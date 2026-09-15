@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import logging
 import re
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -30,6 +31,8 @@ from polyad.operator.graph_status import observed as observed
 from polyad.operator.network import POLICY_KINDS, context, ensure_policies
 from polyad.operator.placement import merge_placement, place_pod
 from polyad.operator.rules import check_rules
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from typing import Any
@@ -211,9 +214,11 @@ class Controller:
         Returns:
             None: No return value.
         """
+        logger.debug("Reconciliation started kind=%s namespace=%s name=%s", *key)
         try:
             await self._reconcile(key)
         except Pending as error:
+            logger.debug("Reconciliation deferred kind=%s namespace=%s name=%s phase=%s", *key, error.phase)
             await self.report_metrics(key, pending=error)
             raise
         except (ValueError, TypeError, BaseValidationError):
@@ -224,6 +229,7 @@ class Controller:
             raise
         else:
             await self.report_metrics(key)
+            logger.debug("Reconciliation completed kind=%s namespace=%s name=%s", *key)
 
     async def report_metrics(self, key: Key, *, pending: Pending | None = None) -> None:
         """
@@ -269,7 +275,14 @@ class Controller:
             return
         obj = await self.api.get(kind, namespace, name)
         if obj is None:
+            logger.debug("Reconciliation target absent kind=%s namespace=%s name=%s", *key)
             return
+        logger.debug(
+            "Refreshed intent kind=%s namespace=%s name=%s generation=%s deleting=%s",
+            *key,
+            obj["metadata"].get("generation"),
+            bool(obj["metadata"].get("deletionTimestamp")),
+        )
         if obj["metadata"].get("deletionTimestamp"):
             await CapacityManager(self, obj).cancel("graph deletion requested")
             if not await self.drain(obj):
@@ -406,6 +419,7 @@ class Controller:
                 for container in admitted.get("spec", {}).get("initContainers", [])
             ):
                 raise ValueError("Istio native sidecar injection must succeed before admitting mesh workloads")
+        logger.debug("Creating owned resource kind=%s namespace=%s name=%s", kind, meta.namespace, meta.name)
         await self.api.request("POST", kind, meta.namespace, body=desired)
         return None  # Creation acknowledgement is not readiness; observe it on a fresh pass.
 
@@ -589,6 +603,7 @@ class Controller:
             if node.name in states:
                 continue
             if not all(states.get(edge.node, {}).get(edge.condition, False) for edge in node.requires):
+                logger.debug("Node admission deferred graph=%s/%s node=%s reason=dependencies", namespace, meta["name"], node.name)
                 continue
             if node.gate:
                 definition = await self.definition("Gate", namespace, node.gate)
@@ -607,21 +622,34 @@ class Controller:
                     now = datetime.now(UTC)
                     if not record or record.get("token") != token:
                         delays[node.name] = {"token": token, "notBefore": (now + timedelta(seconds=delay.seconds)).isoformat()}
+                        logger.debug("Node admission deferred graph=%s/%s node=%s reason=delay-persist", namespace, meta["name"], node.name)
                         continue  # Persist the deadline, then require a refreshed observation.
                     delays[node.name] = record
                     if now < datetime.fromisoformat(record["notBefore"]):
+                        logger.debug("Node admission deferred graph=%s/%s node=%s reason=delay", namespace, meta["name"], node.name)
                         continue
                 else:
                     gate = converter.structure(gate_spec["expression"], Gate)
                     if gate.evaluate(facts) is not True:
+                        logger.debug("Node admission deferred graph=%s/%s node=%s reason=gate", namespace, meta["name"], node.name)
                         continue
             if used + node.slots > graph.slots:
+                logger.debug(
+                    "Node admission deferred graph=%s/%s node=%s reason=slots used=%s requested=%s limit=%s",
+                    namespace,
+                    meta["name"],
+                    node.name,
+                    used,
+                    node.slots,
+                    graph.slots,
+                )
                 continue
             storage = persistence.get(node.name)
             if storage and storage.enabled:
                 await self.storage_claim(namespace, storage)
             admitted = await capacity.admit(node.name, desired[node.name])
             if admitted is None:
+                logger.debug("Node admission deferred graph=%s/%s node=%s reason=capacity", namespace, meta["name"], node.name)
                 continue
             await self.ensure(admitted)
             used += node.slots

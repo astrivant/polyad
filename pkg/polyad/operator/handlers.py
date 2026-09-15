@@ -89,6 +89,14 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
         metrics_http = MetricsServer(metrics_store)
         background.append(asyncio.create_task(metrics_loop()))
     background.append(asyncio.create_task(watch_credentials()))
+    logger.debug(
+        "Operator workers started namespace=%s replica=%s metrics=%s events=%s composition=%s",
+        namespace,
+        coordinator.identity,
+        metrics_http is not None,
+        event_http is not None,
+        http is not None,
+    )
     initialized = True
     background.extend(
         [
@@ -395,6 +403,7 @@ async def cleanup(**_: Any) -> None:
         None: No return value.
     """
     global initialized
+    logger.debug("Operator cleanup started; joining listeners, queued work and API transports")
     initialized = False
     if metrics_http:
         await metrics_http.close()

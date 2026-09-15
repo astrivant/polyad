@@ -1,37 +1,41 @@
 ## @section Operator and shared queue parameters
-## @param replicaCount Operator replicas when autoscaling is disabled
-replicaCount: 2
-## @param nodeSelector Node labels selecting the operator node group, independent of workload graph placement
-nodeSelector: {}
-## @param tolerations [array] Taints tolerated by the operator replicas
-tolerations: []
-autoscaling:
-  ## @param autoscaling.enabled Enable CPU-based operator autoscaling
-  enabled: false
-  ## @param autoscaling.minReplicas Minimum operator replicas
-  minReplicas: 2
-  ## @param autoscaling.maxReplicas Maximum operator replicas, at least minReplicas and at most 32
-  maxReplicas: 8
-  ## @param autoscaling.targetCPUUtilizationPercentage Target operator CPU utilization relative to requested CPU
-  targetCPUUtilizationPercentage: 70
-image:
-  ## @param image.repository Operator image repository
-  repository: ghcr.io/astrivant/polyad
-  ## @param image.tag Operator image tag
-  tag: '0.1.0'
-  ## @param image.pullPolicy Operator image pull policy
-  pullPolicy: IfNotPresent
-resources:
-  requests:
-    ## @param resources.requests.cpu Requested operator CPU, required for CPU autoscaling
-    cpu: 100m
-    ## @param resources.requests.memory Requested operator memory
-    memory: 128Mi
-  limits:
-    ## @param resources.limits.memory Operator memory limit
-    memory: 512Mi
-## @param terminationGracePeriodSeconds Time allowed for operator shutdown and outstanding API calls
-terminationGracePeriodSeconds: 60
+operator:
+  ## @param operator.logLevel Polyad logging verbosity (DEBUG, INFO, WARNING, ERROR or CRITICAL)
+  logLevel: INFO
+  ## @param operator.replicaCount Operator replicas when autoscaling is disabled
+  replicaCount: 2
+  ## @param operator.nodeSelector Node labels selecting the operator node group, independent of workload graph placement
+  nodeSelector: {}
+  ## @param operator.tolerations [array] Taints tolerated by the operator replicas
+  tolerations: []
+  autoscaling:
+    ## @param operator.autoscaling.enabled Enable CPU-based operator autoscaling
+    enabled: false
+    ## @param operator.autoscaling.minReplicas Minimum operator replicas
+    minReplicas: 2
+    ## @param operator.autoscaling.maxReplicas Maximum operator replicas, at least minReplicas and at most 32
+    maxReplicas: 8
+    ## @param operator.autoscaling.targetCPUUtilizationPercentage Target operator CPU utilization relative to requested CPU
+    targetCPUUtilizationPercentage: 70
+  image:
+    ## @param operator.image.repository Operator image repository
+    repository: ghcr.io/astrivant/polyad
+    ## @param operator.image.tag Operator image tag
+    tag: '0.1.0'
+    ## @param operator.image.pullPolicy Operator image pull policy
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      ## @param operator.resources.requests.cpu Requested operator CPU, required for CPU autoscaling
+      cpu: 100m
+      ## @param operator.resources.requests.memory Requested operator memory
+      memory: 128Mi
+    limits:
+      ## @param operator.resources.limits.memory Operator memory limit
+      memory: 512Mi
+  ## @param operator.terminationGracePeriodSeconds Time allowed for operator shutdown and outstanding API calls
+  terminationGracePeriodSeconds: 60
+
 dragonfly:
   ## @param dragonfly.enabled Deploy Dragonfly through the upstream operator Helm dependency
   enabled: true

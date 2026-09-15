@@ -92,7 +92,7 @@ use general compute and a third uses accelerated compute.
 Polyad's operator replicas run on a separate group and coordinate through a
 shared cache.<sup>[\[16\]](operator.md#replicas-shared-queues-and-autoscaling)</sup>
 Graph placement selects machines for the workloads;
-Helm's `nodeSelector` and `tolerations` configure placement for the operator itself.<sup>[\[17\]](../charts/polyad/README.md#operator-and-shared-queue-parameters)</sup>
+Helm's `operator.nodeSelector` and `operator.tolerations` configure placement for the operator itself.<sup>[\[17\]](../charts/polyad/README.md#operator-and-shared-queue-parameters)</sup>
 
 Placement is enforced by default. Set `spec.placement.enforce: false` to let a
 more specific workload or subgraph replace those defaults. Enforced ancestors

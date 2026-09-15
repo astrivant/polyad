@@ -99,9 +99,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--namespace", default=os.environ.get("POLYAD_NAMESPACE", "default"))
     parser.add_argument("--liveness", default="http://0.0.0.0:8080/healthz")
+    parser.add_argument(
+        "--log-level",
+        type=str.upper,
+        choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
+        default=os.environ.get("POLYAD_LOG_LEVEL", "INFO"),
+        help="Polyad log verbosity (default: POLYAD_LOG_LEVEL or INFO)",
+    )
     args = parser.parse_args()
+    if args.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+        parser.error("POLYAD_LOG_LEVEL must be DEBUG, INFO, WARNING, ERROR or CRITICAL")
     os.environ["POLYAD_NAMESPACE"] = args.namespace
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(threadName)s] %(name)s: %(message)s")
+    logging.getLogger("polyad").setLevel(args.log_level)
+    logger = logging.getLogger(__name__)
+    logger.debug("Starting operator namespace=%s log_level=%s", args.namespace, args.log_level)
     runtime = OperatorThread(standalone=True, namespaces=[args.namespace], liveness_endpoint=args.liveness)
 
     def stop(signum: int, frame: FrameType | None) -> None:
@@ -115,6 +127,7 @@ def main() -> None:
         Returns:
             None: No return value.
         """
+        logger.debug("Process signal received signal=%s replacement=%s", signal.Signals(signum).name, signum == signal.SIGHUP)
         if signum == signal.SIGHUP:
             lifecycle.replacement.set()
         else:

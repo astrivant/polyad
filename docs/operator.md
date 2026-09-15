@@ -118,7 +118,7 @@ choose eligible nodes. They do not reserve nodes, ensure scheduling, or prevent
 node failure. Polyad's compilation policy is not an admission webhook policing
 arbitrary edits by other Kubernetes clients.
 
-Operator placement is separate: set Helm `nodeSelector` and `tolerations` to run
+Operator placement is separate: set Helm `operator.nodeSelector` and `operator.tolerations` to run
 operator replicas on a control node group. Workload graph placement has no effect
 on the operator pods.
 
@@ -504,6 +504,30 @@ The Python library exposes the same structural measurements with
 `polyad.graph.topology_metrics(topology)` and accepts an optional set of present
 node names to measure an observed subset.
 
+## Debug logging
+
+Set Helm `operator.logLevel: DEBUG` to trace reconciliation, admission decisions,
+queue coalescing and delivery, shard leases, and API dispatch/completion timings.
+The default is `INFO`. Supported levels are `DEBUG`, `INFO`, `WARNING`, `ERROR`
+and `CRITICAL`.
+
+```sh
+helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+  --set operator.logLevel=DEBUG
+kubectl logs -n polyad -l app.kubernetes.io/name=polyad -c operator --prefix=true --follow
+```
+
+Include your existing values file when upgrading a configured release. For a
+local process, use `polyad-operator --log-level DEBUG` or
+`POLYAD_LOG_LEVEL=DEBUG`; the command-line option takes precedence.
+
+These settings affect Polyad loggers. They do not enable Kubernetes client,
+HTTP transport or other dependency debug logging. Diagnostic messages include
+resource identities, queue/shard context, delay reasons and elapsed seconds;
+request/response bodies, gate facts, cache URLs and credentials are omitted.
+Timestamps, module names and thread names identify each message. Set the level
+back to `INFO` after troubleshooting to reduce volume.
+
 ## Health
 
 The operator's startup and liveness probes use Kopf's `/healthz` endpoint and the registered worker probe. Readiness also checks API/Lease renewal freshness and Dragonfly connectivity (`apiFresh` and `cacheFresh`). Periodic API scans and cache pings keep connectivity observations current even in an empty namespace. A slow or unavailable API can make the pod unready without triggering a restart loop. A stopped worker fails liveness. The health handler never treats an indefinitely running workload as a fault.
@@ -673,12 +697,12 @@ Enable CPU-based HPA with:
 
 ```sh
 helm upgrade --install polyad charts/polyad --namespace polyad \
-  --set autoscaling.enabled=true --set autoscaling.minReplicas=2 \
-  --set autoscaling.maxReplicas=8
+  --set operator.autoscaling.enabled=true --set operator.autoscaling.minReplicas=2 \
+  --set operator.autoscaling.maxReplicas=8
 ```
 
 HPA requires the cluster metrics API and operator CPU requests. Without HPA,
-`replicaCount` controls scale. New replicas receive shards automatically; scale-down
+`operator.replicaCount` controls scale. New replicas receive shards automatically; scale-down
 allows their leases to expire. At most 32 replicas can own useful shards. CPU HPA
 does not directly measure queue backlog. The default cache is a single availability
 dependency; enable Dragonfly HA to recover automatically from a primary failure.
@@ -693,7 +717,7 @@ docker build -t polyad:dev .
 # Push to your registry, or load into your local test cluster.
 helm dependency build charts/polyad
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
-  --set image.repository=YOUR_REGISTRY/polyad --set image.tag=dev
+  --set operator.image.repository=YOUR_REGISTRY/polyad --set operator.image.tag=dev
 kubectl -n polyad apply -f examples/finite.yaml
 kubectl -n polyad get graphs -o yaml
 kubectl -n polyad apply -f examples/persistent.yaml

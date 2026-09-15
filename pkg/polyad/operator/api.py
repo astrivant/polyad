@@ -5,7 +5,9 @@ Bound Kubernetes calls and preserve resource-version and ownership fences.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from functools import cached_property
 from typing import TYPE_CHECKING, cast
@@ -17,6 +19,8 @@ from polyad.compiler.asts import GROUP as GROUP
 from polyad.compiler.asts import RESOURCE_TYPES, DeleteOptions, UIDPreconditions, encode_body
 from polyad.compiler.asts import VERSION as VERSION
 from polyad.operator.metrics import WriteBacklog
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -129,7 +133,17 @@ class API:
             path += f"/{name}"
         if status:
             path += "/status"
+        started = time.monotonic()
+        logger.debug("API request queued method=%s kind=%s namespace=%s name=%s status=%s", method, kind, namespace, name, status)
         async with self.mutation(method):
+            logger.debug(
+                "API request dispatched method=%s kind=%s namespace=%s name=%s wait_seconds=%.3f",
+                method,
+                kind,
+                namespace,
+                name,
+                time.monotonic() - started,
+            )
             try:
                 request = asyncio.create_task(
                     asyncio.to_thread(
@@ -146,14 +160,50 @@ class API:
                     )
                 )
                 try:
-                    return await asyncio.shield(request)
+                    result = await asyncio.shield(request)
+                    logger.debug(
+                        "API request completed method=%s kind=%s namespace=%s name=%s elapsed_seconds=%.3f",
+                        method,
+                        kind,
+                        namespace,
+                        name,
+                        time.monotonic() - started,
+                    )
+                    return result
                 except asyncio.CancelledError:
                     # Cancelling to_thread does not stop HTTP. Join it before ownership ends.
+                    logger.debug(
+                        "API request cancelled; joining outstanding transport method=%s kind=%s namespace=%s name=%s",
+                        method,
+                        kind,
+                        namespace,
+                        name,
+                    )
                     await asyncio.gather(request, return_exceptions=True)
                     raise
             except ApiException as error:
+                logger.debug(
+                    "API request failed method=%s kind=%s namespace=%s name=%s http_status=%s elapsed_seconds=%.3f",
+                    method,
+                    kind,
+                    namespace,
+                    name,
+                    error.status,
+                    time.monotonic() - started,
+                )
                 if error.status == 404 and method in {"GET", "DELETE"}:
                     return None
+                raise
+            except Exception as error:
+                logger.debug(
+                    "API transport failed method=%s kind=%s namespace=%s name=%s error_type=%s elapsed_seconds=%.3f",
+                    method,
+                    kind,
+                    namespace,
+                    name,
+                    type(error).__name__,
+                    time.monotonic() - started,
+                )
                 raise
 
     async def get(self, kind: str, namespace: str, name: str) -> dict[str, Any] | None:

@@ -138,7 +138,9 @@ def test_operator_can_use_a_separate_node_group():
     """
     Place operator replicas independently from workload graph placement rules.
     """
-    objects = render("nodeSelector.pool=operators", "tolerations[0].key=control", "tolerations[0].operator=Exists")
+    objects = render(
+        "operator.nodeSelector.pool=operators", "operator.tolerations[0].key=control", "operator.tolerations[0].operator=Exists"
+    )
     operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     pod = operator["spec"]["template"]["spec"]
     assert pod["nodeSelector"] == {"pool": "operators"}

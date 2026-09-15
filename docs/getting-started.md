@@ -78,7 +78,7 @@ docker build -t YOUR_REGISTRY/polyad:dev .
 docker push YOUR_REGISTRY/polyad:dev
 helm dependency build charts/polyad
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
-  --set image.repository=YOUR_REGISTRY/polyad --set image.tag=dev --wait
+  --set operator.image.repository=YOUR_REGISTRY/polyad --set operator.image.tag=dev --wait
 kubectl apply -n polyad -f examples/finite.yaml
 kubectl get graphs -n polyad -o wide
 ```

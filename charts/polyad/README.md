@@ -4,7 +4,7 @@ Deploy the Kubernetes workload scheduler and its shared Dragonfly queue. See the
 [operator guide](../../docs/operator.md) for graph semantics, replica coordination,
 health metrics, and installation examples.
 
-Use Helm `nodeSelector` and `tolerations` to select the operator's node group.
+Use Helm `operator.nodeSelector` and `operator.tolerations` to select the operator's node group.
 Graph CR placement controls workload pods independently; enforced graph placement
 is copied into their native templates. The Python `polyad.cache` package connects
 replicas using `POLYAD_CACHE_URL`, including external Redis-compatible endpoints.
@@ -12,7 +12,7 @@ replicas using `POLYAD_CACHE_URL`, including external Redis-compatible endpoints
 ```sh
 helm dependency build charts/polyad
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
-  --set image.repository=YOUR_REGISTRY/polyad --set image.tag=YOUR_TAG
+  --set operator.image.repository=YOUR_REGISTRY/polyad --set operator.image.tag=YOUR_TAG
 ```
 
 The chart installs the [upstream Dragonfly operator](https://github.com/dragonflydb/dragonfly-operator)
@@ -56,36 +56,41 @@ See the [networking guide](../../docs/networking.md) for scoped graph isolation,
 optional Istio installation and endpoint authorization, event subscribers, and
 Secret-driven health replacement. Both networking integrations are disabled by default.
 
+Operator deployment settings are grouped under `operator`. When upgrading existing
+values files, nest replicas, placement, autoscaling, image, resources and shutdown
+grace settings under that key (for example, `image.tag` becomes `operator.image.tag`).
+
 ## Parameters
 
 ### Operator and shared queue parameters
 
-| Name                                         | Description                                                                                          | Value                                                 |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `replicaCount`                               | Operator replicas when autoscaling is disabled                                                       | `2`                                                   |
-| `nodeSelector`                               | Node labels selecting the operator node group, independent of workload graph placement               | `{}`                                                  |
-| `tolerations`                                | Taints tolerated by the operator replicas                                                            | `[]`                                                  |
-| `autoscaling.enabled`                        | Enable CPU-based operator autoscaling                                                                | `false`                                               |
-| `autoscaling.minReplicas`                    | Minimum operator replicas                                                                            | `2`                                                   |
-| `autoscaling.maxReplicas`                    | Maximum operator replicas, at least minReplicas and at most 32                                       | `8`                                                   |
-| `autoscaling.targetCPUUtilizationPercentage` | Target operator CPU utilization relative to requested CPU                                            | `70`                                                  |
-| `image.repository`                           | Operator image repository                                                                            | `ghcr.io/astrivant/polyad`                            |
-| `image.tag`                                  | Operator image tag                                                                                   | `0.1.0`                                               |
-| `image.pullPolicy`                           | Operator image pull policy                                                                           | `IfNotPresent`                                        |
-| `resources.requests.cpu`                     | Requested operator CPU, required for CPU autoscaling                                                 | `100m`                                                |
-| `resources.requests.memory`                  | Requested operator memory                                                                            | `128Mi`                                               |
-| `resources.limits.memory`                    | Operator memory limit                                                                                | `512Mi`                                               |
-| `terminationGracePeriodSeconds`              | Time allowed for operator shutdown and outstanding API calls                                         | `60`                                                  |
-| `dragonfly.enabled`                          | Deploy Dragonfly through the upstream operator Helm dependency                                       | `true`                                                |
-| `dragonfly.image`                            | Bundled Dragonfly image                                                                              | `docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0` |
-| `dragonfly.ha.enabled`                       | Enable primary/replica replication and automatic failover                                            | `false`                                               |
-| `dragonfly.ha.replicas`                      | Total Dragonfly instances in HA mode, including the primary                                          | `2`                                                   |
-| `dragonfly.ha.topologyKey`                   | Place HA instances on distinct values of this node label                                             | `kubernetes.io/hostname`                              |
-| `dragonfly.externalUrl`                      | External Redis-compatible URL when bundled Dragonfly is disabled                                     | `redis://dragonfly:6379/0`                            |
-| `dragonfly.existingSecret`                   | Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings | `""`                                                  |
-| `dragonfly.persistence.enabled`              | Persist bundled Dragonfly snapshots on a PVC                                                         | `true`                                                |
-| `dragonfly.persistence.size`                 | Snapshot volume capacity                                                                             | `1Gi`                                                 |
-| `dragonfly.persistence.storageClass`         | Snapshot volume storage class; empty uses the cluster default                                        | `""`                                                  |
+| Name                                                  | Description                                                                                          | Value                                                 |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `operator.logLevel`                                   | Polyad logging verbosity (DEBUG, INFO, WARNING, ERROR or CRITICAL)                                   | `INFO`                                                |
+| `operator.replicaCount`                               | Operator replicas when autoscaling is disabled                                                       | `2`                                                   |
+| `operator.nodeSelector`                               | Node labels selecting the operator node group, independent of workload graph placement               | `{}`                                                  |
+| `operator.tolerations`                                | Taints tolerated by the operator replicas                                                            | `[]`                                                  |
+| `operator.autoscaling.enabled`                        | Enable CPU-based operator autoscaling                                                                | `false`                                               |
+| `operator.autoscaling.minReplicas`                    | Minimum operator replicas                                                                            | `2`                                                   |
+| `operator.autoscaling.maxReplicas`                    | Maximum operator replicas, at least minReplicas and at most 32                                       | `8`                                                   |
+| `operator.autoscaling.targetCPUUtilizationPercentage` | Target operator CPU utilization relative to requested CPU                                            | `70`                                                  |
+| `operator.image.repository`                           | Operator image repository                                                                            | `ghcr.io/astrivant/polyad`                            |
+| `operator.image.tag`                                  | Operator image tag                                                                                   | `0.1.0`                                               |
+| `operator.image.pullPolicy`                           | Operator image pull policy                                                                           | `IfNotPresent`                                        |
+| `operator.resources.requests.cpu`                     | Requested operator CPU, required for CPU autoscaling                                                 | `100m`                                                |
+| `operator.resources.requests.memory`                  | Requested operator memory                                                                            | `128Mi`                                               |
+| `operator.resources.limits.memory`                    | Operator memory limit                                                                                | `512Mi`                                               |
+| `operator.terminationGracePeriodSeconds`              | Time allowed for operator shutdown and outstanding API calls                                         | `60`                                                  |
+| `dragonfly.enabled`                                   | Deploy Dragonfly through the upstream operator Helm dependency                                       | `true`                                                |
+| `dragonfly.image`                                     | Bundled Dragonfly image                                                                              | `docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0` |
+| `dragonfly.ha.enabled`                                | Enable primary/replica replication and automatic failover                                            | `false`                                               |
+| `dragonfly.ha.replicas`                               | Total Dragonfly instances in HA mode, including the primary                                          | `2`                                                   |
+| `dragonfly.ha.topologyKey`                            | Place HA instances on distinct values of this node label                                             | `kubernetes.io/hostname`                              |
+| `dragonfly.externalUrl`                               | External Redis-compatible URL when bundled Dragonfly is disabled                                     | `redis://dragonfly:6379/0`                            |
+| `dragonfly.existingSecret`                            | Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings | `""`                                                  |
+| `dragonfly.persistence.enabled`                       | Persist bundled Dragonfly snapshots on a PVC                                                         | `true`                                                |
+| `dragonfly.persistence.size`                          | Snapshot volume capacity                                                                             | `1Gi`                                                 |
+| `dragonfly.persistence.storageClass`                  | Snapshot volume storage class; empty uses the cluster default                                        | `""`                                                  |
 
 ### Upstream Dragonfly operator dependency
 

@@ -6,12 +6,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import time
 from typing import TYPE_CHECKING, cast
 
 from redis.exceptions import ResponseError
 
 from polyad.cache import Cache
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Iterable
@@ -88,8 +91,11 @@ class SharedQueue:
         """
         encoded = json.dumps(key)
         digest = hashlib.sha256(encoded.encode()).hexdigest()
-        await cast("Awaitable[Any]", self.client.eval(PUBLISH, 2, self.stream(shard), f"{self.prefix}:{{{shard}}}:dedup:{digest}", encoded))
+        message_id = await cast(
+            "Awaitable[Any]", self.client.eval(PUBLISH, 2, self.stream(shard), f"{self.prefix}:{{{shard}}}:dedup:{digest}", encoded)
+        )
         self.last_success = time.monotonic()
+        logger.debug("Shared update published shard=%s kind=%s namespace=%s name=%s coalesced=%s", shard, *key, not bool(message_id))
 
     async def take(self, shard: int) -> tuple[str, Key] | None:
         """
@@ -121,6 +127,15 @@ class SharedQueue:
                 return None
             message_id, fields = messages[0]
             kind, namespace, name = json.loads(fields["key"])
+            logger.debug(
+                "Shared update delivered consumer=%s shard=%s kind=%s namespace=%s name=%s reclaimed=%s",
+                self.consumer,
+                shard,
+                kind,
+                namespace,
+                name,
+                bool(pending[1]),
+            )
             return message_id, (kind, namespace, name)
         except ResponseError:
             self.groups.discard(shard)  # A restarted cache may have lost the stream/group.
@@ -141,6 +156,7 @@ class SharedQueue:
             transaction.xack(self.stream(shard), self.group, message_id)
             transaction.xdel(self.stream(shard), message_id)
             await transaction.execute()
+        logger.debug("Shared update acknowledged consumer=%s shard=%s message_id=%s", self.consumer, shard, message_id)
         self.last_success = time.monotonic()
 
     async def ping(self) -> None:

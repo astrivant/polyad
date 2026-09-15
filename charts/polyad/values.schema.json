@@ -3,428 +3,529 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "image",
-    "resources",
-    "terminationGracePeriodSeconds",
-    "replicaCount",
-    "autoscaling",
+    "operator",
     "dragonfly",
     "dragonflyOperator",
     "api"
   ],
   "properties": {
-    "image": {
+    "operator": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "repository",
-        "tag",
-        "pullPolicy"
+        "image",
+        "resources",
+        "terminationGracePeriodSeconds",
+        "replicaCount",
+        "autoscaling"
       ],
       "properties": {
-        "repository": {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9./:_-]*$"
+        "replicaCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
         },
-        "tag": {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$"
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Value for an individual key in nodeSelector."
+          },
+          "description": "Exact Kubernetes node-label matches, all of which must hold. Use labels for node groups or resource slices; cloud tags must first be exposed as node labels. Conflicting inherited values are rejected."
         },
-        "pullPolicy": {
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Taint key to match. An empty key requires operator Exists and matches all keys."
+              },
+              "operator": {
+                "type": "string",
+                "enum": [
+                  "Exists",
+                  "Equal"
+                ],
+                "description": "Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal."
+              },
+              "value": {
+                "type": "string",
+                "description": "Taint value to match when operator is Equal. Omit or leave empty when operator is Exists."
+              },
+              "effect": {
+                "type": "string",
+                "enum": [
+                  "",
+                  "NoSchedule",
+                  "PreferNoSchedule",
+                  "NoExecute"
+                ],
+                "description": "Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute."
+              },
+              "tolerationSeconds": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0,
+                "description": "Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction."
+              }
+            },
+            "description": "One entry in tolerations.",
+            "additionalProperties": false
+          },
+          "description": "Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations allow placement on tainted nodes; they do not select or guarantee a node."
+        },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "minReplicas",
+            "maxReplicas",
+            "targetCPUUtilizationPercentage"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minReplicas": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "maxReplicas": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "targetCPUUtilizationPercentage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 1
+                      },
+                      "maxReplicas": {
+                        "minimum": 1
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 2
+                      },
+                      "maxReplicas": {
+                        "minimum": 2
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 3
+                      },
+                      "maxReplicas": {
+                        "minimum": 3
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 4
+                      },
+                      "maxReplicas": {
+                        "minimum": 4
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 5
+                      },
+                      "maxReplicas": {
+                        "minimum": 5
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 6
+                      },
+                      "maxReplicas": {
+                        "minimum": 6
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 7
+                      },
+                      "maxReplicas": {
+                        "minimum": 7
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 8
+                      },
+                      "maxReplicas": {
+                        "minimum": 8
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 9
+                      },
+                      "maxReplicas": {
+                        "minimum": 9
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 10
+                      },
+                      "maxReplicas": {
+                        "minimum": 10
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 11
+                      },
+                      "maxReplicas": {
+                        "minimum": 11
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 12
+                      },
+                      "maxReplicas": {
+                        "minimum": 12
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 13
+                      },
+                      "maxReplicas": {
+                        "minimum": 13
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 14
+                      },
+                      "maxReplicas": {
+                        "minimum": 14
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 15
+                      },
+                      "maxReplicas": {
+                        "minimum": 15
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 16
+                      },
+                      "maxReplicas": {
+                        "minimum": 16
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 17
+                      },
+                      "maxReplicas": {
+                        "minimum": 17
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 18
+                      },
+                      "maxReplicas": {
+                        "minimum": 18
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 19
+                      },
+                      "maxReplicas": {
+                        "minimum": 19
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 20
+                      },
+                      "maxReplicas": {
+                        "minimum": 20
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 21
+                      },
+                      "maxReplicas": {
+                        "minimum": 21
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 22
+                      },
+                      "maxReplicas": {
+                        "minimum": 22
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 23
+                      },
+                      "maxReplicas": {
+                        "minimum": 23
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 24
+                      },
+                      "maxReplicas": {
+                        "minimum": 24
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 25
+                      },
+                      "maxReplicas": {
+                        "minimum": 25
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 26
+                      },
+                      "maxReplicas": {
+                        "minimum": 26
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 27
+                      },
+                      "maxReplicas": {
+                        "minimum": 27
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 28
+                      },
+                      "maxReplicas": {
+                        "minimum": 28
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 29
+                      },
+                      "maxReplicas": {
+                        "minimum": 29
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 30
+                      },
+                      "maxReplicas": {
+                        "minimum": 30
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 31
+                      },
+                      "maxReplicas": {
+                        "minimum": 31
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "minReplicas": {
+                        "const": 32
+                      },
+                      "maxReplicas": {
+                        "minimum": 32
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "tag",
+            "pullPolicy"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[a-z0-9][a-z0-9./:_-]*$"
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$"
+            },
+            "pullPolicy": {
+              "type": "string",
+              "enum": [
+                "IfNotPresent",
+                "Always",
+                "Never"
+              ]
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requests": {
+              "$ref": "#/definitions/resourceList"
+            },
+            "limits": {
+              "$ref": "#/definitions/resourceList"
+            }
+          }
+        },
+        "terminationGracePeriodSeconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 300
+        },
+        "logLevel": {
           "type": "string",
           "enum": [
-            "IfNotPresent",
-            "Always",
-            "Never"
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL"
           ]
-        }
-      }
-    },
-    "resources": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "requests": {
-          "$ref": "#/definitions/resourceList"
-        },
-        "limits": {
-          "$ref": "#/definitions/resourceList"
-        }
-      }
-    },
-    "terminationGracePeriodSeconds": {
-      "type": "integer",
-      "minimum": 30,
-      "maximum": 300
-    },
-    "replicaCount": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 32
-    },
-    "autoscaling": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "enabled",
-        "minReplicas",
-        "maxReplicas",
-        "targetCPUUtilizationPercentage"
-      ],
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "minReplicas": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 32
-        },
-        "maxReplicas": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 32
-        },
-        "targetCPUUtilizationPercentage": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
         }
       },
       "allOf": [
         {
           "if": {
             "properties": {
-              "enabled": {
-                "const": true
+              "autoscaling": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
               }
             }
           },
           "then": {
-            "anyOf": [
-              {
+            "properties": {
+              "resources": {
+                "required": [
+                  "requests"
+                ],
                 "properties": {
-                  "minReplicas": {
-                    "const": 1
-                  },
-                  "maxReplicas": {
-                    "minimum": 1
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 2
-                  },
-                  "maxReplicas": {
-                    "minimum": 2
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 3
-                  },
-                  "maxReplicas": {
-                    "minimum": 3
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 4
-                  },
-                  "maxReplicas": {
-                    "minimum": 4
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 5
-                  },
-                  "maxReplicas": {
-                    "minimum": 5
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 6
-                  },
-                  "maxReplicas": {
-                    "minimum": 6
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 7
-                  },
-                  "maxReplicas": {
-                    "minimum": 7
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 8
-                  },
-                  "maxReplicas": {
-                    "minimum": 8
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 9
-                  },
-                  "maxReplicas": {
-                    "minimum": 9
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 10
-                  },
-                  "maxReplicas": {
-                    "minimum": 10
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 11
-                  },
-                  "maxReplicas": {
-                    "minimum": 11
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 12
-                  },
-                  "maxReplicas": {
-                    "minimum": 12
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 13
-                  },
-                  "maxReplicas": {
-                    "minimum": 13
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 14
-                  },
-                  "maxReplicas": {
-                    "minimum": 14
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 15
-                  },
-                  "maxReplicas": {
-                    "minimum": 15
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 16
-                  },
-                  "maxReplicas": {
-                    "minimum": 16
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 17
-                  },
-                  "maxReplicas": {
-                    "minimum": 17
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 18
-                  },
-                  "maxReplicas": {
-                    "minimum": 18
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 19
-                  },
-                  "maxReplicas": {
-                    "minimum": 19
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 20
-                  },
-                  "maxReplicas": {
-                    "minimum": 20
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 21
-                  },
-                  "maxReplicas": {
-                    "minimum": 21
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 22
-                  },
-                  "maxReplicas": {
-                    "minimum": 22
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 23
-                  },
-                  "maxReplicas": {
-                    "minimum": 23
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 24
-                  },
-                  "maxReplicas": {
-                    "minimum": 24
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 25
-                  },
-                  "maxReplicas": {
-                    "minimum": 25
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 26
-                  },
-                  "maxReplicas": {
-                    "minimum": 26
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 27
-                  },
-                  "maxReplicas": {
-                    "minimum": 27
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 28
-                  },
-                  "maxReplicas": {
-                    "minimum": 28
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 29
-                  },
-                  "maxReplicas": {
-                    "minimum": 29
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 30
-                  },
-                  "maxReplicas": {
-                    "minimum": 30
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 31
-                  },
-                  "maxReplicas": {
-                    "minimum": 31
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "minReplicas": {
-                    "const": 32
-                  },
-                  "maxReplicas": {
-                    "minimum": 32
+                  "requests": {
+                    "required": [
+                      "cpu"
+                    ]
                   }
                 }
               }
-            ]
+            }
           }
         }
       ]
@@ -592,57 +693,6 @@
           "minLength": 1
         }
       }
-    },
-    "nodeSelector": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string",
-        "description": "Value for an individual key in nodeSelector."
-      },
-      "description": "Exact Kubernetes node-label matches, all of which must hold. Use labels for node groups or resource slices; cloud tags must first be exposed as node labels. Conflicting inherited values are rejected."
-    },
-    "tolerations": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "Taint key to match. An empty key requires operator Exists and matches all keys."
-          },
-          "operator": {
-            "type": "string",
-            "enum": [
-              "Exists",
-              "Equal"
-            ],
-            "description": "Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal."
-          },
-          "value": {
-            "type": "string",
-            "description": "Taint value to match when operator is Equal. Omit or leave empty when operator is Exists."
-          },
-          "effect": {
-            "type": "string",
-            "enum": [
-              "",
-              "NoSchedule",
-              "PreferNoSchedule",
-              "NoExecute"
-            ],
-            "description": "Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute."
-          },
-          "tolerationSeconds": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0,
-            "description": "Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction."
-          }
-        },
-        "description": "One entry in tolerations.",
-        "additionalProperties": false
-      },
-      "description": "Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations allow placement on tainted nodes; they do not select or guarantee a node."
     },
     "api": {
       "type": "object",
@@ -2018,35 +2068,6 @@
     }
   },
   "allOf": [
-    {
-      "if": {
-        "properties": {
-          "autoscaling": {
-            "properties": {
-              "enabled": {
-                "const": true
-              }
-            }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "resources": {
-            "required": [
-              "requests"
-            ],
-            "properties": {
-              "requests": {
-                "required": [
-                  "cpu"
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
     {
       "if": {
         "properties": {

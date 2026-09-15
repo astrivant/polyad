@@ -5,8 +5,11 @@ Serialize refreshed reconciliation and coalesce redundant watch notifications.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -52,6 +55,7 @@ class RefreshQueue:
             None: No return value.
         """
         future = asyncio.get_running_loop().create_future()
+        logger.debug("Refresh submitted kind=%s namespace=%s name=%s coalesced=%s", *key, key in self.pending)
         if key not in self.pending:
             self.pending[key] = []
             self.queue.put_nowait(key)
@@ -68,6 +72,7 @@ class RefreshQueue:
         while True:
             key = await self.queue.get()
             waiters = self.pending.pop(key)
+            logger.debug("Refresh dequeued kind=%s namespace=%s name=%s waiters=%s remaining=%s", *key, len(waiters), self.queue.qsize())
             try:
                 await self.reconcile(key)
             except asyncio.CancelledError:

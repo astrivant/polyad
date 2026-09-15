@@ -112,7 +112,7 @@ jobs:
       - run: docker build -t polyad:test .
       - run: kind load docker-image polyad:test --name polyad-test
       - run: helm dependency build charts/polyad
-      - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set image.repository=polyad --set image.tag=test --set dragonfly.ha.enabled=${{ matrix.dragonfly-ha }} --wait --timeout=300s
+      - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set operator.image.repository=polyad --set operator.image.tag=test --set dragonfly.ha.enabled=${{ matrix.dragonfly-ha }} --wait --timeout=300s
       - run: bash scripts/test-operator.sh
       - run: kubectl -n polyad delete graphs,polygraphs,ephemeralgraphs,feedbacks --all --wait=true --timeout=120s
       - run: bash scripts/test-replacement.sh

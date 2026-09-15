@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -18,6 +19,8 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.compiler.asts import Lease, LeaseSpec, ObjectMeta
 from polyad.operator.api import GROUP
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -191,6 +194,14 @@ class Coordinator:
                     # no handoff can bypass an outstanding transport request.
                     self.owned.discard(shard)
             self.last_success = time.monotonic()
+            logger.debug(
+                "Coordination refreshed namespace=%s replica=%s leader=%s owned_shards=%s busy_shards=%s",
+                self.namespace,
+                self.identity,
+                self.leader,
+                sorted(self.owned),
+                sorted(self.busy),
+            )
 
     async def shard_for(self, key: Key) -> int:
         """
@@ -238,6 +249,7 @@ class Coordinator:
         """
         shard = active_shard.get()
         if shard is None or shard not in self.owned:
+            logger.debug("Write guard rejected replica=%s shard=%s reason=unowned", self.identity, shard)
             raise NotOwner("no active shard ownership")
         name = f"polyad-shard-{shard}"
         lease = await self.api.get("Lease", self.namespace, name)
@@ -246,6 +258,7 @@ class Coordinator:
             or lease["spec"].get("holderIdentity") != self.identity
             or time.monotonic() >= self.deadlines.get(name, 0) - WRITE_BUDGET
         ):
+            logger.debug("Write guard rejected replica=%s shard=%s reason=lease-expired-or-lost", self.identity, shard)
             raise NotOwner("shard lease lost or renewal overdue")
 
     @asynccontextmanager
@@ -266,7 +279,9 @@ class Coordinator:
         token = active_shard.set(shard)
         try:
             await self.guard()
+            logger.debug("Duty acquired replica=%s shard=%s kind=%s namespace=%s name=%s", self.identity, shard, *key)
             yield
         finally:
             active_shard.reset(token)
             self.busy.discard(shard)
+            logger.debug("Duty released replica=%s shard=%s kind=%s namespace=%s name=%s", self.identity, shard, *key)
