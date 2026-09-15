@@ -116,6 +116,13 @@ events:
   ## @param events.maxConnections Maximum simultaneous event subscribers per operator replica
   maxConnections: 16
 
+## @section Scheduler metrics
+metrics:
+  ## @param metrics.enabled Serve cached Prometheus and JSON metrics on an internal Service at port 8092
+  enabled: false
+  ## @param metrics.graphLabels Include per-object hierarchy and direct-resource Prometheus series; increases cardinality
+  graphLabels: false
+
 ## @section Operator endpoint and cache isolation
 networkPolicy:
   ## @param networkPolicy.enabled Isolate operator pods; requires explicit Kubernetes API and cache egress rules
@@ -128,6 +135,8 @@ networkPolicy:
   compositionPeers: []
   ## @param networkPolicy.eventPeers [array] NetworkPolicy peers allowed to subscribe to events
   eventPeers: []
+  ## @param networkPolicy.metricsPeers [array] Monitoring peers allowed to scrape the metrics API on port 8092
+  metricsPeers: []
   ## @param networkPolicy.healthPeers [array] Optional monitoring peers allowed to read port 8080 health metrics
   healthPeers: []
   ## @param networkPolicy.extraEgress [array] Additional NetworkPolicy egress rules, including any external cache or DNS configuration
@@ -144,6 +153,8 @@ mesh:
     enabled: false
     ## @param mesh.operator.compositionPrincipals [array] Exact mTLS source identities allowed to use the composition endpoint
     compositionPrincipals: []
+    ## @param mesh.operator.metricsPrincipals [array] Exact mTLS source identities allowed to read scheduler metrics
+    metricsPrincipals: []
     ## @param mesh.operator.eventPrincipals [array] Exact mTLS source identities allowed to subscribe to events
     eventPrincipals: []
   ingress:
@@ -172,3 +183,21 @@ istioIngress:
 global:
   ## @param global.istioNamespace Istio control-plane namespace; must equal the release namespace when mesh.install is enabled
   istioNamespace: istio-system
+
+## @section Advance graph capacity
+capacity:
+  ## @param capacity.enabled Allow graph capacity plans to create autoscaler requests and inert placeholder Pods
+  enabled: false
+  ## @param capacity.provisioningClassName Autoscaler class used when a graph does not select one
+  provisioningClassName: best-effort-atomic-scale-up.autoscaling.x-k8s.io
+  ## @param capacity.maxPods Maximum forecast Pods per graph boundary, also bounded by each graph's maxPods
+  maxPods: 128
+  ## @param capacity.placeholderImage Inert image used to expose advance scheduling demand
+  placeholderImage: registry.k8s.io/pause:3.10
+  priorityClass:
+    ## @param capacity.priorityClass.create Install a release-scoped PriorityClass for placeholder Pods
+    create: true
+    ## @param capacity.priorityClass.name Existing PriorityClass name, or an override for the generated name
+    name: ""
+    ## @param capacity.priorityClass.value Placeholder priority; must meet the autoscaler's cutoff and be below workload priorities
+    value: -5

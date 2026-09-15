@@ -125,6 +125,13 @@ Secret-driven health replacement. Both networking integrations are disabled by d
 | `events.retention`      | Maximum observations retained in the shared replay stream                                 | `10000`         |
 | `events.maxConnections` | Maximum simultaneous event subscribers per operator replica                               | `16`            |
 
+### Scheduler metrics
+
+| Name                  | Description                                                                               | Value   |
+| --------------------- | ----------------------------------------------------------------------------------------- | ------- |
+| `metrics.enabled`     | Serve cached Prometheus and JSON metrics on an internal Service at port 8092              | `false` |
+| `metrics.graphLabels` | Include per-object hierarchy and direct-resource Prometheus series; increases cardinality | `false` |
+
 ### Operator endpoint and cache isolation
 
 | Name                             | Description                                                                              | Value   |
@@ -134,6 +141,7 @@ Secret-driven health replacement. Both networking integrations are disabled by d
 | `networkPolicy.apiServerPort`    | Kubernetes API endpoint port after this cluster's service translation                    | `443`   |
 | `networkPolicy.compositionPeers` | NetworkPolicy peers allowed to connect to the composition API                            | `[]`    |
 | `networkPolicy.eventPeers`       | NetworkPolicy peers allowed to subscribe to events                                       | `[]`    |
+| `networkPolicy.metricsPeers`     | Monitoring peers allowed to scrape the metrics API on port 8092                          | `[]`    |
 | `networkPolicy.healthPeers`      | Optional monitoring peers allowed to read port 8080 health metrics                       | `[]`    |
 | `networkPolicy.extraEgress`      | Additional NetworkPolicy egress rules, including any external cache or DNS configuration | `[]`    |
 
@@ -145,6 +153,7 @@ Secret-driven health replacement. Both networking integrations are disabled by d
 | `mesh.install`                        | Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled     | `false` |
 | `mesh.operator.enabled`               | Inject the operator pods and authorize their API and event ports with Istio               | `false` |
 | `mesh.operator.compositionPrincipals` | Exact mTLS source identities allowed to use the composition endpoint                      | `[]`    |
+| `mesh.operator.metricsPrincipals`     | Exact mTLS source identities allowed to read scheduler metrics                            | `[]`    |
 | `mesh.operator.eventPrincipals`       | Exact mTLS source identities allowed to subscribe to events                               | `[]`    |
 | `mesh.ingress.enabled`                | Install the optional upstream Istio gateway dependency                                    | `false` |
 | `mesh.ingress.hosts`                  | Hosts served by the Istio Gateway and VirtualService                                      | `[]`    |
@@ -158,5 +167,17 @@ Secret-driven health replacement. Both networking integrations are disabled by d
 | Name                    | Description                                                                                  | Value          |
 | ----------------------- | -------------------------------------------------------------------------------------------- | -------------- |
 | `global.istioNamespace` | Istio control-plane namespace; must equal the release namespace when mesh.install is enabled | `istio-system` |
+
+### Advance graph capacity
+
+| Name                             | Description                                                                              | Value                                              |
+| -------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `capacity.enabled`               | Allow graph capacity plans to create autoscaler requests and inert placeholder Pods      | `false`                                            |
+| `capacity.provisioningClassName` | Autoscaler class used when a graph does not select one                                   | `best-effort-atomic-scale-up.autoscaling.x-k8s.io` |
+| `capacity.maxPods`               | Maximum forecast Pods per graph boundary, also bounded by each graph's maxPods           | `128`                                              |
+| `capacity.placeholderImage`      | Inert image used to expose advance scheduling demand                                     | `registry.k8s.io/pause:3.10`                       |
+| `capacity.priorityClass.create`  | Install a release-scoped PriorityClass for placeholder Pods                              | `true`                                             |
+| `capacity.priorityClass.name`    | Existing PriorityClass name, or an override for the generated name                       | `""`                                               |
+| `capacity.priorityClass.value`   | Placeholder priority; must meet the autoscaler's cutoff and be below workload priorities | `-5`                                               |
 
 <!-- The parameters table is maintained by the helm-readme-generator pre-commit hook. -->

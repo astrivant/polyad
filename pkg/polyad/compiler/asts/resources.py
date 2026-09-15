@@ -423,7 +423,35 @@ class PeerAuthentication(SpecResource):
     resource_type: ClassVar[ResourceType] = ResourceType("PeerAuthentication", "security.istio.io/v1", "peerauthentications")
 
 
+@frozen(kw_only=True)
+class ProvisioningRequest(SpecResource):
+    """
+    A namespaced request for future workload capacity.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Autoscaler API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType("ProvisioningRequest", "autoscaling.x-k8s.io/v1", "provisioningrequests")
+
+
+@frozen(kw_only=True)
+class PodTemplateResource(Resource):
+    """
+    A core PodTemplate object consumed by the node autoscaler.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Native PodTemplate API identity.
+        template (PodTemplate): Future workload's scheduling specification.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType("PodTemplate", "v1", "podtemplates")
+    template: PodTemplate
+
+
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
+    ProvisioningRequest,
+    PodTemplateResource,
     NetworkPolicy,
     AuthorizationPolicy,
     PeerAuthentication,
@@ -453,3 +481,6 @@ RESOURCE_REGISTRY = {cls.resource_type.kind: cls for cls in RESOURCE_CLASSES}
 BOUNDARY_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.boundary)
 
 NETWORK_POLICY_KINDS = frozenset({"NetworkPolicy", "AuthorizationPolicy", "PeerAuthentication"})
+
+CAPACITY_KINDS = frozenset({"Pod", "PodTemplate", "ProvisioningRequest"})
+AUXILIARY_KINDS = NETWORK_POLICY_KINDS | CAPACITY_KINDS

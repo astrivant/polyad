@@ -99,6 +99,7 @@ See [deployment and lifecycle checks](operator.md#build-install-and-exercise).
 | [Persistent service](../examples/persistent.yaml) | Run a daemon with startup, readiness and liveness probes |
 | [Recurring epochs](../examples/feedback.yaml) | Run finite graph instances with a durable round counter |
 | [Spot work](../examples/ephemeral.yaml) | Apply explicit spot placement to an ephemeral graph |
+| [Advance capacity](../examples/capacity.yaml) | Prewarm capacity for downstream work while preparation runs |
 | [Graph composition](../examples/polygraph.yaml) | Compose nested graph types and inspect root status rollups |
 
 Apply examples after installing the operator. Spot examples require node labels

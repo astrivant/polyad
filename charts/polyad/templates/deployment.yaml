@@ -55,6 +55,24 @@ spec:
             - --namespace={{ .Release.Namespace }}
             - --liveness=http://0.0.0.0:8080/healthz
           env:
+            - name: POLYAD_METRICS_ENABLED
+              value: {{ .Values.metrics.enabled | quote }}
+            - name: POLYAD_METRICS_GRAPH_LABELS
+              value: {{ .Values.metrics.graphLabels | quote }}
+            - name: POLYAD_CAPACITY_ENABLED
+              value: {{ .Values.capacity.enabled | quote }}
+            {{- if .Values.capacity.enabled }}
+            - name: POLYAD_CAPACITY_CLASS
+              value: {{ .Values.capacity.provisioningClassName | quote }}
+            - name: POLYAD_CAPACITY_MAX_PODS
+              value: {{ .Values.capacity.maxPods | quote }}
+            - name: POLYAD_CAPACITY_IMAGE
+              value: {{ .Values.capacity.placeholderImage | quote }}
+            - name: POLYAD_CAPACITY_PRIORITY
+              value: {{ .Values.capacity.priorityClass.value | quote }}
+            - name: POLYAD_CAPACITY_PRIORITY_CLASS
+              value: {{ default (printf "%s-%s-polyad-capacity" .Release.Namespace .Release.Name) .Values.capacity.priorityClass.name | quote }}
+            {{- end }}
             {{- if .Values.mesh.operator.enabled }}
             - name: POLYAD_OPERATOR_MESH_ENABLED
               value: "true"
@@ -112,6 +130,10 @@ spec:
               readOnly: true
             {{- end }}
           ports:
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: 8092
+            {{- end }}
             {{- if .Values.events.enabled }}
             - name: events
               containerPort: 8091

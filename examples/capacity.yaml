@@ -1,0 +1,57 @@
+# Enable capacity.enabled in Helm and configure a compatible node autoscaler.
+# Replace the pool selector with a label provided by your node group.
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: capacity-prepare
+spec:
+  template:
+    spec:
+      containers:
+        - name: prepare
+          image: busybox:1.37
+          command: [sh, -c, 'sleep 60; echo prepared']
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: capacity-process
+spec:
+  template:
+    spec:
+      containers:
+        - name: process
+          image: busybox:1.37
+          command: [sh, -c, 'echo processing; sleep 30']
+          resources:
+            requests:
+              cpu: '2'
+              memory: 1Gi
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: advance-capacity
+spec:
+  capacity:
+    backend: Auto
+    lookaheadStages: 1
+    maxPods: 4
+    timeoutSeconds: 900
+  placement:
+    nodeSelector:
+      pool: processing
+  nodes:
+    - name: prepare
+      kind: Workload
+      ref: capacity-prepare
+    - name: process
+      kind: Workload
+      ref: capacity-process
+      requires:
+        - node: prepare
+          condition: completed

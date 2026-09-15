@@ -23,6 +23,7 @@ from polyad.compiler.storage import configure_storage, storage_fields
 from polyad.graph.gates import DelayGate, Gate
 from polyad.graph.topology import converter, topology
 from polyad.operator.api import GROUP
+from polyad.operator.capacity import CapacityManager
 from polyad.operator.compositions import drain_composition, reconcile_composition
 from polyad.operator.graph_status import instance_metrics
 from polyad.operator.graph_status import observed as observed
@@ -216,6 +217,9 @@ class Controller:
             await self.report_metrics(key, pending=error)
             raise
         except (ValueError, TypeError, BaseValidationError):
+            latest = await self.api.get(*key)
+            if latest is not None:
+                await CapacityManager(self, latest).cancel("graph validation failed")
             await self.report_metrics(key)
             raise
         else:
@@ -267,6 +271,7 @@ class Controller:
         if obj is None:
             return
         if obj["metadata"].get("deletionTimestamp"):
+            await CapacityManager(self, obj).cancel("graph deletion requested")
             if not await self.drain(obj):
                 raise Pending("waiting for owned resources and their finalizers", phase="Draining")
             if FINALIZER in obj["metadata"].get("finalizers", []):
@@ -430,6 +435,7 @@ class Controller:
             age = (datetime.now(UTC) - datetime.fromisoformat(meta["creationTimestamp"].replace("Z", "+00:00"))).total_seconds()
             stopped |= age >= limit
         if graph.suspend or stopped:
+            await CapacityManager(self, obj).cancel("graph suspended or stopped")
             drained = await self.drain(obj)
             await self.status(
                 obj,
@@ -505,6 +511,9 @@ class Controller:
                 ):
                     raise ValueError("persistent nested boundaries cannot satisfy finite completion")
                 spec["templateOnly"] = False
+                if graph.capacity is not None:
+                    target_spec = spec["graph"] if node.kind == "Feedback" else spec
+                    target_spec.setdefault("capacity", converter.unstructure(graph.capacity))
                 if graph.rules:
                     target_spec = spec["graph"] if node.kind == "Feedback" else spec
                     inherited_rules = set()
@@ -545,7 +554,7 @@ class Controller:
                     )
             desired[node.name] = trace_child(desired[node.name], obj, node, definition)
         await ensure_policies(self, obj, network_plans)
-        children = [child for child in await self.api.owned(namespace, meta["uid"]) if child["kind"] not in POLICY_KINDS]
+        children = [child for child in await self.api.owned(namespace, meta["uid"]) if child["kind"] not in asts.AUXILIARY_KINDS]
         present_names = {child["metadata"]["name"] for child in children}
         for name, present_storage in persistence.items():
             if present_storage.enabled and desired[name].metadata.name in present_names:
@@ -571,6 +580,8 @@ class Controller:
             for node in graph.nodes
             if desired[node.name].metadata.name in current
         }
+        capacity = CapacityManager(self, obj)
+        await capacity.prepare(graph, desired, states)
         facts = {f"{name}.{condition}": value for name, state in states.items() for condition, value in state.items()}
         used = sum(node.slots for node in graph.nodes if node.name in states and not states[node.name]["completed"])
         delays: dict[str, Any] = {name: None for name in obj.get("status", {}).get("delays", {})}
@@ -609,7 +620,10 @@ class Controller:
             storage = persistence.get(node.name)
             if storage and storage.enabled:
                 await self.storage_claim(namespace, storage)
-            await self.ensure(desired[node.name])
+            admitted = await capacity.admit(node.name, desired[node.name])
+            if admitted is None:
+                continue
+            await self.ensure(admitted)
             used += node.slots
         failed = any(state["failed"] for state in states.values())
         complete = (

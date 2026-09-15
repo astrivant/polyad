@@ -4,6 +4,11 @@ Attrs resource trees and cattrs codecs for the Kubernetes compiler.
 
 from __future__ import annotations
 
+from polyad.compiler.asts.capacity import CapacityNodeStatus as CapacityNodeStatus
+from polyad.compiler.asts.capacity import CapacityStatus as CapacityStatus
+from polyad.compiler.asts.capacity import PodSet as PodSet
+from polyad.compiler.asts.capacity import PodTemplateReference as PodTemplateReference
+from polyad.compiler.asts.capacity import ProvisioningRequestSpec as ProvisioningRequestSpec
 from polyad.compiler.asts.codec import converter as converter
 from polyad.compiler.asts.codec import encode_body as encode_body
 from polyad.compiler.asts.codec import from_document as from_document
@@ -17,7 +22,9 @@ from polyad.compiler.asts.common import OwnerReference as OwnerReference
 from polyad.compiler.asts.common import ResourceType as ResourceType
 from polyad.compiler.asts.common import StatusPatch as StatusPatch
 from polyad.compiler.asts.common import UIDPreconditions as UIDPreconditions
+from polyad.compiler.asts.resources import AUXILIARY_KINDS as AUXILIARY_KINDS
 from polyad.compiler.asts.resources import BOUNDARY_KINDS as BOUNDARY_KINDS
+from polyad.compiler.asts.resources import CAPACITY_KINDS as CAPACITY_KINDS
 from polyad.compiler.asts.resources import NETWORK_POLICY_KINDS as NETWORK_POLICY_KINDS
 from polyad.compiler.asts.resources import RESOURCE_TYPES as RESOURCE_TYPES
 from polyad.compiler.asts.resources import AuthorizationPolicy as AuthorizationPolicy
@@ -43,7 +50,9 @@ from polyad.compiler.asts.resources import PeerAuthentication as PeerAuthenticat
 from polyad.compiler.asts.resources import PersistentVolumeClaim as PersistentVolumeClaim
 from polyad.compiler.asts.resources import Pod as Pod
 from polyad.compiler.asts.resources import PodTemplate as PodTemplate
+from polyad.compiler.asts.resources import PodTemplateResource as PodTemplateResource
 from polyad.compiler.asts.resources import PolyGraph as PolyGraph
+from polyad.compiler.asts.resources import ProvisioningRequest as ProvisioningRequest
 from polyad.compiler.asts.resources import Resource as Resource
 from polyad.compiler.asts.resources import ResourceDefinition as ResourceDefinition
 from polyad.compiler.asts.resources import Rewrite as Rewrite

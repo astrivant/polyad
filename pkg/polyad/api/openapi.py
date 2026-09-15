@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 from apispec import APISpec
 
 from polyad.compiler.composition import COMPOSITION_KINDS
+from polyad.compiler.schema import structural_schema
+from polyad.graph.capacity import CapacityPlan
 
 if TYPE_CHECKING:
     from typing import Any
@@ -78,6 +80,7 @@ def schemas() -> dict[str, dict[str, Any]]:
             "required": ["nodes"],
             "additionalProperties": False,
             "properties": {
+                "capacity": structural_schema(CapacityPlan),
                 "nodes": {"type": "array", "items": reference("Node")},
                 "connections": {"type": "array", "items": reference("Connection")},
                 "mode": {"type": "string", "enum": ["finite", "persistent"], "default": "finite"},

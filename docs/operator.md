@@ -124,6 +124,8 @@ on the operator pods.
 
 This is a **shared placement boundary**, not gang scheduling or an atomic capacity reservation. Pods can occupy different nodes in the selected slice, and different allowed zones; setting one zone label targets one zone. Kubernetes still checks each pod's CPU, memory, GPU requests and constraints individually. A graph may be partially admitted while waiting for capacity. Co-starting an entire graph or choosing one common pool dynamically from several alternatives would require a separate group-admission/reservation mechanism. PVC/resource selection remains in Resource manifests (`storageClassName`, volume selectors, etc.); node placement applies to pod execution.
 
+For advance capacity requests, see [capacity planning](capacity.md).
+
 ## Ephemeral execution
 
 “Ephemeral” means compute can disappear before completion. Graph intent and observations remain durable in Kubernetes. It does **not** mean the CR deletes itself after running or checkpoints are stored on a disposable disk.
@@ -507,6 +509,9 @@ node names to measure an observed subset.
 The operator's startup and liveness probes use Kopf's `/healthz` endpoint and the registered worker probe. Readiness also checks API/Lease renewal freshness and Dragonfly connectivity (`apiFresh` and `cacheFresh`). Periodic API scans and cache pings keep connectivity observations current even in an empty namespace. A slow or unavailable API can make the pod unready without triggering a restart loop. A stopped worker fails liveness. The health handler never treats an indefinitely running workload as a fault.
 
 Daemon containers must supply startup, readiness and liveness probes. Graph admission observes current-generation Deployment ready/available replicas. Readiness edges control initial admission only: downstream work already admitted continues if upstream readiness later drops. End-to-end availability and recovery require application retry/backpressure contracts.
+
+The optional [metrics API](metrics.md) exposes Prometheus and JSON snapshots on
+a separate listener, including queue pressure and graph hierarchy inventory.
 
 ### Backlog metrics
 

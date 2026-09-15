@@ -144,6 +144,8 @@ async def ensure_policies(controller: Controller, obj: dict[str, Any], plans: di
         raise Pending("network guards persisted; refresh before workload admission")
     children = await controller.api.owned(namespace, uid)
     for child in children:
+        if f"{asts.GROUP}/capacity" in child["metadata"].get("labels", {}):
+            continue
         if child["kind"] in POLICY_KINDS and (child["kind"], child["metadata"]["name"]) not in wanted:
             branch = child["metadata"].get("labels", {}).get(f"{asts.GROUP}/node", "").removeprefix("net-")
             if branch not in plans and any(

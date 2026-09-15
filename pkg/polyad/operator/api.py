@@ -26,7 +26,7 @@ KINDS = {kind: descriptor.plural for kind, descriptor in RESOURCE_TYPES.items() 
 BUILTINS = {kind: (descriptor.prefix, descriptor.plural) for kind, descriptor in RESOURCE_TYPES.items() if kind not in KINDS}
 
 
-WORKLOAD_KINDS = tuple(kind for kind in BUILTINS if kind not in {"Lease", "Pod"})
+WORKLOAD_KINDS = tuple(kind for kind in BUILTINS if kind != "Lease")
 
 
 class API:
@@ -185,7 +185,14 @@ class API:
         kinds = tuple(
             kind
             for kind in WORKLOAD_KINDS
-            if kind not in {"AuthorizationPolicy", "PeerAuthentication"} or os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true"
+            if (
+                kind not in {"AuthorizationPolicy", "PeerAuthentication"}
+                or os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true"
+            )
+            and (
+                kind not in {"Pod", "PodTemplate", "ProvisioningRequest"}
+                or os.environ.get("POLYAD_CAPACITY_ENABLED", "false").lower() == "true"
+            )
         )
         for kind in (*kinds, "Graph", "EphemeralGraph", "Feedback", "PolyGraph"):
             result = await self.request("GET", kind, namespace, query=[("labelSelector", f"{GROUP}/owner={uid}")])

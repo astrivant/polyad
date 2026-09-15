@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import BOUNDARY_KINDS, GROUP, NETWORK_POLICY_KINDS, RollupMetrics, converter, to_document
+from polyad.compiler.asts import AUXILIARY_KINDS, BOUNDARY_KINDS, GROUP, RollupMetrics, converter, to_document
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 
 PHASES = ("Reconciling", "Ready", "Running", "Waiting", "Draining", "Suspended", "Stopped", "Completed", "Failed", "Invalid", "Unknown")
 COUNTERS = (
+    "capacityPlans",
+    "capacityRequestedPods",
+    "capacityReadyPods",
+    "capacityFailedPlans",
     "leafNodes",
     "observedLeafNodes",
     "pendingLeafNodes",
@@ -74,11 +78,26 @@ def measure_subtree(
         "graphsByPhase": {name: int(name == phase) for name in PHASES},
         **dict.fromkeys(COUNTERS, 0),
     }
+    capacity = status.get("capacity") or {}
+    if (
+        capacity.get("observedGeneration") == generation
+        and not obj["metadata"].get("deletionTimestamp")
+        and phase not in {"Suspended", "Stopped", "Draining"}
+    ):
+        for record in capacity.get("nodes", {}).values():
+            if not record:
+                continue
+            if record.get("phase") in {"Failed", "Expired"}:
+                result["capacityFailedPlans"] += 1
+            elif record.get("phase") not in {"Consumed", "Cancelled"}:
+                result["capacityPlans"] += 1
+                result["capacityRequestedPods"] += record.get("pods", 0)
+                result["capacityReadyPods"] += record.get("readyPods", 0)
     spec = obj.get("spec", {})
     # Feedback's template describes the epoch child, not a second set of leaf work.
     nodes = spec.get("nodes", []) if obj["kind"] != "Feedback" and valid else []
     by_node = {
-        child["metadata"].get("labels", {}).get(f"{GROUP}/node"): child for child in children if child["kind"] not in NETWORK_POLICY_KINDS
+        child["metadata"].get("labels", {}).get(f"{GROUP}/node"): child for child in children if child["kind"] not in AUXILIARY_KINDS
     }
     for node in nodes:
         if node["kind"] in BOUNDARY_KINDS:

@@ -1,0 +1,10 @@
+{{- if and .Values.capacity.enabled .Values.capacity.priorityClass.create }}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ default (printf "%s-%s-polyad-capacity" .Release.Namespace .Release.Name) .Values.capacity.priorityClass.name }}
+value: {{ .Values.capacity.priorityClass.value }}
+globalDefault: false
+preemptionPolicy: Never
+description: Inert Polyad capacity placeholders yield to higher-priority workloads.
+{{- end }}

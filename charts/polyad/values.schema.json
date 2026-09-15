@@ -1188,6 +1188,62 @@
               }
             }
           }
+        },
+        "metricsPeers": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "namespaceSelector": {
+                "type": "object"
+              },
+              "podSelector": {
+                "type": "object"
+              },
+              "ipBlock": {
+                "type": "object",
+                "required": [
+                  "cidr"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "cidr": {
+                    "type": "string",
+                    "format": "cidr"
+                  },
+                  "except": {
+                    "type": "array",
+                    "maxItems": 32,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "ipBlock"
+              ],
+              "anyOf": [
+                {
+                  "required": [
+                    "namespaceSelector"
+                  ]
+                },
+                {
+                  "required": [
+                    "podSelector"
+                  ]
+                }
+              ]
+            }
+          }
         }
       },
       "allOf": [
@@ -1247,6 +1303,15 @@
               }
             },
             "eventPrincipals": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "metricsPrincipals": {
               "type": "array",
               "maxItems": 32,
               "items": {
@@ -1858,6 +1923,80 @@
             }
           },
           "description": "Null retains the pinned upstream Istio profile default."
+        }
+      }
+    },
+    "capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "provisioningClassName",
+        "maxPods",
+        "placeholderImage",
+        "priorityClass"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "provisioningClassName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+          "not": {
+            "const": "check-capacity.autoscaling.x-k8s.io"
+          }
+        },
+        "maxPods": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "placeholderImage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "priorityClass": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "create",
+            "name",
+            "value"
+          ],
+          "properties": {
+            "create": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 253,
+              "pattern": "^$|^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": -1000000000,
+              "maximum": -1
+            }
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "graphLabels"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "graphLabels": {
+          "type": "boolean"
         }
       }
     }

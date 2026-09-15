@@ -19,6 +19,9 @@ from polyad.api.server import CompositionServer
 from polyad.cache import cache_url
 from polyad.events.server import EventServer
 from polyad.events.store import EventStore
+from polyad.metrics.inventory import inventory
+from polyad.metrics.server import MetricsServer
+from polyad.metrics.store import MetricsStore
 from polyad.operator.api import API, GROUP, VERSION
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.coordination import SHARDS, Coordinator, NotOwner, active_shard
@@ -38,6 +41,10 @@ shared: SharedQueue | None = None
 http: CompositionServer | None = None
 events: EventStore | None = None
 event_http: EventServer | None = None
+metrics_http: MetricsServer | None = None
+metrics_store = MetricsStore()
+inventory_sample: tuple[float, dict[str, Any]] | None = None
+inventory_sample_ok = False
 last_api_success = 0.0
 initialized = False
 background: list[asyncio.Task[None]] = []
@@ -57,7 +64,7 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     Returns:
         None: No return value.
     """
-    global queue, controller, coordinator, shared, initialized, http, events, event_http
+    global queue, controller, coordinator, shared, initialized, http, events, event_http, metrics_http
     settings.posting.enabled = False
     settings.scanning.disabled = True
     settings.networking.request_timeout = 30
@@ -78,6 +85,9 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
         event_http = EventServer(
             events, namespace, credential_token("EVENTS"), connections=int(os.environ.get("POLYAD_EVENTS_CONNECTIONS", "16"))
         )
+    if os.environ.get("POLYAD_METRICS_ENABLED", "false").lower() == "true":
+        metrics_http = MetricsServer(metrics_store)
+        background.append(asyncio.create_task(metrics_loop()))
     background.append(asyncio.create_task(watch_credentials()))
     initialized = True
     background.extend(
@@ -131,17 +141,57 @@ async def rescan_loop() -> None:
     Returns:
         None: No return value.
     """
-    global last_api_success
+    global last_api_success, inventory_sample, inventory_sample_ok
     assert coordinator is not None and queue is not None
     while True:
         try:
-            for kind in KINDS:
+            scan_started = time.monotonic()
+            objects = []
+            definitions = ("Workload", "Daemon", "Ephemeral", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if metrics_http else ()
+            for kind in (*KINDS, *definitions):
                 result = await coordinator.api.request("GET", kind, coordinator.namespace)
                 last_api_success = time.monotonic()
-                for obj in result.get("items", []):
-                    await publish((kind, coordinator.namespace, obj["metadata"]["name"]))
+                if metrics_http:
+                    objects.extend(result.get("items", []))
+                if kind in KINDS:
+                    for obj in result.get("items", []):
+                        await publish((kind, coordinator.namespace, obj["metadata"]["name"]))
+            if metrics_http:
+                inventory_sample = (scan_started, inventory(objects))
+                inventory_sample_ok = True
         except Exception:
+            inventory_sample_ok = False
             logger.exception("Resource rescan failed; retrying from fresh state")
+        await asyncio.sleep(5)
+
+
+async def metrics_loop() -> None:
+    """
+    Publish cached observations without adding API requests to HTTP scrape paths.
+
+    Returns:
+        None: No return value.
+    """
+    assert coordinator is not None and shared is not None and queue is not None
+    while True:
+        age = time.monotonic() - inventory_sample[0] if inventory_sample else None
+        tracked = dict(inventory_sample[1]) if inventory_sample else {"total": None, "byKind": [], "objects": []}
+        tracked.update(sampleAgeSeconds=age, fresh=inventory_sample_ok and age is not None and age < 30)
+        await asyncio.to_thread(
+            metrics_store.publish,
+            {
+                "namespace": coordinator.namespace,
+                "replica": coordinator.identity,
+                "leader": coordinator.leader,
+                "shards": sorted(coordinator.owned),
+                "pending": queue.queue.qsize(),
+                "writes": write_backlog(),
+                "inbound": shared.backlog(tuple(coordinator.owned)),
+                "shardBacklogs": shared.backlog_sample[1] if shared.backlog_sample else {},
+                "inventory": tracked,
+            },
+            graph_labels=os.environ.get("POLYAD_METRICS_GRAPH_LABELS", "false").lower() == "true",
+        )
         await asyncio.sleep(5)
 
 
@@ -311,7 +361,10 @@ def health(**_: Any) -> dict[str, Any]:
         raise RuntimeError("composition API thread is unavailable")
     if event_http is not None and not event_http.thread.is_alive():
         raise RuntimeError("events API thread is unavailable")
+    if metrics_http is not None and not metrics_http.thread.is_alive():
+        raise RuntimeError("metrics API thread is unavailable")
     return {
+        "metricsEnabled": metrics_http is not None,
         "eventsEnabled": event_http is not None,
         "initialized": initialized,
         "worker": True,
@@ -343,6 +396,8 @@ async def cleanup(**_: Any) -> None:
     """
     global initialized
     initialized = False
+    if metrics_http:
+        await metrics_http.close()
     if event_http:
         await event_http.close()
     if http:

@@ -284,3 +284,73 @@ def test_inline_keys_create_secrets_and_checksum_rollouts():
     assert deployment["spec"]["template"]["metadata"]["annotations"]["checksum/credentials"]
     mounts = deployment["spec"]["template"]["spec"]["containers"][0]["volumeMounts"]
     assert mounts[0]["readOnly"] and "subPath" not in mounts[0]
+
+
+def test_capacity_permissions_and_priority_are_opt_in():
+    """
+    Capacity plans receive bounded configuration and namespaced helper permissions.
+    """
+    default = render()
+    assert not any(obj["kind"] == "PriorityClass" for obj in default)
+    objects = render("capacity.enabled=true")
+    priority = next(obj for obj in objects if obj["kind"] == "PriorityClass")
+    assert priority["value"] == -5 and priority["preemptionPolicy"] == "Never"
+    assert priority["metadata"]["name"] == "test-test-polyad-capacity"
+    role = next(obj for obj in objects if obj["kind"] == "Role" and obj["metadata"]["name"] == "test-polyad")
+    rule = next(rule for rule in role["rules"] if "provisioningrequests" in rule["resources"])
+    assert rule["verbs"] == ["get", "list", "create", "delete"]
+    operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    env = {entry["name"]: entry.get("value") for entry in operator["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert env["POLYAD_CAPACITY_ENABLED"] == "true"
+    assert env["POLYAD_CAPACITY_MAX_PODS"] == "128"
+    existing = render("capacity.enabled=true", "capacity.priorityClass.create=false", "capacity.priorityClass.name=spare")
+    assert not any(obj["kind"] == "PriorityClass" for obj in existing)
+
+
+def test_capacity_schemas_come_from_public_models():
+    """
+    Graphs, Feedback epochs and rewrites expose matching capacity policy schemas.
+    """
+    from polyad.compiler.asts import CapacityStatus
+    from polyad.compiler.schema import structural_schema
+    from polyad.graph import CapacityPlan
+
+    for kind in ("graphs", "polygraphs", "ephemeralgraphs", "feedbacks", "rewrites"):
+        crd = yaml.safe_load((CHART / "crds" / f"{kind}.yaml").read_text())
+        props = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]
+        spec = props["spec"]["properties"]
+        if kind in {"feedbacks", "rewrites"}:
+            spec = spec["graph" if kind == "feedbacks" else "topology"]["properties"]
+        assert spec["capacity"] == structural_schema(CapacityPlan)
+        if kind != "rewrites":
+            assert props["status"]["properties"]["capacity"] == structural_schema(CapacityStatus)
+
+
+def test_optional_metrics_service_and_access_policies():
+    """
+    Match monitoring traffic to a dedicated port under both network and mesh isolation.
+    """
+    assert not any(obj["kind"] == "Service" and obj["metadata"]["name"] == "test-polyad-metrics" for obj in render())
+    objects = render(
+        "metrics.enabled=true",
+        "metrics.graphLabels=true",
+        "networkPolicy.enabled=true",
+        "networkPolicy.apiServerCIDRs[0]=10.0.0.1/32",
+        "networkPolicy.metricsPeers[0].namespaceSelector.matchLabels.name=monitoring",
+        "mesh.enabled=true",
+        "mesh.operator.enabled=true",
+        "mesh.operator.metricsPrincipals[0]=cluster.local/ns/monitoring/sa/prometheus",
+    )
+    service = next(obj for obj in objects if obj["kind"] == "Service" and obj["metadata"]["name"] == "test-polyad-metrics")
+    assert service["spec"]["type"] == "ClusterIP"
+    assert service["spec"]["ports"] == [{"name": "metrics", "port": 8092, "targetPort": "metrics"}]
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    container = deployment["spec"]["template"]["spec"]["containers"][0]
+    assert {"name": "metrics", "containerPort": 8092} in container["ports"]
+    assert {"name": "POLYAD_METRICS_GRAPH_LABELS", "value": "true"} in container["env"]
+    network = next(obj for obj in objects if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "test-polyad")
+    assert any(rule["ports"] == [{"protocol": "TCP", "port": 8092}] for rule in network["spec"]["ingress"])
+    mesh = next(obj for obj in objects if obj["kind"] == "AuthorizationPolicy")
+    rule = next(rule for rule in mesh["spec"]["rules"] if rule["to"][0]["operation"]["ports"] == ["8092"])
+    assert rule["from"][0]["source"]["principals"] == ["cluster.local/ns/monitoring/sa/prometheus"]
+    assert rule["to"][0]["operation"]["paths"] == ["/metrics", "/v1/metrics", "/openapi.json"]

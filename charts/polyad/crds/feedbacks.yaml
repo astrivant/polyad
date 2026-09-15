@@ -59,6 +59,45 @@ spec:
               graph:
                 type: object
                 properties:
+                  capacity:
+                    type: object
+                    description: Forecast missing execution nodes before their admission dependencies finish.
+                    properties:
+                      backend:
+                        type: string
+                        enum:
+                        - Auto
+                        - ProvisioningRequest
+                        - Placeholders
+                        description: Preferred capacity mechanism.
+                      lookaheadStages:
+                        type: integer
+                        description: Number of uncreated dependency layers to forecast at each boundary.
+                        minimum: 1
+                        maximum: 32
+                      maxPods:
+                        type: integer
+                        description: Maximum forecast Pods held by this boundary at once.
+                        minimum: 1
+                        maximum: 1024
+                      timeoutSeconds:
+                        type: integer
+                        description: Maximum time to hold an unconsumed request, including gate waits.
+                        minimum: 10
+                        maximum: 86400
+                      provisioningClassName:
+                        type: string
+                        description: Autoscaler provisioning class; empty uses the operator default.
+                      parameters:
+                        type: object
+                        additionalProperties:
+                          type: string
+                          maxLength: 255
+                        description: Provider-specific ProvisioningRequest parameters.
+                        maxProperties: 100
+                      retryToken:
+                        type: string
+                        description: Change this value to retry a failed or expired plan.
                   network:
                     type: object
                     description: Isolate a graph subtree and intersect its exceptions with inherited constraints.
@@ -686,6 +725,66 @@ spec:
             description: Operator-observed instance lifecycle and graph metrics. Inert templateOnly definitions do not
               publish execution status. Updates are fenced by resourceVersion.
             properties:
+              capacity:
+                type: object
+                description: Expose durable advance capacity plans independently of execution readiness.
+                properties:
+                  observedGeneration:
+                    type: integer
+                    description: Graph generation used for this forecast.
+                  nodes:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      description: Retain generation-fenced provisioning and handoff state for one execution node.
+                      properties:
+                        revision:
+                          type: string
+                          description: Hash of the graph generation, workload and capacity policy.
+                        backend:
+                          type: string
+                          description: Backend selected for this revision.
+                        phase:
+                          type: string
+                          enum:
+                          - Planned
+                          - Provisioning
+                          - Ready
+                          - Releasing
+                          - Consumed
+                          - Failed
+                          - Expired
+                          - Cancelled
+                          description: Current capacity lifecycle.
+                        startedAt:
+                          type: string
+                          description: UTC start of this bounded request.
+                        pods:
+                          type: integer
+                          description: Requested Pod count.
+                        waitSeconds:
+                          type: integer
+                          description: Elapsed time since the capacity forecast was recorded.
+                        readyPods:
+                          type: integer
+                          description: Pods with freshly observed usable capacity.
+                        resources:
+                          type: object
+                          additionalProperties:
+                            type: string
+                          description: Total requested resources for this node's future Pods.
+                        message:
+                          type: string
+                          description: Provisioning or expiry explanation.
+                        requestName:
+                          type: string
+                          description: ProvisioningRequest name, or empty for placeholders.
+                      required:
+                      - revision
+                      - backend
+                      - startedAt
+                      - pods
+                    description: Per-execution-node capacity lifecycle.
               structuralRules:
                 type: array
                 description: Most recent successful admission policy observations, including rule UID and generation,
@@ -729,56 +828,56 @@ spec:
                     description: Metrics cover this scheduling boundary only.
                   observedGeneration:
                     type: integer
-                    minimum: 0
                     description: Parent spec generation used to compute these metrics, independently of lifecycle observedGeneration.
+                    minimum: 0
                   topology:
                     type: object
                     description: Desired shape of the current graph spec, or Feedback epoch template. Null when invalid.
                     properties:
                       nodeCount:
                         type: integer
-                        minimum: 0
                         description: Number of nodes in this graph or induced observed subset.
+                        minimum: 0
                       nodesByKind:
                         type: object
                         description: Node counts by execution abstraction.
                         properties:
                           Workload:
                             type: integer
-                            minimum: 0
                             description: Number of Workload nodes.
+                            minimum: 0
                           Daemon:
                             type: integer
-                            minimum: 0
                             description: Number of Daemon nodes.
+                            minimum: 0
                           Ephemeral:
                             type: integer
-                            minimum: 0
                             description: Number of Ephemeral nodes.
+                            minimum: 0
                           Resource:
                             type: integer
-                            minimum: 0
                             description: Number of Resource nodes.
+                            minimum: 0
                           Graph:
                             type: integer
-                            minimum: 0
                             description: Number of Graph nodes.
+                            minimum: 0
                           EphemeralGraph:
                             type: integer
-                            minimum: 0
                             description: Number of EphemeralGraph nodes.
+                            minimum: 0
                           Feedback:
                             type: integer
-                            minimum: 0
                             description: Number of Feedback nodes.
+                            minimum: 0
                           PolyGraph:
                             type: integer
-                            minimum: 0
                             description: Number of PolyGraph boundaries.
+                            minimum: 0
                       subgraphCount:
                         type: integer
-                        minimum: 0
                         description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                        minimum: 0
                       admission:
                         type: object
                         description: Acyclic lifecycle dependencies used for admission.
@@ -807,24 +906,24 @@ spec:
                               cost.
                           edgeCount:
                             type: integer
-                            minimum: 0
                             description: Number of distinct dependency pairs, regardless of lifecycle predicate.
+                            minimum: 0
                           rootCount:
                             type: integer
-                            minimum: 0
                             description: Nodes with no dependencies in this subset.
+                            minimum: 0
                           leafCount:
                             type: integer
-                            minimum: 0
                             description: Nodes with no dependents in this subset.
+                            minimum: 0
                           maxFanIn:
                             type: integer
-                            minimum: 0
                             description: Largest number of direct prerequisites.
+                            minimum: 0
                           maxFanOut:
                             type: integer
-                            minimum: 0
                             description: Largest number of direct dependents.
+                            minimum: 0
                       connections:
                         type: object
                         description: Directed data-flow connections, which may contain cycles. Isolated nodes are included
@@ -832,25 +931,25 @@ spec:
                         properties:
                           edgeCount:
                             type: integer
-                            minimum: 0
                             description: Number of distinct directed data-flow connections, including self-loops.
+                            minimum: 0
                           weakComponents:
                             type: integer
-                            minimum: 0
                             description: Connected components after ignoring edge direction.
+                            minimum: 0
                           strongComponents:
                             type: integer
-                            minimum: 0
                             description: Maximal components in which each node can reach every other node.
+                            minimum: 0
                           cyclicComponents:
                             type: integer
-                            minimum: 0
                             description: Strong components with multiple nodes or a self-loop; this does not enumerate
                               individual cycles.
+                            minimum: 0
                           largestStrongComponent:
                             type: integer
-                            minimum: 0
                             description: Number of nodes in the largest strongly connected component.
+                            minimum: 0
                           condensation:
                             type: object
                             description: Layer shape after collapsing each strongly connected component to one node.
@@ -858,14 +957,14 @@ spec:
                             properties:
                               depth:
                                 type: integer
-                                minimum: 0
                                 description: Number of dependency layers; zero for an empty graph and one for independent
                                   nodes.
+                                minimum: 0
                               breadth:
                                 type: integer
-                                minimum: 0
                                 description: Largest layer size. This is layer breadth, not maximum antichain width
                                   or available concurrency.
+                                minimum: 0
                               layerWidths:
                                 type: array
                                 items:
@@ -875,9 +974,9 @@ spec:
                                 description: Node counts by earliest topological generation, starting at the roots.
                               breadthDepth:
                                 type: integer
-                                minimum: 0
                                 description: Breadth multiplied by depth; a shape summary, not an estimate of execution
                                   cost.
+                                minimum: 0
                     nullable: true
                   observedTopology:
                     type: object
@@ -887,48 +986,48 @@ spec:
                     properties:
                       nodeCount:
                         type: integer
-                        minimum: 0
                         description: Number of nodes in this graph or induced observed subset.
+                        minimum: 0
                       nodesByKind:
                         type: object
                         description: Node counts by execution abstraction.
                         properties:
                           Workload:
                             type: integer
-                            minimum: 0
                             description: Number of Workload nodes.
+                            minimum: 0
                           Daemon:
                             type: integer
-                            minimum: 0
                             description: Number of Daemon nodes.
+                            minimum: 0
                           Ephemeral:
                             type: integer
-                            minimum: 0
                             description: Number of Ephemeral nodes.
+                            minimum: 0
                           Resource:
                             type: integer
-                            minimum: 0
                             description: Number of Resource nodes.
+                            minimum: 0
                           Graph:
                             type: integer
-                            minimum: 0
                             description: Number of Graph nodes.
+                            minimum: 0
                           EphemeralGraph:
                             type: integer
-                            minimum: 0
                             description: Number of EphemeralGraph nodes.
+                            minimum: 0
                           Feedback:
                             type: integer
-                            minimum: 0
                             description: Number of Feedback nodes.
+                            minimum: 0
                           PolyGraph:
                             type: integer
-                            minimum: 0
                             description: Number of PolyGraph boundaries.
+                            minimum: 0
                       subgraphCount:
                         type: integer
-                        minimum: 0
                         description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                        minimum: 0
                       admission:
                         type: object
                         description: Acyclic lifecycle dependencies used for admission.
@@ -957,24 +1056,24 @@ spec:
                               cost.
                           edgeCount:
                             type: integer
-                            minimum: 0
                             description: Number of distinct dependency pairs, regardless of lifecycle predicate.
+                            minimum: 0
                           rootCount:
                             type: integer
-                            minimum: 0
                             description: Nodes with no dependencies in this subset.
+                            minimum: 0
                           leafCount:
                             type: integer
-                            minimum: 0
                             description: Nodes with no dependents in this subset.
+                            minimum: 0
                           maxFanIn:
                             type: integer
-                            minimum: 0
                             description: Largest number of direct prerequisites.
+                            minimum: 0
                           maxFanOut:
                             type: integer
-                            minimum: 0
                             description: Largest number of direct dependents.
+                            minimum: 0
                       connections:
                         type: object
                         description: Directed data-flow connections, which may contain cycles. Isolated nodes are included
@@ -982,25 +1081,25 @@ spec:
                         properties:
                           edgeCount:
                             type: integer
-                            minimum: 0
                             description: Number of distinct directed data-flow connections, including self-loops.
+                            minimum: 0
                           weakComponents:
                             type: integer
-                            minimum: 0
                             description: Connected components after ignoring edge direction.
+                            minimum: 0
                           strongComponents:
                             type: integer
-                            minimum: 0
                             description: Maximal components in which each node can reach every other node.
+                            minimum: 0
                           cyclicComponents:
                             type: integer
-                            minimum: 0
                             description: Strong components with multiple nodes or a self-loop; this does not enumerate
                               individual cycles.
+                            minimum: 0
                           largestStrongComponent:
                             type: integer
-                            minimum: 0
                             description: Number of nodes in the largest strongly connected component.
+                            minimum: 0
                           condensation:
                             type: object
                             description: Layer shape after collapsing each strongly connected component to one node.
@@ -1008,14 +1107,14 @@ spec:
                             properties:
                               depth:
                                 type: integer
-                                minimum: 0
                                 description: Number of dependency layers; zero for an empty graph and one for independent
                                   nodes.
+                                minimum: 0
                               breadth:
                                 type: integer
-                                minimum: 0
                                 description: Largest layer size. This is layer breadth, not maximum antichain width
                                   or available concurrency.
+                                minimum: 0
                               layerWidths:
                                 type: array
                                 items:
@@ -1025,9 +1124,9 @@ spec:
                                 description: Node counts by earliest topological generation, starting at the roots.
                               breadthDepth:
                                 type: integer
-                                minimum: 0
                                 description: Breadth multiplied by depth; a shape summary, not an estimate of execution
                                   cost.
+                                minimum: 0
                     nullable: true
                   execution:
                     type: object
@@ -1038,47 +1137,47 @@ spec:
                     properties:
                       observedNodes:
                         type: integer
-                        minimum: 0
                         description: Declared nodes with an owned execution resource, including terminating resources.
+                        minimum: 0
                       pendingNodes:
                         type: integer
-                        minimum: 0
                         description: Declared nodes with no observed execution resource; includes dependency, gate and
                           capacity waits.
+                        minimum: 0
                       activeNodes:
                         type: integer
-                        minimum: 0
                         description: Observed nodes that are not terminating, completed or failed. This is not a Pod
                           Running count.
+                        minimum: 0
                       readyNodes:
                         type: integer
-                        minimum: 0
                         description: Observed nodes satisfying their resource readiness predicate.
+                        minimum: 0
                       completedNodes:
                         type: integer
-                        minimum: 0
                         description: Observed nodes whose finite execution completed.
+                        minimum: 0
                       failedNodes:
                         type: integer
-                        minimum: 0
                         description: Observed nodes with terminal failure.
+                        minimum: 0
                       terminatingNodes:
                         type: integer
-                        minimum: 0
                         description: Observed nodes whose execution resources have deletion timestamps.
+                        minimum: 0
                       slotCapacity:
                         type: integer
-                        minimum: 0
                         description: Slot budget declared by this graph.
+                        minimum: 0
                       reservedSlots:
                         type: integer
-                        minimum: 0
                         description: Slots reserved by observed nodes that have not completed, including terminating
                           or failed nodes.
+                        minimum: 0
                       availableSlots:
                         type: integer
-                        minimum: 0
                         description: Nonnegative difference between slot capacity and observed reservations.
+                        minimum: 0
                     nullable: true
                   topologyError:
                     type: string
@@ -1090,64 +1189,76 @@ spec:
                     properties:
                       total:
                         type: integer
-                        minimum: 0
                         description: Total directly owned resource count.
+                        minimum: 0
                       terminating:
                         type: integer
-                        minimum: 0
                         description: Directly owned resources awaiting deletion.
+                        minimum: 0
                       byKind:
                         type: object
                         description: Directly owned resource counts by Kubernetes kind.
                         properties:
                           NetworkPolicy:
                             type: integer
-                            minimum: 0
                             description: Owned transport policies.
+                            minimum: 0
                           AuthorizationPolicy:
                             type: integer
-                            minimum: 0
                             description: Owned Istio authorization policies.
+                            minimum: 0
                           PeerAuthentication:
                             type: integer
-                            minimum: 0
                             description: Owned mutual TLS policies.
+                            minimum: 0
                           Job:
                             type: integer
-                            minimum: 0
                             description: Number of owned Job resources.
+                            minimum: 0
                           Deployment:
                             type: integer
-                            minimum: 0
                             description: Number of owned Deployment resources.
+                            minimum: 0
                           Service:
                             type: integer
-                            minimum: 0
                             description: Number of owned Service resources.
+                            minimum: 0
                           ConfigMap:
                             type: integer
-                            minimum: 0
                             description: Number of owned ConfigMap resources.
+                            minimum: 0
                           PersistentVolumeClaim:
                             type: integer
-                            minimum: 0
                             description: Number of owned PersistentVolumeClaim resources.
+                            minimum: 0
                           Graph:
                             type: integer
-                            minimum: 0
                             description: Number of owned Graph resources.
+                            minimum: 0
                           EphemeralGraph:
                             type: integer
-                            minimum: 0
                             description: Number of owned EphemeralGraph resources.
+                            minimum: 0
                           Feedback:
                             type: integer
-                            minimum: 0
                             description: Number of owned Feedback resources.
+                            minimum: 0
                           PolyGraph:
                             type: integer
-                            minimum: 0
                             description: Number of PolyGraph boundaries.
+                            minimum: 0
+                          Pod:
+                            type: integer
+                            description: Owned capacity placeholder Pods.
+                            minimum: 0
+                          PodTemplate:
+                            type: integer
+                            description: Owned scheduling templates for capacity plans.
+                            minimum: 0
+                          ProvisioningRequest:
+                            type: integer
+                            description: Owned autoscaler capacity requests.
+                            minimum: 0
                   subgraphs:
                     type: array
                     items:
@@ -1171,13 +1282,13 @@ spec:
                           description: Last reported lifecycle phase; consult current before using it.
                         generation:
                           type: integer
-                          minimum: 0
                           description: Current child spec generation.
+                          minimum: 0
                         observedGeneration:
                           type: integer
                           nullable: true
-                          minimum: 0
                           description: Child generation evaluated by its metrics.
+                          minimum: 0
                         current:
                           type: boolean
                           description: Whether child lifecycle and metrics observations match its generation and it
@@ -1189,48 +1300,48 @@ spec:
                           properties:
                             nodeCount:
                               type: integer
-                              minimum: 0
                               description: Number of nodes in this graph or induced observed subset.
+                              minimum: 0
                             nodesByKind:
                               type: object
                               description: Node counts by execution abstraction.
                               properties:
                                 Workload:
                                   type: integer
-                                  minimum: 0
                                   description: Number of Workload nodes.
+                                  minimum: 0
                                 Daemon:
                                   type: integer
-                                  minimum: 0
                                   description: Number of Daemon nodes.
+                                  minimum: 0
                                 Ephemeral:
                                   type: integer
-                                  minimum: 0
                                   description: Number of Ephemeral nodes.
+                                  minimum: 0
                                 Resource:
                                   type: integer
-                                  minimum: 0
                                   description: Number of Resource nodes.
+                                  minimum: 0
                                 Graph:
                                   type: integer
-                                  minimum: 0
                                   description: Number of Graph nodes.
+                                  minimum: 0
                                 EphemeralGraph:
                                   type: integer
-                                  minimum: 0
                                   description: Number of EphemeralGraph nodes.
+                                  minimum: 0
                                 Feedback:
                                   type: integer
-                                  minimum: 0
                                   description: Number of Feedback nodes.
+                                  minimum: 0
                                 PolyGraph:
                                   type: integer
-                                  minimum: 0
                                   description: Number of PolyGraph boundaries.
+                                  minimum: 0
                             subgraphCount:
                               type: integer
-                              minimum: 0
                               description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                              minimum: 0
                             admission:
                               type: object
                               description: Acyclic lifecycle dependencies used for admission.
@@ -1259,24 +1370,24 @@ spec:
                                     cost.
                                 edgeCount:
                                   type: integer
-                                  minimum: 0
                                   description: Number of distinct dependency pairs, regardless of lifecycle predicate.
+                                  minimum: 0
                                 rootCount:
                                   type: integer
-                                  minimum: 0
                                   description: Nodes with no dependencies in this subset.
+                                  minimum: 0
                                 leafCount:
                                   type: integer
-                                  minimum: 0
                                   description: Nodes with no dependents in this subset.
+                                  minimum: 0
                                 maxFanIn:
                                   type: integer
-                                  minimum: 0
                                   description: Largest number of direct prerequisites.
+                                  minimum: 0
                                 maxFanOut:
                                   type: integer
-                                  minimum: 0
                                   description: Largest number of direct dependents.
+                                  minimum: 0
                             connections:
                               type: object
                               description: Directed data-flow connections, which may contain cycles. Isolated nodes
@@ -1284,25 +1395,25 @@ spec:
                               properties:
                                 edgeCount:
                                   type: integer
-                                  minimum: 0
                                   description: Number of distinct directed data-flow connections, including self-loops.
+                                  minimum: 0
                                 weakComponents:
                                   type: integer
-                                  minimum: 0
                                   description: Connected components after ignoring edge direction.
+                                  minimum: 0
                                 strongComponents:
                                   type: integer
-                                  minimum: 0
                                   description: Maximal components in which each node can reach every other node.
+                                  minimum: 0
                                 cyclicComponents:
                                   type: integer
-                                  minimum: 0
                                   description: Strong components with multiple nodes or a self-loop; this does not enumerate
                                     individual cycles.
+                                  minimum: 0
                                 largestStrongComponent:
                                   type: integer
-                                  minimum: 0
                                   description: Number of nodes in the largest strongly connected component.
+                                  minimum: 0
                                 condensation:
                                   type: object
                                   description: Layer shape after collapsing each strongly connected component to one
@@ -1310,14 +1421,14 @@ spec:
                                   properties:
                                     depth:
                                       type: integer
-                                      minimum: 0
                                       description: Number of dependency layers; zero for an empty graph and one for
                                         independent nodes.
+                                      minimum: 0
                                     breadth:
                                       type: integer
-                                      minimum: 0
                                       description: Largest layer size. This is layer breadth, not maximum antichain
                                         width or available concurrency.
+                                      minimum: 0
                                     layerWidths:
                                       type: array
                                       items:
@@ -1327,9 +1438,9 @@ spec:
                                       description: Node counts by earliest topological generation, starting at the roots.
                                     breadthDepth:
                                       type: integer
-                                      minimum: 0
                                       description: Breadth multiplied by depth; a shape summary, not an estimate of
                                         execution cost.
+                                      minimum: 0
                           nullable: true
                         execution:
                           type: object
@@ -1338,47 +1449,47 @@ spec:
                           properties:
                             observedNodes:
                               type: integer
-                              minimum: 0
                               description: Declared nodes with an owned execution resource, including terminating resources.
+                              minimum: 0
                             pendingNodes:
                               type: integer
-                              minimum: 0
                               description: Declared nodes with no observed execution resource; includes dependency,
                                 gate and capacity waits.
+                              minimum: 0
                             activeNodes:
                               type: integer
-                              minimum: 0
                               description: Observed nodes that are not terminating, completed or failed. This is not
                                 a Pod Running count.
+                              minimum: 0
                             readyNodes:
                               type: integer
-                              minimum: 0
                               description: Observed nodes satisfying their resource readiness predicate.
+                              minimum: 0
                             completedNodes:
                               type: integer
-                              minimum: 0
                               description: Observed nodes whose finite execution completed.
+                              minimum: 0
                             failedNodes:
                               type: integer
-                              minimum: 0
                               description: Observed nodes with terminal failure.
+                              minimum: 0
                             terminatingNodes:
                               type: integer
-                              minimum: 0
                               description: Observed nodes whose execution resources have deletion timestamps.
+                              minimum: 0
                             slotCapacity:
                               type: integer
-                              minimum: 0
                               description: Slot budget declared by this graph.
+                              minimum: 0
                             reservedSlots:
                               type: integer
-                              minimum: 0
                               description: Slots reserved by observed nodes that have not completed, including terminating
                                 or failed nodes.
+                              minimum: 0
                             availableSlots:
                               type: integer
-                              minimum: 0
                               description: Nonnegative difference between slot capacity and observed reservations.
+                              minimum: 0
                           nullable: true
                     description: Immediate graph instances, sorted by kind and name. Summaries do not recursively embed
                       descendant metrics.
@@ -1395,8 +1506,8 @@ spec:
                         description: This boundary and all currently observed descendant boundaries.
                       observedGeneration:
                         type: integer
-                        minimum: 0
                         description: Parent generation evaluated for this aggregate.
+                        minimum: 0
                       observationsComplete:
                         type: boolean
                         description: All expected immediate graph instances and recursively composed summaries were
@@ -1404,18 +1515,18 @@ spec:
                           atomic cluster snapshot.
                       graphCount:
                         type: integer
-                        minimum: 0
                         description: Known graph boundaries including this one. Each boundary counts once.
+                        minimum: 0
                       unobservedGraphs:
                         type: integer
-                        minimum: 0
                         description: Known missing instances or unavailable/stale child summaries. Descendant totals
                           are lower bounds when nonzero.
+                        minimum: 0
                       nestingDepth:
                         type: integer
-                        minimum: 0
                         description: Maximum known nesting layers including this boundary as layer one; independent
                           of admission dependency depth.
+                        minimum: 0
                       graphsByPhase:
                         type: object
                         description: Known boundaries by their generation-current lifecycle phase; unavailable summaries
@@ -1423,92 +1534,108 @@ spec:
                         properties:
                           Reconciling:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Reconciling.
+                            minimum: 0
                           Ready:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Ready.
+                            minimum: 0
                           Running:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Running.
+                            minimum: 0
                           Waiting:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Waiting.
+                            minimum: 0
                           Draining:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Draining.
+                            minimum: 0
                           Suspended:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Suspended.
+                            minimum: 0
                           Stopped:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Stopped.
+                            minimum: 0
                           Completed:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Completed.
+                            minimum: 0
                           Failed:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Failed.
+                            minimum: 0
                           Invalid:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Invalid.
+                            minimum: 0
                           Unknown:
                             type: integer
-                            minimum: 0
                             description: Boundaries in phase Unknown.
+                            minimum: 0
                       leafNodes:
                         type: integer
-                        minimum: 0
                         description: Declared non-boundary nodes across observed graph specs. Uninstantiated subgraph
                           contents are unknown.
+                        minimum: 0
                       observedLeafNodes:
                         type: integer
-                        minimum: 0
                         description: Declared non-boundary nodes with owned execution resources.
+                        minimum: 0
                       pendingLeafNodes:
                         type: integer
-                        minimum: 0
                         description: Known leaf nodes with no observed execution resource.
+                        minimum: 0
                       activeLeafNodes:
                         type: integer
-                        minimum: 0
                         description: Observed leaf resources that are not completed, failed or terminating; not a Pod
                           Running count.
+                        minimum: 0
                       readyLeafNodes:
                         type: integer
-                        minimum: 0
                         description: Leaf nodes satisfying readiness.
+                        minimum: 0
                       completedLeafNodes:
                         type: integer
-                        minimum: 0
                         description: Observed finite leaf nodes that completed. Completed Feedback epochs are not retained
                           after garbage collection.
+                        minimum: 0
                       failedLeafNodes:
                         type: integer
-                        minimum: 0
                         description: Leaf nodes reporting terminal failure.
+                        minimum: 0
                       terminatingLeafNodes:
                         type: integer
-                        minimum: 0
                         description: Declared leaf executions awaiting deletion.
+                        minimum: 0
                       resourceCount:
                         type: integer
-                        minimum: 0
                         description: All known owned resources across descendants, including nested boundary CRs and
                           obsolete resources. Excludes this root CR; each owned resource counts once.
+                        minimum: 0
                       terminatingResources:
                         type: integer
-                        minimum: 0
                         description: Known owned resources awaiting deletion across descendants.
+                        minimum: 0
+                      capacityPlans:
+                        type: integer
+                        description: Known active capacity plans across observed graph instances.
+                        minimum: 0
+                      capacityRequestedPods:
+                        type: integer
+                        description: Future Pods in active capacity plans.
+                        minimum: 0
+                      capacityReadyPods:
+                        type: integer
+                        description: Future Pods with last-observed usable capacity.
+                        minimum: 0
+                      capacityFailedPlans:
+                        type: integer
+                        description: Failed or expired capacity plans requiring a retry.
+                        minimum: 0
               epoch:
                 type: integer
                 minimum: 0

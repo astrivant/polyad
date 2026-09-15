@@ -1,5 +1,5 @@
 """
-Generate graph networking CRD properties from the public attrs models.
+Generate graph networking and capacity CRD properties from the public attrs models.
 """
 
 from __future__ import annotations
@@ -11,7 +11,9 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from polyad.compiler.asts import CapacityStatus
 from polyad.compiler.schema import structural_schema
+from polyad.graph.capacity import CapacityPlan
 from polyad.graph.network import NetworkAccess, NetworkPort
 
 if TYPE_CHECKING:
@@ -82,6 +84,10 @@ def main() -> int:
                 },
             )
         if kind != "graphrules":
+            updated = refresh(updated, props, "capacity", structural_schema(CapacityPlan))
+            if kind != "rewrites":
+                status_props = ROOT[:-2] + ("status", "properties")
+                updated = refresh(updated, status_props, "capacity", structural_schema(CapacityStatus))
             updated = refresh(
                 updated,
                 (*props, "connections", "items", "properties"),
@@ -97,7 +103,7 @@ def main() -> int:
             if not args.check:
                 path.write_text(updated)
     if changed:
-        print(("Stale" if args.check else "Regenerated") + " network schemas: " + ", ".join(changed))
+        print(("Stale" if args.check else "Regenerated") + " network and capacity schemas: " + ", ".join(changed))
     return int(args.check and bool(changed))
 
 

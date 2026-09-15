@@ -32,7 +32,7 @@ repos:
         pass_filenames: false
         files: '^(pkg/polyad/compiler/|charts/polyad/crds/|scripts/generate-status-schemas\.py$|\.pre-commit-config\.yaml$)'
       - id: network-schemas
-        name: Generated graph network schemas
+        name: Generated graph network and capacity schemas
         entry: bash scripts/project-python.sh scripts/generate-network-schemas.py --check
         language: system
         pass_filenames: false

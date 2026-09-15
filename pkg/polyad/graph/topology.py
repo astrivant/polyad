@@ -10,6 +10,7 @@ from attrs import field, frozen
 from cattrs import Converter
 from cattrs.errors import CattrsError
 
+from polyad.graph.capacity import CapacityPlan
 from polyad.graph.network import NetworkAccess, NetworkPort
 
 
@@ -111,6 +112,7 @@ class Topology:
         templateOnly (bool): Whether this definition is instantiated only by a parent graph.
         placement (Placement | None): Scheduling constraints inherited by descendant execution.
         rules (tuple[str, ...]): Additional structural rules inherited by nested boundaries.
+        capacity (CapacityPlan | None): Optional advance capacity policy inherited by nested graph instances.
         network (NetworkAccess | None): Optional traffic restrictions inherited by descendant workloads.
     """
 
@@ -123,6 +125,7 @@ class Topology:
     templateOnly: bool = False
     placement: Placement | None = field(default=None, kw_only=True)
     rules: tuple[str, ...] = field(default=(), kw_only=True)
+    capacity: CapacityPlan | None = field(default=None, kw_only=True)
     network: NetworkAccess | None = field(default=None, kw_only=True)
 
     def __attrs_post_init__(self) -> None:

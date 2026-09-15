@@ -65,6 +65,8 @@ def test_resource_roundtrip(cls):
     }
     if cls is asts.ConfigMap:
         document.update(data={}, binaryData={"key": "YQ=="}, immutable=False)
+    elif cls is asts.PodTemplateResource:
+        document["template"] = execution_spec("Job")["template"]
     else:
         document["spec"] = execution_spec(descriptor.kind)
     model = asts.from_document(document)

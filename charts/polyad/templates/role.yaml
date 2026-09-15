@@ -41,3 +41,12 @@ rules:
     resources: [pods]
     verbs: [create]
   {{- end }}
+
+  {{- if .Values.capacity.enabled }}
+  - apiGroups: [autoscaling.x-k8s.io]
+    resources: [provisioningrequests]
+    verbs: [get, list, create, delete]
+  - apiGroups: ['']
+    resources: [podtemplates, pods]
+    verbs: [get, list, create, delete]
+  {{- end }}

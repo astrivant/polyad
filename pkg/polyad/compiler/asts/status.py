@@ -285,6 +285,9 @@ class ResourceCounts(AST):
         EphemeralGraph (int): Number of owned EphemeralGraph resources.
         Feedback (int): Number of owned Feedback resources.
         PolyGraph (int): Number of PolyGraph boundaries.
+        Pod (int): Owned capacity placeholder Pods.
+        PodTemplate (int): Owned scheduling templates for capacity plans.
+        ProvisioningRequest (int): Owned autoscaler capacity requests.
     """
 
     NetworkPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned transport policies."}})
@@ -301,6 +304,12 @@ class ResourceCounts(AST):
     EphemeralGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned EphemeralGraph resources."}})
     Feedback: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Feedback resources."}})
     PolyGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of PolyGraph boundaries."}})
+
+    Pod: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned capacity placeholder Pods."}})
+    PodTemplate: int = field(
+        default=0, metadata={"schema": {"minimum": 0, "description": "Owned scheduling templates for capacity plans."}}
+    )
+    ProvisioningRequest: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned autoscaler capacity requests."}})
 
 
 @frozen(kw_only=True)
@@ -449,6 +458,10 @@ class RollupMetrics(AST):
         resourceCount (int): All known owned resources across descendants, including nested boundary CRs and
             obsolete resources.
         terminatingResources (int): Known owned resources awaiting deletion across descendants.
+        capacityPlans (int): Known active capacity plans across observed graph instances.
+        capacityRequestedPods (int): Future Pods in active capacity plans.
+        capacityReadyPods (int): Future Pods with last-observed usable capacity.
+        capacityFailedPlans (int): Failed or expired capacity plans requiring a retry.
     """
 
     scope: Literal["subtree"] = field(
@@ -557,6 +570,19 @@ class RollupMetrics(AST):
     )
     terminatingResources: int = field(
         default=0, metadata={"schema": {"minimum": 0, "description": "Known owned resources awaiting deletion across descendants."}}
+    )
+
+    capacityPlans: int = field(
+        default=0, metadata={"schema": {"minimum": 0, "description": "Known active capacity plans across observed graph instances."}}
+    )
+    capacityRequestedPods: int = field(
+        default=0, metadata={"schema": {"minimum": 0, "description": "Future Pods in active capacity plans."}}
+    )
+    capacityReadyPods: int = field(
+        default=0, metadata={"schema": {"minimum": 0, "description": "Future Pods with last-observed usable capacity."}}
+    )
+    capacityFailedPlans: int = field(
+        default=0, metadata={"schema": {"minimum": 0, "description": "Failed or expired capacity plans requiring a retry."}}
     )
 
 

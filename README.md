@@ -223,6 +223,12 @@ flowchart LR
     linkStyle default stroke:#475467,stroke-width:2px
 ```
 
+The operator can also [request capacity ahead of upcoming stages](docs/capacity.md),
+helping node autoscalers prepare machines while upstream work runs.
+
+Queue pressure and graph hierarchies are available through the optional
+[Prometheus and JSON metrics API](docs/metrics.md).
+
 ## Get started
 
 Deploy the [Kubernetes operator](docs/getting-started.md#quick-start-kubernetes)

@@ -53,6 +53,45 @@ spec:
               topology:
                 type: object
                 properties:
+                  capacity:
+                    type: object
+                    description: Forecast missing execution nodes before their admission dependencies finish.
+                    properties:
+                      backend:
+                        type: string
+                        enum:
+                        - Auto
+                        - ProvisioningRequest
+                        - Placeholders
+                        description: Preferred capacity mechanism.
+                      lookaheadStages:
+                        type: integer
+                        description: Number of uncreated dependency layers to forecast at each boundary.
+                        minimum: 1
+                        maximum: 32
+                      maxPods:
+                        type: integer
+                        description: Maximum forecast Pods held by this boundary at once.
+                        minimum: 1
+                        maximum: 1024
+                      timeoutSeconds:
+                        type: integer
+                        description: Maximum time to hold an unconsumed request, including gate waits.
+                        minimum: 10
+                        maximum: 86400
+                      provisioningClassName:
+                        type: string
+                        description: Autoscaler provisioning class; empty uses the operator default.
+                      parameters:
+                        type: object
+                        additionalProperties:
+                          type: string
+                          maxLength: 255
+                        description: Provider-specific ProvisioningRequest parameters.
+                        maxProperties: 100
+                      retryToken:
+                        type: string
+                        description: Change this value to retry a failed or expired plan.
                   network:
                     type: object
                     description: Isolate a graph subtree and intersect its exceptions with inherited constraints.
