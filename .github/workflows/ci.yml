@@ -43,7 +43,10 @@ jobs:
           fi
       - run: poetry install
       - run: bash scripts/ci/install-helm-tools.sh helm shellcheck shfmt
-      - run: helm dependency build charts/polyad
+      - name: Build chart dependencies
+        run: |
+          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
+          helm dependency build charts/polyad
       - run: poetry run pre-commit run --all-files
       - run: npm test --prefix scripts/mermaid
       - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0 --proactor_threads=1 --maxmemory=256mb
@@ -99,7 +102,10 @@ jobs:
           version: ${{ steps.tools.outputs.helm }}
       - run: docker build -t polyad:test .
       - run: kind load docker-image polyad:test --name polyad-test
-      - run: helm dependency build charts/polyad
+      - name: Build chart dependencies
+        run: |
+          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
+          helm dependency build charts/polyad
       - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set operator.image.repository=polyad --set operator.image.tag=test --set dragonfly.ha.enabled=${{ matrix.dragonfly-ha }} --wait --timeout=300s
       - run: bash scripts/test-operator.sh
       - run: kubectl -n polyad delete graphs,polygraphs,ephemeralgraphs,feedbacks --all --wait=true --timeout=120s

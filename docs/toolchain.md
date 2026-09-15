@@ -12,6 +12,7 @@ Install asdf and Bash 4.4 or newer, then run from the repository root:
 bash scripts/install-asdf-tools.sh
 python -m venv .venv
 poetry install
+helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
 helm dependency build charts/polyad
 poetry run pre-commit install --install-hooks
 poetry run pre-commit run --all-files

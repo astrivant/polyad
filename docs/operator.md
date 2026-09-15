@@ -647,6 +647,7 @@ Polyad processes.
 Enable replication and automatic primary failover with:
 
 ```sh
+helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
 helm dependency build charts/polyad
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
   --set dragonfly.ha.enabled=true --set dragonfly.ha.replicas=2
@@ -715,6 +716,7 @@ References: [Kubernetes Leases](https://kubernetes.io/docs/concepts/architecture
 ```sh
 docker build -t polyad:dev .
 # Push to your registry, or load into your local test cluster.
+helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
 helm dependency build charts/polyad
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
   --set operator.image.repository=YOUR_REGISTRY/polyad --set operator.image.tag=dev

@@ -41,7 +41,10 @@ jobs:
           ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
       - run: bash scripts/ci/install-helm-tools.sh helm kubeconform
-      - run: helm dependency build charts/polyad
+      - name: Build chart dependencies
+        run: |
+          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
+          helm dependency build charts/polyad
       - name: Validate chart with hypothesis-helm
         uses: astrivant/hypothesis-helm@main
         with:
@@ -66,7 +69,10 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - run: bash scripts/ci/install-helm-tools.sh helm
-      - run: helm dependency build charts/polyad
+      - name: Build chart dependencies
+        run: |
+          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
+          helm dependency build charts/polyad
       - name: Package validated chart
         id: package
         env:
