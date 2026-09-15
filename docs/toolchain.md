@@ -163,8 +163,8 @@ and uploads them as `python-distributions-<version>`. The publishing job downloa
 those exact artifacts, runs in the `pypi` environment and uses its `PYPI_API_TOKEN`
 Secret. Configure environment protection and that credential before publishing.
 Pre-release tags are normalized by `.github/release-version.py`. For example,
-Git tag `v0.0.1-alpha1` matches Python package version `0.0.1a1`; the chart,
-`appVersion` and default image tag use `0.0.1-alpha1`. A tag with different release
+Git tag `v0.0.1-alpha2` matches Python package version `0.0.1a2`; the chart,
+`appVersion` and default image tag use `0.0.1-alpha2`. A tag with different release
 numbers fails validation, even if its prerelease spelling is valid.
 
 Set version metadata before creating a tag. CI reads the tagged commit, so changing

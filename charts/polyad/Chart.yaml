@@ -2,8 +2,8 @@ apiVersion: v2
 name: polyad
 description: Kubernetes operator for scheduling workloads through graphs
 type: application
-version: 0.0.1-alpha1
-appVersion: 0.0.1-alpha1
+version: 0.0.1-alpha2
+appVersion: 0.0.1-alpha2
 kubeVersion: '>=1.30.0-0'
 dependencies:
   - name: dragonfly-operator
