@@ -381,6 +381,32 @@ def test_rewrite_receipt_survives_status_conflict():
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize("field,value", [("uid", "replacement"), ("resourceVersion", "2"), ("deletionTimestamp", "2026-09-15T00:00:00Z")])
+def test_rewrite_refreshes_preconditions_before_dispatch(field, value):
+    """
+    A target changed between planning and dispatch must return to the refresh queue.
+    """
+
+    async def scenario():
+        graph = resource("Graph", "target", {"nodes": [], "suspend": True})
+        rewrite = resource("Rewrite", "change", {"graph": "target", "expectedGeneration": 1, "topology": {"nodes": []}})
+
+        class ChangingAPI(FakeAPI):
+            async def get(self, kind, namespace, name):
+                result = await super().get(kind, namespace, name)
+                if kind == "Graph":
+                    self.objects[(kind, namespace, name)]["metadata"][field] = value
+                return result
+
+        api = ChangingAPI(graph, rewrite)
+        with pytest.raises(Pending, match="changed before dispatch"):
+            await Controller(api).rewrite(rewrite)
+        assert not any(call[0] == "PUT" for call in api.calls)
+        assert api.objects[("Graph", "test", "target")]["spec"]["suspend"]
+
+    asyncio.run(scenario())
+
+
 def test_resources_and_gates_resolve_node_names():
     """
     A resource's readiness opens a gate and resolves its name in the consuming pod.

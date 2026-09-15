@@ -16,6 +16,8 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 | [Graph status](operator.md#graph-instance-status) | Breadth, depth, lifecycle counters and descendant summaries |
 | [Resource registry](resource-registry.md) | Supported kinds, AST models, API identities and scheduling capabilities |
 | [Compiler objects](operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
+| [Mutation plans](mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |
+| [Mutation diagrams](mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
 | [Advance capacity](capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
 | [Replication and KEDA](replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
 | [Metrics API](metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |

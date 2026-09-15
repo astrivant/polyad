@@ -233,6 +233,7 @@ API versions, plural names and graph-boundary membership.
 | `storage` | Validate persistence and configure workload storage |
 | `network` | Intersect inherited traffic rules and generate network and mesh policies |
 | `capacity` | Identify upcoming work and compile capacity reservation templates |
+| `mutations` | Check declared effects and shared bounds, and produce ordered execution batches |
 | `schema` | Convert attrs models into structural OpenAPI schemas |
 
 These passes are functions composed by the API and operator; they do not issue
@@ -379,6 +380,12 @@ Raw Kopf event handlers publish work hints without writing Kopf progress annotat
 Deterministic names and owner UID checks make lost create acknowledgements recoverable. Status patches and rewrites include resource versions; deletes include UID and resource-version preconditions. Acknowledging DELETE does not prove disappearance. Replaced and removed children drain before replacements are admitted. A definition update replaces affected execution resources; completed Jobs can therefore run again. This is an explicit revision boundary, not transparent checkpoint migration.
 
 `Rewrite` replaces the complete graph spec at `expectedGeneration`. The spec and rewrite receipt annotation are committed atomically; a retry checks the receipt before doing anything. Reference edits and Graph spec edits can also change desired topology directly. No arbitrary Python rewrite callbacks run inside the operator.
+
+Rewrites use the [mutation-plan executor](mutations.md) to refresh target identity,
+generation, resource version and deletion state before dispatch. The Python library
+also supports bounded concurrent batches for operations with complete, disjoint
+declared effects and compatible shared bounds. Topology replacements retain the
+existing root-family serialization because their descendant effects are not fully modeled.
 
 `spec.suspend: true` stops admission and drains the boundary; clearing it starts fresh execution. `ShutdownPolicy.afterSeconds` measures wall time from CR creation, including downtime. `graceSeconds` becomes pod `terminationGracePeriodSeconds`; application SIGTERM/preStop logic should checkpoint/drain inside that time. These are Kubernetes process contracts, not local `Control.pause` calls.
 

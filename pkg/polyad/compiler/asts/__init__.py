@@ -22,6 +22,14 @@ from polyad.compiler.asts.common import OwnerReference as OwnerReference
 from polyad.compiler.asts.common import ResourceType as ResourceType
 from polyad.compiler.asts.common import StatusPatch as StatusPatch
 from polyad.compiler.asts.common import UIDPreconditions as UIDPreconditions
+from polyad.compiler.asts.mutations import Budget as Budget
+from polyad.compiler.asts.mutations import BudgetDelta as BudgetDelta
+from polyad.compiler.asts.mutations import Independence as Independence
+from polyad.compiler.asts.mutations import Mutation as Mutation
+from polyad.compiler.asts.mutations import MutationPlan as MutationPlan
+from polyad.compiler.asts.mutations import Ordering as Ordering
+from polyad.compiler.asts.mutations import Precondition as Precondition
+from polyad.compiler.asts.mutations import Scope as Scope
 from polyad.compiler.asts.resources import AUXILIARY_KINDS as AUXILIARY_KINDS
 from polyad.compiler.asts.resources import BOUNDARY_KINDS as BOUNDARY_KINDS
 from polyad.compiler.asts.resources import CAPACITY_KINDS as CAPACITY_KINDS

@@ -17,10 +17,12 @@ from attrs import evolve
 from cattrs.errors import BaseValidationError
 
 from polyad.compiler import asts
+from polyad.compiler.asts.mutations import Mutation, Precondition, Scope
 from polyad.compiler.passes.audit import trace_child
 from polyad.compiler.passes.children import child_name as compile_child_name
 from polyad.compiler.passes.children import owned_child
 from polyad.compiler.passes.identity import inject_environment, workload_identity
+from polyad.compiler.passes.mutations import PreconditionFailed
 from polyad.compiler.passes.network import configure_pod
 from polyad.compiler.passes.storage import configure_storage, storage_fields
 from polyad.graph.activation import ActivationPolicy
@@ -34,6 +36,7 @@ from polyad.operator.compositions import drain_composition, reconcile_compositio
 from polyad.operator.graph_status import instance_metrics
 from polyad.operator.graph_status import observed as observed
 from polyad.operator.identity import graph_ancestry
+from polyad.operator.mutations import execute_mutations
 from polyad.operator.network import POLICY_KINDS, context, ensure_policies
 from polyad.operator.placement import merge_placement, place_pod
 from polyad.operator.rules import check_rules
@@ -391,7 +394,56 @@ class Controller:
                 spec=copy.deepcopy(spec["topology"]),
                 metadata=evolve(target_ast.metadata, annotations={**(target_ast.metadata.annotations or {}), f"{GROUP}/rewrite": token}),
             )
-            await self.api.request("PUT", target["kind"], meta["namespace"], target["metadata"]["name"], replacement)
+            address = ("kubernetes", target["apiVersion"], target["kind"], meta["namespace"], target["metadata"]["name"])
+            expected = {
+                "uid": target["metadata"]["uid"],
+                "generation": str(spec["expectedGeneration"]),
+                "resourceVersion": target["metadata"]["resourceVersion"],
+                "deletionTimestamp": None,
+            }
+            mutation = Mutation(
+                name=f"rewrite:{token}",
+                writes=(Scope(address),),
+                preconditions=tuple(Precondition(Scope((*address, "metadata", key)), value) for key, value in expected.items()),
+                # Whole-topology replacement has unmodeled descendant effects.
+                # It remains serialized under the root-family shard fence.
+                effects_complete=False,
+            )
+
+            async def observe_rewrite(operation: Mutation) -> dict[Scope, str | None]:
+                """
+                Refresh target identity and revision immediately before replacement.
+
+                Args:
+                    operation (Mutation): Replacement being admitted.
+
+                Returns:
+                    dict[Scope, str | None]: Exact metadata observations or explicit absence.
+                """
+                current = await self.api.get(target["kind"], meta["namespace"], target["metadata"]["name"])
+                metadata = (current or {}).get("metadata", {})
+                return {
+                    condition.scope: str(metadata[condition.scope.path[-1]]) if metadata.get(condition.scope.path[-1]) is not None else None
+                    for condition in operation.preconditions
+                }
+
+            async def apply_rewrite(operation: Mutation) -> None:
+                """
+                Retain server-side revision fencing through the existing write queue.
+
+                Args:
+                    operation (Mutation): Admitted replacement identity for audit logging.
+
+                Returns:
+                    None: No return value.
+                """
+                logger.debug("Applying mutation name=%s writes=%s", operation.name, operation.writes)
+                await self.api.request("PUT", target["kind"], meta["namespace"], target["metadata"]["name"], replacement)
+
+            try:
+                await execute_mutations((mutation,), observe=observe_rewrite, apply=apply_rewrite)
+            except PreconditionFailed as error:
+                raise Pending("rewrite target changed before dispatch; waiting for refreshed state") from error
         await self.status(obj, {"applied": True, "observedGeneration": meta["generation"]})
 
     def child(
