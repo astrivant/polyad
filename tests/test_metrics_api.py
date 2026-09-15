@@ -212,3 +212,56 @@ def test_rescan_retains_complete_inventory_on_partial_failure(monkeypatch):
         assert handlers.inventory_sample[1]["objects"][0]["name"] == "new"
 
     asyncio.run(scenario())
+
+
+def test_metrics_authentication_protects_every_route_and_documents_bearer():
+    """
+    Reject absent or wrong credentials before reading snapshots, with no secret disclosure.
+    """
+    store = MetricsStore()
+    store.publish(snapshot())
+    original = MetricsAPIBuilder().with_store(store)
+    builder = original.with_bearer_token("metrics-only-token")
+    assert original.token is None
+    client = builder.build().test_client()
+    for path in ("/metrics", "/v1/metrics", "/v1/workloads/Graph/missing/executions", "/openapi.json"):
+        for header in ({}, {"Authorization": "Bearer wrong"}, {"Authorization": "Basic metrics-only-token"}):
+            response = client.get(path, headers=header)
+            assert response.status_code == 401
+            assert response.headers["WWW-Authenticate"] == "Bearer"
+            assert response.headers["Cache-Control"] == "no-store"
+            assert b"metrics-only-token" not in response.data
+    authenticated = {"Authorization": "Bearer metrics-only-token"}
+    assert client.get("/metrics", headers=authenticated).status_code == 200
+    assert client.get("/v1/metrics", headers=authenticated).status_code == 200
+    schema = client.get("/openapi.json", headers=authenticated).json
+    validate(schema)
+    assert schema["security"] == [{"bearerAuth": []}]
+    assert schema["components"]["securitySchemes"]["bearerAuth"]["scheme"] == "bearer"
+    assert all("401" in path["get"]["responses"] for path in schema["paths"].values())
+    for token in ("", "with space", "trailing\n", "non-ascii-ü"):
+        with pytest.raises(ValueError):
+            original.with_bearer_token(token)
+        with pytest.raises(ValueError):
+            MetricsAPIBuilder(store=store, token=token).build()
+
+
+@pytest.mark.parametrize("endpoint,setting", [("METRICS", "TOKEN"), ("CACHE", "URL")])
+def test_projected_metrics_and_cache_secret_rotation_requests_replacement(tmp_path, monkeypatch, endpoint, setting):
+    """
+    Track projected Secret changes using health replacement rather than hot-swapping credentials.
+    """
+    from polyad.operator import health
+
+    state = health.Lifecycle()
+    monkeypatch.setattr(health, "lifecycle", state)
+    credential = tmp_path / "credential"
+    credential.write_text("initial")
+    monkeypatch.setenv(f"POLYAD_{endpoint}_{setting}_FILE", str(credential))
+    assert health.credential_token(endpoint, setting=setting) == "initial"
+    assert not health.credentials_changed()
+    credential.write_text("rotated")
+    assert health.credentials_changed()
+    assert all(value != b"initial" for value in state.credentials.values())
+    credential.unlink()
+    assert health.credentials_changed()

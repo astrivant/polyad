@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 
 from apispec import APISpec
 
-from polyad.compiler.composition import COMPOSITION_KINDS
-from polyad.compiler.schema import structural_schema
+from polyad.compiler.passes.composition import COMPOSITION_KINDS
+from polyad.compiler.passes.schema import structural_schema
 from polyad.graph.activation import ActivationPolicy
 from polyad.graph.capacity import CapacityPlan
 
@@ -58,7 +58,7 @@ def schemas() -> dict[str, dict[str, Any]]:
                 "graph": reference("ID"),
                 "node": reference("ID"),
                 "graphUid": {"type": "string", "minLength": 1, "maxLength": 128},
-                "kind": {"type": "string", "enum": ["Graph", "EphemeralGraph", "PolyGraph"], "default": "Graph"},
+                "kind": {"type": "string", "enum": ["Graph", "EphemeralGraph", "PolyGraph", "ReplicaGroup"], "default": "Graph"},
             },
         },
         "ActivationReceipt": {
@@ -128,6 +128,24 @@ def schemas() -> dict[str, dict[str, Any]]:
                 },
             },
         },
+        "ReplicaGroupSpec": {
+            "type": "object",
+            "required": ["template"],
+            "properties": {
+                "template": {
+                    "type": "object",
+                    "required": ["refId"],
+                    "properties": {"refId": reference("ID")},
+                    "additionalProperties": False,
+                },
+                "replicas": {"type": "integer", "minimum": 0, "maximum": 256, "default": 1},
+                "minReplicas": {"type": "integer", "minimum": 0, "default": 0},
+                "maxReplicas": {"type": "integer", "minimum": 1, "maximum": 256, "default": 32},
+                "placement": free_object,
+                "network": free_object,
+                "rules": {"type": "array", "items": reference("ID")},
+            },
+        },
         "FeedbackSpec": {
             "type": "object",
             "required": ["graph"],
@@ -149,10 +167,11 @@ def schemas() -> dict[str, dict[str, Any]]:
             "properties": {"id": reference("ID"), "kind": {"type": "string", "enum": sorted(COMPOSITION_KINDS)}, "spec": free_object},
             "oneOf": [
                 {"properties": {"kind": {"enum": ["Graph", "PolyGraph", "EphemeralGraph"]}, "spec": reference("GraphSpec")}},
+                {"properties": {"kind": {"const": "ReplicaGroup"}, "spec": reference("ReplicaGroupSpec")}},
                 {"properties": {"kind": {"const": "Feedback"}, "spec": reference("FeedbackSpec")}},
                 {
                     "properties": {
-                        "kind": {"enum": sorted(COMPOSITION_KINDS - {"Graph", "PolyGraph", "EphemeralGraph", "Feedback"})},
+                        "kind": {"enum": sorted(COMPOSITION_KINDS - {"Graph", "PolyGraph", "EphemeralGraph", "Feedback", "ReplicaGroup"})},
                         "spec": {
                             **free_object,
                             "description": (

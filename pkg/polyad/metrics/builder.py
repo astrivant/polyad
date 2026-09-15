@@ -4,6 +4,7 @@ Build a read-only telemetry API independent of composition and event workers.
 
 from __future__ import annotations
 
+import hmac
 import json
 
 from apispec import APISpec
@@ -12,6 +13,7 @@ from flask import Flask, Response, request
 from prometheus_client import CONTENT_TYPE_LATEST
 
 from polyad.metrics.store import MetricsStore
+from polyad.metrics.workloads import workload_metric
 from polyad.operator.health import lifecycle
 
 
@@ -22,9 +24,11 @@ class MetricsAPIBuilder:
 
     Attributes:
         store (MetricsStore | None): Snapshot source populated by the operator loop.
+        token (str | None): Optional dedicated read-only bearer credential.
     """
 
     store: MetricsStore | None = None
+    token: str | None = None
 
     def with_store(self, store: MetricsStore) -> MetricsAPIBuilder:
         """
@@ -38,6 +42,20 @@ class MetricsAPIBuilder:
         """
         return evolve(self, store=store)
 
+    def with_bearer_token(self, token: str) -> MetricsAPIBuilder:
+        """
+        Require a dedicated read-only credential for every metrics route.
+
+        Args:
+            token (str): Nonempty printable bearer credential without whitespace.
+
+        Returns:
+            MetricsAPIBuilder: Builder with authentication enabled.
+        """
+        if not token or any(ord(char) < 33 or ord(char) > 126 for char in token):
+            raise ValueError("metrics authentication requires a nonempty printable bearer token without whitespace")
+        return evolve(self, token=token)
+
     def build(self) -> Flask:
         """
         Expose Prometheus, JSON and OpenAPI endpoints on a dedicated service.
@@ -47,9 +65,25 @@ class MetricsAPIBuilder:
         """
         if self.store is None:
             raise ValueError("metrics API requires a snapshot store")
+        if self.token is not None:
+            self.with_bearer_token(self.token)
         store = self.store
         app = Flask(__name__)
         spec = APISpec(title="Polyad metrics API", version="v1alpha1", openapi_version="3.0.3")
+        if self.token is not None:
+            spec.components.security_scheme("bearerAuth", {"type": "http", "scheme": "bearer"})
+            spec.options["security"] = [{"bearerAuth": []}]
+
+        @app.before_request
+        def authenticate() -> Response | None:
+            if self.token is not None and not hmac.compare_digest(
+                request.headers.get("Authorization", "").encode(), f"Bearer {self.token}".encode()
+            ):
+                return Response(
+                    '{"error":"unauthorized"}', status=401, content_type="application/json", headers={"WWW-Authenticate": "Bearer"}
+                )
+            return None
+
         for path, media in (("/metrics", "text/plain"), ("/v1/metrics", "application/json")):
             spec.path(
                 path=path,
@@ -66,9 +100,54 @@ class MetricsAPIBuilder:
                 },
             )
 
+        spec.path(
+            path="/v1/workloads/{kind}/{name}/{metric}",
+            operations={
+                "get": {
+                    "parameters": [
+                        {"name": key, "in": "path", "required": True, "schema": {"type": "string"}} for key in ("kind", "name", "metric")
+                    ]
+                    + [{"name": "node", "in": "query", "schema": {"type": "string"}}],
+                    "responses": {
+                        "200": {
+                            "description": "Fresh workload metric; reusable definitions aggregate all observed uses",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["value", "fresh"],
+                                        "properties": {"value": {"type": "number"}, "fresh": {"type": "boolean"}},
+                                    }
+                                }
+                            },
+                        },
+                        "404": {"description": "Unknown object, node or metric"},
+                        "503": {"description": "Stale, unavailable or retiring"},
+                    },
+                }
+            },
+        )
+
+        @app.get("/v1/workloads/<kind>/<name>/<metric>")
+        def workload(kind: str, name: str, metric: str) -> Response:
+            sample = store.read()
+            if sample is None or lifecycle.replacement.is_set() or lifecycle.draining.is_set():
+                return Response('{"error":"metrics snapshot unavailable"}', status=503, content_type="application/json")
+            try:
+                value = workload_metric(json.loads(sample[1]), kind, name, metric, request.args.get("node"))
+            except (KeyError, ValueError) as error:
+                return Response(
+                    json.dumps({"error": str(error)}), status=404 if isinstance(error, KeyError) else 503, content_type="application/json"
+                )
+            return Response(json.dumps(value), content_type="application/json")
+
         @app.get("/openapi.json")
         def openapi() -> Response:
-            return Response(json.dumps(spec.to_dict()), content_type="application/json")
+            document = spec.to_dict()
+            if self.token is not None:
+                for item in document["paths"].values():
+                    item["get"]["responses"]["401"] = {"description": "Missing or invalid metrics bearer credential"}
+            return Response(json.dumps(document), content_type="application/json")
 
         @app.get("/metrics")
         @app.get("/v1/metrics")

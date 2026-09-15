@@ -67,6 +67,7 @@ class NodeCounts(AST):
         Resource (int): Number of Resource nodes.
         Graph (int): Number of Graph nodes.
         EphemeralGraph (int): Number of EphemeralGraph nodes.
+        ReplicaGroup (int): Number of replication boundaries.
         Feedback (int): Number of Feedback nodes.
         PolyGraph (int): Number of PolyGraph boundaries.
     """
@@ -77,6 +78,7 @@ class NodeCounts(AST):
     Resource: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Resource nodes."}})
     Graph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Graph nodes."}})
     EphemeralGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of EphemeralGraph nodes."}})
+    ReplicaGroup: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of replication boundaries."}})
     Feedback: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Feedback nodes."}})
     PolyGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of PolyGraph boundaries."}})
 
@@ -284,6 +286,7 @@ class ResourceCounts(AST):
         PersistentVolumeClaim (int): Number of owned PersistentVolumeClaim resources.
         Graph (int): Number of owned Graph resources.
         EphemeralGraph (int): Number of owned EphemeralGraph resources.
+        ReplicaGroup (int): Number of owned replication boundaries.
         Feedback (int): Number of owned Feedback resources.
         PolyGraph (int): Number of PolyGraph boundaries.
         Pod (int): Owned capacity placeholder Pods.
@@ -304,6 +307,7 @@ class ResourceCounts(AST):
     )
     Graph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Graph resources."}})
     EphemeralGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned EphemeralGraph resources."}})
+    ReplicaGroup: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of replication boundaries."}})
     Feedback: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Feedback resources."}})
     PolyGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of PolyGraph boundaries."}})
 

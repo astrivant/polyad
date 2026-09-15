@@ -12,7 +12,7 @@ from attrs import evolve, field, frozen
 from polyad.api.app import _build_app
 from polyad.api.limits import RateLimitPolicy
 from polyad.compiler.activation import ActivationRequest
-from polyad.compiler.composition import CompositionRequest
+from polyad.compiler.passes.composition import CompositionRequest
 
 if TYPE_CHECKING:
     from typing import Self

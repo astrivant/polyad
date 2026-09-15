@@ -14,7 +14,7 @@ from werkzeug.exceptions import HTTPException
 from polyad.api.limits import install_limits
 from polyad.api.openapi import openapi_document
 from polyad.compiler.activation import ActivationRequest
-from polyad.compiler.composition import CompositionRequest, compile_composition, identity
+from polyad.compiler.passes.composition import CompositionRequest, compile_composition, identity
 from polyad.graph.topology import converter
 
 if TYPE_CHECKING:

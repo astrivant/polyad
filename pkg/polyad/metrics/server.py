@@ -22,19 +22,23 @@ class MetricsServer:
     Host cached telemetry without blocking the scheduler event loop.
     """
 
-    def __init__(self, store: MetricsStore, *, host: str = "0.0.0.0", port: int = 8092) -> None:
+    def __init__(self, store: MetricsStore, *, token: str | None = None, host: str = "0.0.0.0", port: int = 8092) -> None:
         """
         Bind a dedicated listener and start its worker thread.
 
         Args:
             store (MetricsStore): Shared snapshot source.
+            token (str | None): Optional dedicated metrics bearer credential.
             host (str): Listening address.
             port (int): Listening port.
         """
+        builder = MetricsAPIBuilder().with_store(store)
+        if token is not None:
+            builder = builder.with_bearer_token(token)
         self.stopping = Event()
         self.sockets: wasyncore._SocketMap = {}
         self.server = create_server(
-            MetricsAPIBuilder().with_store(store).build(),
+            builder.build(),
             map=self.sockets,
             host=host,
             port=port,

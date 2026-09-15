@@ -74,6 +74,7 @@ spec:
                               - PolyGraph
                               - EphemeralGraph
                               - Feedback
+                              - ReplicaGroup
                               description: Kind of the referenced graph instance.
                             node:
                               type: string
@@ -152,6 +153,7 @@ spec:
                               - PolyGraph
                               - EphemeralGraph
                               - Feedback
+                              - ReplicaGroup
                               description: Kind of the referenced graph instance.
                             node:
                               type: string

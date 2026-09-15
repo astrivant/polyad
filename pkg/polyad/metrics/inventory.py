@@ -90,11 +90,18 @@ def inventory(objects: list[dict[str, Any]]) -> dict[str, Any]:
                     break
             if not target_seen:
                 duty_root = None
+        uses = []
+        if role == "instance":
+            uses = [{"kind": node["kind"], "name": node["ref"]} for node in obj.get("spec", {}).get("nodes", [])]
+            if obj["kind"] == "ReplicaGroup":
+                template = obj["spec"]["template"]
+                uses = [{"kind": template["kind"], "name": template["ref"]}]
         records.append(
             {
                 "kind": obj["kind"],
                 "name": meta["name"],
                 "uid": meta["uid"],
+                "generation": generation,
                 "role": role,
                 "parent": parent,
                 "root": root,
@@ -110,6 +117,29 @@ def inventory(objects: list[dict[str, Any]]) -> dict[str, Any]:
                 "execution": metrics.get("execution") if observed else None,
                 "topology": metrics.get("topology") if observed else None,
                 "rollup": metrics.get("rollup") if observed else None,
+                "uses": uses,
+                "workloads": {name: entry for name, entry in (status.get("workloads") or {}).items() if entry is not None},
+                "workloadsObservedAt": status.get("workloadsObservedAt"),
+                "metricsObservedAt": status.get("metricsObservedAt"),
+                "boundarySignals": {
+                    key: value
+                    for part in (metrics.get("execution"), metrics.get("rollup"))
+                    for key, value in (part or {}).items()
+                    if type(value) in (int, float)
+                }
+                if observed
+                else {},
+                "scaling": {
+                    **{
+                        key: status.get(key)
+                        for key in ("replicas", "desiredReplicas", "readyReplicas", "totalReplicas", "instanceCount", "sourceGeneration")
+                    },
+                    "source": obj["spec"].get("replicaSource") if obj["spec"].get("inheritReplicas", True) else None,
+                    "current": status.get("scaleCurrent", False) and status.get("observedGeneration") == generation,
+                    "observedAt": status.get("scaleObservedAt"),
+                }
+                if obj["kind"] == "ReplicaGroup"
+                else None,
             }
         )
     return {

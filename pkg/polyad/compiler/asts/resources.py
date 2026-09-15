@@ -470,6 +470,27 @@ class Composition(SpecResource):
 
 
 @frozen(kw_only=True)
+class ReplicaGroup(SpecResource):
+    """
+    A scalable family of stable copies of a workload or graph definition.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Scalable replication boundary identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "ReplicaGroup",
+        f"{GROUP}/{VERSION}",
+        "replicagroups",
+        boundary=True,
+        description="Bounded replication of workload and graph abstractions through the scale subresource.",
+        graph_owned=True,
+        reconciled=True,
+        composable=True,
+    )
+
+
+@frozen(kw_only=True)
 class Activation(SpecResource):
     """
     An immutable activation receipt whose execution belongs to its parent graph.
@@ -612,6 +633,7 @@ class PodTemplateResource(Resource):
 
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     Activation,
+    ReplicaGroup,
     ProvisioningRequest,
     PodTemplateResource,
     NetworkPolicy,

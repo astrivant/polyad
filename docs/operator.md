@@ -222,14 +222,32 @@ operator manages. Metadata, owner references, Job/Deployment specs, status patch
 and deletion preconditions have dedicated types. A shared resource registry supplies
 API versions, plural names and graph-boundary membership.
 
-The controller compiles graph intent with `compiler.children.owned_child`, which
+`polyad.compiler.passes` contains the transformations applied to those models:
+
+| Module | Responsibility |
+| --- | --- |
+| `composition` | Validate request identities and resolve references into resource definitions |
+| `children` | Build owned resources with deterministic names and revision hashes |
+| `audit` | Carry request and definition provenance into child manifests |
+| `identity` | Inject graph, execution, Pod and operator endpoint context into workload containers |
+| `storage` | Validate persistence and configure workload storage |
+| `network` | Intersect inherited traffic rules and generate network and mesh policies |
+| `capacity` | Identify upcoming work and compile capacity reservation templates |
+| `schema` | Convert attrs models into structural OpenAPI schemas |
+
+These passes are functions composed by the API and operator; they do not issue
+Kubernetes requests. Resource models remain in `compiler.asts`, and kind metadata
+remains in `compiler.registry`. Import transformations directly from
+`polyad.compiler.passes` submodules.
+
+The controller compiles graph intent with `compiler.passes.children.owned_child`, which
 assigns deterministic names, desired hashes and ownership. The API adapter lowers
 these objects to Kubernetes documents with cattrs immediately before sending them.
 For example:
 
 ```python
 from polyad.compiler.asts import Graph, JobSpec, ObjectMeta, PodTemplate, to_document
-from polyad.compiler.children import owned_child
+from polyad.compiler.passes.children import owned_child
 
 parent = Graph(
     metadata=ObjectMeta(name="pipeline", namespace="default", uid="persisted-parent-uid"),
@@ -265,7 +283,7 @@ Field names match the Kubernetes document, including `observedGeneration`.
 
 ```python
 from polyad.compiler.asts import GraphMetrics, converter, to_document
-from polyad.compiler.schema import structural_schema
+from polyad.compiler.passes.schema import structural_schema
 from polyad.graph import measure_topology
 from polyad.graph.topology import topology
 
@@ -707,6 +725,11 @@ HPA requires the cluster metrics API and operator CPU requests. Without HPA,
 allows their leases to expire. At most 32 replicas can own useful shards. CPU HPA
 does not directly measure queue backlog. The default cache is a single availability
 dependency; enable Dragonfly HA to recover automatically from a primary failure.
+
+Both HPA stabilization windows and scaling rate policies are configurable through
+`operator.autoscaling.behavior`. Rescan, queue consumption and telemetry periods
+are available under `operator.tuning`. See [performance tuning](performance.md)
+for defaults, bounds and the equivalent KEDA configuration.
 
 References: [Kubernetes Leases](https://kubernetes.io/docs/concepts/architecture/leases/),
 [Dragonfly pending-message recovery](https://www.dragonflydb.io/docs/command-reference/stream/xautoclaim).

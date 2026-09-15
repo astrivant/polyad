@@ -141,13 +141,14 @@ import os
 from polyad_client import Client
 
 client = Client(
-    "http://polyad-polyad-api.orchestration.svc.cluster.local:8090",
+    os.environ["POLYAD_API_URL"],
     os.environ["POLYAD_API_TOKEN"],
 )
 client.activate(
     request_id="batch-42",
-    graph="processing",
-    graph_uid="THE-PERSISTED-GRAPH-UID",
+    graph=os.environ["POLYAD_GRAPH_NAME"],
+    graph_uid=os.environ["POLYAD_GRAPH_UID"],
+    kind=os.environ["POLYAD_GRAPH_KIND"],
     node="process-batch",
 )
 print(client.activation("batch-42"))
@@ -161,8 +162,13 @@ print(client.activation("batch-42"))
 | API contract | `GET /openapi.json` |
 
 Submission JSON uses `requestId`, `graph`, `graphUid`, `node` and optional `kind`
-(default `Graph`). Get graph instance names and UIDs from composition resource
-audit or Kubernetes. Stop is idempotent and asynchronous; poll until `Stopped`.
+(default `Graph`). Managed workloads receive their containing graph identity and
+operator URLs through [injected environment variables](workload-environment.md).
+The example targets another node named `process-batch` in that containing graph;
+the caller's own vertex is `POLYAD_NODE_NAME`. Supply the API token through an
+authorized Secret. External clients can get graph instance names and UIDs from
+composition resource audit or Kubernetes. Stop is idempotent and asynchronous;
+poll until `Stopped`.
 The same endpoints are available to explicitly authorized cross-namespace callers,
 as described in [workload access](networking.md#workload-access-to-operator-apis).
 

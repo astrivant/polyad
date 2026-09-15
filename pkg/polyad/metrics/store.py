@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 from prometheus_client import CollectorRegistry, Gauge, generate_latest
 
+from polyad.metrics.workloads import GROUP_SIGNALS, workload_metric
+
 if TYPE_CHECKING:
     from typing import Any
 
@@ -106,7 +108,7 @@ class MetricsStore:
             direct: Counter[str] = Counter()
             coverage: Counter[str] = Counter({"current": 0, "unknown": 0})
             for obj in tracked["objects"]:
-                if obj["kind"] not in {"Graph", "PolyGraph", "EphemeralGraph", "Feedback"} or obj["role"] != "instance":
+                if obj["kind"] not in {"Graph", "PolyGraph", "EphemeralGraph", "Feedback", "ReplicaGroup"} or obj["role"] != "instance":
                     continue
                 coverage["current" if obj["statusCurrent"] else "unknown"] += 1
                 if obj["statusCurrent"]:
@@ -151,6 +153,18 @@ class MetricsStore:
                         resources.extend(
                             ({**labels, "resource_kind": kind}, count) for kind, count in (obj["resources"] or {}).get("byKind", {}).items()
                         )
+                signals = []
+                for obj in tracked["objects"]:
+                    candidates = [(None, key) for key in GROUP_SIGNALS] if obj["kind"] == "ReplicaGroup" else []
+                    candidates += [(None, key) for key in obj.get("boundarySignals", {}) if key not in GROUP_SIGNALS]
+                    candidates += [(node, key) for node, entry in (obj.get("workloads") or {}).items() for key in entry["values"]]
+                    for node, signal_name in candidates:
+                        try:
+                            value = workload_metric(snapshot, obj["kind"], obj["name"], signal_name, node)["value"]
+                        except (KeyError, ValueError):
+                            continue
+                        signals.append(({"kind": obj["kind"], "name": obj["name"], "node": node or "", "signal": signal_name}, value))
+                gauge("workload_signal", "Fresh workload signals and replica controls; deduplicate operator replicas.", signals)
                 gauge("graph_shape", "Declared topology nodes, admission edges, breadth and depth of current graph observations.", shape)
                 gauge("graph_status_current", "Whether graph metrics describe the object's current generation.", current_status)
                 gauge("hierarchy_info", "Object membership in parent and root controller hierarchies.", rows)

@@ -1,0 +1,95 @@
+{{- define "polyad.notes.composition" }}
+  POST {{ . }}/v1/compositions
+  GET  {{ . }}/v1/compositions/{requestId}
+  GET  {{ . }}/v1/compositions/{requestId}/resources
+  POST {{ . }}/v1/activations
+  GET  {{ . }}/v1/activations/{requestId}
+  POST {{ . }}/v1/activations/{requestId}/stop
+  GET  {{ . }}/openapi.json
+{{- end -}}
+Polyad release {{ .Release.Name }} is installed in namespace {{ .Release.Namespace }}.
+
+PUBLIC ROUTES
+{{- if not (or .Values.api.gateway.enabled .Values.mesh.ingress.enabled) }}
+No external API routes are configured for this release.
+{{- end }}
+{{- if .Values.api.gateway.enabled }}
+Gateway API: composition and activation API (bearer authentication required)
+{{- if .Values.api.gateway.create }}
+{{- $scheme := ternary "https" "http" (not (empty .Values.api.gateway.tlsSecret)) }}
+{{- range .Values.api.gateway.hostnames }}
+{{ include "polyad.notes.composition" (printf "%s://%s" $scheme .) }}
+{{- else }}
+No route hostnames are configured. Substitute the assigned Gateway address:
+{{ include "polyad.notes.composition" (printf "%s://<gateway-address>" $scheme) }}
+{{- end }}
+  Gateway status: kubectl -n {{ .Release.Namespace }} get gateway.gateway.networking.k8s.io {{ .Release.Name }}-polyad-api -o wide
+{{- else }}
+The existing Gateway determines the scheme and port. Inspect its listener
+{{ .Values.api.gateway.sectionName }} before substituting <scheme> and <port>:
+{{- range .Values.api.gateway.hostnames }}
+{{ include "polyad.notes.composition" (printf "<scheme>://%s:<port>" .) }}
+{{- else }}
+Use a host accepted by the existing Gateway listener:
+{{ include "polyad.notes.composition" "<scheme>://<listener-host>:<port>" }}
+{{- end }}
+  Gateway listener/address: kubectl -n {{ default .Release.Namespace .Values.api.gateway.namespace }} get gateway.gateway.networking.k8s.io {{ .Values.api.gateway.name }} -o jsonpath='{.spec.listeners}{"\n"}{.status.addresses}{"\n"}'
+{{- end }}
+  Route status: kubectl -n {{ .Release.Namespace }} get httproute.gateway.networking.k8s.io {{ .Release.Name }}-polyad-api
+{{- end }}
+{{- if .Values.mesh.ingress.enabled }}
+Istio HTTPS ingress (each API requires its own bearer credential)
+{{- range .Values.mesh.ingress.hosts }}
+{{- if $.Values.api.enabled }}
+{{ include "polyad.notes.composition" (printf "https://%s" .) }}
+{{- end }}
+{{- if $.Values.events.enabled }}
+  GET  https://{{ . }}/v1/events                 (Server-Sent Events)
+  GET  https://{{ . }}/events/openapi.json       (event API schema)
+{{- end }}
+{{- end }}
+  Ingress address: kubectl -n {{ .Release.Namespace }} get service -l istio=polyad-ingress
+{{- end }}
+{{- if or .Values.api.gateway.enabled .Values.mesh.ingress.enabled }}
+These are configured routes; check ingress readiness and DNS before connecting.
+Replace wildcard hosts and <...> placeholders with the actual listener values.
+{{- end }}
+
+CLUSTER-INTERNAL ENDPOINTS
+{{- if .Values.api.enabled }}
+Composition and activation API (bearer authentication required):
+{{ include "polyad.notes.composition" (printf "http://%s-polyad-api.%s.svc:8090" .Release.Name .Release.Namespace) }}
+  Local access: kubectl -n {{ .Release.Namespace }} port-forward service/{{ .Release.Name }}-polyad-api 8090:8090
+  Local base URL: http://127.0.0.1:8090
+{{- end }}
+{{- if .Values.events.enabled }}
+Event subscriptions (bearer authentication required):
+  GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/events
+  GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/openapi.json
+  Local access: kubectl -n {{ .Release.Namespace }} port-forward service/{{ .Release.Name }}-polyad-events 8091:8091
+  Local base URL: http://127.0.0.1:8091
+{{- end }}
+{{- if .Values.metrics.enabled }}
+Scheduler metrics{{- if .Values.metrics.authentication.enabled }} (bearer authentication required){{- end }}:
+  GET http://{{ .Release.Name }}-polyad-metrics.{{ .Release.Namespace }}.svc:8092/metrics
+  GET http://{{ .Release.Name }}-polyad-metrics.{{ .Release.Namespace }}.svc:8092/v1/metrics
+  GET http://{{ .Release.Name }}-polyad-metrics.{{ .Release.Namespace }}.svc:8092/v1/workloads/{kind}/{name}/{metric}
+  GET http://{{ .Release.Name }}-polyad-metrics.{{ .Release.Namespace }}.svc:8092/openapi.json
+  Local access: kubectl -n {{ .Release.Namespace }} port-forward service/{{ .Release.Name }}-polyad-metrics 8092:8092
+  Local base URL: http://127.0.0.1:8092
+{{- end }}
+{{- if not (or .Values.api.enabled .Values.events.enabled .Values.metrics.enabled) }}
+Composition, events and metrics Services are disabled.
+{{- end }}
+
+Pod health (operator-local endpoint):
+  kubectl -n {{ .Release.Namespace }} port-forward deployment/{{ .Release.Name }}-polyad 8080:8080
+  GET http://127.0.0.1:8080/healthz
+
+{{- if or .Values.api.enabled .Values.events.enabled (and .Values.metrics.enabled .Values.metrics.authentication.enabled) }}
+Bearer credentials are supplied through Authorization: Bearer <token>.
+{{- end }}
+{{- if or .Values.api.enabled .Values.events.enabled .Values.metrics.enabled }}
+Configured NetworkPolicy and Istio authorization rules also apply to API access.
+{{- end }}
+View these notes again: helm get notes {{ .Release.Name }} -n {{ .Release.Namespace }}

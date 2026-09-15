@@ -12,10 +12,11 @@ from typing import TYPE_CHECKING
 import yaml
 
 from polyad.compiler.asts import CapacityStatus
-from polyad.compiler.schema import structural_schema
+from polyad.compiler.passes.schema import structural_schema
 from polyad.graph.activation import ActivationPolicy
 from polyad.graph.capacity import CapacityPlan
 from polyad.graph.network import NetworkAccess, NetworkPort
+from polyad.graph.replication import Replication
 
 if TYPE_CHECKING:
     from typing import Any
@@ -111,6 +112,34 @@ def main() -> int:
             changed.append(kind)
             if not args.check:
                 path.write_text(updated)
+    path = directory / "replicagroups.yaml"
+    source = path.read_text()
+    schema = structural_schema(Replication)
+    for name, value in {
+        "replicas": 1,
+        "minReplicas": 0,
+        "maxReplicas": 32,
+        "templateOnly": False,
+        "inheritReplicas": True,
+        "suspend": False,
+    }.items():
+        schema["properties"][name]["default"] = value
+    schema["x-kubernetes-validations"] = [
+        {"rule": "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas", "message": "replicas must respect group bounds"},
+        {
+            "rule": "!has(oldSelf.replicaSource) || !oldSelf.inheritReplicas || self.replicas == oldSelf.replicas || !self.inheritReplicas",
+            "message": "disable inheritReplicas before scaling an individual generated instance",
+        },
+        {
+            "rule": "!has(oldSelf.replicaSource) || (has(self.replicaSource) && self.replicaSource == oldSelf.replicaSource)",
+            "message": "replica source identity is immutable",
+        },
+    ]
+    updated = refresh(source, ROOT[:-2], "spec", schema)
+    if updated != source:
+        changed.append("replicagroups")
+        if not args.check:
+            path.write_text(updated)
     if changed:
         print(("Stale" if args.check else "Regenerated") + " network and capacity schemas: " + ", ".join(changed))
     return int(args.check and bool(changed))

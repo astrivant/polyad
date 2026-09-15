@@ -54,10 +54,6 @@ jobs:
           chart: charts/polyad
           shard: ${{ matrix.shard }}/3
           jobs: '2'
-          max-examples: '100'
-          sample-random: '100'
-          rerun: all
-          cache: 'false'
           kubeconform: 'true'
           kubeconform-binary: scripts/kubeconform.sh
           schema-version: '1.35.0'

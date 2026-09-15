@@ -36,7 +36,7 @@ class Node:
 
     Attributes:
         name (str): Resource name within its namespace.
-        kind (Literal['Workload', 'Daemon', 'Ephemeral', 'Resource', 'Graph', 'EphemeralGraph', 'Feedback', 'PolyGraph']):
+        kind (Literal['Workload', 'Daemon', 'Ephemeral', 'Resource', 'Graph', 'EphemeralGraph', 'Feedback', 'PolyGraph', 'ReplicaGroup']):
             Kubernetes resource kind.
         ref (str): Name of the reusable execution definition.
         requires (tuple[Dependency, ...]): Admission dependencies; all must be satisfied.
@@ -46,7 +46,7 @@ class Node:
     """
 
     name: str
-    kind: Literal["Workload", "Daemon", "Ephemeral", "Resource", "Graph", "EphemeralGraph", "Feedback", "PolyGraph"]
+    kind: Literal["Workload", "Daemon", "Ephemeral", "Resource", "Graph", "EphemeralGraph", "Feedback", "PolyGraph", "ReplicaGroup"]
     ref: str
     requires: tuple[Dependency, ...] = ()
     gate: str | None = None
@@ -183,6 +183,10 @@ def topology(spec: dict[str, object], kind: str = "Graph") -> Topology:
     Returns:
         Topology: Validated graph topology.
     """
+    if kind == "ReplicaGroup" and "template" in spec:
+        from polyad.graph.replication import replica_topology
+
+        spec = replica_topology(spec)
     try:
         return converter.structure(spec, PolyGraph[GraphNode] if kind == "PolyGraph" else Topology)
     except CattrsError as error:
@@ -231,10 +235,10 @@ class GraphNode(Node):
     Reference a reusable graph boundary as a node in another graph.
 
     Attributes:
-        kind (Literal['Graph', 'EphemeralGraph', 'Feedback', 'PolyGraph']): Referenced boundary kind.
+        kind (Literal['Graph', 'EphemeralGraph', 'Feedback', 'PolyGraph', 'ReplicaGroup']): Referenced boundary kind.
     """
 
-    kind: Literal["Graph", "EphemeralGraph", "Feedback", "PolyGraph"]
+    kind: Literal["Graph", "EphemeralGraph", "Feedback", "PolyGraph", "ReplicaGroup"]
 
 
 NodeT = TypeVar("NodeT", bound=GraphNode, default=GraphNode, covariant=True)
@@ -259,5 +263,5 @@ class PolyGraph(Topology, Generic[NodeT]):
             None: No return value.
         """
         Topology.__attrs_post_init__(self)
-        if any(node.kind not in {"Graph", "EphemeralGraph", "Feedback", "PolyGraph"} for node in self.nodes):
+        if any(node.kind not in {"Graph", "EphemeralGraph", "Feedback", "PolyGraph", "ReplicaGroup"} for node in self.nodes):
             raise ValueError("PolyGraph nodes must reference graph boundaries")

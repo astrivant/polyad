@@ -54,6 +54,7 @@ from polyad.compiler.asts.resources import PodTemplate as PodTemplate
 from polyad.compiler.asts.resources import PodTemplateResource as PodTemplateResource
 from polyad.compiler.asts.resources import PolyGraph as PolyGraph
 from polyad.compiler.asts.resources import ProvisioningRequest as ProvisioningRequest
+from polyad.compiler.asts.resources import ReplicaGroup as ReplicaGroup
 from polyad.compiler.asts.resources import Resource as Resource
 from polyad.compiler.asts.resources import ResourceDefinition as ResourceDefinition
 from polyad.compiler.asts.resources import Rewrite as Rewrite

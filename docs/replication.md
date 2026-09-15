@@ -1,0 +1,203 @@
+# Replication and KEDA
+
+A **ReplicaGroup** is a scalable family of copies. Its template can reference a
+`Workload`, `Daemon`, `Ephemeral`, `Resource`, `Graph`, `EphemeralGraph`,
+`PolyGraph`, `Feedback`, or another `ReplicaGroup`. Replicating a graph copies its
+whole service composition, including dependencies, gates and resource definitions.
+Each copy has a stable ordinal, separate owned resources and a status that rolls
+up to the group and its ancestors.
+
+```mermaid
+flowchart LR
+    signal["Workload metrics"] --> keda["KEDA"]
+    keda -->|"Kubernetes /scale"| group["ReplicaGroup"]
+    group --> first["Copy 0 · graph"]
+    group --> second["Copy 1 · graph"]
+    group --> third["Copy 2 · graph"]
+    first --> a["Services and jobs"]
+    second --> b["Services and jobs"]
+    third --> c["Services and jobs"]
+    classDef control fill:#ffe3a3,stroke:#926000,color:#513900
+    classDef boundary fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
+    class signal,keda control
+    class group,first,second,third boundary
+    class a,b,c execution
+```
+
+## Declare a scalable abstraction
+
+```yaml
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ReplicaGroup
+metadata:
+  name: processors
+  namespace: polyad
+spec:
+  replicas: 2
+  minReplicas: 0
+  maxReplicas: 20
+  template:
+    kind: Graph
+    ref: processing-pipeline
+```
+
+`processing-pipeline` is an existing graph definition with `templateOnly: true`.
+To scale individual services, reference a `Daemon` instead. To scale a collection
+of jobs, reference a finite `Graph`. `Resource` can replicate supported Services,
+ConfigMaps and PVCs. Gates, rules and shutdown policies are reusable control
+configuration: include them in a graph to apply them to every copy.
+
+The group exposes the Kubernetes scale subresource:
+
+- `.spec.replicas`: desired copies, bounded by `minReplicas` and `maxReplicas`.
+- `.status.replicas`: observed copies, including those still terminating.
+- `.status.labelSelector`: an incarnation-specific selector for descendant Pods.
+- `.status.readyReplicas`: copies observed ready or successfully completed.
+
+A group stays alive at zero copies. Completed finite copies remain completed;
+replica count is not a repeated-job trigger. Use [activation pulses](activation.md)
+or Feedback when work must repeat. Replicating a Daemon copies its Deployment;
+each copy retains that definition's own replica setting. Bounds count copies of
+the selected abstraction, not the total Pods in their descendant graphs.
+
+## Independent instances and all uses of a definition
+
+A standalone ReplicaGroup is independently scalable. To share a replication
+policy, set `templateOnly: true` on a ReplicaGroup definition and reference it as
+a `ReplicaGroup` node in persistent graphs or PolyGraphs. Each generated instance
+inherits the reusable group's requested count. Scaling that definition scales
+**all inheriting uses**, without replacing their existing copies.
+
+The generated `spec.replicaSource` pins the reusable group's name and UID. The
+operator rejects a missing or recreated source. On a generated instance, set
+`inheritReplicas: false` before attaching a separate KEDA ScaledObject to it.
+The scale subresource rejects individual count changes while inheritance is on.
+For a shared definition, status reports the maximum observed per-instance count,
+plus `instanceCount` and `totalReplicas`; requested replicas remain **per use**.
+
+Existing references directly to a Workload or Graph continue their normal
+semantics. To replicate those uses together, route them through the shared
+ReplicaGroup definition. Replication is explicit rather than a namespace-wide
+mutation of every reference to a library object.
+
+## Connect KEDA
+
+Enable `metrics.enabled`, `metrics.authentication.enabled` and
+`keda.authentication.enabled` in the Helm chart, and supply the metrics Secret
+as described in [authentication and ESO setup](authentication.md). Install KEDA separately and give its
+operator and HPA controllers permission to read/update `replicagroups/scale` in
+the target namespace. KEDA supports custom resources through this standard
+[scale subresource](https://keda.sh/docs/2.20/concepts/scaling-deployments/).
+Do not attach two autoscalers to the same group.
+
+```yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: processors
+  namespace: polyad
+spec:
+  scaleTargetRef:
+    apiVersion: polyad.astrivant.com/v1alpha1
+    kind: ReplicaGroup
+    name: processors
+  minReplicaCount: 0
+  maxReplicaCount: 20
+  pollingInterval: 10
+  cooldownPeriod: 60
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+        scaleDown:
+          stabilizationWindowSeconds: 300
+  triggers:
+    - type: metrics-api
+      metricType: AverageValue
+      metadata:
+        url: http://polyad-polyad-metrics.polyad.svc.cluster.local:8092/v1/workloads/Graph/intake/pendingActivations?node=process
+        format: json
+        valueLocation: value
+        targetValue: '5'
+        activationTargetValue: '0'
+        authMode: bearer
+      authenticationRef:
+        name: polyad-polyad-metrics
+```
+
+Replace the metric URL with the actual source of demand. The metric source and
+scale target can be different objects. KEDA's
+[Metrics API scaler](https://keda.sh/docs/2.20/scalers/metrics-api/) reads the
+numeric `value` field. Match KEDA's bounds to the group's bounds. For shared
+definitions, thresholds must account for the number of inheriting instances:
+the same requested count is applied to every instance.
+
+The example assumes release `polyad` in namespace `polyad`. The generated
+TriggerAuthentication is namespaced and reusable by ScaledObjects there.
+Use the configured `keda.authentication.name` when overriding its default name.
+Tune stabilization and scaling rates independently of polling and cooldown;
+see [performance tuning](performance.md#keda-managed-targets).
+
+The example reads pending activation demand; scaling processors does not itself
+consume activation receipts owned by another graph. Applications must connect
+the replicated consumers to their actual queue or upstream service. KEDA can
+also use its other scalers, including Prometheus and application queue backends,
+with the same ReplicaGroup target.
+
+Allow KEDA through `networkPolicy.metricsPeers` and, with Istio,
+`mesh.operator.metricsPrincipals`. `/v1/workloads/*` is covered by the metrics
+listener's authorization policy. Each operator replica observes namespace-wide
+demand: use the Service address, or **max**, rather than summing replica samples.
+No application secrets or arbitrary Pod labels are exposed by the metrics API.
+
+## Metric scopes and freshness
+
+`GET /v1/workloads/{kind}/{name}/{metric}` returns one scalar. Add `?node=NAME`
+to select one logical node of a graph. For a reusable Workload, Daemon or
+Ephemeral definition, the endpoint aggregates its observed uses by UID.
+ReplicaGroup-specific signals are `replicas`, `desiredReplicas`, `readyReplicas`,
+`totalReplicas` and `instanceCount`. Node signals include:
+
+| Signal | Meaning |
+| --- | --- |
+| `executions` | Observed execution resources |
+| `readyExecutions`, `completedExecutions`, `failedExecutions` | Lifecycle counts |
+| `pendingActivations`, `activeActivations` | Pending and selected/running pulse counts |
+| `overdue` | Number of targets past their activation deadline |
+| `replicas`, `readyReplicas` | Native replica observations where supplied by Kubernetes |
+
+Graph boundaries, including Feedback, also expose current execution and recursive
+rollup counters such as `pendingNodes`, `activeLeafNodes`, `readyLeafNodes`,
+`graphCount` and `resourceCount`. Incomplete descendant observations return 503.
+
+These are scheduler and Kubernetes status signals, not application CPU, memory
+or custom queue measurements. Use KEDA's application scalers for those.
+
+Missing objects or signals return 404. Stale inventory, stale controller
+observations or mismatched inherited source generations return 503. Observations
+expire after thirty seconds; missing demand is never synthesized as zero.
+`/openapi.json` describes the endpoint. `/v1/metrics` includes the same observations,
+and `metrics.graphLabels: true` enables `polyad_workload_signal` Prometheus series
+with `kind`, `name`, `node` and `signal` labels.
+
+## Scheduling and cleanup
+
+ReplicaGroup uses the graph's existing ordered mutation queue and root-family
+shard. Copies inherit placement, network isolation, capacity planning and
+structural rules. Nested replication is evaluated against the graph family's
+size and nesting limits before admission. Each group supports at most 256 copies;
+its default upper bound is 32. All instances in one graph family remain serialized.
+Use independent root groups to distribute duties across operator shards.
+
+Scale-out retains existing ordinal identities. Scale-in waits for active Jobs
+and finite Graph/PolyGraph copies to complete before deleting them. Daemons and
+persistent graphs drain through normal termination and finalizers. Suspension,
+explicit graph deletion and definition revision changes follow their existing
+cleanup contracts. Storage and application state must support the chosen number
+of concurrent copies; replication does not clone or checkpoint application state.
+
+Upgrade the chart's CRDs, including `ReplicaGroup`, before the operator. Helm does
+not automatically upgrade existing CRDs. No KEDA installation or ScaledObject is
+created implicitly by Polyad.

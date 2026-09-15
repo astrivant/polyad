@@ -57,8 +57,28 @@ spec:
           env:
             - name: POLYAD_LOG_LEVEL
               value: {{ .Values.operator.logLevel | quote }}
+            - name: POLYAD_RESCAN_INTERVAL_SECONDS
+              value: {{ .Values.operator.tuning.rescanIntervalSeconds | quote }}
+            - name: POLYAD_CONSUME_INTERVAL_SECONDS
+              value: {{ .Values.operator.tuning.consumeIntervalSeconds | quote }}
+            - name: POLYAD_METRICS_INTERVAL_SECONDS
+              value: {{ .Values.operator.tuning.metricsIntervalSeconds | quote }}
+            - name: POLYAD_BACKLOG_INTERVAL_SECONDS
+              value: {{ .Values.operator.tuning.backlogIntervalSeconds | quote }}
             - name: POLYAD_METRICS_ENABLED
               value: {{ .Values.metrics.enabled | quote }}
+            - name: POLYAD_WORKLOAD_API_URL
+              value: {{ ternary (printf "http://%s-polyad-api.%s.svc:8090" .Release.Name .Release.Namespace) "" .Values.api.enabled | quote }}
+            - name: POLYAD_WORKLOAD_EVENTS_URL
+              value: {{ ternary (printf "http://%s-polyad-events.%s.svc:8091" .Release.Name .Release.Namespace) "" .Values.events.enabled | quote }}
+            - name: POLYAD_WORKLOAD_METRICS_URL
+              value: {{ ternary (printf "http://%s-polyad-metrics.%s.svc:8092" .Release.Name .Release.Namespace) "" .Values.metrics.enabled | quote }}
+            {{- if and .Values.metrics.enabled .Values.metrics.authentication.enabled }}
+            - name: POLYAD_METRICS_AUTH_ENABLED
+              value: "true"
+            - name: POLYAD_METRICS_TOKEN_FILE
+              value: /var/run/polyad/metrics/token
+            {{- end }}
             - name: POLYAD_METRICS_GRAPH_LABELS
               value: {{ .Values.metrics.graphLabels | quote }}
             - name: POLYAD_CAPACITY_ENABLED
@@ -87,6 +107,10 @@ spec:
               value: {{ .Values.mesh.enabled | quote }}
             - name: POLYAD_ISTIO_NAMESPACE
               value: {{ .Values.global.istioNamespace | quote }}
+            {{- if .Values.dragonfly.existingSecret }}
+            - name: POLYAD_CACHE_URL_FILE
+              value: /var/run/polyad/cache/url
+            {{- end }}
             - name: POLYAD_CACHE_URL
               {{- if .Values.dragonfly.existingSecret }}
               valueFrom:
@@ -120,7 +144,7 @@ spec:
             - name: POLYAD_EVENTS_TOKEN_FILE
               value: /var/run/polyad/events/token
             {{- end }}
-          volumeMounts:{{ if not (or .Values.api.enabled .Values.events.enabled) }} []{{ end }}
+          volumeMounts:{{ if not (or .Values.api.enabled .Values.events.enabled .Values.dragonfly.existingSecret (and .Values.metrics.enabled .Values.metrics.authentication.enabled)) }} []{{ end }}
             {{- if .Values.api.enabled }}
             - name: api-credentials
               mountPath: /var/run/polyad/api
@@ -129,6 +153,16 @@ spec:
             {{- if .Values.events.enabled }}
             - name: events-credentials
               mountPath: /var/run/polyad/events
+              readOnly: true
+            {{- end }}
+            {{- if and .Values.metrics.enabled .Values.metrics.authentication.enabled }}
+            - name: metrics-credentials
+              mountPath: /var/run/polyad/metrics
+              readOnly: true
+            {{- end }}
+            {{- if .Values.dragonfly.existingSecret }}
+            - name: cache-credentials
+              mountPath: /var/run/polyad/cache
               readOnly: true
             {{- end }}
           ports:
@@ -175,7 +209,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
-      volumes:{{ if not (or .Values.api.enabled .Values.events.enabled) }} []{{ end }}
+      volumes:{{ if not (or .Values.api.enabled .Values.events.enabled .Values.dragonfly.existingSecret (and .Values.metrics.enabled .Values.metrics.authentication.enabled)) }} []{{ end }}
         {{- if .Values.api.enabled }}
         - name: api-credentials
           secret:
@@ -191,4 +225,20 @@ spec:
             items:
               - key: token
                 path: token
+        {{- end }}
+        {{- if and .Values.metrics.enabled .Values.metrics.authentication.enabled }}
+        - name: metrics-credentials
+          secret:
+            secretName: {{ default (printf "%s-polyad-metrics" .Release.Name) .Values.metrics.authentication.existingSecret | quote }}
+            items:
+              - key: {{ .Values.metrics.authentication.secretKey | quote }}
+                path: token
+        {{- end }}
+        {{- if .Values.dragonfly.existingSecret }}
+        - name: cache-credentials
+          secret:
+            secretName: {{ .Values.dragonfly.existingSecret | quote }}
+            items:
+              - key: url
+                path: url
         {{- end }}

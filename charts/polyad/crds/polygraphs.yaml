@@ -179,6 +179,7 @@ spec:
                               - PolyGraph
                               - EphemeralGraph
                               - Feedback
+                              - ReplicaGroup
                               description: Kind of the referenced graph instance.
                             node:
                               type: string
@@ -257,6 +258,7 @@ spec:
                               - PolyGraph
                               - EphemeralGraph
                               - Feedback
+                              - ReplicaGroup
                               description: Kind of the referenced graph instance.
                             node:
                               type: string
@@ -361,6 +363,7 @@ spec:
                       - PolyGraph
                       - EphemeralGraph
                       - Feedback
+                      - ReplicaGroup
                       description: Graph boundary kind instantiated from the referenced template.
                     ref:
                       type: string
@@ -890,6 +893,10 @@ spec:
                             type: integer
                             description: Number of EphemeralGraph nodes.
                             minimum: 0
+                          ReplicaGroup:
+                            type: integer
+                            description: Number of replication boundaries.
+                            minimum: 0
                           Feedback:
                             type: integer
                             description: Number of Feedback nodes.
@@ -1039,6 +1046,10 @@ spec:
                           EphemeralGraph:
                             type: integer
                             description: Number of EphemeralGraph nodes.
+                            minimum: 0
+                          ReplicaGroup:
+                            type: integer
+                            description: Number of replication boundaries.
                             minimum: 0
                           Feedback:
                             type: integer
@@ -1267,6 +1278,10 @@ spec:
                             type: integer
                             description: Number of owned EphemeralGraph resources.
                             minimum: 0
+                          ReplicaGroup:
+                            type: integer
+                            description: Number of replication boundaries.
+                            minimum: 0
                           Feedback:
                             type: integer
                             description: Number of owned Feedback resources.
@@ -1357,6 +1372,10 @@ spec:
                                 EphemeralGraph:
                                   type: integer
                                   description: Number of EphemeralGraph nodes.
+                                  minimum: 0
+                                ReplicaGroup:
+                                  type: integer
+                                  description: Number of replication boundaries.
                                   minimum: 0
                                 Feedback:
                                   type: integer

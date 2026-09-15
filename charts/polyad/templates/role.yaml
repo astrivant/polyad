@@ -4,13 +4,13 @@ metadata:
   name: {{ .Release.Name }}-polyad
 rules:
   - apiGroups: [polyad.astrivant.com]
-    resources: [graphs, polygraphs, ephemeralgraphs, workloads, daemons, ephemerals, resources, gates, shutdownpolicies, feedbacks, rewrites, compositions, activations]
+    resources: [graphs, polygraphs, ephemeralgraphs, workloads, daemons, ephemerals, resources, gates, shutdownpolicies, feedbacks, rewrites, compositions, activations, replicagroups]
     verbs: [get, list, watch, create, update, patch, delete]
   - apiGroups: [polyad.astrivant.com]
-    resources: [graphs/status, polygraphs/status, ephemeralgraphs/status, feedbacks/status, rewrites/status, compositions/status, activations/status]
+    resources: [graphs/status, polygraphs/status, ephemeralgraphs/status, feedbacks/status, rewrites/status, compositions/status, activations/status, replicagroups/status]
     verbs: [get, patch]
   - apiGroups: [polyad.astrivant.com]
-    resources: [graphs/finalizers, polygraphs/finalizers, ephemeralgraphs/finalizers, feedbacks/finalizers, rewrites/finalizers, compositions/finalizers]
+    resources: [graphs/finalizers, polygraphs/finalizers, ephemeralgraphs/finalizers, feedbacks/finalizers, rewrites/finalizers, compositions/finalizers, replicagroups/finalizers]
     verbs: [update, patch]
   - apiGroups: [coordination.k8s.io]
     resources: [leases]

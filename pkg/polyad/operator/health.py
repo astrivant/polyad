@@ -28,19 +28,20 @@ class Lifecycle:
 lifecycle = Lifecycle()
 
 
-def credential_token(endpoint: str) -> str:
+def credential_token(endpoint: str, *, setting: str = "TOKEN") -> str:
     """
     Read a projected Secret token and retain only its fingerprint for health checks.
 
     Args:
-        endpoint (str): API or EVENTS configuration prefix.
+        endpoint (str): API, EVENTS, METRICS or CACHE configuration prefix.
+        setting (str): Credential setting suffix, TOKEN or URL.
 
     Returns:
         str: Required token, retaining environment compatibility for local use.
     """
-    filename = os.environ.get(f"POLYAD_{endpoint}_TOKEN_FILE")
+    filename = os.environ.get(f"POLYAD_{endpoint}_{setting}_FILE")
     if not filename:
-        return os.environ.get(f"POLYAD_{endpoint}_TOKEN", "")
+        return os.environ.get(f"POLYAD_{endpoint}_{setting}", "")
     path = Path(filename)
     token = path.read_bytes()
     lifecycle.credentials[path] = hashlib.sha256(token).digest()

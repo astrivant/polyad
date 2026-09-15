@@ -8,6 +8,7 @@ import copy
 import hashlib
 import json
 import logging
+import os
 import re
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -16,20 +17,23 @@ from attrs import evolve
 from cattrs.errors import BaseValidationError
 
 from polyad.compiler import asts
-from polyad.compiler.audit import trace_child
-from polyad.compiler.children import child_name as compile_child_name
-from polyad.compiler.children import owned_child
-from polyad.compiler.network import configure_pod
-from polyad.compiler.storage import configure_storage, storage_fields
+from polyad.compiler.passes.audit import trace_child
+from polyad.compiler.passes.children import child_name as compile_child_name
+from polyad.compiler.passes.children import owned_child
+from polyad.compiler.passes.identity import inject_environment, workload_identity
+from polyad.compiler.passes.network import configure_pod
+from polyad.compiler.passes.storage import configure_storage, storage_fields
 from polyad.graph.activation import ActivationPolicy
 from polyad.graph.gates import DelayGate, Gate
 from polyad.graph.topology import converter, topology
+from polyad.metrics.workloads import observation_time
 from polyad.operator.activations import TERMINAL, Activations
 from polyad.operator.api import GROUP
 from polyad.operator.capacity import CapacityManager
 from polyad.operator.compositions import drain_composition, reconcile_composition
 from polyad.operator.graph_status import instance_metrics
 from polyad.operator.graph_status import observed as observed
+from polyad.operator.identity import graph_ancestry
 from polyad.operator.network import POLICY_KINDS, context, ensure_policies
 from polyad.operator.placement import merge_placement, place_pod
 from polyad.operator.rules import check_rules
@@ -142,9 +146,10 @@ class Controller:
         if all(_status_value(obj.get("status", {}).get(key)) == _status_value(value) for key, value in values.items()):
             return
         values = copy.deepcopy(values)
-        if "nodes" in values:
-            for removed in obj.get("status", {}).get("nodes", {}).keys() - values["nodes"].keys():
-                values["nodes"][removed] = None
+        for field in ("nodes", "workloads", "activations"):
+            if field in values:
+                for removed in obj.get("status", {}).get(field, {}).keys() - values[field].keys():
+                    values[field][removed] = None
         await self.api.request(
             "PATCH",
             obj["kind"],
@@ -276,6 +281,7 @@ class Controller:
             )
         snapshot = {**obj, "status": {**obj.get("status", {}), **values}}
         values["metrics"] = instance_metrics(snapshot, children)
+        values["metricsObservedAt"] = observation_time(obj.get("status", {}).get("metricsObservedAt"))
         await self.status(obj, values)
 
     async def _reconcile(self, key: Key) -> None:
@@ -317,6 +323,11 @@ class Controller:
         if kind in BOUNDARIES | {"Rewrite", "Composition"} and FINALIZER not in obj["metadata"].get("finalizers", []):
             await self.finalizers(obj)
             raise Pending("drain finalizer persisted; refresh before admission")
+        if kind == "ReplicaGroup":
+            from polyad.operator.replication import reconcile_group
+
+            await reconcile_group(self, obj)
+            return
         if obj.get("spec", {}).get("templateOnly", False):
             return
         if kind == "Composition":
@@ -491,10 +502,18 @@ class Controller:
         persistence = {}
         activation_policies = {}
         definitions = {}
+        definition_cache = {}
         network_plans = {}
         names = {node.name: child_name(obj, node.name) for node in graph.nodes}
+        ancestors = (
+            await graph_ancestry(self.api, obj) if any(node.kind in {"Workload", "Ephemeral", "Daemon"} for node in graph.nodes) else []
+        )
+        endpoints = {name: os.environ.get(f"POLYAD_WORKLOAD_{name}_URL", "") for name in ("API", "EVENTS", "METRICS")}
         for node in graph.nodes:
-            definition = await self.definition(node.kind, namespace, node.ref)
+            reference_key = (node.kind, node.ref)
+            if reference_key not in definition_cache:
+                definition_cache[reference_key] = await self.definition(node.kind, namespace, node.ref)
+            definition = definition_cache[reference_key]
             definitions[node.name] = definition
             if "activation" in definition["spec"]:
                 if node.kind == "Resource":
@@ -517,6 +536,7 @@ class Controller:
                     raise ValueError("Ephemeral requires explicit spot placement")
                 place_pod(pod_spec, effective)
                 pod_spec["terminationGracePeriodSeconds"] = policy.get("graceSeconds", pod_spec.get("terminationGracePeriodSeconds", 30))
+                inject_environment(pod, workload_identity(ancestors, node, definition, names[node.name], endpoints))
                 if node.kind == "Daemon":
                     for container in pod_spec["containers"]:
                         if any(probe not in container for probe in ("startupProbe", "readinessProbe", "livenessProbe")):
@@ -551,12 +571,18 @@ class Controller:
             else:
                 if not spec.get("templateOnly", False):
                     raise ValueError("nested boundaries must reference templateOnly definitions")
-                finite_child = spec.get("rounds") is not None if node.kind == "Feedback" else spec.get("mode", "finite") == "finite"
+                finite_child = (
+                    spec.get("rounds") is not None
+                    if node.kind == "Feedback"
+                    else node.kind != "ReplicaGroup" and spec.get("mode", "finite") == "finite"
+                )
                 if not finite_child and (
                     graph.mode == "finite"
                     or any(edge.node == node.name and edge.condition == "completed" for other in graph.nodes for edge in other.requires)
                 ):
                     raise ValueError("persistent nested boundaries cannot satisfy finite completion")
+                if node.kind == "ReplicaGroup":
+                    spec["replicaSource"] = {"name": definition["metadata"]["name"], "uid": definition["metadata"]["uid"]}
                 spec.pop("activation", None)
                 spec["templateOnly"] = False
                 if graph.capacity is not None:
@@ -636,6 +662,13 @@ class Controller:
                 obj, {"phase": "Draining", "ready": False, "completed": False, "failed": False, "observedGeneration": meta["generation"]}
             )
             for child in obsolete:
+                if (
+                    obj["kind"] == "ReplicaGroup"
+                    and child["kind"] == "Job"
+                    and not observed(child)["completed"]
+                    and not observed(child)["failed"]
+                ):
+                    continue  # Scale-in waits for finite work; it never cancels an active Job.
                 if not child["metadata"].get("deletionTimestamp"):
                     await self.api.delete(child)
             raise Pending("draining removed or replaced nodes before admitting the new topology", phase="Draining")
@@ -728,6 +761,29 @@ class Controller:
             node.name in activations.blocked or states.get(node.name, {}).get("ready") or states.get(node.name, {}).get("completed")
             for node in graph.nodes
         )
+        workloads = {}
+        for logical, definition in definitions.items():
+            logical_executions = [child for child in children if child["metadata"].get("labels", {}).get(f"{GROUP}/node") == logical]
+            logical_observations = [observed(child) for child in logical_executions]
+            pulse = activations.summary.get(logical, {})
+            workloads[logical] = {
+                "kind": definition["kind"],
+                "definition": definition["metadata"]["name"],
+                "definitionUid": definition["metadata"]["uid"],
+                "values": {
+                    "executions": len(logical_executions),
+                    "readyExecutions": sum(state["ready"] for state in logical_observations),
+                    "completedExecutions": sum(state["completed"] for state in logical_observations),
+                    "failedExecutions": sum(state["failed"] for state in logical_observations),
+                    "pendingActivations": pulse.get("pending", 0),
+                    "activeActivations": pulse.get("active", 0),
+                    "overdue": int(pulse.get("overdue", False)),
+                    "replicas": sum(
+                        child.get("status", {}).get("replicas", child.get("status", {}).get("active", 0)) for child in logical_executions
+                    ),
+                    "readyReplicas": sum(child.get("status", {}).get("readyReplicas", 0) for child in logical_executions),
+                },
+            }
         await self.status(
             obj,
             {
@@ -737,6 +793,8 @@ class Controller:
                 "failed": failed,
                 "nodes": states,
                 "activations": activations.summary,
+                "workloads": workloads,
+                "workloadsObservedAt": observation_time(obj.get("status", {}).get("workloadsObservedAt")),
                 "activationRuntime": {
                     "generation": meta["generation"],
                     "dormant": sorted(activations.blocked - activations.records.keys()),

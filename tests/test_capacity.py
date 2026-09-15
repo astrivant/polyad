@@ -12,8 +12,8 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.compiler import asts
-from polyad.compiler.capacity import frontier, placeholder, requests
-from polyad.compiler.schema import structural_schema
+from polyad.compiler.passes.capacity import frontier, placeholder, requests
+from polyad.compiler.passes.schema import structural_schema
 from polyad.graph import CapacityPlan, Dependency, Node, Topology
 from polyad.graph.topology import converter
 from polyad.operator.capacity import CONSUME

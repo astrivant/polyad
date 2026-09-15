@@ -49,6 +49,8 @@ def graph(kind="Graph"):
     Produce a real, generation-current status snapshot for an empty completed graph.
     """
     obj = resource(kind, "root", {"graph": {"nodes": []}} if kind == "Feedback" else {"nodes": []})
+    if kind == "ReplicaGroup":
+        obj["spec"] = {"replicas": 0, "template": {"kind": "Graph", "ref": "template"}}
     obj["status"] = {"observedGeneration": 1, "phase": "Completed", "completed": True, "ready": True}
     obj["status"]["metrics"] = instance_metrics(obj, [])
     return obj
@@ -86,7 +88,7 @@ def test_activation_receipt_health(tmp_path, argocd_config, phase, expected):
     assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected
 
 
-@pytest.mark.parametrize("kind", ["Graph", "EphemeralGraph", "PolyGraph", "Feedback"])
+@pytest.mark.parametrize("kind", ["Graph", "EphemeralGraph", "PolyGraph", "Feedback", "ReplicaGroup"])
 def test_graph_kinds_and_templates(tmp_path, argocd_config, kind):
     """
     All graph boundaries report completion, while unexecuted templates are healthy definitions.

@@ -9,7 +9,7 @@ import os
 from typing import TYPE_CHECKING
 
 from polyad.compiler import asts
-from polyad.compiler.network import NetworkScope, policy_specs, scope_label
+from polyad.compiler.passes.network import NetworkScope, policy_specs, scope_label
 from polyad.graph.rules import StructuralRule
 from polyad.graph.topology import converter, topology
 
@@ -49,6 +49,13 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
         if meta["uid"] in seen:
             raise ValueError("cyclic graph ownership")
         seen.add(meta["uid"])
+        if kind == "ReplicaGroup":
+            from polyad.operator.replication import replica_selector
+
+            labels[replica_selector(meta["uid"])] = "true"
+            source = current.get("spec", {}).get("replicaSource")
+            if source and current["spec"].get("inheritReplicas", True):
+                labels[replica_selector(source["uid"])] = "true"
         labels[scope_label(namespace, kind, meta["name"])] = "true"
         labels[scope_label(namespace, kind, meta["name"], branch)] = "true"
         # Feedback's graph specification is applied by its epoch instance. Its identity

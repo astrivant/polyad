@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from attrs import evolve
 
 from polyad.compiler import asts
-from polyad.compiler.composition import request_name
+from polyad.compiler.passes.composition import request_name
 
 if TYPE_CHECKING:
     from typing import Any

@@ -29,6 +29,7 @@ from polyad.operator.coordination import SHARDS, Coordinator, NotOwner, active_s
 from polyad.operator.health import credential_token, lifecycle, watch_credentials
 from polyad.operator.queue import RefreshQueue
 from polyad.operator.shared_queue import SharedQueue
+from polyad.operator.tuning import OperatorTuning
 
 if TYPE_CHECKING:
     from typing import Any
@@ -48,6 +49,7 @@ inventory_sample: tuple[float, dict[str, Any]] | None = None
 inventory_sample_ok = False
 last_api_success = 0.0
 initialized = False
+tuning = OperatorTuning()
 background: list[asyncio.Task[None]] = []
 KINDS = tuple(sorted(RECONCILED_KINDS))
 logger = logging.getLogger(__name__)
@@ -65,7 +67,8 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     Returns:
         None: No return value.
     """
-    global queue, controller, coordinator, shared, initialized, http, events, event_http, metrics_http
+    global queue, controller, coordinator, shared, initialized, http, events, event_http, metrics_http, tuning
+    tuning = OperatorTuning.from_environment()
     settings.posting.enabled = False
     settings.scanning.disabled = True
     settings.networking.request_timeout = 30
@@ -73,6 +76,8 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
         injection = json.loads(os.environ.get("POLYAD_MESH_INJECTION_STATUS", "{}") or "{}")
         if "istio-proxy" not in injection.get("initContainers", []):
             raise RuntimeError("operator mesh authorization requires injected Istio native sidecars")
+    if os.environ.get("POLYAD_CACHE_URL_FILE"):
+        os.environ["POLYAD_CACHE_URL"] = credential_token("CACHE", setting="URL")
     namespace = os.environ.get("POLYAD_NAMESPACE", "default")
     coordinator = Coordinator(API(), namespace)
     controller = Controller(API(before_write=coordinator.guard))
@@ -87,7 +92,8 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
             events, namespace, credential_token("EVENTS"), connections=int(os.environ.get("POLYAD_EVENTS_CONNECTIONS", "16"))
         )
     if os.environ.get("POLYAD_METRICS_ENABLED", "false").lower() == "true":
-        metrics_http = MetricsServer(metrics_store)
+        token = credential_token("METRICS") if os.environ.get("POLYAD_METRICS_AUTH_ENABLED", "false").lower() == "true" else None
+        metrics_http = MetricsServer(metrics_store, token=token)
         background.append(asyncio.create_task(metrics_loop()))
     background.append(asyncio.create_task(watch_credentials()))
     logger.debug(
@@ -140,7 +146,7 @@ async def backlog_loop() -> None:
             await shared.sample_backlog(range(SHARDS))
         except Exception:
             logger.warning("Backlog sampling failed; health metrics retain their stale sample")
-        await asyncio.sleep(5)
+        await asyncio.sleep(tuning.backlog)
 
 
 async def rescan_loop() -> None:
@@ -171,7 +177,7 @@ async def rescan_loop() -> None:
         except Exception:
             inventory_sample_ok = False
             logger.exception("Resource rescan failed; retrying from fresh state")
-        await asyncio.sleep(5)
+        await asyncio.sleep(tuning.rescan)
 
 
 async def metrics_loop() -> None:
@@ -201,7 +207,7 @@ async def metrics_loop() -> None:
             },
             graph_labels=os.environ.get("POLYAD_METRICS_GRAPH_LABELS", "false").lower() == "true",
         )
-        await asyncio.sleep(5)
+        await asyncio.sleep(tuning.metrics)
 
 
 async def reconcile(key: Key) -> None:
@@ -302,7 +308,7 @@ async def consume_loop() -> None:
                     active_shard.reset(token)
         except Exception:
             logger.exception("Dragonfly unavailable; queue consumption paused")
-        await asyncio.sleep(1)
+        await asyncio.sleep(tuning.consume)
 
 
 async def handle(namespace: str | None, name: str, body: kopf.Body, **_: Any) -> None:

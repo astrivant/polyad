@@ -111,9 +111,18 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
     runtime = obj.get("status", {}).get("activationRuntime") or {}
     if runtime.get("generation") == obj["metadata"].get("generation", 1) and obj["kind"] != "Feedback":
         # Metrics use execution aliases; traffic guards retain logical identities.
-        obj = {**obj, "spec": {**obj["spec"], "nodes": runtime["nodes"], "connections": runtime["connections"], "network": None}}
+        base_spec = obj["spec"]
+        if obj["kind"] == "ReplicaGroup":
+            from polyad.graph.replication import replica_topology
+
+            base_spec = replica_topology(base_spec)
+        obj = {**obj, "spec": {**base_spec, "nodes": runtime["nodes"], "connections": runtime["connections"], "network": None}}
     else:
         runtime = {}
+    if obj["kind"] == "ReplicaGroup" and "template" in obj["spec"]:
+        from polyad.graph.replication import replica_topology
+
+        obj = {**obj, "spec": replica_topology(obj["spec"])}
     spec = obj["spec"]["graph"] if obj["kind"] == "Feedback" else obj["spec"]
     counts = Counter(child["kind"] for child in children)
     by_kind: dict[str, Any] = {kind: counts[kind] for kind in sorted(GRAPH_OWNED_KINDS)}

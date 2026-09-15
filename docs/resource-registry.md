@@ -59,3 +59,7 @@ to `ResourceCounts` and regenerate status schemas. Registry tests catch drift
 between owned kinds and typed counts, and between Python API identities and the
 shipped Polyad CRDs. Existing `polyad.compiler.asts.RESOURCE_TYPES` imports remain
 available.
+
+`ReplicaGroup` is a composable, reconciled graph boundary with a Kubernetes scale
+subresource. It accepts any executable node definition, including nested groups.
+See [replication and KEDA](replication.md).

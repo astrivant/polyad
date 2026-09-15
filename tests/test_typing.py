@@ -79,7 +79,7 @@ def test_public_status_types(tmp_path):
     consumer.write_text(
         "from typing import assert_type\n"
         "from polyad.compiler.asts import GraphMetrics, TopologyMetrics, ExecutionMetrics\n"
-        "from polyad.compiler.schema import structural_schema\n"
+        "from polyad.compiler.passes.schema import structural_schema\n"
         "metrics = GraphMetrics(observedGeneration=2)\n"
         "assert_type(metrics.topology, TopologyMetrics | None)\n"
         "assert_type(metrics.execution, ExecutionMetrics | None)\n"

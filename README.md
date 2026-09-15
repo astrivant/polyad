@@ -8,16 +8,19 @@ their work and tracks progress across the application and integrations.<sup>[\[2
 
 ## Table of contents
 
-- [What Polyad abstracts](#what-polyad-abstracts)
-  - [Graphs of graphs](#graphs-of-graphs)
-  - [Constrained compositions](#constrained-compositions)
-  - [Network boundaries](#network-boundaries)
-  - [Graphs across node groups](#graphs-across-node-groups)
-  - [Workloads calling the operator](#workloads-calling-the-operator)
-  - [Finite pipelines](#finite-pipelines)
-  - [Persistent services and recurrence](#persistent-services-and-recurrence)
-- [Get started](#get-started)
-- [License](#license)
+- [Polyad](#polyad)
+  - [Table of contents](#table-of-contents)
+  - [What Polyad abstracts](#what-polyad-abstracts)
+    - [Graphs of graphs](#graphs-of-graphs)
+    - [Constrained compositions](#constrained-compositions)
+    - [Network boundaries](#network-boundaries)
+    - [Graphs across node groups](#graphs-across-node-groups)
+    - [Workloads calling the operator](#workloads-calling-the-operator)
+    - [Finite pipelines](#finite-pipelines)
+    - [Persistent services and recurrence](#persistent-services-and-recurrence)
+  - [What Polyad is not](#what-polyad-is-not)
+  - [Get started](#get-started)
+  - [License](#license)
 
 ## What Polyad abstracts
 
@@ -333,7 +336,30 @@ helping node autoscalers prepare machines while upstream work runs.
 
 Queue pressure and graph hierarchies are available through the optional
 [Prometheus and JSON metrics API](docs/metrics.md).
+[KEDA can scale services or whole graph compositions](docs/replication.md) through
+`ReplicaGroup`, using workload metrics served by the operator.
+
 [Argo CD](docs/argocd.md) and [Flux health checks](docs/fluxcd.md) report graph and leaf health across nested applications.
+
+## What Polyad is not
+
+Polyad coordinates application graphs alongside existing cluster components.
+
+- **A general-purpose policy engine such as OPA.** `GraphRule` constrains the
+  graphs Polyad admits and the resources it compiles. It does not evaluate Rego,
+  replace application authorization, or enforce policy on every Kubernetes API
+  request. Cluster-wide admission policy remains a separate concern.<sup>[\[18\]](https://www.openpolicyagent.org/docs)</sup><sup>[\[19\]](docs/operator.md#structural-policy-and-composition-api)</sup>
+- **A replacement for the Kubernetes scheduler or node autoscaler.** Polyad
+  controls when graph work is admitted and propagates placement constraints.
+  Kubernetes places Pods; the configured autoscaler provisions machines.
+  Grouping work does not guarantee that every Pod starts together.<sup>[\[9\]](docs/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup><sup>[\[20\]](docs/capacity.md#scheduling-demand-and-placement)</sup>
+- **A service mesh or network transport.** Polyad generates network and Istio
+  policy resources. The cluster's networking implementation and mesh enforce
+  them; drawing a graph connection does not transport application data.<sup>[\[21\]](docs/networking.md#enforcement-and-lifecycle)</sup>
+- **Automatic process checkpointing or exactly-once execution.** Restarting
+  containers with persistent storage requires application recovery logic.
+  Workloads must handle retries and duplicate effects; graph ownership and
+  ordered API writes do not make application operations transactional.<sup>[\[22\]](docs/operator.md#workload-persistence)</sup><sup>[\[10\]](docs/operator.md#replicas-shared-queues-and-autoscaling)</sup>
 
 ## Get started
 

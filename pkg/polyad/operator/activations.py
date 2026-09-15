@@ -13,7 +13,8 @@ from attrs import evolve
 from polyad.api.activations import ActivationStore
 from polyad.compiler import asts
 from polyad.compiler.activation import ActivationRequest, activation_name
-from polyad.compiler.children import child_name
+from polyad.compiler.passes.children import child_name
+from polyad.compiler.passes.identity import inject_environment
 from polyad.graph.topology import Dependency
 from polyad.operator.graph_status import observed
 
@@ -299,6 +300,15 @@ class Activations:
             f"{annotations[f'{asts.GROUP}/desired-hash']}/{uid}/{self.policies[node].replicasPerActivation}".encode()
         ).hexdigest()
         if document["kind"] in {"Job", "Deployment"}:
+            inject_environment(
+                document["spec"]["template"],
+                {
+                    "POLYAD_RESOURCE_NAME": meta["name"],
+                    "POLYAD_RUNTIME_NODE_NAME": key,
+                    "POLYAD_ACTIVATION_ID": receipt["spec"]["requestId"],
+                    "POLYAD_ACTIVATION_UID": uid,
+                },
+            )
             document["spec"]["template"].setdefault("metadata", {}).setdefault("annotations", {}).update(
                 {
                     ANNOTATION: uid,

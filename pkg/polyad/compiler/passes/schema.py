@@ -35,6 +35,10 @@ def structural_schema(model: type) -> dict[str, Any]:
 
 
 def _schema(annotation: Any, ancestors: tuple[type, ...]) -> dict[str, Any]:
+    from typing import Any as AnyValue
+
+    if annotation is AnyValue:
+        return {"x-kubernetes-preserve-unknown-fields": True}
     origin, arguments = get_origin(annotation), get_args(annotation)
     if origin in (Union, UnionType):
         members = [member for member in arguments if member is not type(None)]

@@ -17,19 +17,28 @@ import os
 from polyad_client import Client
 
 client = Client(
-    "http://polyad-polyad-api.orchestration.svc.cluster.local:8090",
+    os.environ["POLYAD_API_URL"],
     os.environ["POLYAD_API_TOKEN"],
 )
 receipt = client.activate(
     request_id="batch-42",
-    graph="processing",
-    graph_uid="THE-GRAPH-INSTANCE-UID",
+    graph=os.environ["POLYAD_GRAPH_NAME"],
+    graph_uid=os.environ["POLYAD_GRAPH_UID"],
+    kind=os.environ["POLYAD_GRAPH_KIND"],
     node="process-batch",
 )
 status = client.activation("batch-42")
 # Explicitly stop a long-running activation when its service is no longer needed:
 client.stop("batch-42")
 ```
+
+Inside a managed workload, Polyad injects the graph instance identity and enabled
+operator endpoint URLs into every declared application and init container.
+`process-batch` is the downstream target in that graph; `POLYAD_NODE_NAME`
+identifies the calling workload's own node. Supply `POLYAD_API_TOKEN` explicitly
+from an authorized Secret. See [workload environment](../../docs/workload-environment.md)
+for ancestry, Pod identity, activation IDs and the full variable contract.
+Outside managed Pods, supply the operator URL and graph instance identity yourself.
 
 `compose(document)` submits ID-addressed graph definitions.
 `composition(request_id, resources=True)` returns generated resource names and UIDs.

@@ -17,8 +17,7 @@ spec:
   minReplicas: {{ .Values.operator.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.operator.autoscaling.maxReplicas }}
   behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
+    {{- toYaml .Values.operator.autoscaling.behavior | nindent 4 }}
   metrics:
     - type: Resource
       resource:

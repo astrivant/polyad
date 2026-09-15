@@ -24,8 +24,66 @@ def render(*settings):
     """
     command = ["helm", "template", "test", str(CHART), "--namespace", "test", "--include-crds"]
     for setting in settings:
-        command.extend(["--set-string" if setting.startswith("dragonfly.existingSecret=") else "--set", setting])
+        flag = "--set-string" if setting.startswith("dragonfly.existingSecret=") else "--set"
+        if setting.startswith("operator.tuning."):
+            flag = "--set-json"
+        command.extend([flag, setting])
     return list(filter(None, yaml.safe_load_all(subprocess.check_output(command, text=True))))
+
+
+def test_operator_autoscaling_behavior_and_runtime_tuning():
+    """
+    Preserve scaling defaults while passing explicit zero and rate overrides through Helm.
+    """
+    objects = render("operator.autoscaling.enabled=true")
+    hpa = next(obj for obj in objects if obj["kind"] == "HorizontalPodAutoscaler")
+    assert hpa["spec"]["behavior"]["scaleDown"]["stabilizationWindowSeconds"] == 300
+    assert hpa["spec"]["behavior"]["scaleUp"]["stabilizationWindowSeconds"] == 0
+    objects = render(
+        "operator.autoscaling.enabled=true",
+        "operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds=45",
+        "operator.autoscaling.behavior.scaleDown.stabilizationWindowSeconds=0",
+        "operator.autoscaling.behavior.scaleDown.selectPolicy=Min",
+        "operator.autoscaling.behavior.scaleDown.policies[0].type=Pods",
+        "operator.autoscaling.behavior.scaleDown.policies[0].value=1",
+        "operator.autoscaling.behavior.scaleDown.policies[0].periodSeconds=60",
+        "operator.tuning.rescanIntervalSeconds=12",
+        "operator.tuning.consumeIntervalSeconds=0.25",
+        "operator.tuning.metricsIntervalSeconds=2",
+        "operator.tuning.backlogIntervalSeconds=3",
+    )
+    hpa = next(obj for obj in objects if obj["kind"] == "HorizontalPodAutoscaler")
+    assert hpa["spec"]["behavior"]["scaleUp"]["stabilizationWindowSeconds"] == 45
+    assert hpa["spec"]["behavior"]["scaleDown"] == {
+        "stabilizationWindowSeconds": 0,
+        "selectPolicy": "Min",
+        "policies": [{"type": "Pods", "value": 1, "periodSeconds": 60}],
+    }
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    assert "replicas" not in deployment["spec"]
+    env = {item["name"]: item.get("value") for item in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+    for name, value in (("RESCAN", "12"), ("CONSUME", "0.25"), ("METRICS", "2"), ("BACKLOG", "3")):
+        assert env[f"POLYAD_{name}_INTERVAL_SECONDS"] == value
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "operator.autoscaling.behavior.scaleDown.stabilizationWindowSeconds=-1",
+        "operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds=3601",
+        "operator.autoscaling.behavior.scaleUp.selectPolicy=Fast",
+        "operator.autoscaling.behavior.scaleDown.policies[0].periodSeconds=1801",
+        "operator.autoscaling.behavior.scaleDown.policies[0].value=0",
+        "operator.tuning.consumeIntervalSeconds=0",
+        "operator.tuning.rescanIntervalSeconds=16",
+    ],
+)
+def test_invalid_operator_performance_settings_fail(setting):
+    """
+    Reject unusable autoscaler policies and worker periods during chart rendering.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(setting)
 
 
 @pytest.mark.parametrize("ha,persistence", [(False, True), (True, True), (True, False)])
@@ -232,6 +290,9 @@ def test_composition_service_and_policy_rbac():
     operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     env = operator["spec"]["template"]["spec"]["containers"][0]["env"]
     assert {"name": "POLYAD_API_ENABLED", "value": "true"} in env
+    assert {"name": "POLYAD_WORKLOAD_API_URL", "value": "http://test-polyad-api.test.svc:8090"} in env
+    assert {"name": "POLYAD_WORKLOAD_EVENTS_URL", "value": ""} in env
+    assert {"name": "POLYAD_WORKLOAD_METRICS_URL", "value": ""} in env
     assert next(item for item in env if item["name"] == "POLYAD_API_TOKEN_FILE")["value"] == "/var/run/polyad/api/token"
     assert operator["spec"]["template"]["spec"]["volumes"][0]["secret"]["secretName"] == "composition-token"
     role = next(obj for obj in objects if obj["kind"] == "Role" and obj["metadata"]["name"] == "test-polyad")
@@ -318,7 +379,7 @@ def test_capacity_schemas_come_from_public_models():
     Graphs, Feedback epochs and rewrites expose matching capacity policy schemas.
     """
     from polyad.compiler.asts import CapacityStatus
-    from polyad.compiler.schema import structural_schema
+    from polyad.compiler.passes.schema import structural_schema
     from polyad.graph import CapacityPlan
 
     for kind in ("graphs", "polygraphs", "ephemeralgraphs", "feedbacks", "rewrites"):
@@ -354,9 +415,133 @@ def test_optional_metrics_service_and_access_policies():
     container = deployment["spec"]["template"]["spec"]["containers"][0]
     assert {"name": "metrics", "containerPort": 8092} in container["ports"]
     assert {"name": "POLYAD_METRICS_GRAPH_LABELS", "value": "true"} in container["env"]
+    assert {"name": "POLYAD_WORKLOAD_METRICS_URL", "value": "http://test-polyad-metrics.test.svc:8092"} in container["env"]
     network = next(obj for obj in objects if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "test-polyad")
     assert any(rule["ports"] == [{"protocol": "TCP", "port": 8092}] for rule in network["spec"]["ingress"])
     mesh = next(obj for obj in objects if obj["kind"] == "AuthorizationPolicy")
     rule = next(rule for rule in mesh["spec"]["rules"] if rule["to"][0]["operation"]["ports"] == ["8092"])
     assert rule["from"][0]["source"]["principals"] == ["cluster.local/ns/monitoring/sa/prometheus"]
-    assert rule["to"][0]["operation"]["paths"] == ["/metrics", "/v1/metrics", "/openapi.json"]
+    assert rule["to"][0]["operation"]["paths"] == ["/metrics", "/v1/metrics", "/v1/workloads/*", "/openapi.json"]
+
+
+def test_keda_bearer_secret_mount_and_optional_resources():
+    """
+    Share a dedicated Secret between the metrics listener and reusable KEDA authentication.
+    """
+    assert not any(item["kind"] in {"TriggerAuthentication", "ExternalSecret"} for item in render())
+    objects = render(
+        "metrics.enabled=true",
+        "metrics.authentication.enabled=true",
+        "metrics.authentication.existingSecret=autoscaler-token",
+        "metrics.authentication.secretKey=access",
+        "keda.authentication.enabled=true",
+    )
+    auth = next(item for item in objects if item["kind"] == "TriggerAuthentication")
+    schema = json.loads((CHART / "schemas/triggerauthentication-keda-v1alpha1.json").read_text())
+    jsonschema.Draft7Validator(schema).validate(auth)
+    assert auth["metadata"]["namespace"] == "test"
+    assert auth["spec"]["secretTargetRef"] == [{"parameter": "token", "name": "autoscaler-token", "key": "access"}]
+    pod = next(item for item in objects if item["kind"] == "Deployment" and item["metadata"]["name"] == "test-polyad")["spec"]["template"][
+        "spec"
+    ]
+    volume = next(item for item in pod["volumes"] if item["name"] == "metrics-credentials")
+    assert volume["secret"] == {"secretName": "autoscaler-token", "items": [{"key": "access", "path": "token"}]}
+    assert {"name": "POLYAD_METRICS_AUTH_ENABLED", "value": "true"} in pod["containers"][0]["env"]
+    assert {"name": "POLYAD_METRICS_TOKEN_FILE", "value": "/var/run/polyad/metrics/token"} in pod["containers"][0]["env"]
+    assert not any(item["kind"] == "Secret" and item["metadata"]["name"] == "autoscaler-token" for item in objects)
+    inline = render(
+        "metrics.enabled=true",
+        "metrics.authentication.enabled=true",
+        "metrics.authentication.existingSecret=",
+        "metrics.authentication.key=test-metrics-token",
+        "keda.authentication.enabled=true",
+    )
+    assert next(item for item in inline if item["kind"] == "Secret")["stringData"] == {"token": "test-metrics-token"}
+    assert (
+        next(item for item in inline if item["kind"] == "TriggerAuthentication")["spec"]["secretTargetRef"][0]["name"]
+        == "test-polyad-metrics"
+    )
+
+
+def test_eso_generates_references_for_endpoint_and_cache_secrets(tmp_path):
+    """
+    Render provider references without including credentials or duplicating target Secrets.
+    """
+    config = {
+        "metrics": {"enabled": True, "authentication": {"enabled": True}},
+        "keda": {"authentication": {"enabled": True}},
+        "api": {"enabled": True},
+        "events": {"enabled": True},
+        "dragonfly": {"enabled": False, "existingSecret": "polyad-cache"},
+        "externalSecrets": {
+            "enabled": True,
+            "secretStoreRef": {"name": "vault", "kind": "ClusterSecretStore"},
+            "secrets": [
+                {
+                    "name": f"polyad-{endpoint}",
+                    "data": [{"secretKey": key, "remoteRef": {"key": f"production/polyad/{endpoint}", "property": key}}],
+                }
+                for endpoint, key in (("metrics", "token"), ("api", "token"), ("events", "token"), ("cache", "url"))
+            ],
+        },
+    }
+    path = tmp_path / "values.yaml"
+    path.write_text(yaml.safe_dump(config))
+
+    def render_config():
+        return list(
+            filter(
+                None,
+                yaml.safe_load_all(
+                    subprocess.check_output(["helm", "template", "test", str(CHART), "--namespace", "test", "-f", str(path)], text=True)
+                ),
+            )
+        )
+
+    objects = render_config()
+    external = [item for item in objects if item["kind"] == "ExternalSecret"]
+    assert len(external) == 4
+    assert not any(item["kind"] == "Secret" for item in objects)
+    for item in external:
+        schema = json.loads((CHART / "schemas/externalsecret-external-secrets-v1.json").read_text())
+        jsonschema.Draft7Validator(schema).validate(item)
+        assert item["apiVersion"] == "external-secrets.io/v1"
+        assert item["spec"]["secretStoreRef"] == {"name": "vault", "kind": "ClusterSecretStore"}
+        assert item["spec"]["target"]["name"] == item["metadata"]["name"]
+        assert "remoteRef" in item["spec"]["data"][0]
+    pod = next(item for item in objects if item["kind"] == "Deployment")["spec"]["template"]["spec"]
+    assert {"name": "POLYAD_CACHE_URL_FILE", "value": "/var/run/polyad/cache/url"} in pod["containers"][0]["env"]
+    assert next(item for item in pod["volumes"] if item["name"] == "cache-credentials")["secret"]["secretName"] == "polyad-cache"
+    config["externalSecrets"]["secrets"].append(config["externalSecrets"]["secrets"][0])
+    path.write_text(yaml.safe_dump(config))
+    with pytest.raises(subprocess.CalledProcessError):
+        render_config()
+    config["externalSecrets"]["secrets"].pop()
+    config["externalSecrets"]["secrets"][0]["data"].append(config["externalSecrets"]["secrets"][0]["data"][0])
+    path.write_text(yaml.safe_dump(config))
+    with pytest.raises(subprocess.CalledProcessError):
+        render_config()
+    config["externalSecrets"]["secrets"][0]["data"].pop()
+    config["externalSecrets"]["secrets"][0]["name"] = "test-polyad-metrics"
+    config["metrics"]["authentication"].update(existingSecret="", key="test-only-inline-token")
+    path.write_text(yaml.safe_dump(config))
+    with pytest.raises(subprocess.CalledProcessError):
+        render_config()
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        ["keda.authentication.enabled=true"],
+        ["metrics.authentication.enabled=true"],
+        ["metrics.enabled=true", "metrics.authentication.enabled=true", "metrics.authentication.key=conflict"],
+        ["metrics.enabled=true", "metrics.authentication.enabled=true", "metrics.authentication.existingSecret="],
+        ["externalSecrets.enabled=true"],
+    ],
+)
+def test_invalid_endpoint_authentication_configuration_fails(settings):
+    """
+    Refuse authentication without credentials, a listener or an external store reference.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(*settings)

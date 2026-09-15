@@ -20,8 +20,12 @@ It is independent of composition intake, event subscriptions and Kopf health
 probes. Outside Helm, set `POLYAD_METRICS_ENABLED=true`; optionally set
 `POLYAD_METRICS_GRAPH_LABELS=true`.
 
-The endpoint has no application bearer credential. Treat object names and
-hierarchy membership as internal operational data. If NetworkPolicies are
+Enable `metrics.authentication.enabled` to require a dedicated bearer token on
+every metrics route, including OpenAPI. The chart can create KEDA
+`TriggerAuthentication` and ESO `ExternalSecret` resources; see
+[metrics authentication and external credentials](authentication.md).
+Authentication is disabled by default. Treat object names and hierarchy
+membership as internal operational data. If NetworkPolicies are
 enabled, allow monitoring clients with `networkPolicy.metricsPeers`. If the
 operator uses Istio, authorize the scraper's mTLS identity through
 `mesh.operator.metricsPrincipals`. Both controls apply when both are enabled.
@@ -57,6 +61,20 @@ and Prometheus are supplied by your monitoring stack,
 not by this chart. A meshed operator also requires a compatible mTLS scrape
 configuration.
 
+With bearer authentication enabled, add `authorization` to the ServiceMonitor
+endpoint, referencing a Secret **in the ServiceMonitor's namespace**:
+
+```yaml
+authorization:
+  type: Bearer
+  credentials:
+    name: polyad-metrics
+    key: token
+```
+
+If Prometheus is in another namespace, use ESO there to populate a Secret from
+the same provider entry. The chart does not copy credentials across namespaces.
+
 ## Counts and scope
 
 Every Prometheus series includes `namespace` and `replica`. Additional labels
@@ -84,7 +102,7 @@ unacknowledged entry can also be undergoing reconciliation. **Do not add inbound
 local refresh and API write counts together as independent work.**
 
 The inventory includes Graph, PolyGraph, EphemeralGraph, Feedback, Rewrite,
-Composition, Workload, Daemon, Ephemeral, Resource, Gate, ShutdownPolicy and
+Composition, Activation, ReplicaGroup, Workload, Daemon, Ephemeral, Resource, Gate, ShutdownPolicy and
 GraphRule CRs. Reusable definitions count separately from instances. Definition
 references are not ownership links. Direct resources come from graph status,
 not a cluster-wide Pod or workload census; they include graph child CRs and
@@ -108,17 +126,21 @@ The JSON hierarchy remains available either way.
 
 ## Freshness and failures
 
-The operator publishes snapshots every five seconds. HTTP reads use cached
+By default, the operator publishes snapshots every five seconds. HTTP reads use cached
 bytes and never contact Kubernetes or Dragonfly. API write gauges are sampled,
 so short bursts between samples may not appear.
 
-Shared queues are sampled independently every five seconds. A failed sample or
+Shared queues are sampled independently every five seconds by default. A failed sample or
 one older than fifteen seconds suppresses the actionable Prometheus backlog
 series. Inventory updates replace the previous snapshot only after a complete
 namespace scan; failed scans or samples older than thirty seconds (measured
 from the start of the scan) suppress
 inventory-derived Prometheus series. Lists across kinds are eventually
 consistent, not a transactional snapshot of the whole namespace.
+
+Tune publication, backlog sampling and inventory rescans through
+[`operator.tuning`](performance.md#worker-cadence). Changing the intervals does
+not extend freshness deadlines or make unavailable demand count as zero.
 
 `polyad_inbound_sample_fresh`, `polyad_inventory_sample_fresh` and their
 `*_sample_age_seconds` companions expose these conditions. JSON retains the
@@ -132,7 +154,7 @@ or replacement/draining signalled returns HTTP 503 for both data endpoints.
 An exited metrics thread or publication task also fails the existing health
 probe. No API/cache outage is represented as zero demand.
 
-## Preparing for KEDA
+## Operator scaling with KEDA
 
 Shared queue and inventory counts are observed by every replica. Deduplicate
 replicas **before** summing shards. For example, namespace inbound demand:
@@ -162,5 +184,9 @@ has 32 logical shards; one graph family remains serialized, so adding replicas
 cannot speed up a single busy family. Kubernetes API saturation can also worsen
 with more writers. [KEDA Prometheus scaler](https://keda.sh/docs/2.20/scalers/prometheus/)
 
-This change exposes signals for monitoring and later scaling policy; it does
-not install KEDA or create an autoscaler.
+For workload scaling, [ReplicaGroup and the workload metrics endpoint](replication.md)
+provide a bounded Kubernetes scale target for services and entire graphs. KEDA
+is installed separately.
+
+See [per-workload metric scopes and freshness](replication.md#metric-scopes-and-freshness)
+for scalar KEDA endpoints and `polyad_workload_signal` series.

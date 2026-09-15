@@ -15,7 +15,7 @@ from attrs import field, frozen
 from jsonschema import ValidationError, validate
 
 from polyad.compiler.asts import AST, GraphMetrics, ObjectMeta, ResourceMetrics, SubgraphMetrics, converter, to_document
-from polyad.compiler.schema import structural_schema
+from polyad.compiler.passes.schema import structural_schema
 from polyad.graph import measure_topology, topology_metrics
 from polyad.graph.topology import topology
 from polyad.operator.graph_status import instance_metrics, observe_graph
@@ -23,7 +23,7 @@ from tests.test_graph_metrics import diamond
 from tests.test_operator import resource
 
 ROOT = Path(__file__).resolve().parents[1]
-CRDS = ("graphs.yaml", "polygraphs.yaml", "ephemeralgraphs.yaml", "feedbacks.yaml")
+CRDS = ("graphs.yaml", "polygraphs.yaml", "ephemeralgraphs.yaml", "feedbacks.yaml", "replicagroups.yaml")
 
 
 def metrics_schema(document):

@@ -1,0 +1,13 @@
+{{- if .Values.keda.authentication.enabled }}
+{{- if not (and .Values.metrics.enabled .Values.metrics.authentication.enabled) }}{{ fail "KEDA authentication requires metrics.enabled and metrics.authentication.enabled" }}{{ end }}
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ default (printf "%s-polyad-metrics" .Release.Name) .Values.keda.authentication.name | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  secretTargetRef:
+    - parameter: token
+      name: {{ default (printf "%s-polyad-metrics" .Release.Name) .Values.metrics.authentication.existingSecret | quote }}
+      key: {{ .Values.metrics.authentication.secretKey | quote }}
+{{- end }}

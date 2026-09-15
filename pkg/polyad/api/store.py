@@ -10,12 +10,12 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.app import Conflict
 from polyad.compiler import asts
-from polyad.compiler.composition import COMPOSITION_KINDS, read_receipt, receipt_spec, request_name
+from polyad.compiler.passes.composition import COMPOSITION_KINDS, read_receipt, receipt_spec, request_name
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.compiler.composition import CompositionRequest
+    from polyad.compiler.passes.composition import CompositionRequest
     from polyad.operator.api import API
 
 

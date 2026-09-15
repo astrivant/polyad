@@ -17,7 +17,7 @@ from redis.exceptions import RedisError
 from redis.retry import Retry
 
 from polyad.cache import cache_url
-from polyad.compiler.composition import request_name
+from polyad.compiler.passes.composition import request_name
 from polyad.operator.coordination import root_shard
 
 if TYPE_CHECKING:

@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from attrs import evolve
 
 from polyad.compiler import asts
-from polyad.compiler.capacity import frontier, placeholder, requests
+from polyad.compiler.passes.capacity import frontier, placeholder, requests
 from polyad.graph.topology import converter
 
 if TYPE_CHECKING:

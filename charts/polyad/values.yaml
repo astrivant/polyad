@@ -17,6 +17,39 @@ operator:
     maxReplicas: 8
     ## @param operator.autoscaling.targetCPUUtilizationPercentage Target operator CPU utilization relative to requested CPU
     targetCPUUtilizationPercentage: 70
+    behavior:
+      scaleUp:
+        ## @param operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds Scale-up recommendation window in seconds (0-3600)
+        stabilizationWindowSeconds: 0
+        ## @param operator.autoscaling.behavior.scaleUp.selectPolicy Choose the largest or smallest permitted change, or disable scale-up (Max, Min, Disabled)
+        selectPolicy: Max
+        ## @param operator.autoscaling.behavior.scaleUp.policies [array] Rate limits (Pods or Percent); defaults to 100 percent or 4 Pods per 15 seconds; periodSeconds accepts 1-1800
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 4
+            periodSeconds: 15
+      scaleDown:
+        ## @param operator.autoscaling.behavior.scaleDown.stabilizationWindowSeconds Scale-down recommendation window in seconds (0-3600)
+        stabilizationWindowSeconds: 300
+        ## @param operator.autoscaling.behavior.scaleDown.selectPolicy Choose the largest or smallest permitted change, or disable scale-down (Max, Min, Disabled)
+        selectPolicy: Max
+        ## @param operator.autoscaling.behavior.scaleDown.policies [array] Rate limits (Pods or Percent); defaults to 100 percent per 15 seconds; periodSeconds accepts 1-1800
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+  tuning:
+    ## @param operator.tuning.rescanIntervalSeconds Delay after namespace rescans; lower values increase Kubernetes reads (1-15)
+    rescanIntervalSeconds: 5
+    ## @param operator.tuning.consumeIntervalSeconds Delay after each shared-queue consumption pass (0.1-5)
+    consumeIntervalSeconds: 1
+    ## @param operator.tuning.metricsIntervalSeconds Delay between cached metrics publications (1-5)
+    metricsIntervalSeconds: 5
+    ## @param operator.tuning.backlogIntervalSeconds Delay between shared-queue backlog samples (1-5)
+    backlogIntervalSeconds: 5
   image:
     ## @param operator.image.repository Operator image repository
     repository: ghcr.io/astrivant/polyad
@@ -126,6 +159,38 @@ metrics:
   enabled: false
   ## @param metrics.graphLabels Include per-object hierarchy and direct-resource Prometheus series; increases cardinality
   graphLabels: false
+
+  authentication:
+    ## @param metrics.authentication.enabled Require a dedicated bearer token on all metrics endpoints
+    enabled: false
+    ## @param metrics.authentication.existingSecret Existing or ESO-managed Secret containing the metrics token
+    existingSecret: polyad-metrics
+    ## @param metrics.authentication.secretKey Key containing the metrics bearer token
+    secretKey: token
+    ## @param metrics.authentication.key Inline metrics token; requires existingSecret to be empty
+    key: ''
+
+## @section KEDA credential integration
+keda:
+  authentication:
+    ## @param keda.authentication.enabled Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics
+    enabled: false
+    ## @param keda.authentication.name TriggerAuthentication name; empty uses the release metrics name
+    name: ''
+
+## @section Optional External Secrets Operator resources
+externalSecrets:
+  ## @param externalSecrets.enabled Generate ExternalSecret resources; requires an installed ESO operator and SecretStore
+  enabled: false
+  ## @param externalSecrets.refreshInterval ESO credential refresh interval
+  refreshInterval: 1h
+  secretStoreRef:
+    ## @param externalSecrets.secretStoreRef.name Existing SecretStore or ClusterSecretStore name
+    name: ''
+    ## @param externalSecrets.secretStoreRef.kind Secret store reference kind
+    kind: SecretStore
+  ## @param externalSecrets.secrets [array] Secret mappings with name and data entries of secretKey and remoteRef; reference names via existingSecret settings
+  secrets: []
 
 ## @section Operator endpoint and cache isolation
 networkPolicy:

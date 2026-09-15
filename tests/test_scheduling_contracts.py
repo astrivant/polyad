@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from polyad.compiler.asts import GROUP
-from polyad.compiler.storage import configure_storage
+from polyad.compiler.passes.storage import configure_storage
 from polyad.graph import DelayGate
 from polyad.operator.controller import Controller
 from polyad.operator.placement import merge_placement, place_pod

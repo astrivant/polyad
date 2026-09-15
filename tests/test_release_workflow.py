@@ -224,7 +224,7 @@ def test_publication_downloads_verified_artifacts_and_uses_environment_credentia
     assert publish["steps"][-1]["env"]["POETRY_PYPI_TOKEN_PYPI"] == "${{ secrets.PYPI_API_TOKEN }}"
 
 
-def test_full_chart_suite_is_sharded_and_gates_tagged_packaging():
+def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     """
     Require every shard to pass before packaging the exact commit those shards validated.
     """
@@ -236,8 +236,7 @@ def test_full_chart_suite_is_sharded_and_gates_tagged_packaging():
     inputs = action["with"]
     assert inputs["chart"] == "charts/polyad"
     assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "2"
-    assert inputs["sample-random"] == "100" and inputs["max-examples"] == "100"
-    assert inputs["rerun"] == "all" and inputs["cache"] == "false"
+    assert not {"sample-random", "max-examples", "rerun", "cache", "filter", "exhaustive"}.intersection(inputs)
     assert "match" not in inputs and "continue-on-error" not in action
     package = workflow["jobs"]["package"]
     assert package["needs"] == ["source", "chart"]
@@ -257,6 +256,7 @@ def test_main_and_automatic_tags_use_the_same_chart_gate():
     ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
     tag = yaml.load((ROOT / ".github/workflows/tag.yml").read_text(), Loader=yaml.BaseLoader)
     assert ci["on"]["push"]["branches"] == ["main"]
+    assert "pull_request" in ci["on"]
     assert ci["jobs"]["chart"]["uses"] == "./.github/workflows/chart.yml"
     assert "startsWith" in ci["jobs"]["chart"]["with"]["release-tag"]
     followup = tag["jobs"]["chart"]

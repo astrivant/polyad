@@ -55,8 +55,19 @@ class ActivationStore:
                 raise Conflict("activation target graph incarnation is absent or deleting")
             if graph["spec"].get("templateOnly") or graph["spec"].get("suspend") or graph.get("status", {}).get("phase") == "Stopped":
                 raise Conflict("activation target must be an executable, unsuspended graph")
-            if graph["spec"].get("mode", "finite") != "persistent":
+            if request.kind != "ReplicaGroup" and graph["spec"].get("mode", "finite") != "persistent":
                 raise ValueError("activation-controlled nodes require a persistent containing graph")
+            if request.kind == "ReplicaGroup":
+                from polyad.graph.replication import replica_topology
+
+                spec = dict(graph["spec"])
+                source_ref = spec.get("replicaSource")
+                if source_ref and spec.get("inheritReplicas", True):
+                    source = await self.api.get("ReplicaGroup", self.namespace, source_ref["name"])
+                    if not source or source["metadata"]["uid"] != source_ref["uid"] or source["metadata"].get("deletionTimestamp"):
+                        raise Conflict("replica source incarnation is unavailable")
+                    spec["replicas"] = source["spec"].get("replicas", 1)
+                graph = {**graph, "spec": replica_topology(spec)}
             node = next((node for node in graph["spec"]["nodes"] if node["name"] == request.node), None)
             if node is None or node["kind"] == "Resource":
                 raise ValueError("activation target must be a workload or graph vertex")

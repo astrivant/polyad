@@ -197,10 +197,12 @@ python .github/release-version.py --tag v0.0.1-alpha3
 
 Main-branch pushes and pull requests call `.github/workflows/chart.yml` from the
 Test workflow. Chart validation uses `astrivant/hypothesis-helm@main` with **three
-shards and two workers per shard**. Every generated property is selected, with
-up to 100 examples per property, no path exclusions or random sampling, and no
-reuse of cached test results. This covers the full generated suite, including
-dependency values; it is not enumeration of every possible input value.
+shards and two workers per shard**. PRs, main-branch pushes and tagged builds
+inherit the action's defaults for test selection, sampling, example counts,
+reruns and result caching. The release path does not request a separate
+exhaustive mode. Since the action tracks `main`, those defaults follow upstream;
+consult its [action definition](https://github.com/astrivant/hypothesis-helm/blob/main/action.yml)
+for the current behavior.
 
 All three shards must succeed before Test can permit automatic tagging. The same
 workflow validates user-pushed/manual release tags through reusable CI, and is

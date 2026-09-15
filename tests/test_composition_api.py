@@ -14,7 +14,7 @@ from polyad.api import create_app
 from polyad.api.app import Conflict
 from polyad.api.store import CompositionStore
 from polyad.compiler import asts
-from polyad.compiler.composition import CompositionRequest, compile_composition, read_receipt, receipt_spec, request_name
+from polyad.compiler.passes.composition import CompositionRequest, compile_composition, read_receipt, receipt_spec, request_name
 from polyad.graph.topology import converter
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.coordination import Coordinator
@@ -181,6 +181,10 @@ def test_queued_materialization_policy_and_audit_lineage():
             assert annotations[f"{asts.GROUP}/request-id"] == "request-one"
             assert annotations[f"{asts.GROUP}/composition-uid"] == receipt["metadata"]["uid"]
             assert annotations[f"{asts.GROUP}/definition-uid"]
+            env = {item["name"]: item.get("value") for item in job["spec"]["template"]["spec"]["containers"][0]["env"]}
+            assert env["POLYAD_REQUEST_ID"] == "request-one"
+            assert env["POLYAD_COMPOSITION_UID"] == receipt["metadata"]["uid"]
+            assert env["POLYAD_NODE_PATH"] == annotations[f"{asts.GROUP}/node-path"]
         await controller.reconcile(key)
         audit = await CompositionStore(api, "test").lookup(request.requestId, True)
         assert len([item for item in audit["resources"] if item["kind"] == "Job"]) == 2
@@ -242,5 +246,7 @@ def test_feedback_epoch_preserves_request_lineage():
         trace = job["spec"]["template"]["metadata"]["annotations"]
         assert trace[f"{asts.GROUP}/node-path"] == "root/epoch-0/execute"
         assert trace[f"{asts.GROUP}/request-id"] == "request-one"
+        env = {item["name"]: item.get("value") for item in job["spec"]["template"]["spec"]["containers"][0]["env"]}
+        assert env["POLYAD_NODE_PATH"] == trace[f"{asts.GROUP}/node-path"]
 
     asyncio.run(scenario())

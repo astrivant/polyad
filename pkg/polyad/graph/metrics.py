@@ -72,11 +72,21 @@ def measure_topology(graph: Topology, present: set[str] | None = None) -> Topolo
         nodesByKind=converter.structure(
             {
                 kind: counts[kind]
-                for kind in ("Workload", "Daemon", "Ephemeral", "Resource", "Graph", "EphemeralGraph", "Feedback", "PolyGraph")
+                for kind in (
+                    "Workload",
+                    "Daemon",
+                    "Ephemeral",
+                    "Resource",
+                    "Graph",
+                    "EphemeralGraph",
+                    "Feedback",
+                    "PolyGraph",
+                    "ReplicaGroup",
+                )
             },
             NodeCounts,
         ),
-        subgraphCount=sum(counts[kind] for kind in ("Graph", "EphemeralGraph", "Feedback", "PolyGraph")),
+        subgraphCount=sum(counts[kind] for kind in ("Graph", "EphemeralGraph", "Feedback", "PolyGraph", "ReplicaGroup")),
         admission=AdmissionMetrics(
             edgeCount=admission.number_of_edges(),
             **to_document(_layers(admission)),

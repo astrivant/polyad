@@ -146,7 +146,16 @@ def compile_composition(request: CompositionRequest, namespace: str, *, owner_ui
             body = spec["graph"] if item.kind == "Feedback" else spec
             if item.kind == "Feedback":
                 body["templateOnly"] = False
-            for node in body["nodes"]:
+            if item.kind == "ReplicaGroup":
+                target_id = spec["template"].pop("refId")
+                target = by_id.get(target_id)
+                if target is None or "ref" in spec["template"] or "kind" in spec["template"]:
+                    raise ValueError("replica template requires a composition refId")
+                spec["template"].update(kind=target.kind, ref=names[target.id])
+                if "replicaSource" in spec:
+                    raise ValueError("replicaSource is assigned by the compiler")
+                uses.add_edge(item.id, target.id)
+            for node in body.get("nodes", []):
                 node_id = identity(node.pop("id"))
                 target = by_id.get(node.pop("refId"))
                 if target is None:

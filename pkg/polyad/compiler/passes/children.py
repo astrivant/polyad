@@ -80,7 +80,8 @@ def owned_child(
         raise ValueError("child extension fields cannot override identity, ownership, spec or status")
     raw_spec = to_document(spec) if isinstance(spec, (JobSpec, DeploymentSpec)) else copy.deepcopy(spec)
     # Preserve the pre-AST hash contract: this refactor must not replace existing workloads.
-    digest = hashlib.sha256(json.dumps([kind, raw_spec, extra], sort_keys=True).encode()).hexdigest()[:12]
+    hashed_spec = {key: value for key, value in raw_spec.items() if key != "replicas"} if kind == "ReplicaGroup" else raw_spec
+    digest = hashlib.sha256(json.dumps([kind, hashed_spec, extra], sort_keys=True).encode()).hexdigest()[:12]
     annotations = {f"{GROUP}/desired-hash": digest}
     if f"{GROUP}/lineage" in (meta.annotations or {}):
         annotations[f"{GROUP}/lineage"] = (meta.annotations or {})[f"{GROUP}/lineage"]

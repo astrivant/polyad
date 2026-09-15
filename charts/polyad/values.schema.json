@@ -17,7 +17,8 @@
         "resources",
         "terminationGracePeriodSeconds",
         "replicaCount",
-        "autoscaling"
+        "autoscaling",
+        "tuning"
       ],
       "properties": {
         "replicaCount": {
@@ -83,7 +84,8 @@
             "enabled",
             "minReplicas",
             "maxReplicas",
-            "targetCPUUtilizationPercentage"
+            "targetCPUUtilizationPercentage",
+            "behavior"
           ],
           "properties": {
             "enabled": {
@@ -103,6 +105,130 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 100
+            },
+            "behavior": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "scaleUp",
+                "scaleDown"
+              ],
+              "properties": {
+                "scaleUp": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "stabilizationWindowSeconds",
+                    "selectPolicy",
+                    "policies"
+                  ],
+                  "properties": {
+                    "stabilizationWindowSeconds": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3600
+                    },
+                    "selectPolicy": {
+                      "type": "string",
+                      "enum": [
+                        "Max",
+                        "Min",
+                        "Disabled"
+                      ]
+                    },
+                    "policies": {
+                      "type": "array",
+                      "minItems": 1,
+                      "maxItems": 16,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "type",
+                          "value",
+                          "periodSeconds"
+                        ],
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "Pods",
+                              "Percent"
+                            ]
+                          },
+                          "value": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 2147483647
+                          },
+                          "periodSeconds": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1800
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "scaleDown": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "stabilizationWindowSeconds",
+                    "selectPolicy",
+                    "policies"
+                  ],
+                  "properties": {
+                    "stabilizationWindowSeconds": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3600
+                    },
+                    "selectPolicy": {
+                      "type": "string",
+                      "enum": [
+                        "Max",
+                        "Min",
+                        "Disabled"
+                      ]
+                    },
+                    "policies": {
+                      "type": "array",
+                      "minItems": 1,
+                      "maxItems": 16,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "type",
+                          "value",
+                          "periodSeconds"
+                        ],
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "Pods",
+                              "Percent"
+                            ]
+                          },
+                          "value": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 2147483647
+                          },
+                          "periodSeconds": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1800
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           },
           "allOf": [
@@ -496,6 +622,38 @@
             "ERROR",
             "CRITICAL"
           ]
+        },
+        "tuning": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rescanIntervalSeconds",
+            "consumeIntervalSeconds",
+            "metricsIntervalSeconds",
+            "backlogIntervalSeconds"
+          ],
+          "properties": {
+            "rescanIntervalSeconds": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 15
+            },
+            "consumeIntervalSeconds": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 5
+            },
+            "metricsIntervalSeconds": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "backlogIntervalSeconds": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 5
+            }
+          }
         }
       },
       "allOf": [
@@ -2039,7 +2197,8 @@
       "additionalProperties": false,
       "required": [
         "enabled",
-        "graphLabels"
+        "graphLabels",
+        "authentication"
       ],
       "properties": {
         "enabled": {
@@ -2047,8 +2206,230 @@
         },
         "graphLabels": {
           "type": "boolean"
+        },
+        "authentication": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "existingSecret": {
+              "type": "string",
+              "maxLength": 253,
+              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$"
+            },
+            "secretKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253,
+              "pattern": "^[A-Za-z0-9._-]+$"
+            },
+            "key": {
+              "type": "string",
+              "maxLength": 4096,
+              "pattern": "^[!-~]*$"
+            }
+          },
+          "required": [
+            "enabled",
+            "existingSecret",
+            "secretKey",
+            "key"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "existingSecret": {
+                        "minLength": 1
+                      },
+                      "key": {
+                        "const": ""
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "existingSecret": {
+                        "const": ""
+                      },
+                      "key": {
+                        "minLength": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
         }
       }
+    },
+    "keda": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authentication": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 253,
+              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$"
+            }
+          },
+          "required": [
+            "enabled",
+            "name"
+          ]
+        }
+      },
+      "required": [
+        "authentication"
+      ]
+    },
+    "externalSecrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "refreshInterval": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(s|m|h)$"
+        },
+        "secretStoreRef": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 253,
+              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$"
+            },
+            "kind": {
+              "enum": [
+                "SecretStore",
+                "ClusterSecretStore"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "kind"
+          ]
+        },
+        "secrets": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+              },
+              "data": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 32,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "secretKey": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 253,
+                      "pattern": "^[A-Za-z0-9._-]+$"
+                    },
+                    "remoteRef": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2048
+                        },
+                        "property": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2048
+                        },
+                        "version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "key"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "secretKey",
+                    "remoteRef"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "data"
+            ]
+          }
+        }
+      },
+      "required": [
+        "enabled",
+        "refreshInterval",
+        "secretStoreRef",
+        "secrets"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "secretStoreRef": {
+                "properties": {
+                  "name": {
+                    "minLength": 1
+                  }
+                }
+              },
+              "secrets": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "definitions": {
@@ -2109,6 +2490,78 @@
             }
           }
         ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "metrics"
+        ],
+        "properties": {
+          "metrics": {
+            "required": [
+              "authentication"
+            ],
+            "properties": {
+              "authentication": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "keda"
+        ],
+        "properties": {
+          "keda": {
+            "properties": {
+              "authentication": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "enabled": {
+                "const": true
+              },
+              "authentication": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   ]
