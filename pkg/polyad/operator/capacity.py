@@ -184,7 +184,9 @@ class CapacityManager:
         self.selected_backend = "Placeholders"
         return self.selected_backend
 
-    async def prepare(self, graph: Topology, desired: dict[str, asts.Resource], states: dict[str, dict[str, bool]]) -> None:
+    async def prepare(
+        self, graph: Topology, desired: dict[str, asts.Resource], states: dict[str, dict[str, bool]], *, excluded: set[str] | None = None
+    ) -> None:
         """
         Forecast upcoming execution and refresh readiness without bypassing admission gates.
 
@@ -192,6 +194,7 @@ class CapacityManager:
             graph (Topology): Validated graph and optional capacity policy.
             desired (dict[str, asts.Resource]): Compiled workloads including inherited placement.
             states (dict[str, dict[str, bool]]): Freshly observed existing execution nodes.
+            excluded (set[str] | None): Dormant pulse vertices that must not reserve capacity.
 
         Returns:
             None: No return value.
@@ -219,7 +222,7 @@ class CapacityManager:
         revisions = {
             name: hashlib.sha256(json.dumps([generation, asts.to_document(resource), policy], sort_keys=True).encode()).hexdigest()[:20]
             for name, resource in desired.items()
-            if resource.resource_type.kind in {"Job", "Deployment"}
+            if resource.resource_type.kind in {"Job", "Deployment"} and name not in (excluded or set())
         }
         for name, record in list(self.state.nodes.items()):
             if revisions.get(name) != record.revision or (record.phase == "Consumed" and name not in states):

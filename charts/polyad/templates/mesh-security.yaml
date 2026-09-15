@@ -40,7 +40,7 @@ spec:
         - operation:
             ports: ["8090"]
             methods: [GET, POST]
-            paths: [/v1/compositions, /v1/compositions/*, /openapi.json]
+            paths: [/v1/compositions, /v1/compositions/*, /v1/activations, /v1/activations/*, /openapi.json]
     {{- end }}
     {{- if .Values.metrics.enabled }}
     {{- with .Values.mesh.operator.metricsPrincipals }}

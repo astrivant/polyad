@@ -13,6 +13,7 @@ import yaml
 
 from polyad.compiler.asts import CapacityStatus
 from polyad.compiler.schema import structural_schema
+from polyad.graph.activation import ActivationPolicy
 from polyad.graph.capacity import CapacityPlan
 from polyad.graph.network import NetworkAccess, NetworkPort
 
@@ -98,6 +99,14 @@ def main() -> int:
                     "items": structural_schema(NetworkPort),
                 },
             )
+        if updated != source:
+            changed.append(kind)
+            if not args.check:
+                path.write_text(updated)
+    for kind in ("graphs", "polygraphs", "ephemeralgraphs", "feedbacks", "workloads", "ephemerals", "daemons"):
+        path = directory / f"{kind}.yaml"
+        source = path.read_text()
+        updated = refresh(source, ROOT, "activation", structural_schema(ActivationPolicy))
         if updated != source:
             changed.append(kind)
             if not args.check:

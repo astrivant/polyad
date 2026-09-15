@@ -26,6 +26,9 @@ end
 if phase == "Invalid" or phase == "Failed" or status.failed == true then
     return health("Degraded", message)
 end
+if obj.kind == "Activation" and phase == "Superseded" then
+    return health("Healthy", "Pulse coalesced into a newer pending request")
+end
 if obj.kind == "Rewrite" then
     if status.applied == true then
         return health("Healthy", "Rewrite applied; execution is reported by the target graph")
@@ -34,7 +37,7 @@ if obj.kind == "Rewrite" then
 end
 
 -- Composition receipts mirror root lifecycle predicates, rather than graph metrics.
-if obj.kind ~= "Composition" then
+if obj.kind ~= "Composition" and obj.kind ~= "Activation" then
     local metrics = status.metrics or {}
     local rollup = metrics.rollup or {}
     if metrics.observedGeneration ~= (meta.generation or 1)

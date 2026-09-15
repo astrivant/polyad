@@ -13,6 +13,7 @@ from werkzeug.exceptions import HTTPException
 
 from polyad.api.limits import install_limits
 from polyad.api.openapi import openapi_document
+from polyad.compiler.activation import ActivationRequest
 from polyad.compiler.composition import CompositionRequest, compile_composition, identity
 from polyad.graph.topology import converter
 
@@ -45,6 +46,9 @@ def _build_app(
     title: str,
     version: str,
     rate_limits: RateLimitPolicy | None = None,
+    activate: Callable[[ActivationRequest], dict[str, Any]] | None = None,
+    activation_lookup: Callable[[str], dict[str, Any] | None] | None = None,
+    activation_stop: Callable[[str], dict[str, Any] | None] | None = None,
 ) -> Flask:
     """
     Create an injectable WSGI app for request compilation, submission and audit lookup.
@@ -56,6 +60,9 @@ def _build_app(
         title (str): Service title for the OpenAPI document.
         version (str): API contract version for the OpenAPI document.
         rate_limits (RateLimitPolicy | None): Optional shared namespace and shard quota.
+        activate (Callable[[ActivationRequest], dict[str, Any]] | None): Durable pulse submission handler.
+        activation_lookup (Callable[[str], dict[str, Any] | None] | None): Pulse status handler.
+        activation_stop (Callable[[str], dict[str, Any] | None] | None): Durable pulse stop handler.
 
     Returns:
         Flask: Configured app suitable for a production WSGI server.
@@ -110,6 +117,27 @@ def _build_app(
     def resources(request_id: str) -> tuple[Response, int]:
         result = lookup(identity(request_id), True)
         return (jsonify(result), 200) if result is not None else (jsonify(error="composition not found"), 404)
+
+    @app.post("/v1/activations")
+    def activation_submit() -> tuple[Response, int]:
+        value = converter.structure(request.get_json(), ActivationRequest)
+        if activate is None:
+            raise Unavailable("activation service is not configured")
+        return jsonify(activate(value)), 202
+
+    @app.get("/v1/activations/<request_id>")
+    def activation_status(request_id: str) -> tuple[Response, int]:
+        if activation_lookup is None:
+            raise Unavailable("activation service is not configured")
+        value = activation_lookup(identity(request_id))
+        return (jsonify(value), 200) if value else (jsonify(error="activation not found"), 404)
+
+    @app.post("/v1/activations/<request_id>/stop")
+    def activation_cancel(request_id: str) -> tuple[Response, int]:
+        if activation_stop is None:
+            raise Unavailable("activation service is not configured")
+        value = activation_stop(identity(request_id))
+        return (jsonify(value), 202) if value else (jsonify(error="activation not found"), 404)
 
     schema = openapi_document(title, version)
     app.extensions["polyad.openapi"] = schema

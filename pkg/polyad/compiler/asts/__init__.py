@@ -27,6 +27,7 @@ from polyad.compiler.asts.resources import BOUNDARY_KINDS as BOUNDARY_KINDS
 from polyad.compiler.asts.resources import CAPACITY_KINDS as CAPACITY_KINDS
 from polyad.compiler.asts.resources import NETWORK_POLICY_KINDS as NETWORK_POLICY_KINDS
 from polyad.compiler.asts.resources import RESOURCE_TYPES as RESOURCE_TYPES
+from polyad.compiler.asts.resources import Activation as Activation
 from polyad.compiler.asts.resources import AuthorizationPolicy as AuthorizationPolicy
 from polyad.compiler.asts.resources import Composition as Composition
 from polyad.compiler.asts.resources import ConfigMap as ConfigMap

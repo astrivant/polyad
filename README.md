@@ -175,6 +175,9 @@ graph events through the operator's optional APIs. Services route requests to
 ready replicas; explicitly authorized callers can connect from other
 namespaces.<sup>[\[15\]](docs/networking.md#workload-access-to-operator-apis)</sup>
 
+A running service can also pulse downstream workloads or daemon replica groups,
+with explicit concurrency and frequency policies.<sup>[\[17\]](docs/activation.md)</sup>
+
 With a capacity policy, Polyad forecasts upcoming stages while earlier work
 runs, giving a compatible node autoscaler advance notice. Dependencies and gates
 still decide when the next stage starts.<sup>[\[16\]](docs/capacity.md)</sup>

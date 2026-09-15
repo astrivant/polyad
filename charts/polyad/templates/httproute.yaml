@@ -26,6 +26,9 @@ spec:
             type: PathPrefix
             value: /v1/compositions
         - path:
+            type: PathPrefix
+            value: /v1/activations
+        - path:
             type: Exact
             value: /openapi.json
       backendRefs:

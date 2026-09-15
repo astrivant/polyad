@@ -10,6 +10,7 @@ from apispec import APISpec
 
 from polyad.compiler.composition import COMPOSITION_KINDS
 from polyad.compiler.schema import structural_schema
+from polyad.graph.activation import ActivationPolicy
 from polyad.graph.capacity import CapacityPlan
 
 if TYPE_CHECKING:
@@ -47,6 +48,28 @@ def schemas() -> dict[str, dict[str, Any]]:
     }
     return {
         "ID": identifier,
+        "ActivationPolicy": structural_schema(ActivationPolicy),
+        "ActivationRequest": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["requestId", "graph", "graphUid", "node"],
+            "properties": {
+                "requestId": reference("ID"),
+                "graph": reference("ID"),
+                "node": reference("ID"),
+                "graphUid": {"type": "string", "minLength": 1, "maxLength": 128},
+                "kind": {"type": "string", "enum": ["Graph", "EphemeralGraph", "PolyGraph"], "default": "Graph"},
+            },
+        },
+        "ActivationReceipt": {
+            "type": "object",
+            "required": ["requestId", "uid", "status"],
+            "properties": {
+                **identity_fields,
+                "target": free_object,
+                "stopRequested": {"type": "boolean"},
+            },
+        },
         "Dependency": {
             "type": "object",
             "required": ["nodeId"],
@@ -80,6 +103,7 @@ def schemas() -> dict[str, dict[str, Any]]:
             "required": ["nodes"],
             "additionalProperties": False,
             "properties": {
+                "activation": reference("ActivationPolicy"),
                 "capacity": structural_schema(CapacityPlan),
                 "nodes": {"type": "array", "items": reference("Node")},
                 "connections": {"type": "array", "items": reference("Connection")},
@@ -109,6 +133,7 @@ def schemas() -> dict[str, dict[str, Any]]:
             "required": ["graph"],
             "additionalProperties": False,
             "properties": {
+                "activation": reference("ActivationPolicy"),
                 "graph": reference("GraphSpec"),
                 "kind": {"type": "string", "enum": ["Graph", "EphemeralGraph", "PolyGraph"], "default": "Graph"},
                 "rounds": {"type": "integer", "minimum": 0},
@@ -301,6 +326,39 @@ def openapi_document(title: str, version: str) -> dict[str, Any]:
                         **errors,
                         "200": response(summary, schema),
                         "404": response("No current receipt with this requestId.", "Error"),
+                    },
+                }
+            },
+        )
+    spec.path(
+        path="/v1/activations",
+        operations={
+            "post": {
+                "operationId": "submitActivation",
+                "summary": "Submit a bounded downstream pulse",
+                "requestBody": {"required": True, "content": {"application/json": {"schema": reference("ActivationRequest")}}},
+                "responses": {
+                    **errors,
+                    "202": response("Durable pulse receipt; policy admission is asynchronous.", "ActivationReceipt"),
+                    "409": response("Conflicting request identity or unavailable graph incarnation.", "Error"),
+                    "400": response("Malformed JSON.", "Error"),
+                    "413": response("Request exceeds 1 MiB.", "Error"),
+                    "415": response("Content-Type must be application/json.", "Error"),
+                },
+            }
+        },
+    )
+    for suffix, method, operation, code in (("", "get", "getActivation", "200"), ("/stop", "post", "stopActivation", "202")):
+        spec.path(
+            path=f"/v1/activations/{{request_id}}{suffix}",
+            parameters=[parameter],
+            operations={
+                method: {
+                    "operationId": operation,
+                    "responses": {
+                        **errors,
+                        code: response("Current pulse receipt.", "ActivationReceipt"),
+                        "404": response("Activation receipt not found.", "Error"),
                     },
                 }
             },

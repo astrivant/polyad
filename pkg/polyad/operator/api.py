@@ -18,7 +18,7 @@ from kubernetes.client.exceptions import ApiException
 from polyad.compiler.asts import GROUP as GROUP
 from polyad.compiler.asts import VERSION as VERSION
 from polyad.compiler.asts import DeleteOptions, UIDPreconditions, encode_body
-from polyad.compiler.registry import BOUNDARY_KINDS, GRAPH_OWNED_KINDS, RESOURCE_TYPES
+from polyad.compiler.registry import GRAPH_OWNED_KINDS, RESOURCE_TYPES
 from polyad.operator.metrics import WriteBacklog
 
 logger = logging.getLogger(__name__)
@@ -238,8 +238,8 @@ class API:
             "mesh": os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true",
             "capacity": os.environ.get("POLYAD_CAPACITY_ENABLED", "false").lower() == "true",
         }
-        kinds = tuple(kind for kind in WORKLOAD_KINDS if enabled[RESOURCE_TYPES[kind].required_feature])
-        for kind in (*kinds, *sorted(BOUNDARY_KINDS)):
+        kinds = tuple(kind for kind in sorted(GRAPH_OWNED_KINDS) if enabled[RESOURCE_TYPES[kind].required_feature])
+        for kind in kinds:
             result = await self.request("GET", kind, namespace, query=[("labelSelector", f"{GROUP}/owner={uid}")])
             for item in (result or {}).get("items", []):
                 item.setdefault("kind", kind)  # Kubernetes list items may omit TypeMeta.

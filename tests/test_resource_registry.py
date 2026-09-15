@@ -81,11 +81,11 @@ def test_inventory_and_reconciliation_roles():
     Derived capabilities preserve ownership boundaries and keep definitions out of execution duties.
     """
     assert set(KINDS) == POLYAD_KINDS
-    assert set(WORKLOAD_KINDS) == GRAPH_OWNED_KINDS - BOUNDARY_KINDS
-    assert set(WATCHED_KINDS) == RECONCILED_KINDS == BOUNDARY_KINDS | {"Rewrite", "Composition"}
+    assert set(WORKLOAD_KINDS) == GRAPH_OWNED_KINDS - BOUNDARY_KINDS - {"Activation"}
+    assert set(WATCHED_KINDS) == RECONCILED_KINDS == BOUNDARY_KINDS | {"Rewrite", "Composition", "Activation"}
     assert DEFINITION_KINDS.isdisjoint(RECONCILED_KINDS)
     assert COMPOSABLE_KINDS == BOUNDARY_KINDS | (DEFINITION_KINDS - {"GraphRule"})
-    assert AUXILIARY_KINDS == CAPACITY_KINDS | NETWORK_POLICY_KINDS
+    assert AUXILIARY_KINDS == CAPACITY_KINDS | NETWORK_POLICY_KINDS | {"Activation"}
     assert RESOURCE_TYPES["Lease"].graph_owned is False
     assert RESOURCE_TYPES["ConfigMap"].api_group == ""
     assert BUILTINS["Job"] == ("/apis/batch/v1", "jobs")

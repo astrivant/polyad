@@ -21,8 +21,10 @@ from polyad.compiler.children import child_name as compile_child_name
 from polyad.compiler.children import owned_child
 from polyad.compiler.network import configure_pod
 from polyad.compiler.storage import configure_storage, storage_fields
+from polyad.graph.activation import ActivationPolicy
 from polyad.graph.gates import DelayGate, Gate
 from polyad.graph.topology import converter, topology
+from polyad.operator.activations import TERMINAL, Activations
 from polyad.operator.api import GROUP
 from polyad.operator.capacity import CapacityManager
 from polyad.operator.compositions import drain_composition, reconcile_composition
@@ -183,6 +185,14 @@ class Controller:
         if obj["kind"] == "Composition":
             return await drain_composition(self, obj)
         children = await self.api.owned(meta["namespace"], meta["uid"])
+        if not meta.get("deletionTimestamp"):
+            receipts = [child for child in children if child["kind"] == "Activation"]
+            children = [child for child in children if child["kind"] != "Activation"]
+            for receipt in receipts:
+                if receipt.get("status", {}).get("phase") not in TERMINAL:
+                    await Activations(self, obj).save(
+                        receipt, "Stopping" if children else "Stopped", message="containing graph suspended or stopped"
+                    )
         work = [child for child in children if child["kind"] not in POLICY_KINDS]
         for child in work or children:
             if not child["metadata"].get("deletionTimestamp"):
@@ -276,6 +286,20 @@ class Controller:
         obj = await self.api.get(kind, namespace, name)
         if obj is None:
             logger.debug("Reconciliation target absent kind=%s namespace=%s name=%s", *key)
+            return
+        if kind == "Activation":
+            parent = await self.api.get(obj["spec"]["kind"], namespace, obj["spec"]["graph"])
+            if parent and parent["metadata"]["uid"] == obj["spec"]["graphUid"]:
+                if not any(
+                    owner.get("controller")
+                    and owner.get("uid") == parent["metadata"]["uid"]
+                    and owner.get("kind") == parent["kind"]
+                    and owner.get("name") == parent["metadata"]["name"]
+                    and owner.get("apiVersion") == parent["apiVersion"]
+                    for owner in obj["metadata"].get("ownerReferences", [])
+                ):
+                    raise ValueError("Activation ownership must match its target graph")
+                await self.reconcile((parent["kind"], namespace, parent["metadata"]["name"]))
             return
         logger.debug(
             "Refreshed intent kind=%s namespace=%s name=%s generation=%s deleting=%s",
@@ -465,10 +489,19 @@ class Controller:
         desired: dict[str, asts.Resource] = {}
         rule_reports = await check_rules(self.api, namespace, obj["kind"], obj["spec"])
         persistence = {}
+        activation_policies = {}
+        definitions = {}
         network_plans = {}
         names = {node.name: child_name(obj, node.name) for node in graph.nodes}
         for node in graph.nodes:
             definition = await self.definition(node.kind, namespace, node.ref)
+            definitions[node.name] = definition
+            if "activation" in definition["spec"]:
+                if node.kind == "Resource":
+                    raise ValueError("resources cannot be pulse-activated")
+                activation_policies[node.name] = converter.structure(definition["spec"]["activation"], ActivationPolicy)
+                if node.kind != "Daemon" and activation_policies[node.name].replicasPerActivation != 1:
+                    raise ValueError("replicasPerActivation applies only to Daemons")
             spec = (
                 references(copy.deepcopy(definition["spec"]), names) if node.kind not in BOUNDARIES else copy.deepcopy(definition["spec"])
             )
@@ -524,6 +557,7 @@ class Controller:
                     or any(edge.node == node.name and edge.condition == "completed" for other in graph.nodes for edge in other.requires)
                 ):
                     raise ValueError("persistent nested boundaries cannot satisfy finite completion")
+                spec.pop("activation", None)
                 spec["templateOnly"] = False
                 if graph.capacity is not None:
                     target_spec = spec["graph"] if node.kind == "Feedback" else spec
@@ -567,6 +601,23 @@ class Controller:
                         ),
                     )
             desired[node.name] = trace_child(desired[node.name], obj, node, definition)
+        for name in activation_policies:
+            if any(
+                "${nodes." + name + ".name}" in json.dumps(definition["spec"])
+                for definition in definitions.values()
+                if definition["kind"] not in BOUNDARIES
+            ):
+                raise ValueError("activation-controlled targets have per-run names; use a Service for discovery")
+        activations = Activations(self, obj)
+        graph, desired = await activations.prepare(
+            graph, desired, activation_policies, definitions, await self.api.owned(namespace, meta["uid"])
+        )
+        for runtime_name, receipt in activations.records.items():
+            if receipt["spec"]["node"] in persistence:
+                persistence[runtime_name] = persistence[receipt["spec"]["node"]]
+        persistence = {name: storage for name, storage in persistence.items() if name in desired}
+        if activation_policies:
+            rule_reports = await check_rules(self.api, namespace, obj["kind"], converter.unstructure(graph))
         await ensure_policies(self, obj, network_plans)
         children = [child for child in await self.api.owned(namespace, meta["uid"]) if child["kind"] not in asts.AUXILIARY_KINDS]
         present_names = {child["metadata"]["name"] for child in children}
@@ -595,12 +646,19 @@ class Controller:
             if desired[node.name].metadata.name in current
         }
         capacity = CapacityManager(self, obj)
-        await capacity.prepare(graph, desired, states)
+        await capacity.prepare(graph, desired, states, excluded=activations.blocked)
         facts = {f"{name}.{condition}": value for name, state in states.items() for condition, value in state.items()}
+        for logical_name in activation_policies:
+            executions = [key for key, receipt in activations.records.items() if receipt["spec"]["node"] == logical_name]
+            for condition in ("started", "ready", "completed", "failed"):
+                observations = [states.get(key, {}).get(condition, False) for key in executions]
+                facts[f"{logical_name}.{condition}"] = bool(observations) and (
+                    any(observations) if condition == "failed" else all(observations)
+                )
         used = sum(node.slots for node in graph.nodes if node.name in states and not states[node.name]["completed"])
         delays: dict[str, Any] = {name: None for name in obj.get("status", {}).get("delays", {})}
         for node in graph.nodes:
-            if node.name in states:
+            if node.name in states or node.name in activations.blocked:
                 continue
             if not all(states.get(edge.node, {}).get(edge.condition, False) for edge in node.requires):
                 logger.debug("Node admission deferred graph=%s/%s node=%s reason=dependencies", namespace, meta["name"], node.name)
@@ -651,9 +709,11 @@ class Controller:
             if admitted is None:
                 logger.debug("Node admission deferred graph=%s/%s node=%s reason=capacity", namespace, meta["name"], node.name)
                 continue
+            if not await activations.admit(node.name):
+                continue
             await self.ensure(admitted)
             used += node.slots
-        failed = any(state["failed"] for state in states.values())
+        failed = any(state["failed"] for state in states.values()) or any(value["overdue"] for value in activations.summary.values())
         complete = (
             graph.mode == "finite"
             and len(states) == len(graph.nodes)
@@ -664,7 +724,10 @@ class Controller:
                 for node in graph.nodes
             )
         )
-        ready = len(states) == len(graph.nodes) and all(state["ready"] or state["completed"] for state in states.values())
+        ready = all(
+            node.name in activations.blocked or states.get(node.name, {}).get("ready") or states.get(node.name, {}).get("completed")
+            for node in graph.nodes
+        )
         await self.status(
             obj,
             {
@@ -673,6 +736,13 @@ class Controller:
                 "completed": complete,
                 "failed": failed,
                 "nodes": states,
+                "activations": activations.summary,
+                "activationRuntime": {
+                    "generation": meta["generation"],
+                    "dormant": sorted(activations.blocked - activations.records.keys()),
+                    "nodes": converter.unstructure(graph.nodes),
+                    "connections": converter.unstructure(graph.connections),
+                },
                 "delays": delays,
                 "structuralRules": rule_reports,
                 "observedGeneration": meta["generation"],

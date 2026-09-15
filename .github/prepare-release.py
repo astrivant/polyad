@@ -54,6 +54,7 @@ def prepare(tag: str) -> None:
     project = Path("pyproject.toml")
     old_version = tomllib.loads(project.read_text())["tool"]["poetry"]["version"]
     replace("pyproject.toml", rf'^(version\s*=\s*)"{re.escape(old_version)}"\s*$', rf'\g<1>"{package}"')
+    replace("clients/python/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
     replace("charts/polyad/Chart.yaml", r"^version: .+$", f"version: {chart}")
     replace("charts/polyad/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
     replace("charts/polyad/values.yaml", r"^    tag: .+$", f"    tag: '{chart}'")

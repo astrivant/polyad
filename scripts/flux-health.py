@@ -43,8 +43,10 @@ def main() -> None:
             current, failed = "true", "false"
         elif kind == "Rewrite":
             current, failed = f"{CURRENT_GENERATION} && has(status.applied) && status.applied", FAILED
-        elif kind == "Composition":
+        elif kind in {"Composition", "Activation"}:
             current, failed = READY, FAILED
+            if kind == "Activation":
+                current = f"({READY}) || ({CURRENT_GENERATION} && has(status.phase) && status.phase == 'Superseded')"
         else:
             raise ValueError(f"Flux health semantics are not defined for {kind}")
         checks.append(

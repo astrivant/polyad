@@ -203,7 +203,9 @@ def test_rescan_retains_complete_inventory_on_partial_failure(monkeypatch):
             await handlers.rescan_loop()
         assert handlers.inventory_sample is original
         assert not handlers.inventory_sample_ok
-        request.side_effect = [{"items": [graph("new")]}] + [{"items": []}] * 12
+        from polyad.compiler.registry import POLYAD_KINDS
+
+        request.side_effect = [{"items": [graph("new")]}] + [{"items": []}] * (len(POLYAD_KINDS) - 1)
         with pytest.raises(asyncio.CancelledError):
             await handlers.rescan_loop()
         assert handlers.inventory_sample_ok

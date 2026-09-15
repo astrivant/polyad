@@ -33,7 +33,7 @@ for kind in sorted(GRAPH_OWNED_KINDS):
 | `reconciled` | Receives operator reconciliation duties |
 | `composable` | May be declared in a composition request |
 | `required_feature` | Operator feature (`mesh` or `capacity`) required before graph inventory reads |
-| `auxiliary` | `network`, `capacity`, or `None`; auxiliary resources do not count as graph vertices |
+| `auxiliary` | `network`, `capacity`, `activation`, or `None`; auxiliary resources do not count as graph vertices |
 
 The module also exports immutable sets named `BOUNDARY_KINDS`,
 `GRAPH_OWNED_KINDS`, `DEFINITION_KINDS`, `RECONCILED_KINDS`, `COMPOSABLE_KINDS`,

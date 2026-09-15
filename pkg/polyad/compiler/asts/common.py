@@ -40,7 +40,7 @@ class ResourceType:
         definition (bool): Whether this kind is a reusable definition without independent execution.
         reconciled (bool): Whether the operator schedules reconciliation duties for this kind.
         composable (bool): Whether composition requests may declare this kind.
-        auxiliary (Literal['network', 'capacity'] | None): Supporting resource role, excluded from graph vertices.
+        auxiliary (Literal['network', 'capacity', 'activation'] | None): Supporting resource role, excluded from graph vertices.
         required_feature (Literal['mesh', 'capacity'] | None): Operator feature required for graph inventory reads.
     """
 
@@ -54,7 +54,7 @@ class ResourceType:
     definition: bool = False
     reconciled: bool = False
     composable: bool = False
-    auxiliary: Literal["network", "capacity"] | None = None
+    auxiliary: Literal["network", "capacity", "activation"] | None = None
     required_feature: Literal["mesh", "capacity"] | None = None
 
     @property

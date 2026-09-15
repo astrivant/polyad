@@ -11,6 +11,7 @@ from attrs import evolve, field, frozen
 
 from polyad.api.app import _build_app
 from polyad.api.limits import RateLimitPolicy
+from polyad.compiler.activation import ActivationRequest
 from polyad.compiler.composition import CompositionRequest
 
 if TYPE_CHECKING:
@@ -31,6 +32,9 @@ class APIBuilder:
         title (str): Service title exposed by the schema endpoint.
         version (str): API contract version exposed by the schema endpoint.
         rate_limits (RateLimitPolicy | None): Optional shared shard intake policy.
+        activate (Callable[[ActivationRequest], dict[str, Any]] | None): Durable pulse submission.
+        activation_lookup (Callable[[str], dict[str, Any] | None] | None): Pulse observations.
+        activation_stop (Callable[[str], dict[str, Any] | None] | None): Pulse stop signal.
     """
 
     submit: Callable[[CompositionRequest], dict[str, Any]] | None = None
@@ -39,6 +43,28 @@ class APIBuilder:
     title: str = "Polyad Composition API"
     version: str = "v1alpha1"
     rate_limits: RateLimitPolicy | None = None
+    activate: Callable[[ActivationRequest], dict[str, Any]] | None = None
+    activation_lookup: Callable[[str], dict[str, Any] | None] | None = None
+    activation_stop: Callable[[str], dict[str, Any] | None] | None = None
+
+    def with_activation_handlers(
+        self,
+        submit: Callable[[ActivationRequest], dict[str, Any]],
+        lookup: Callable[[str], dict[str, Any] | None],
+        stop: Callable[[str], dict[str, Any] | None],
+    ) -> Self:
+        """
+        Configure durable pulse intake and observation callbacks.
+
+        Args:
+            submit (Callable[[ActivationRequest], dict[str, Any]]): Pulse receipt submission.
+            lookup (Callable[[str], dict[str, Any] | None]): Pulse status lookup.
+            stop (Callable[[str], dict[str, Any] | None]): Durable stop request.
+
+        Returns:
+            Self: A builder with activation support.
+        """
+        return evolve(self, activate=submit, activation_lookup=lookup, activation_stop=stop)
 
     def with_rate_limits(self, policy: RateLimitPolicy) -> Self:
         """
@@ -105,4 +131,14 @@ class APIBuilder:
             raise ValueError("the composition API requires a bearer token")
         if not self.title.strip() or not self.version.strip():
             raise ValueError("OpenAPI title and version must be nonempty")
-        return _build_app(self.submit, self.lookup, token=self.token, title=self.title, version=self.version, rate_limits=self.rate_limits)
+        return _build_app(
+            self.submit,
+            self.lookup,
+            token=self.token,
+            title=self.title,
+            version=self.version,
+            rate_limits=self.rate_limits,
+            activate=self.activate,
+            activation_lookup=self.activation_lookup,
+            activation_stop=self.activation_stop,
+        )

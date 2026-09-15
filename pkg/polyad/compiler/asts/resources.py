@@ -470,6 +470,26 @@ class Composition(SpecResource):
 
 
 @frozen(kw_only=True)
+class Activation(SpecResource):
+    """
+    An immutable activation receipt whose execution belongs to its parent graph.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Namespaced activation API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Activation",
+        f"{GROUP}/{VERSION}",
+        "activations",
+        description="Durable pulse request, admission decision and execution identity.",
+        graph_owned=True,
+        reconciled=True,
+        auxiliary="activation",
+    )
+
+
+@frozen(kw_only=True)
 class Pod(SpecResource):
     """
     A native Pod observed for composition audit traces.
@@ -591,6 +611,7 @@ class PodTemplateResource(Resource):
 
 
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
+    Activation,
     ProvisioningRequest,
     PodTemplateResource,
     NetworkPolicy,
@@ -628,4 +649,4 @@ COMPOSABLE_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items()
 POLYAD_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.polyad)
 NETWORK_POLICY_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.auxiliary == "network")
 CAPACITY_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.auxiliary == "capacity")
-AUXILIARY_KINDS = NETWORK_POLICY_KINDS | CAPACITY_KINDS
+AUXILIARY_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.auxiliary is not None)

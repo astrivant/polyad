@@ -100,7 +100,9 @@ class EventStore:
                 for key, value in meta.get("labels", {}).items()
                 if key.startswith(f"{GROUP}/") and any(part in key for part in ("request", "composition", "node"))
             },
-            "status": {key: status[key] for key in ("phase", "ready", "completed", "failed", "observedGeneration") if key in status},
+            "status": {
+                key: status[key] for key in ("phase", "ready", "completed", "failed", "observedGeneration", "activations") if key in status
+            },
             "resources": metrics.get("resources", {}),
         }
         await cast(

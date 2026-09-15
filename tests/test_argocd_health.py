@@ -73,6 +73,19 @@ def test_configuration_formats_cover_only_polyad_kinds(argocd_config):
         assert (output[field]["cm"] if format_name == "helm" else output[field]) == data
 
 
+@pytest.mark.parametrize(
+    "phase,expected",
+    [("Queued", "Progressing"), ("Ready", "Healthy"), ("Superseded", "Healthy"), ("Stopped", "Suspended"), ("Rejected", "Degraded")],
+)
+def test_activation_receipt_health(tmp_path, argocd_config, phase, expected):
+    """
+    Interpret durable pulse admission decisions without requiring graph metrics on receipts.
+    """
+    obj = resource("Activation", "pulse")
+    obj["status"] = {"phase": phase, "observedGeneration": 1, "ready": phase == "Ready", "failed": phase == "Rejected"}
+    assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected
+
+
 @pytest.mark.parametrize("kind", ["Graph", "EphemeralGraph", "PolyGraph", "Feedback"])
 def test_graph_kinds_and_templates(tmp_path, argocd_config, kind):
     """

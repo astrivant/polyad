@@ -181,7 +181,7 @@ api:
 
 Created Gateways allow HTTPRoutes from the release namespace only. `tlsSecret`
 selects HTTPS on port 443; omitting it selects HTTP on port 80. Secrets and DNS
-records are supplied separately. The route forwards `/v1/compositions` and
+records are supplied separately. The route forwards `/v1/compositions`, `/v1/activations` and
 `/openapi.json` to the API Service on port 8090. Requests still require the bearer
 token. Pod health probes keep using their separate internal port.
 
@@ -333,3 +333,9 @@ operator healthcheck.
 
 The separate [event subscription API](networking.md#event-subscriptions) reports
 observations with the same Kubernetes identities and audit references.
+
+## Workload activation
+
+The same service supports [durable activation requests](activation.md) for workloads,
+subgraphs and daemon replica groups. The [standalone Python client](../clients/python/README.md)
+can submit compositions, inspect audit identities, pulse nodes and subscribe to events.

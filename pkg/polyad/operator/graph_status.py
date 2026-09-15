@@ -108,6 +108,12 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
     Returns:
         GraphMetrics: Local observations and generation-fenced descendant summaries.
     """
+    runtime = obj.get("status", {}).get("activationRuntime") or {}
+    if runtime.get("generation") == obj["metadata"].get("generation", 1) and obj["kind"] != "Feedback":
+        # Metrics use execution aliases; traffic guards retain logical identities.
+        obj = {**obj, "spec": {**obj["spec"], "nodes": runtime["nodes"], "connections": runtime["connections"], "network": None}}
+    else:
+        runtime = {}
     spec = obj["spec"]["graph"] if obj["kind"] == "Feedback" else obj["spec"]
     counts = Counter(child["kind"] for child in children)
     by_kind: dict[str, Any] = {kind: counts[kind] for kind in sorted(GRAPH_OWNED_KINDS)}
@@ -161,7 +167,9 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
             )
         return result
     by_node = {
-        child["metadata"].get("labels", {}).get(f"{GROUP}/node"): child for child in children if child["kind"] not in AUXILIARY_KINDS
+        child["metadata"].get("labels", {}).get(f"{GROUP}/runtime-node", child["metadata"].get("labels", {}).get(f"{GROUP}/node")): child
+        for child in children
+        if child["kind"] not in AUXILIARY_KINDS
     }
     present = {node.name: by_node[node.name] for node in graph.nodes if node.name in by_node}
     states = {name: observed(child) for name, child in present.items()}
@@ -171,7 +179,7 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
         observedTopology=measure_topology(graph, set(present)),
         execution=ExecutionMetrics(
             observedNodes=len(present),
-            pendingNodes=len(graph.nodes) - len(present),
+            pendingNodes=len(graph.nodes) - len(present) - len(set(runtime.get("dormant", [])) - present.keys()),
             activeNodes=sum(state["started"] and not state["completed"] and not state["failed"] for state in states.values()),
             readyNodes=sum(state["ready"] for state in states.values()),
             completedNodes=sum(state["completed"] for state in states.values()),

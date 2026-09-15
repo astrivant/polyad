@@ -170,6 +170,10 @@ example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the ch
 README's image-tag default. Alpha, beta and release-candidate spellings are
 normalized; malformed tags fail before metadata changes.
 
+The standalone `polyad-client` package receives the same Python version. CI builds
+and checks its wheel without operator dependencies and publishes it with the verified
+operator artifacts; the PyPI token must permit both package names.
+
 Python builds, both Docker profiles, operator integration tests, every Helm
 validation shard, Helm packaging and PyPI publishing use this preparation step.
 `.github/release-version.py` still verifies that the resulting package version

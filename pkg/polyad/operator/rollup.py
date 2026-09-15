@@ -97,9 +97,18 @@ def measure_subtree(
     # Feedback's template describes the epoch child, not a second set of leaf work.
     nodes = spec.get("nodes", []) if obj["kind"] != "Feedback" and valid else []
     by_node = {
-        child["metadata"].get("labels", {}).get(f"{GROUP}/node"): child for child in children if child["kind"] not in AUXILIARY_KINDS
+        child["metadata"].get("labels", {}).get(f"{GROUP}/runtime-node", child["metadata"].get("labels", {}).get(f"{GROUP}/node")): child
+        for child in children
+        if child["kind"] not in AUXILIARY_KINDS
     }
+    dormant = (
+        set(status.get("activationRuntime", {}).get("dormant", []))
+        if status.get("activationRuntime", {}).get("generation") == generation
+        else set()
+    )
     for node in nodes:
+        if node["name"] in dormant:
+            continue
         if node["kind"] in BOUNDARY_KINDS:
             if node["name"] not in by_node:
                 result["unobservedGraphs"] += 1

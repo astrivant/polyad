@@ -31,6 +31,55 @@ spec:
           spec:
             type: object
             properties:
+              activation:
+                type: object
+                description: Control how repeated requests start a downstream workload or graph.
+                properties:
+                  mode:
+                    type: string
+                    enum:
+                    - Queue
+                    - Reject
+                    - Coalesce
+                    - Parallel
+                    description: Busy-target admission policy.
+                  maxConcurrent:
+                    type: integer
+                    description: Maximum selected or running executions for parallel mode.
+                    minimum: 1
+                    maximum: 64
+                  maxPending:
+                    type: integer
+                    description: Maximum retained pending requests admitted to the queue.
+                    minimum: 1
+                    maximum: 1024
+                  replicasPerActivation:
+                    type: integer
+                    description: Deployment replicas in each daemon activation.
+                    minimum: 1
+                    maximum: 1024
+                  maxReplicas:
+                    type: integer
+                    description: Upper bound on the total daemon replicas reserved by concurrent pulses.
+                    minimum: 1
+                    maximum: 1024
+                  minIntervalSeconds:
+                    type: integer
+                    description: Minimum time between execution admissions.
+                    minimum: 0
+                    maximum: 86400
+                  maxIntervalSeconds:
+                    type: integer
+                    nullable: true
+                    description: Maximum expected time between admissions.
+                    minimum: 1
+                    maximum: 604800
+                  onDeadline:
+                    type: string
+                    enum:
+                    - Report
+                    - Activate
+                    description: Report overdue admission or submit a timer pulse.
               template:
                 type: object
                 properties:

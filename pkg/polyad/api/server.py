@@ -13,6 +13,7 @@ from flask import jsonify
 from waitress import wasyncore
 from waitress.server import create_server
 
+from polyad.api.activations import ActivationStore
 from polyad.api.app import Conflict, Unavailable
 from polyad.api.builder import APIBuilder
 from polyad.api.limits import RateLimitPolicy
@@ -54,9 +55,15 @@ class CompositionServer:
         self.lock = Lock()
         self.pending: set[Future[dict[str, Any] | None]] = set()
         store = CompositionStore(api, namespace)
+        activations = ActivationStore(api, namespace)
         app = (
             APIBuilder()
             .with_handlers(lambda value: self.invoke(store.submit(value)) or {}, lambda key, audit: self.invoke(store.lookup(key, audit)))
+            .with_activation_handlers(
+                lambda value: self.invoke(activations.submit(value)) or {},
+                lambda key: self.invoke(activations.lookup(key)),
+                lambda key: self.invoke(activations.stop(key)),
+            )
             .with_bearer_token(token)
             .with_rate_limits(RateLimitPolicy.from_environment(namespace))
             .build()

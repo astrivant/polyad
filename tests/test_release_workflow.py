@@ -31,7 +31,13 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
     """
     Apply the same release version before every artifact is built, without changing dependencies.
     """
-    for name in ("pyproject.toml", "charts/polyad/Chart.yaml", "charts/polyad/values.yaml", "charts/polyad/README.md"):
+    for name in (
+        "pyproject.toml",
+        "clients/python/pyproject.toml",
+        "charts/polyad/Chart.yaml",
+        "charts/polyad/values.yaml",
+        "charts/polyad/README.md",
+    ):
         target = tmp_path / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / name, target)
@@ -46,6 +52,7 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
     assert all(path.read_bytes() == content for path, content in first.items())
     actual = tomllib.loads(project.read_text())
     assert actual["tool"]["poetry"]["version"] == package
+    assert tomllib.loads((tmp_path / "clients/python/pyproject.toml").read_text())["tool"]["poetry"]["version"] == package
     actual["tool"]["poetry"]["version"] = original["tool"]["poetry"]["version"]
     assert actual == original
     metadata = yaml.safe_load((tmp_path / "charts/polyad/Chart.yaml").read_text())

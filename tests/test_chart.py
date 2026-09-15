@@ -86,7 +86,11 @@ def test_optional_gateway_routes_only_to_composition_service(create, tls):
     assert parent.get("namespace") == (None if create else "edge")
     assert route["spec"]["hostnames"] == ["polyad.example.com"]
     assert route["spec"]["rules"][0]["backendRefs"] == [{"name": "test-polyad-api", "port": 8090}]
-    assert {match["path"]["value"] for match in route["spec"]["rules"][0]["matches"]} == {"/v1/compositions", "/openapi.json"}
+    assert {match["path"]["value"] for match in route["spec"]["rules"][0]["matches"]} == {
+        "/v1/compositions",
+        "/v1/activations",
+        "/openapi.json",
+    }
     gateways = [obj for obj in objects if obj["kind"] == "Gateway"]
     assert len(gateways) == int(create)
     if create:

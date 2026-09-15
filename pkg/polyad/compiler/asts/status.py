@@ -273,6 +273,7 @@ class ResourceCounts(AST):
     Directly owned resource counts by Kubernetes kind.
 
     Attributes:
+        Activation (int): Number of durable activation receipts.
         NetworkPolicy (int): Number of owned transport policies.
         AuthorizationPolicy (int): Number of owned Istio authorization policies.
         PeerAuthentication (int): Number of owned mutual TLS policies.
@@ -290,6 +291,7 @@ class ResourceCounts(AST):
         ProvisioningRequest (int): Owned autoscaler capacity requests.
     """
 
+    Activation: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Durable activation receipts."}})
     NetworkPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned transport policies."}})
     AuthorizationPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned Istio authorization policies."}})
     PeerAuthentication: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned mutual TLS policies."}})

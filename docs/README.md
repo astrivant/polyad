@@ -19,6 +19,7 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 | [Advance capacity](capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
 | [Metrics API](metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |
 | [Health and backlog](operator.md#health) | Pod probes, inbound updates and API write pressure |
+| [Activation and client](activation.md) | Workload pulses, parallel daemons, frequency bounds and the standalone Python client |
 | [Composition API](composition-api.md#optional-gateway-api-routing) | Gateway routing, shared shard rate limits, request IDs and audit lookup |
 | [Local scheduling](../pkg/polyad/balance/README.md) | Cooperative work, checkpoints, policies, rewrites and graph images |
 | [Python types and serialization](toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |

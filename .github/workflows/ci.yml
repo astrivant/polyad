@@ -77,9 +77,15 @@ jobs:
       - name: Check installed wheel typing
         run: |
           poetry build
+          poetry -C clients/python build --output ../../dist
           poetry run python -m venv /tmp/polyad-typing
           /tmp/polyad-typing/bin/python -m pip install dist/*.whl
           POLYAD_TYPING_PYTHON=/tmp/polyad-typing/bin/python poetry run pytest tests/test_typing.py
+      - name: Check standalone client wheel
+        run: |
+          python -m venv /tmp/polyad-client
+          /tmp/polyad-client/bin/python -m pip install --no-deps dist/polyad_client-*.whl
+          /tmp/polyad-client/bin/python -c 'from polyad_client import Client; import importlib.util; assert importlib.util.find_spec("polyad") is None; assert Client("http://localhost:8090", "test")'
       - name: Upload verified distributions
         uses: actions/upload-artifact@v4
         with:

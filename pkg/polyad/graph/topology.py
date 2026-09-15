@@ -10,6 +10,7 @@ from attrs import field, frozen
 from cattrs import Converter
 from cattrs.errors import CattrsError
 
+from polyad.graph.activation import ActivationPolicy
 from polyad.graph.capacity import CapacityPlan
 from polyad.graph.network import NetworkAccess, NetworkPort
 
@@ -114,6 +115,7 @@ class Topology:
         rules (tuple[str, ...]): Additional structural rules inherited by nested boundaries.
         capacity (CapacityPlan | None): Optional advance capacity policy inherited by nested graph instances.
         network (NetworkAccess | None): Optional traffic restrictions inherited by descendant workloads.
+        activation (ActivationPolicy | None): Optional pulse policy when this graph is referenced as a downstream node.
     """
 
     nodes: tuple[Node, ...]
@@ -127,6 +129,7 @@ class Topology:
     rules: tuple[str, ...] = field(default=(), kw_only=True)
     capacity: CapacityPlan | None = field(default=None, kw_only=True)
     network: NetworkAccess | None = field(default=None, kw_only=True)
+    activation: ActivationPolicy | None = field(default=None, kw_only=True)
 
     def __attrs_post_init__(self) -> None:
         """

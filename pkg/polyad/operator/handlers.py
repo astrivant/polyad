@@ -17,7 +17,7 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.server import CompositionServer
 from polyad.cache import cache_url
-from polyad.compiler.registry import RECONCILED_KINDS
+from polyad.compiler.registry import RECONCILED_KINDS, RESOURCE_TYPES
 from polyad.events.server import EventServer
 from polyad.events.store import EventStore
 from polyad.metrics.inventory import inventory
@@ -325,7 +325,7 @@ async def handle(namespace: str | None, name: str, body: kopf.Body, **_: Any) ->
             await publish((owner["kind"], namespace, owner["name"]))
 
 
-for plural in ("graphs", "ephemeralgraphs", "feedbacks", "polygraphs", "rewrites", "compositions"):
+for plural in (RESOURCE_TYPES[kind].plural for kind in KINDS):
     kopf.on.event(GROUP, VERSION, plural)(handle)
 
 

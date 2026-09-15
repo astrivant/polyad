@@ -46,6 +46,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["clients/python"]
 addopts = "-n auto --maxprocesses=8 --dist=worksteal"
 
 [tool.ruff]
@@ -72,7 +73,7 @@ convention = "google"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["pkg", "examples"]
+files = ["pkg", "examples", "clients/python/polyad_client"]
 
 [[tool.mypy.overrides]]
 module = ["kubernetes.*"]
