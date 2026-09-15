@@ -5,8 +5,10 @@ Validate safe tag derivation and release gating on the complete CI result.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -16,12 +18,93 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize(
+    "tag,package,chart",
+    [
+        ("v0.0.1-alpha3", "0.0.1a3", "0.0.1-alpha3"),
+        ("refs/tags/v2.4.0-beta.12", "2.4.0b12", "2.4.0-beta12"),
+        ("v2.4.0rc2", "2.4.0rc2", "2.4.0-rc2"),
+        ("v2.4.0-alpha", "2.4.0a0", "2.4.0-alpha0"),
+        ("v2.4.0", "2.4.0", "2.4.0"),
+    ],
+)
+def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart):
+    """
+    Apply the same release version before every artifact is built, without changing dependencies.
+    """
+    for name in ("pyproject.toml", "charts/polyad/Chart.yaml", "charts/polyad/values.yaml", "charts/polyad/README.md"):
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, target)
+    project = tmp_path / "pyproject.toml"
+    original = tomllib.loads(project.read_text())
+    # Always exercise stamping a mismatched source version, even on a release checkout.
+    project.write_text(project.read_text().replace(f'version = "{original["tool"]["poetry"]["version"]}"', 'version = "0.0.0"', 1))
+    command = [sys.executable, str(ROOT / ".github/prepare-release.py"), "--tag", tag]
+    subprocess.run(command, cwd=tmp_path, check=True, capture_output=True, text=True)
+    first = {path: path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+    subprocess.run(command, cwd=tmp_path, check=True, capture_output=True, text=True)
+    assert all(path.read_bytes() == content for path, content in first.items())
+    actual = tomllib.loads(project.read_text())
+    assert actual["tool"]["poetry"]["version"] == package
+    actual["tool"]["poetry"]["version"] = original["tool"]["poetry"]["version"]
+    assert actual == original
+    metadata = yaml.safe_load((tmp_path / "charts/polyad/Chart.yaml").read_text())
+    assert metadata["version"] == metadata["appVersion"] == chart
+    values = yaml.safe_load((tmp_path / "charts/polyad/values.yaml").read_text())
+    assert values["operator"]["image"]["tag"] == chart
+    row = next(
+        line for line in (tmp_path / "charts/polyad/README.md").read_text().splitlines() if line.startswith("| `operator.image.tag`")
+    )
+    assert f"`{chart}`" in row
+    subprocess.run(
+        [sys.executable, str(ROOT / ".github/release-version.py"), "--tag", tag.removeprefix("refs/tags/")],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+
+@pytest.mark.parametrize("tag", ["v1.0.0;echo bad", "v1.2", "refs/heads/main", "v1.0.0\nversion=oops"])
+def test_release_preparation_rejects_invalid_tags_without_writes(tmp_path, tag):
+    """
+    Reject malformed tag input before reading or changing project metadata.
+    """
+    result = subprocess.run(
+        [sys.executable, str(ROOT / ".github/prepare-release.py"), "--tag", tag], cwd=tmp_path, capture_output=True, check=False
+    )
+    assert result.returncode != 0
+    assert not list(tmp_path.iterdir())
+
+
+def test_every_release_build_prepares_metadata_before_consuming_it():
+    """
+    Stamp every independent checkout, including all chart shards and the artifact publisher.
+    """
+    for filename, jobs in {
+        "ci.yml": ("python", "container", "operator"),
+        "chart.yml": ("chart", "package"),
+        "publish.yml": ("publish",),
+    }.items():
+        workflow = yaml.load((ROOT / ".github/workflows" / filename).read_text(), Loader=yaml.BaseLoader)
+        for job in jobs:
+            steps = workflow["jobs"][job]["steps"]
+            assert steps[0]["uses"] == "actions/checkout@v4"
+            assert steps[1]["uses"] == "./.github/actions/prepare-release"
+    action = yaml.load((ROOT / ".github/actions/prepare-release/action.yml").read_text(), Loader=yaml.BaseLoader)
+    stamp = action["runs"]["steps"][-1]
+    assert "refs/tags/" in stamp["if"]
+    assert stamp["env"]["RELEASE_REF"] == "${{ inputs.ref }}"
+    assert stamp["run"] == 'python .github/prepare-release.py --tag "$RELEASE_REF"'
+
+
+@pytest.mark.parametrize(
     "version,tag",
     [
         ("0.1.0", "v0.1.0"),
         ("1.2.3", "v1.2.3"),
         ("0.0.1a1", "v0.0.1-alpha1"),
         ("0.0.1a2", "v0.0.1-alpha2"),
+        ("0.0.1a3", "v0.0.1-alpha3"),
         ("1.2.3a1", "v1.2.3-alpha1"),
         ("1.2.3b2", "v1.2.3-beta2"),
         ("1.2.3rc3", "v1.2.3-rc3"),
@@ -90,6 +173,8 @@ def test_tagging_waits_for_all_checks_and_checks_out_the_tested_commit():
         ("0.1.0", "v0.0.1-alpha1", None),
         ("0.0.1a1", "v0.0.1-alpha1", "0.0.1a1"),
         ("0.0.1a2", "v0.0.1-alpha2", "0.0.1a2"),
+        ("0.0.1a3", "v0.0.1-alpha3", "0.0.1a3"),
+        ("0.0.1a2", "v0.0.1-alpha3", None),
         ("0.0.1a1", "v0.0.1-alpha2", None),
         ("0.0.1a1", "v0.0.1-alpha.1", "0.0.1a1"),
         ("0.0.1a1", "v0.0.1a1", "0.0.1a1"),
@@ -112,6 +197,9 @@ def test_publishing_validates_the_package_tag(tmp_path, package, tag, normalized
     assert (result.returncode == 0) is (normalized is not None)
     if normalized is None:
         assert not output.exists()
+        if package == "0.0.1a2" and tag == "v0.0.1-alpha3":
+            assert "The tagged commit must declare 0.0.1a3 in pyproject.toml" in result.stderr
+            assert "prepare-release.py --tag v0.0.1-alpha3" in result.stderr
     else:
         assert output.read_text() == f"version={normalized}\n"
 

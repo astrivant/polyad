@@ -17,6 +17,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+      - uses: ./.github/actions/prepare-release
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - name: Read shared tool versions
         id: tools
         run: |
@@ -94,6 +97,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+      - uses: ./.github/actions/prepare-release
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - name: Build container profile
         run: |
           docker build --target "${{ matrix.profile }}" \
@@ -156,6 +162,9 @@ jobs:
       POLYAD_TEST_DRAGONFLY_HA: ${{ matrix.dragonfly-ha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: ./.github/actions/prepare-release
         with:
           ref: ${{ inputs.ref || github.ref }}
       - uses: helm/kind-action@v1

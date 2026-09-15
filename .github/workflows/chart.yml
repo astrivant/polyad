@@ -40,6 +40,9 @@ jobs:
         with:
           ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
+      - uses: ./.github/actions/prepare-release
+        with:
+          ref: ${{ inputs.release-tag }}
       - run: bash scripts/ci/install-helm-tools.sh helm kubeconform
       - name: Build chart dependencies
         run: |
@@ -68,6 +71,9 @@ jobs:
           ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
           fetch-depth: 0
+      - uses: ./.github/actions/prepare-release
+        with:
+          ref: ${{ inputs.release-tag }}
       - run: bash scripts/ci/install-helm-tools.sh helm
       - name: Build chart dependencies
         run: |

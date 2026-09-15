@@ -21,7 +21,7 @@ operator:
     ## @param operator.image.repository Operator image repository
     repository: ghcr.io/astrivant/polyad
     ## @param operator.image.tag Operator image tag
-    tag: '0.0.1-alpha2'
+    tag: '0.0.1-alpha3'
     ## @param operator.image.pullPolicy Operator image pull policy
     pullPolicy: IfNotPresent
   resources:

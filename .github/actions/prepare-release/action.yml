@@ -1,0 +1,19 @@
+name: Prepare release versions
+description: Derive package, chart and image versions from a release tag in the build checkout
+inputs:
+  ref:
+    description: Git ref or version tag; branch and commit builds retain their declared versions
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      if: startsWith(inputs.ref, 'refs/tags/') || startsWith(inputs.ref, 'v')
+      with:
+        python-version-file: .python-version
+    - name: Stamp release metadata
+      if: startsWith(inputs.ref, 'refs/tags/') || startsWith(inputs.ref, 'v')
+      shell: bash
+      env:
+        RELEASE_REF: ${{ inputs.ref }}
+      run: python .github/prepare-release.py --tag "$RELEASE_REF"

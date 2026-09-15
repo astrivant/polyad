@@ -32,8 +32,14 @@ def release_version(package: str, tag: str | None) -> str:
     if tag is not None:
         if not re.fullmatch(r"v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)(?:[.-]?\d+)?|(?:a|b|rc)\d+)?", tag):
             raise ValueError(f"Unsupported release tag: {tag}; use vX.Y.Z, vX.Y.Z-alpha.N, vX.Y.Z-beta.N or vX.Y.Z-rc.N")
-        if Version(tag[1:]) != version:
-            raise ValueError(f"Release tag {tag} does not match package version {version}")
+        tagged_version = Version(tag[1:])
+        if tagged_version != version:
+            raise ValueError(
+                f"Release tag {tag} does not match package version {version}. "
+                f"The tagged commit must declare {tagged_version} in pyproject.toml, with matching chart and image versions. "
+                f"Run python .github/prepare-release.py --tag {tag} before validation to prepare the build checkout. "
+                "Release workflows do this automatically once the tag includes the updated pipeline."
+            )
     return str(version)
 
 

@@ -157,20 +157,37 @@ See [GitHub's workflow trigger behavior](https://docs.github.com/en/actions/how-
 
 ## Verified package releases
 
-The release path follows `hypothesis-helm`: reusable CI verifies the tagged source,
-checks its version against Poetry metadata, builds a wheel and source distribution,
+The release path follows `hypothesis-helm`: reusable CI prepares the tagged source,
+checks its release metadata, builds a wheel and source distribution,
 and uploads them as `python-distributions-<version>`. The publishing job downloads
 those exact artifacts, runs in the `pypi` environment and uses its `PYPI_API_TOKEN`
 Secret. Configure environment protection and that credential before publishing.
-Pre-release tags are normalized by `.github/release-version.py`. For example,
-Git tag `v0.0.1-alpha2` matches Python package version `0.0.1a2`; the chart,
-`appVersion` and default image tag use `0.0.1-alpha2`. A tag with different release
-numbers fails validation, even if its prerelease spelling is valid.
+For tagged builds, the Git tag determines the release version. The shared
+`.github/actions/prepare-release` action runs `.github/prepare-release.py` in each
+build checkout before dependencies are installed or artifacts are built. For
+example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the chart,
+`appVersion` and default image tag to `0.0.1-alpha3`. It also refreshes the chart
+README's image-tag default. Alpha, beta and release-candidate spellings are
+normalized; malformed tags fail before metadata changes.
 
-Set version metadata before creating a tag. CI reads the tagged commit, so changing
-`main` or rerunning a failed release cannot repair metadata in an existing tag.
-Create a new version tag on the corrected commit, or deliberately replace and
-re-sign the original tag if it has not been released and you intend to reuse it.
+Python builds, both Docker profiles, operator integration tests, every Helm
+validation shard, Helm packaging and PyPI publishing use this preparation step.
+`.github/release-version.py` still verifies that the resulting package version
+matches the tag. Changes exist only in the build checkout: CI does not commit
+version bumps or move tags, and dependency locks are unchanged.
+
+Branch and pull-request builds retain their declared versions. The automatic
+main-branch tagging workflow also continues to derive its tag from the declared
+package version; it does not increment that version on every push. To select a
+release manually, create its tag on a commit containing this pipeline. Older tags
+that contain the previous pipeline still use its strict version check when rerun.
+
+To reproduce release metadata locally before building:
+
+```sh
+python .github/prepare-release.py --tag v0.0.1-alpha3
+python .github/release-version.py --tag v0.0.1-alpha3
+```
 
 ## Verified Helm chart builds
 
