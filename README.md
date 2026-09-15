@@ -6,6 +6,19 @@ their work and tracks progress across the application and integrations.<sup>[\[2
 
 **[Get started](docs/getting-started.md)** · **[Documentation](docs/README.md)** · **[Helm chart](charts/polyad/README.md)**
 
+## Table of contents
+
+- [What Polyad abstracts](#what-polyad-abstracts)
+  - [Graphs of graphs](#graphs-of-graphs)
+  - [Constrained compositions](#constrained-compositions)
+  - [Network boundaries](#network-boundaries)
+  - [Graphs across node groups](#graphs-across-node-groups)
+  - [Workloads calling the operator](#workloads-calling-the-operator)
+  - [Finite pipelines](#finite-pipelines)
+  - [Persistent services and recurrence](#persistent-services-and-recurrence)
+- [Get started](#get-started)
+- [License](#license)
+
 ## What Polyad abstracts
 
 A **graph** groups related work and describes how its parts depend on each other.
@@ -20,6 +33,9 @@ and gray marks resources and containing boundaries.
 
 Compose smaller workflows into an application with `PolyGraph`. Each child
 reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/concepts.md#graphs-of-graphs)</sup>
+
+<details>
+<summary>Example: nested graphs reporting to an application root</summary>
 
 ```mermaid
 flowchart BT
@@ -36,11 +52,16 @@ flowchart BT
     class spot,epochs constraint
 ```
 
+</details>
+
 ### Constrained compositions
 
 Build workflows from reusable definitions and trace each instance to its
 Kubernetes resources. `GraphRule` lets engineers constrain what users can
 schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/composition-api.md#mathematical-constraints)</sup><sup>[\[6\]](docs/composition-api.md#durability-ordering-and-audit)</sup>
+
+<details>
+<summary>Example: reusable graph definitions with structural constraints</summary>
 
 ```mermaid
 flowchart LR
@@ -66,11 +87,16 @@ flowchart LR
     definition -. "instantiates" .-> b
 ```
 
+</details>
+
 ### Network boundaries
 
 Group workloads into subgraphs with explicit network connections. Scoped rules
 control traffic across boundaries and namespaces; optional Istio integration
 adds HTTP and service-identity authorization.<sup>[\[7\]](docs/networking.md#selection-scope-and-inheritance)</sup><sup>[\[8\]](docs/networking.md#cross-namespace-peers-and-http-authorization)</sup>
+
+<details>
+<summary>Example: subgraph connections and cross-namespace authorization</summary>
 
 ```mermaid
 flowchart LR
@@ -93,11 +119,16 @@ flowchart LR
     class group,producers,consumers boundary
 ```
 
+</details>
+
 ### Graphs across node groups
 
 Place whole graphs on groups of Kubernetes machines, such as general compute
 or accelerators. Here, three graphs share two worker groups while coordinated
 operator replicas and their shared Dragonfly cache run on a third.<sup>[\[9\]](docs/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup><sup>[\[10\]](docs/operator.md#replicas-shared-queues-and-autoscaling)</sup>
+
+<details>
+<summary>Example: three graphs across two worker groups</summary>
 
 ```mermaid
 flowchart TB
@@ -135,6 +166,8 @@ flowchart TB
     style groupB fill:#eeeeee,stroke:#777777,color:#444444
 ```
 
+</details>
+
 ### Workloads calling the operator
 
 Running workloads can submit their next graph, read its status and subscribe to
@@ -145,6 +178,9 @@ namespaces.<sup>[\[15\]](docs/networking.md#workload-access-to-operator-apis)</s
 With a capacity policy, Polyad forecasts upcoming stages while earlier work
 runs, giving a compatible node autoscaler advance notice. Dependencies and gates
 still decide when the next stage starts.<sup>[\[16\]](docs/capacity.md)</sup>
+
+<details>
+<summary>Example: API access, event streams and advance capacity requests</summary>
 
 ```mermaid
 flowchart TB
@@ -188,11 +224,16 @@ flowchart TB
     linkStyle default stroke:#475467,stroke-width:2px
 ```
 
+</details>
+
 ### Finite pipelines
 
 Express a workflow from preparation to publication, with parallel tasks and
 gates that wait for a condition or delay. `EphemeralGraph` groups interruptible
 work for capacity such as spot instances.<sup>[\[11\]](docs/concepts.md#finite-pipelines)</sup><sup>[\[12\]](docs/operator.md#delay-gates)</sup>
+
+<details>
+<summary>Example: parallel spot workloads behind an admission gate</summary>
 
 ```mermaid
 flowchart LR
@@ -229,12 +270,17 @@ flowchart LR
     linkStyle default stroke:#475467,stroke-width:2px
 ```
 
+</details>
+
 ### Persistent services and recurrence
 
 Keep services running with `Daemon`, and repeat a finite workflow with
 `Feedback`. Each repetition is an **epoch**: for example, sample new measurements,
 then adjust a service. Polyad completes and cleans up one epoch before starting
 the next; the application supplies the decision logic and shared state.<sup>[\[13\]](docs/operator.md#feedback-epochs)</sup>
+
+<details>
+<summary>Example: persistent services with recurring feedback epochs</summary>
 
 Solid arrows show startup or epoch progression; dashed arrows show data flow
 or repetition.
@@ -276,6 +322,8 @@ flowchart LR
     style epoch fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
     linkStyle default stroke:#475467,stroke-width:2px
 ```
+
+</details>
 
 The operator can also [request capacity ahead of upcoming stages](docs/capacity.md),
 helping node autoscalers prepare machines while upstream work runs.
