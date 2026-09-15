@@ -165,14 +165,15 @@ flowchart LR
         workers -->|completed| merge
     end
     classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
-    classDef constraint fill:#fff3d6,stroke:#926000,color:#513900
+    classDef constraint fill:#ffe3a3,stroke:#926000,color:#513900
     classDef resource fill:#eeeeee,stroke:#777777,color:#444444
     class prepare,left,right,merge,report execution
     class gate constraint
     class storage resource
-    style pipeline fill:#eeeeee,stroke:#777777,color:#444444
-    style workers fill:#fff3d6,stroke:#926000,color:#513900
-    style publish fill:#eeeeee,stroke:#777777,color:#444444
+    style pipeline fill:#e2e6ec,stroke:#667085,stroke-width:2px,color:#344054
+    style workers fill:#fff3d6,stroke:#926000,stroke-width:2px,color:#513900
+    style publish fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
+    linkStyle default stroke:#475467,stroke-width:2px
 ```
 
 ### Persistent services and recurrence
