@@ -143,10 +143,12 @@ The first passing commit for a new version creates its tag. Later builds with
 the same version leave the existing tag unchanged; bump the package version to
 create another tag. Supported versions are `X.Y.Z` and Python prereleases such as
 `X.Y.Zrc1`. Tag creation is serialized and only the tagging job gets repository
-write permission. The workflow does not publish packages, images or Helm charts.
+write permission. New tags, and reruns for a tag already pointing to that tested
+commit, invoke the reusable chart workflow to validate and package the Helm chart.
 
 Tags use `GITHUB_TOKEN`, so creating one does not start another push-triggered
-workflow. The Publish to PyPI workflow accepts a manual version-tag input for these automatically created tags.
+workflow. The tagging workflow calls chart validation/build directly after creating
+the tag. The Publish to PyPI workflow accepts a manual version-tag input for these automatically created tags.
 User-pushed version tags start it directly.
 See [GitHub's workflow trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
@@ -158,6 +160,28 @@ and uploads them as `python-distributions-<version>`. The publishing job downloa
 those exact artifacts, runs in the `pypi` environment and uses its `PYPI_API_TOKEN`
 Secret. Configure environment protection and that credential before publishing.
 Pre-release tags are normalized by `.github/release-version.py`.
+
+## Verified Helm chart builds
+
+Main-branch pushes and pull requests call `.github/workflows/chart.yml` from the
+Test workflow. Chart validation uses `astrivant/hypothesis-helm@main` with **three
+shards and two workers per shard**. Every generated property is selected, with
+up to 100 examples per property, no path exclusions or random sampling, and no
+reuse of cached test results. This covers the full generated suite, including
+dependency values; it is not enumeration of every possible input value.
+
+All three shards must succeed before Test can permit automatic tagging. The same
+workflow validates user-pushed/manual release tags through reusable CI, and is
+called directly after automatic tagging. For tagged builds, its package job
+requires all three validation shards, packages `charts/polyad`, and uploads
+`helm-chart-<tag>` containing the `.tgz` archive for 30 days. Main and PR runs
+validate without producing a release chart archive.
+
+The workflow resolves the source commit once and uses that SHA for every shard
+and the package job. Packaging also checks that the release tag still identifies
+that SHA. The archive retains the chart's declared version; update `Chart.yaml`
+when releasing a new chart version. These builds upload workflow artifacts;
+they do not publish to a Helm registry or GitHub Release.
 
 ## Helm documentation
 
@@ -173,9 +197,8 @@ Commit any regenerated table with the values change. The chart's hand-authored
 pre-commit checks, Mermaid regression tests, Python tests, hypothesis-helm chart
 validation, and Kubernetes operator integration tests.
 
-Helm property tests cover Polyad's public values and its exposed dependency
-settings. Upstream-only Grafana, Prometheus, and controller customization options
-are outside this suite. `scripts/kubeconform.sh` adds the pinned Dragonfly schema
+Helm property tests cover all generated value paths, including upstream
+dependency settings. `scripts/kubeconform.sh` adds the pinned Dragonfly schema
 to Kubernetes API validation; a contract test keeps it aligned with the CRD and
 the upstream dependency.
 

@@ -1,0 +1,85 @@
+name: Validate and build Helm chart
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit or ref to validate and build
+        type: string
+        default: ''
+      release-tag:
+        description: Version tag (optionally refs/tags-prefixed); empty skips packaging
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - name: Resolve immutable chart source
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  chart:
+    needs: source
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - run: bash scripts/ci/install-helm-tools.sh helm kubeconform
+      - run: helm dependency build charts/polyad
+      - name: Validate chart with hypothesis-helm
+        uses: astrivant/hypothesis-helm@main
+        with:
+          chart: charts/polyad
+          shard: ${{ matrix.shard }}/3
+          jobs: '2'
+          max-examples: '100'
+          sample-random: '100'
+          rerun: all
+          cache: 'false'
+          kubeconform: 'true'
+          kubeconform-binary: scripts/kubeconform.sh
+          schema-version: '1.35.0'
+  package:
+    needs: [source, chart]
+    if: inputs.release-tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - run: bash scripts/ci/install-helm-tools.sh helm
+      - run: helm dependency build charts/polyad
+      - name: Package validated chart
+        id: package
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        run: |
+          tag="${RELEASE_TAG#refs/tags/}"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
+          helm package charts/polyad --destination dist/chart
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Upload tagged Helm chart
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart-${{ steps.package.outputs.tag }}
+          path: dist/chart/*.tgz
+          if-no-files-found: error
+          retention-days: 30

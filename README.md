@@ -1,8 +1,8 @@
 # Polyad
 
-Polyad is a graph-based workload scheduler for Kubernetes. Describe tasks,
+Polyad<sup>[\[1\]](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29)</sup> is a graph-based workload scheduler for Kubernetes. Describe tasks,
 long-running services and resources as composable graphs; the operator schedules
-their work and tracks progress across the application.<sup>[\[1\]](docs/operator.md#api-and-python-abstractions)</sup>
+their work and tracks progress across the application.<sup>[\[2\]](docs/operator.md#api-and-python-abstractions)</sup>
 
 **[Get started](docs/getting-started.md)** · **[Documentation](docs/README.md)** · **[Helm chart](charts/polyad/README.md)**
 
@@ -11,7 +11,7 @@ their work and tracks progress across the application.<sup>[\[1\]](docs/operator
 A **graph** groups related work and describes how its parts depend on each other.
 Its **nodes** can be tasks, services, resources or other graphs. A data pipeline
 might fetch records, process partitions in parallel, then publish the results;
-a service graph might keep consumers and their supporting resources running.<sup>[\[2\]](docs/concepts.md)</sup>
+a service graph might keep consumers and their supporting resources running.<sup>[\[3\]](docs/concepts.md)</sup>
 
 Green marks work and graph summaries, amber marks constraints or recurrence,
 and gray marks resources and containing boundaries.
@@ -19,7 +19,7 @@ and gray marks resources and containing boundaries.
 ### Graphs of graphs
 
 Compose smaller workflows into an application with `PolyGraph`. Each child
-reports progress to its parent, giving the root a combined view of the work.<sup>[\[3\]](docs/concepts.md#graphs-of-graphs)</sup>
+reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/concepts.md#graphs-of-graphs)</sup>
 
 ```mermaid
 flowchart BT
@@ -40,7 +40,7 @@ flowchart BT
 
 Build workflows from reusable definitions and trace each instance to its
 Kubernetes resources. `GraphRule` lets engineers constrain what users can
-schedule by size, shape, nesting and mathematical properties.<sup>[\[4\]](docs/composition-api.md#mathematical-constraints)</sup><sup>[\[5\]](docs/composition-api.md#durability-ordering-and-audit)</sup>
+schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/composition-api.md#mathematical-constraints)</sup><sup>[\[6\]](docs/composition-api.md#durability-ordering-and-audit)</sup>
 
 ```mermaid
 flowchart LR
@@ -70,7 +70,7 @@ flowchart LR
 
 Group workloads into subgraphs with explicit network connections. Scoped rules
 control traffic across boundaries and namespaces; optional Istio integration
-adds HTTP and service-identity authorization.<sup>[\[6\]](docs/networking.md#selection-scope-and-inheritance)</sup><sup>[\[7\]](docs/networking.md#cross-namespace-peers-and-http-authorization)</sup>
+adds HTTP and service-identity authorization.<sup>[\[7\]](docs/networking.md#selection-scope-and-inheritance)</sup><sup>[\[8\]](docs/networking.md#cross-namespace-peers-and-http-authorization)</sup>
 
 ```mermaid
 flowchart LR
@@ -97,7 +97,7 @@ flowchart LR
 
 Place whole graphs on groups of Kubernetes machines, such as general compute
 or accelerators. Here, three graphs share two worker groups while coordinated
-operator replicas run on a third.<sup>[\[8\]](docs/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup><sup>[\[9\]](docs/operator.md#replicas-shared-queues-and-autoscaling)</sup>
+operator replicas run on a third.<sup>[\[9\]](docs/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup><sup>[\[10\]](docs/operator.md#replicas-shared-queues-and-autoscaling)</sup>
 
 ```mermaid
 flowchart TB
@@ -139,7 +139,7 @@ flowchart TB
 
 Express a workflow from preparation to publication, with parallel tasks and
 gates that wait for a condition or delay. `EphemeralGraph` groups interruptible
-work for capacity such as spot instances.<sup>[\[10\]](docs/concepts.md#finite-pipelines)</sup><sup>[\[11\]](docs/operator.md#delay-gates)</sup>
+work for capacity such as spot instances.<sup>[\[11\]](docs/concepts.md#finite-pipelines)</sup><sup>[\[12\]](docs/operator.md#delay-gates)</sup>
 
 ```mermaid
 flowchart LR
@@ -180,7 +180,7 @@ flowchart LR
 Keep services running with `Daemon`, and repeat a finite workflow with
 `Feedback`. Each repetition is an **epoch**: for example, sample new measurements,
 then adjust a service. Polyad completes and cleans up one epoch before starting
-the next; the application supplies the decision logic and shared state.<sup>[\[12\]](docs/operator.md#feedback-epochs)</sup>
+the next; the application supplies the decision logic and shared state.<sup>[\[13\]](docs/operator.md#feedback-epochs)</sup>
 
 Solid arrows show startup or epoch progression; dashed arrows show data flow
 or repetition.

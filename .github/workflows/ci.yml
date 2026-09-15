@@ -48,7 +48,7 @@ jobs:
       - run: npm test --prefix scripts/mermaid
       - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0 --proactor_threads=1 --maxmemory=256mb
       - run: |
-          for attempt in $(seq 1 30); do
+          for _attempt in $(seq 1 30); do
             if poetry run python -c "import redis; redis.Redis().ping()"; then break; fi
             sleep 1
           done
@@ -71,22 +71,10 @@ jobs:
           if-no-files-found: error
           retention-days: 7
   chart:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-      - run: bash scripts/ci/install-helm-tools.sh helm kubeconform
-      - run: helm dependency build charts/polyad
-      - uses: astrivant/hypothesis-helm@main
-        with:
-          chart: charts/polyad
-          max-examples: '10'
-          # Test the public chart interface, including exposed dependency options.
-          match: '(not dragonflyOperator or replicaCount or (nameOverride and not fullnameOverride) or crds or extraArgs) and not (istioBase or istiod or istioIngress or global) and (not mesh or mesh_enabled or mesh_operator or mesh_ingress_enabled or mesh_ingress_hosts or mesh_ingress_tlsSecret)'
-          kubeconform: 'true'
-          kubeconform-binary: scripts/kubeconform.sh
-          schema-version: '1.35.0'
+    uses: ./.github/workflows/chart.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
+      release-tag: ${{ startsWith(inputs.ref || github.ref, 'refs/tags/') && (inputs.ref || github.ref_name) || '' }}
   operator:
     runs-on: ubuntu-latest
     strategy:

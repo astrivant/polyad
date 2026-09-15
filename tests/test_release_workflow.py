@@ -92,3 +92,47 @@ def test_publication_downloads_verified_artifacts_and_uses_environment_credentia
     assert any(step.get("uses", "").startswith("actions/download-artifact@") for step in publish["steps"])
     assert not any("poetry build" in step.get("run", "") for step in publish["steps"])
     assert publish["steps"][-1]["env"]["POETRY_PYPI_TOKEN_PYPI"] == "${{ secrets.PYPI_API_TOKEN }}"
+
+
+def test_full_chart_suite_is_sharded_and_gates_tagged_packaging():
+    """
+    Require every shard to pass before packaging the exact commit those shards validated.
+    """
+    workflow = yaml.load((ROOT / ".github/workflows/chart.yml").read_text(), Loader=yaml.BaseLoader)
+    chart = workflow["jobs"]["chart"]
+    assert chart["needs"] == "source"
+    assert chart["strategy"] == {"fail-fast": "false", "matrix": {"shard": ["1", "2", "3"]}}
+    action = next(step for step in chart["steps"] if step.get("uses") == "astrivant/hypothesis-helm@main")
+    inputs = action["with"]
+    assert inputs["chart"] == "charts/polyad"
+    assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "2"
+    assert inputs["sample-random"] == "100" and inputs["max-examples"] == "100"
+    assert inputs["rerun"] == "all" and inputs["cache"] == "false"
+    assert "match" not in inputs and "continue-on-error" not in action
+    package = workflow["jobs"]["package"]
+    assert package["needs"] == ["source", "chart"]
+    assert package["if"] == "inputs.release-tag != ''"
+    for job in [chart, package]:
+        assert job["steps"][0]["with"]["ref"] == "${{ needs.source.outputs.sha }}"
+    assert package["steps"][0]["with"]["fetch-depth"] == "0"
+    build = next(step for step in package["steps"] if step.get("id") == "package")
+    assert build["run"].index('git rev-parse "refs/tags/$tag^{commit}"') < build["run"].index("helm package")
+    assert package["steps"][-1]["with"]["if-no-files-found"] == "error"
+
+
+def test_main_and_automatic_tags_use_the_same_chart_gate():
+    """
+    Main must validate before tagging; token-created tags explicitly invoke their chart build.
+    """
+    ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
+    tag = yaml.load((ROOT / ".github/workflows/tag.yml").read_text(), Loader=yaml.BaseLoader)
+    assert ci["on"]["push"]["branches"] == ["main"]
+    assert ci["jobs"]["chart"]["uses"] == "./.github/workflows/chart.yml"
+    assert "startsWith" in ci["jobs"]["chart"]["with"]["release-tag"]
+    followup = tag["jobs"]["chart"]
+    assert followup["needs"] == "tag"
+    assert followup["if"] == "needs.tag.outputs.tag != ''"
+    assert followup["uses"] == ci["jobs"]["chart"]["uses"]
+    assert followup["with"] == {"ref": "${{ needs.tag.outputs.sha }}", "release-tag": "${{ needs.tag.outputs.tag }}"}
+    create = next(step for step in tag["jobs"]["tag"]["steps"] if step.get("id") == "create")
+    assert "existing.data.object.sha === process.env.TESTED_SHA" in create["with"]["script"]
