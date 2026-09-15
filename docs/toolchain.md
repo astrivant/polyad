@@ -136,8 +136,10 @@ stub package to keep synchronized.
 
 After every successful Test workflow for a push on `main`,
 `.github/workflows/tag.yml` receives its completion event. It waits for the Python,
-chart and both operator integration jobs, then tags that exact tested commit as `v<tool.poetry.version>` from
-`pyproject.toml`. Pull requests and other branches cannot create tags.
+chart and both operator integration jobs, then tags that exact tested commit using
+`tool.poetry.version` from `pyproject.toml`. Stable versions receive `vX.Y.Z`; Python
+prereleases use `vX.Y.Z-alphaN`, `vX.Y.Z-betaN` or `vX.Y.Z-rcN`. Pull requests and
+other branches cannot create tags.
 
 The first passing commit for a new version creates its tag. Later builds with
 the same version leave the existing tag unchanged; bump the package version to
@@ -159,7 +161,15 @@ checks its version against Poetry metadata, builds a wheel and source distributi
 and uploads them as `python-distributions-<version>`. The publishing job downloads
 those exact artifacts, runs in the `pypi` environment and uses its `PYPI_API_TOKEN`
 Secret. Configure environment protection and that credential before publishing.
-Pre-release tags are normalized by `.github/release-version.py`.
+Pre-release tags are normalized by `.github/release-version.py`. For example,
+Git tag `v0.0.1-alpha1` matches Python package version `0.0.1a1`; the chart,
+`appVersion` and default image tag use `0.0.1-alpha1`. A tag with different release
+numbers fails validation, even if its prerelease spelling is valid.
+
+Set version metadata before creating a tag. CI reads the tagged commit, so changing
+`main` or rerunning a failed release cannot repair metadata in an existing tag.
+Create a new version tag on the corrected commit, or deliberately replace and
+re-sign the original tag if it has not been released and you intend to reuse it.
 
 ## Verified Helm chart builds
 

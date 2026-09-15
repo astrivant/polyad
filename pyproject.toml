@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "polyad"
-version = "0.1.0"
+version = "0.0.1a1"
 description = "Kubernetes operator for scheduling workloads through graphs"
 authors = ["Emma Doyle"]
 readme = "README.md"

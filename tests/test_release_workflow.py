@@ -15,8 +15,18 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@pytest.mark.parametrize("version", ["0.1.0", "1.2.3", "1.2.3a1", "1.2.3b2", "1.2.3rc3"])
-def test_release_tag_preserves_package_version(tmp_path, version):
+@pytest.mark.parametrize(
+    "version,tag",
+    [
+        ("0.1.0", "v0.1.0"),
+        ("1.2.3", "v1.2.3"),
+        ("0.0.1a1", "v0.0.1-alpha1"),
+        ("1.2.3a1", "v1.2.3-alpha1"),
+        ("1.2.3b2", "v1.2.3-beta2"),
+        ("1.2.3rc3", "v1.2.3-rc3"),
+    ],
+)
+def test_release_tag_preserves_package_version(tmp_path, version, tag):
     """
     Read package metadata and append exactly one output without overwriting prior values.
     """
@@ -30,8 +40,8 @@ def test_release_tag_preserves_package_version(tmp_path, version):
         text=True,
         check=True,
     )
-    assert result.stdout.strip() == f"v{version}"
-    assert output.read_text() == f"previous=value\ntag=v{version}\n"
+    assert result.stdout.strip() == tag
+    assert output.read_text() == f"previous=value\ntag={tag}\n"
 
 
 @pytest.mark.parametrize("version", ["", "v1.2.3", "01.2.3", "1.2", "1.2.3\ntag=malicious", "1.2.3/other", 123])
@@ -70,15 +80,37 @@ def test_tagging_waits_for_all_checks_and_checks_out_the_tested_commit():
     assert "workflow_call" in ci["on"]
 
 
-@pytest.mark.parametrize("tag,valid", [("v0.1.0", True), ("v0.2.0", False), ("not-a-tag", False)])
-def test_publishing_validates_the_package_tag(tag, valid):
+@pytest.mark.parametrize(
+    "package,tag,normalized",
+    [
+        ("0.1.0", "v0.1.0", "0.1.0"),
+        ("0.1.0", "v0.2.0", None),
+        ("0.1.0", "not-a-tag", None),
+        ("0.1.0", "v0.0.1-alpha1", None),
+        ("0.0.1a1", "v0.0.1-alpha1", "0.0.1a1"),
+        ("0.0.1a1", "v0.0.1-alpha.1", "0.0.1a1"),
+        ("0.0.1a1", "v0.0.1a1", "0.0.1a1"),
+        ("0.0.1a1", "v0.0.1", None),
+    ],
+)
+def test_publishing_validates_the_package_tag(tmp_path, package, tag, normalized):
     """
-    Reject publication when the tag does not identify the checkout's package version.
+    Normalize equivalent prerelease spellings while rejecting a different release before emitting outputs.
     """
+    (tmp_path / "pyproject.toml").write_text(f"[tool.poetry]\nversion = {json.dumps(package)}\n")
+    output = tmp_path / "outputs"
     result = subprocess.run(
-        [sys.executable, str(ROOT / ".github/release-version.py"), "--tag", tag], cwd=ROOT, capture_output=True, text=True, check=False
+        [sys.executable, str(ROOT / ".github/release-version.py"), "--tag", tag, "--output", str(output)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
     )
-    assert (result.returncode == 0) is valid
+    assert (result.returncode == 0) is (normalized is not None)
+    if normalized is None:
+        assert not output.exists()
+    else:
+        assert output.read_text() == f"version={normalized}\n"
 
 
 def test_publication_downloads_verified_artifacts_and_uses_environment_credentials():

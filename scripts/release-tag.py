@@ -18,14 +18,19 @@ def release_tag(project: Path) -> str:
         project (Path): Path to the tested checkout's pyproject.toml.
 
     Returns:
-        str: Git tag prefixed with v, including an optional Python prerelease suffix.
+        str: Git tag prefixed with v, using alpha, beta or rc prerelease spelling.
     """
     version = tomllib.loads(project.read_text(encoding="utf-8"))["tool"]["poetry"]["version"]
     if not isinstance(version, str) or not re.fullmatch(
         r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:(?:a|b|rc)[0-9]+)?", version
     ):
         raise ValueError("release version must be X.Y.Z, optionally followed by aN, bN or rcN")
-    return f"v{version}"
+    release = re.fullmatch(r"(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?", version)
+    assert release is not None
+    base, phase, number = release.groups()
+    phases = {"a": "alpha", "b": "beta", "rc": "rc"}
+    suffix = f"-{phases[phase]}{number}" if phase else ""
+    return f"v{base}{suffix}"
 
 
 def main() -> None:
