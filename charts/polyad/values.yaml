@@ -1,0 +1,26 @@
+replicaCount: 2
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+image:
+  repository: ghcr.io/astrivant/polyad
+  tag: '0.1.0'
+  pullPolicy: IfNotPresent
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+terminationGracePeriodSeconds: 60
+dragonfly:
+  enabled: true
+  image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.28.1
+  externalUrl: ''
+  existingSecret: ''
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ''

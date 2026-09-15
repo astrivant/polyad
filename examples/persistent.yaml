@@ -1,0 +1,33 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: server
+spec:
+  template:
+    spec:
+      containers:
+        - name: server
+          image: busybox:1.37
+          command: [sh, -c, 'mkdir -p /www; echo ready > /www/index.html; httpd -f -p 8080 -h /www']
+          startupProbe:
+            httpGet: {path: /, port: 8080}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /, port: 8080}
+          livenessProbe:
+            httpGet: {path: /, port: 8080}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: persistent
+spec:
+  mode: persistent
+  nodes:
+    - name: server
+      kind: Daemon
+      ref: server
+  connections:
+    - source: server
+      target: server

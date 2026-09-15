@@ -1,0 +1,61 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Resource
+metadata:
+  name: settings
+spec:
+  manifest:
+    apiVersion: v1
+    kind: ConfigMap
+    data:
+      message: hello
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Gate
+metadata:
+  name: configuration-ready
+spec:
+  expression:
+    operator: signal
+    name: settings.ready
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ShutdownPolicy
+metadata:
+  name: bounded
+spec:
+  graceSeconds: 30
+  afterSeconds: 300
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: configured-worker
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command: [cat, /settings/message]
+          volumeMounts:
+            - name: settings
+              mountPath: /settings
+      volumes:
+        - name: settings
+          configMap:
+            name: '${nodes.settings.name}'
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: configured
+spec:
+  shutdownPolicy: bounded
+  nodes:
+    - name: settings
+      kind: Resource
+      ref: settings
+    - name: worker
+      kind: Workload
+      ref: configured-worker
+      gate: configuration-ready

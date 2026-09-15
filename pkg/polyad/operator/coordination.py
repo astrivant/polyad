@@ -1,0 +1,185 @@
+"""Elect a planner and lease graph shards to replicas using Kubernetes CAS updates."""
+
+import asyncio
+import hashlib
+import json
+import time
+import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
+from datetime import UTC, datetime
+from typing import Any
+
+from kubernetes.client.exceptions import ApiException
+
+from polyad.operator.api import API, GROUP
+from polyad.operator.compiler.asts import Lease, LeaseSpec, ObjectMeta
+from polyad.operator.queue import Key
+
+SHARDS = 32
+DURATION = 90
+WRITE_BUDGET = 35
+active_shard: ContextVar[int | None] = ContextVar("polyad_shard", default=None)
+
+
+class NotOwner(Exception):
+    """Stop a pass when this replica cannot prove shard ownership."""
+
+
+def assignment(members: list[str], shards: int = SHARDS) -> dict[str, str]:
+    """Use rendezvous hashing to minimize movement when replicas join or leave."""
+    return (
+        {str(shard): max(members, key=lambda member: hashlib.sha256(f"{shard}/{member}".encode()).digest()) for shard in range(shards)}
+        if members
+        else {}
+    )
+
+
+class Coordinator:
+    """Keep leader planning separate from exclusive, renewable worker ownership."""
+
+    def __init__(self, api: API, namespace: str, identity: str | None = None) -> None:
+        """Use a unique process identity, even when a pod restarts under the same name."""
+        self.api, self.namespace = api, namespace
+        self.identity = identity or str(uuid.uuid4())
+        self.observed: dict[str, tuple[str, float]] = {}
+        self.deadlines: dict[str, float] = {}
+        self.owned: set[int] = set()
+        self.busy: set[int] = set()
+        self.leader = False
+        self.last_success = 0.0
+        self.lock = asyncio.Lock()
+
+    def expired(self, lease: dict[str, Any]) -> bool:
+        """Measure unchanged lease versions locally; do not trust remote wall clocks."""
+        meta = lease["metadata"]
+        name, version = meta["name"], meta["resourceVersion"]
+        previous = self.observed.get(name)
+        if previous is None or previous[0] != version:
+            self.observed[name] = (version, time.monotonic())
+        duration = max(DURATION, lease.get("spec", {}).get("leaseDurationSeconds", DURATION))
+        return bool(time.monotonic() - self.observed[name][1] > duration)
+
+    async def claim(self, name: str, *, annotations: dict[str, str] | None = None) -> bool:
+        """Acquire or renew with resourceVersion compare-and-swap, never blind patches."""
+        started = time.monotonic()
+        current = await self.api.get("Lease", self.namespace, name)
+        if current and current.get("spec", {}).get("holderIdentity") != self.identity and not self.expired(current):
+            return False
+        body = Lease(
+            metadata=ObjectMeta(
+                name=name,
+                namespace=self.namespace,
+                labels={f"{GROUP}/coordination": "true"},
+                resourceVersion=current["metadata"]["resourceVersion"] if current else None,
+                annotations=annotations if annotations is not None else (current or {}).get("metadata", {}).get("annotations", {}),
+            ),
+            spec=LeaseSpec(
+                holderIdentity=self.identity,
+                leaseDurationSeconds=DURATION,
+                renewTime=datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z"),
+            ),
+        )
+        try:
+            await self.api.request("PUT" if current else "POST", "Lease", self.namespace, name if current else "", body)
+        except ApiException as error:
+            if error.status == 409:
+                return False
+            raise
+        self.deadlines[name] = started + DURATION
+        return time.monotonic() < self.deadlines[name] - WRITE_BUDGET
+
+    async def tick(self) -> None:
+        """Heartbeat membership, elect the planner, and acquire assigned shards."""
+        async with self.lock:
+            await self.claim(f"polyad-member-{self.identity}")
+            listing = await self.api.request("GET", "Lease", self.namespace, query=[("labelSelector", f"{GROUP}/coordination=true")])
+            for lease in listing.get("items", []):
+                self.expired(lease)
+            self.leader = await self.claim("polyad-leader")
+            if self.leader:
+                members = []
+                for lease in listing.get("items", []):
+                    if lease["metadata"]["name"].startswith("polyad-member-"):
+                        if self.expired(lease):
+                            try:
+                                await self.api.delete(lease)
+                            except ApiException as error:
+                                if error.status != 409:
+                                    raise
+                        else:
+                            members.append(lease["spec"]["holderIdentity"])
+                await self.claim("polyad-leader", annotations={f"{GROUP}/assignments": json.dumps(assignment(members), sort_keys=True)})
+            leader = await self.api.get("Lease", self.namespace, "polyad-leader")
+            planned = json.loads((leader or {}).get("metadata", {}).get("annotations", {}).get(f"{GROUP}/assignments", "{}"))
+            for shard in range(SHARDS):
+                name = f"polyad-shard-{shard}"
+                if planned.get(str(shard)) == self.identity or shard in self.busy:
+                    if await self.claim(name):
+                        self.owned.add(shard)
+                    else:
+                        self.owned.discard(shard)
+                else:
+                    # Stop renewing. A successor waits for the full lease expiry;
+                    # no handoff can bypass an outstanding transport request.
+                    self.owned.discard(shard)
+            self.last_success = time.monotonic()
+
+    async def shard_for(self, key: Key) -> int:
+        """Co-locate nested boundaries and rewrites with their owning root graph."""
+        kind, namespace, name = key
+        seen: set[Key] = set()
+        for _ in range(64):
+            current_key = kind, namespace, name
+            if current_key in seen:
+                raise ValueError("cyclic graph ownership")
+            seen.add(current_key)
+            obj = await self.api.get(kind, namespace, name)
+            if obj is None:
+                break
+            if kind == "Rewrite":
+                kind, name = obj["spec"].get("kind", "Graph"), obj["spec"]["graph"]
+                continue
+            owners = [
+                owner
+                for owner in obj["metadata"].get("ownerReferences", [])
+                if owner.get("controller")
+                and owner.get("apiVersion", "").startswith(f"{GROUP}/")
+                and owner["kind"] in {"Graph", "EphemeralGraph", "Feedback"}
+            ]
+            if not owners:
+                break
+            kind, name = owners[0]["kind"], owners[0]["name"]
+        else:
+            raise ValueError("graph ownership exceeds 64 levels")
+        return int.from_bytes(hashlib.sha256(f"{namespace}/{kind}/{name}".encode()).digest()[:8]) % SHARDS
+
+    async def guard(self) -> None:
+        """Recheck the lease before each workload mutation and leave transport headroom."""
+        shard = active_shard.get()
+        if shard is None or shard not in self.owned:
+            raise NotOwner("no active shard ownership")
+        name = f"polyad-shard-{shard}"
+        lease = await self.api.get("Lease", self.namespace, name)
+        if (
+            not lease
+            or lease["spec"].get("holderIdentity") != self.identity
+            or time.monotonic() >= self.deadlines.get(name, 0) - WRITE_BUDGET
+        ):
+            raise NotOwner("shard lease lost or renewal overdue")
+
+    @asynccontextmanager
+    async def duty(self, key: Key) -> AsyncIterator[None]:
+        """Hold a shard through one ordered, freshly read reconciliation attempt."""
+        shard = await self.shard_for(key)
+        if shard not in self.owned:
+            raise NotOwner("graph assigned to another replica")
+        self.busy.add(shard)
+        token = active_shard.set(shard)
+        try:
+            await self.guard()
+            yield
+        finally:
+            active_shard.reset(token)
+            self.busy.discard(shard)

@@ -1,0 +1,13 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Feedback
+metadata:
+  name: recurring
+spec:
+  # Omit rounds for indefinite recurrence. Each epoch is a finite graph.
+  rounds: 2
+  intervalSeconds: 5
+  graph:
+    nodes:
+      - name: iteration
+        kind: Workload
+        ref: hello

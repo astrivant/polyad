@@ -1,0 +1,57 @@
+name: Test
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install poetry
+      - run: poetry install
+      - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.28.1 --proactor_threads=1 --maxmemory=256mb
+      - run: |
+          for attempt in $(seq 1 30); do
+            if poetry run python -c "import redis; redis.Redis().ping()"; then break; fi
+            sleep 1
+          done
+          poetry run python -c "import redis; redis.Redis().ping()"
+      - run: poetry run pytest
+        env:
+          POLYAD_TEST_DRAGONFLY_URL: redis://localhost:6379/0
+      - run: poetry run ruff check .
+      - run: poetry run mypy pkg
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astrivant/hypothesis-helm@main
+        with:
+          chart: charts/polyad
+          max-examples: '10'
+          kubeconform: 'true'
+          schema-version: '1.35.0'
+  operator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: polyad-test
+      - uses: azure/setup-helm@v4.3.0
+      - run: docker build -t polyad:test .
+      - run: kind load docker-image polyad:test --name polyad-test
+      - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set image.repository=polyad --set image.tag=test --wait --timeout=180s
+      - run: bash scripts/test-operator.sh
+      - run: kubectl -n polyad delete graphs,ephemeralgraphs,feedbacks --all --wait=true --timeout=120s
+      - run: bash scripts/test-replacement.sh
+      - run: bash scripts/test-coordination.sh
+      - if: failure()
+        run: |
+          kubectl -n polyad get pods,leases,graphs,ephemeralgraphs,feedbacks -o yaml
+          kubectl -n polyad logs deployment/polyad-polyad --tail=200

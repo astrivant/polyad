@@ -1,0 +1,27 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: hello
+spec:
+  template:
+    spec:
+      containers:
+        - name: main
+          image: busybox:1.37
+          command: [sh, -c, 'echo polyad']
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: finite
+spec:
+  nodes:
+    - name: first
+      kind: Workload
+      ref: hello
+    - name: second
+      kind: Workload
+      ref: hello
+      requires:
+        - node: first
+          condition: completed

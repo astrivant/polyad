@@ -1,0 +1,25 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Ephemeral
+metadata:
+  name: interruptible-worker
+spec:
+  placement:
+    nodeSelector:
+      polyad.astrivant.com/capacity: spot
+  backoffLimit: 10
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command: [sh, -c, 'sleep 20; echo finished']
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: interrupted
+spec:
+  nodes:
+    - name: worker
+      kind: Ephemeral
+      ref: interruptible-worker

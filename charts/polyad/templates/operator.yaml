@@ -1,0 +1,158 @@
+{{- if and .Values.autoscaling.enabled (gt (int .Values.autoscaling.minReplicas) (int .Values.autoscaling.maxReplicas)) }}
+{{- fail "autoscaling.minReplicas must not exceed autoscaling.maxReplicas" }}
+{{- end }}
+{{- if and .Values.autoscaling.enabled (not (dig "requests" "cpu" "" .Values.resources)) }}
+{{- fail "CPU autoscaling requires resources.requests.cpu" }}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-polyad
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-polyad
+rules:
+  - apiGroups: [polyad.astrivant.com]
+    resources: [graphs, ephemeralgraphs, workloads, daemons, ephemerals, resources, gates, shutdownpolicies, feedbacks, rewrites]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [polyad.astrivant.com]
+    resources: [graphs/status, ephemeralgraphs/status, feedbacks/status, rewrites/status]
+    verbs: [get, patch]
+  - apiGroups: [polyad.astrivant.com]
+    resources: [graphs/finalizers, ephemeralgraphs/finalizers, feedbacks/finalizers, rewrites/finalizers]
+    verbs: [update, patch]
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list, create, update, delete]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list, create, delete]
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [get, list, create, delete]
+  - apiGroups: ['']
+    resources: [services, configmaps, persistentvolumeclaims]
+    verbs: [get, list, create, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-polyad
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-polyad
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-polyad
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: polyad
+    spec:
+      serviceAccountName: {{ .Release.Name }}-polyad
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: operator
+          image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --namespace={{ .Release.Namespace }}
+            - --liveness=http://0.0.0.0:8080/healthz
+          env:
+            - name: POLYAD_DRAGONFLY_URL
+              {{- if .Values.dragonfly.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dragonfly.existingSecret }}
+                  key: url
+              {{- else if .Values.dragonfly.enabled }}
+              value: {{ printf "redis://%s-dragonfly:6379/0" .Release.Name | quote }}
+              {{- else }}
+              value: {{ required "dragonfly.externalUrl or dragonfly.existingSecret is required when the bundled cache is disabled" .Values.dragonfly.externalUrl | quote }}
+              {{- end }}
+          ports:
+            - name: health
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 2
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import json,urllib.request; s=json.load(urllib.request.urlopen('http://localhost:8080/healthz',timeout=2))['scheduler']; assert s['initialized'] and s['worker'] and s['apiFresh'] and s['cacheFresh']"
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+{{- if .Values.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-polyad
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

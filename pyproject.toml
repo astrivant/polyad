@@ -1,0 +1,58 @@
+[tool.poetry]
+name = "polyad"
+version = "0.1.0"
+description = "Adaptive graph orchestration with resumable work and explicit lifecycle contracts"
+authors = ["Emma Doyle"]
+readme = "README.md"
+license = "GPL-3.0-only"
+repository = "https://github.com/astrivant/polyad"
+packages = [{include = "polyad", from = "pkg"}]
+
+[tool.poetry.dependencies]
+python = ">=3.13,<4.0"
+matplotlib = {version = ">=3.10,<4", optional = true}
+kopf = ">=1.37,<2"
+kubernetes = ">=32,<36"
+attrs = ">=24,<27"
+cattrs = ">=24,<27"
+redis = ">=5.2,<7"
+
+[tool.poetry.extras]
+plotting = ["matplotlib"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+ruff = "^0.15"
+mypy = "^1.15"
+matplotlib = ">=3.10,<4"
+
+[tool.poetry.scripts]
+polyad-operator = "polyad.operator.runtime:main"
+polyad-example = "polyad.balance.example:main"
+
+[build-system]
+requires = ["poetry-core>=2.0,<3.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "D"]
+ignore = ["D200", "D212"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["pkg"]
+
+[[tool.mypy.overrides]]
+module = ["kubernetes.*"]
+ignore_missing_imports = true

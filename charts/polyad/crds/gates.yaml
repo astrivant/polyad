@@ -1,0 +1,55 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: gates.polyad.astrivant.com
+spec:
+  group: polyad.astrivant.com
+  scope: Namespaced
+  names:
+    kind: Gate
+    plural: gates
+    singular: gate
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          apiVersion:
+            type: string
+            description: 'API group and version of this custom resource: polyad.astrivant.com/v1alpha1.'
+          kind:
+            type: string
+            description: 'Custom resource kind: Gate.'
+          metadata:
+            type: object
+            properties: {}
+          spec:
+            type: object
+            properties:
+              expression:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+                required:
+                - operator
+                description: Serialized Gate expression with operator, optional operands and signal name. Operators
+                  are signal, and, or, not, xor and nxor. Signals use NODE.started, NODE.ready, NODE.completed or
+                  NODE.failed; absent observations remain unknown.
+            required:
+            - expression
+            description: Desired configuration for this Gate resource. Define a reusable Boolean admission expression
+              using the Python Gate model. Signals refer to node lifecycle observations; unresolved expressions
+              block admission.
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+            description: Reserved operator observation subresource. This reusable definition does not execute independently
+              or currently publish lifecycle status.
+        required:
+        - spec
+        description: Define a reusable Boolean admission expression using the Python Gate model. Signals refer to
+          node lifecycle observations; unresolved expressions block admission.

@@ -1,0 +1,38 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: batch-slice
+spec:
+  placement:
+    # Provider node-group tags must be exposed as Kubernetes node labels.
+    nodeSelector:
+      workloads.example.com/pool: batch
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: topology.kubernetes.io/zone
+                operator: In
+                values: [east-a, east-b]
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 50
+          preference:
+            matchExpressions:
+              - key: workloads.example.com/disk
+                operator: In
+                values: [ssd]
+    tolerations:
+      - key: workloads.example.com/dedicated
+        operator: Equal
+        value: batch
+        effect: NoSchedule
+  nodes:
+    - name: prepare
+      kind: Workload
+      ref: hello
+    - name: process
+      kind: Workload
+      ref: hello
+      requires:
+        - node: prepare
+          condition: completed

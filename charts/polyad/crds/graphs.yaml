@@ -1,0 +1,403 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: graphs.polyad.astrivant.com
+spec:
+  group: polyad.astrivant.com
+  scope: Namespaced
+  names:
+    kind: Graph
+    plural: graphs
+    singular: graph
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          apiVersion:
+            type: string
+            description: 'API group and version of this custom resource: polyad.astrivant.com/v1alpha1.'
+          kind:
+            type: string
+            description: 'Custom resource kind: Graph.'
+          metadata:
+            type: object
+            properties: {}
+          spec:
+            type: object
+            properties:
+              nodes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      maxLength: 63
+                      minLength: 1
+                      description: Unique name of this node within its graph. Used by dependencies, connections
+                        and lifecycle signals.
+                    kind:
+                      type: string
+                      enum:
+                      - Workload
+                      - Daemon
+                      - Ephemeral
+                      - Resource
+                      - Graph
+                      - EphemeralGraph
+                      - Feedback
+                      description: Kind of the definition referenced by this node; determines whether execution
+                        uses a Job, Deployment, resource or nested graph boundary.
+                    ref:
+                      type: string
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      maxLength: 63
+                      minLength: 1
+                      description: Name of the reusable definition in the same namespace. Nested Graph, EphemeralGraph
+                        and Feedback definitions must set templateOnly to true.
+                    requires:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          node:
+                            type: string
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            maxLength: 63
+                            minLength: 1
+                            description: Name of the upstream node within this graph.
+                          condition:
+                            type: string
+                            enum:
+                            - started
+                            - ready
+                            - completed
+                            default: completed
+                            description: 'Observation required before admission: started means the execution resource
+                              exists; ready means it exposes readiness; completed means finite execution succeeded.
+                              Daemons and resources cannot satisfy completed. Readiness loss does not cancel already-admitted
+                              consumers.'
+                        required:
+                        - node
+                        description: One entry in requires.
+                      description: Lifecycle prerequisites that must all hold before initial admission. Admission
+                        dependencies must be acyclic; use connections for cyclic data flow.
+                    gate:
+                      type: string
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      maxLength: 63
+                      minLength: 1
+                      description: Name of a Gate definition in the same namespace. Admission requires its expression
+                        to evaluate to true; false or unknown blocks admission.
+                    slots:
+                      type: integer
+                      minimum: 1
+                      default: 1
+                      description: Admission slots reserved by this node until finite work completes or execution
+                        is removed. Must fit the containing graph; this is not a CPU request.
+                  required:
+                  - name
+                  - kind
+                  - ref
+                  description: One entry in nodes.
+                x-kubernetes-list-type: map
+                x-kubernetes-list-map-keys:
+                - name
+                description: Graph membership in deterministic admission order. Names are unique within this boundary;
+                  definitions are resolved in the same namespace.
+              connections:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    source:
+                      type: string
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      maxLength: 63
+                      minLength: 1
+                      description: Name of the source node for this data-flow connection.
+                    target:
+                      type: string
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      maxLength: 63
+                      minLength: 1
+                      description: Name of the destination node for this data-flow connection.
+                  required:
+                  - source
+                  - target
+                  description: One entry in connections.
+                description: Declarative data-flow edges, including cycles and self-loops. These edges neither block
+                  admission nor configure network transport.
+              mode:
+                type: string
+                enum:
+                - finite
+                - persistent
+                default: finite
+                description: Finite graphs report completion when finite work completes and resource nodes are ready.
+                  Persistent graphs remain active until stopped or deleted. Graphs containing daemons must be persistent.
+              slots:
+                type: integer
+                minimum: 1
+                default: 64
+                description: Total admission-slot capacity for this boundary. Node reservations govern admission;
+                  Kubernetes independently schedules actual CPU, memory and device requests.
+              shutdownPolicy:
+                type: string
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                maxLength: 63
+                minLength: 1
+                description: Name of a ShutdownPolicy in the same namespace, specifying a runtime limit and termination
+                  grace period.
+              suspend:
+                type: boolean
+                default: false
+                description: Stop admitting work and drain owned execution while true. Clearing suspension permits
+                  fresh execution; this is not an application checkpoint request.
+              templateOnly:
+                type: boolean
+                default: false
+                description: Keep this boundary as an inert reusable definition. A parent graph creates an owned
+                  executable copy with this flag cleared.
+              placement:
+                type: object
+                properties:
+                  nodeSelector:
+                    type: object
+                    additionalProperties:
+                      type: string
+                      description: Value for an individual key in nodeSelector.
+                    description: Exact Kubernetes node-label matches, all of which must hold. Use labels for node
+                      groups or resource slices; cloud tags must first be exposed as node labels. Conflicting inherited
+                      values are rejected.
+                  nodeAffinity:
+                    type: object
+                    properties:
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        type: object
+                        properties:
+                          nodeSelectorTerms:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: Node label or node field tested by this requirement.
+                                      operator:
+                                        type: string
+                                        enum:
+                                        - In
+                                        - NotIn
+                                        - Exists
+                                        - DoesNotExist
+                                        - Gt
+                                        - Lt
+                                        description: 'Selector comparison operator: In, NotIn, Exists, DoesNotExist,
+                                          Gt or Lt.'
+                                      values:
+                                        type: array
+                                        items:
+                                          type: string
+                                          description: One entry in values.
+                                        description: Comparison values for this requirement. In and NotIn use a
+                                          nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one
+                                          integer encoded as a string.
+                                    required:
+                                    - key
+                                    - operator
+                                    description: One entry in matchExpressions.
+                                  description: Node-label requirements combined with AND within this term.
+                                matchFields:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: Node label or node field tested by this requirement.
+                                      operator:
+                                        type: string
+                                        enum:
+                                        - In
+                                        - NotIn
+                                        - Exists
+                                        - DoesNotExist
+                                        - Gt
+                                        - Lt
+                                        description: 'Selector comparison operator: In, NotIn, Exists, DoesNotExist,
+                                          Gt or Lt.'
+                                      values:
+                                        type: array
+                                        items:
+                                          type: string
+                                          description: One entry in values.
+                                        description: Comparison values for this requirement. In and NotIn use a
+                                          nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one
+                                          integer encoded as a string.
+                                    required:
+                                    - key
+                                    - operator
+                                    description: One entry in matchFields.
+                                  description: Node-field requirements combined with AND within this term.
+                              description: One entry in nodeSelectorTerms.
+                            description: Alternative node-selection terms combined with OR. Expressions within one
+                              term are combined with AND. An empty term selects no nodes.
+                        required:
+                        - nodeSelectorTerms
+                        description: Hard node eligibility rules evaluated when scheduling. Changes to node labels
+                          after scheduling do not by themselves evict a running pod.
+                      preferredDuringSchedulingIgnoredDuringExecution:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            weight:
+                              type: integer
+                              minimum: 1
+                              maximum: 100
+                              description: Preference weight from 1 to 100. Matching preferred rules contribute
+                                to the node scheduling score.
+                            preference:
+                              type: object
+                              properties:
+                                matchExpressions:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: Node label or node field tested by this requirement.
+                                      operator:
+                                        type: string
+                                        enum:
+                                        - In
+                                        - NotIn
+                                        - Exists
+                                        - DoesNotExist
+                                        - Gt
+                                        - Lt
+                                        description: 'Selector comparison operator: In, NotIn, Exists, DoesNotExist,
+                                          Gt or Lt.'
+                                      values:
+                                        type: array
+                                        items:
+                                          type: string
+                                          description: One entry in values.
+                                        description: Comparison values for this requirement. In and NotIn use a
+                                          nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one
+                                          integer encoded as a string.
+                                    required:
+                                    - key
+                                    - operator
+                                    description: One entry in matchExpressions.
+                                  description: Node-label requirements combined with AND within this term.
+                                matchFields:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      key:
+                                        type: string
+                                        description: Node label or node field tested by this requirement.
+                                      operator:
+                                        type: string
+                                        enum:
+                                        - In
+                                        - NotIn
+                                        - Exists
+                                        - DoesNotExist
+                                        - Gt
+                                        - Lt
+                                        description: 'Selector comparison operator: In, NotIn, Exists, DoesNotExist,
+                                          Gt or Lt.'
+                                      values:
+                                        type: array
+                                        items:
+                                          type: string
+                                          description: One entry in values.
+                                        description: Comparison values for this requirement. In and NotIn use a
+                                          nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one
+                                          integer encoded as a string.
+                                    required:
+                                    - key
+                                    - operator
+                                    description: One entry in matchFields.
+                                  description: Node-field requirements combined with AND within this term.
+                              description: Node-selection term whose match contributes the associated weight.
+                          required:
+                          - weight
+                          - preference
+                          description: One entry in preferredDuringSchedulingIgnoredDuringExecution.
+                        description: Weighted node preferences applied after hard eligibility checks. Unmatched
+                          preferences do not prevent scheduling.
+                    description: Required and preferred Kubernetes node-selection rules. Required rules intersect
+                      across graph, definition and pod scopes; preferences are combined.
+                  tolerations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          description: Taint key to match. An empty key requires operator Exists and matches all
+                            keys.
+                        operator:
+                          type: string
+                          enum:
+                          - Exists
+                          - Equal
+                          description: 'Taint comparison: Equal matches key and value; Exists matches the key regardless
+                            of value. Kubernetes defaults an omitted operator to Equal.'
+                        value:
+                          type: string
+                          description: Taint value to match when operator is Equal. Omit or leave empty when operator
+                            is Exists.
+                        effect:
+                          type: string
+                          enum:
+                          - ''
+                          - NoSchedule
+                          - PreferNoSchedule
+                          - NoExecute
+                          description: 'Taint effect to match. An empty effect matches all effects: NoSchedule,
+                            PreferNoSchedule and NoExecute.'
+                        tolerationSeconds:
+                          type: integer
+                          format: int64
+                          minimum: 0
+                          description: Seconds a pod may remain bound after a matching NoExecute taint. Omission
+                            tolerates that taint indefinitely; zero requests immediate eviction.
+                      description: One entry in tolerations.
+                    description: Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations
+                      allow placement on tainted nodes; they do not select or guarantee a node.
+                description: Shared placement for this execution boundary. Descendants intersect node selectors
+                  and required affinity, combine preferences, and add tolerations. This constrains eligible nodes;
+                  it does not reserve capacity atomically for the whole graph.
+            required:
+            - nodes
+            description: Desired configuration for this Graph resource. Own and orchestrate a finite or persistent
+              graph of workloads and resources. Admission follows lifecycle dependencies; deletion waits for owned
+              resources to finish cleanup.
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+            description: Operator-observed phase, readiness, completion, failure and per-node lifecycle facts. observedGeneration
+              identifies the Graph spec generation evaluated; status is not user input.
+        required:
+        - spec
+        description: Own and orchestrate a finite or persistent graph of workloads and resources. Admission follows
+          lifecycle dependencies; deletion waits for owned resources to finish cleanup.

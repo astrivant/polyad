@@ -1,0 +1,33 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Ephemeral
+metadata:
+  name: spot-worker
+spec:
+  placement:
+    # Replace with the labels/tolerations of your provider's spot node pool.
+    nodeSelector:
+      polyad.astrivant.com/capacity: spot
+    tolerations:
+      - key: polyad.astrivant.com/spot
+        operator: Exists
+        effect: NoSchedule
+  backoffLimit: 10
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command: [sh, -c, 'echo restartable work']
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: EphemeralGraph
+metadata:
+  name: spot-pipeline
+spec:
+  placement:
+    nodeSelector:
+      polyad.astrivant.com/capacity: spot
+  nodes:
+    - name: worker
+      kind: Ephemeral
+      ref: spot-worker
