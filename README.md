@@ -34,7 +34,7 @@ and gray marks resources and containing boundaries.
 Compose smaller workflows into an application with `PolyGraph`. Each child
 reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/concepts.md#graphs-of-graphs)</sup>
 
-<details>
+<details open>
 <summary>Example: nested graphs reporting to an application root</summary>
 
 ```mermaid
