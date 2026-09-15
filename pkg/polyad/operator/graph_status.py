@@ -4,6 +4,7 @@ Summarize fresh graph inventory and generation-fenced nested observations.
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import TYPE_CHECKING
 
 from attrs import evolve
@@ -22,6 +23,7 @@ from polyad.compiler.asts import (
     converter,
     to_document,
 )
+from polyad.compiler.registry import GRAPH_OWNED_KINDS
 from polyad.graph.metrics import measure_topology
 from polyad.graph.topology import topology
 from polyad.operator.rollup import measure_subtree
@@ -53,8 +55,16 @@ def observed(obj: dict[str, Any]) -> dict[str, bool]:
         completed, failed = conditions.get("Complete", False), conditions.get("Failed", False)
         ready = bool(status.get("active", 0)) or completed
     elif obj["kind"] == "Deployment":
+        current = status.get("observedGeneration", 0) >= obj["metadata"].get("generation", 1)
+        failed = current and any(
+            condition.get("type") == "Progressing"
+            and condition.get("status") == "False"
+            and condition.get("reason") == "ProgressDeadlineExceeded"
+            for condition in status.get("conditions", [])
+        )
         ready = (
-            status.get("observedGeneration", 0) >= obj["metadata"].get("generation", 1)
+            current
+            and not failed
             and status.get("updatedReplicas", 0) == spec.get("replicas", 1)
             and status.get("readyReplicas", 0) >= spec.get("replicas", 1)
             and status.get("availableReplicas", 0) >= spec.get("replicas", 1)
@@ -65,6 +75,7 @@ def observed(obj: dict[str, Any]) -> dict[str, bool]:
         failed = failed or (current and status.get("phase") == "Invalid")
     elif obj["kind"] == "PersistentVolumeClaim":
         ready = status.get("phase") == "Bound"
+        failed = status.get("phase") == "Lost"
     else:
         ready = True
     if obj["metadata"].get("deletionTimestamp"):
@@ -98,33 +109,14 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
         GraphMetrics: Local observations and generation-fenced descendant summaries.
     """
     spec = obj["spec"]["graph"] if obj["kind"] == "Feedback" else obj["spec"]
+    counts = Counter(child["kind"] for child in children)
+    by_kind: dict[str, Any] = {kind: counts[kind] for kind in sorted(GRAPH_OWNED_KINDS)}
     result = GraphMetrics(
         observedGeneration=obj["metadata"].get("generation", 1),
         resources=ResourceMetrics(
             total=len(children),
             terminating=sum(bool(child["metadata"].get("deletionTimestamp")) for child in children),
-            byKind=ResourceCounts(
-                **{
-                    kind: sum(child["kind"] == kind for child in children)
-                    for kind in (
-                        "Pod",
-                        "PodTemplate",
-                        "ProvisioningRequest",
-                        "NetworkPolicy",
-                        "AuthorizationPolicy",
-                        "PeerAuthentication",
-                        "Job",
-                        "Deployment",
-                        "Service",
-                        "ConfigMap",
-                        "PersistentVolumeClaim",
-                        "Graph",
-                        "EphemeralGraph",
-                        "Feedback",
-                        "PolyGraph",
-                    )
-                }
-            ),
+            byKind=ResourceCounts(**by_kind),
         ),
     )
     for child in sorted(children, key=lambda item: (item["kind"], item["metadata"]["name"])):

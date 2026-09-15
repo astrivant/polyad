@@ -17,6 +17,7 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.server import CompositionServer
 from polyad.cache import cache_url
+from polyad.compiler.registry import RECONCILED_KINDS
 from polyad.events.server import EventServer
 from polyad.events.store import EventStore
 from polyad.metrics.inventory import inventory
@@ -48,7 +49,7 @@ inventory_sample_ok = False
 last_api_success = 0.0
 initialized = False
 background: list[asyncio.Task[None]] = []
-KINDS = ("Graph", "EphemeralGraph", "Feedback", "PolyGraph", "Rewrite", "Composition")
+KINDS = tuple(sorted(RECONCILED_KINDS))
 logger = logging.getLogger(__name__)
 
 

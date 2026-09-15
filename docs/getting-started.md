@@ -74,7 +74,7 @@ Build and publish an image to a registry your cluster can pull from. Replace
 `YOUR_REGISTRY` in these commands:
 
 ```sh
-docker build -t YOUR_REGISTRY/polyad:dev .
+docker build --target production -t YOUR_REGISTRY/polyad:dev .
 docker push YOUR_REGISTRY/polyad:dev
 helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
 helm dependency build charts/polyad

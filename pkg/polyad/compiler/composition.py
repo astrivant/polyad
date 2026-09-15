@@ -14,10 +14,12 @@ import networkx as nx
 from attrs import frozen
 
 from polyad.compiler import asts
-from polyad.compiler.asts.resources import RESOURCE_REGISTRY, SpecResource
+from polyad.compiler.asts.resources import SpecResource
+from polyad.compiler.registry import COMPOSABLE_KINDS
+from polyad.compiler.registry import RESOURCE_MODELS as RESOURCE_REGISTRY
 from polyad.graph.topology import converter, topology
 
-COMPOSITION_KINDS = asts.BOUNDARY_KINDS | {"Workload", "Daemon", "Ephemeral", "Resource", "Gate", "ShutdownPolicy"}
+COMPOSITION_KINDS = COMPOSABLE_KINDS
 
 
 def identity(value: str) -> str:

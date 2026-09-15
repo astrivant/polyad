@@ -102,7 +102,7 @@ def from_document(document: dict[str, Any], *, kind: str | None = None) -> Resou
         Resource: Typed resource selected from the registered Kubernetes kinds.
     """
     identity = kind or document.get("kind")
-    if identity not in RESOURCE_REGISTRY:
+    if not isinstance(identity, str) or identity not in RESOURCE_REGISTRY:
         raise ValueError(f"unsupported resource kind: {identity}")
     return converter.structure(document, RESOURCE_REGISTRY[identity])
 

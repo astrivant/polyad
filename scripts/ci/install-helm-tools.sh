@@ -38,6 +38,14 @@ for tool in "$@"; do
             tar -xzf kubeconform.tar.gz kubeconform
             binary=kubeconform
             ;;
+        argocd)
+            binary="argocd-linux-${arch}"
+            curl -fsSL "https://github.com/argoproj/argo-cd/releases/download/v${version}/$binary" -o "$binary"
+            curl -fsSL "https://github.com/argoproj/argo-cd/releases/download/v${version}/cli_checksums.txt" -o cli_checksums.txt
+            awk -v binary="$binary" '$2 == binary {print}' cli_checksums.txt >argocd.sha256
+            test -s argocd.sha256
+            sha256sum --check argocd.sha256
+            ;;
         shellcheck)
             curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${version}/shellcheck-v${version}.linux.${shellcheck_arch}.tar.xz" -o shellcheck.tar.xz
             binary="shellcheck-v${version}/shellcheck"

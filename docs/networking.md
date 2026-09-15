@@ -211,6 +211,44 @@ authorization is enabled. `/v1/events` streams without a route timeout;
 `/events/openapi.json` exposes its schema. The existing Gateway API option remains
 available for the composition service. See [Istio Helm installation](https://istio.io/latest/docs/setup/install/helm/).
 
+## Workload access to operator APIs
+
+Managed workloads can call the same APIs as external clients. Enable `api.enabled`
+for composition and status requests, and `events.enabled` for event subscriptions.
+Each Service routes to ready operator replicas; callers do not need to locate the
+shard that owns their graph. The replicas use shared queues and event history.
+
+For release `polyad` in namespace `orchestration`, callers in another namespace
+can use these in-cluster addresses (with the default `cluster.local` DNS domain):
+
+| Purpose | Address |
+| --- | --- |
+| Submit a graph | `POST http://polyad-polyad-api.orchestration.svc.cluster.local:8090/v1/compositions` |
+| Read composition status | `GET http://polyad-polyad-api.orchestration.svc.cluster.local:8090/v1/compositions/{requestId}` |
+| Subscribe to observations | `GET http://polyad-polyad-events.orchestration.svc.cluster.local:8091/v1/events` |
+
+Supply the appropriate bearer token for each API. Cross-namespace connectivity
+does not change the composition's destination: this operator creates resources
+in its configured namespace.
+
+When chart NetworkPolicies are enabled, select the caller namespace and pods in
+`networkPolicy.compositionPeers` and `networkPolicy.eventPeers`. If a graph's
+network rules isolate the caller, also allow its egress to operator pods on the
+corresponding ports, together with DNS access. Where operator Istio authorization
+is enabled, authorize the caller's service-account principal in
+`mesh.operator.compositionPrincipals` and `mesh.operator.eventPrincipals` as well.
+NetworkPolicy permits traffic; it does not supply authentication or create a
+route through a gateway. In-cluster clients can reach the Services directly.
+
+A workload can submit a composition containing a graph `capacity` policy before
+its next phase of work. After admission, Polyad looks ahead through that graph
+and publishes demand through ProvisioningRequests or placeholder Pods. The
+configured node autoscaler provisions capacity; this is not a direct scale-node
+API or a guarantee that nodes will be available. See
+[advance capacity planning](capacity.md) for enablement, budgets and admission.
+Event subscriptions report graph observations, rather than predictions of future
+application actions. Subscribers can react by submitting another composition.
+
 ## Event subscriptions
 
 Enable `events.enabled` for a separate ClusterIP Service,

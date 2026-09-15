@@ -4,6 +4,7 @@ Concrete resource kinds and the execution specs synthesized by the compiler.
 
 from __future__ import annotations
 
+from types import MappingProxyType
 from typing import Any, ClassVar
 
 from attrs import frozen
@@ -117,7 +118,9 @@ class Job(Resource):
         spec (JobSpec): Desired resource configuration.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Job", "batch/v1", "jobs")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Job", "batch/v1", "jobs", description="Finite workload execution.", graph_owned=True
+    )
     spec: JobSpec
 
 
@@ -131,7 +134,9 @@ class Deployment(Resource):
         spec (DeploymentSpec): Desired resource configuration.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Deployment", "apps/v1", "deployments")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Deployment", "apps/v1", "deployments", description="Persistent daemon execution.", graph_owned=True
+    )
     spec: DeploymentSpec
 
 
@@ -173,7 +178,9 @@ class Lease(Resource):
         spec (LeaseSpec): Desired resource configuration.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Lease", "coordination.k8s.io/v1", "leases")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Lease", "coordination.k8s.io/v1", "leases", description="Replica membership, leadership and shard coordination."
+    )
     spec: LeaseSpec
 
 
@@ -186,7 +193,9 @@ class Service(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Service", "v1", "services")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Service", "v1", "services", description="Network endpoint for graph workloads.", graph_owned=True
+    )
 
 
 @frozen(kw_only=True)
@@ -198,7 +207,13 @@ class PersistentVolumeClaim(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("PersistentVolumeClaim", "v1", "persistentvolumeclaims")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "PersistentVolumeClaim",
+        "v1",
+        "persistentvolumeclaims",
+        description="Persistent storage claimed by graph workloads.",
+        graph_owned=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -213,7 +228,9 @@ class ConfigMap(Resource):
         immutable (bool | None): Whether Kubernetes should reject changes to ConfigMap data.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("ConfigMap", "v1", "configmaps")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "ConfigMap", "v1", "configmaps", description="Configuration data owned by a graph.", graph_owned=True
+    )
     data: dict[str, str] | None = None
     binaryData: dict[str, str] | None = None
     immutable: bool | None = None
@@ -228,7 +245,16 @@ class Graph(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Graph", f"{GROUP}/{VERSION}", "graphs", boundary=True)
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Graph",
+        f"{GROUP}/{VERSION}",
+        "graphs",
+        boundary=True,
+        description="Scheduling boundary for dependent workload vertices.",
+        graph_owned=True,
+        reconciled=True,
+        composable=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -240,7 +266,16 @@ class PolyGraph(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor for routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("PolyGraph", f"{GROUP}/{VERSION}", "polygraphs", boundary=True)
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "PolyGraph",
+        f"{GROUP}/{VERSION}",
+        "polygraphs",
+        boundary=True,
+        description="Scheduling boundary composed of nested graph types.",
+        graph_owned=True,
+        reconciled=True,
+        composable=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -252,7 +287,16 @@ class EphemeralGraph(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("EphemeralGraph", f"{GROUP}/{VERSION}", "ephemeralgraphs", boundary=True)
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "EphemeralGraph",
+        f"{GROUP}/{VERSION}",
+        "ephemeralgraphs",
+        boundary=True,
+        description="Graph boundary for interruptible capacity.",
+        graph_owned=True,
+        reconciled=True,
+        composable=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -264,7 +308,16 @@ class Feedback(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Feedback", f"{GROUP}/{VERSION}", "feedbacks", boundary=True)
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Feedback",
+        f"{GROUP}/{VERSION}",
+        "feedbacks",
+        boundary=True,
+        description="Recurring finite graph epochs.",
+        graph_owned=True,
+        reconciled=True,
+        composable=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -276,7 +329,9 @@ class Workload(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Workload", f"{GROUP}/{VERSION}", "workloads")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Workload", f"{GROUP}/{VERSION}", "workloads", description="Reusable finite workload definition.", definition=True, composable=True
+    )
 
 
 @frozen(kw_only=True)
@@ -288,7 +343,9 @@ class Daemon(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Daemon", f"{GROUP}/{VERSION}", "daemons")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Daemon", f"{GROUP}/{VERSION}", "daemons", description="Reusable persistent service definition.", definition=True, composable=True
+    )
 
 
 @frozen(kw_only=True)
@@ -300,7 +357,14 @@ class Ephemeral(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Ephemeral", f"{GROUP}/{VERSION}", "ephemerals")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Ephemeral",
+        f"{GROUP}/{VERSION}",
+        "ephemerals",
+        description="Reusable workload definition for interruptible capacity.",
+        definition=True,
+        composable=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -312,7 +376,14 @@ class ResourceDefinition(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Resource", f"{GROUP}/{VERSION}", "resources")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Resource",
+        f"{GROUP}/{VERSION}",
+        "resources",
+        description="Reusable native resource manifest definition.",
+        definition=True,
+        composable=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -324,7 +395,9 @@ class Gate(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Gate", f"{GROUP}/{VERSION}", "gates")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Gate", f"{GROUP}/{VERSION}", "gates", description="Reusable Boolean admission condition.", definition=True, composable=True
+    )
 
 
 @frozen(kw_only=True)
@@ -336,7 +409,14 @@ class ShutdownPolicy(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("ShutdownPolicy", f"{GROUP}/{VERSION}", "shutdownpolicies")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "ShutdownPolicy",
+        f"{GROUP}/{VERSION}",
+        "shutdownpolicies",
+        description="Reusable execution limit and termination contract.",
+        definition=True,
+        composable=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -348,7 +428,9 @@ class Rewrite(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Rewrite", f"{GROUP}/{VERSION}", "rewrites")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Rewrite", f"{GROUP}/{VERSION}", "rewrites", description="Generation-fenced graph revision request.", reconciled=True
+    )
 
 
 @frozen(kw_only=True)
@@ -360,7 +442,13 @@ class GraphRule(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor for routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("GraphRule", f"{GROUP}/{VERSION}", "graphrules")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "GraphRule",
+        f"{GROUP}/{VERSION}",
+        "graphrules",
+        description="Structural and network policy governing graph admission.",
+        definition=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -372,7 +460,13 @@ class Composition(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor for routing and serialization.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Composition", f"{GROUP}/{VERSION}", "compositions")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Composition",
+        f"{GROUP}/{VERSION}",
+        "compositions",
+        description="Immutable composition request and generated identity receipt.",
+        reconciled=True,
+    )
 
 
 @frozen(kw_only=True)
@@ -384,7 +478,15 @@ class Pod(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor for read-only API routing.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("Pod", "v1", "pods")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Pod",
+        "v1",
+        "pods",
+        description="Capacity reservation or observed workload Pod.",
+        graph_owned=True,
+        auxiliary="capacity",
+        required_feature="capacity",
+    )
 
 
 @frozen(kw_only=True)
@@ -396,7 +498,14 @@ class NetworkPolicy(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor for network API routing.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("NetworkPolicy", "networking.k8s.io/v1", "networkpolicies")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "NetworkPolicy",
+        "networking.k8s.io/v1",
+        "networkpolicies",
+        description="Pod network isolation policy.",
+        graph_owned=True,
+        auxiliary="network",
+    )
 
 
 @frozen(kw_only=True)
@@ -408,7 +517,15 @@ class AuthorizationPolicy(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor for network API routing.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("AuthorizationPolicy", "security.istio.io/v1", "authorizationpolicies")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "AuthorizationPolicy",
+        "security.istio.io/v1",
+        "authorizationpolicies",
+        description="Optional Istio HTTP and service identity authorization.",
+        graph_owned=True,
+        auxiliary="network",
+        required_feature="mesh",
+    )
 
 
 @frozen(kw_only=True)
@@ -420,7 +537,15 @@ class PeerAuthentication(SpecResource):
         resource_type (ClassVar[ResourceType]): Kind descriptor for network API routing.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("PeerAuthentication", "security.istio.io/v1", "peerauthentications")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "PeerAuthentication",
+        "security.istio.io/v1",
+        "peerauthentications",
+        description="Optional Istio mutual TLS authentication policy.",
+        graph_owned=True,
+        auxiliary="network",
+        required_feature="mesh",
+    )
 
 
 @frozen(kw_only=True)
@@ -432,7 +557,15 @@ class ProvisioningRequest(SpecResource):
         resource_type (ClassVar[ResourceType]): Autoscaler API identity.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("ProvisioningRequest", "autoscaling.x-k8s.io/v1", "provisioningrequests")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "ProvisioningRequest",
+        "autoscaling.x-k8s.io/v1",
+        "provisioningrequests",
+        description="Optional cluster autoscaler capacity request.",
+        graph_owned=True,
+        auxiliary="capacity",
+        required_feature="capacity",
+    )
 
 
 @frozen(kw_only=True)
@@ -445,7 +578,15 @@ class PodTemplateResource(Resource):
         template (PodTemplate): Future workload's scheduling specification.
     """
 
-    resource_type: ClassVar[ResourceType] = ResourceType("PodTemplate", "v1", "podtemplates")
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "PodTemplate",
+        "v1",
+        "podtemplates",
+        description="Future workload template for node capacity provisioning.",
+        graph_owned=True,
+        auxiliary="capacity",
+        required_feature="capacity",
+    )
     template: PodTemplate
 
 
@@ -476,11 +617,15 @@ RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     ShutdownPolicy,
     Rewrite,
 )
-RESOURCE_TYPES = {cls.resource_type.kind: cls.resource_type for cls in RESOURCE_CLASSES}
-RESOURCE_REGISTRY = {cls.resource_type.kind: cls for cls in RESOURCE_CLASSES}
+# Immutable projections of the descriptors declared on the AST classes above.
+RESOURCE_TYPES = MappingProxyType({cls.resource_type.kind: cls.resource_type for cls in RESOURCE_CLASSES})
+RESOURCE_REGISTRY = MappingProxyType({cls.resource_type.kind: cls for cls in RESOURCE_CLASSES})
 BOUNDARY_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.boundary)
-
-NETWORK_POLICY_KINDS = frozenset({"NetworkPolicy", "AuthorizationPolicy", "PeerAuthentication"})
-
-CAPACITY_KINDS = frozenset({"Pod", "PodTemplate", "ProvisioningRequest"})
+GRAPH_OWNED_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.graph_owned)
+DEFINITION_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.definition)
+RECONCILED_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.reconciled)
+COMPOSABLE_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.composable)
+POLYAD_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.polyad)
+NETWORK_POLICY_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.auxiliary == "network")
+CAPACITY_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.auxiliary == "capacity")
 AUXILIARY_KINDS = NETWORK_POLICY_KINDS | CAPACITY_KINDS

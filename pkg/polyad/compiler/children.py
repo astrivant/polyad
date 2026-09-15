@@ -21,7 +21,8 @@ from polyad.compiler.asts import (
     converter,
     to_document,
 )
-from polyad.compiler.asts.resources import RESOURCE_REGISTRY, SpecResource
+from polyad.compiler.asts.resources import SpecResource
+from polyad.compiler.registry import RESOURCE_MODELS as RESOURCE_REGISTRY
 
 if TYPE_CHECKING:
     from typing import Any

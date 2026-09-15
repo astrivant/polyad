@@ -217,3 +217,11 @@ The Kubernetes job exercises both single-instance Dragonfly and HA. The HA test
 temporarily cordons the primary's node in its disposable kind cluster, deletes
 the primary pod, and checks graph progress through the promoted replica before
 allowing the old primary to return.
+
+## Compose artifact on main
+
+Each main-branch push runs `astrivant/composer@v0.3.0` against `charts/polyad`.
+The `polyad-compose` workflow artifact contains the generated Compose file, its
+mount files and the compiler report. Generation uses the chart defaults and does
+not commit back to the branch. Kubernetes scheduling and controller behavior still
+require a cluster; inspect the report before adapting this output for local use.

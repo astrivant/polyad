@@ -25,6 +25,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tests/flux/go.mod
+          cache-dependency-path: tests/flux/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ steps.tools.outputs.nodejs }}
@@ -42,12 +46,19 @@ jobs:
             python .github/release-version.py --output "$GITHUB_OUTPUT"
           fi
       - run: poetry install
-      - run: bash scripts/ci/install-helm-tools.sh helm shellcheck shfmt
+      - run: bash scripts/ci/install-helm-tools.sh helm shellcheck shfmt argocd
       - name: Build chart dependencies
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
           helm dependency build charts/polyad
       - run: poetry run pre-commit run --all-files
+      - name: Validate Flux health expressions
+        env:
+          POLYAD_FLUX_CHECKS: ${{ runner.temp }}/polyad-flux-checks.json
+        run: |
+          poetry run python scripts/flux-health.py --json > "$POLYAD_FLUX_CHECKS"
+          test -z "$(gofmt -l tests/flux/*.go)"
+          go -C tests/flux test -mod=readonly -parallel 8 ./...
       - run: npm test --prefix scripts/mermaid
       - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0 --proactor_threads=1 --maxmemory=256mb
       - run: |
@@ -71,6 +82,63 @@ jobs:
         with:
           name: python-distributions-${{ steps.version.outputs.version }}
           path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+  container:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [development, production]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Build container profile
+        run: |
+          docker build --target "${{ matrix.profile }}" \
+            --build-arg VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["tool"]["poetry"]["version"])')" \
+            --build-arg VCS_REF="$(git rev-parse HEAD)" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -t polyad:container-test .
+      - name: Check non-root container profile
+        run: |
+          docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges --entrypoint python -i polyad:container-test - "${{ matrix.profile }}" < scripts/check-container.py
+          docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges polyad:container-test --help
+      - name: Check development tests
+        if: matrix.profile == 'development'
+        run: docker run --rm --entrypoint python polyad:container-test -m pytest -n 2 tests/test_balance_gates.py
+  compose:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: bash scripts/ci/install-helm-tools.sh helm
+      - name: Build chart dependencies
+        run: |
+          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
+          helm dependency build charts/polyad
+      - name: Helm to Docker Compose
+        id: compose
+        uses: astrivant/composer@v0.3.0
+        with:
+          watch-directory: '.'
+          chart: charts/polyad
+          commit: 'false'
+          release: polyad
+          namespace: polyad
+          output: dist/compose/compose.yaml
+          report: dist/compose/report.json
+      - name: Upload generated Compose
+        if: steps.compose.outputs.skipped != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: polyad-compose
+          path: dist/compose/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
   chart:
@@ -100,7 +168,7 @@ jobs:
       - uses: azure/setup-helm@v4.3.0
         with:
           version: ${{ steps.tools.outputs.helm }}
-      - run: docker build -t polyad:test .
+      - run: docker build --target production -t polyad:test .
       - run: kind load docker-image polyad:test --name polyad-test
       - name: Build chart dependencies
         run: |

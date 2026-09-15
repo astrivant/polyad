@@ -34,6 +34,8 @@ for tool in "${tools[@]}"; do
         helm) repository=https://github.com/Antiarchitect/asdf-helm.git ;;
         kubectl) repository=https://github.com/asdf-community/asdf-kubectl.git ;;
         kubeconform) repository=https://github.com/lirlia/asdf-kubeconform.git ;;
+        argocd) repository=https://github.com/beardix/asdf-argocd.git ;;
+        golang) repository=https://github.com/asdf-community/asdf-golang.git ;;
         shellcheck) repository=https://github.com/luizm/asdf-shellcheck.git ;;
         shfmt) repository=https://github.com/luizm/asdf-shfmt.git ;;
         *)

@@ -34,12 +34,48 @@ class ResourceType:
         api_version (str): Kubernetes API group/version, or the core version.
         plural (str): Plural resource name used in Kubernetes API paths.
         boundary (bool): Whether this kind owns a graph reconciliation boundary.
+        description (str): Purpose of this supported resource type.
+        namespaced (bool): Whether Kubernetes scopes instances to a namespace.
+        graph_owned (bool): Whether graph inventory and resource counts include this kind.
+        definition (bool): Whether this kind is a reusable definition without independent execution.
+        reconciled (bool): Whether the operator schedules reconciliation duties for this kind.
+        composable (bool): Whether composition requests may declare this kind.
+        auxiliary (Literal['network', 'capacity'] | None): Supporting resource role, excluded from graph vertices.
+        required_feature (Literal['mesh', 'capacity'] | None): Operator feature required for graph inventory reads.
     """
 
     kind: str
     api_version: str
     plural: str
     boundary: bool = False
+    description: str = ""
+    namespaced: bool = True
+    graph_owned: bool = False
+    definition: bool = False
+    reconciled: bool = False
+    composable: bool = False
+    auxiliary: Literal["network", "capacity"] | None = None
+    required_feature: Literal["mesh", "capacity"] | None = None
+
+    @property
+    def api_group(self) -> str:
+        """
+        Return the API group, or the empty string for core Kubernetes resources.
+
+        Returns:
+            str: API group without its version.
+        """
+        return self.api_version.rsplit("/", 1)[0] if "/" in self.api_version else ""
+
+    @property
+    def polyad(self) -> bool:
+        """
+        Identify resources whose CRD API is owned by Polyad.
+
+        Returns:
+            bool: Whether this descriptor belongs to the Polyad API group.
+        """
+        return self.api_group == GROUP
 
     @property
     def prefix(self) -> str:

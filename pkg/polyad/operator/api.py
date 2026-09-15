@@ -16,8 +16,9 @@ from kubernetes import client, config
 from kubernetes.client.exceptions import ApiException
 
 from polyad.compiler.asts import GROUP as GROUP
-from polyad.compiler.asts import RESOURCE_TYPES, DeleteOptions, UIDPreconditions, encode_body
 from polyad.compiler.asts import VERSION as VERSION
+from polyad.compiler.asts import DeleteOptions, UIDPreconditions, encode_body
+from polyad.compiler.registry import BOUNDARY_KINDS, GRAPH_OWNED_KINDS, RESOURCE_TYPES
 from polyad.operator.metrics import WriteBacklog
 
 logger = logging.getLogger(__name__)
@@ -26,11 +27,11 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
     from typing import Any
 
-KINDS = {kind: descriptor.plural for kind, descriptor in RESOURCE_TYPES.items() if descriptor.api_version == f"{GROUP}/{VERSION}"}
+KINDS = {kind: descriptor.plural for kind, descriptor in RESOURCE_TYPES.items() if descriptor.polyad}
 BUILTINS = {kind: (descriptor.prefix, descriptor.plural) for kind, descriptor in RESOURCE_TYPES.items() if kind not in KINDS}
 
 
-WORKLOAD_KINDS = tuple(kind for kind in BUILTINS if kind != "Lease")
+WORKLOAD_KINDS = tuple(kind for kind in BUILTINS if kind in GRAPH_OWNED_KINDS)
 
 
 class API:
@@ -232,19 +233,13 @@ class API:
             list[dict[str, Any]]: Children whose owner references match the requested UID.
         """
         children = []
-        kinds = tuple(
-            kind
-            for kind in WORKLOAD_KINDS
-            if (
-                kind not in {"AuthorizationPolicy", "PeerAuthentication"}
-                or os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true"
-            )
-            and (
-                kind not in {"Pod", "PodTemplate", "ProvisioningRequest"}
-                or os.environ.get("POLYAD_CAPACITY_ENABLED", "false").lower() == "true"
-            )
-        )
-        for kind in (*kinds, "Graph", "EphemeralGraph", "Feedback", "PolyGraph"):
+        enabled = {
+            None: True,
+            "mesh": os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true",
+            "capacity": os.environ.get("POLYAD_CAPACITY_ENABLED", "false").lower() == "true",
+        }
+        kinds = tuple(kind for kind in WORKLOAD_KINDS if enabled[RESOURCE_TYPES[kind].required_feature])
+        for kind in (*kinds, *sorted(BOUNDARY_KINDS)):
             result = await self.request("GET", kind, namespace, query=[("labelSelector", f"{GROUP}/owner={uid}")])
             for item in (result or {}).get("items", []):
                 item.setdefault("kind", kind)  # Kubernetes list items may omit TypeMeta.

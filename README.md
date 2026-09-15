@@ -2,7 +2,7 @@
 
 Polyad<sup>[\[1\]](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29)</sup> is a graph-based workload scheduler for Kubernetes. Describe tasks,
 long-running services and resources as composable graphs; the operator schedules
-their work and tracks progress across the application.<sup>[\[2\]](docs/operator.md#api-and-python-abstractions)</sup>
+their work and tracks progress across the application and integrations.<sup>[\[2\]](docs/operator.md#api-and-python-abstractions)</sup>
 
 **[Get started](docs/getting-started.md)** · **[Documentation](docs/README.md)** · **[Helm chart](charts/polyad/README.md)**
 
@@ -97,14 +97,14 @@ flowchart LR
 
 Place whole graphs on groups of Kubernetes machines, such as general compute
 or accelerators. Here, three graphs share two worker groups while coordinated
-operator replicas run on a third.<sup>[\[9\]](docs/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup><sup>[\[10\]](docs/operator.md#replicas-shared-queues-and-autoscaling)</sup>
+operator replicas and their shared Dragonfly cache run on a third.<sup>[\[9\]](docs/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup><sup>[\[10\]](docs/operator.md#replicas-shared-queues-and-autoscaling)</sup>
 
 ```mermaid
 flowchart TB
     subgraph control["Node group · operators"]
         operator["Polyad operator replicas"]
+        cache[("Shared Redis / Dragonfly cache")]
     end
-    cache[("Shared Redis / Dragonfly cache")]
     api["Kubernetes API"]
     operator <-->|"queues and coordination"| cache
     operator -->|"ordered resource writes"| api
@@ -133,6 +133,59 @@ flowchart TB
     style control fill:#fff3d6,stroke:#926000,color:#513900
     style groupA fill:#eeeeee,stroke:#777777,color:#444444
     style groupB fill:#eeeeee,stroke:#777777,color:#444444
+```
+
+### Workloads calling the operator
+
+Running workloads can submit their next graph, read its status and subscribe to
+graph events through the operator's optional APIs. Services route requests to
+ready replicas; explicitly authorized callers can connect from other
+namespaces.<sup>[\[15\]](docs/networking.md#workload-access-to-operator-apis)</sup>
+
+With a capacity policy, Polyad forecasts upcoming stages while earlier work
+runs, giving a compatible node autoscaler advance notice. Dependencies and gates
+still decide when the next stage starts.<sup>[\[16\]](docs/capacity.md)</sup>
+
+```mermaid
+flowchart TB
+    subgraph local["Workloads · operator namespace"]
+        caller["Managed workload"]
+    end
+    subgraph remote["Workloads · another namespace"]
+        subscriber["Authorized workload"]
+    end
+    access["Explicit network access<br/>Optional Istio identity authorization"]
+    composition["Composition Service · 8090<br/>Submit graphs and read status"]
+    events["Event Service · 8091<br/>Subscribe to graph observations"]
+    subgraph control["Node group · operators"]
+        operator["Ready operator replicas<br/>APIs and graph scheduling"]
+        cache[("Shared Dragonfly cache<br/>Queues and event history")]
+    end
+    demand["Kubernetes API<br/>ProvisioningRequest or placeholder Pods"]
+    autoscaler["Node autoscaler"]
+    machines["Target worker node group<br/>Capacity for upcoming stages"]
+    caller -->|"Authenticated requests"| access
+    subscriber -->|"Cross-namespace requests"| access
+    access --> composition
+    access -->|"GET /v1/events"| events
+    composition --> operator
+    events --> operator
+    operator <-->|"Coordination and observations"| cache
+    events -. "SSE observations" .-> caller
+    events -. "SSE observations" .-> subscriber
+    operator -->|"Forecast before next stage"| demand
+    demand -->|"Upcoming resource demand"| autoscaler
+    autoscaler -->|"Provision nodes when supported"| machines
+    classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
+    classDef constraint fill:#ffe3a3,stroke:#926000,color:#513900
+    classDef resource fill:#eeeeee,stroke:#777777,color:#444444
+    class caller,subscriber execution
+    class operator,access constraint
+    class composition,events,cache,demand,autoscaler,machines resource
+    style local fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
+    style remote fill:#e2e6ec,stroke:#667085,stroke-width:2px,color:#344054
+    style control fill:#fff3d6,stroke:#926000,stroke-width:2px,color:#513900
+    linkStyle default stroke:#475467,stroke-width:2px
 ```
 
 ### Finite pipelines
@@ -229,6 +282,7 @@ helping node autoscalers prepare machines while upstream work runs.
 
 Queue pressure and graph hierarchies are available through the optional
 [Prometheus and JSON metrics API](docs/metrics.md).
+[Argo CD](docs/argocd.md) and [Flux health checks](docs/fluxcd.md) report graph and leaf health across nested applications.
 
 ## Get started
 
