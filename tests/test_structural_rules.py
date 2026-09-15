@@ -1,4 +1,6 @@
-"""Verify mathematical meanings and mandatory policy checks across nested graph families."""
+"""
+Verify mathematical meanings and mandatory policy checks across nested graph families.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +17,9 @@ from tests.test_operator import FakeAPI, resource, template
 
 
 def test_spectrum_known_graphs_and_unweighted_projection():
-    """Compute real symmetric spectra, ignoring direction, weights and self-loops."""
+    """
+    Compute real symmetric spectra, ignoring direction, weights and self-loops.
+    """
     graph = nx.DiGraph()
     graph.add_nodes_from(["a", "b", "c"])
     graph.add_edge("a", "b", weight=100)
@@ -37,7 +41,9 @@ def test_spectrum_known_graphs_and_unweighted_projection():
 
 
 def test_relations_and_condensation_have_different_shapes():
-    """Cycle rank and condensation size have explicit meanings independent of DAG depth."""
+    """
+    Cycle rank and condensation size have explicit meanings independent of DAG depth.
+    """
     graph = Topology(
         nodes=(Node("a", "Workload", "w"), Node("b", "Workload", "w", (Dependency("a"),)), Node("c", "Workload", "w", (Dependency("b"),))),
         connections=(Connection("a", "b"), Connection("b", "c"), Connection("c", "a")),
@@ -64,7 +70,9 @@ def test_relations_and_condensation_have_different_shapes():
 
 
 def test_namespace_policy_cannot_be_omitted_and_is_refreshed():
-    """A rule update blocks new workload admission on the next refreshed pass."""
+    """
+    A rule update blocks new workload admission on the next refreshed pass.
+    """
 
     async def scenario():
         graph = resource("Graph", "root", {"nodes": [{"name": "a", "kind": "Workload", "ref": "work"}]})
@@ -84,7 +92,9 @@ def test_namespace_policy_cannot_be_omitted_and_is_refreshed():
 
 
 def test_referenced_rules_and_expanded_occurrences_survive_nesting():
-    """Referencing one template twice counts two instances and inherits optional rules."""
+    """
+    Referencing one template twice counts two instances and inherits optional rules.
+    """
 
     async def scenario():
         leaf = resource(
@@ -110,6 +120,8 @@ def test_referenced_rules_and_expanded_occurrences_survive_nesting():
 
 @pytest.mark.parametrize("value", [-1, float("nan"), float("inf"), True])
 def test_invalid_spectral_bounds(value):
-    """Reject non-finite, negative and boolean thresholds in the public Python API."""
+    """
+    Reject non-finite, negative and boolean thresholds in the public Python API.
+    """
     with pytest.raises(ValueError):
         Spectrum(maxRadius=value)

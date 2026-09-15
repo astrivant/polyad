@@ -1,4 +1,6 @@
-"""Store immutable API receipts and resolve audit IDs through refreshed Kubernetes reads."""
+"""
+Store immutable API receipts and resolve audit IDs through refreshed Kubernetes reads.
+"""
 
 from __future__ import annotations
 
@@ -18,7 +20,9 @@ if TYPE_CHECKING:
 
 
 class CompositionStore:
-    """Use Kubernetes as the durable source of accepted composition requests."""
+    """
+    Use Kubernetes as the durable source of accepted composition requests.
+    """
 
     def __init__(self, api: API, namespace: str) -> None:
         """

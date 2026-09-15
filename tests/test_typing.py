@@ -1,4 +1,6 @@
-"""Check the public typing contract with Mypy, including an installed wheel in CI."""
+"""
+Check the public typing contract with Mypy, including an installed wheel in CI.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def check_types(path):
-    """Run Mypy against the configured consumer interpreter without local type caches."""
+    """
+    Run Mypy against the configured consumer interpreter without local type caches.
+    """
     environment = os.environ.copy()
     environment.pop("MYPYPATH", None)
     return subprocess.run(
@@ -36,7 +40,9 @@ def check_types(path):
 
 
 def test_public_generic_types(tmp_path):
-    """Preserve inference, specialization, covariance and default types for consumers."""
+    """
+    Preserve inference, specialization, covariance and default types for consumers.
+    """
     consumer = tmp_path / "consumer.py"
     consumer.write_text((ROOT / "examples/typed_graphs.py").read_text())
     result = check_types(consumer)
@@ -44,7 +50,9 @@ def test_public_generic_types(tmp_path):
 
 
 def test_invalid_graph_types_are_rejected(tmp_path):
-    """Reject leaf-node parameters and references outside a graph's declared specialization."""
+    """
+    Reject leaf-node parameters and references outside a graph's declared specialization.
+    """
     consumer = tmp_path / "invalid.py"
     consumer.write_text(
         "from attrs import frozen\n"
@@ -64,7 +72,9 @@ def test_invalid_graph_types_are_rejected(tmp_path):
 
 
 def test_installed_wheel_has_inline_types(tmp_path):
-    """Verify CI's consumer imports a marked installed package, outside the source checkout."""
+    """
+    Verify CI's consumer imports a marked installed package, outside the source checkout.
+    """
     interpreter = os.environ.get("POLYAD_TYPING_PYTHON")
     if interpreter is None:
         # Source runs still enforce the package marker; CI additionally checks its wheel.

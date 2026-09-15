@@ -1,4 +1,6 @@
-"""Concrete resource kinds and the execution specs synthesized by the compiler."""
+"""
+Concrete resource kinds and the execution specs synthesized by the compiler.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,6 @@
-"""Run production HTTP intake on a thread while keeping Kubernetes I/O on the operator loop."""
+"""
+Run production HTTP intake on a thread while keeping Kubernetes I/O on the operator loop.
+"""
 
 from __future__ import annotations
 
@@ -25,7 +27,9 @@ logger = logging.getLogger(__name__)
 
 
 class CompositionServer:
-    """Bound intake and bridge WSGI workers into the operator's serialized API adapter."""
+    """
+    Bound intake and bridge WSGI workers into the operator's serialized API adapter.
+    """
 
     def __init__(self, api: API, namespace: str, token: str, *, host: str = "0.0.0.0", port: int = 8090) -> None:
         """

@@ -1,4 +1,6 @@
-"""Compile owned child resources while retaining stable identity and revision hashes."""
+"""
+Compile owned child resources while retaining stable identity and revision hashes.
+"""
 
 from __future__ import annotations
 

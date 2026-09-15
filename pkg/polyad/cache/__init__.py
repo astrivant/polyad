@@ -1,4 +1,6 @@
-"""Redis-compatible shared caches for Polyad operator replicas."""
+"""
+Redis-compatible shared caches for Polyad operator replicas.
+"""
 
 from __future__ import annotations
 

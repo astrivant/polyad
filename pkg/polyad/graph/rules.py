@@ -1,4 +1,6 @@
-"""Constrain graph structure with explicit combinatorial and spectral measurements."""
+"""
+Constrain graph structure with explicit combinatorial and spectral measurements.
+"""
 
 from __future__ import annotations
 

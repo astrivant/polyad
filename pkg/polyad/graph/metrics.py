@@ -1,4 +1,6 @@
-"""Measure admission shape and cyclic data flow without enumerating paths or cycles."""
+"""
+Measure admission shape and cyclic data flow without enumerating paths or cycles.
+"""
 
 from __future__ import annotations
 

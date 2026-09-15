@@ -1,4 +1,6 @@
-"""Exercise ID compilation, HTTP intake and queued manifest provenance."""
+"""
+Exercise ID compilation, HTTP intake and queued manifest provenance.
+"""
 
 from __future__ import annotations
 
@@ -21,7 +23,9 @@ from tests.test_operator import FakeAPI, resource, template
 
 
 def document():
-    """Reuse a graph definition at two nodes of a higher-order root."""
+    """
+    Reuse a graph definition at two nodes of a higher-order root.
+    """
     return {
         "requestId": "request-one",
         "rootId": "root",
@@ -38,12 +42,16 @@ def document():
 
 
 def request_value(data=None):
-    """Structure an HTTP-like request into the public attrs model."""
+    """
+    Structure an HTTP-like request into the public attrs model.
+    """
     return converter.structure(data or document(), CompositionRequest)
 
 
 def test_compiler_resolves_ids_and_reuses_templates():
-    """Keep definition and node instance identities separate across repeated subgraphs."""
+    """
+    Keep definition and node instance identities separate across repeated subgraphs.
+    """
     request = request_value()
     manifests = compile_composition(request, "test", owner_uid="receipt-uid")
     root = asts.to_document(manifests["root"])
@@ -64,7 +72,9 @@ def test_compiler_resolves_ids_and_reuses_templates():
 
 @pytest.mark.parametrize("change", ["missing", "duplicate", "recursive", "unreachable", "native", "bypass"])
 def test_compiler_rejects_ambiguous_or_unsafe_composition(change):
-    """Reject dangling, recursive and out-of-surface references before receipt creation."""
+    """
+    Reject dangling, recursive and out-of-surface references before receipt creation.
+    """
     data = document()
     if change == "missing":
         data["objects"][1]["spec"]["nodes"][0]["refId"] = "missing"
@@ -83,7 +93,9 @@ def test_compiler_rejects_ambiguous_or_unsafe_composition(change):
 
 
 def test_flask_authentication_validation_and_idempotency_errors():
-    """Expose JSON-only submissions, bounded bodies and stable conflict responses."""
+    """
+    Expose JSON-only submissions, bounded bodies and stable conflict responses.
+    """
     accepted = []
 
     def submit(value):
@@ -110,7 +122,9 @@ def test_flask_authentication_validation_and_idempotency_errors():
 
 
 def test_receipt_retries_recover_lost_acknowledgements_and_conflicts():
-    """A retry on any replica resolves to one durable UID even after an uncertain POST."""
+    """
+    A retry on any replica resolves to one durable UID even after an uncertain POST.
+    """
 
     async def scenario():
         api = FakeAPI()
@@ -131,7 +145,9 @@ def test_receipt_retries_recover_lost_acknowledgements_and_conflicts():
 
 
 def test_queued_materialization_policy_and_audit_lineage():
-    """Preflight before templates, observe before root, and trace nested Jobs into Pod metadata."""
+    """
+    Preflight before templates, observe before root, and trace nested Jobs into Pod metadata.
+    """
 
     async def scenario():
         request = request_value()
@@ -180,7 +196,9 @@ def test_queued_materialization_policy_and_audit_lineage():
 
 
 def test_api_builder_branches_configuration_and_validates_before_build():
-    """Configure isolated service instances without leaking credentials or builder mutations."""
+    """
+    Configure isolated service instances without leaking credentials or builder mutations.
+    """
     from polyad.api import APIBuilder
 
     base = APIBuilder().with_handlers(lambda value: {"requestId": value.requestId}, lambda *_: None)
@@ -198,7 +216,9 @@ def test_api_builder_branches_configuration_and_validates_before_build():
 
 
 def test_feedback_epoch_preserves_request_lineage():
-    """Give recurring graph instances an explicit epoch segment in their audit paths."""
+    """
+    Give recurring graph instances an explicit epoch segment in their audit paths.
+    """
 
     async def scenario():
         value = document()

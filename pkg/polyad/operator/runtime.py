@@ -1,4 +1,6 @@
-"""Own process signals on the main thread and embed Kopf on a dedicated thread."""
+"""
+Own process signals on the main thread and embed Kopf on a dedicated thread.
+"""
 
 from __future__ import annotations
 
@@ -18,7 +20,9 @@ if TYPE_CHECKING:
 
 
 class OperatorThread:
-    """Run an async operator on its own event loop with a thread-safe stop flag."""
+    """
+    Run an async operator on its own event loop with a thread-safe stop flag.
+    """
 
     def __init__(self, operator: Callable[..., Awaitable[None]] = kopf.operator, **options: object) -> None:
         """

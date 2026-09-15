@@ -1,4 +1,6 @@
-"""Compose authenticated API services with an immutable fluent builder."""
+"""
+Compose authenticated API services with an immutable fluent builder.
+"""
 
 from __future__ import annotations
 

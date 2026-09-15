@@ -1,4 +1,6 @@
-"""Summarize fresh graph inventory and generation-fenced nested observations."""
+"""
+Summarize fresh graph inventory and generation-fenced nested observations.
+"""
 
 from __future__ import annotations
 

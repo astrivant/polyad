@@ -1,4 +1,6 @@
-"""Exercise replica contention, failover and write guards with a CAS API."""
+"""
+Exercise replica contention, failover and write guards with a CAS API.
+"""
 
 from __future__ import annotations
 
@@ -16,10 +18,14 @@ from tests.test_operator import FakeAPI, resource
 
 
 class LeaseAPI(FakeAPI):
-    """Model versioned lease writes with deliberate coroutine interleaving."""
+    """
+    Model versioned lease writes with deliberate coroutine interleaving.
+    """
 
     async def request(self, method, kind, namespace, name="", body=None, **kwargs):
-        """List a fresh snapshot or delegate writes to the compare-and-swap fake."""
+        """
+        List a fresh snapshot or delegate writes to the compare-and-swap fake.
+        """
         await asyncio.sleep(0)
         if method == "GET":
             return {
@@ -33,7 +39,9 @@ class LeaseAPI(FakeAPI):
 
 
 def test_assignment_stability():
-    """New replicas only take their own shards; survivor assignments stay stable."""
+    """
+    New replicas only take their own shards; survivor assignments stay stable.
+    """
     before = assignment(["a", "b"])
     after = assignment(["c", "b", "a"])
     assert len(before) == SHARDS
@@ -44,7 +52,9 @@ def test_assignment_stability():
 
 
 def test_election_contention_and_expiry(monkeypatch):
-    """Only one CAS contender wins; stale holders cannot write after takeover."""
+    """
+    Only one CAS contender wins; stale holders cannot write after takeover.
+    """
     now = [100.0]
     monkeypatch.setattr("polyad.operator.coordination.time.monotonic", lambda: now[0])
 
@@ -69,7 +79,9 @@ def test_election_contention_and_expiry(monkeypatch):
 
 
 def test_replica_rebalance_and_leader_failover(monkeypatch):
-    """Scale-out transfers expired shards; a survivor replaces a failed planner."""
+    """
+    Scale-out transfers expired shards; a survivor replaces a failed planner.
+    """
     now = [100.0]
     monkeypatch.setattr("polyad.operator.coordination.time.monotonic", lambda: now[0])
 
@@ -100,7 +112,9 @@ def test_replica_rebalance_and_leader_failover(monkeypatch):
 
 
 def test_nested_graphs_and_rewrites_share_duty():
-    """Target rewrites and nested boundaries serialize with their root graph."""
+    """
+    Target rewrites and nested boundaries serialize with their root graph.
+    """
 
     async def scenario():
         root = resource("Graph", "root")
@@ -126,7 +140,9 @@ def test_nested_graphs_and_rewrites_share_duty():
 
 
 def test_renewal_deadline_fails_closed(monkeypatch):
-    """A slow or unavailable renewal stops admission before the lease expires."""
+    """
+    A slow or unavailable renewal stops admission before the lease expires.
+    """
     now = [100.0]
     monkeypatch.setattr("polyad.operator.coordination.time.monotonic", lambda: now[0])
 
@@ -147,7 +163,9 @@ def test_renewal_deadline_fails_closed(monkeypatch):
 
 
 def test_finalizer_is_acknowledged_before_children_and_preserves_others():
-    """Add and remove the drain finalizer using resource-version fenced patches."""
+    """
+    Add and remove the drain finalizer using resource-version fenced patches.
+    """
 
     async def scenario():
         obj = resource("Graph", "root", {"nodes": []})
@@ -170,7 +188,9 @@ def test_finalizer_is_acknowledged_before_children_and_preserves_others():
 
 
 def test_transport_cancellation_joins_outstanding_write():
-    """Do not leave HTTP running after the surrounding duty exits on cancellation."""
+    """
+    Do not leave HTTP running after the surrounding duty exits on cancellation.
+    """
 
     async def scenario():
         started, finish = threading.Event(), threading.Event()
@@ -196,7 +216,9 @@ def test_transport_cancellation_joins_outstanding_write():
 
 
 def test_config_resolution_and_guard(monkeypatch):
-    """Prefer service-account credentials, fall back locally, and reject unowned writes."""
+    """
+    Prefer service-account credentials, fall back locally, and reject unowned writes.
+    """
     from kubernetes import config
 
     from polyad.operator import api as module

@@ -1,4 +1,6 @@
-"""Verify typed resource compilation preserves Kubernetes wire contracts."""
+"""
+Verify typed resource compilation preserves Kubernetes wire contracts.
+"""
 
 from __future__ import annotations
 
@@ -16,12 +18,16 @@ from polyad.operator.api import API
 
 
 def parent():
-    """Provide a persisted graph boundary for owned resources."""
+    """
+    Provide a persisted graph boundary for owned resources.
+    """
     return asts.Graph(metadata=asts.ObjectMeta(name="graph", namespace="test", uid="12345678-abcd"), spec={})
 
 
 def execution_spec(kind):
-    """Provide representative native execution settings including extension fields."""
+    """
+    Provide representative native execution settings including extension fields.
+    """
     template = {
         "metadata": {"labels": {"app": "test"}},
         "spec": {"containers": [{"name": "main", "image": "test", "stdin": False}], "restartPolicy": "Never"},
@@ -40,7 +46,9 @@ def execution_spec(kind):
 
 @pytest.mark.parametrize("cls", RESOURCE_CLASSES, ids=lambda cls: cls.resource_type.kind)
 def test_resource_roundtrip(cls):
-    """Every supported kind retains native and server fields through cattrs."""
+    """
+    Every supported kind retains native and server fields through cattrs.
+    """
     descriptor = cls.resource_type
     document = {
         "apiVersion": descriptor.api_version,
@@ -74,7 +82,9 @@ def test_resource_roundtrip(cls):
 
 @pytest.mark.parametrize("kind", ["Job", "Deployment", "ConfigMap", "Service", "PersistentVolumeClaim", "Graph", "Feedback"])
 def test_child_wire_compatibility(kind):
-    """Keep the original child payload and digest to avoid replacing live workloads."""
+    """
+    Keep the original child payload and digest to avoid replacing live workloads.
+    """
     spec = execution_spec(kind)
     extra = {"data": {"key": "value"}, "immutable": False} if kind == "ConfigMap" else None
     child = owned_child(parent(), "worker", kind, spec, extra=extra)
@@ -110,7 +120,9 @@ def test_child_wire_compatibility(kind):
 
 
 def test_identity_and_extension_guards():
-    """Reject unknown identities and extension fields that could replace ownership."""
+    """
+    Reject unknown identities and extension fields that could replace ownership.
+    """
     document = asts.to_document(parent())
     with pytest.raises(ValueError, match="API version"):
         asts.from_document({**document, "apiVersion": "wrong/v1"})
@@ -129,7 +141,9 @@ def test_identity_and_extension_guards():
 
 
 def test_api_serializes_resources_and_fences():
-    """Exercise the actual API adapter without requiring credentials or a cluster."""
+    """
+    Exercise the actual API adapter without requiring credentials or a cluster.
+    """
     api = API.__new__(API)
     api.client = Mock()
     child = owned_child(parent(), "worker", "Job", execution_spec("Job"))

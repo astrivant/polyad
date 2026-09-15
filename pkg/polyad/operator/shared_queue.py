@@ -1,4 +1,6 @@
-"""Store shard notifications and recover unacknowledged deliveries in Dragonfly."""
+"""
+Store shard notifications and recover unacknowledged deliveries in Dragonfly.
+"""
 
 from __future__ import annotations
 
@@ -38,7 +40,9 @@ return {total, pending[1]}
 
 
 class SharedQueue:
-    """Use one consumer group per shard, with Kubernetes Leases fencing consumers."""
+    """
+    Use one consumer group per shard, with Kubernetes Leases fencing consumers.
+    """
 
     def __init__(self, url: str, namespace: str, consumer: str) -> None:
         """

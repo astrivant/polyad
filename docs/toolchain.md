@@ -47,6 +47,24 @@ poetry run pytest
 The hooks check Google-style docstrings with pydocstyle and pydoclint, Python
 lint and formatting with Ruff, types with mypy, shell scripts with ShellCheck
 and shfmt, and Mermaid diagrams in Markdown and standalone diagram files.
+All Python docstrings put both opening and closing triple quotes on separate
+lines, even for a single sentence. The `docstring-layout` hook enforces this for
+modules, classes and functions, including tests and examples. Ruff's `D213` rule
+also keeps multiline summaries below the opening quotes; `D200` stays disabled
+so tools do not require collapsing short docstrings.
+
+```python
+"""
+Describe the module, class or function here.
+"""
+```
+
+Check the layout directly with:
+
+```sh
+bash scripts/project-python.sh scripts/check-docstrings.py pkg tests examples scripts
+```
+
 Ruff requires postponed annotations and separates imports used only by type
 checkers behind `if TYPE_CHECKING:`. Attrs field annotations remain importable
 at runtime for cattrs serialization; constructors, base classes, decorators and
@@ -54,17 +72,54 @@ other runtime expressions also keep their imports. Dataclass annotations and
 Kopf callback annotations receive no blanket exemption. Python remains targeted
 at 3.13.
 
-The wheel ships inline annotations and the package-root `py.typed` marker. CI
-installs that wheel into a consumer environment and checks positive and negative
-Mypy contracts, including generic `PolyGraph` references. There is no separate
-stub package to keep synchronized.
-
 Mermaid checker regression tests run with:
 
 ```bash
 bash scripts/check-mermaid.sh
 npm test --prefix scripts/mermaid
 ```
+
+## Python types and serialization
+
+Python applications can specialize the node types accepted by a `PolyGraph`.
+`PolyGraph[NodeT]` retains that type when code reads `graph.nodes`, so Mypy can
+check custom reference fields and reject incompatible nodes before execution.
+`NodeT` must extend `GraphNode`; the default is `GraphNode`, which accepts a
+mixture of supported graph boundary kinds. The graph is immutable and its type
+parameter is covariant, allowing a specialized graph wherever a more general
+graph reference is accepted.
+
+See [the checked typing example](../examples/typed_graphs.py) for a `BatchGraph`
+reference that restricts its kind to `Graph`. The example demonstrates explicit
+type parameters, inferred node types and mixed graph references. These types
+describe Python objects; they do not add Kubernetes scheduling behavior or
+extend CRD schemas. Kubernetes references still resolve reusable definitions
+by kind and name.
+
+For cattrs serialization, supply the same concrete graph type when converting
+in both directions:
+
+```python
+from polyad.graph import GraphNode, PolyGraph
+from polyad.graph.topology import converter
+
+graph = PolyGraph(
+    nodes=(GraphNode(name="batch", kind="Graph", ref="batch-template"),),
+)
+graph_type = PolyGraph[GraphNode]
+document = converter.unstructure(graph, unstructure_as=graph_type)
+restored = converter.structure(document, graph_type)
+```
+
+Use `PolyGraph[YourReference]` in both calls when the graph contains custom
+reference objects. Supplying the concrete type preserves their fields through
+the round trip. Custom fields remain Python-library data unless the Kubernetes
+schema and compiler explicitly support them.
+
+The wheel ships inline annotations and the package-root `py.typed` marker. CI
+installs that wheel into a consumer environment and checks positive and negative
+Mypy contracts, including generic `PolyGraph` references. There is no separate
+stub package to keep synchronized.
 
 ## Helm documentation
 

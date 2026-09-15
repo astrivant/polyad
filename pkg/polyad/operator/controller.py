@@ -1,4 +1,6 @@
-"""Translate refreshed graph intent into owned Kubernetes execution resources."""
+"""
+Translate refreshed graph intent into owned Kubernetes execution resources.
+"""
 
 from __future__ import annotations
 
@@ -47,7 +49,9 @@ def _status_value(value: Any) -> Any:
 
 
 class Pending(Exception):
-    """Require a later refreshed observation before proceeding."""
+    """
+    Require a later refreshed observation before proceeding.
+    """
 
     def __init__(self, message: str, *, phase: str = "Reconciling") -> None:
         """
@@ -102,7 +106,9 @@ def references(value: Any, names: dict[str, str]) -> Any:
 
 
 class Controller:
-    """Reconcile one namespace-scoped boundary per ordered queue turn."""
+    """
+    Reconcile one namespace-scoped boundary per ordered queue turn.
+    """
 
     def __init__(self, api: API) -> None:
         """

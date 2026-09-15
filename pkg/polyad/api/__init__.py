@@ -1,4 +1,6 @@
-"""Flask composition intake and request-to-manifest audit translation."""
+"""
+Flask composition intake and request-to-manifest audit translation.
+"""
 
 from __future__ import annotations
 

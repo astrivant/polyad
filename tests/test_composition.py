@@ -1,4 +1,6 @@
-"""Exercise mixed graph composition and recursive, generation-fenced status propagation."""
+"""
+Exercise mixed graph composition and recursive, generation-fenced status propagation.
+"""
 
 from __future__ import annotations
 
@@ -19,12 +21,16 @@ from tests.test_operator import FakeAPI, resource, template
 
 
 def reference(name, kind, ref):
-    """Create a typed-boundary reference in a serialized topology."""
+    """
+    Create a typed-boundary reference in a serialized topology.
+    """
     return {"name": name, "kind": kind, "ref": ref}
 
 
 async def settle(api, passes=10):
-    """Advance boundaries through finalizer persistence and child status propagation."""
+    """
+    Advance boundaries through finalizer persistence and child status propagation.
+    """
     controller = Controller(api)
     for _ in range(passes):
         for key in list(api.objects):
@@ -37,7 +43,9 @@ async def settle(api, passes=10):
 
 
 def test_python_composition_roundtrip_and_boundary_restriction():
-    """Compose any supported boundary type and reject direct leaf work in PolyGraph."""
+    """
+    Compose any supported boundary type and reject direct leaf work in PolyGraph.
+    """
     graph = PolyGraph(nodes=tuple(GraphNode(name=kind.lower(), kind=kind, ref="template") for kind in asts.BOUNDARY_KINDS))
     document = converter.unstructure(graph)
     assert topology(document, "PolyGraph") == graph
@@ -51,11 +59,15 @@ def test_python_composition_roundtrip_and_boundary_restriction():
 
 
 def test_specialized_polygraph_roundtrip():
-    """Decode concrete attrs fields through an explicit generic specialization."""
+    """
+    Decode concrete attrs fields through an explicit generic specialization.
+    """
 
     @frozen(kw_only=True)
     class RegionalGraph(GraphNode):
-        """Attach application metadata to a Python graph reference."""
+        """
+        Attach application metadata to a Python graph reference.
+        """
 
         region: str
 
@@ -68,7 +80,9 @@ def test_specialized_polygraph_roundtrip():
 
 
 def test_mixed_graph_types_roll_up_leaf_work_once():
-    """Graph, spot, recurrence and nested PolyGraph counts all reach the same root."""
+    """
+    Graph, spot, recurrence and nested PolyGraph counts all reach the same root.
+    """
 
     async def scenario():
         root = resource(
@@ -142,7 +156,9 @@ def test_mixed_graph_types_roll_up_leaf_work_once():
 
 
 def deep_graphs():
-    """Build a PolyGraph of a PolyGraph of a finite Graph."""
+    """
+    Build a PolyGraph of a PolyGraph of a finite Graph.
+    """
     return FakeAPI(
         resource("PolyGraph", "root", {"nodes": [reference("group", "PolyGraph", "group-template")]}),
         resource("PolyGraph", "group-template", {"templateOnly": True, "nodes": [reference("batch", "Graph", "batch-template")]}),
@@ -153,7 +169,9 @@ def deep_graphs():
 
 @pytest.mark.parametrize("condition,field,phase", [("Complete", "completed", "Completed"), ("Failed", "failed", "Failed")])
 def test_deep_lifecycle_reaches_root(condition, field, phase):
-    """Terminal leaf facts propagate through every intermediate abstraction."""
+    """
+    Terminal leaf facts propagate through every intermediate abstraction.
+    """
 
     async def scenario():
         api = deep_graphs()
@@ -170,7 +188,9 @@ def test_deep_lifecycle_reaches_root(condition, field, phase):
 
 
 def test_missing_stale_and_terminating_subtrees_are_explicit():
-    """Never present unavailable subtree totals as a complete root observation."""
+    """
+    Never present unavailable subtree totals as a complete root observation.
+    """
 
     async def scenario():
         api = deep_graphs()
@@ -202,7 +222,9 @@ def test_missing_stale_and_terminating_subtrees_are_explicit():
 
 
 def test_invalid_child_failure_propagates_and_owner_event_enqueues_parent():
-    """Validation failure blocks the root and changes enqueue both child and parent."""
+    """
+    Validation failure blocks the root and changes enqueue both child and parent.
+    """
 
     async def scenario():
         api = deep_graphs()
@@ -230,7 +252,9 @@ def test_invalid_child_failure_propagates_and_owner_event_enqueues_parent():
 
 
 def test_reused_graph_types_create_distinct_owned_instances():
-    """Referencing one graph definition twice represents two executions in the root fold."""
+    """
+    Referencing one graph definition twice represents two executions in the root fold.
+    """
 
     async def scenario():
         api = FakeAPI(
@@ -249,7 +273,9 @@ def test_reused_graph_types_create_distinct_owned_instances():
 
 
 def test_polygraph_placement_and_persistent_completion_contracts():
-    """Root placement reaches leaves while persistent descendants cannot satisfy completion."""
+    """
+    Root placement reaches leaves while persistent descendants cannot satisfy completion.
+    """
 
     async def scenario():
         api = deep_graphs()
@@ -268,7 +294,9 @@ def test_polygraph_placement_and_persistent_completion_contracts():
 
 
 def test_example_completes_with_epoch_cleanup_and_root_totals():
-    """The shipped mixed composition finishes with only retained executions counted."""
+    """
+    The shipped mixed composition finishes with only retained executions counted.
+    """
     from pathlib import Path
 
     import jsonschema

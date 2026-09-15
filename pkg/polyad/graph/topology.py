@@ -1,4 +1,6 @@
-"""Describe admission separately from persistent data-flow connections."""
+"""
+Describe admission separately from persistent data-flow connections.
+"""
 
 from __future__ import annotations
 

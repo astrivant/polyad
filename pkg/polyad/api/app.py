@@ -1,4 +1,6 @@
-"""Expose immutable graph composition requests through a small authenticated Flask API."""
+"""
+Expose immutable graph composition requests through a small authenticated Flask API.
+"""
 
 from __future__ import annotations
 
@@ -21,11 +23,15 @@ if TYPE_CHECKING:
 
 
 class Conflict(ValueError):
-    """Reject a request ID that already identifies different or deleting intent."""
+    """
+    Reject a request ID that already identifies different or deleting intent.
+    """
 
 
 class Unavailable(RuntimeError):
-    """Report an uncertain submission without encouraging a new request identity."""
+    """
+    Report an uncertain submission without encouraging a new request identity.
+    """
 
 
 def _build_app(

@@ -1,4 +1,6 @@
-"""Bound Kubernetes calls and preserve resource-version and ownership fences."""
+"""
+Bound Kubernetes calls and preserve resource-version and ownership fences.
+"""
 
 from __future__ import annotations
 
@@ -27,7 +29,9 @@ WORKLOAD_KINDS = tuple(kind for kind in BUILTINS if kind not in {"Lease", "Pod"}
 
 
 class API:
-    """Use namespaced, JSON Kubernetes requests with finite transport timeouts."""
+    """
+    Use namespaced, JSON Kubernetes requests with finite transport timeouts.
+    """
 
     def __init__(self, before_write: Callable[[], Awaitable[None]] | None = None) -> None:
         """

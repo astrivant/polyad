@@ -1,4 +1,6 @@
-"""Structure Kubernetes documents and lower ASTs at the API serialization boundary."""
+"""
+Structure Kubernetes documents and lower ASTs at the API serialization boundary.
+"""
 
 from __future__ import annotations
 

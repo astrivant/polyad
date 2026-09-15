@@ -1,4 +1,6 @@
-"""Describe the composition HTTP contract with apispec and reusable request schemas."""
+"""
+Describe the composition HTTP contract with apispec and reusable request schemas.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,6 @@
-"""Verify graph shape, observed inventory, nested freshness and status write fences."""
+"""
+Verify graph shape, observed inventory, nested freshness and status write fences.
+"""
 
 from __future__ import annotations
 
@@ -16,7 +18,9 @@ from tests.test_operator import FakeAPI, resource, template
 
 
 def diamond():
-    """Create parallel branches with a common root and join."""
+    """
+    Create parallel branches with a common root and join.
+    """
     return {
         "nodes": [
             {"name": "a", "kind": "Workload", "ref": "worker"},
@@ -28,7 +32,9 @@ def diamond():
 
 
 def test_diamond_and_observed_induced_shape():
-    """Depth counts node layers; observed subsets drop absent vertices and edges."""
+    """
+    Depth counts node layers; observed subsets drop absent vertices and edges.
+    """
     graph = topology(diamond())
     metrics = topology_metrics(graph)
     assert metrics["nodeCount"] == 4
@@ -50,7 +56,9 @@ def test_diamond_and_observed_induced_shape():
 
 
 def test_empty_and_disconnected_graphs():
-    """Empty boundaries and isolated vertices have defined finite measurements."""
+    """
+    Empty boundaries and isolated vertices have defined finite measurements.
+    """
     empty = topology_metrics(topology({"nodes": []}))
     assert empty["nodeCount"] == empty["admission"]["depth"] == empty["admission"]["breadth"] == 0
     assert empty["connections"]["weakComponents"] == empty["connections"]["condensation"]["depth"] == 0
@@ -63,7 +71,9 @@ def test_empty_and_disconnected_graphs():
 
 
 def test_cycle_components_and_duplicate_edges():
-    """Cycles collapse to components and repeated declarations do not inflate edges."""
+    """
+    Cycles collapse to components and repeated declarations do not inflate edges.
+    """
     spec = diamond()
     spec["nodes"][1]["requires"].append({"node": "a", "condition": "ready"})
     spec["connections"] = [
@@ -87,7 +97,9 @@ def test_cycle_components_and_duplicate_edges():
 
 @pytest.mark.parametrize("kind", ["Graph", "EphemeralGraph"])
 def test_instance_metrics_progress_and_idempotence(kind):
-    """Refresh counts after creation and completion without issuing unchanged status writes."""
+    """
+    Refresh counts after creation and completion without issuing unchanged status writes.
+    """
 
     async def scenario():
         spec = diamond()
@@ -120,7 +132,9 @@ def test_instance_metrics_progress_and_idempotence(kind):
 
 
 def test_pending_missing_definition_and_deletion_report_inventory():
-    """Blocked admission and delayed finalizers still publish graph measurements."""
+    """
+    Blocked admission and delayed finalizers still publish graph measurements.
+    """
 
     async def scenario():
         key = "Graph", "test", "pipeline"
@@ -147,7 +161,9 @@ def test_pending_missing_definition_and_deletion_report_inventory():
 
 
 def test_replacement_and_suspension_retain_live_inventory():
-    """Removed nodes leave the desired topology while cleanup remains visible."""
+    """
+    Removed nodes leave the desired topology while cleanup remains visible.
+    """
 
     async def scenario():
         key = "Graph", "test", "pipeline"
@@ -178,7 +194,9 @@ def test_replacement_and_suspension_retain_live_inventory():
 
 
 def test_nested_metrics_and_feedback_epoch_freshness():
-    """Expose immediate summaries and reject stale generations without flattening descendants."""
+    """
+    Expose immediate summaries and reject stale generations without flattening descendants.
+    """
 
     async def scenario():
         key = "Feedback", "test", "loop"
@@ -212,7 +230,9 @@ def test_nested_metrics_and_feedback_epoch_freshness():
 
 
 def test_invalid_topology_metrics_do_not_mask_validation():
-    """Keep inventory available even when a graph revision contains an admission cycle."""
+    """
+    Keep inventory available even when a graph revision contains an admission cycle.
+    """
 
     async def scenario():
         spec = diamond()
@@ -236,7 +256,9 @@ def test_invalid_topology_metrics_do_not_mask_validation():
 
 
 def test_templates_remain_inert_and_status_is_version_fenced():
-    """Only instances report execution and concurrent API changes reject stale metrics."""
+    """
+    Only instances report execution and concurrent API changes reject stale metrics.
+    """
 
     async def scenario():
         key = "Graph", "test", "definition"
@@ -262,7 +284,9 @@ def test_templates_remain_inert_and_status_is_version_fenced():
 
 
 def test_absent_nullable_metrics_do_not_cause_repeated_patches():
-    """Kubernetes removes merge-patch null fields rather than retaining Python None."""
+    """
+    Kubernetes removes merge-patch null fields rather than retaining Python None.
+    """
 
     async def scenario():
         key = "Feedback", "test", "waiting"
@@ -283,7 +307,9 @@ def test_absent_nullable_metrics_do_not_cause_repeated_patches():
     "kind,filename", [("Graph", "graphs"), ("PolyGraph", "polygraphs"), ("EphemeralGraph", "ephemeralgraphs"), ("Feedback", "feedbacks")]
 )
 def test_emitted_status_matches_crd_schema(kind, filename):
-    """Validate wire metrics, nullable epoch observations and schema rejection of bad gauges."""
+    """
+    Validate wire metrics, nullable epoch observations and schema rejection of bad gauges.
+    """
     from pathlib import Path
 
     import jsonschema

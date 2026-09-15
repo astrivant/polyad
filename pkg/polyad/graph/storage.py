@@ -1,4 +1,6 @@
-"""Describe explicit storage requirements without promising application recovery."""
+"""
+Describe explicit storage requirements without promising application recovery.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,6 @@
-"""Attrs resource trees and cattrs codecs for the Kubernetes compiler."""
+"""
+Attrs resource trees and cattrs codecs for the Kubernetes compiler.
+"""
 
 from __future__ import annotations
 

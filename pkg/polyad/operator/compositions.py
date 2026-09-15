@@ -1,4 +1,6 @@
-"""Materialize immutable composition receipts through the leased reconciliation queue."""
+"""
+Materialize immutable composition receipts through the leased reconciliation queue.
+"""
 
 from __future__ import annotations
 

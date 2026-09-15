@@ -1,4 +1,6 @@
-"""Exercise storage, inherited placement and delay admission across graph instances."""
+"""
+Exercise storage, inherited placement and delay admission across graph instances.
+"""
 
 from __future__ import annotations
 
@@ -18,7 +20,9 @@ from tests.test_operator import FakeAPI, resource, template
 
 
 def test_placement_defaults_can_be_overridden_but_enforcement_is_sticky():
-    """Allow explicit defaults to change while preserving enforced selectors and tolerations."""
+    """
+    Allow explicit defaults to change while preserving enforced selectors and tolerations.
+    """
     required = {"nodeSelector": {"pool": "cpu"}, "tolerations": [{"key": "dedicated", "operator": "Exists"}]}
     own = {"nodeSelector": {"pool": "gpu"}}
     assert merge_placement({**required, "enforce": False}, own) == own
@@ -39,7 +43,9 @@ def test_placement_defaults_can_be_overridden_but_enforcement_is_sticky():
 
 @pytest.mark.parametrize("enforce", [True, False])
 def test_workload_placement_override_reaches_native_pod(enforce):
-    """Reject conflicting explicit workload placement only when the graph enforces it."""
+    """
+    Reject conflicting explicit workload placement only when the graph enforces it.
+    """
 
     async def scenario():
         api = FakeAPI(
@@ -65,7 +71,9 @@ def test_workload_placement_override_reaches_native_pod(enforce):
 
 
 def test_persistence_uses_named_class_claim_and_preserves_external_storage():
-    """Check class identity before creating a Job and leave external PVCs outside graph cleanup."""
+    """
+    Check class identity before creating a Job and leave external PVCs outside graph cleanup.
+    """
 
     async def scenario():
         api = FakeAPI(
@@ -105,7 +113,9 @@ def test_persistence_uses_named_class_claim_and_preserves_external_storage():
 
 @pytest.mark.parametrize("persistence", [{"enabled": True}, {"enabled": True, "claimName": "data"}])
 def test_persistence_requires_storage_class(persistence):
-    """Reject implicit default StorageClasses when persistence is enabled."""
+    """
+    Reject implicit default StorageClasses when persistence is enabled.
+    """
     with pytest.raises(ValueError, match="requires storageClass"):
         configure_storage({"template": template(), "persistence": persistence}, ephemeral=False)
 
@@ -120,7 +130,9 @@ def test_persistence_requires_storage_class(persistence):
     ],
 )
 def test_ephemeral_storage_rejection(configuration):
-    """Reject storage declarations even when hidden in native volume templates."""
+    """
+    Reject storage declarations even when hidden in native volume templates.
+    """
     spec = {"template": template()}
     if "volumes" in configuration:
         spec["template"]["spec"].update(configuration)
@@ -131,7 +143,9 @@ def test_ephemeral_storage_rejection(configuration):
 
 
 def test_ephemeral_restriction_crosses_polygraph_and_feedback():
-    """Propagate ephemeral ancestry through every kind of nested boundary."""
+    """
+    Propagate ephemeral ancestry through every kind of nested boundary.
+    """
 
     async def scenario():
         api = FakeAPI(
@@ -162,7 +176,9 @@ def test_ephemeral_restriction_crosses_polygraph_and_feedback():
 
 
 def test_delay_is_persisted_and_recovered_without_blocking_other_nodes():
-    """Start a timer after dependencies complete and retain it across replica replacement."""
+    """
+    Start a timer after dependencies complete and retain it across replica replacement.
+    """
 
     async def scenario():
         root_key = "Graph", "test", "root"
@@ -212,6 +228,8 @@ def test_delay_is_persisted_and_recovered_without_blocking_other_nodes():
 
 @pytest.mark.parametrize("seconds", [-1, float("inf"), float("nan"), True, 315360001])
 def test_delay_rejects_invalid_durations(seconds):
-    """Reject invalid deadlines before scheduling or serializing them."""
+    """
+    Reject invalid deadlines before scheduling or serializing them.
+    """
     with pytest.raises(ValueError, match="delay seconds"):
         DelayGate(seconds)

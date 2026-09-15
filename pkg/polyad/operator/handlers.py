@@ -1,4 +1,6 @@
-"""Observe with Kopf; coordinate all mutations through leased, refreshed queues."""
+"""
+Observe with Kopf; coordinate all mutations through leased, refreshed queues.
+"""
 
 from __future__ import annotations
 

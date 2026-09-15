@@ -1,4 +1,6 @@
-"""Verify backlog gauges remain truthful during delays, cancellation and outages."""
+"""
+Verify backlog gauges remain truthful during delays, cancellation and outages.
+"""
 
 from __future__ import annotations
 
@@ -20,7 +22,9 @@ from polyad.operator.shared_queue import SharedQueue
 
 
 def test_write_backlog_serialization_and_cancellation():
-    """Count queued writes separately and retain in-flight counts until HTTP joins."""
+    """
+    Count queued writes separately and retain in-flight counts until HTTP joins.
+    """
 
     async def scenario():
         started, release = threading.Event(), threading.Event()
@@ -67,7 +71,9 @@ def test_write_backlog_serialization_and_cancellation():
 
 @pytest.mark.parametrize("error", [NotOwner("lease lost"), ApiException(status=409), TimeoutError("slow API")])
 def test_failed_writes_release_gauges(error):
-    """Ownership rejection and transport errors must not leave phantom write backlog."""
+    """
+    Ownership rejection and transport errors must not leave phantom write backlog.
+    """
 
     async def scenario():
         api = API.__new__(API)
@@ -90,7 +96,9 @@ def test_failed_writes_release_gauges(error):
 
 
 def test_write_age_tracks_each_stage(monkeypatch):
-    """Measure waiting age and transport age from their respective start times."""
+    """
+    Measure waiting age and transport age from their respective start times.
+    """
     now = [10.0]
     monkeypatch.setattr("polyad.operator.metrics.time", SimpleNamespace(monotonic=lambda: now[0]))
     metrics = WriteBacklog()
@@ -106,7 +114,9 @@ def test_write_age_tracks_each_stage(monkeypatch):
 
 
 def test_health_uses_cached_backlogs_and_preserves_stale_values(monkeypatch):
-    """Probe snapshots perform no network I/O, aggregate local writes, and flag stale samples."""
+    """
+    Probe snapshots perform no network I/O, aggregate local writes, and flag stale samples.
+    """
     from polyad.operator import handlers
 
     async def scenario():
@@ -154,7 +164,9 @@ def test_health_uses_cached_backlogs_and_preserves_stale_values(monkeypatch):
 
 
 def test_failed_sampling_retains_last_known_backlog():
-    """A cache outage must expose stale counts rather than a misleading empty queue."""
+    """
+    A cache outage must expose stale counts rather than a misleading empty queue.
+    """
     from unittest.mock import MagicMock
 
     async def scenario():

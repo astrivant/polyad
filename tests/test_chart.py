@@ -1,4 +1,6 @@
-"""Verify dependency wiring, fresh-install APIs and cache availability modes."""
+"""
+Verify dependency wiring, fresh-install APIs and cache availability modes.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +19,9 @@ pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="requires H
 
 
 def render(*settings):
-    """Render a release with its CRDs and selected values."""
+    """
+    Render a release with its CRDs and selected values.
+    """
     command = ["helm", "template", "test", str(CHART), "--namespace", "test", "--include-crds"]
     for setting in settings:
         command.extend(["--set-string" if setting.startswith("dragonfly.existingSecret=") else "--set", setting])
@@ -26,7 +30,9 @@ def render(*settings):
 
 @pytest.mark.parametrize("ha,persistence", [(False, True), (True, True), (True, False)])
 def test_managed_dragonfly_contract(ha, persistence):
-    """Deploy a primary endpoint with the upstream API and real replication settings."""
+    """
+    Deploy a primary endpoint with the upstream API and real replication settings.
+    """
     objects = render(f"dragonfly.ha.enabled={str(ha).lower()}", f"dragonfly.persistence.enabled={str(persistence).lower()}")
     cache = next(obj for obj in objects if obj["kind"] == "Dragonfly")
     assert cache["metadata"]["name"] == "test-queue"
@@ -53,13 +59,17 @@ def test_managed_dragonfly_contract(ha, persistence):
 
 
 def cache_url(objects):
-    """Read the actual connection configuration used by Polyad."""
+    """
+    Read the actual connection configuration used by Polyad.
+    """
     operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     return next(item for item in operator["spec"]["template"]["spec"]["containers"][0]["env"] if item["name"] == "POLYAD_CACHE_URL")
 
 
 def test_operator_can_use_a_separate_node_group():
-    """Place operator replicas independently from workload graph placement rules."""
+    """
+    Place operator replicas independently from workload graph placement rules.
+    """
     objects = render("nodeSelector.pool=operators", "tolerations[0].key=control", "tolerations[0].operator=Exists")
     operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     pod = operator["spec"]["template"]["spec"]
@@ -68,7 +78,9 @@ def test_operator_can_use_a_separate_node_group():
 
 
 def test_admission_and_deadline_fields_survive_crd_pruning():
-    """Keep delay observations structural and expose enforcement and storage validation rules."""
+    """
+    Keep delay observations structural and expose enforcement and storage validation rules.
+    """
     objects = render()
     schemas = {
         obj["spec"]["names"]["kind"]: obj["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
@@ -87,7 +99,9 @@ def test_admission_and_deadline_fields_survive_crd_pruning():
 
 
 def test_external_cache_disables_dependency():
-    """External URLs and Secrets disable both the cache and its controller."""
+    """
+    External URLs and Secrets disable both the cache and its controller.
+    """
     objects = render("dragonfly.enabled=false", "dragonfly.externalUrl=rediss://cache.example:6379/2")
     assert not any(obj["kind"] == "Dragonfly" for obj in objects)
     assert [obj["metadata"]["name"] for obj in objects if obj["kind"] == "Deployment"] == ["test-polyad"]
@@ -109,14 +123,18 @@ def test_external_cache_disables_dependency():
     ],
 )
 def test_invalid_cache_configuration_rejected(setting):
-    """Reject non-HA replica counts and duplicate upstream CRD management."""
+    """
+    Reject non-HA replica counts and duplicate upstream CRD management.
+    """
     result = subprocess.run(["helm", "template", "test", str(CHART), "--set", setting], capture_output=True, text=True)
     assert result.returncode != 0
     assert "schema" in result.stderr
 
 
 def test_vendored_crd_matches_locked_dependency(tmp_path):
-    """Detect upstream API drift whenever the dependency version changes."""
+    """
+    Detect upstream API drift whenever the dependency version changes.
+    """
     dependency = yaml.safe_load((CHART / "Chart.lock").read_text())["dependencies"][0]
     archive = CHART / "charts" / f"dragonfly-operator-{dependency['version']}.tgz"
     with tarfile.open(archive) as package:
@@ -130,7 +148,9 @@ def test_vendored_crd_matches_locked_dependency(tmp_path):
 
 
 def test_composition_service_and_policy_rbac():
-    """Expose the optional service with Secret auth while keeping policy writes administrator-only."""
+    """
+    Expose the optional service with Secret auth while keeping policy writes administrator-only.
+    """
     objects = render("api.enabled=true", "api.existingSecret=composition-token")
     service = next(obj for obj in objects if obj["kind"] == "Service" and obj["metadata"]["name"] == "test-polyad-api")
     assert service["spec"]["type"] == "ClusterIP"

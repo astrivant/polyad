@@ -1,4 +1,6 @@
-"""Bound Redis and Dragonfly cache I/O and share connection policy across replicas."""
+"""
+Bound Redis and Dragonfly cache I/O and share connection policy across replicas.
+"""
 
 from __future__ import annotations
 
@@ -26,7 +28,9 @@ def cache_url() -> str:
 
 
 class Cache:
-    """Own an asynchronous connection pool and namespace transient JSON cache entries."""
+    """
+    Own an asynchronous connection pool and namespace transient JSON cache entries.
+    """
 
     def __init__(self, url: str, namespace: str) -> None:
         """

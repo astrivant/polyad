@@ -20,7 +20,9 @@ if TYPE_CHECKING:
 
 
 def test_delay_admission_keeps_work_pending_without_occupying_workers(tmp_path):
-    """Wait using a monotonic clock and admit independent work during the delay."""
+    """
+    Wait using a monotonic clock and admit independent work during the delay.
+    """
     scheduler = Scheduler(
         [Unit(Work(name, "v1"), lambda *_: Outcome()) for name in ("delayed", "independent")],
         slots=1,

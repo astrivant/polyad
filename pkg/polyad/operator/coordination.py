@@ -1,4 +1,6 @@
-"""Elect a planner and lease graph shards to replicas using Kubernetes CAS updates."""
+"""
+Elect a planner and lease graph shards to replicas using Kubernetes CAS updates.
+"""
 
 from __future__ import annotations
 
@@ -31,7 +33,9 @@ active_shard: ContextVar[int | None] = ContextVar("polyad_shard", default=None)
 
 
 class NotOwner(Exception):
-    """Stop a pass when this replica cannot prove shard ownership."""
+    """
+    Stop a pass when this replica cannot prove shard ownership.
+    """
 
 
 def assignment(members: list[str], shards: int = SHARDS) -> dict[str, str]:
@@ -53,7 +57,9 @@ def assignment(members: list[str], shards: int = SHARDS) -> dict[str, str]:
 
 
 class Coordinator:
-    """Keep leader planning separate from exclusive, renewable worker ownership."""
+    """
+    Keep leader planning separate from exclusive, renewable worker ownership.
+    """
 
     def __init__(self, api: API, namespace: str, identity: str | None = None) -> None:
         """

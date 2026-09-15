@@ -1,4 +1,6 @@
-"""Fold generation-fenced descendant summaries without duplicating nested resources."""
+"""
+Fold generation-fenced descendant summaries without duplicating nested resources.
+"""
 
 from __future__ import annotations
 

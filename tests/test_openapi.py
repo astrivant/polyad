@@ -1,4 +1,6 @@
-"""Check the served OpenAPI document against routes, validators and actual JSON payloads."""
+"""
+Check the served OpenAPI document against routes, validators and actual JSON payloads.
+"""
 
 from __future__ import annotations
 
@@ -16,7 +18,9 @@ from tests.test_composition_api import document
 
 
 def test_openapi_endpoint_documents_real_routes_and_request_shapes():
-    """Serve a valid authenticated document describing each live method and the ID request model."""
+    """
+    Serve a valid authenticated document describing each live method and the ID request model.
+    """
     app = (
         APIBuilder()
         .with_handlers(lambda value: {"requestId": value.requestId}, lambda *_: None)
@@ -55,7 +59,9 @@ def test_openapi_endpoint_documents_real_routes_and_request_shapes():
 
 
 def test_openapi_schema_matches_persisted_receipt_and_audit_responses():
-    """Validate real adapter outputs, including nullable Pod generations and pending observations."""
+    """
+    Validate real adapter outputs, including nullable Pod generations and pending observations.
+    """
     import asyncio
 
     from polyad.api.store import CompositionStore
@@ -75,7 +81,9 @@ def test_openapi_schema_matches_persisted_receipt_and_audit_responses():
 
 
 def test_builder_requires_nonempty_schema_metadata():
-    """Fail during construction when the OpenAPI service identity would be invalid."""
+    """
+    Fail during construction when the OpenAPI service identity would be invalid.
+    """
     builder = APIBuilder().with_handlers(lambda _: {}, lambda *_: None).with_bearer_token("token")
     with pytest.raises(ValueError, match="OpenAPI"):
         builder.with_metadata("", "1").build()

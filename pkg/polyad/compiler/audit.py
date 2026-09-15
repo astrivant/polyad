@@ -1,4 +1,6 @@
-"""Carry request, definition and node-instance identities into native workload manifests."""
+"""
+Carry request, definition and node-instance identities into native workload manifests.
+"""
 
 from __future__ import annotations
 

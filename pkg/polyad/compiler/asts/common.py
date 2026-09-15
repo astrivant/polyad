@@ -1,4 +1,6 @@
-"""Shared Kubernetes identity, metadata and mutation syntax trees."""
+"""
+Shared Kubernetes identity, metadata and mutation syntax trees.
+"""
 
 from __future__ import annotations
 

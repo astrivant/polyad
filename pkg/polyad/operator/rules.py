@@ -1,4 +1,6 @@
-"""Refresh structural policies and validate a complete graph family before admission."""
+"""
+Refresh structural policies and validate a complete graph family before admission.
+"""
 
 from __future__ import annotations
 
@@ -16,7 +18,9 @@ if TYPE_CHECKING:
 
 
 class RuleViolation(ValueError):
-    """Reject a graph family that violates an engineer-defined structural rule."""
+    """
+    Reject a graph family that violates an engineer-defined structural rule.
+    """
 
 
 async def check_rules(

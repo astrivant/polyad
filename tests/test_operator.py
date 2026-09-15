@@ -1,4 +1,6 @@
-"""Exercise graph lifecycle against an API with acknowledgement and deletion delays."""
+"""
+Exercise graph lifecycle against an API with acknowledgement and deletion delays.
+"""
 
 from __future__ import annotations
 
@@ -24,7 +26,9 @@ if TYPE_CHECKING:
 
 
 def resource(kind, name, spec=None):
-    """Create a minimal stored resource with a durable identity."""
+    """
+    Create a minimal stored resource with a durable identity.
+    """
     return {
         "apiVersion": f"{GROUP}/{VERSION}",
         "kind": kind,
@@ -42,20 +46,28 @@ def resource(kind, name, spec=None):
 
 
 class FakeAPI:
-    """Retain deleting resources until tests simulate the garbage collector."""
+    """
+    Retain deleting resources until tests simulate the garbage collector.
+    """
 
     def __init__(self, *objects):
-        """Store deep copies so callers cannot mutate the server without a request."""
+        """
+        Store deep copies so callers cannot mutate the server without a request.
+        """
         self.objects = {(o["kind"], o["metadata"]["namespace"], o["metadata"]["name"]): copy.deepcopy(o) for o in objects}
         self.calls = []
         self.fail_create_after_commit = False
 
     async def get(self, kind, namespace, name):
-        """Return a fresh snapshot."""
+        """
+        Return a fresh snapshot.
+        """
         return copy.deepcopy(self.objects.get((kind, namespace, name)))
 
     async def request(self, method, kind, namespace, name="", body=None, **kwargs):
-        """Enforce optimistic concurrency and optionally lose creation acknowledgement."""
+        """
+        Enforce optimistic concurrency and optionally lose creation acknowledgement.
+        """
         if method == "GET":
             if name:
                 return await self.get(kind, namespace, name)
@@ -91,7 +103,9 @@ class FakeAPI:
         return copy.deepcopy(obj)
 
     async def owned(self, namespace, uid):
-        """List even terminating children until deletion is observed."""
+        """
+        List even terminating children until deletion is observed.
+        """
         return [
             copy.deepcopy(o)
             for o in self.objects.values()
@@ -99,18 +113,24 @@ class FakeAPI:
         ]
 
     async def delete(self, obj):
-        """A delete response only requests deletion; it does not acknowledge cleanup."""
+        """
+        A delete response only requests deletion; it does not acknowledge cleanup.
+        """
         meta = obj["metadata"]
         self.objects[(obj["kind"], meta["namespace"], meta["name"])]["metadata"]["deletionTimestamp"] = "now"
         self.calls.append(("DELETE", obj["kind"], meta["name"]))
 
     def children(self, kind):
-        """Return mutable stored children to simulate Kubernetes observations."""
+        """
+        Return mutable stored children to simulate Kubernetes observations.
+        """
         return [obj for obj in self.objects.values() if obj["kind"] == kind]
 
 
 def template(daemon=False):
-    """Build an execution definition with application health probes."""
+    """
+    Build an execution definition with application health probes.
+    """
     container: dict[str, Any] = {"name": "main", "image": "busybox:1.37"}
     if daemon:
         for probe in ("startupProbe", "readinessProbe", "livenessProbe"):
@@ -119,7 +139,9 @@ def template(daemon=False):
 
 
 def test_topology_separates_cyclic_flow_from_admission():
-    """Persistent cycles are valid only when their admission predicates can progress."""
+    """
+    Persistent cycles are valid only when their admission predicates can progress.
+    """
     spec = {
         "mode": "persistent",
         "nodes": [
@@ -139,7 +161,9 @@ def test_topology_separates_cyclic_flow_from_admission():
 
 
 def test_ephemeral_python_types_roundtrip():
-    """Expose explicit spot node and graph descriptors in the Python library."""
+    """
+    Expose explicit spot node and graph descriptors in the Python library.
+    """
     node = Ephemeral(name="worker", ref="spot")
     graph = EphemeralGraph(nodes=(node,), placement=Placement({"capacity": "spot"}))
     data = converter.unstructure(graph)
@@ -148,7 +172,9 @@ def test_ephemeral_python_types_roundtrip():
 
 
 def test_readiness_and_creation_timeout():
-    """A lost create response never duplicates a daemon or admits a dependent early."""
+    """
+    A lost create response never duplicates a daemon or admits a dependent early.
+    """
 
     async def scenario():
         graph = resource(
@@ -183,7 +209,9 @@ def test_readiness_and_creation_timeout():
 
 
 def test_replacement_and_finalizers_wait_for_absence():
-    """Deleting children retain graph ownership and block replacement admission."""
+    """
+    Deleting children retain graph ownership and block replacement admission.
+    """
 
     async def scenario():
         key = ("Graph", "test", "pipeline")
@@ -220,7 +248,9 @@ def test_replacement_and_finalizers_wait_for_absence():
 
 
 def test_ephemeral_placement_and_interruption():
-    """Spot placement propagates and a replacement Pod is not reported as job completion."""
+    """
+    Spot placement propagates and a replacement Pod is not reported as job completion.
+    """
 
     async def scenario():
         graph = resource(
@@ -245,7 +275,9 @@ def test_ephemeral_placement_and_interruption():
 
 
 def test_feedback_epoch_is_durable_before_cleanup():
-    """An operator restart between epoch advancement and child cleanup cannot rerun the epoch."""
+    """
+    An operator restart between epoch advancement and child cleanup cannot rerun the epoch.
+    """
 
     async def scenario():
         api = FakeAPI(resource("Feedback", "loop", {"rounds": 1, "graph": {"nodes": []}}))
@@ -266,7 +298,9 @@ def test_feedback_epoch_is_durable_before_cleanup():
 
 
 def test_queue_serializes_coalesces_and_refreshes_during_work():
-    """Enqueues during an in-flight pass are processed again after older queued keys."""
+    """
+    Enqueues during an in-flight pass are processed again after older queued keys.
+    """
 
     async def scenario():
         calls = []
@@ -294,7 +328,9 @@ def test_queue_serializes_coalesces_and_refreshes_during_work():
 
 
 def test_operator_runs_off_main_thread_and_stops():
-    """The process owner can cooperatively stop the embedded Kopf thread."""
+    """
+    The process owner can cooperatively stop the embedded Kopf thread.
+    """
     threads = []
 
     async def operator(*, stop_flag, ready_flag):
@@ -313,7 +349,9 @@ def test_operator_runs_off_main_thread_and_stops():
 
 
 def test_stale_deployment_observation_is_not_ready():
-    """A previous generation's availability cannot release downstream admission."""
+    """
+    A previous generation's availability cannot release downstream admission.
+    """
     deployment = resource("Deployment", "server", {"replicas": 1})
     deployment["metadata"]["generation"] = 2
     deployment["status"] = {"observedGeneration": 1, "updatedReplicas": 1, "readyReplicas": 1, "availableReplicas": 1}
@@ -321,7 +359,9 @@ def test_stale_deployment_observation_is_not_ready():
 
 
 def test_rewrite_receipt_survives_status_conflict():
-    """A committed spec change is not repeated if the rewrite's status patch conflicts."""
+    """
+    A committed spec change is not repeated if the rewrite's status patch conflicts.
+    """
 
     async def scenario():
         graph = resource("Graph", "target", {"nodes": [], "suspend": True})
@@ -342,7 +382,9 @@ def test_rewrite_receipt_survives_status_conflict():
 
 
 def test_resources_and_gates_resolve_node_names():
-    """A resource's readiness opens a gate and resolves its name in the consuming pod."""
+    """
+    A resource's readiness opens a gate and resolves its name in the consuming pod.
+    """
 
     async def scenario():
         pod = template()
@@ -377,7 +419,9 @@ def test_resources_and_gates_resolve_node_names():
 
 
 def test_nested_ephemeral_graph_inherits_placement():
-    """Templates remain inert while instantiated nested boundaries inherit spot placement."""
+    """
+    Templates remain inert while instantiated nested boundaries inherit spot placement.
+    """
 
     async def scenario():
         api = FakeAPI(
@@ -400,7 +444,9 @@ def test_nested_ephemeral_graph_inherits_placement():
 
 
 def test_api_list_items_can_omit_kind():
-    """Normalize Kubernetes list items, whose TypeMeta is commonly absent on the wire."""
+    """
+    Normalize Kubernetes list items, whose TypeMeta is commonly absent on the wire.
+    """
     from polyad.operator.api import API
 
     async def scenario():
@@ -419,7 +465,9 @@ def test_api_list_items_can_omit_kind():
 
 
 def test_graph_wide_placement_preserves_execution_kind_and_child_constraints():
-    """General graph placement narrows nested graphs without changing their lifecycle."""
+    """
+    General graph placement narrows nested graphs without changing their lifecycle.
+    """
 
     async def scenario():
         api = FakeAPI(
@@ -457,7 +505,9 @@ def test_graph_wide_placement_preserves_execution_kind_and_child_constraints():
 
 
 def test_placement_intersects_affinity_alternatives_and_does_not_mutate_inputs():
-    """AND scopes together while retaining OR within each scope's node selector terms."""
+    """
+    AND scopes together while retaining OR within each scope's node selector terms.
+    """
     from polyad.operator.placement import REQUIRED, merge_placement, place_pod
 
     def term(key, value):
@@ -482,7 +532,9 @@ def test_placement_intersects_affinity_alternatives_and_does_not_mutate_inputs()
 
 
 def test_feedback_inherits_general_placement_without_becoming_ephemeral():
-    """Recurrence carries group placement into finite epoch bodies."""
+    """
+    Recurrence carries group placement into finite epoch bodies.
+    """
 
     async def scenario():
         api = FakeAPI(

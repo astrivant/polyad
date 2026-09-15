@@ -1,4 +1,6 @@
-"""Translate ID-addressed request compositions into auditable Kubernetes definitions."""
+"""
+Translate ID-addressed request compositions into auditable Kubernetes definitions.
+"""
 
 from __future__ import annotations
 

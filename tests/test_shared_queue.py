@@ -1,4 +1,6 @@
-"""Verify shared stream ordering, failover recovery and cache reconstruction."""
+"""
+Verify shared stream ordering, failover recovery and cache reconstruction.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +16,9 @@ from polyad.operator.shared_queue import SharedQueue
 
 
 def test_pending_entries_precede_new_work():
-    """Never overtake an unacknowledged request when a new replica takes a shard."""
+    """
+    Never overtake an unacknowledged request when a new replica takes a shard.
+    """
 
     async def scenario():
         queue = SharedQueue("redis://localhost", "test", "worker")
@@ -30,7 +34,9 @@ def test_pending_entries_precede_new_work():
 
 
 def test_cache_restart_recreates_consumer_groups():
-    """Forget cached group existence after the server loses its stream state."""
+    """
+    Forget cached group existence after the server loses its stream state.
+    """
 
     async def scenario():
         queue = SharedQueue("redis://localhost", "test", "worker")
@@ -45,7 +51,9 @@ def test_cache_restart_recreates_consumer_groups():
 
 
 def test_demoted_primary_connection_is_discarded():
-    """Reconnect on the next pass instead of reusing a live but read-only socket."""
+    """
+    Reconnect on the next pass instead of reusing a live but read-only socket.
+    """
 
     async def scenario():
         connections = 0
@@ -93,7 +101,9 @@ def test_demoted_primary_connection_is_discarded():
 
 @pytest.mark.skipif(not os.environ.get("POLYAD_TEST_DRAGONFLY_URL"), reason="requires an isolated Dragonfly test endpoint")
 def test_dragonfly_queue_recovery():
-    """Use the real Dragonfly protocol to verify deduplication, ordering and reclaim."""
+    """
+    Use the real Dragonfly protocol to verify deduplication, ordering and reclaim.
+    """
 
     async def scenario():
         namespace = f"test-{uuid.uuid4()}"

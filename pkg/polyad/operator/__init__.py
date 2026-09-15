@@ -1,1 +1,3 @@
-"""Schedule Kubernetes workloads through finite, persistent and ephemeral graphs."""
+"""
+Schedule Kubernetes workloads through finite, persistent and ephemeral graphs.
+"""

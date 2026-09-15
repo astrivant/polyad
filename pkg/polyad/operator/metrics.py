@@ -1,4 +1,6 @@
-"""Track local write pressure without doing I/O from health probes."""
+"""
+Track local write pressure without doing I/O from health probes.
+"""
 
 from __future__ import annotations
 

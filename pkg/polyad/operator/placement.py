@@ -1,4 +1,6 @@
-"""Intersect graph placement constraints across boundary and pod scopes."""
+"""
+Intersect graph placement constraints across boundary and pod scopes.
+"""
 
 from __future__ import annotations
 

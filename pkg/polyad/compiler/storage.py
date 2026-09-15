@@ -1,4 +1,6 @@
-"""Validate storage contracts before compiling Kubernetes workload pod templates."""
+"""
+Validate storage contracts before compiling Kubernetes workload pod templates.
+"""
 
 from __future__ import annotations
 

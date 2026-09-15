@@ -1,4 +1,6 @@
-"""Serialize refreshed reconciliation and coalesce redundant watch notifications."""
+"""
+Serialize refreshed reconciliation and coalesce redundant watch notifications.
+"""
 
 from __future__ import annotations
 
@@ -13,7 +15,9 @@ type Key = tuple[str, str, str]
 
 
 class RefreshQueue:
-    """Keep one FIFO entry per resource; changes during execution get another turn."""
+    """
+    Keep one FIFO entry per resource; changes during execution get another turn.
+    """
 
     def __init__(self, reconcile: Callable[[Key], Awaitable[None]]) -> None:
         """

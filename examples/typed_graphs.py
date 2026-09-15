@@ -1,4 +1,6 @@
-"""Compose typed graph references while preserving specialized boundary kinds."""
+"""
+Compose typed graph references while preserving specialized boundary kinds.
+"""
 
 from __future__ import annotations
 

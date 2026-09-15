@@ -1,4 +1,6 @@
-"""Verify shared cache isolation, configuration and finite connection behavior."""
+"""
+Verify shared cache isolation, configuration and finite connection behavior.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +14,9 @@ from polyad.operator.shared_queue import SharedQueue
 
 
 def test_cache_endpoint_precedence(monkeypatch):
-    """Support generic Redis endpoints while retaining Dragonfly configuration compatibility."""
+    """
+    Support generic Redis endpoints while retaining Dragonfly configuration compatibility.
+    """
     monkeypatch.delenv("POLYAD_CACHE_URL", raising=False)
     monkeypatch.setenv("POLYAD_DRAGONFLY_URL", "redis://dragonfly:6379/0")
     assert cache_url() == "redis://dragonfly:6379/0"
@@ -21,7 +25,9 @@ def test_cache_endpoint_precedence(monkeypatch):
 
 
 def test_cache_json_ttl_and_connection_ownership():
-    """Require expiry for cached values and give the replica queue the cache-owned pool."""
+    """
+    Require expiry for cached values and give the replica queue the cache-owned pool.
+    """
 
     async def scenario():
         queue = SharedQueue("redis://localhost:6379/0", "tenant", "replica")
