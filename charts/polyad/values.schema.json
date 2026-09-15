@@ -583,7 +583,15 @@
       }
     },
     "global": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "istioNamespace": {
+          "type": "string",
+          "maxLength": 63,
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+          "minLength": 1
+        }
+      }
     },
     "nodeSelector": {
       "type": "object",
@@ -651,9 +659,8 @@
         },
         "existingSecret": {
           "type": "string",
-          "minLength": 1,
           "maxLength": 63,
-          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
         },
         "rateLimit": {
           "type": "object",
@@ -781,6 +788,10 @@
               }
             }
           ]
+        },
+        "key": {
+          "type": "string",
+          "maxLength": 4096
         }
       },
       "allOf": [
@@ -803,8 +814,1052 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "oneOf": [
+              {
+                "properties": {
+                  "key": {
+                    "const": ""
+                  },
+                  "existingSecret": {
+                    "minLength": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "key": {
+                    "minLength": 1
+                  },
+                  "existingSecret": {
+                    "const": ""
+                  }
+                }
+              }
+            ]
+          }
         }
       ]
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "existingSecret",
+        "key",
+        "retention",
+        "maxConnections"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "existingSecret": {
+          "type": "string",
+          "maxLength": 63,
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+        },
+        "key": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "retention": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 100000
+        },
+        "maxConnections": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "oneOf": [
+              {
+                "properties": {
+                  "key": {
+                    "const": ""
+                  },
+                  "existingSecret": {
+                    "minLength": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "key": {
+                    "minLength": 1
+                  },
+                  "existingSecret": {
+                    "const": ""
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "apiServerCIDRs",
+        "apiServerPort",
+        "compositionPeers",
+        "eventPeers",
+        "healthPeers",
+        "extraEgress"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "apiServerCIDRs": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "apiServerPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "compositionPeers": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "namespaceSelector": {
+                "type": "object"
+              },
+              "podSelector": {
+                "type": "object"
+              },
+              "ipBlock": {
+                "type": "object",
+                "required": [
+                  "cidr"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "cidr": {
+                    "type": "string",
+                    "format": "cidr"
+                  },
+                  "except": {
+                    "type": "array",
+                    "maxItems": 32,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "ipBlock"
+              ],
+              "anyOf": [
+                {
+                  "required": [
+                    "namespaceSelector"
+                  ]
+                },
+                {
+                  "required": [
+                    "podSelector"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "eventPeers": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "namespaceSelector": {
+                "type": "object"
+              },
+              "podSelector": {
+                "type": "object"
+              },
+              "ipBlock": {
+                "type": "object",
+                "required": [
+                  "cidr"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "cidr": {
+                    "type": "string",
+                    "format": "cidr"
+                  },
+                  "except": {
+                    "type": "array",
+                    "maxItems": 32,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "ipBlock"
+              ],
+              "anyOf": [
+                {
+                  "required": [
+                    "namespaceSelector"
+                  ]
+                },
+                {
+                  "required": [
+                    "podSelector"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "healthPeers": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "namespaceSelector": {
+                "type": "object"
+              },
+              "podSelector": {
+                "type": "object"
+              },
+              "ipBlock": {
+                "type": "object",
+                "required": [
+                  "cidr"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "cidr": {
+                    "type": "string",
+                    "format": "cidr"
+                  },
+                  "except": {
+                    "type": "array",
+                    "maxItems": 32,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "ipBlock"
+              ],
+              "anyOf": [
+                {
+                  "required": [
+                    "namespaceSelector"
+                  ]
+                },
+                {
+                  "required": [
+                    "podSelector"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "extraEgress": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "properties": {
+              "to": {
+                "type": "array",
+                "maxItems": 32,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "properties": {
+                    "namespaceSelector": {
+                      "type": "object"
+                    },
+                    "podSelector": {
+                      "type": "object"
+                    },
+                    "ipBlock": {
+                      "type": "object",
+                      "required": [
+                        "cidr"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "cidr": {
+                          "type": "string",
+                          "format": "cidr"
+                        },
+                        "except": {
+                          "type": "array",
+                          "maxItems": 32,
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "not": {
+                    "required": [
+                      "ipBlock"
+                    ],
+                    "anyOf": [
+                      {
+                        "required": [
+                          "namespaceSelector"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "podSelector"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "ports": {
+                "type": "array",
+                "maxItems": 32,
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "apiServerCIDRs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "mesh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "install",
+        "operator",
+        "ingress"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "install": {
+          "type": "boolean"
+        },
+        "operator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "compositionPrincipals",
+            "eventPrincipals"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "compositionPrincipals": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "eventPrincipals": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "hosts",
+            "tlsSecret"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "hosts": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+              }
+            },
+            "tlsSecret": {
+              "type": "string",
+              "maxLength": 63,
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "properties": {
+                  "install": {
+                    "const": true
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "operator": {
+                    "properties": {
+                      "enabled": {
+                        "const": true
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "ingress": {
+                    "properties": {
+                      "enabled": {
+                        "const": true
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ingress": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ingress": {
+                "properties": {
+                  "hosts": {
+                    "minItems": 1
+                  },
+                  "tlsSecret": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "istioBase": {
+      "type": "object"
+    },
+    "istiod": {
+      "type": "object"
+    },
+    "istioIngress": {
+      "type": "object",
+      "properties": {
+        "affinity": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Deployment",
+            "DaemonSet",
+            null
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "annotations": {
+          "additionalProperties": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "maxReplicas": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "minReplicas": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "targetCPUUtilizationPercentage": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            }
+          }
+        },
+        "envVarFrom": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "valueFrom": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "strategy": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "nodeSelector": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "podAnnotations": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "inject.istio.io/templates": {
+              "type": "string"
+            },
+            "prometheus.io/path": {
+              "type": "string"
+            },
+            "prometheus.io/port": {
+              "type": "string"
+            },
+            "prometheus.io/scrape": {
+              "type": "string"
+            }
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "resources": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "limits": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "cpu": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "memory": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "requests": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "cpu": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "memory": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "revision": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "compatibilityVersion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "profile": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "platform": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "selectorLabels": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "externalTrafficPolicy": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "loadBalancerIP": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "loadBalancerSourceRanges": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "ipFamilyPolicy": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "",
+                "SingleStack",
+                "PreferDualStack",
+                "RequireDualStack",
+                null
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "ports": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "port": {
+                        "type": "integer"
+                      },
+                      "protocol": {
+                        "type": "string"
+                      },
+                      "targetPort": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "properties": {}
+                },
+                {
+                  "type": "object",
+                  "maxProperties": 0
+                }
+              ],
+              "description": "An empty object retains the upstream profile ports."
+            },
+            "type": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            }
+          }
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            },
+            "create": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            }
+          }
+        },
+        "rbac": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "Null retains the pinned upstream Istio profile default."
+            }
+          }
+        },
+        "tolerations": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "topologySpreadConstraints": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "networkGateway": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "networkGatewayPorts": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "port": {
+                "type": "integer"
+              },
+              "targetPort": {
+                "type": "integer"
+              },
+              "protocol": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "port"
+            ]
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "imagePullPolicy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "",
+            "Always",
+            "IfNotPresent",
+            "Never",
+            null
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "imagePullSecrets": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "podDisruptionBudget": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "minAvailable": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "maxUnavailable": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "unhealthyPodEvictionPolicy": {
+              "type": "string",
+              "enum": [
+                "",
+                "IfHealthyBudget",
+                "AlwaysAllow"
+              ]
+            }
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "terminationGracePeriodSeconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "volumes": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object"
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "volumeMounts": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object"
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "initContainers": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object"
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "additionalContainers": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object"
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "priorityClassName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "lifecycle": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "postStart": {
+              "type": "object"
+            },
+            "preStop": {
+              "type": "object"
+            }
+          },
+          "description": "Null retains the pinned upstream Istio profile default."
+        }
+      }
     }
   },
   "definitions": {
@@ -851,6 +1906,49 @@
             }
           }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mesh": {
+            "properties": {
+              "ingress": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "api": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "events": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     }
   ]

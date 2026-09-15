@@ -12,6 +12,7 @@ from cattrs.errors import BaseValidationError
 from polyad.compiler.asts import (
     BOUNDARY_KINDS,
     GROUP,
+    NETWORK_POLICY_KINDS,
     ExecutionMetrics,
     GraphMetrics,
     ResourceCounts,
@@ -106,6 +107,9 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
                 **{
                     kind: sum(child["kind"] == kind for child in children)
                     for kind in (
+                        "NetworkPolicy",
+                        "AuthorizationPolicy",
+                        "PeerAuthentication",
                         "Job",
                         "Deployment",
                         "Service",
@@ -161,7 +165,9 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
                 observedTopology=_metric(instance["status"]["metrics"].get("observedTopology"), TopologyMetrics),
             )
         return result
-    by_node = {child["metadata"].get("labels", {}).get(f"{GROUP}/node"): child for child in children}
+    by_node = {
+        child["metadata"].get("labels", {}).get(f"{GROUP}/node"): child for child in children if child["kind"] not in NETWORK_POLICY_KINDS
+    }
     present = {node.name: by_node[node.name] for node in graph.nodes if node.name in by_node}
     states = {name: observed(child) for name, child in present.items()}
     reserved = sum(node.slots for node in graph.nodes if node.name in states and not states[node.name]["completed"])

@@ -59,6 +59,187 @@ spec:
               graph:
                 type: object
                 properties:
+                  network:
+                    type: object
+                    description: Isolate a graph subtree and intersect its exceptions with inherited constraints.
+                    properties:
+                      scope:
+                        type: string
+                        enum:
+                        - Boundary
+                        - Subtree
+                        description: Apply to direct workloads or propagate to all descendant workloads.
+                      ingress:
+                        type: array
+                        items:
+                          type: object
+                          description: Allow one peer on selected ports, with optional inbound mesh authorization.
+                          properties:
+                            peer:
+                              type: object
+                              description: Select peers in an explicit namespace, optionally by graph or pod labels.
+                              properties:
+                                namespace:
+                                  type: string
+                                  nullable: true
+                                  description: Peer namespace; omitted means this graph's namespace.
+                                graph:
+                                  type: string
+                                  nullable: true
+                                  description: Named graph instance; omitted with node selects a node in this boundary.
+                                kind:
+                                  type: string
+                                  enum:
+                                  - Graph
+                                  - PolyGraph
+                                  - EphemeralGraph
+                                  - Feedback
+                                  description: Kind of the referenced graph instance.
+                                node:
+                                  type: string
+                                  nullable: true
+                                  description: Node and its descendants inside the selected graph.
+                                podLabels:
+                                  type: object
+                                  additionalProperties:
+                                    type: string
+                                  description: Additional exact pod-label matches, combined with graph selection.
+                            ports:
+                              type: array
+                              items:
+                                type: object
+                                description: Select a transport port on the destination workload.
+                                properties:
+                                  port:
+                                    type: integer
+                                    description: Destination transport port.
+                                    minimum: 1
+                                    maximum: 65535
+                                  protocol:
+                                    type: string
+                                    enum:
+                                    - TCP
+                                    - UDP
+                                    - SCTP
+                                    description: Transport protocol.
+                                required:
+                                - port
+                              description: Destination ports; empty means every transport port.
+                            node:
+                              type: string
+                              nullable: true
+                              description: Local node subtree to which this rule applies; omitted selects every local node.
+                            principals:
+                              type: array
+                              items:
+                                type: string
+                              description: Exact Istio source identities such as cluster.local/ns/team/sa/client.
+                            methods:
+                              type: array
+                              items:
+                                type: string
+                              description: Allowed inbound HTTP methods; empty leaves methods unconstrained.
+                            paths:
+                              type: array
+                              items:
+                                type: string
+                              description: Exact inbound HTTP paths; empty leaves paths unconstrained.
+                          required:
+                          - peer
+                        description: Additional allowed inbound traffic.
+                      egress:
+                        type: array
+                        items:
+                          type: object
+                          description: Allow one peer on selected ports, with optional inbound mesh authorization.
+                          properties:
+                            peer:
+                              type: object
+                              description: Select peers in an explicit namespace, optionally by graph or pod labels.
+                              properties:
+                                namespace:
+                                  type: string
+                                  nullable: true
+                                  description: Peer namespace; omitted means this graph's namespace.
+                                graph:
+                                  type: string
+                                  nullable: true
+                                  description: Named graph instance; omitted with node selects a node in this boundary.
+                                kind:
+                                  type: string
+                                  enum:
+                                  - Graph
+                                  - PolyGraph
+                                  - EphemeralGraph
+                                  - Feedback
+                                  description: Kind of the referenced graph instance.
+                                node:
+                                  type: string
+                                  nullable: true
+                                  description: Node and its descendants inside the selected graph.
+                                podLabels:
+                                  type: object
+                                  additionalProperties:
+                                    type: string
+                                  description: Additional exact pod-label matches, combined with graph selection.
+                            ports:
+                              type: array
+                              items:
+                                type: object
+                                description: Select a transport port on the destination workload.
+                                properties:
+                                  port:
+                                    type: integer
+                                    description: Destination transport port.
+                                    minimum: 1
+                                    maximum: 65535
+                                  protocol:
+                                    type: string
+                                    enum:
+                                    - TCP
+                                    - UDP
+                                    - SCTP
+                                    description: Transport protocol.
+                                required:
+                                - port
+                              description: Destination ports; empty means every transport port.
+                            node:
+                              type: string
+                              nullable: true
+                              description: Local node subtree to which this rule applies; omitted selects every local node.
+                            principals:
+                              type: array
+                              items:
+                                type: string
+                              description: Exact Istio source identities such as cluster.local/ns/team/sa/client.
+                            methods:
+                              type: array
+                              items:
+                                type: string
+                              description: Allowed inbound HTTP methods; empty leaves methods unconstrained.
+                            paths:
+                              type: array
+                              items:
+                                type: string
+                              description: Exact inbound HTTP paths; empty leaves paths unconstrained.
+                          required:
+                          - peer
+                        description: Additional allowed outbound traffic.
+                      isolateIngress:
+                        type: boolean
+                        description: Restrict incoming connections.
+                      isolateEgress:
+                        type: boolean
+                        description: Restrict outgoing connections.
+                      allowWithin:
+                        type: boolean
+                        description: Allow traffic between all workloads inside this boundary.
+                      allowDNS:
+                        type: boolean
+                        description: Allow TCP/UDP 53 to kube-system pods labeled k8s-app=kube-dns.
+                      mesh:
+                        type: boolean
+                        description: Require Istio injection, strict mutual TLS and inbound authorization.
                   rules:
                     type: array
                     description: Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide
@@ -164,6 +345,27 @@ spec:
                     items:
                       type: object
                       properties:
+                        ports:
+                          type: array
+                          description: Destination transport grants; omitted connections remain data-flow declarations.
+                          items:
+                            type: object
+                            description: Select a transport port on the destination workload.
+                            properties:
+                              port:
+                                type: integer
+                                description: Destination transport port.
+                                minimum: 1
+                                maximum: 65535
+                              protocol:
+                                type: string
+                                enum:
+                                - TCP
+                                - UDP
+                                - SCTP
+                                description: Transport protocol.
+                            required:
+                            - port
                         source:
                           type: string
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -581,10 +783,6 @@ spec:
                         type: object
                         description: Acyclic lifecycle dependencies used for admission.
                         properties:
-                          edgeCount:
-                            type: integer
-                            minimum: 0
-                            description: Number of distinct dependency pairs, regardless of lifecycle predicate.
                           depth:
                             type: integer
                             minimum: 0
@@ -605,7 +803,12 @@ spec:
                           breadthDepth:
                             type: integer
                             minimum: 0
-                            description: Breadth multiplied by depth; a shape summary, not an estimate of execution cost.
+                            description: Breadth multiplied by depth; a shape summary, not an estimate of execution
+                              cost.
+                          edgeCount:
+                            type: integer
+                            minimum: 0
+                            description: Number of distinct dependency pairs, regardless of lifecycle predicate.
                           rootCount:
                             type: integer
                             minimum: 0
@@ -661,8 +864,8 @@ spec:
                               breadth:
                                 type: integer
                                 minimum: 0
-                                description: Largest layer size. This is layer breadth, not maximum antichain width or
-                                  available concurrency.
+                                description: Largest layer size. This is layer breadth, not maximum antichain width
+                                  or available concurrency.
                               layerWidths:
                                 type: array
                                 items:
@@ -730,10 +933,6 @@ spec:
                         type: object
                         description: Acyclic lifecycle dependencies used for admission.
                         properties:
-                          edgeCount:
-                            type: integer
-                            minimum: 0
-                            description: Number of distinct dependency pairs, regardless of lifecycle predicate.
                           depth:
                             type: integer
                             minimum: 0
@@ -754,7 +953,12 @@ spec:
                           breadthDepth:
                             type: integer
                             minimum: 0
-                            description: Breadth multiplied by depth; a shape summary, not an estimate of execution cost.
+                            description: Breadth multiplied by depth; a shape summary, not an estimate of execution
+                              cost.
+                          edgeCount:
+                            type: integer
+                            minimum: 0
+                            description: Number of distinct dependency pairs, regardless of lifecycle predicate.
                           rootCount:
                             type: integer
                             minimum: 0
@@ -810,8 +1014,8 @@ spec:
                               breadth:
                                 type: integer
                                 minimum: 0
-                                description: Largest layer size. This is layer breadth, not maximum antichain width or
-                                  available concurrency.
+                                description: Largest layer size. This is layer breadth, not maximum antichain width
+                                  or available concurrency.
                               layerWidths:
                                 type: array
                                 items:
@@ -829,7 +1033,8 @@ spec:
                     type: object
                     description: 'Fresh observations for nodes in this boundary. Counts overlap: a completed Job can
                       also be ready. Terminating or failed execution retains slots until cleanup or completion. Feedback
-                      mirrors only the current epoch and reports null before it has current observations or between epochs.'
+                      mirrors only the current epoch and reports null before it has current observations or between
+                      epochs.'
                     properties:
                       observedNodes:
                         type: integer
@@ -880,7 +1085,8 @@ spec:
                     description: Validation error if graph shape cannot be computed; empty for a valid topology.
                   resources:
                     type: object
-                    description: All directly owned resources, including obsolete and terminating children awaiting cleanup.
+                    description: All directly owned resources, including obsolete and terminating children awaiting
+                      cleanup.
                     properties:
                       total:
                         type: integer
@@ -894,6 +1100,18 @@ spec:
                         type: object
                         description: Directly owned resource counts by Kubernetes kind.
                         properties:
+                          NetworkPolicy:
+                            type: integer
+                            minimum: 0
+                            description: Owned transport policies.
+                          AuthorizationPolicy:
+                            type: integer
+                            minimum: 0
+                            description: Owned Istio authorization policies.
+                          PeerAuthentication:
+                            type: integer
+                            minimum: 0
+                            description: Owned mutual TLS policies.
                           Job:
                             type: integer
                             minimum: 0
@@ -932,8 +1150,6 @@ spec:
                             description: Number of PolyGraph boundaries.
                   subgraphs:
                     type: array
-                    description: Immediate graph instances, sorted by kind and name. Summaries do not recursively embed
-                      descendant metrics.
                     items:
                       type: object
                       description: Identity and freshness of a nested graph or Feedback epoch.
@@ -959,17 +1175,17 @@ spec:
                           description: Current child spec generation.
                         observedGeneration:
                           type: integer
+                          nullable: true
                           minimum: 0
                           description: Child generation evaluated by its metrics.
-                          nullable: true
                         current:
                           type: boolean
-                          description: Whether child lifecycle and metrics observations match its generation and it is
-                            not terminating. This is generation freshness, not a heartbeat.
+                          description: Whether child lifecycle and metrics observations match its generation and it
+                            is not terminating. This is generation freshness, not a heartbeat.
                         topology:
                           type: object
-                          description: Boundary-local graph shape. Nested Graph, PolyGraph, EphemeralGraph and Feedback instances
-                            count as single nodes. Duplicate directed edges are collapsed.
+                          description: Boundary-local graph shape. Nested Graph, PolyGraph, EphemeralGraph and Feedback
+                            instances count as single nodes. Duplicate directed edges are collapsed.
                           properties:
                             nodeCount:
                               type: integer
@@ -1019,10 +1235,6 @@ spec:
                               type: object
                               description: Acyclic lifecycle dependencies used for admission.
                               properties:
-                                edgeCount:
-                                  type: integer
-                                  minimum: 0
-                                  description: Number of distinct dependency pairs, regardless of lifecycle predicate.
                                 depth:
                                   type: integer
                                   minimum: 0
@@ -1045,6 +1257,10 @@ spec:
                                   minimum: 0
                                   description: Breadth multiplied by depth; a shape summary, not an estimate of execution
                                     cost.
+                                edgeCount:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of distinct dependency pairs, regardless of lifecycle predicate.
                                 rootCount:
                                   type: integer
                                   minimum: 0
@@ -1063,8 +1279,8 @@ spec:
                                   description: Largest number of direct dependents.
                             connections:
                               type: object
-                              description: Directed data-flow connections, which may contain cycles. Isolated nodes are
-                                included in component counts.
+                              description: Directed data-flow connections, which may contain cycles. Isolated nodes
+                                are included in component counts.
                               properties:
                                 edgeCount:
                                   type: integer
@@ -1095,13 +1311,13 @@ spec:
                                     depth:
                                       type: integer
                                       minimum: 0
-                                      description: Number of dependency layers; zero for an empty graph and one for independent
-                                        nodes.
+                                      description: Number of dependency layers; zero for an empty graph and one for
+                                        independent nodes.
                                     breadth:
                                       type: integer
                                       minimum: 0
-                                      description: Largest layer size. This is layer breadth, not maximum antichain width
-                                        or available concurrency.
+                                      description: Largest layer size. This is layer breadth, not maximum antichain
+                                        width or available concurrency.
                                     layerWidths:
                                       type: array
                                       items:
@@ -1112,8 +1328,8 @@ spec:
                                     breadthDepth:
                                       type: integer
                                       minimum: 0
-                                      description: Breadth multiplied by depth; a shape summary, not an estimate of execution
-                                        cost.
+                                      description: Breadth multiplied by depth; a shape summary, not an estimate of
+                                        execution cost.
                           nullable: true
                         execution:
                           type: object
@@ -1127,8 +1343,8 @@ spec:
                             pendingNodes:
                               type: integer
                               minimum: 0
-                              description: Declared nodes with no observed execution resource; includes dependency, gate
-                                and capacity waits.
+                              description: Declared nodes with no observed execution resource; includes dependency,
+                                gate and capacity waits.
                             activeNodes:
                               type: integer
                               minimum: 0
@@ -1164,6 +1380,8 @@ spec:
                               minimum: 0
                               description: Nonnegative difference between slot capacity and observed reservations.
                           nullable: true
+                    description: Immediate graph instances, sorted by kind and name. Summaries do not recursively embed
+                      descendant metrics.
                   rollup:
                     type: object
                     description: Recursive status fold across mixed graph types. Local leaves are combined with each
@@ -1181,9 +1399,9 @@ spec:
                         description: Parent generation evaluated for this aggregate.
                       observationsComplete:
                         type: boolean
-                        description: All expected immediate graph instances and recursively composed summaries were observed
-                          at matching generations. This is eventual generation freshness, not a heartbeat or atomic cluster
-                          snapshot.
+                        description: All expected immediate graph instances and recursively composed summaries were
+                          observed at matching generations. This is eventual generation freshness, not a heartbeat or
+                          atomic cluster snapshot.
                       graphCount:
                         type: integer
                         minimum: 0
@@ -1196,8 +1414,8 @@ spec:
                       nestingDepth:
                         type: integer
                         minimum: 0
-                        description: Maximum known nesting layers including this boundary as layer one; independent of
-                          admission dependency depth.
+                        description: Maximum known nesting layers including this boundary as layer one; independent
+                          of admission dependency depth.
                       graphsByPhase:
                         type: object
                         description: Known boundaries by their generation-current lifecycle phase; unavailable summaries

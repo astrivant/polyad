@@ -5,6 +5,7 @@ Bound Kubernetes calls and preserve resource-version and ownership fences.
 from __future__ import annotations
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from functools import cached_property
 from typing import TYPE_CHECKING, cast
@@ -181,7 +182,12 @@ class API:
             list[dict[str, Any]]: Children whose owner references match the requested UID.
         """
         children = []
-        for kind in (*WORKLOAD_KINDS, "Graph", "EphemeralGraph", "Feedback", "PolyGraph"):
+        kinds = tuple(
+            kind
+            for kind in WORKLOAD_KINDS
+            if kind not in {"AuthorizationPolicy", "PeerAuthentication"} or os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true"
+        )
+        for kind in (*kinds, "Graph", "EphemeralGraph", "Feedback", "PolyGraph"):
             result = await self.request("GET", kind, namespace, query=[("labelSelector", f"{GROUP}/owner={uid}")])
             for item in (result or {}).get("items", []):
                 item.setdefault("kind", kind)  # Kubernetes list items may omit TypeMeta.

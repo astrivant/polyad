@@ -387,7 +387,46 @@ class Pod(SpecResource):
     resource_type: ClassVar[ResourceType] = ResourceType("Pod", "v1", "pods")
 
 
+@frozen(kw_only=True)
+class NetworkPolicy(SpecResource):
+    """
+    A managed NetworkPolicy network resource.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Kind descriptor for network API routing.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType("NetworkPolicy", "networking.k8s.io/v1", "networkpolicies")
+
+
+@frozen(kw_only=True)
+class AuthorizationPolicy(SpecResource):
+    """
+    A managed AuthorizationPolicy network resource.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Kind descriptor for network API routing.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType("AuthorizationPolicy", "security.istio.io/v1", "authorizationpolicies")
+
+
+@frozen(kw_only=True)
+class PeerAuthentication(SpecResource):
+    """
+    A managed PeerAuthentication network resource.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Kind descriptor for network API routing.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType("PeerAuthentication", "security.istio.io/v1", "peerauthentications")
+
+
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
+    NetworkPolicy,
+    AuthorizationPolicy,
+    PeerAuthentication,
     GraphRule,
     Composition,
     Pod,
@@ -412,3 +451,5 @@ RESOURCE_CLASSES: tuple[type[Resource], ...] = (
 RESOURCE_TYPES = {cls.resource_type.kind: cls.resource_type for cls in RESOURCE_CLASSES}
 RESOURCE_REGISTRY = {cls.resource_type.kind: cls for cls in RESOURCE_CLASSES}
 BOUNDARY_KINDS = frozenset(kind for kind, descriptor in RESOURCE_TYPES.items() if descriptor.boundary)
+
+NETWORK_POLICY_KINDS = frozenset({"NetworkPolicy", "AuthorizationPolicy", "PeerAuthentication"})

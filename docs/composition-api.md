@@ -4,7 +4,10 @@ Polyad separates engineer-owned constraints from end-user composition intent.
 A `GraphRule` is namespace-scoped. Its default `enforcement: Namespace` applies
 to every executable boundary, including graphs created directly through Kubernetes.
 `enforcement: Referenced` opts a rule into selection through `spec.rules` on a graph;
-selected rules are inherited by descendants. All selected rules must pass.
+selected rules propagate by default with `scope: Subtree`. `scope: Boundary` keeps a
+reference local. Namespace rules are independently selected at every boundary. All
+selected rules must pass. See [network scope and inheritance](networking.md#selection-scope-and-inheritance)
+for traffic contracts and their separate propagation setting.
 
 Only policy administrators should have write access to `graphrules`. The operator's
 Role grants read access. The HTTP API cannot create or modify rules. Its bearer
@@ -327,3 +330,6 @@ retains its slot until acknowledgement; shutdown joins outstanding operations.
 The existing Kopf probe includes intake writes in
 `backlog.kubernetesWrites.compositionIntake`. A failed HTTP thread fails the
 operator healthcheck.
+
+The separate [event subscription API](networking.md#event-subscriptions) reports
+observations with the same Kubernetes identities and audit references.

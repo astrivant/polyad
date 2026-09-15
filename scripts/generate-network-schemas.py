@@ -1,0 +1,105 @@
+"""
+Generate graph networking CRD properties from the public attrs models.
+"""
+
+from __future__ import annotations
+
+import argparse
+import textwrap
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import yaml
+
+from polyad.compiler.schema import structural_schema
+from polyad.graph.network import NetworkAccess, NetworkPort
+
+if TYPE_CHECKING:
+    from typing import Any
+
+ROOT = ("spec", "versions", 0, "schema", "openAPIV3Schema", "properties", "spec", "properties")
+
+
+def refresh(source: str, path: tuple[str | int, ...], name: str, schema: dict[str, Any]) -> str:
+    """
+    Replace or append a generated property while retaining unrelated source formatting.
+
+    Args:
+        source (str): Original CRD YAML.
+        path (tuple[str | int, ...]): Path to the containing properties mapping.
+        name (str): Generated property name.
+        schema (dict[str, Any]): Structural schema produced from an attrs model.
+
+    Returns:
+        str: Updated CRD YAML.
+    """
+    document = yaml.safe_load(source)
+    node = yaml.compose(source)
+    for part in path:
+        document = document[part]
+        node = node.value[part] if isinstance(part, int) else next(value for key, value in node.value if key.value == part)
+    if document.get(name) == schema:
+        return source
+    indent = node.value[0][0].start_mark.column
+    found = next(((key, value) for key, value in node.value if key.value == name), None)
+    if found:
+        key, value = found
+        start = key.start_mark.index - indent
+        end = value.end_mark.index - value.end_mark.column
+    else:
+        start = end = node.value[0][0].start_mark.index - indent
+    rendered = textwrap.indent(yaml.safe_dump({name: schema}, sort_keys=False, width=100), " " * indent)
+    return source[:start] + rendered + source[end:]
+
+
+def main() -> int:
+    """
+    Regenerate schemas or report model drift without modifying files.
+
+    Returns:
+        int: Nonzero when check mode discovers stale schemas.
+    """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    directory = Path(__file__).resolve().parents[1] / "charts/polyad/crds"
+    changed = []
+    for kind in ("graphs", "polygraphs", "ephemeralgraphs", "feedbacks", "rewrites", "graphrules"):
+        path = directory / f"{kind}.yaml"
+        source = path.read_text()
+        props = ROOT + (("graph", "properties") if kind == "feedbacks" else ("topology", "properties") if kind == "rewrites" else ())
+        updated = refresh(source, props, "network", structural_schema(NetworkAccess))
+        if kind == "graphrules":
+            updated = refresh(
+                updated,
+                props,
+                "scope",
+                {
+                    "type": "string",
+                    "enum": ["Boundary", "Subtree"],
+                    "default": "Subtree",
+                    "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary.",
+                },
+            )
+        if kind != "graphrules":
+            updated = refresh(
+                updated,
+                (*props, "connections", "items", "properties"),
+                "ports",
+                {
+                    "type": "array",
+                    "description": "Destination transport grants; omitted connections remain data-flow declarations.",
+                    "items": structural_schema(NetworkPort),
+                },
+            )
+        if updated != source:
+            changed.append(kind)
+            if not args.check:
+                path.write_text(updated)
+    if changed:
+        print(("Stale" if args.check else "Regenerated") + " network schemas: " + ", ".join(changed))
+    return int(args.check and bool(changed))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

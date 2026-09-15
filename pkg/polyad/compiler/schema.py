@@ -6,18 +6,17 @@ from __future__ import annotations
 
 import copy
 import inspect
+import re
 from types import UnionType
 from typing import TYPE_CHECKING, Literal, Union, get_args, get_origin, get_type_hints
 
-from attrs import NOTHING, fields
-
-from polyad.compiler.asts.common import AST
+from attrs import NOTHING, fields, has
 
 if TYPE_CHECKING:
     from typing import Any
 
 
-def structural_schema(model: type[AST]) -> dict[str, Any]:
+def structural_schema(model: type) -> dict[str, Any]:
     """
     Inline a typed AST as a structural schema suitable for a CRD property.
 
@@ -27,7 +26,7 @@ def structural_schema(model: type[AST]) -> dict[str, Any]:
     Unsupported annotations and recursive models fail instead of emitting loose schemas.
 
     Args:
-        model (type[AST]): Attrs model whose fields define the wire contract.
+        model (type): Attrs model whose fields define the wire contract.
 
     Returns:
         dict[str, Any]: Independent OpenAPI schema with nested models inlined.
@@ -35,7 +34,7 @@ def structural_schema(model: type[AST]) -> dict[str, Any]:
     return _schema(model, ())
 
 
-def _schema(annotation: Any, ancestors: tuple[type[AST], ...]) -> dict[str, Any]:
+def _schema(annotation: Any, ancestors: tuple[type, ...]) -> dict[str, Any]:
     origin, arguments = get_origin(annotation), get_args(annotation)
     if origin in (Union, UnionType):
         members = [member for member in arguments if member is not type(None)]
@@ -46,22 +45,27 @@ def _schema(annotation: Any, ancestors: tuple[type[AST], ...]) -> dict[str, Any]
         if not arguments or len({type(value) for value in arguments}) != 1:
             raise TypeError(f"literal values must have one primitive type: {annotation}")
         return {**_schema(type(arguments[0]), ancestors), "enum": list(arguments)}
-    if origin is list:
+    if origin is list or (origin is tuple and len(arguments) == 2 and arguments[1] is Ellipsis):
         return {"type": "array", "items": _schema(arguments[0], ancestors)}
+    if origin is dict and arguments[0] is str:
+        return {"type": "object", "additionalProperties": _schema(arguments[1], ancestors)}
     primitives = {str: "string", int: "integer", float: "number", bool: "boolean"}
     if annotation in primitives:
         return {"type": primitives[annotation]}
-    if not isinstance(annotation, type) or not issubclass(annotation, AST):
+    if not isinstance(annotation, type) or not has(annotation):
         raise TypeError(f"unsupported structural schema annotation: {annotation}")
     if annotation in ancestors:
         raise TypeError(f"recursive AST cannot be inlined: {annotation.__name__}")
     hints = get_type_hints(annotation)
+    descriptions = dict(re.findall(r"^\s+(\w+) \([^\n]+\): ([^\n]+)", annotation.__doc__ or "", re.MULTILINE))
     properties, required = {}, []
     for attribute in fields(annotation):
         if attribute.name == "extra":
             continue
         value = _schema(hints[attribute.name], (*ancestors, annotation))
         constraints = copy.deepcopy(attribute.metadata.get("schema", {}))
+        if attribute.name in descriptions:
+            value.setdefault("description", descriptions[attribute.name])
         if "items" in constraints:
             value["items"].update(constraints.pop("items"))
         value.update(constraints)

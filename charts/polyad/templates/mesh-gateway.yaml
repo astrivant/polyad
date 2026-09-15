@@ -1,0 +1,55 @@
+{{- if .Values.mesh.ingress.enabled }}
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  selector:
+    istio: polyad-ingress
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        {{- toYaml .Values.mesh.ingress.hosts | nindent 8 }}
+      tls:
+        mode: SIMPLE
+        credentialName: {{ .Values.mesh.ingress.tlsSecret | quote }}
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  hosts:
+    {{- toYaml .Values.mesh.ingress.hosts | nindent 4 }}
+  gateways: [{{ printf "%s-polyad" .Release.Name | quote }}]
+  http:
+    {{- if .Values.events.enabled }}
+    - match:
+        - uri:
+            exact: /v1/events
+        - uri:
+            exact: /events/openapi.json
+      rewrite:
+        uriRegexRewrite:
+          match: ^/events/openapi.json$
+          rewrite: /openapi.json
+      route:
+        - destination:
+            host: {{ .Release.Name }}-polyad-events
+            port:
+              number: 8091
+    {{- end }}
+    {{- if .Values.api.enabled }}
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: {{ .Release.Name }}-polyad-api
+            port:
+              number: 8090
+    {{- end }}
+{{- end }}

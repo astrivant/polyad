@@ -1,0 +1,56 @@
+{{- if .Values.mesh.install }}
+{{- if ne .Values.global.istioNamespace .Release.Namespace }}{{ fail "mesh.install requires global.istioNamespace to equal the release namespace" }}{{ end }}
+{{- end }}
+{{- if .Values.mesh.operator.enabled }}
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    '8080':
+      mode: DISABLE
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad
+  action: ALLOW
+  rules:
+    - to:
+        - operation:
+            ports: ['8080']
+    {{- with .Values.mesh.operator.compositionPrincipals }}
+    - from:
+        - source:
+            principals:
+              {{- toYaml . | nindent 14 }}
+      to:
+        - operation:
+            ports: ["8090"]
+            methods: [GET, POST]
+            paths: [/v1/compositions, /v1/compositions/*, /openapi.json]
+    {{- end }}
+    {{- with .Values.mesh.operator.eventPrincipals }}
+    - from:
+        - source:
+            principals:
+              {{- toYaml . | nindent 14 }}
+      to:
+        - operation:
+            ports: ["8091"]
+            methods: [GET]
+            paths: [/v1/events, /openapi.json]
+    {{- end }}
+{{- end }}

@@ -82,7 +82,9 @@ async def check_rules(
 
                     raise Pending(f"waiting for graph definition: {node.kind}/{node.ref}")
                 cache[key] = definition
-            count, levels, _ = await visit(node.kind, cache[key]["spec"], (*path, key), selected)
+            count, levels, _ = await visit(
+                node.kind, cache[key]["spec"], (*path, key), {name for name in selected if rules[name].scope == "Subtree"}
+            )
             expanded += count
             depth = max(depth, levels + 1)
         reports = []

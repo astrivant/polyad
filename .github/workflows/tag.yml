@@ -1,0 +1,55 @@
+name: Tag version
+
+on:
+  workflow_run:
+    workflows: [Test]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tag-version-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Read package version
+        id: version
+        run: python scripts/release-tag.py --output "$GITHUB_OUTPUT"
+      - name: Create tag if absent
+        uses: actions/github-script@v7
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        with:
+          script: |
+            const tag = process.env.RELEASE_TAG;
+            const ref = `tags/${tag}`;
+            const repository = context.repo;
+            try {
+              const existing = await github.rest.git.getRef({ ...repository, ref });
+              core.info(`${tag} already exists at ${existing.data.object.sha}; leaving it unchanged.`);
+              return;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            await github.rest.git.createRef({
+              ...repository,
+              ref: `refs/${ref}`,
+              sha: process.env.TESTED_SHA,
+            });
+            core.info(`Tagged tested commit ${process.env.TESTED_SHA} as ${tag}.`);

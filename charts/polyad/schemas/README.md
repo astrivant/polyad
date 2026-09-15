@@ -13,3 +13,9 @@ install APIs into a cluster.
 When updating Gateway API schemas, extract `spec.versions[name=v1].schema.openAPIV3Schema`
 from both upstream CRDs and preserve their constraints and descriptions. Run the
 chart tests and hypothesis-helm with kubeconform enabled.
+
+- `authorizationpolicy-security-v1.json`, `peerauthentication-security-v1.json`,
+  `gateway-networking-v1.json` and `virtualservice-networking-v1.json` are extracted
+  from the pinned Istio 1.30.4 base chart's `files/crd-all.gen.yaml`. The only additions
+  are `$schema` and a provenance `$comment`. Istio uses
+  [Apache-2.0](https://github.com/istio/istio/blob/1.30.4/LICENSE).

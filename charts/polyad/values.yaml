@@ -78,6 +78,8 @@ api:
   enabled: false
   ## @param api.existingSecret Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
   existingSecret: polyad-api
+  ## @param api.key Inline composition token; creates a managed Secret and requires existingSecret to be empty
+  key: ''
   rateLimit:
     ## @param api.rateLimit.enabled Enforce shared Redis/Dragonfly composition request quotas on every logical shard
     enabled: true
@@ -100,3 +102,73 @@ api:
     hostnames: []
     ## @param api.gateway.tlsSecret Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80
     tlsSecret: ''
+
+## @section Event subscriptions
+events:
+  ## @param events.enabled Serve namespace graph observations through a separate SSE Service on port 8091
+  enabled: false
+  ## @param events.existingSecret Existing Secret containing a token key for read-only event subscriptions
+  existingSecret: polyad-events
+  ## @param events.key Inline subscriber token; creates a managed Secret and requires existingSecret to be empty
+  key: ''
+  ## @param events.retention Maximum observations retained in the shared replay stream
+  retention: 10000
+  ## @param events.maxConnections Maximum simultaneous event subscribers per operator replica
+  maxConnections: 16
+
+## @section Operator endpoint and cache isolation
+networkPolicy:
+  ## @param networkPolicy.enabled Isolate operator pods; requires explicit Kubernetes API and cache egress rules
+  enabled: false
+  ## @param networkPolicy.apiServerCIDRs [array] Kubernetes API endpoint CIDRs reachable through this cluster's CNI
+  apiServerCIDRs: []
+  ## @param networkPolicy.apiServerPort Kubernetes API endpoint port after this cluster's service translation
+  apiServerPort: 443
+  ## @param networkPolicy.compositionPeers [array] NetworkPolicy peers allowed to connect to the composition API
+  compositionPeers: []
+  ## @param networkPolicy.eventPeers [array] NetworkPolicy peers allowed to subscribe to events
+  eventPeers: []
+  ## @param networkPolicy.healthPeers [array] Optional monitoring peers allowed to read port 8080 health metrics
+  healthPeers: []
+  ## @param networkPolicy.extraEgress [array] Additional NetworkPolicy egress rules, including any external cache or DNS configuration
+  extraEgress: []
+
+## @section Optional Istio integration
+mesh:
+  ## @param mesh.enabled Allow graph HTTP and service-identity authorization and generate Istio security resources
+  enabled: false
+  ## @param mesh.install Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled
+  install: false
+  operator:
+    ## @param mesh.operator.enabled Inject the operator pods and authorize their API and event ports with Istio
+    enabled: false
+    ## @param mesh.operator.compositionPrincipals [array] Exact mTLS source identities allowed to use the composition endpoint
+    compositionPrincipals: []
+    ## @param mesh.operator.eventPrincipals [array] Exact mTLS source identities allowed to subscribe to events
+    eventPrincipals: []
+  ingress:
+    ## @param mesh.ingress.enabled Install the optional upstream Istio gateway dependency
+    enabled: false
+    ## @param mesh.ingress.hosts [array] Hosts served by the Istio Gateway and VirtualService
+    hosts: []
+    ## @param mesh.ingress.tlsSecret TLS credential Secret in the gateway namespace, required when exposing the APIs
+    tlsSecret: ''
+## @param istioBase [object] Upstream Istio base chart overrides
+istioBase: {}
+## @param istiod [object] Upstream Istio control-plane chart overrides
+istiod:
+  env:
+    ENABLE_NATIVE_SIDECARS: 'true'
+  meshConfig:
+    enableAutoMtls: true
+    defaultConfig:
+      holdApplicationUntilProxyStarts: true
+## @param istioIngress [object] Upstream Istio gateway chart overrides
+istioIngress:
+  labels:
+    istio: polyad-ingress
+
+## @section Shared Istio namespace
+global:
+  ## @param global.istioNamespace Istio control-plane namespace; must equal the release namespace when mesh.install is enabled
+  istioNamespace: istio-system

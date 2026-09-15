@@ -18,7 +18,9 @@ from polyad.compiler.asts.common import ResourceType as ResourceType
 from polyad.compiler.asts.common import StatusPatch as StatusPatch
 from polyad.compiler.asts.common import UIDPreconditions as UIDPreconditions
 from polyad.compiler.asts.resources import BOUNDARY_KINDS as BOUNDARY_KINDS
+from polyad.compiler.asts.resources import NETWORK_POLICY_KINDS as NETWORK_POLICY_KINDS
 from polyad.compiler.asts.resources import RESOURCE_TYPES as RESOURCE_TYPES
+from polyad.compiler.asts.resources import AuthorizationPolicy as AuthorizationPolicy
 from polyad.compiler.asts.resources import Composition as Composition
 from polyad.compiler.asts.resources import ConfigMap as ConfigMap
 from polyad.compiler.asts.resources import Daemon as Daemon
@@ -36,6 +38,8 @@ from polyad.compiler.asts.resources import JobSpec as JobSpec
 from polyad.compiler.asts.resources import LabelSelector as LabelSelector
 from polyad.compiler.asts.resources import Lease as Lease
 from polyad.compiler.asts.resources import LeaseSpec as LeaseSpec
+from polyad.compiler.asts.resources import NetworkPolicy as NetworkPolicy
+from polyad.compiler.asts.resources import PeerAuthentication as PeerAuthentication
 from polyad.compiler.asts.resources import PersistentVolumeClaim as PersistentVolumeClaim
 from polyad.compiler.asts.resources import Pod as Pod
 from polyad.compiler.asts.resources import PodTemplate as PodTemplate

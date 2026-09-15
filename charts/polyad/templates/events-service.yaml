@@ -1,0 +1,15 @@
+{{- if .Values.events.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-polyad-events
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: polyad
+  ports:
+    - name: http-events
+      appProtocol: http
+      port: 8091
+      targetPort: events
+{{- end }}

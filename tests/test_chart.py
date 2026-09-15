@@ -226,10 +226,8 @@ def test_composition_service_and_policy_rbac():
     operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     env = operator["spec"]["template"]["spec"]["containers"][0]["env"]
     assert {"name": "POLYAD_API_ENABLED", "value": "true"} in env
-    assert next(item for item in env if item["name"] == "POLYAD_API_TOKEN")["valueFrom"]["secretKeyRef"] == {
-        "name": "composition-token",
-        "key": "token",
-    }
+    assert next(item for item in env if item["name"] == "POLYAD_API_TOKEN_FILE")["value"] == "/var/run/polyad/api/token"
+    assert operator["spec"]["template"]["spec"]["volumes"][0]["secret"]["secretName"] == "composition-token"
     role = next(obj for obj in objects if obj["kind"] == "Role" and obj["metadata"]["name"] == "test-polyad")
     policy = [rule for rule in role["rules"] if "graphrules" in rule["resources"]]
     assert len(policy) == 1 and set(policy[0]["verbs"]) == {"get", "list", "watch"}
@@ -246,3 +244,43 @@ def test_composition_service_and_policy_rbac():
             spec = spec["graph"]["properties"]
         assert spec["rules"]["x-kubernetes-list-type"] == "set"
         assert spec["nodes"]["items"]["properties"]["id"]["maxLength"] == 63
+
+
+def test_optional_network_policies_and_mesh_auth_are_separate_from_workloads():
+    """
+    Render endpoint isolation, explicit service identities and Secret projections without credential write RBAC.
+    """
+    objects = render(
+        "api.enabled=true",
+        "events.enabled=true",
+        "networkPolicy.enabled=true",
+        "networkPolicy.apiServerCIDRs[0]=10.0.0.1/32",
+        "networkPolicy.eventPeers[0].namespaceSelector.matchLabels.team=consumers",
+        "mesh.enabled=true",
+        "mesh.operator.enabled=true",
+        "mesh.operator.eventPrincipals[0]=cluster.local/ns/consumers/sa/reader",
+    )
+    policy = next(obj for obj in objects if obj["kind"] == "NetworkPolicy")
+    assert policy["spec"]["podSelector"]["matchLabels"]["app.kubernetes.io/name"] == "polyad"
+    assert policy["spec"]["ingress"][0]["ports"][0]["port"] == 8091
+    auth = next(obj for obj in objects if obj["kind"] == "AuthorizationPolicy")
+    assert auth["spec"]["rules"][1]["from"][0]["source"]["principals"] == ["cluster.local/ns/consumers/sa/reader"]
+    assert auth["spec"]["rules"][1]["to"][0]["operation"]["methods"] == ["GET"]
+    role = next(obj for obj in objects if obj["kind"] == "Role" and obj["metadata"]["name"] == "test-polyad")
+    assert not any("secrets" in rule["resources"] for rule in role["rules"])
+    assert not any("deployments" in rule["resources"] and "patch" in rule["verbs"] for rule in role["rules"])
+    services = {obj["metadata"]["name"] for obj in objects if obj["kind"] == "Service"}
+    assert {"test-polyad-api", "test-polyad-events"} <= services
+
+
+def test_inline_keys_create_secrets_and_checksum_rollouts():
+    """
+    Inline credentials live in Secrets; existing credentials are projected without subPath.
+    """
+    objects = render("api.enabled=true", "api.existingSecret=", "api.key=test-secret")
+    secret = next(obj for obj in objects if obj["kind"] == "Secret" and obj["metadata"]["name"] == "test-polyad-api")
+    assert secret["stringData"] == {"token": "test-secret"}
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    assert deployment["spec"]["template"]["metadata"]["annotations"]["checksum/credentials"]
+    mounts = deployment["spec"]["template"]["spec"]["containers"][0]["volumeMounts"]
+    assert mounts[0]["readOnly"] and "subPath" not in mounts[0]

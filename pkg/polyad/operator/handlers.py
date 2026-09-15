@@ -5,6 +5,7 @@ Observe with Kopf; coordinate all mutations through leased, refreshed queues.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -16,9 +17,12 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.server import CompositionServer
 from polyad.cache import cache_url
+from polyad.events.server import EventServer
+from polyad.events.store import EventStore
 from polyad.operator.api import API, GROUP, VERSION
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.coordination import SHARDS, Coordinator, NotOwner, active_shard
+from polyad.operator.health import credential_token, lifecycle, watch_credentials
 from polyad.operator.queue import RefreshQueue
 from polyad.operator.shared_queue import SharedQueue
 
@@ -32,6 +36,8 @@ controller: Controller | None = None
 coordinator: Coordinator | None = None
 shared: SharedQueue | None = None
 http: CompositionServer | None = None
+events: EventStore | None = None
+event_http: EventServer | None = None
 last_api_success = 0.0
 initialized = False
 background: list[asyncio.Task[None]] = []
@@ -51,10 +57,14 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     Returns:
         None: No return value.
     """
-    global queue, controller, coordinator, shared, initialized, http
+    global queue, controller, coordinator, shared, initialized, http, events, event_http
     settings.posting.enabled = False
     settings.scanning.disabled = True
     settings.networking.request_timeout = 30
+    if os.environ.get("POLYAD_OPERATOR_MESH_ENABLED", "false").lower() == "true":
+        injection = json.loads(os.environ.get("POLYAD_MESH_INJECTION_STATUS", "{}") or "{}")
+        if "istio-proxy" not in injection.get("initContainers", []):
+            raise RuntimeError("operator mesh authorization requires injected Istio native sidecars")
     namespace = os.environ.get("POLYAD_NAMESPACE", "default")
     coordinator = Coordinator(API(), namespace)
     controller = Controller(API(before_write=coordinator.guard))
@@ -62,7 +72,13 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     queue = RefreshQueue(reconcile)
     queue.start()
     if os.environ.get("POLYAD_API_ENABLED", "false").lower() == "true":
-        http = CompositionServer(API(), namespace, os.environ.get("POLYAD_API_TOKEN", ""))
+        http = CompositionServer(API(), namespace, credential_token("API"))
+    if os.environ.get("POLYAD_EVENTS_ENABLED", "false").lower() == "true":
+        events = EventStore(cache_url(), namespace, retention=int(os.environ.get("POLYAD_EVENTS_RETENTION", "10000")))
+        event_http = EventServer(
+            events, namespace, credential_token("EVENTS"), connections=int(os.environ.get("POLYAD_EVENTS_CONNECTIONS", "16"))
+        )
+    background.append(asyncio.create_task(watch_credentials()))
     initialized = True
     background.extend(
         [
@@ -144,6 +160,13 @@ async def reconcile(key: Key) -> None:
     async with coordinator.duty(key):
         try:
             await controller.reconcile(key)
+        except Pending:
+            if events is not None:
+                obj = await controller.api.get(*key)
+                if obj is not None:
+                    await coordinator.guard()
+                    await events.publish(obj)
+            raise
         except (ValueError, TypeError, KeyError, CattrsError, ApiException) as error:
             if isinstance(error, ApiException) and error.status not in {400, 422}:
                 raise
@@ -161,6 +184,11 @@ async def reconcile(key: Key) -> None:
                 )
                 await controller.report_metrics(key)
         last_api_success = time.monotonic()
+        if events is not None:
+            obj = await controller.api.get(*key)
+            if obj is not None and key[0] in KINDS:
+                await coordinator.guard()
+                await events.publish(obj)
 
 
 async def publish(key: Key) -> None:
@@ -189,6 +217,8 @@ async def consume_loop() -> None:
         try:
             await shared.ping()
             for shard in sorted(coordinator.owned):
+                if lifecycle.replacement.is_set() or lifecycle.draining.is_set():
+                    break
                 token = active_shard.set(shard)
                 try:
                     await coordinator.guard()
@@ -271,11 +301,18 @@ def health(**_: Any) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Worker health, coordination state and cached backlog gauges.
     """
+    if lifecycle.replacement.is_set():
+        raise RuntimeError("replica replacement required: credential change or restart signal")
+    if lifecycle.draining.is_set():
+        raise RuntimeError("replica is draining for replacement")
     if not initialized or queue is None or queue.task is None or queue.task.done() or any(task.done() for task in background):
         raise RuntimeError("operator worker is unavailable")
     if http is not None and not http.thread.is_alive():
         raise RuntimeError("composition API thread is unavailable")
+    if event_http is not None and not event_http.thread.is_alive():
+        raise RuntimeError("events API thread is unavailable")
     return {
+        "eventsEnabled": event_http is not None,
         "initialized": initialized,
         "worker": True,
         "pending": queue.queue.qsize(),
@@ -306,6 +343,8 @@ async def cleanup(**_: Any) -> None:
     """
     global initialized
     initialized = False
+    if event_http:
+        await event_http.close()
     if http:
         await http.close()
     if queue:
@@ -314,5 +353,7 @@ async def cleanup(**_: Any) -> None:
         task.cancel()
     await asyncio.gather(*background, return_exceptions=True)
     background.clear()
+    if events:
+        await events.close()
     if shared:
         await shared.close()

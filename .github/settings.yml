@@ -7,13 +7,13 @@ repository:
   name: polyad
 
   # A short description of the repository that will show up on GitHub
-  description: Kubernetes operator for scheduling workloads through graphs
+  description: Kubernetes operator for scheduling and securing workloads as composable graphs
 
   # A URL with more information about the repository
   homepage: https://github.com/astrivant/polyad
 
   # A comma-separated list of topics to set on the repository
-  topics: Kubernetes, scheduler, graphs
+  topics: Kubernetes, scheduler, operator, controller, api, orchestration, graphs
 
   # Either `true` to make the repository private, or `false` to make it public.
   private: false
@@ -23,7 +23,7 @@ repository:
 
   # Either `true` to enable projects for this repository, or `false` to disable them.
   # If projects are disabled for the organization, passing `true` will cause an API error.
-  has_projects: true
+  has_projects: false
 
   # Either `true` to enable the wiki for this repository, `false` to disable it.
   has_wiki: true
@@ -109,7 +109,7 @@ teams: []
   #   permission: push
 
 branches:
-  - name: master
+  - name: main
     # https://docs.github.com/en/rest/reference/repos#update-branch-protection
     # Branch Protection settings. Set to null to disable
     protection:

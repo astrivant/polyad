@@ -273,6 +273,9 @@ class ResourceCounts(AST):
     Directly owned resource counts by Kubernetes kind.
 
     Attributes:
+        NetworkPolicy (int): Number of owned transport policies.
+        AuthorizationPolicy (int): Number of owned Istio authorization policies.
+        PeerAuthentication (int): Number of owned mutual TLS policies.
         Job (int): Number of owned Job resources.
         Deployment (int): Number of owned Deployment resources.
         Service (int): Number of owned Service resources.
@@ -284,6 +287,9 @@ class ResourceCounts(AST):
         PolyGraph (int): Number of PolyGraph boundaries.
     """
 
+    NetworkPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned transport policies."}})
+    AuthorizationPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned Istio authorization policies."}})
+    PeerAuthentication: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned mutual TLS policies."}})
     Job: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Job resources."}})
     Deployment: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Deployment resources."}})
     Service: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Service resources."}})

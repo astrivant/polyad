@@ -52,6 +52,10 @@ imported. Kubernetes remains authoritative and rescans repopulate notifications;
 expect a reconciliation pause while the new cache starts. Review and remove the
 old `data-<release>-dragonfly-0` PVC separately when it is no longer needed.
 
+See the [networking guide](../../docs/networking.md) for scoped graph isolation,
+optional Istio installation and endpoint authorization, event subscribers, and
+Secret-driven health replacement. Both networking integrations are disabled by default.
+
 ## Parameters
 
 ### Operator and shared queue parameters
@@ -99,6 +103,7 @@ old `data-<release>-dragonfly-0` PVC separately when it is no longer needed.
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | `api.enabled`                     | Serve authenticated composition requests on port 8090 through a ClusterIP Service                                                | `false`      |
 | `api.existingSecret`              | Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads                            | `polyad-api` |
+| `api.key`                         | Inline composition token; creates a managed Secret and requires existingSecret to be empty                                       | `""`         |
 | `api.rateLimit.enabled`           | Enforce shared Redis/Dragonfly composition request quotas on every logical shard                                                 | `true`       |
 | `api.rateLimit.requestsPerMinute` | Combined submission and audit requests per minute per shard, shared by all replicas                                              | `60`         |
 | `api.gateway.enabled`             | Expose the composition Service through a Gateway API v1 HTTPRoute; requires api.enabled                                          | `false`      |
@@ -109,5 +114,49 @@ old `data-<release>-dragonfly-0` PVC separately when it is no longer needed.
 | `api.gateway.sectionName`         | Listener name to attach to or create                                                                                             | `http`       |
 | `api.gateway.hostnames`           | DNS hostnames matched by the HTTPRoute; empty matches all listener hostnames                                                     | `[]`         |
 | `api.gateway.tlsSecret`           | Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80 | `""`         |
+
+### Event subscriptions
+
+| Name                    | Description                                                                               | Value           |
+| ----------------------- | ----------------------------------------------------------------------------------------- | --------------- |
+| `events.enabled`        | Serve namespace graph observations through a separate SSE Service on port 8091            | `false`         |
+| `events.existingSecret` | Existing Secret containing a token key for read-only event subscriptions                  | `polyad-events` |
+| `events.key`            | Inline subscriber token; creates a managed Secret and requires existingSecret to be empty | `""`            |
+| `events.retention`      | Maximum observations retained in the shared replay stream                                 | `10000`         |
+| `events.maxConnections` | Maximum simultaneous event subscribers per operator replica                               | `16`            |
+
+### Operator endpoint and cache isolation
+
+| Name                             | Description                                                                              | Value   |
+| -------------------------------- | ---------------------------------------------------------------------------------------- | ------- |
+| `networkPolicy.enabled`          | Isolate operator pods; requires explicit Kubernetes API and cache egress rules           | `false` |
+| `networkPolicy.apiServerCIDRs`   | Kubernetes API endpoint CIDRs reachable through this cluster's CNI                       | `[]`    |
+| `networkPolicy.apiServerPort`    | Kubernetes API endpoint port after this cluster's service translation                    | `443`   |
+| `networkPolicy.compositionPeers` | NetworkPolicy peers allowed to connect to the composition API                            | `[]`    |
+| `networkPolicy.eventPeers`       | NetworkPolicy peers allowed to subscribe to events                                       | `[]`    |
+| `networkPolicy.healthPeers`      | Optional monitoring peers allowed to read port 8080 health metrics                       | `[]`    |
+| `networkPolicy.extraEgress`      | Additional NetworkPolicy egress rules, including any external cache or DNS configuration | `[]`    |
+
+### Optional Istio integration
+
+| Name                                  | Description                                                                               | Value   |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- | ------- |
+| `mesh.enabled`                        | Allow graph HTTP and service-identity authorization and generate Istio security resources | `false` |
+| `mesh.install`                        | Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled     | `false` |
+| `mesh.operator.enabled`               | Inject the operator pods and authorize their API and event ports with Istio               | `false` |
+| `mesh.operator.compositionPrincipals` | Exact mTLS source identities allowed to use the composition endpoint                      | `[]`    |
+| `mesh.operator.eventPrincipals`       | Exact mTLS source identities allowed to subscribe to events                               | `[]`    |
+| `mesh.ingress.enabled`                | Install the optional upstream Istio gateway dependency                                    | `false` |
+| `mesh.ingress.hosts`                  | Hosts served by the Istio Gateway and VirtualService                                      | `[]`    |
+| `mesh.ingress.tlsSecret`              | TLS credential Secret in the gateway namespace, required when exposing the APIs           | `""`    |
+| `istioBase`                           | Upstream Istio base chart overrides                                                       | `{}`    |
+| `istiod`                              | Upstream Istio control-plane chart overrides                                              | `{}`    |
+| `istioIngress`                        | Upstream Istio gateway chart overrides                                                    | `{}`    |
+
+### Shared Istio namespace
+
+| Name                    | Description                                                                                  | Value          |
+| ----------------------- | -------------------------------------------------------------------------------------------- | -------------- |
+| `global.istioNamespace` | Istio control-plane namespace; must equal the release namespace when mesh.install is enabled | `istio-system` |
 
 <!-- The parameters table is maintained by the helm-readme-generator pre-commit hook. -->

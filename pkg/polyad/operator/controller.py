@@ -18,6 +18,7 @@ from polyad.compiler import asts
 from polyad.compiler.audit import trace_child
 from polyad.compiler.children import child_name as compile_child_name
 from polyad.compiler.children import owned_child
+from polyad.compiler.network import configure_pod
 from polyad.compiler.storage import configure_storage, storage_fields
 from polyad.graph.gates import DelayGate, Gate
 from polyad.graph.topology import converter, topology
@@ -25,6 +26,7 @@ from polyad.operator.api import GROUP
 from polyad.operator.compositions import drain_composition, reconcile_composition
 from polyad.operator.graph_status import instance_metrics
 from polyad.operator.graph_status import observed as observed
+from polyad.operator.network import POLICY_KINDS, context, ensure_policies
 from polyad.operator.placement import merge_placement, place_pod
 from polyad.operator.rules import check_rules
 
@@ -177,7 +179,8 @@ class Controller:
         if obj["kind"] == "Composition":
             return await drain_composition(self, obj)
         children = await self.api.owned(meta["namespace"], meta["uid"])
-        for child in children:
+        work = [child for child in children if child["kind"] not in POLICY_KINDS]
+        for child in work or children:
             if not child["metadata"].get("deletionTimestamp"):
                 await self.api.delete(child)
         return not children
@@ -386,6 +389,18 @@ class Controller:
             ).get(f"{GROUP}/desired-hash"):
                 raise Pending("waiting for resource replacement", phase="Draining")
             return current
+        document = asts.to_document(desired)
+        pod = document.get("spec", {}).get("template", {}) if kind in {"Job", "Deployment"} else {}
+        if pod.get("metadata", {}).get("annotations", {}).get("sidecar.istio.io/inject") == "true":
+            probe = copy.deepcopy(pod)
+            probe.update(apiVersion="v1", kind="Pod")
+            probe["metadata"].update(namespace=meta.namespace, generateName="polyad-injection-check-")
+            admitted = await self.api.request("POST", "Pod", meta.namespace, body=probe, query=[("dryRun", "All")])
+            if not any(
+                container.get("name") == "istio-proxy" and container.get("restartPolicy") == "Always"
+                for container in admitted.get("spec", {}).get("initContainers", [])
+            ):
+                raise ValueError("Istio native sidecar injection must succeed before admitting mesh workloads")
         await self.api.request("POST", kind, meta.namespace, body=desired)
         return None  # Creation acknowledgement is not readiness; observe it on a fresh pass.
 
@@ -430,6 +445,7 @@ class Controller:
         desired: dict[str, asts.Resource] = {}
         rule_reports = await check_rules(self.api, namespace, obj["kind"], obj["spec"])
         persistence = {}
+        network_plans = {}
         names = {node.name: child_name(obj, node.name) for node in graph.nodes}
         for node in graph.nodes:
             definition = await self.definition(node.kind, namespace, node.ref)
@@ -439,6 +455,9 @@ class Controller:
             if node.kind in {"Workload", "Ephemeral", "Daemon"}:
                 persistence[node.name] = configure_storage(spec, ephemeral=ephemeral or node.kind == "Ephemeral")
                 pod = spec["template"]
+                labels, scopes = await context(self.api, obj, node.name)
+                network_plans[node.name] = scopes
+                configure_pod(pod, labels, isolated=bool(scopes), mesh=any(scope.access.mesh for scope in scopes))
                 pod_spec = pod["spec"]
                 effective = merge_placement(placement, spec.get("placement"))
                 if node.kind == "Ephemeral" and not effective:
@@ -488,7 +507,12 @@ class Controller:
                 spec["templateOnly"] = False
                 if graph.rules:
                     target_spec = spec["graph"] if node.kind == "Feedback" else spec
-                    target_spec["rules"] = sorted(set(target_spec.get("rules", [])) | set(graph.rules))
+                    inherited_rules = set()
+                    for rule_name in graph.rules:
+                        rule = await self.definition("GraphRule", namespace, rule_name)
+                        if rule["spec"].get("scope", "Subtree") == "Subtree":
+                            inherited_rules.add(rule_name)
+                    target_spec["rules"] = sorted(set(target_spec.get("rules", [])) | inherited_rules)
                 if placement:
                     if node.kind == "Feedback":
                         spec["graph"]["placement"] = merge_placement(placement, spec["graph"].get("placement"))
@@ -520,7 +544,8 @@ class Controller:
                         ),
                     )
             desired[node.name] = trace_child(desired[node.name], obj, node, definition)
-        children = await self.api.owned(namespace, meta["uid"])
+        await ensure_policies(self, obj, network_plans)
+        children = [child for child in await self.api.owned(namespace, meta["uid"]) if child["kind"] not in POLICY_KINDS]
         present_names = {child["metadata"]["name"] for child in children}
         for name, present_storage in persistence.items():
             if present_storage.enabled and desired[name].metadata.name in present_names:
@@ -529,7 +554,8 @@ class Controller:
         obsolete = [
             child
             for child in children
-            if wanted.get(child["metadata"]["name"]) != child["metadata"].get("annotations", {}).get(f"{GROUP}/desired-hash")
+            if child["kind"] not in POLICY_KINDS
+            and wanted.get(child["metadata"]["name"]) != child["metadata"].get("annotations", {}).get(f"{GROUP}/desired-hash")
         ]
         if obsolete:
             await self.status(

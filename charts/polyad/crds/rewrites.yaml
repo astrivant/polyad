@@ -53,6 +53,187 @@ spec:
               topology:
                 type: object
                 properties:
+                  network:
+                    type: object
+                    description: Isolate a graph subtree and intersect its exceptions with inherited constraints.
+                    properties:
+                      scope:
+                        type: string
+                        enum:
+                        - Boundary
+                        - Subtree
+                        description: Apply to direct workloads or propagate to all descendant workloads.
+                      ingress:
+                        type: array
+                        items:
+                          type: object
+                          description: Allow one peer on selected ports, with optional inbound mesh authorization.
+                          properties:
+                            peer:
+                              type: object
+                              description: Select peers in an explicit namespace, optionally by graph or pod labels.
+                              properties:
+                                namespace:
+                                  type: string
+                                  nullable: true
+                                  description: Peer namespace; omitted means this graph's namespace.
+                                graph:
+                                  type: string
+                                  nullable: true
+                                  description: Named graph instance; omitted with node selects a node in this boundary.
+                                kind:
+                                  type: string
+                                  enum:
+                                  - Graph
+                                  - PolyGraph
+                                  - EphemeralGraph
+                                  - Feedback
+                                  description: Kind of the referenced graph instance.
+                                node:
+                                  type: string
+                                  nullable: true
+                                  description: Node and its descendants inside the selected graph.
+                                podLabels:
+                                  type: object
+                                  additionalProperties:
+                                    type: string
+                                  description: Additional exact pod-label matches, combined with graph selection.
+                            ports:
+                              type: array
+                              items:
+                                type: object
+                                description: Select a transport port on the destination workload.
+                                properties:
+                                  port:
+                                    type: integer
+                                    description: Destination transport port.
+                                    minimum: 1
+                                    maximum: 65535
+                                  protocol:
+                                    type: string
+                                    enum:
+                                    - TCP
+                                    - UDP
+                                    - SCTP
+                                    description: Transport protocol.
+                                required:
+                                - port
+                              description: Destination ports; empty means every transport port.
+                            node:
+                              type: string
+                              nullable: true
+                              description: Local node subtree to which this rule applies; omitted selects every local node.
+                            principals:
+                              type: array
+                              items:
+                                type: string
+                              description: Exact Istio source identities such as cluster.local/ns/team/sa/client.
+                            methods:
+                              type: array
+                              items:
+                                type: string
+                              description: Allowed inbound HTTP methods; empty leaves methods unconstrained.
+                            paths:
+                              type: array
+                              items:
+                                type: string
+                              description: Exact inbound HTTP paths; empty leaves paths unconstrained.
+                          required:
+                          - peer
+                        description: Additional allowed inbound traffic.
+                      egress:
+                        type: array
+                        items:
+                          type: object
+                          description: Allow one peer on selected ports, with optional inbound mesh authorization.
+                          properties:
+                            peer:
+                              type: object
+                              description: Select peers in an explicit namespace, optionally by graph or pod labels.
+                              properties:
+                                namespace:
+                                  type: string
+                                  nullable: true
+                                  description: Peer namespace; omitted means this graph's namespace.
+                                graph:
+                                  type: string
+                                  nullable: true
+                                  description: Named graph instance; omitted with node selects a node in this boundary.
+                                kind:
+                                  type: string
+                                  enum:
+                                  - Graph
+                                  - PolyGraph
+                                  - EphemeralGraph
+                                  - Feedback
+                                  description: Kind of the referenced graph instance.
+                                node:
+                                  type: string
+                                  nullable: true
+                                  description: Node and its descendants inside the selected graph.
+                                podLabels:
+                                  type: object
+                                  additionalProperties:
+                                    type: string
+                                  description: Additional exact pod-label matches, combined with graph selection.
+                            ports:
+                              type: array
+                              items:
+                                type: object
+                                description: Select a transport port on the destination workload.
+                                properties:
+                                  port:
+                                    type: integer
+                                    description: Destination transport port.
+                                    minimum: 1
+                                    maximum: 65535
+                                  protocol:
+                                    type: string
+                                    enum:
+                                    - TCP
+                                    - UDP
+                                    - SCTP
+                                    description: Transport protocol.
+                                required:
+                                - port
+                              description: Destination ports; empty means every transport port.
+                            node:
+                              type: string
+                              nullable: true
+                              description: Local node subtree to which this rule applies; omitted selects every local node.
+                            principals:
+                              type: array
+                              items:
+                                type: string
+                              description: Exact Istio source identities such as cluster.local/ns/team/sa/client.
+                            methods:
+                              type: array
+                              items:
+                                type: string
+                              description: Allowed inbound HTTP methods; empty leaves methods unconstrained.
+                            paths:
+                              type: array
+                              items:
+                                type: string
+                              description: Exact inbound HTTP paths; empty leaves paths unconstrained.
+                          required:
+                          - peer
+                        description: Additional allowed outbound traffic.
+                      isolateIngress:
+                        type: boolean
+                        description: Restrict incoming connections.
+                      isolateEgress:
+                        type: boolean
+                        description: Restrict outgoing connections.
+                      allowWithin:
+                        type: boolean
+                        description: Allow traffic between all workloads inside this boundary.
+                      allowDNS:
+                        type: boolean
+                        description: Allow TCP/UDP 53 to kube-system pods labeled k8s-app=kube-dns.
+                      mesh:
+                        type: boolean
+                        description: Require Istio injection, strict mutual TLS and inbound authorization.
                   rules:
                     type: array
                     description: Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide
@@ -158,6 +339,27 @@ spec:
                     items:
                       type: object
                       properties:
+                        ports:
+                          type: array
+                          description: Destination transport grants; omitted connections remain data-flow declarations.
+                          items:
+                            type: object
+                            description: Select a transport port on the destination workload.
+                            properties:
+                              port:
+                                type: integer
+                                description: Destination transport port.
+                                minimum: 1
+                                maximum: 65535
+                              protocol:
+                                type: string
+                                enum:
+                                - TCP
+                                - UDP
+                                - SCTP
+                                description: Transport protocol.
+                            required:
+                            - port
                         source:
                           type: string
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$

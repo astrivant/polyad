@@ -1,0 +1,165 @@
+"""
+Publish namespace observations to a bounded Redis stream shared by operator replicas.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import re
+from typing import TYPE_CHECKING, cast
+
+from redis.exceptions import ResponseError
+
+from polyad.cache import Cache
+from polyad.compiler.asts import GROUP
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable
+    from typing import Any
+
+PUBLISH = """
+if redis.call('HGET', KEYS[2], ARGV[1]) == ARGV[2] then return false end
+if redis.call('HLEN', KEYS[2]) >= tonumber(ARGV[4]) and redis.call('HEXISTS', KEYS[2], ARGV[1]) == 0 then
+    redis.call('DEL', KEYS[2])
+end
+local id = redis.call('XADD', KEYS[1], 'MAXLEN', ARGV[4], '*', 'event', ARGV[3])
+redis.call('HSET', KEYS[2], ARGV[1], ARGV[2])
+redis.call('EXPIRE', KEYS[2], 86400)
+return id
+"""
+
+
+READ = """
+local first = redis.call('XRANGE', KEYS[1], '-', '+', 'COUNT', 1)
+local function older(a, b)
+    local am, as = string.match(a, '^(%d+)%-(%d+)$')
+    local bm, bs = string.match(b, '^(%d+)%-(%d+)$')
+    if #am ~= #bm then return #am < #bm end
+    if am ~= bm then return am < bm end
+    if #as ~= #bs then return #as < #bs end
+    return as < bs
+end
+if ARGV[1] ~= '0-0' and (#first == 0 or older(ARGV[1], first[1][1])) then
+    return redis.error_reply('CURSOR_EXPIRED')
+end
+return redis.call('XRANGE', KEYS[1], '(' .. ARGV[1], '+', 'COUNT', 64)
+"""
+
+
+class CursorExpired(ValueError):
+    """
+    Require a fresh Kubernetes/API snapshot after the bounded replay window expires.
+    """
+
+
+class EventStore:
+    """
+    Share at-least-once observation delivery without retaining workload payloads or credentials.
+    """
+
+    def __init__(self, url: str, namespace: str, *, retention: int = 10000) -> None:
+        """
+        Configure the namespace stream and maximum retained event count.
+
+        Args:
+            url (str): Shared Redis or Dragonfly URL.
+            namespace (str): Namespace visible to subscribers.
+            retention (int): Maximum retained observations and deduplication identities.
+        """
+        if not 100 <= retention <= 100000:
+            raise ValueError("event retention must be between 100 and 100000")
+        self.cache = Cache(url, namespace)
+        self.key = f"polyad:{{events:{namespace}}}:observations"
+        self.retention = retention
+
+    async def publish(self, obj: dict[str, Any]) -> None:
+        """
+        Atomically deduplicate an observed revision and append a small audit-linked event.
+
+        Args:
+            obj (dict[str, Any]): Fresh graph or composition observation from the owning shard.
+
+        Returns:
+            None: No return value.
+        """
+        meta, status = obj["metadata"], obj.get("status", {})
+        metrics = status.get("metrics", {})
+        payload = {
+            "type": "deleting" if meta.get("deletionTimestamp") else "observation",
+            "apiVersion": obj["apiVersion"],
+            "kind": obj["kind"],
+            "namespace": meta["namespace"],
+            "name": meta["name"],
+            "uid": meta["uid"],
+            "resourceVersion": meta["resourceVersion"],
+            "generation": meta.get("generation", 1),
+            "owners": [{key: owner[key] for key in ("kind", "name", "uid")} for owner in meta.get("ownerReferences", [])],
+            "audit": {
+                key: value
+                for key, value in meta.get("labels", {}).items()
+                if key.startswith(f"{GROUP}/") and any(part in key for part in ("request", "composition", "node"))
+            },
+            "status": {key: status[key] for key in ("phase", "ready", "completed", "failed", "observedGeneration") if key in status},
+            "resources": metrics.get("resources", {}),
+        }
+        await cast(
+            "Awaitable[Any]",
+            self.cache.client.eval(
+                PUBLISH, 2, self.key, self.key + ":versions", meta["uid"], meta["resourceVersion"], json.dumps(payload), str(self.retention)
+            ),
+        )
+
+    async def cursor(self, supplied: str | None) -> str:
+        """
+        Validate a reconnect cursor or begin after the latest retained observation.
+
+        Args:
+            supplied (str | None): Last-Event-ID header, or None for live observations.
+
+        Returns:
+            str: Redis stream cursor valid at the time of this read.
+        """
+        if supplied is not None and not re.fullmatch(r"(?:0|[1-9][0-9]{0,19})-(?:0|[1-9][0-9]{0,19})", supplied):
+            raise ValueError("Last-Event-ID must be a Redis stream ID")
+        first = await self.cache.client.xrange(self.key, count=1)
+        if supplied is not None:
+            if supplied != "0-0" and (not first or tuple(map(int, supplied.split("-"))) < tuple(map(int, first[0][0].split("-")))):
+                raise CursorExpired("event cursor expired; refresh graph status before reconnecting")
+            last = await self.cache.client.xrevrange(self.key, count=1)
+            if last and tuple(map(int, supplied.split("-"))) > tuple(map(int, last[0][0].split("-"))):
+                raise ValueError("event cursor is ahead of the stream")
+            return supplied
+        last = await self.cache.client.xrevrange(self.key, count=1)
+        return last[0][0] if last else "0-0"
+
+    async def read(self, cursor: str) -> list[tuple[str, str]]:
+        """
+        Read a bounded batch without blocking the scheduler's event loop.
+
+        Args:
+            cursor (str): Last observation delivered to this subscriber.
+
+        Returns:
+            list[tuple[str, str]]: Stream IDs and serialized JSON observations.
+        """
+        if not re.fullmatch(r"(?:0|[1-9][0-9]{0,19})-(?:0|[1-9][0-9]{0,19})", cursor):
+            raise ValueError("invalid event cursor")
+        try:
+            entries = await cast("Awaitable[Any]", self.cache.client.eval(READ, 1, self.key, cursor))
+        except ResponseError as error:
+            if "CURSOR_EXPIRED" in str(error):
+                raise CursorExpired("event cursor expired") from error
+            raise
+        if not entries:
+            await asyncio.sleep(1)
+        return [(identity, fields[1]) for identity, fields in entries]
+
+    async def close(self) -> None:
+        """
+        Close the connection pool after publishers and subscribers stop.
+
+        Returns:
+            None: No return value.
+        """
+        await self.cache.close()

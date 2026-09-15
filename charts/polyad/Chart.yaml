@@ -11,3 +11,17 @@ dependencies:
     version: v1.6.1
     repository: oci://ghcr.io/dragonflydb/dragonfly-operator/helm
     condition: dragonfly.enabled
+  - name: base
+    alias: istioBase
+    version: 1.30.4
+    repository: https://istio-release.storage.googleapis.com/charts
+    condition: mesh.install
+  - name: istiod
+    version: 1.30.4
+    repository: https://istio-release.storage.googleapis.com/charts
+    condition: mesh.install
+  - name: gateway
+    alias: istioIngress
+    version: 1.30.4
+    repository: https://istio-release.storage.googleapis.com/charts
+    condition: mesh.ingress.enabled

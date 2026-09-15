@@ -11,6 +11,8 @@ import networkx as nx
 import numpy as np
 from attrs import field, frozen
 
+from polyad.graph.network import NetworkAccess
+
 if TYPE_CHECKING:
     from typing import Any
 
@@ -54,18 +56,22 @@ class StructuralRule:
     Apply reusable mathematical constraints to each graph boundary and its subtree.
 
     Attributes:
+        scope (Literal['Boundary', 'Subtree']): Whether selected rules propagate to descendant boundaries.
         enforcement (Literal['Namespace', 'Referenced']): Mandatory namespace policy or explicitly selected rule.
         relation (Literal['admission', 'connections']): Directed edge relation used for local measurements.
         limits (dict[str, int]): Inclusive upper bounds on named combinatorial measurements.
         shapes (tuple[Literal['acyclic', 'connected', 'tree', 'planar'], ...]): Required graph properties.
         spectrum (Spectrum | None): Optional undirected spectral constraints, limited to 256 vertices.
+        network (NetworkAccess | None): Mandatory or referenced traffic restrictions inherited by graph descendants.
     """
 
+    scope: Literal["Boundary", "Subtree"] = "Subtree"
     enforcement: Literal["Namespace", "Referenced"] = "Namespace"
     relation: Literal["admission", "connections"] = "admission"
     limits: dict[str, int] = field(factory=dict)
     shapes: tuple[Literal["acyclic", "connected", "tree", "planar"], ...] = ()
     spectrum: Spectrum | None = None
+    network: NetworkAccess | None = None
 
     def __attrs_post_init__(self) -> None:
         """
@@ -74,6 +80,8 @@ class StructuralRule:
         Returns:
             None: No return value.
         """
+        if self.scope not in {"Boundary", "Subtree"}:
+            raise ValueError("unknown rule scope")
         if self.enforcement not in {"Namespace", "Referenced"} or self.relation not in {"admission", "connections"}:
             raise ValueError("unknown rule enforcement or graph relation")
         if set(self.limits) - LIMITS or any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in self.limits.values()):

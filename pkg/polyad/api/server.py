@@ -9,6 +9,7 @@ import logging
 from threading import BoundedSemaphore, Event, Lock, Thread
 from typing import TYPE_CHECKING
 
+from flask import jsonify
 from waitress import wasyncore
 from waitress.server import create_server
 
@@ -16,11 +17,14 @@ from polyad.api.app import Conflict, Unavailable
 from polyad.api.builder import APIBuilder
 from polyad.api.limits import RateLimitPolicy
 from polyad.api.store import CompositionStore
+from polyad.operator.health import lifecycle
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from concurrent.futures import Future
     from typing import Any
+
+    from flask import Response
 
     from polyad.operator.api import API
 
@@ -57,6 +61,13 @@ class CompositionServer:
             .with_rate_limits(RateLimitPolicy.from_environment(namespace))
             .build()
         )
+
+        @app.before_request
+        def retiring() -> tuple[Response, int] | None:
+            if lifecycle.replacement.is_set() or lifecycle.draining.is_set():
+                return jsonify(error="replica is retiring; reconnect to a healthy replica"), 503
+            return None
+
         self.limiter = app.extensions["polyad.limiter"]
         self.sockets: wasyncore._SocketMap = {}
         self.server = create_server(

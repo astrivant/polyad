@@ -1,7 +1,7 @@
 # Development toolchain
 
-Polyad shares Astrivant's pre-commit tooling and four-space Python and shell
-formatting. `.tool-versions` pins the local and CI tools; `.python-version` keeps
+Polyad uses pre-commit checks and four-space indentation for Python and shell
+scripts. `.tool-versions` pins the local and CI tools; `.python-version` keeps
 the Python 3.13 interpreter selected. `.editorconfig` supplies editor indentation.
 
 ## Setup
@@ -43,6 +43,17 @@ git ls-files -z --cached --others --exclude-standard -- '*.sh' '*.bash' | xargs 
 poetry run pre-commit run --all-files
 poetry run pytest
 ```
+
+Pytest runs in parallel locally and in CI through the `pytest-xdist` development
+dependency. The project defaults to automatic CPU-based worker selection, capped
+at eight workers. Work stealing redistributes pending tests as workers finish.
+The installed-wheel typing checks use the same configuration.
+
+Use `poetry run pytest -n 4` to choose a worker count, or
+`poetry run pytest -n 0` for serial debugging. See the
+[pytest-xdist execution options](https://pytest-xdist.readthedocs.io/en/latest/distribution.html).
+Redis/Dragonfly integration tests use unique namespaces, local socket tests bind
+ephemeral ports, and file-writing tests use pytest's isolated temporary directories.
 
 The hooks check Google-style docstrings with pydocstyle and pydoclint, Python
 lint and formatting with Ruff, types with mypy, shell scripts with ShellCheck
@@ -120,6 +131,33 @@ The wheel ships inline annotations and the package-root `py.typed` marker. CI
 installs that wheel into a consumer environment and checks positive and negative
 Mypy contracts, including generic `PolyGraph` references. There is no separate
 stub package to keep synchronized.
+
+## Version tags
+
+After every successful Test workflow for a push on `main`,
+`.github/workflows/tag.yml` receives its completion event. It waits for the Python,
+chart and both operator integration jobs, then tags that exact tested commit as `v<tool.poetry.version>` from
+`pyproject.toml`. Pull requests and other branches cannot create tags.
+
+The first passing commit for a new version creates its tag. Later builds with
+the same version leave the existing tag unchanged; bump the package version to
+create another tag. Supported versions are `X.Y.Z` and Python prereleases such as
+`X.Y.Zrc1`. Tag creation is serialized and only the tagging job gets repository
+write permission. The workflow does not publish packages, images or Helm charts.
+
+Tags use `GITHUB_TOKEN`, so creating one does not start another push-triggered
+workflow. The Publish to PyPI workflow accepts a manual version-tag input for these automatically created tags.
+User-pushed version tags start it directly.
+See [GitHub's workflow trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+
+## Verified package releases
+
+The release path follows `hypothesis-helm`: reusable CI verifies the tagged source,
+checks its version against Poetry metadata, builds a wheel and source distribution,
+and uploads them as `python-distributions-<version>`. The publishing job downloads
+those exact artifacts, runs in the `pypi` environment and uses its `PYPI_API_TOKEN`
+Secret. Configure environment protection and that credential before publishing.
+Pre-release tags are normalized by `.github/release-version.py`.
 
 ## Helm documentation
 

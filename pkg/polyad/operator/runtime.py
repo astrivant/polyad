@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 import kopf
 
+from polyad.operator.health import lifecycle
+
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from types import FrameType
@@ -113,9 +115,13 @@ def main() -> None:
         Returns:
             None: No return value.
         """
-        runtime.stop()
+        if signum == signal.SIGHUP:
+            lifecycle.replacement.set()
+        else:
+            lifecycle.draining.set()
+            runtime.stop()
 
-    previous = {sig: signal.signal(sig, stop) for sig in (signal.SIGTERM, signal.SIGINT)}
+    previous = {sig: signal.signal(sig, stop) for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
     try:
         runtime.start()
         runtime.join()

@@ -1,4 +1,4 @@
-# Shared local/CI pins; formatter versions match ../astrivant.
+# Pinned tool versions for local development and CI.
 python 3.13.12
 nodejs 24.14.0
 poetry 2.1.3

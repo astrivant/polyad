@@ -7,6 +7,10 @@ from __future__ import annotations
 from polyad.graph.gates import DelayGate as DelayGate
 from polyad.graph.metrics import measure_topology as measure_topology
 from polyad.graph.metrics import topology_metrics as topology_metrics
+from polyad.graph.network import NetworkAccess as NetworkAccess
+from polyad.graph.network import NetworkPeer as NetworkPeer
+from polyad.graph.network import NetworkPort as NetworkPort
+from polyad.graph.network import TrafficRule as TrafficRule
 from polyad.graph.operations import Operation as Operation
 from polyad.graph.operations import OperationQueue as OperationQueue
 from polyad.graph.operations import ProcessOwner as ProcessOwner

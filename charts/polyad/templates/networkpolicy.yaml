@@ -1,0 +1,132 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- if not .Values.networkPolicy.apiServerCIDRs }}{{ fail "networkPolicy.apiServerCIDRs must identify the cluster API endpoint" }}{{ end }}
+{{- if and (or (not .Values.dragonfly.enabled) .Values.dragonfly.existingSecret) (not .Values.networkPolicy.extraEgress) }}
+{{- fail "an external cache requires networkPolicy.extraEgress" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad
+  policyTypes: [Ingress, Egress]
+  ingress:{{ if not (or .Values.networkPolicy.compositionPeers .Values.networkPolicy.eventPeers .Values.networkPolicy.healthPeers .Values.mesh.ingress.enabled) }} []{{ end }}
+    {{- with .Values.networkPolicy.compositionPeers }}
+    - from:
+        {{- toYaml . | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: 8090
+    {{- end }}
+    {{- with .Values.networkPolicy.eventPeers }}
+    - from:
+        {{- toYaml . | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: 8091
+    {{- end }}
+    {{- with .Values.networkPolicy.healthPeers }}
+    - from:
+        {{- toYaml . | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    {{- end }}
+    {{- if .Values.mesh.ingress.enabled }}
+    - from:
+        - podSelector:
+            matchLabels:
+              istio: polyad-ingress
+      ports:
+        - {protocol: TCP, port: 8090}
+        - {protocol: TCP, port: 8091}
+    {{- end }}
+  egress:
+    - to:
+        {{- range .Values.networkPolicy.apiServerCIDRs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.apiServerPort }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - {protocol: TCP, port: 53}
+        - {protocol: UDP, port: 53}
+    {{- if .Values.dragonfly.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-queue
+      ports:
+        - {protocol: TCP, port: 6379}
+    {{- end }}
+    {{- if .Values.mesh.operator.enabled }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.global.istioNamespace | quote }}
+          podSelector:
+            matchLabels:
+              app: istiod
+      ports:
+        - {protocol: TCP, port: 15012}
+    {{- end }}
+    {{- with .Values.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- if and .Values.networkPolicy.enabled .Values.dragonfly.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-queue
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-queue
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/name: polyad
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/name: {{ .Values.dragonflyOperator.nameOverride }}
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-queue
+      ports:
+        - {protocol: TCP, port: 6379}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-queue
+      ports:
+        - {protocol: TCP, port: 6379}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - {protocol: TCP, port: 53}
+        - {protocol: UDP, port: 53}
+{{- end }}

@@ -34,6 +34,7 @@ types-networkx = "^3.6.1.20260911"
 types-waitress = ">=3,<4"
 jsonschema = ">=4.26,<5"
 openapi-spec-validator = ">=0.7,<0.9"
+pytest-xdist = ">=3.8,<4"
 
 [tool.poetry.scripts]
 polyad-operator = "polyad.operator.runtime:main"
@@ -44,6 +45,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-n auto --maxprocesses=8 --dist=worksteal"
 
 [tool.ruff]
 src = [".", "pkg"]

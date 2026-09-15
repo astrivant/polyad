@@ -17,9 +17,19 @@ spec:
       app.kubernetes.io/name: polyad
   template:
     metadata:
+      annotations:
+        checksum/credentials: {{ include (print $.Template.BasePath "/credentials.yaml") . | sha256sum }}
+        {{- if .Values.mesh.operator.enabled }}
+        sidecar.istio.io/inject: "true"
+        sidecar.istio.io/nativeSidecar: "true"
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts":true}'
+        {{- end }}
       labels:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/name: polyad
+        {{- if .Values.mesh.operator.enabled }}
+        sidecar.istio.io/inject: "true"
+        {{- end }}
     spec:
       {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -45,6 +55,18 @@ spec:
             - --namespace={{ .Release.Namespace }}
             - --liveness=http://0.0.0.0:8080/healthz
           env:
+            {{- if .Values.mesh.operator.enabled }}
+            - name: POLYAD_OPERATOR_MESH_ENABLED
+              value: "true"
+            - name: POLYAD_MESH_INJECTION_STATUS
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['sidecar.istio.io/status']
+            {{- end }}
+            - name: POLYAD_MESH_ENABLED
+              value: {{ .Values.mesh.enabled | quote }}
+            - name: POLYAD_ISTIO_NAMESPACE
+              value: {{ .Values.global.istioNamespace | quote }}
             - name: POLYAD_CACHE_URL
               {{- if .Values.dragonfly.existingSecret }}
               valueFrom:
@@ -56,20 +78,44 @@ spec:
               {{- else }}
               value: {{ required "dragonfly.externalUrl or dragonfly.existingSecret is required when the bundled cache is disabled" .Values.dragonfly.externalUrl | quote }}
               {{- end }}
-            {{- if .Values.api.enabled }}
-            - name: POLYAD_API_ENABLED
-              value: "true"
+            {{- if or .Values.api.enabled .Values.events.enabled }}
             - name: POLYAD_API_RATE_LIMIT_ENABLED
               value: {{ .Values.api.rateLimit.enabled | quote }}
             - name: POLYAD_API_REQUESTS_PER_MINUTE
               value: {{ .Values.api.rateLimit.requestsPerMinute | quote }}
-            - name: POLYAD_API_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.api.existingSecret | quote }}
-                  key: token
+            {{- end }}
+            {{- if .Values.api.enabled }}
+            - name: POLYAD_API_ENABLED
+              value: "true"
+            - name: POLYAD_API_TOKEN_FILE
+              value: /var/run/polyad/api/token
+            {{- end }}
+            {{- if .Values.events.enabled }}
+            - name: POLYAD_EVENTS_ENABLED
+              value: "true"
+            - name: POLYAD_EVENTS_RETENTION
+              value: {{ .Values.events.retention | quote }}
+            - name: POLYAD_EVENTS_CONNECTIONS
+              value: {{ .Values.events.maxConnections | quote }}
+            - name: POLYAD_EVENTS_TOKEN_FILE
+              value: /var/run/polyad/events/token
+            {{- end }}
+          volumeMounts:{{ if not (or .Values.api.enabled .Values.events.enabled) }} []{{ end }}
+            {{- if .Values.api.enabled }}
+            - name: api-credentials
+              mountPath: /var/run/polyad/api
+              readOnly: true
+            {{- end }}
+            {{- if .Values.events.enabled }}
+            - name: events-credentials
+              mountPath: /var/run/polyad/events
+              readOnly: true
             {{- end }}
           ports:
+            {{- if .Values.events.enabled }}
+            - name: events
+              containerPort: 8091
+            {{- end }}
             {{- if .Values.api.enabled }}
             - name: composition
               containerPort: 8090
@@ -105,3 +151,20 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+      volumes:{{ if not (or .Values.api.enabled .Values.events.enabled) }} []{{ end }}
+        {{- if .Values.api.enabled }}
+        - name: api-credentials
+          secret:
+            secretName: {{ default (printf "%s-polyad-api" .Release.Name) .Values.api.existingSecret | quote }}
+            items:
+              - key: token
+                path: token
+        {{- end }}
+        {{- if .Values.events.enabled }}
+        - name: events-credentials
+          secret:
+            secretName: {{ default (printf "%s-polyad-events" .Release.Name) .Values.events.existingSecret | quote }}
+            items:
+              - key: token
+                path: token
+        {{- end }}

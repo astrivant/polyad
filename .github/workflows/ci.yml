@@ -1,7 +1,13 @@
 name: Test
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -9,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - name: Read shared tool versions
         id: tools
         run: |
@@ -23,6 +31,16 @@ jobs:
           cache: npm
           cache-dependency-path: scripts/mermaid/package-lock.json
       - run: pip install "poetry==${{ steps.tools.outputs.poetry }}"
+      - name: Validate distribution version
+        id: version
+        env:
+          BUILD_REF: ${{ inputs.ref || github.ref }}
+        run: |
+          if [[ "$BUILD_REF" == refs/tags/* ]]; then
+            python .github/release-version.py --tag "${BUILD_REF#refs/tags/}" --output "$GITHUB_OUTPUT"
+          else
+            python .github/release-version.py --output "$GITHUB_OUTPUT"
+          fi
       - run: poetry install
       - run: bash scripts/ci/install-helm-tools.sh helm shellcheck shfmt
       - run: helm dependency build charts/polyad
@@ -35,19 +53,29 @@ jobs:
             sleep 1
           done
           poetry run python -c "import redis; redis.Redis().ping()"
-      - run: poetry run pytest
+      - name: Run Python tests in parallel
+        run: poetry run pytest
         env:
           POLYAD_TEST_DRAGONFLY_URL: redis://localhost:6379/0
       - name: Check installed wheel typing
         run: |
-          poetry build --format wheel
+          poetry build
           poetry run python -m venv /tmp/polyad-typing
           /tmp/polyad-typing/bin/python -m pip install dist/*.whl
           POLYAD_TYPING_PYTHON=/tmp/polyad-typing/bin/python poetry run pytest tests/test_typing.py
+      - name: Upload verified distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions-${{ steps.version.outputs.version }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
   chart:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - run: bash scripts/ci/install-helm-tools.sh helm kubeconform
       - run: helm dependency build charts/polyad
       - uses: astrivant/hypothesis-helm@main
@@ -55,7 +83,7 @@ jobs:
           chart: charts/polyad
           max-examples: '10'
           # Test the public chart interface, including exposed dependency options.
-          match: 'not dragonflyOperator or replicaCount or (nameOverride and not fullnameOverride) or crds or extraArgs'
+          match: '(not dragonflyOperator or replicaCount or (nameOverride and not fullnameOverride) or crds or extraArgs) and not (istioBase or istiod or istioIngress or global) and (not mesh or mesh_enabled or mesh_operator or mesh_ingress_enabled or mesh_ingress_hosts or mesh_ingress_tlsSecret)'
           kubeconform: 'true'
           kubeconform-binary: scripts/kubeconform.sh
           schema-version: '1.35.0'
@@ -69,6 +97,8 @@ jobs:
       POLYAD_TEST_DRAGONFLY_HA: ${{ matrix.dragonfly-ha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - uses: helm/kind-action@v1
         with:
           cluster_name: polyad-test

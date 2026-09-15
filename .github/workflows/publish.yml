@@ -1,0 +1,58 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags: ['v[0-9]*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to verify and publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pypi-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: refs/tags/${{ inputs.tag || github.ref_name }}
+  publish:
+    needs: verify
+    environment: pypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install Poetry
+        run: pip install "poetry==$(bash scripts/tool-version.sh poetry)"
+      - name: Check release version
+        id: version
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: python .github/release-version.py --tag "$RELEASE_TAG" --output "$GITHUB_OUTPUT"
+      - name: Download verified distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions-${{ steps.version.outputs.version }}
+          path: dist/
+      - name: Publish wheel and source distribution
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [[ -z "$POETRY_PYPI_TOKEN_PYPI" ]]; then
+            echo '::error::Set PYPI_API_TOKEN in the pypi environment before publishing'
+            exit 1
+          fi
+          poetry publish --no-interaction

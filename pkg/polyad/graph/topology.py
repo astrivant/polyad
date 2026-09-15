@@ -10,6 +10,8 @@ from attrs import field, frozen
 from cattrs import Converter
 from cattrs.errors import CattrsError
 
+from polyad.graph.network import NetworkAccess, NetworkPort
+
 
 @frozen
 class Dependency:
@@ -58,10 +60,12 @@ class Connection:
     Attributes:
         source (str): Node emitting data on this connection.
         target (str): Node receiving data on this connection.
+        ports (tuple[NetworkPort, ...]): Optional transport grants when graph networking is enabled.
     """
 
     source: str
     target: str
+    ports: tuple[NetworkPort, ...] = ()
 
 
 @frozen
@@ -107,6 +111,7 @@ class Topology:
         templateOnly (bool): Whether this definition is instantiated only by a parent graph.
         placement (Placement | None): Scheduling constraints inherited by descendant execution.
         rules (tuple[str, ...]): Additional structural rules inherited by nested boundaries.
+        network (NetworkAccess | None): Optional traffic restrictions inherited by descendant workloads.
     """
 
     nodes: tuple[Node, ...]
@@ -118,6 +123,7 @@ class Topology:
     templateOnly: bool = False
     placement: Placement | None = field(default=None, kw_only=True)
     rules: tuple[str, ...] = field(default=(), kw_only=True)
+    network: NetworkAccess | None = field(default=None, kw_only=True)
 
     def __attrs_post_init__(self) -> None:
         """
@@ -129,6 +135,12 @@ class Topology:
         names = {node.name for node in self.nodes}
         if len(names) != len(self.nodes) or self.slots < 1:
             raise ValueError("nodes must be unique and capacity positive")
+        if self.network:
+            for rule in (*self.network.ingress, *self.network.egress):
+                if rule.node is not None and rule.node not in names:
+                    raise ValueError("network rule refers to an absent local node")
+                if rule.peer.node and not rule.peer.graph and rule.peer.node not in names:
+                    raise ValueError("network peer refers to an absent local node")
         by_name = {node.name: node for node in self.nodes}
         for node in self.nodes:
             if node.slots < 1 or node.slots > self.slots:
