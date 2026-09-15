@@ -71,6 +71,26 @@ def test_invalid_graph_types_are_rejected(tmp_path):
     assert any(":7: error:" in line and "[arg-type]" in line for line in errors), result.stdout
 
 
+def test_public_status_types(tmp_path):
+    """
+    Expose nested metrics as concrete types to library and installed-wheel consumers.
+    """
+    consumer = tmp_path / "status_consumer.py"
+    consumer.write_text(
+        "from typing import assert_type\n"
+        "from polyad.compiler.asts import GraphMetrics, TopologyMetrics, ExecutionMetrics\n"
+        "from polyad.compiler.schema import structural_schema\n"
+        "metrics = GraphMetrics(observedGeneration=2)\n"
+        "assert_type(metrics.topology, TopologyMetrics | None)\n"
+        "assert_type(metrics.execution, ExecutionMetrics | None)\n"
+        "assert_type(metrics.resources.byKind.Job, int)\n"
+        "assert_type(metrics.rollup.graphsByPhase.Ready, int)\n"
+        "schema = structural_schema(GraphMetrics)\n"
+    )
+    result = check_types(consumer)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_installed_wheel_has_inline_types(tmp_path):
     """
     Verify CI's consumer imports a marked installed package, outside the source checkout.

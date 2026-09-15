@@ -78,3 +78,25 @@ api:
   enabled: false
   ## @param api.existingSecret Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
   existingSecret: polyad-api
+  rateLimit:
+    ## @param api.rateLimit.enabled Enforce shared Redis/Dragonfly composition request quotas on every logical shard
+    enabled: true
+    ## @param api.rateLimit.requestsPerMinute Combined submission and audit requests per minute per shard, shared by all replicas
+    requestsPerMinute: 60
+  gateway:
+    ## @param api.gateway.enabled Expose the composition Service through a Gateway API v1 HTTPRoute; requires api.enabled
+    enabled: false
+    ## @param api.gateway.create Create a Gateway in this release namespace instead of attaching to an existing Gateway
+    create: false
+    ## @param api.gateway.name Existing Gateway name when create is false; created Gateways use the release API name
+    name: ''
+    ## @param api.gateway.namespace Existing Gateway namespace; empty uses the release namespace
+    namespace: ''
+    ## @param api.gateway.className Installed GatewayClass used when create is true
+    className: ''
+    ## @param api.gateway.sectionName Listener name to attach to or create
+    sectionName: http
+    ## @param api.gateway.hostnames [array] DNS hostnames matched by the HTTPRoute; empty matches all listener hostnames
+    hostnames: []
+    ## @param api.gateway.tlsSecret Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80
+    tlsSecret: ''

@@ -33,7 +33,7 @@ def _unstructure(value: AST) -> dict[str, Any]:
     result = copy.deepcopy(value.extra)
     for field in fields(type(value)):
         item = getattr(value, field.name)
-        if field.name != "extra" and item is not None:
+        if field.name != "extra" and (item is not None or field.metadata.get("emit_none", False)):
             result[field.name] = converter.unstructure(item)
     if isinstance(value, Resource):
         result.update(apiVersion=value.resource_type.api_version, kind=value.resource_type.kind)
@@ -79,13 +79,13 @@ converter.register_structure_hook_factory(_is_ast, _structure_factory)
 
 def to_document(value: AST) -> dict[str, Any]:
     """
-    Return an independent API document, omitting absent optional model fields.
+    Return an independent API document, retaining explicitly modeled merge-patch nulls.
 
     Args:
         value (AST): Model to serialize as a native API document.
 
     Returns:
-        dict[str, Any]: Independent native document with omitted absent optional fields.
+        dict[str, Any]: Native document; optional fields are omitted unless marked emit_none.
     """
     return copy.deepcopy(cast("dict[str, Any]", converter.unstructure(value)))
 

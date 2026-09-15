@@ -32,6 +32,21 @@ WRITE_BUDGET = 35
 active_shard: ContextVar[int | None] = ContextVar("polyad_shard", default=None)
 
 
+def root_shard(kind: str, namespace: str, name: str) -> int:
+    """
+    Map a root identity to its stable logical shard independently of replica ownership.
+
+    Args:
+        kind (str): Root resource kind.
+        namespace (str): Namespace containing the root.
+        name (str): Root resource name.
+
+    Returns:
+        int: Fixed shard shared by intake and reconciliation.
+    """
+    return int.from_bytes(hashlib.sha256(f"{namespace}/{kind}/{name}".encode()).digest()[:8]) % SHARDS
+
+
 class NotOwner(Exception):
     """
     Stop a pass when this replica cannot prove shard ownership.
@@ -212,7 +227,7 @@ class Coordinator:
             kind, name = owners[0]["kind"], owners[0]["name"]
         else:
             raise ValueError("graph ownership exceeds 64 levels")
-        return int.from_bytes(hashlib.sha256(f"{namespace}/{kind}/{name}".encode()).digest()[:8]) % SHARDS
+        return root_shard(kind, namespace, name)
 
     async def guard(self) -> None:
         """

@@ -494,6 +494,8 @@ spec:
                     failed:
                       type: boolean
                       description: Whether the node is failed.
+              # status.metrics is generated from polyad.compiler.asts.GraphMetrics.
+              # Regenerate with scripts/generate-status-schemas.py; edit the attrs models.
               metrics:
                 type: object
                 description: Graph instance metrics refreshed through the ordered, ownership-guarded API queue. Counts

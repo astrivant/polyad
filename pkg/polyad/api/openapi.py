@@ -256,7 +256,11 @@ def openapi_document(title: str, version: str) -> dict[str, Any]:
     errors = {
         "401": response("Missing or invalid bearer token.", "Error"),
         "422": response("Invalid IDs, reference structure or request fields.", "Error"),
-        "503": response("Acknowledgement unavailable; retry identical intent with the same requestId.", "Error"),
+        "429": {
+            **response("Shared shard request budget exhausted; retry with the same requestId after Retry-After.", "Error"),
+            "headers": {"Retry-After": {"description": "Seconds until retry is allowed.", "schema": {"type": "integer", "minimum": 0}}},
+        },
+        "503": response("Acknowledgement or rate-limit storage unavailable; retry identical intent with the same requestId.", "Error"),
     }
     spec.path(
         path="/v1/compositions",
@@ -311,6 +315,8 @@ def openapi_document(title: str, version: str) -> dict[str, Any]:
                         "content": {"application/json": {"schema": {"type": "object", "additionalProperties": True}}},
                     },
                     "401": errors["401"],
+                    "429": errors["429"],
+                    "503": errors["503"],
                 },
             }
         },

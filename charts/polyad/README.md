@@ -95,9 +95,19 @@ old `data-<release>-dragonfly-0` PVC separately when it is no longer needed.
 
 ### Composition API
 
-| Name                 | Description                                                                                           | Value        |
-| -------------------- | ----------------------------------------------------------------------------------------------------- | ------------ |
-| `api.enabled`        | Serve authenticated composition requests on port 8090 through a ClusterIP Service                     | `false`      |
-| `api.existingSecret` | Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads | `polyad-api` |
+| Name                              | Description                                                                                                                      | Value        |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `api.enabled`                     | Serve authenticated composition requests on port 8090 through a ClusterIP Service                                                | `false`      |
+| `api.existingSecret`              | Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads                            | `polyad-api` |
+| `api.rateLimit.enabled`           | Enforce shared Redis/Dragonfly composition request quotas on every logical shard                                                 | `true`       |
+| `api.rateLimit.requestsPerMinute` | Combined submission and audit requests per minute per shard, shared by all replicas                                              | `60`         |
+| `api.gateway.enabled`             | Expose the composition Service through a Gateway API v1 HTTPRoute; requires api.enabled                                          | `false`      |
+| `api.gateway.create`              | Create a Gateway in this release namespace instead of attaching to an existing Gateway                                           | `false`      |
+| `api.gateway.name`                | Existing Gateway name when create is false; created Gateways use the release API name                                            | `""`         |
+| `api.gateway.namespace`           | Existing Gateway namespace; empty uses the release namespace                                                                     | `""`         |
+| `api.gateway.className`           | Installed GatewayClass used when create is true                                                                                  | `""`         |
+| `api.gateway.sectionName`         | Listener name to attach to or create                                                                                             | `http`       |
+| `api.gateway.hostnames`           | DNS hostnames matched by the HTTPRoute; empty matches all listener hostnames                                                     | `[]`         |
+| `api.gateway.tlsSecret`           | Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80 | `""`         |
 
 <!-- The parameters table is maintained by the helm-readme-generator pre-commit hook. -->

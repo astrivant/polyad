@@ -59,6 +59,10 @@ spec:
             {{- if .Values.api.enabled }}
             - name: POLYAD_API_ENABLED
               value: "true"
+            - name: POLYAD_API_RATE_LIMIT_ENABLED
+              value: {{ .Values.api.rateLimit.enabled | quote }}
+            - name: POLYAD_API_REQUESTS_PER_MINUTE
+              value: {{ .Values.api.rateLimit.requestsPerMinute | quote }}
             - name: POLYAD_API_TOKEN
               valueFrom:
                 secretKeyRef:

@@ -20,6 +20,7 @@ flask = ">=3.1,<4"
 apispec = ">=6.10,<7"
 numpy = ">=2.2,<3"
 waitress = ">=3,<4"
+flask-limiter = {version = ">=4.1,<5", extras = ["redis"]}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"

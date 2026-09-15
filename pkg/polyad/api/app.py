@@ -11,6 +11,7 @@ from cattrs.errors import CattrsError
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
 
+from polyad.api.limits import install_limits
 from polyad.api.openapi import openapi_document
 from polyad.compiler.composition import CompositionRequest, compile_composition, identity
 from polyad.graph.topology import converter
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
     from typing import Any
 
     from flask import Response
+
+    from polyad.api.limits import RateLimitPolicy
 
 
 class Conflict(ValueError):
@@ -41,6 +44,7 @@ def _build_app(
     token: str,
     title: str,
     version: str,
+    rate_limits: RateLimitPolicy | None = None,
 ) -> Flask:
     """
     Create an injectable WSGI app for request compilation, submission and audit lookup.
@@ -51,6 +55,7 @@ def _build_app(
         token (str): Namespace-scoped bearer credential, supplied through a Secret.
         title (str): Service title for the OpenAPI document.
         version (str): API contract version for the OpenAPI document.
+        rate_limits (RateLimitPolicy | None): Optional shared namespace and shard quota.
 
     Returns:
         Flask: Configured app suitable for a production WSGI server.
@@ -66,6 +71,9 @@ def _build_app(
         if not hmac.compare_digest(supplied.encode(), f"Bearer {token}".encode()):
             return jsonify(error="unauthorized"), 401
         return None
+
+    if rate_limits is not None:
+        app.extensions["polyad.limiter"] = install_limits(app, rate_limits)
 
     @app.errorhandler(Conflict)
     def conflict(error: Conflict) -> tuple[Response, int]:

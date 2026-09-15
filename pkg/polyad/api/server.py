@@ -14,6 +14,7 @@ from waitress.server import create_server
 
 from polyad.api.app import Conflict, Unavailable
 from polyad.api.builder import APIBuilder
+from polyad.api.limits import RateLimitPolicy
 from polyad.api.store import CompositionStore
 
 if TYPE_CHECKING:
@@ -53,8 +54,10 @@ class CompositionServer:
             APIBuilder()
             .with_handlers(lambda value: self.invoke(store.submit(value)) or {}, lambda key, audit: self.invoke(store.lookup(key, audit)))
             .with_bearer_token(token)
+            .with_rate_limits(RateLimitPolicy.from_environment(namespace))
             .build()
         )
+        self.limiter = app.extensions["polyad.limiter"]
         self.sockets: wasyncore._SocketMap = {}
         self.server = create_server(
             app, map=self.sockets, host=host, port=port, threads=4, max_request_body_size=1024 * 1024, connection_limit=64
@@ -128,3 +131,5 @@ class CompositionServer:
             pending = list(self.pending)
         await asyncio.gather(*(asyncio.wrap_future(future) for future in pending), return_exceptions=True)
         self.api.client.close()
+        if self.limiter.enabled:
+            self.limiter.storage.storage.close()

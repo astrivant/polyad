@@ -261,9 +261,16 @@ are long-running services: an ingestion service and a processing service might
 exchange events and acknowledgements continuously. Their readiness tells you
 whether the system can serve work; there need not be a completion point.<sup>[\[5\]](docs/operator.md#daemons-change-the-graphs-contract)</sup>
 
-`Feedback` represents repeated finite work. Each run of its graph is an **epoch**.
-For example, a monitoring workflow might repeatedly sample a system and adjust
-its settings, stopping after a chosen number of epochs or when explicitly stopped.<sup>[\[5\]](docs/operator.md#daemons-change-the-graphs-contract)</sup>
+`Feedback` wraps a finite graph so the entire workflow can run repeatedly. Each
+execution is an **epoch**. For example, a `sample → adjust` workflow can use new
+measurements to update a service's settings on each pass. The application supplies
+the decision logic and any state shared between epochs.<sup>[\[18\]](docs/operator.md#feedback-epochs)</sup>
+
+On Kubernetes, epochs run one at a time: the current graph must complete and its
+resources finish cleanup before the next starts. `rounds` limits the number of
+epochs; omitting it permits indefinite recurrence. `intervalSeconds` sets a
+minimum wait after completion, and `suspend: true` drains active work and prevents
+another epoch from starting.<sup>[\[18\]](docs/operator.md#feedback-epochs)</sup>
 
 Data can circulate between running services. Startup dependencies must still
 allow something to start first, so they cannot form a cycle in which every node
@@ -336,17 +343,17 @@ Tool versions are pinned in
 
 Python applications can define and compose graphs using the library's objects.
 Mypy can check their types, and cattrs can convert graph definitions to and from
-dictionaries.<sup>[\[18\]](docs/toolchain.md#python-types-and-serialization)</sup>
+dictionaries.<sup>[\[19\]](docs/toolchain.md#python-types-and-serialization)</sup>
 
 ## Choose an execution model
 
 | Model | Use it for | Execution and observations |
 | --- | --- | --- |
-| Local Python scheduler | Cooperative workloads with checkpoints, runtime estimates and graph rewrites | Python workers report progress; the scheduler records events and can export diagrams and plots.<sup>[\[19\]](pkg/polyad/balance/README.md#scheduling-and-feedback)</sup><sup>[\[20\]](pkg/polyad/balance/README.md#logs-and-diagrams)</sup> |
+| Local Python scheduler | Cooperative workloads with checkpoints, runtime estimates and graph rewrites | Python workers report progress; the scheduler records events and can export diagrams and plots.<sup>[\[20\]](pkg/polyad/balance/README.md#scheduling-and-feedback)</sup><sup>[\[21\]](pkg/polyad/balance/README.md#logs-and-diagrams)</sup> |
 | Kubernetes operator | Container workloads, persistent services, spot execution and graphs of graphs | Jobs, Deployments and nested CRs report lifecycle and graph metrics; replicas coordinate ownership and API writes.<sup>[\[11\]](docs/operator.md#graph-instance-status)</sup><sup>[\[15\]](docs/operator.md#replicas-shared-queues-and-autoscaling)</sup> |
 
 The local scheduler supports estimated-duration, FIFO, breadth-first and
-depth-first ordering.<sup>[\[19\]](pkg/polyad/balance/README.md#scheduling-and-feedback)</sup><sup>[\[21\]](pkg/polyad/balance/README.md#graph-traversal-ordering)</sup>
+depth-first ordering.<sup>[\[20\]](pkg/polyad/balance/README.md#scheduling-and-feedback)</sup><sup>[\[22\]](pkg/polyad/balance/README.md#graph-traversal-ordering)</sup>
 Kubernetes admission follows
 declared dependencies, gates and per-boundary slot reservations; Kubernetes places
 the resulting Pods.<sup>[\[1\]](docs/operator.md#api-and-python-abstractions)</sup><sup>[\[7\]](docs/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup>
@@ -362,7 +369,7 @@ poetry run python examples/heartbeat.py
 
 The [heartbeat example](examples/heartbeat.py) reports a one-second heartbeat while the graph grows into a
 fork–join pipeline. The command prints the directory containing its plots and
-event journal.<sup>[\[20\]](pkg/polyad/balance/README.md#logs-and-diagrams)</sup>
+event journal.<sup>[\[21\]](pkg/polyad/balance/README.md#logs-and-diagrams)</sup>
 
 ### Quick start: Kubernetes
 
@@ -406,7 +413,7 @@ and tolerations that match your cluster; update their placement before applying.
 | --- | --- |
 | [Operator model](docs/operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
 | [Graph status](docs/operator.md#graph-instance-status) | Breadth, depth, lifecycle counters and descendant summaries |
-| [Compiler objects](docs/operator.md#resource-compiler-objects) | Attrs resource trees and Kubernetes serialization in `polyad.compiler` |
+| [Compiler objects](docs/operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
 | [Health and backlog](docs/operator.md#health) | Pod probes, inbound updates and API write pressure |
 | [Local scheduling](pkg/polyad/balance/README.md) | Cooperative work, checkpoints, policies, rewrites and graph images |
 | [Python types and serialization](docs/toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |
@@ -423,10 +430,10 @@ poetry run pytest
 ```
 
 Pre-commit checks Python formatting, docstrings, types, shell scripts, Mermaid
-diagrams and generated Helm documentation.<sup>[\[22\]](docs/toolchain.md#formatting-and-checks)</sup>
+diagrams and generated Helm documentation.<sup>[\[23\]](docs/toolchain.md#formatting-and-checks)</sup>
 CI also uses
 `astrivant/hypothesis-helm` to property-test the chart and runs operator lifecycle
-checks in a disposable kind cluster.<sup>[\[23\]](docs/toolchain.md#helm-documentation)</sup>
+checks in a disposable kind cluster.<sup>[\[24\]](docs/toolchain.md#helm-documentation)</sup>
 See the [toolchain setup](docs/toolchain.md#setup).
 
 Polyad was extracted from Hypothesis Helm; its runtime has no Helm dependency.

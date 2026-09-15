@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from attrs import evolve, field, frozen
 
 from polyad.api.app import _build_app
+from polyad.api.limits import RateLimitPolicy
 from polyad.compiler.composition import CompositionRequest
 
 if TYPE_CHECKING:
@@ -29,6 +30,7 @@ class APIBuilder:
         token (str): Namespace-scoped bearer credential, excluded from representations.
         title (str): Service title exposed by the schema endpoint.
         version (str): API contract version exposed by the schema endpoint.
+        rate_limits (RateLimitPolicy | None): Optional shared shard intake policy.
     """
 
     submit: Callable[[CompositionRequest], dict[str, Any]] | None = None
@@ -36,6 +38,19 @@ class APIBuilder:
     token: str = field(default="", repr=False)
     title: str = "Polyad Composition API"
     version: str = "v1alpha1"
+    rate_limits: RateLimitPolicy | None = None
+
+    def with_rate_limits(self, policy: RateLimitPolicy) -> Self:
+        """
+        Apply shared shard quotas when constructing the service.
+
+        Args:
+            policy (RateLimitPolicy): Namespace and Redis-backed request budget.
+
+        Returns:
+            Self: Builder containing the rate-limit policy.
+        """
+        return evolve(self, rate_limits=policy)
 
     def with_handlers(
         self, submit: Callable[[CompositionRequest], dict[str, Any]], lookup: Callable[[str, bool], dict[str, Any] | None]
@@ -90,4 +105,4 @@ class APIBuilder:
             raise ValueError("the composition API requires a bearer token")
         if not self.title.strip() or not self.version.strip():
             raise ValueError("OpenAPI title and version must be nonempty")
-        return _build_app(self.submit, self.lookup, token=self.token, title=self.title, version=self.version)
+        return _build_app(self.submit, self.lookup, token=self.token, title=self.title, version=self.version, rate_limits=self.rate_limits)

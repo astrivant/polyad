@@ -25,6 +25,12 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: status-schemas
+        name: Generated graph status schemas
+        entry: bash scripts/project-python.sh scripts/generate-status-schemas.py --check
+        language: system
+        pass_filenames: false
+        files: '^(pkg/polyad/compiler/|charts/polyad/crds/|scripts/generate-status-schemas\.py$|\.pre-commit-config\.yaml$)'
       - id: docstring-layout
         name: Multiline docstring layout
         entry: bash scripts/project-python.sh scripts/check-docstrings.py

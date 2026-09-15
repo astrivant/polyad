@@ -641,7 +641,9 @@
       "additionalProperties": false,
       "required": [
         "enabled",
-        "existingSecret"
+        "existingSecret",
+        "rateLimit",
+        "gateway"
       ],
       "properties": {
         "enabled": {
@@ -652,8 +654,157 @@
           "minLength": 1,
           "maxLength": 63,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        },
+        "rateLimit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "requestsPerMinute"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "requestsPerMinute": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            }
+          }
+        },
+        "gateway": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "create",
+            "name",
+            "namespace",
+            "className",
+            "sectionName",
+            "hostnames",
+            "tlsSecret"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 63,
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+            },
+            "namespace": {
+              "type": "string",
+              "maxLength": 63,
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+            },
+            "className": {
+              "type": "string",
+              "maxLength": 63,
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+            },
+            "sectionName": {
+              "type": "string",
+              "maxLength": 63,
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+              "minLength": 1
+            },
+            "hostnames": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+              }
+            },
+            "tlsSecret": {
+              "type": "string",
+              "maxLength": 63,
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  },
+                  "create": {
+                    "const": false
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "name": {
+                    "minLength": 1
+                  },
+                  "tlsSecret": {
+                    "const": ""
+                  },
+                  "className": {
+                    "const": ""
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  },
+                  "create": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "className": {
+                    "minLength": 1
+                  },
+                  "name": {
+                    "const": ""
+                  },
+                  "namespace": {
+                    "const": ""
+                  }
+                }
+              }
+            }
+          ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "gateway": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "definitions": {

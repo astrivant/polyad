@@ -46,3 +46,15 @@ from polyad.compiler.asts.resources import Rewrite as Rewrite
 from polyad.compiler.asts.resources import Service as Service
 from polyad.compiler.asts.resources import ShutdownPolicy as ShutdownPolicy
 from polyad.compiler.asts.resources import Workload as Workload
+from polyad.compiler.asts.status import AdmissionMetrics as AdmissionMetrics
+from polyad.compiler.asts.status import ConnectionMetrics as ConnectionMetrics
+from polyad.compiler.asts.status import ExecutionMetrics as ExecutionMetrics
+from polyad.compiler.asts.status import GraphMetrics as GraphMetrics
+from polyad.compiler.asts.status import LayerMetrics as LayerMetrics
+from polyad.compiler.asts.status import NodeCounts as NodeCounts
+from polyad.compiler.asts.status import PhaseCounts as PhaseCounts
+from polyad.compiler.asts.status import ResourceCounts as ResourceCounts
+from polyad.compiler.asts.status import ResourceMetrics as ResourceMetrics
+from polyad.compiler.asts.status import RollupMetrics as RollupMetrics
+from polyad.compiler.asts.status import SubgraphMetrics as SubgraphMetrics
+from polyad.compiler.asts.status import TopologyMetrics as TopologyMetrics

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import BOUNDARY_KINDS, GROUP
+from polyad.compiler.asts import BOUNDARY_KINDS, GROUP, RollupMetrics, converter, to_document
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -41,6 +41,24 @@ def subtree_metrics(
 
     Returns:
         dict[str, Any]: Descendant counters and explicit completeness for unobserved subtrees.
+    """
+    return to_document(measure_subtree(obj, children, observe, valid=valid))
+
+
+def measure_subtree(
+    obj: dict[str, Any], children: list[dict[str, Any]], observe: Callable[[dict[str, Any]], dict[str, bool]], *, valid: bool
+) -> RollupMetrics:
+    """
+    Build a typed recursive summary after checking raw child observation completeness.
+
+    Args:
+        obj (dict[str, Any]): Parent boundary with its latest lifecycle status.
+        children (list[dict[str, Any]]): Direct children observed through UID-fenced ownership.
+        observe (Callable[[dict[str, Any]], dict[str, bool]]): Resource lifecycle predicate evaluator.
+        valid (bool): Whether the local desired topology passed validation.
+
+    Returns:
+        RollupMetrics: Recursive counters fenced by the observed generations.
     """
     generation = obj["metadata"].get("generation", 1)
     status = obj.get("status", {})
@@ -107,4 +125,4 @@ def subtree_metrics(
         for name in PHASES:
             result["graphsByPhase"][name] += rollup["graphsByPhase"][name]
     result["observationsComplete"] &= result["unobservedGraphs"] == 0
-    return result
+    return converter.structure(result, RollupMetrics)

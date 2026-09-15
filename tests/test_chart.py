@@ -66,6 +66,74 @@ def cache_url(objects):
     return next(item for item in operator["spec"]["template"]["spec"]["containers"][0]["env"] if item["name"] == "POLYAD_CACHE_URL")
 
 
+@pytest.mark.parametrize("create,tls", [(False, False), (True, False), (True, True)])
+def test_optional_gateway_routes_only_to_composition_service(create, tls):
+    """
+    Attach to a shared Gateway or create HTTP/HTTPS listeners with valid upstream schemas.
+    """
+    settings = ["api.enabled=true", "api.gateway.enabled=true", "api.gateway.hostnames[0]=polyad.example.com"]
+    settings += (
+        ["api.gateway.create=true", "api.gateway.className=example"]
+        if create
+        else ["api.gateway.name=shared", "api.gateway.namespace=edge"]
+    )
+    if tls:
+        settings += ["api.gateway.tlsSecret=polyad-tls", "api.gateway.sectionName=https"]
+    objects = render(*settings)
+    route = next(obj for obj in objects if obj["kind"] == "HTTPRoute")
+    parent = route["spec"]["parentRefs"][0]
+    assert parent["name"] == ("test-polyad-api" if create else "shared")
+    assert parent.get("namespace") == (None if create else "edge")
+    assert route["spec"]["hostnames"] == ["polyad.example.com"]
+    assert route["spec"]["rules"][0]["backendRefs"] == [{"name": "test-polyad-api", "port": 8090}]
+    assert {match["path"]["value"] for match in route["spec"]["rules"][0]["matches"]} == {"/v1/compositions", "/openapi.json"}
+    gateways = [obj for obj in objects if obj["kind"] == "Gateway"]
+    assert len(gateways) == int(create)
+    if create:
+        listener = gateways[0]["spec"]["listeners"][0]
+        assert listener["protocol"] == ("HTTPS" if tls else "HTTP")
+        assert listener["port"] == (443 if tls else 80)
+        assert listener["allowedRoutes"]["namespaces"]["from"] == "Same"
+        if tls:
+            assert listener["tls"]["certificateRefs"] == [{"kind": "Secret", "name": "polyad-tls"}]
+    for obj in [route, *gateways]:
+        schema = json.loads((CHART / "schemas" / f"{obj['kind'].lower()}-gateway-v1.json").read_text())
+        jsonschema.Draft7Validator(schema).validate(obj)
+
+
+def test_gateway_defaults_and_rate_limit_wiring():
+    """
+    Keep routing opt-in while passing the shared quota to every API replica.
+    """
+    assert not any(obj["kind"] in {"Gateway", "HTTPRoute"} for obj in render())
+    objects = render("api.enabled=true", "api.rateLimit.requestsPerMinute=12")
+    operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    env = {item["name"]: item.get("value") for item in operator["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert env["POLYAD_API_REQUESTS_PER_MINUTE"] == "12"
+    assert env["POLYAD_API_RATE_LIMIT_ENABLED"] == "true"
+
+
+@pytest.mark.parametrize("change", ["disabled-api", "missing-gateway", "missing-class", "zero-quota"])
+def test_gateway_and_rate_limit_values_reject_invalid_configuration(change):
+    """
+    Reject routing without its prerequisites and invalid request budgets during Helm validation.
+    """
+    values = yaml.safe_load((CHART / "values.yaml").read_text())
+    api = values["api"]
+    api["enabled"] = True
+    api["gateway"].update(enabled=True, name="edge")
+    if change == "disabled-api":
+        api["enabled"] = False
+    elif change == "missing-gateway":
+        api["gateway"]["name"] = ""
+    elif change == "missing-class":
+        api["gateway"].update(create=True, name="")
+    else:
+        api["rateLimit"]["requestsPerMinute"] = 0
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(values, json.loads((CHART / "values.schema.json").read_text()))
+
+
 def test_operator_can_use_a_separate_node_group():
     """
     Place operator replicas independently from workload graph placement rules.

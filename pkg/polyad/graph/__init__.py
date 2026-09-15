@@ -5,6 +5,7 @@ Public operation descriptors, dependency scheduling, and process ownership contr
 from __future__ import annotations
 
 from polyad.graph.gates import DelayGate as DelayGate
+from polyad.graph.metrics import measure_topology as measure_topology
 from polyad.graph.metrics import topology_metrics as topology_metrics
 from polyad.graph.operations import Operation as Operation
 from polyad.graph.operations import OperationQueue as OperationQueue

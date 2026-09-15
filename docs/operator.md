@@ -252,6 +252,94 @@ the existing graph library and CRD schemas validate graph semantics. These model
 cover the operator's generated execution specs rather than the complete Kubernetes
 schema. Desired-resource hashes retain their existing format across this refactor.
 
+### Graph observation objects
+
+`GraphMetrics` is the attrs tree behind `status.metrics`. Its children separate
+the shape of a graph (`TopologyMetrics`), work in progress (`ExecutionMetrics`),
+owned Kubernetes resources (`ResourceMetrics`), immediate graph children
+(`SubgraphMetrics`) and the recursive summary (`RollupMetrics`). Nested counters
+also have concrete types, so editors and Mypy can follow fields to their values.
+Field names match the Kubernetes document, including `observedGeneration`.
+
+```python
+from polyad.compiler.asts import GraphMetrics, converter, to_document
+from polyad.compiler.schema import structural_schema
+from polyad.graph import measure_topology
+from polyad.graph.topology import topology
+
+shape = measure_topology(topology({"nodes": []}))
+metrics = GraphMetrics(observedGeneration=1, topology=shape)
+document = to_document(metrics)
+restored = converter.structure(document, GraphMetrics)
+assert restored.topology is not None
+assert restored.topology.admission.depth == 0
+schema = structural_schema(GraphMetrics)
+```
+
+For an API response, decode `resource["status"]["metrics"]` in the same way.
+Missing fields use Python defaults; this does **not** establish that an observation
+is fresh or complete. The operator checks raw child generations and rollup field
+presence before aggregating descendants. `observe_graph` in
+`polyad.operator.graph_status` builds the full typed tree from a graph document
+and its owned children. Existing `instance_metrics` and `topology_metrics` calls
+still return dictionaries.
+
+These models preserve unknown fields through the existing `extra` mechanism.
+The metrics fields marked `emit_none` serialize explicit nulls to clear stale
+observations in Kubernetes merge patches; other AST optional fields retain their
+omission behavior. Attrs types provide the Python contract; generated CRD
+constraints validate API writes. Python constructor defaults do not become
+Kubernetes defaults, and unknown metrics fields remain subject to CRD pruning.
+
+The models generate **the `status.metrics` schema** for Graph, PolyGraph,
+EphemeralGraph and Feedback. Descriptions and numeric limits live in attrs field
+metadata; nested objects, lists, literals and nullable fields come from their
+annotations. CRD specs and other status fields are maintained separately.
+
+After editing a metrics model, regenerate and check the chart:
+
+```bash
+bash scripts/project-python.sh scripts/generate-status-schemas.py
+bash scripts/project-python.sh scripts/generate-status-schemas.py --check
+```
+
+The pre-commit hook and CI reject schema drift across all four CRDs. Generation
+replaces only the metrics property, preserving unrelated manifest sections.
+As with other CRD changes, apply updated CRDs before upgrading an existing Helm
+release; Helm does not upgrade files under `crds/` automatically.
+
+## Feedback epochs
+
+A `Feedback` resource repeatedly creates an execution instance of a finite graph.
+An epoch includes the whole graph, with its dependencies, gates and nested work.
+For example, a sample-and-adjust graph can read current measurements, calculate
+new settings and apply them; the next epoch observes the updated system.
+
+The operator records completion in `status.epoch` and `status.lastEpochTime`,
+then deletes the finished epoch's graph and waits for its resources to disappear.
+Only one epoch executes at a time. A failed or unfinished epoch does not advance
+the completion counter or start the next epoch.
+
+| Setting | Meaning |
+| --- | --- |
+| `spec.graph` | Finite graph template instantiated for every epoch |
+| `spec.kind` | Epoch graph kind: Graph, PolyGraph or EphemeralGraph; defaults to Graph |
+| `spec.rounds` | Maximum completed epochs; omit for indefinite recurrence, or set zero to finish without starting work |
+| `spec.intervalSeconds` | Minimum wait from recorded epoch completion; defaults to one second. Cleanup and reconciliation can extend it |
+| `spec.suspend` | Drain active execution and prevent new epochs; clearing it permits fresh execution |
+
+Epoch counters and completion timestamps live in Kubernetes status, so an operator
+restart does not reset the round limit. Each epoch starts fresh containers.
+Applications must explicitly read and write any state or results needed by later
+epochs. Use storage that outlives the epoch, such as an external PVC configured
+through [workload persistence](#workload-persistence), when preserving files.
+
+Feedback supplies repetition; the workloads implement any feedback algorithm.
+There is no automatic result-to-input transfer or convergence test. See the
+[two-epoch example](../examples/feedback.yaml) and
+[local Feedback guide](../pkg/polyad/balance/README.md#feedback-graphs-and-daemon-like-work)
+for the separate Python factory-based execution model.
+
 ## Reconciliation and shutdown
 
 Kopf runs on `OperatorThread`, which owns its asyncio event loop. The Python main thread owns process signals and forwards SIGTERM/SIGINT through a thread-safe stop event. Start with:
