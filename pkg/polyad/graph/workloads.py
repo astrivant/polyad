@@ -2,11 +2,15 @@
 Describe measurable workloads that can cooperate with checkpoint requests.
 """
 
+from __future__ import annotations
+
 import math
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from threading import Event
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from threading import Event
 
 
 @dataclass(frozen=True)

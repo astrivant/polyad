@@ -2,12 +2,17 @@
 Rank ready work and request worthwhile preemption with uncertainty and aging guards.
 """
 
+from __future__ import annotations
+
 import math
 from collections import deque
-from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from polyad.graph.workloads import Estimate, Work
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from polyad.graph.workloads import Estimate, Work
 
 
 @dataclass(frozen=True)

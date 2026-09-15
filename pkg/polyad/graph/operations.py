@@ -4,18 +4,25 @@ Make your own pipeline of executions that need to occur easily in your project.
 I will probably make this its own module at some point. It helps automate local runtime / benchmarking / graph regeneration.
 """
 
+from __future__ import annotations
+
 import json
 import re
 import time
-from collections.abc import Callable, Sequence
-from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
-from contextlib import AbstractContextManager, nullcontext
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from contextlib import nullcontext
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from subprocess import CompletedProcess
-from typing import Protocol, TextIO
+from typing import TYPE_CHECKING, Protocol
 
 from polyad.graph.workloads import Statistics
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+    from concurrent.futures import Future
+    from contextlib import AbstractContextManager
+    from pathlib import Path
+    from subprocess import CompletedProcess
+    from typing import TextIO
 
 
 class ProcessOwner(Protocol):

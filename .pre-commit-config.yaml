@@ -1,0 +1,56 @@
+default_language_version:
+  python: python3.13
+repos:
+  - repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: [--config=pyproject.toml]
+        files: ^(pkg|scripts|examples)/.*\.py$
+  - repo: https://github.com/jsh9/pydoclint
+    rev: 0.6.6
+    hooks:
+      - id: pydoclint
+        args: [--config=pyproject.toml]
+        files: ^(pkg|scripts|examples)/.*\.py$
+  - repo: https://github.com/bitnami/readme-generator-for-helm
+    rev: 4d29f59abac6aeed6fbc2467e24fc17560057bcb # 3.0.1
+    hooks:
+      - id: helm-readme-generator
+        files: ^(charts/polyad/|\.pre-commit-config\.yaml$)
+        language_version: 24.14.0
+        args:
+          - --readme=charts/polyad/README.md
+          - --values=charts/polyad/values.yaml
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: mermaid-check
+        name: Validate Mermaid diagrams
+        entry: bash scripts/check-mermaid.sh
+        language: system
+        pass_filenames: false
+        require_serial: true
+        files: '(?i)(\.(md|markdown|mmd|mermaid)$|^scripts/mermaid/|^scripts/check-mermaid\.sh$|^\.pre-commit-config\.yaml$)'
+      - id: shellcheck
+        name: ShellCheck and shfmt
+        entry: bash scripts/check-shell.sh
+        language: system
+        types: [shell]
+      - id: ruff-check
+        name: Ruff lint
+        entry: bash scripts/project-python.sh -m ruff check
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: Ruff format
+        entry: bash scripts/project-python.sh -m ruff format --check
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: bash scripts/project-python.sh -m mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true

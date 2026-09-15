@@ -1,7 +1,13 @@
 apiVersion: v2
 name: polyad
-description: Kubernetes operator for finite, persistent and ephemeral workload graphs
+description: Kubernetes operator for scheduling workloads through graphs
 type: application
 version: 0.1.0
 appVersion: 0.1.0
 kubeVersion: '>=1.30.0-0'
+dependencies:
+  - name: dragonfly-operator
+    alias: dragonflyOperator
+    version: v1.6.1
+    repository: oci://ghcr.io/dragonflydb/dragonfly-operator/helm
+    condition: dragonfly.enabled

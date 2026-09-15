@@ -1,15 +1,20 @@
 """Structure Kubernetes documents and lower ASTs at the API serialization boundary."""
 
+from __future__ import annotations
+
 import copy
-from collections.abc import Callable
-from typing import Any, cast
+from typing import TYPE_CHECKING, cast
 
 from attrs import fields
 from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn
 
-from polyad.operator.compiler.asts.common import AST
-from polyad.operator.compiler.asts.resources import RESOURCE_REGISTRY, ConfigMap, Resource
+from polyad.compiler.asts.common import AST
+from polyad.compiler.asts.resources import RESOURCE_REGISTRY, ConfigMap, Resource
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
 
 converter = Converter(forbid_extra_keys=True, detailed_validation=False)
 
@@ -38,6 +43,15 @@ def _structure_factory[T: AST](cls: type[T]) -> Callable[[dict[str, Any], Any], 
     names = {field.name for field in fields(cls)} - {"extra"}
 
     def structure(value: dict[str, Any], _: Any) -> T:
+        """
+        Decode modeled fields and retain unmodeled native extensions.
+
+        Args:
+            value (dict[str, Any]): Native document to decode.
+
+        Returns:
+            T: Structured model retaining independent extension fields.
+        """
         if not isinstance(value, dict):
             raise TypeError("an AST requires an object document")
         value = copy.deepcopy(value)
@@ -62,12 +76,29 @@ converter.register_structure_hook_factory(_is_ast, _structure_factory)
 
 
 def to_document(value: AST) -> dict[str, Any]:
-    """Return an independent API document, omitting absent optional model fields."""
-    return copy.deepcopy(cast(dict[str, Any], converter.unstructure(value)))
+    """
+    Return an independent API document, omitting absent optional model fields.
+
+    Args:
+        value (AST): Model to serialize as a native API document.
+
+    Returns:
+        dict[str, Any]: Independent native document with omitted absent optional fields.
+    """
+    return copy.deepcopy(cast("dict[str, Any]", converter.unstructure(value)))
 
 
 def from_document(document: dict[str, Any], *, kind: str | None = None) -> Resource:
-    """Dispatch by known kind, including list items whose type metadata is omitted."""
+    """
+    Dispatch by known kind, including list items whose type metadata is omitted.
+
+    Args:
+        document (dict[str, Any]): Native Kubernetes resource document.
+        kind (str | None): Kubernetes resource kind.
+
+    Returns:
+        Resource: Typed resource selected from the registered Kubernetes kinds.
+    """
     identity = kind or document.get("kind")
     if identity not in RESOURCE_REGISTRY:
         raise ValueError(f"unsupported resource kind: {identity}")
@@ -75,5 +106,13 @@ def from_document(document: dict[str, Any], *, kind: str | None = None) -> Resou
 
 
 def encode_body(body: Any) -> Any:
-    """Serialize model objects while preserving raw JSON patch and native payload support."""
+    """
+    Serialize model objects while preserving raw JSON patch and native payload support.
+
+    Args:
+        body (Any): Request payload, either a typed AST or native API document.
+
+    Returns:
+        Any: Serialized AST or unchanged native request body.
+    """
     return to_document(body) if isinstance(body, AST) else body

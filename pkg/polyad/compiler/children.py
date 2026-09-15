@@ -1,11 +1,13 @@
 """Compile owned child resources while retaining stable identity and revision hashes."""
 
+from __future__ import annotations
+
 import copy
 import hashlib
 import json
-from typing import Any
+from typing import TYPE_CHECKING
 
-from polyad.operator.compiler.asts import (
+from polyad.compiler.asts import (
     GROUP,
     ConfigMap,
     Deployment,
@@ -14,15 +16,30 @@ from polyad.operator.compiler.asts import (
     JobSpec,
     ObjectMeta,
     OwnerReference,
-    Resource,
     converter,
     to_document,
 )
-from polyad.operator.compiler.asts.resources import RESOURCE_REGISTRY, SpecResource
+from polyad.compiler.asts.resources import RESOURCE_REGISTRY, SpecResource
+
+if TYPE_CHECKING:
+    from typing import Any
+
+    from polyad.compiler.asts import (
+        Resource,
+    )
 
 
 def child_name(parent: ObjectMeta, node: str) -> str:
-    """Keep addresses stable across revisions and distinct within a boundary."""
+    """
+    Keep addresses stable across revisions and distinct within a boundary.
+
+    Args:
+        parent (ObjectMeta): Persisted parent identity and ownership boundary.
+        node (str): Name of the node within its graph boundary.
+
+    Returns:
+        str: Stable child name derived from the parent UID and node name.
+    """
     if not parent.name or not parent.uid:
         raise ValueError("a child requires a named parent with a persisted UID")
     suffix = hashlib.sha256(node.encode()).hexdigest()[:8]
@@ -37,7 +54,19 @@ def owned_child(
     *,
     extra: dict[str, Any] | None = None,
 ) -> Resource:
-    """Create typed resource identity, ownership and payload without mutating graph definitions."""
+    """
+    Create typed resource identity, ownership and payload without mutating graph definitions.
+
+    Args:
+        parent (Resource): Persisted parent identity and ownership boundary.
+        node_name (str): Node name used for child identity and ownership labels.
+        kind (str): Kubernetes resource kind.
+        spec (dict[str, Any] | JobSpec | DeploymentSpec): Desired resource configuration.
+        extra (dict[str, Any] | None): Unmodeled native fields preserved during serialization.
+
+    Returns:
+        Resource: Owned resource AST ready for serialization.
+    """
     meta = parent.metadata
     if not meta.namespace or not meta.name or not meta.uid:
         raise ValueError("a child requires a namespaced parent with a persisted UID")
@@ -52,11 +81,23 @@ def owned_child(
     annotations = {f"{GROUP}/desired-hash": digest}
     if f"{GROUP}/lineage" in (meta.annotations or {}):
         annotations[f"{GROUP}/lineage"] = (meta.annotations or {})[f"{GROUP}/lineage"]
+    if (meta.annotations or {}).get(f"{GROUP}/ephemeral") == "true":
+        annotations[f"{GROUP}/ephemeral"] = "true"
+    for key in ("request-id", "composition-uid", "object-id", "node-path"):
+        if f"{GROUP}/{key}" in (meta.annotations or {}):
+            annotations[f"{GROUP}/{key}"] = (meta.annotations or {})[f"{GROUP}/{key}"]
+    if f"{GROUP}/request-id" in annotations:
+        path = annotations.get(f"{GROUP}/node-path", annotations.get(f"{GROUP}/object-id", meta.name))
+        annotations[f"{GROUP}/node-path"] = f"{path}/{node_name}"
     metadata = ObjectMeta(
         name=child_name(meta, node_name),
         namespace=meta.namespace,
         annotations=annotations,
-        labels={f"{GROUP}/owner": meta.uid, f"{GROUP}/node": node_name},
+        labels={
+            f"{GROUP}/owner": meta.uid,
+            f"{GROUP}/node": node_name,
+            **({f"{GROUP}/request": (meta.labels or {})[f"{GROUP}/request"]} if f"{GROUP}/request" in (meta.labels or {}) else {}),
+        },
         ownerReferences=(
             OwnerReference(
                 apiVersion=parent.resource_type.api_version,

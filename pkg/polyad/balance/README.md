@@ -2,12 +2,24 @@
 
 `polyad.balance` schedules cooperative `polyad.graph.Workload` implementations. It is part of the standalone Polyad project. It does not depend on Helm and is not yet a separately published PyPI distribution.
 
+Polyad primarily schedules Kubernetes workloads through graphs. This local
+backend can request pauses and save checkpoints only when application code
+implements that contract and suitable persistent storage is configured. It does
+not make arbitrary work resumable, and its checkpoints do not transfer Python
+execution into Kubernetes containers.
+
 Each workload exposes a `Work` description: stable name, input/implementation fingerprint, prerequisites, reserved execution
 slots, memory reservation, initial statistics, and whether it supports checkpoints. Unknown durations and costs are represented
 by `None`. Existing `polyad.graph.Operation` commands expose statistics too, but remain non-preemptible in `OperationQueue`.
 Applications using OperationQueue retain their subprocess execution model.
 
 ## Scheduling and feedback
+
+Use `routes={"next": DelayGate(30)}` with `polyad.graph.DelayGate` to wait after
+dependencies complete before admitting a workload. The timer uses a monotonic
+clock without occupying a worker; independent ready nodes can continue. Local
+delay timers restart with a new scheduler process. Kubernetes delay gates instead
+keep deadlines on graph status; see the [operator guide](../../../docs/operator.md#delay-gates).
 
 `Scheduler` starts dependency-ready work that fits its slot and optional memory budgets. Workloads report cumulative
 `Statistics(completed, total, estimate)` through `Control.report`. If remaining duration is unknown, observations update an
@@ -226,11 +238,11 @@ within that boundary. Sorting R ready units adds O(R log R). These costs describ
 
 ## Try a live graph rewrite
 
-Install the project with plotting support, then run:
+From the project root, install the development dependencies, which include Matplotlib, then run:
 
 ```bash
-poetry install -E plotting
-poetry run polyad-example
+poetry install --with dev
+poetry run python examples/heartbeat.py
 ```
 
 The example does no useful computation. Each unit waits one second, prints a healthy heartbeat and reports progress.

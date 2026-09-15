@@ -39,11 +39,16 @@ spec:
                 description: Serialized Gate expression with operator, optional operands and signal name. Operators
                   are signal, and, or, not, xor and nxor. Signals use NODE.started, NODE.ready, NODE.completed or
                   NODE.failed; absent observations remain unknown.
-            required:
-            - expression
-            description: Desired configuration for this Gate resource. Define a reusable Boolean admission expression
-              using the Python Gate model. Signals refer to node lifecycle observations; unresolved expressions
-              block admission.
+              delaySeconds:
+                type: number
+                minimum: 0
+                maximum: 315360000
+                description: Standalone admission delay after dependencies are observed. Each graph instance persists
+                  its own deadline in status; waits do not occupy workers or slots.
+            description: Reusable Boolean expression or delay gate controlling admission to the next vertex.
+            x-kubernetes-validations:
+            - rule: has(self.expression) != has(self.delaySeconds)
+              message: Gate requires exactly one of expression or delaySeconds
           status:
             type: object
             x-kubernetes-preserve-unknown-fields: true
@@ -51,5 +56,4 @@ spec:
               or currently publish lifecycle status.
         required:
         - spec
-        description: Define a reusable Boolean admission expression using the Python Gate model. Signals refer to
-          node lifecycle observations; unresolved expressions block admission.
+        description: Define a Boolean or delay gate. Instances keep delay observations on their containing graph.

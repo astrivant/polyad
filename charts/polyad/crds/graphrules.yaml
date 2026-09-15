@@ -1,0 +1,139 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: graphrules.polyad.astrivant.com
+spec:
+  group: polyad.astrivant.com
+  scope: Namespaced
+  names:
+    kind: GraphRule
+    plural: graphrules
+    singular: graphrule
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        description: Constrain graph structure and spectrum across an operator namespace. Grants no workload execution by
+          itself.
+        properties:
+          apiVersion:
+            type: string
+            description: Polyad API group and version.
+          kind:
+            type: string
+            description: 'Custom resource kind: GraphRule.'
+          metadata:
+            type: object
+          spec:
+            type: object
+            description: Engineer-controlled structural constraints applied before scheduler admission. Namespace defaults
+              cannot be opted out of by compositions.
+            properties:
+              enforcement:
+                type: string
+                description: Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor.
+                enum:
+                - Namespace
+                - Referenced
+                default: Namespace
+              relation:
+                type: string
+                description: Relation measured independently inside every graph boundary.
+                enum:
+                - admission
+                - connections
+                default: admission
+              limits:
+                type: object
+                description: Inclusive structural maxima; omitted fields impose no bound.
+                properties:
+                  nodes:
+                    type: integer
+                    description: Maximum vertices in each immediate boundary, including isolated vertices.
+                    minimum: 0
+                    maximum: 1000000
+                  edges:
+                    type: integer
+                    description: Maximum distinct directed edges of the selected relation; self-loops count.
+                    minimum: 0
+                    maximum: 1000000
+                  depth:
+                    type: integer
+                    description: Maximum layers in the SCC condensation DAG. Admission is already acyclic.
+                    minimum: 0
+                    maximum: 1000000
+                  breadth:
+                    type: integer
+                    description: Maximum number of SCCs in an earliest topological layer; not maximum antichain width.
+                    minimum: 0
+                    maximum: 1000000
+                  fanIn:
+                    type: integer
+                    description: Maximum directed in-degree.
+                    minimum: 0
+                    maximum: 1000000
+                  fanOut:
+                    type: integer
+                    description: Maximum directed out-degree.
+                    minimum: 0
+                    maximum: 1000000
+                  cycleRank:
+                    type: integer
+                    description: Maximum m - n + c of the simple undirected projection, excluding self-loops.
+                    minimum: 0
+                    maximum: 1000000
+                  strongComponent:
+                    type: integer
+                    description: Maximum vertices in one strongly connected component.
+                    minimum: 0
+                    maximum: 1000000
+                  expandedNodes:
+                    type: integer
+                    description: Maximum recursively expanded vertex occurrences, counting boundary vertices and repeated
+                      instances; Feedback counts one epoch template.
+                    minimum: 0
+                    maximum: 1000000
+                  nestingDepth:
+                    type: integer
+                    description: Maximum nested boundary layers including this boundary as layer one.
+                    minimum: 0
+                    maximum: 1000000
+              shapes:
+                type: array
+                description: Required shapes. Acyclic tests the directed relation; connected, tree and planar test the simple
+                  undirected projection.
+                maxItems: 4
+                x-kubernetes-list-type: set
+                items:
+                  type: string
+                  description: Required graph shape.
+                  enum:
+                  - acyclic
+                  - connected
+                  - tree
+                  - planar
+              spectrum:
+                type: object
+                description: Spectral bounds on the simple undirected, unweighted projection with self-loops removed. At most
+                  256 vertices; relative tolerance 1e-9.
+                properties:
+                  maxRadius:
+                    type: number
+                    description: Maximum absolute adjacency eigenvalue.
+                    minimum: 0
+                    maximum: 1000000
+                  minConnectivity:
+                    type: number
+                    description: Minimum second-smallest combinatorial Laplacian eigenvalue; zero for fewer than two vertices.
+                    minimum: 0
+                    maximum: 1000000
+                  maxLaplacian:
+                    type: number
+                    description: Maximum combinatorial Laplacian eigenvalue.
+                    minimum: 0
+                    maximum: 1000000
+        required:
+        - spec

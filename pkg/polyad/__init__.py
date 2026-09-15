@@ -1,1 +1,1 @@
-"""Adaptive graph orchestration with cooperative lifecycle contracts."""
+"""Kubernetes operator for scheduling workloads through graphs."""

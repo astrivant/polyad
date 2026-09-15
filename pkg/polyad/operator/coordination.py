@@ -1,21 +1,28 @@
 """Elect a planner and lease graph shards to replicas using Kubernetes CAS updates."""
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import json
 import time
 import uuid
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING
 
 from kubernetes.client.exceptions import ApiException
 
-from polyad.operator.api import API, GROUP
-from polyad.operator.compiler.asts import Lease, LeaseSpec, ObjectMeta
-from polyad.operator.queue import Key
+from polyad.compiler.asts import Lease, LeaseSpec, ObjectMeta
+from polyad.operator.api import GROUP
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from typing import Any
+
+    from polyad.operator.api import API
+    from polyad.operator.queue import Key
 
 SHARDS = 32
 DURATION = 90
@@ -28,7 +35,16 @@ class NotOwner(Exception):
 
 
 def assignment(members: list[str], shards: int = SHARDS) -> dict[str, str]:
-    """Use rendezvous hashing to minimize movement when replicas join or leave."""
+    """
+    Use rendezvous hashing to minimize movement when replicas join or leave.
+
+    Args:
+        members (list[str]): Live replica identities eligible for shard assignment.
+        shards (int): Total number of fixed shards to distribute.
+
+    Returns:
+        dict[str, str]: String shard IDs mapped to their selected replica identities.
+    """
     return (
         {str(shard): max(members, key=lambda member: hashlib.sha256(f"{shard}/{member}".encode()).digest()) for shard in range(shards)}
         if members
@@ -40,7 +56,14 @@ class Coordinator:
     """Keep leader planning separate from exclusive, renewable worker ownership."""
 
     def __init__(self, api: API, namespace: str, identity: str | None = None) -> None:
-        """Use a unique process identity, even when a pod restarts under the same name."""
+        """
+        Use a unique process identity, even when a pod restarts under the same name.
+
+        Args:
+            api (API): Kubernetes adapter used for refreshed reads and guarded writes.
+            namespace (str): Namespace containing the operator resources.
+            identity (str | None): Optional process identity; generated uniquely when omitted.
+        """
         self.api, self.namespace = api, namespace
         self.identity = identity or str(uuid.uuid4())
         self.observed: dict[str, tuple[str, float]] = {}
@@ -52,7 +75,15 @@ class Coordinator:
         self.lock = asyncio.Lock()
 
     def expired(self, lease: dict[str, Any]) -> bool:
-        """Measure unchanged lease versions locally; do not trust remote wall clocks."""
+        """
+        Measure unchanged lease versions locally; do not trust remote wall clocks.
+
+        Args:
+            lease (dict[str, Any]): Latest observed Lease document.
+
+        Returns:
+            bool: Whether the unchanged lease version has exceeded its observed duration.
+        """
         meta = lease["metadata"]
         name, version = meta["name"], meta["resourceVersion"]
         previous = self.observed.get(name)
@@ -62,7 +93,16 @@ class Coordinator:
         return bool(time.monotonic() - self.observed[name][1] > duration)
 
     async def claim(self, name: str, *, annotations: dict[str, str] | None = None) -> bool:
-        """Acquire or renew with resourceVersion compare-and-swap, never blind patches."""
+        """
+        Acquire or renew with resourceVersion compare-and-swap, never blind patches.
+
+        Args:
+            name (str): Resource name within its namespace.
+            annotations (dict[str, str] | None): Resource annotations carrying coordination or revision metadata.
+
+        Returns:
+            bool: Whether this replica holds the claim with sufficient write headroom.
+        """
         started = time.monotonic()
         current = await self.api.get("Lease", self.namespace, name)
         if current and current.get("spec", {}).get("holderIdentity") != self.identity and not self.expired(current):
@@ -91,7 +131,12 @@ class Coordinator:
         return time.monotonic() < self.deadlines[name] - WRITE_BUDGET
 
     async def tick(self) -> None:
-        """Heartbeat membership, elect the planner, and acquire assigned shards."""
+        """
+        Heartbeat membership, elect the planner, and acquire assigned shards.
+
+        Returns:
+            None: No return value.
+        """
         async with self.lock:
             await self.claim(f"polyad-member-{self.identity}")
             listing = await self.api.request("GET", "Lease", self.namespace, query=[("labelSelector", f"{GROUP}/coordination=true")])
@@ -104,7 +149,7 @@ class Coordinator:
                     if lease["metadata"]["name"].startswith("polyad-member-"):
                         if self.expired(lease):
                             try:
-                                await self.api.delete(lease)
+                                await self.api.delete({**lease, "kind": "Lease"})
                             except ApiException as error:
                                 if error.status != 409:
                                     raise
@@ -127,7 +172,15 @@ class Coordinator:
             self.last_success = time.monotonic()
 
     async def shard_for(self, key: Key) -> int:
-        """Co-locate nested boundaries and rewrites with their owning root graph."""
+        """
+        Co-locate nested boundaries and rewrites with their owning root graph.
+
+        Args:
+            key (Key): Resource kind, namespace and name to reconcile from fresh API state.
+
+        Returns:
+            int: Shard assigned to the root graph family.
+        """
         kind, namespace, name = key
         seen: set[Key] = set()
         for _ in range(64):
@@ -146,7 +199,7 @@ class Coordinator:
                 for owner in obj["metadata"].get("ownerReferences", [])
                 if owner.get("controller")
                 and owner.get("apiVersion", "").startswith(f"{GROUP}/")
-                and owner["kind"] in {"Graph", "EphemeralGraph", "Feedback"}
+                and owner["kind"] in {"Graph", "EphemeralGraph", "Feedback", "PolyGraph", "Composition"}
             ]
             if not owners:
                 break
@@ -156,7 +209,12 @@ class Coordinator:
         return int.from_bytes(hashlib.sha256(f"{namespace}/{kind}/{name}".encode()).digest()[:8]) % SHARDS
 
     async def guard(self) -> None:
-        """Recheck the lease before each workload mutation and leave transport headroom."""
+        """
+        Recheck the lease before each workload mutation and leave transport headroom.
+
+        Returns:
+            None: No return value.
+        """
         shard = active_shard.get()
         if shard is None or shard not in self.owned:
             raise NotOwner("no active shard ownership")
@@ -171,7 +229,15 @@ class Coordinator:
 
     @asynccontextmanager
     async def duty(self, key: Key) -> AsyncIterator[None]:
-        """Hold a shard through one ordered, freshly read reconciliation attempt."""
+        """
+        Hold a shard through one ordered, freshly read reconciliation attempt.
+
+        Args:
+            key (Key): Resource kind, namespace and name to reconcile from fresh API state.
+
+        Yields:
+            None: Control while the guarded mutation or reconciliation slot is held.
+        """
         shard = await self.shard_for(key)
         if shard not in self.owned:
             raise NotOwner("graph assigned to another replica")

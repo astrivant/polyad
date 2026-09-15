@@ -2,6 +2,8 @@
 Public feedback scheduling and policy interfaces for cooperative graph workloads.
 """
 
+from __future__ import annotations
+
 from polyad.balance.feedback import FeedbackGraph as FeedbackGraph
 from polyad.balance.graph import Graph as Graph
 from polyad.balance.policy import FIFO as FIFO

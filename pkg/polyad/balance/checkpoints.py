@@ -2,15 +2,20 @@
 Store explicit JSON checkpoints with input identity and corruption checks.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import os
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-from polyad.graph.workloads import Estimate, Statistics, Work
+from polyad.graph.workloads import Estimate, Statistics
+
+if TYPE_CHECKING:
+    from polyad.graph.workloads import Work
 
 
 def save(directory: Path, work: Work, payload: dict[str, object], statistics: Statistics) -> None:
@@ -72,6 +77,6 @@ def load(directory: Path, work: Work) -> tuple[dict[str, object], Statistics] | 
     if not isinstance(document["payload"], dict):
         raise ValueError("checkpoint payload must be an object")
     progress = document["statistics"]
-    return cast(dict[str, object], document["payload"]), Statistics(
+    return cast("dict[str, object]", document["payload"]), Statistics(
         progress["completed"], progress["total"], Estimate(**progress["estimate"])
     )

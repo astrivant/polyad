@@ -2,15 +2,21 @@
 Exercise cooperative preemption, graph changes, checkpoint validation and resource ownership.
 """
 
+from __future__ import annotations
+
 import json
-from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 from threading import Event
+from typing import TYPE_CHECKING
 
 import pytest
+
 from polyad.balance import Scheduler, ShortestRemaining, checkpoints
 from polyad.graph import Control, Estimate, Outcome, Statistics, Work
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
 
 
 @dataclass

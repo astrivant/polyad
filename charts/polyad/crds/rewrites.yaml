@@ -41,6 +41,7 @@ spec:
                 type: string
                 enum:
                 - Graph
+                - PolyGraph
                 - EphemeralGraph
                 default: Graph
                 description: Kind of the graph targeted by this rewrite.
@@ -52,11 +53,29 @@ spec:
               topology:
                 type: object
                 properties:
+                  rules:
+                    type: array
+                    description: Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide
+                      rules always apply.
+                    maxItems: 32
+                    x-kubernetes-list-type: set
+                    items:
+                      type: string
+                      description: GraphRule name.
+                      maxLength: 253
+                      minLength: 1
                   nodes:
                     type: array
                     items:
                       type: object
                       properties:
+                        id:
+                          type: string
+                          description: Optional request-local node identity retained on generated manifests for
+                            auditing.
+                          minLength: 1
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$
                         name:
                           type: string
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -72,6 +91,7 @@ spec:
                           - Ephemeral
                           - Resource
                           - Graph
+                          - PolyGraph
                           - EphemeralGraph
                           - Feedback
                           description: Kind of the definition referenced by this node; determines whether execution
@@ -81,7 +101,7 @@ spec:
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           maxLength: 63
                           minLength: 1
-                          description: Name of the reusable definition in the same namespace. Nested Graph, EphemeralGraph
+                          description: Name of the reusable definition in the same namespace. Nested Graph, PolyGraph, EphemeralGraph
                             and Feedback definitions must set templateOnly to true.
                         requires:
                           type: array
@@ -406,9 +426,15 @@ spec:
                           description: One entry in tolerations.
                         description: Kubernetes taints tolerated by descendant pods, deduplicated across scopes.
                           Tolerations allow placement on tainted nodes; they do not select or guarantee a node.
-                    description: Shared placement for this execution boundary. Descendants intersect node selectors
-                      and required affinity, combine preferences, and add tolerations. This constrains eligible
-                      nodes; it does not reserve capacity atomically for the whole graph.
+                      enforce:
+                        type: boolean
+                        default: true
+                        description: Keep these constraints in every descendant pod. False allows a more specific
+                          workload or graph placement to replace these defaults; an enforced ancestor cannot be
+                          relaxed.
+                    description: Placement defaults or enforced constraints copied to descendant pod templates.
+                      Tolerations permit matching taints; selectors and required affinity restrict eligible nodes.
+                      This does not reserve capacity.
                 required:
                 - nodes
                 description: Complete replacement graph spec, including nodes, placement and lifecycle settings.

@@ -1,26 +1,80 @@
+## @section Operator and shared queue parameters
+## @param replicaCount Operator replicas when autoscaling is disabled
 replicaCount: 2
+## @param nodeSelector Node labels selecting the operator node group, independent of workload graph placement
+nodeSelector: {}
+## @param tolerations [array] Taints tolerated by the operator replicas
+tolerations: []
 autoscaling:
+  ## @param autoscaling.enabled Enable CPU-based operator autoscaling
   enabled: false
+  ## @param autoscaling.minReplicas Minimum operator replicas
   minReplicas: 2
+  ## @param autoscaling.maxReplicas Maximum operator replicas, at least minReplicas and at most 32
   maxReplicas: 8
+  ## @param autoscaling.targetCPUUtilizationPercentage Target operator CPU utilization relative to requested CPU
   targetCPUUtilizationPercentage: 70
 image:
+  ## @param image.repository Operator image repository
   repository: ghcr.io/astrivant/polyad
+  ## @param image.tag Operator image tag
   tag: '0.1.0'
+  ## @param image.pullPolicy Operator image pull policy
   pullPolicy: IfNotPresent
 resources:
   requests:
+    ## @param resources.requests.cpu Requested operator CPU, required for CPU autoscaling
     cpu: 100m
+    ## @param resources.requests.memory Requested operator memory
     memory: 128Mi
   limits:
+    ## @param resources.limits.memory Operator memory limit
     memory: 512Mi
+## @param terminationGracePeriodSeconds Time allowed for operator shutdown and outstanding API calls
 terminationGracePeriodSeconds: 60
 dragonfly:
+  ## @param dragonfly.enabled Deploy Dragonfly through the upstream operator Helm dependency
   enabled: true
-  image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.28.1
-  externalUrl: ''
+  ## @param dragonfly.image Bundled Dragonfly image
+  image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0
+  ha:
+    ## @param dragonfly.ha.enabled Enable primary/replica replication and automatic failover
+    enabled: false
+    ## @param dragonfly.ha.replicas Total Dragonfly instances in HA mode, including the primary
+    replicas: 2
+    ## @param dragonfly.ha.topologyKey Place HA instances on distinct values of this node label
+    topologyKey: kubernetes.io/hostname
+  ## @param dragonfly.externalUrl External Redis-compatible URL when bundled Dragonfly is disabled
+  externalUrl: redis://dragonfly:6379/0
+  ## @param dragonfly.existingSecret Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings
   existingSecret: ''
   persistence:
+    ## @param dragonfly.persistence.enabled Persist bundled Dragonfly snapshots on a PVC
     enabled: true
+    ## @param dragonfly.persistence.size Snapshot volume capacity
     size: 1Gi
+    ## @param dragonfly.persistence.storageClass Snapshot volume storage class; empty uses the cluster default
     storageClass: ''
+
+## @section Upstream Dragonfly operator dependency
+dragonflyOperator:
+  ## @param dragonflyOperator.nameOverride Upstream controller resource name
+  nameOverride: dragonfly-operator
+  ## @param dragonflyOperator.replicaCount Leader-elected Dragonfly controller replicas
+  replicaCount: 2
+  crds:
+    ## @param dragonflyOperator.crds.install Must remain false; Polyad installs the pinned upstream CRD from crds before rendering instances
+    install: false
+  manager:
+    ## @param dragonflyOperator.manager.extraArgs [array] Additional Dragonfly controller command arguments
+    extraArgs: []
+  rbacProxy:
+    ## @param dragonflyOperator.rbacProxy.extraArgs [array] Additional metrics proxy command arguments
+    extraArgs: []
+
+## @section Composition API
+api:
+  ## @param api.enabled Serve authenticated composition requests on port 8090 through a ClusterIP Service
+  enabled: false
+  ## @param api.existingSecret Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
+  existingSecret: polyad-api

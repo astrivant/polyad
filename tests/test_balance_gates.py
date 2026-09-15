@@ -2,15 +2,40 @@
 Verify Boolean routing, unresolved observations and graph rewrite plots.
 """
 
-from pathlib import Path
+from __future__ import annotations
+
 from threading import Event
+from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
-from polyad.balance import Graph, Scheduler
-from polyad.graph import Control, Outcome, ShutdownContract, Work
-from polyad.graph.gates import AND, NOT, NXOR, OR, XOR, Signal
 
+from polyad.balance import Graph, Scheduler
+from polyad.graph import Control, DelayGate, Outcome, ShutdownContract, Work
+from polyad.graph.gates import AND, NOT, NXOR, OR, XOR, Signal
 from tests.test_balance import Unit
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+def test_delay_admission_keeps_work_pending_without_occupying_workers(tmp_path):
+    """Wait using a monotonic clock and admit independent work during the delay."""
+    scheduler = Scheduler(
+        [Unit(Work(name, "v1"), lambda *_: Outcome()) for name in ("delayed", "independent")],
+        slots=1,
+        directory=tmp_path,
+        routes={"delayed": DelayGate(10)},
+        notify=lambda _: None,
+    )
+    with patch("polyad.balance.scheduler.time.monotonic", return_value=100):
+        assert scheduler._route(["delayed", "independent"]) == ["independent"]
+    with patch("polyad.balance.scheduler.time.monotonic", return_value=109):
+        assert scheduler._route(["delayed"]) == []
+    assert scheduler.states["delayed"].status == "pending"
+    assert not scheduler.active
+    with patch("polyad.balance.scheduler.time.monotonic", return_value=110):
+        assert scheduler._route(["delayed"]) == ["delayed"]
 
 
 @pytest.mark.parametrize("a", [False, True, None])

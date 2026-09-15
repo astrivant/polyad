@@ -1,54 +1,3 @@
-{{- if and .Values.autoscaling.enabled (gt (int .Values.autoscaling.minReplicas) (int .Values.autoscaling.maxReplicas)) }}
-{{- fail "autoscaling.minReplicas must not exceed autoscaling.maxReplicas" }}
-{{- end }}
-{{- if and .Values.autoscaling.enabled (not (dig "requests" "cpu" "" .Values.resources)) }}
-{{- fail "CPU autoscaling requires resources.requests.cpu" }}
-{{- end }}
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: {{ .Release.Name }}-polyad
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: {{ .Release.Name }}-polyad
-rules:
-  - apiGroups: [polyad.astrivant.com]
-    resources: [graphs, ephemeralgraphs, workloads, daemons, ephemerals, resources, gates, shutdownpolicies, feedbacks, rewrites]
-    verbs: [get, list, watch, create, update, patch, delete]
-  - apiGroups: [polyad.astrivant.com]
-    resources: [graphs/status, ephemeralgraphs/status, feedbacks/status, rewrites/status]
-    verbs: [get, patch]
-  - apiGroups: [polyad.astrivant.com]
-    resources: [graphs/finalizers, ephemeralgraphs/finalizers, feedbacks/finalizers, rewrites/finalizers]
-    verbs: [update, patch]
-  - apiGroups: [coordination.k8s.io]
-    resources: [leases]
-    verbs: [get, list, create, update, delete]
-  - apiGroups: [batch]
-    resources: [jobs]
-    verbs: [get, list, create, delete]
-  - apiGroups: [apps]
-    resources: [deployments]
-    verbs: [get, list, create, delete]
-  - apiGroups: ['']
-    resources: [services, configmaps, persistentvolumeclaims]
-    verbs: [get, list, create, delete]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: {{ .Release.Name }}-polyad
-subjects:
-  - kind: ServiceAccount
-    name: {{ .Release.Name }}-polyad
-    namespace: {{ .Release.Namespace }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: {{ .Release.Name }}-polyad
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -72,6 +21,14 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/name: polyad
     spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccountName: {{ .Release.Name }}-polyad
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       securityContext:
@@ -88,18 +45,31 @@ spec:
             - --namespace={{ .Release.Namespace }}
             - --liveness=http://0.0.0.0:8080/healthz
           env:
-            - name: POLYAD_DRAGONFLY_URL
+            - name: POLYAD_CACHE_URL
               {{- if .Values.dragonfly.existingSecret }}
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.dragonfly.existingSecret }}
+                  name: {{ .Values.dragonfly.existingSecret | quote }}
                   key: url
               {{- else if .Values.dragonfly.enabled }}
-              value: {{ printf "redis://%s-dragonfly:6379/0" .Release.Name | quote }}
+              value: {{ printf "redis://%s-queue:6379/0" .Release.Name | quote }}
               {{- else }}
               value: {{ required "dragonfly.externalUrl or dragonfly.existingSecret is required when the bundled cache is disabled" .Values.dragonfly.externalUrl | quote }}
               {{- end }}
+            {{- if .Values.api.enabled }}
+            - name: POLYAD_API_ENABLED
+              value: "true"
+            - name: POLYAD_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.api.existingSecret | quote }}
+                  key: token
+            {{- end }}
           ports:
+            {{- if .Values.api.enabled }}
+            - name: composition
+              containerPort: 8090
+            {{- end }}
             - name: health
               containerPort: 8080
           securityContext:
@@ -131,28 +101,3 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
-
-{{- if .Values.autoscaling.enabled }}
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: {{ .Release.Name }}-polyad
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ .Release.Name }}-polyad
-  minReplicas: {{ .Values.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
-{{- end }}

@@ -13,6 +13,31 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
+    additionalPrinterColumns:
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Nodes
+      type: integer
+      jsonPath: .status.metrics.topology.nodeCount
+    - name: Active
+      type: integer
+      jsonPath: .status.metrics.execution.activeNodes
+    - name: Breadth
+      type: integer
+      jsonPath: .status.metrics.topology.admission.breadth
+      priority: 1
+    - name: Depth
+      type: integer
+      jsonPath: .status.metrics.topology.admission.depth
+      priority: 1
+    - name: Leaves
+      type: integer
+      jsonPath: .status.metrics.rollup.observedLeafNodes
+    - name: Nesting
+      type: integer
+      jsonPath: .status.metrics.rollup.nestingDepth
+      priority: 1
     subresources:
       status: {}
     schema:
@@ -31,11 +56,28 @@ spec:
           spec:
             type: object
             properties:
+              rules:
+                type: array
+                description: Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide
+                  rules always apply.
+                maxItems: 32
+                x-kubernetes-list-type: set
+                items:
+                  type: string
+                  description: GraphRule name.
+                  maxLength: 253
+                  minLength: 1
               nodes:
                 type: array
                 items:
                   type: object
                   properties:
+                    id:
+                      type: string
+                      description: Optional request-local node identity retained on generated manifests for auditing.
+                      minLength: 1
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$
                     name:
                       type: string
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -51,6 +93,7 @@ spec:
                       - Ephemeral
                       - Resource
                       - Graph
+                      - PolyGraph
                       - EphemeralGraph
                       - Feedback
                       description: Kind of the definition referenced by this node; determines whether execution
@@ -60,7 +103,7 @@ spec:
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       maxLength: 63
                       minLength: 1
-                      description: Name of the reusable definition in the same namespace. Nested Graph, EphemeralGraph
+                      description: Name of the reusable definition in the same namespace. Nested Graph, PolyGraph, EphemeralGraph
                         and Feedback definitions must set templateOnly to true.
                     requires:
                       type: array
@@ -384,9 +427,14 @@ spec:
                       description: One entry in tolerations.
                     description: Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations
                       allow placement on tainted nodes; they do not select or guarantee a node.
-                description: Shared placement for this execution boundary. Descendants intersect node selectors
-                  and required affinity, combine preferences, and add tolerations. This constrains eligible nodes;
-                  it does not reserve capacity atomically for the whole graph.
+                  enforce:
+                    type: boolean
+                    default: true
+                    description: Keep these constraints in every descendant pod. False allows a more specific workload
+                      or graph placement to replace these defaults; an enforced ancestor cannot be relaxed.
+                description: Placement defaults or enforced constraints copied to descendant pod templates. Tolerations
+                  permit matching taints; selectors and required affinity restrict eligible nodes. This does not
+                  reserve capacity.
             required:
             - nodes
             - placement
@@ -395,9 +443,851 @@ spec:
               survives pod loss. Applications own checkpoint and resume logic.
           status:
             type: object
+            description: Operator-observed instance lifecycle and graph metrics. Inert templateOnly definitions do not
+              publish execution status. Updates are fenced by resourceVersion.
+            properties:
+              structuralRules:
+                type: array
+                description: Most recent successful admission policy observations, including rule UID and generation,
+                  structural measurements and compact spectral summaries. Check phase and observedGeneration for
+                  current validity.
+                items:
+                  type: object
+                  description: One evaluated root policy verdict.
+                  x-kubernetes-preserve-unknown-fields: true
+              phase:
+                type: string
+                description: 'Lifecycle phase: Reconciling, Ready, Running, Waiting, Draining, Suspended, Stopped, Completed,
+                  Failed or Invalid.'
+              ready:
+                type: boolean
+                description: Whether the evaluated instance currently satisfies its readiness contract.
+              completed:
+                type: boolean
+                description: Whether finite execution has completed. Persistent graphs do not complete.
+              failed:
+                type: boolean
+                description: Whether the evaluated graph contains a terminal execution failure.
+              observedGeneration:
+                type: integer
+                minimum: 0
+                description: Spec generation evaluated for lifecycle status; compare with metadata.generation.
+              message:
+                type: string
+                description: Explanation of a blocked or invalid reconciliation, cleared after successful reconciliation.
+              nodes:
+                type: object
+                description: Per-node lifecycle observations from the last graph admission pass.
+                additionalProperties:
+                  type: object
+                  description: Observed node lifecycle predicates.
+                  properties:
+                    started:
+                      type: boolean
+                      description: Whether the node is started.
+                    ready:
+                      type: boolean
+                      description: Whether the node is ready.
+                    completed:
+                      type: boolean
+                      description: Whether the node is completed.
+                    failed:
+                      type: boolean
+                      description: Whether the node is failed.
+              metrics:
+                type: object
+                description: Graph instance metrics refreshed through the ordered, ownership-guarded API queue. Counts
+                  describe direct owned resources, not a flattened descendant tree.
+                properties:
+                  scope:
+                    type: string
+                    enum:
+                    - boundary
+                    description: Metrics cover this scheduling boundary only.
+                  observedGeneration:
+                    type: integer
+                    minimum: 0
+                    description: Parent spec generation used to compute these metrics, independently of lifecycle observedGeneration.
+                  topology:
+                    type: object
+                    description: Desired shape of the current graph spec, or Feedback epoch template. Null when invalid.
+                    properties:
+                      nodeCount:
+                        type: integer
+                        minimum: 0
+                        description: Number of nodes in this graph or induced observed subset.
+                      nodesByKind:
+                        type: object
+                        description: Node counts by execution abstraction.
+                        properties:
+                          Workload:
+                            type: integer
+                            minimum: 0
+                            description: Number of Workload nodes.
+                          Daemon:
+                            type: integer
+                            minimum: 0
+                            description: Number of Daemon nodes.
+                          Ephemeral:
+                            type: integer
+                            minimum: 0
+                            description: Number of Ephemeral nodes.
+                          Resource:
+                            type: integer
+                            minimum: 0
+                            description: Number of Resource nodes.
+                          Graph:
+                            type: integer
+                            minimum: 0
+                            description: Number of Graph nodes.
+                          EphemeralGraph:
+                            type: integer
+                            minimum: 0
+                            description: Number of EphemeralGraph nodes.
+                          Feedback:
+                            type: integer
+                            minimum: 0
+                            description: Number of Feedback nodes.
+                          PolyGraph:
+                            type: integer
+                            minimum: 0
+                            description: Number of PolyGraph boundaries.
+                      subgraphCount:
+                        type: integer
+                        minimum: 0
+                        description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                      admission:
+                        type: object
+                        description: Acyclic lifecycle dependencies used for admission.
+                        properties:
+                          edgeCount:
+                            type: integer
+                            minimum: 0
+                            description: Number of distinct dependency pairs, regardless of lifecycle predicate.
+                          depth:
+                            type: integer
+                            minimum: 0
+                            description: Number of dependency layers; zero for an empty graph and one for independent
+                              nodes.
+                          breadth:
+                            type: integer
+                            minimum: 0
+                            description: Largest layer size. This is layer breadth, not maximum antichain width or available
+                              concurrency.
+                          layerWidths:
+                            type: array
+                            items:
+                              type: integer
+                              minimum: 0
+                              description: Number of nodes in this generation.
+                            description: Node counts by earliest topological generation, starting at the roots.
+                          breadthDepth:
+                            type: integer
+                            minimum: 0
+                            description: Breadth multiplied by depth; a shape summary, not an estimate of execution cost.
+                          rootCount:
+                            type: integer
+                            minimum: 0
+                            description: Nodes with no dependencies in this subset.
+                          leafCount:
+                            type: integer
+                            minimum: 0
+                            description: Nodes with no dependents in this subset.
+                          maxFanIn:
+                            type: integer
+                            minimum: 0
+                            description: Largest number of direct prerequisites.
+                          maxFanOut:
+                            type: integer
+                            minimum: 0
+                            description: Largest number of direct dependents.
+                      connections:
+                        type: object
+                        description: Directed data-flow connections, which may contain cycles. Isolated nodes are included
+                          in component counts.
+                        properties:
+                          edgeCount:
+                            type: integer
+                            minimum: 0
+                            description: Number of distinct directed data-flow connections, including self-loops.
+                          weakComponents:
+                            type: integer
+                            minimum: 0
+                            description: Connected components after ignoring edge direction.
+                          strongComponents:
+                            type: integer
+                            minimum: 0
+                            description: Maximal components in which each node can reach every other node.
+                          cyclicComponents:
+                            type: integer
+                            minimum: 0
+                            description: Strong components with multiple nodes or a self-loop; this does not enumerate
+                              individual cycles.
+                          largestStrongComponent:
+                            type: integer
+                            minimum: 0
+                            description: Number of nodes in the largest strongly connected component.
+                          condensation:
+                            type: object
+                            description: Layer shape after collapsing each strongly connected component to one node.
+                              These depths count components, not paths through cycles.
+                            properties:
+                              depth:
+                                type: integer
+                                minimum: 0
+                                description: Number of dependency layers; zero for an empty graph and one for independent
+                                  nodes.
+                              breadth:
+                                type: integer
+                                minimum: 0
+                                description: Largest layer size. This is layer breadth, not maximum antichain width or
+                                  available concurrency.
+                              layerWidths:
+                                type: array
+                                items:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of nodes in this generation.
+                                description: Node counts by earliest topological generation, starting at the roots.
+                              breadthDepth:
+                                type: integer
+                                minimum: 0
+                                description: Breadth multiplied by depth; a shape summary, not an estimate of execution
+                                  cost.
+                    nullable: true
+                  observedTopology:
+                    type: object
+                    description: Induced graph of declared nodes with observed child resources, including terminating
+                      or superseded execution. Feedback mirrors the current epoch only when its status is current; otherwise
+                      null.
+                    properties:
+                      nodeCount:
+                        type: integer
+                        minimum: 0
+                        description: Number of nodes in this graph or induced observed subset.
+                      nodesByKind:
+                        type: object
+                        description: Node counts by execution abstraction.
+                        properties:
+                          Workload:
+                            type: integer
+                            minimum: 0
+                            description: Number of Workload nodes.
+                          Daemon:
+                            type: integer
+                            minimum: 0
+                            description: Number of Daemon nodes.
+                          Ephemeral:
+                            type: integer
+                            minimum: 0
+                            description: Number of Ephemeral nodes.
+                          Resource:
+                            type: integer
+                            minimum: 0
+                            description: Number of Resource nodes.
+                          Graph:
+                            type: integer
+                            minimum: 0
+                            description: Number of Graph nodes.
+                          EphemeralGraph:
+                            type: integer
+                            minimum: 0
+                            description: Number of EphemeralGraph nodes.
+                          Feedback:
+                            type: integer
+                            minimum: 0
+                            description: Number of Feedback nodes.
+                          PolyGraph:
+                            type: integer
+                            minimum: 0
+                            description: Number of PolyGraph boundaries.
+                      subgraphCount:
+                        type: integer
+                        minimum: 0
+                        description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                      admission:
+                        type: object
+                        description: Acyclic lifecycle dependencies used for admission.
+                        properties:
+                          edgeCount:
+                            type: integer
+                            minimum: 0
+                            description: Number of distinct dependency pairs, regardless of lifecycle predicate.
+                          depth:
+                            type: integer
+                            minimum: 0
+                            description: Number of dependency layers; zero for an empty graph and one for independent
+                              nodes.
+                          breadth:
+                            type: integer
+                            minimum: 0
+                            description: Largest layer size. This is layer breadth, not maximum antichain width or available
+                              concurrency.
+                          layerWidths:
+                            type: array
+                            items:
+                              type: integer
+                              minimum: 0
+                              description: Number of nodes in this generation.
+                            description: Node counts by earliest topological generation, starting at the roots.
+                          breadthDepth:
+                            type: integer
+                            minimum: 0
+                            description: Breadth multiplied by depth; a shape summary, not an estimate of execution cost.
+                          rootCount:
+                            type: integer
+                            minimum: 0
+                            description: Nodes with no dependencies in this subset.
+                          leafCount:
+                            type: integer
+                            minimum: 0
+                            description: Nodes with no dependents in this subset.
+                          maxFanIn:
+                            type: integer
+                            minimum: 0
+                            description: Largest number of direct prerequisites.
+                          maxFanOut:
+                            type: integer
+                            minimum: 0
+                            description: Largest number of direct dependents.
+                      connections:
+                        type: object
+                        description: Directed data-flow connections, which may contain cycles. Isolated nodes are included
+                          in component counts.
+                        properties:
+                          edgeCount:
+                            type: integer
+                            minimum: 0
+                            description: Number of distinct directed data-flow connections, including self-loops.
+                          weakComponents:
+                            type: integer
+                            minimum: 0
+                            description: Connected components after ignoring edge direction.
+                          strongComponents:
+                            type: integer
+                            minimum: 0
+                            description: Maximal components in which each node can reach every other node.
+                          cyclicComponents:
+                            type: integer
+                            minimum: 0
+                            description: Strong components with multiple nodes or a self-loop; this does not enumerate
+                              individual cycles.
+                          largestStrongComponent:
+                            type: integer
+                            minimum: 0
+                            description: Number of nodes in the largest strongly connected component.
+                          condensation:
+                            type: object
+                            description: Layer shape after collapsing each strongly connected component to one node.
+                              These depths count components, not paths through cycles.
+                            properties:
+                              depth:
+                                type: integer
+                                minimum: 0
+                                description: Number of dependency layers; zero for an empty graph and one for independent
+                                  nodes.
+                              breadth:
+                                type: integer
+                                minimum: 0
+                                description: Largest layer size. This is layer breadth, not maximum antichain width or
+                                  available concurrency.
+                              layerWidths:
+                                type: array
+                                items:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of nodes in this generation.
+                                description: Node counts by earliest topological generation, starting at the roots.
+                              breadthDepth:
+                                type: integer
+                                minimum: 0
+                                description: Breadth multiplied by depth; a shape summary, not an estimate of execution
+                                  cost.
+                    nullable: true
+                  execution:
+                    type: object
+                    description: 'Fresh observations for nodes in this boundary. Counts overlap: a completed Job can
+                      also be ready. Terminating or failed execution retains slots until cleanup or completion. Feedback
+                      mirrors only the current epoch and reports null before it has current observations or between epochs.'
+                    properties:
+                      observedNodes:
+                        type: integer
+                        minimum: 0
+                        description: Declared nodes with an owned execution resource, including terminating resources.
+                      pendingNodes:
+                        type: integer
+                        minimum: 0
+                        description: Declared nodes with no observed execution resource; includes dependency, gate and
+                          capacity waits.
+                      activeNodes:
+                        type: integer
+                        minimum: 0
+                        description: Observed nodes that are not terminating, completed or failed. This is not a Pod
+                          Running count.
+                      readyNodes:
+                        type: integer
+                        minimum: 0
+                        description: Observed nodes satisfying their resource readiness predicate.
+                      completedNodes:
+                        type: integer
+                        minimum: 0
+                        description: Observed nodes whose finite execution completed.
+                      failedNodes:
+                        type: integer
+                        minimum: 0
+                        description: Observed nodes with terminal failure.
+                      terminatingNodes:
+                        type: integer
+                        minimum: 0
+                        description: Observed nodes whose execution resources have deletion timestamps.
+                      slotCapacity:
+                        type: integer
+                        minimum: 0
+                        description: Slot budget declared by this graph.
+                      reservedSlots:
+                        type: integer
+                        minimum: 0
+                        description: Slots reserved by observed nodes that have not completed, including terminating
+                          or failed nodes.
+                      availableSlots:
+                        type: integer
+                        minimum: 0
+                        description: Nonnegative difference between slot capacity and observed reservations.
+                    nullable: true
+                  topologyError:
+                    type: string
+                    description: Validation error if graph shape cannot be computed; empty for a valid topology.
+                  resources:
+                    type: object
+                    description: All directly owned resources, including obsolete and terminating children awaiting cleanup.
+                    properties:
+                      total:
+                        type: integer
+                        minimum: 0
+                        description: Total directly owned resource count.
+                      terminating:
+                        type: integer
+                        minimum: 0
+                        description: Directly owned resources awaiting deletion.
+                      byKind:
+                        type: object
+                        description: Directly owned resource counts by Kubernetes kind.
+                        properties:
+                          Job:
+                            type: integer
+                            minimum: 0
+                            description: Number of owned Job resources.
+                          Deployment:
+                            type: integer
+                            minimum: 0
+                            description: Number of owned Deployment resources.
+                          Service:
+                            type: integer
+                            minimum: 0
+                            description: Number of owned Service resources.
+                          ConfigMap:
+                            type: integer
+                            minimum: 0
+                            description: Number of owned ConfigMap resources.
+                          PersistentVolumeClaim:
+                            type: integer
+                            minimum: 0
+                            description: Number of owned PersistentVolumeClaim resources.
+                          Graph:
+                            type: integer
+                            minimum: 0
+                            description: Number of owned Graph resources.
+                          EphemeralGraph:
+                            type: integer
+                            minimum: 0
+                            description: Number of owned EphemeralGraph resources.
+                          Feedback:
+                            type: integer
+                            minimum: 0
+                            description: Number of owned Feedback resources.
+                          PolyGraph:
+                            type: integer
+                            minimum: 0
+                            description: Number of PolyGraph boundaries.
+                  subgraphs:
+                    type: array
+                    description: Immediate graph instances, sorted by kind and name. Summaries do not recursively embed
+                      descendant metrics.
+                    items:
+                      type: object
+                      description: Identity and freshness of a nested graph or Feedback epoch.
+                      properties:
+                        kind:
+                          type: string
+                          description: Nested boundary kind.
+                        name:
+                          type: string
+                          description: Nested instance name in the parent namespace.
+                        uid:
+                          type: string
+                          description: Persisted nested instance identity.
+                        node:
+                          type: string
+                          description: Parent node name or Feedback epoch label.
+                        phase:
+                          type: string
+                          description: Last reported lifecycle phase; consult current before using it.
+                        generation:
+                          type: integer
+                          minimum: 0
+                          description: Current child spec generation.
+                        observedGeneration:
+                          type: integer
+                          minimum: 0
+                          description: Child generation evaluated by its metrics.
+                          nullable: true
+                        current:
+                          type: boolean
+                          description: Whether child lifecycle and metrics observations match its generation and it is
+                            not terminating. This is generation freshness, not a heartbeat.
+                        topology:
+                          type: object
+                          description: Boundary-local graph shape. Nested Graph, PolyGraph, EphemeralGraph and Feedback instances
+                            count as single nodes. Duplicate directed edges are collapsed.
+                          properties:
+                            nodeCount:
+                              type: integer
+                              minimum: 0
+                              description: Number of nodes in this graph or induced observed subset.
+                            nodesByKind:
+                              type: object
+                              description: Node counts by execution abstraction.
+                              properties:
+                                Workload:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of Workload nodes.
+                                Daemon:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of Daemon nodes.
+                                Ephemeral:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of Ephemeral nodes.
+                                Resource:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of Resource nodes.
+                                Graph:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of Graph nodes.
+                                EphemeralGraph:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of EphemeralGraph nodes.
+                                Feedback:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of Feedback nodes.
+                                PolyGraph:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of PolyGraph boundaries.
+                            subgraphCount:
+                              type: integer
+                              minimum: 0
+                              description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                            admission:
+                              type: object
+                              description: Acyclic lifecycle dependencies used for admission.
+                              properties:
+                                edgeCount:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of distinct dependency pairs, regardless of lifecycle predicate.
+                                depth:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of dependency layers; zero for an empty graph and one for independent
+                                    nodes.
+                                breadth:
+                                  type: integer
+                                  minimum: 0
+                                  description: Largest layer size. This is layer breadth, not maximum antichain width
+                                    or available concurrency.
+                                layerWidths:
+                                  type: array
+                                  items:
+                                    type: integer
+                                    minimum: 0
+                                    description: Number of nodes in this generation.
+                                  description: Node counts by earliest topological generation, starting at the roots.
+                                breadthDepth:
+                                  type: integer
+                                  minimum: 0
+                                  description: Breadth multiplied by depth; a shape summary, not an estimate of execution
+                                    cost.
+                                rootCount:
+                                  type: integer
+                                  minimum: 0
+                                  description: Nodes with no dependencies in this subset.
+                                leafCount:
+                                  type: integer
+                                  minimum: 0
+                                  description: Nodes with no dependents in this subset.
+                                maxFanIn:
+                                  type: integer
+                                  minimum: 0
+                                  description: Largest number of direct prerequisites.
+                                maxFanOut:
+                                  type: integer
+                                  minimum: 0
+                                  description: Largest number of direct dependents.
+                            connections:
+                              type: object
+                              description: Directed data-flow connections, which may contain cycles. Isolated nodes are
+                                included in component counts.
+                              properties:
+                                edgeCount:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of distinct directed data-flow connections, including self-loops.
+                                weakComponents:
+                                  type: integer
+                                  minimum: 0
+                                  description: Connected components after ignoring edge direction.
+                                strongComponents:
+                                  type: integer
+                                  minimum: 0
+                                  description: Maximal components in which each node can reach every other node.
+                                cyclicComponents:
+                                  type: integer
+                                  minimum: 0
+                                  description: Strong components with multiple nodes or a self-loop; this does not enumerate
+                                    individual cycles.
+                                largestStrongComponent:
+                                  type: integer
+                                  minimum: 0
+                                  description: Number of nodes in the largest strongly connected component.
+                                condensation:
+                                  type: object
+                                  description: Layer shape after collapsing each strongly connected component to one
+                                    node. These depths count components, not paths through cycles.
+                                  properties:
+                                    depth:
+                                      type: integer
+                                      minimum: 0
+                                      description: Number of dependency layers; zero for an empty graph and one for independent
+                                        nodes.
+                                    breadth:
+                                      type: integer
+                                      minimum: 0
+                                      description: Largest layer size. This is layer breadth, not maximum antichain width
+                                        or available concurrency.
+                                    layerWidths:
+                                      type: array
+                                      items:
+                                        type: integer
+                                        minimum: 0
+                                        description: Number of nodes in this generation.
+                                      description: Node counts by earliest topological generation, starting at the roots.
+                                    breadthDepth:
+                                      type: integer
+                                      minimum: 0
+                                      description: Breadth multiplied by depth; a shape summary, not an estimate of execution
+                                        cost.
+                          nullable: true
+                        execution:
+                          type: object
+                          description: 'Fresh observations for nodes in this boundary. Counts overlap: a completed Job
+                            can also be ready. Terminating or failed execution retains slots until cleanup or completion.'
+                          properties:
+                            observedNodes:
+                              type: integer
+                              minimum: 0
+                              description: Declared nodes with an owned execution resource, including terminating resources.
+                            pendingNodes:
+                              type: integer
+                              minimum: 0
+                              description: Declared nodes with no observed execution resource; includes dependency, gate
+                                and capacity waits.
+                            activeNodes:
+                              type: integer
+                              minimum: 0
+                              description: Observed nodes that are not terminating, completed or failed. This is not
+                                a Pod Running count.
+                            readyNodes:
+                              type: integer
+                              minimum: 0
+                              description: Observed nodes satisfying their resource readiness predicate.
+                            completedNodes:
+                              type: integer
+                              minimum: 0
+                              description: Observed nodes whose finite execution completed.
+                            failedNodes:
+                              type: integer
+                              minimum: 0
+                              description: Observed nodes with terminal failure.
+                            terminatingNodes:
+                              type: integer
+                              minimum: 0
+                              description: Observed nodes whose execution resources have deletion timestamps.
+                            slotCapacity:
+                              type: integer
+                              minimum: 0
+                              description: Slot budget declared by this graph.
+                            reservedSlots:
+                              type: integer
+                              minimum: 0
+                              description: Slots reserved by observed nodes that have not completed, including terminating
+                                or failed nodes.
+                            availableSlots:
+                              type: integer
+                              minimum: 0
+                              description: Nonnegative difference between slot capacity and observed reservations.
+                          nullable: true
+                  rollup:
+                    type: object
+                    description: Recursive status fold across mixed graph types. Local leaves are combined with each
+                      child subtree exactly once; Feedback templates do not duplicate epoch work. Missing or stale summaries
+                      are omitted and flagged.
+                    properties:
+                      scope:
+                        type: string
+                        enum:
+                        - subtree
+                        description: This boundary and all currently observed descendant boundaries.
+                      observedGeneration:
+                        type: integer
+                        minimum: 0
+                        description: Parent generation evaluated for this aggregate.
+                      observationsComplete:
+                        type: boolean
+                        description: All expected immediate graph instances and recursively composed summaries were observed
+                          at matching generations. This is eventual generation freshness, not a heartbeat or atomic cluster
+                          snapshot.
+                      graphCount:
+                        type: integer
+                        minimum: 0
+                        description: Known graph boundaries including this one. Each boundary counts once.
+                      unobservedGraphs:
+                        type: integer
+                        minimum: 0
+                        description: Known missing instances or unavailable/stale child summaries. Descendant totals
+                          are lower bounds when nonzero.
+                      nestingDepth:
+                        type: integer
+                        minimum: 0
+                        description: Maximum known nesting layers including this boundary as layer one; independent of
+                          admission dependency depth.
+                      graphsByPhase:
+                        type: object
+                        description: Known boundaries by their generation-current lifecycle phase; unavailable summaries
+                          count as Unknown.
+                        properties:
+                          Reconciling:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Reconciling.
+                          Ready:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Ready.
+                          Running:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Running.
+                          Waiting:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Waiting.
+                          Draining:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Draining.
+                          Suspended:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Suspended.
+                          Stopped:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Stopped.
+                          Completed:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Completed.
+                          Failed:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Failed.
+                          Invalid:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Invalid.
+                          Unknown:
+                            type: integer
+                            minimum: 0
+                            description: Boundaries in phase Unknown.
+                      leafNodes:
+                        type: integer
+                        minimum: 0
+                        description: Declared non-boundary nodes across observed graph specs. Uninstantiated subgraph
+                          contents are unknown.
+                      observedLeafNodes:
+                        type: integer
+                        minimum: 0
+                        description: Declared non-boundary nodes with owned execution resources.
+                      pendingLeafNodes:
+                        type: integer
+                        minimum: 0
+                        description: Known leaf nodes with no observed execution resource.
+                      activeLeafNodes:
+                        type: integer
+                        minimum: 0
+                        description: Observed leaf resources that are not completed, failed or terminating; not a Pod
+                          Running count.
+                      readyLeafNodes:
+                        type: integer
+                        minimum: 0
+                        description: Leaf nodes satisfying readiness.
+                      completedLeafNodes:
+                        type: integer
+                        minimum: 0
+                        description: Observed finite leaf nodes that completed. Completed Feedback epochs are not retained
+                          after garbage collection.
+                      failedLeafNodes:
+                        type: integer
+                        minimum: 0
+                        description: Leaf nodes reporting terminal failure.
+                      terminatingLeafNodes:
+                        type: integer
+                        minimum: 0
+                        description: Declared leaf executions awaiting deletion.
+                      resourceCount:
+                        type: integer
+                        minimum: 0
+                        description: All known owned resources across descendants, including nested boundary CRs and
+                          obsolete resources. Excludes this root CR; each owned resource counts once.
+                      terminatingResources:
+                        type: integer
+                        minimum: 0
+                        description: Known owned resources awaiting deletion across descendants.
+              delays:
+                type: object
+                description: Durable admission deadlines keyed by node name; shared by operator replicas.
+                additionalProperties:
+                  type: object
+                  required:
+                  - token
+                  - notBefore
+                  properties:
+                    token:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: Gate, graph, workload and dependency identities fencing this admission timer.
+                    notBefore:
+                      type: string
+                      format: date-time
+                      description: Earliest UTC admission time after dependency eligibility was observed.
             x-kubernetes-preserve-unknown-fields: true
-            description: Operator-observed phase, readiness, completion, failure and per-node lifecycle facts. observedGeneration
-              identifies the Graph spec generation evaluated; status is not user input.
         required:
         - spec
         description: Orchestrate a graph on explicitly selected interruptible capacity. Placement propagates to

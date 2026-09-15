@@ -2,10 +2,15 @@
 Render deterministic layered dependency graphs without a graph-layout dependency.
 """
 
-from collections.abc import Mapping
-from pathlib import Path
+from __future__ import annotations
 
-from polyad.graph import Work
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from pathlib import Path
+
+    from polyad.graph import Work
 
 
 def plot_graph(works: Mapping[str, Work], output: Path, *, title: str) -> None:

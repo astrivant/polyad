@@ -2,10 +2,14 @@
 Describe atomic dependency-graph rewrites and boundary-local named registries.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from threading import RLock
+from typing import TYPE_CHECKING
 
-from polyad.graph.workloads import Workload
+if TYPE_CHECKING:
+    from polyad.graph.workloads import Workload
 
 
 @dataclass(frozen=True)
@@ -24,9 +28,7 @@ class Rewrite:
     links: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
     @classmethod
-    def replace(
-        cls, removed: tuple[str, ...], added: tuple[Workload, ...], links: tuple[tuple[str, tuple[str, ...]], ...] = ()
-    ) -> "Rewrite":
+    def replace(cls, removed: tuple[str, ...], added: tuple[Workload, ...], links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> Rewrite:
         """
         Replace a subgraph with explicit external reconnections.
 
@@ -41,7 +43,7 @@ class Rewrite:
         return cls(added, removed, links)
 
     @classmethod
-    def prune(cls, removed: tuple[str, ...], links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> "Rewrite":
+    def prune(cls, removed: tuple[str, ...], links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> Rewrite:
         """
         Remove unnecessary units with explicit reconnections.
 
@@ -55,7 +57,7 @@ class Rewrite:
         return cls(removals=removed, links=links)
 
     @classmethod
-    def splice(cls, unit: Workload, target: str, requires: tuple[str, ...]) -> "Rewrite":
+    def splice(cls, unit: Workload, target: str, requires: tuple[str, ...]) -> Rewrite:
         """
         Insert a unit and replace the target's prerequisites in the same transaction.
 
@@ -72,7 +74,7 @@ class Rewrite:
         return cls(additions=(unit,), links=((target, requires),))
 
     @classmethod
-    def split(cls, original: str, partitions: tuple[Workload, ...], links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> "Rewrite":
+    def split(cls, original: str, partitions: tuple[Workload, ...], links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> Rewrite:
         """
         Replace one unit with application-defined partitions and optional join work.
 
@@ -89,7 +91,7 @@ class Rewrite:
         return cls(partitions, (original,), links)
 
     @classmethod
-    def fuse(cls, originals: tuple[str, ...], unit: Workload, links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> "Rewrite":
+    def fuse(cls, originals: tuple[str, ...], unit: Workload, links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> Rewrite:
         """
         Replace multiple units with an application-supplied fused implementation.
 
@@ -106,7 +108,7 @@ class Rewrite:
         return cls((unit,), originals, links)
 
     @classmethod
-    def replicate(cls, replicas: tuple[Workload, ...], links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> "Rewrite":
+    def replicate(cls, replicas: tuple[Workload, ...], links: tuple[tuple[str, tuple[str, ...]], ...] = ()) -> Rewrite:
         """
         Add explicitly named replicas and application-defined result selection.
 
@@ -141,6 +143,9 @@ class RewriteRegistry:
         Args:
             name (str): Boundary-local operation name.
             rewrite (Rewrite): Complete structural proposal.
+
+        Returns:
+            None: No return value.
         """
         with self._lock:
             if not name or name in self._entries:

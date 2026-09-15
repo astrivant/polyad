@@ -1,0 +1,56 @@
+{
+  "requestId": "example-analysis",
+  "rootId": "root",
+  "objects": [
+    {
+      "id": "work",
+      "kind": "Workload",
+      "spec": {
+        "template": {
+          "spec": {
+            "containers": [
+              {
+                "name": "main",
+                "image": "busybox:1.37",
+                "command": [
+                  "sh",
+                  "-c",
+                  "echo scheduled-by-polyad"
+                ]
+              }
+            ],
+            "restartPolicy": "Never"
+          }
+        }
+      }
+    },
+    {
+      "id": "subgraph",
+      "kind": "Graph",
+      "spec": {
+        "nodes": [
+          {
+            "id": "execute",
+            "refId": "work"
+          }
+        ]
+      }
+    },
+    {
+      "id": "root",
+      "kind": "PolyGraph",
+      "spec": {
+        "nodes": [
+          {
+            "id": "left",
+            "refId": "subgraph"
+          },
+          {
+            "id": "right",
+            "refId": "subgraph"
+          }
+        ]
+      }
+    }
+  ]
+}

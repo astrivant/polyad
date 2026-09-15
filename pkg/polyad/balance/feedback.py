@@ -1,20 +1,26 @@
 """
-Represent explicit graph-level feedback as resumable rounds, with explicit termination bounds.
+Schedule local graph feedback in rounds with explicit termination bounds.
 """
+
+from __future__ import annotations
 
 import json
 import math
 import time
-from collections.abc import Callable
 from concurrent.futures import Future
 from dataclasses import replace
-from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-from polyad.balance.graph import Graph
-from polyad.graph import Control, Outcome, Statistics, Work
+from polyad.graph import Control, Outcome, Statistics
 from polyad.graph.hashing import digest
 from polyad.graph.rewrites import RewriteRegistry
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from polyad.balance.graph import Graph
+    from polyad.graph import Work
 
 
 class FeedbackGraph:
@@ -108,7 +114,7 @@ class FeedbackGraph:
         if checkpoint is not None and (checkpoint.get("fingerprint") != self.work.fingerprint or checkpoint.get("rounds") != self.rounds):
             raise ValueError("feedback checkpoint identity changed")
         iteration = int(str(checkpoint["round"])) if checkpoint else 0
-        inner = cast(dict[str, object] | None, checkpoint.get("inner")) if checkpoint else None
+        inner = cast("dict[str, object] | None", checkpoint.get("inner")) if checkpoint else None
         self.directory.mkdir(parents=True, exist_ok=True)
         if self.diagrams:
             (self.directory / "feedback.mmd").write_text(

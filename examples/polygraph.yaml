@@ -1,0 +1,83 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: composition-worker
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command: [sh, -c, 'echo composed work']
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: composition-stage
+spec:
+  templateOnly: true
+  nodes:
+    - name: worker
+      kind: Workload
+      ref: composition-worker
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: PolyGraph
+metadata:
+  name: composition-group
+spec:
+  templateOnly: true
+  nodes:
+    - name: stage
+      kind: Graph
+      ref: composition-stage
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: EphemeralGraph
+metadata:
+  name: composition-spot
+spec:
+  templateOnly: true
+  placement:
+    # Replace with your provider's node labels.
+    nodeSelector:
+      polyad.astrivant.com/capacity: spot
+  nodes:
+    - name: worker
+      kind: Workload
+      ref: composition-worker
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Feedback
+metadata:
+  name: composition-feedback
+spec:
+  templateOnly: true
+  rounds: 1
+  graph:
+    nodes:
+      - name: worker
+        kind: Workload
+        ref: composition-worker
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: PolyGraph
+metadata:
+  name: composed
+spec:
+  nodes:
+    - name: group
+      kind: PolyGraph
+      ref: composition-group
+    - name: spot
+      kind: EphemeralGraph
+      ref: composition-spot
+      requires:
+        - node: group
+          condition: completed
+    - name: feedback
+      kind: Feedback
+      ref: composition-feedback
+      requires:
+        - node: spot
+          condition: completed

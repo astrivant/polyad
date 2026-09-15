@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "polyad"
 version = "0.1.0"
-description = "Adaptive graph orchestration with resumable work and explicit lifecycle contracts"
+description = "Kubernetes operator for scheduling workloads through graphs"
 authors = ["Emma Doyle"]
 readme = "README.md"
 license = "GPL-3.0-only"
@@ -10,25 +10,32 @@ packages = [{include = "polyad", from = "pkg"}]
 
 [tool.poetry.dependencies]
 python = ">=3.13,<4.0"
-matplotlib = {version = ">=3.10,<4", optional = true}
 kopf = ">=1.37,<2"
 kubernetes = ">=32,<36"
 attrs = ">=24,<27"
 cattrs = ">=24,<27"
 redis = ">=5.2,<7"
-
-[tool.poetry.extras]
-plotting = ["matplotlib"]
+networkx = ">=3.6,<4"
+flask = ">=3.1,<4"
+apispec = ">=6.10,<7"
+numpy = ">=2.2,<3"
+waitress = ">=3,<4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"
 ruff = "^0.15"
 mypy = "^1.15"
 matplotlib = ">=3.10,<4"
+pre-commit = "4.6.0"
+pydocstyle = "6.3.0"
+pydoclint = "0.6.6"
+types-networkx = "^3.6.1.20260911"
+types-waitress = ">=3,<4"
+jsonschema = ">=4.26,<5"
+openapi-spec-validator = ">=0.7,<0.9"
 
 [tool.poetry.scripts]
 polyad-operator = "polyad.operator.runtime:main"
-polyad-example = "polyad.balance.example:main"
 
 [build-system]
 requires = ["poetry-core>=2.0,<3.0"]
@@ -38,12 +45,21 @@ build-backend = "poetry.core.masonry.api"
 testpaths = ["tests"]
 
 [tool.ruff]
+src = [".", "pkg"]
 line-length = 140
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "D"]
+select = ["E", "F", "I", "UP", "B", "D", "TC"]
 ignore = ["D200", "D212"]
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.flake8-type-checking]
+strict = true
+exempt-modules = []
+runtime-evaluated-decorators = ["attrs.define", "attrs.frozen"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -51,8 +67,26 @@ convention = "google"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["pkg"]
+files = ["pkg", "examples"]
 
 [[tool.mypy.overrides]]
 module = ["kubernetes.*"]
 ignore_missing_imports = true
+
+[tool.pydocstyle]
+convention = "google"
+add-ignore = ["D200", "D212"]
+add-select = ["D213"]
+match = ".*\\.py"
+
+[tool.pydoclint]
+style = "google"
+skip-checking-short-docstrings = false
+arg-type-hints-in-docstring = true
+arg-type-hints-in-signature = true
+check-return-types = true
+check-arg-order = true
+allow-init-docstring = true
+require-return-section-when-returning-nothing = true
+# Pydoclint only sees local raise statements and rejects documented propagated errors.
+skip-checking-raises = true

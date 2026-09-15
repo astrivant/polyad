@@ -1,0 +1,50 @@
+# Choose a StorageClass and non-spot node labels that exist in your cluster.
+# This PVC is external to the graph and survives graph cleanup.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: application-data
+spec:
+  storageClassName: standard
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: record-run
+spec:
+  persistence:
+    enabled: true
+    storageClass: standard
+    claimName: application-data
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command: [sh, -c, 'date >> /var/lib/polyad/runs']
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Gate
+metadata:
+  name: cooldown
+spec:
+  delaySeconds: 10
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: stored-work
+spec:
+  placement:
+    enforce: true
+    nodeSelector:
+      workloads.example.com/capacity: on-demand
+  nodes:
+    - name: record
+      kind: Workload
+      ref: record-run
+      gate: cooldown

@@ -1,22 +1,33 @@
 """Own process signals on the main thread and embed Kopf on a dedicated thread."""
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
 import os
 import signal
 import threading
-from collections.abc import Awaitable, Callable
-from types import FrameType
+from typing import TYPE_CHECKING
 
 import kopf
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+    from types import FrameType
 
 
 class OperatorThread:
     """Run an async operator on its own event loop with a thread-safe stop flag."""
 
     def __init__(self, operator: Callable[..., Awaitable[None]] = kopf.operator, **options: object) -> None:
-        """Bind runtime options; the owning process controls start and shutdown."""
+        """
+        Bind runtime options; the owning process controls start and shutdown.
+
+        Args:
+            operator (Callable[..., Awaitable[None]]): Async operator entry point to run on the owned thread.
+            **options (object): Keyword options forwarded to the async operator.
+        """
         self.operator, self.options = operator, options
         self.stop_flag = threading.Event()
         self.ready_flag = threading.Event()
@@ -24,7 +35,12 @@ class OperatorThread:
         self.thread = threading.Thread(target=self._run, name="polyad-kopf", daemon=False)
 
     def _run(self) -> None:
-        """Keep event-loop creation and teardown entirely on the operator thread."""
+        """
+        Keep event-loop creation and teardown entirely on the operator thread.
+
+        Returns:
+            None: No return value.
+        """
 
         async def run() -> None:
             await self.operator(stop_flag=self.stop_flag, ready_flag=self.ready_flag, **self.options)
@@ -35,22 +51,42 @@ class OperatorThread:
             self.error = error
 
     def start(self) -> None:
-        """Start the owned thread without blocking the main process."""
+        """
+        Start the owned thread without blocking the main process.
+
+        Returns:
+            None: No return value.
+        """
         self.thread.start()
 
     def stop(self) -> None:
-        """Request cooperative Kopf cleanup without deleting workload resources."""
+        """
+        Request cooperative Kopf cleanup without deleting workload resources.
+
+        Returns:
+            None: No return value.
+        """
         self.stop_flag.set()
 
     def join(self) -> None:
-        """Wait for thread cleanup and propagate failures to the process supervisor."""
+        """
+        Wait for thread cleanup and propagate failures to the process supervisor.
+
+        Returns:
+            None: No return value.
+        """
         self.thread.join()
         if self.error:
             raise RuntimeError("Kopf operator thread failed") from self.error
 
 
 def main() -> None:
-    """Launch the Python-owned operator process and forward termination signals."""
+    """
+    Launch the Python-owned operator process and forward termination signals.
+
+    Returns:
+        None: No return value.
+    """
     # Import registers handlers before Kopf starts its event loop.
     from polyad.operator import handlers  # noqa: F401
 
@@ -63,7 +99,16 @@ def main() -> None:
     runtime = OperatorThread(standalone=True, namespaces=[args.namespace], liveness_endpoint=args.liveness)
 
     def stop(signum: int, frame: FrameType | None) -> None:
-        """Forward main-thread process signals through the shared stop event."""
+        """
+        Forward main-thread process signals through the shared stop event.
+
+        Args:
+            signum (int): Signal received by the main process.
+            frame (FrameType | None): Interrupted Python frame, if available.
+
+        Returns:
+            None: No return value.
+        """
         runtime.stop()
 
     previous = {sig: signal.signal(sig, stop) for sig in (signal.SIGTERM, signal.SIGINT)}

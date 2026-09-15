@@ -2,16 +2,21 @@
 Exercise atomic rewrites, boundary-local registries and recursive shape identity.
 """
 
+from __future__ import annotations
+
 import json
-from pathlib import Path
 from threading import Event
+from typing import TYPE_CHECKING
 
 import pytest
+
 from polyad.balance import Graph, Scheduler
 from polyad.graph import Control, Outcome, Rewrite, Work
 from polyad.graph.gates import Signal
-
 from tests.test_balance import Unit
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def unit(name: str, requires: tuple[str, ...] = ()) -> Unit:

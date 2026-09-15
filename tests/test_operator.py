@@ -1,19 +1,26 @@
 """Exercise graph lifecycle against an API with acknowledgement and deletion delays."""
 
+from __future__ import annotations
+
 import asyncio
 import copy
 import threading
-from typing import Any
+from typing import TYPE_CHECKING
+from uuid import NAMESPACE_URL, uuid5
 
 import pytest
 from kubernetes.client.exceptions import ApiException
+
+from polyad.compiler.asts import encode_body
 from polyad.graph import Ephemeral, EphemeralGraph, Placement
 from polyad.graph.topology import converter, topology
 from polyad.operator.api import GROUP, VERSION
-from polyad.operator.compiler.asts import encode_body
 from polyad.operator.controller import FINALIZER, Controller, Pending, observed
 from polyad.operator.queue import RefreshQueue
 from polyad.operator.runtime import OperatorThread
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 def resource(kind, name, spec=None):
@@ -49,6 +56,15 @@ class FakeAPI:
 
     async def request(self, method, kind, namespace, name="", body=None, **kwargs):
         """Enforce optimistic concurrency and optionally lose creation acknowledgement."""
+        if method == "GET":
+            if name:
+                return await self.get(kind, namespace, name)
+            items = [copy.deepcopy(obj) for (k, ns, _), obj in self.objects.items() if k == kind and ns == namespace]
+            for key, selector in kwargs.get("query", []):
+                if key == "labelSelector":
+                    label, value = selector.split("=", 1)
+                    items = [obj for obj in items if obj["metadata"].get("labels", {}).get(label) == value]
+            return {"items": items}
         body = encode_body(body)
         self.calls.append((method, kind, name))
         key = (kind, namespace, name or (body or {}).get("metadata", {}).get("name", ""))
@@ -56,7 +72,7 @@ class FakeAPI:
             if key in self.objects:
                 raise ApiException(status=409)
             self.objects[key] = copy.deepcopy(body)
-            self.objects[key]["metadata"].update(uid=f"child-{key[2]}", resourceVersion="1", generation=1)
+            self.objects[key]["metadata"].update(uid=str(uuid5(NAMESPACE_URL, "/".join(key))), resourceVersion="1", generation=1)
             if self.fail_create_after_commit:
                 self.fail_create_after_commit = False
                 raise ApiException(status=504)

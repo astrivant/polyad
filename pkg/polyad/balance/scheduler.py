@@ -2,24 +2,31 @@
 Balance cooperative workloads without releasing resources before checkpoint completion.
 """
 
+from __future__ import annotations
+
 import json
 import re
 import time
-from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import asdict, dataclass, replace
-from pathlib import Path
 from queue import Empty, SimpleQueue
 from threading import Event, Lock
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from polyad.balance import checkpoints
 from polyad.balance.policy import ShortestRemaining
-from polyad.graph.gates import Gate
+from polyad.graph.gates import DelayGate
 from polyad.graph.hashing import shape_hash
 from polyad.graph.rewrites import Rewrite, RewriteRegistry
 from polyad.graph.shutdown import ShutdownContract, ShutdownState
-from polyad.graph.workloads import Control, Estimate, Outcome, Statistics, Work, Workload
+from polyad.graph.workloads import Control, Estimate, Statistics
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, Sequence
+    from pathlib import Path
+
+    from polyad.graph.gates import Gate
+    from polyad.graph.workloads import Outcome, Work, Workload
 
 
 @dataclass
@@ -66,7 +73,7 @@ class Scheduler:
         diagrams: bool = False,
         plots: bool = False,
         rewrites: RewriteRegistry | None = None,
-        routes: Mapping[str, Gate] | None = None,
+        routes: Mapping[str, Gate | DelayGate] | None = None,
         facts: Callable[[], Mapping[str, bool]] | None = None,
         restore: bool = False,
         shutdown: ShutdownContract | None = None,
@@ -82,9 +89,9 @@ class Scheduler:
             memory_bytes (int | None): Optional memory reservation budget.
             policy (ShortestRemaining | None): Ready-work ordering and preemption policy.
             diagrams (bool): Write Mermaid snapshots when graph or lifecycle state changes.
-            rewrites (RewriteRegistry | None): Registry owned by this scheduling boundary.
             plots (bool): Save matplotlib PNG snapshots on graph creation and rewrites.
-            routes (Mapping[str, Gate] | None): Boolean admission rules keyed by workload name.
+            rewrites (RewriteRegistry | None): Registry owned by this scheduling boundary.
+            routes (Mapping[str, Gate | DelayGate] | None): Boolean or delay admission rules keyed by workload name.
             facts (Callable[[], Mapping[str, bool]] | None): Coordinator callback supplying current Boolean observations.
             restore (bool): Restore compatible paused checkpoints from a previous scheduler.
             shutdown (ShutdownContract | None): Conditions and grace period for cooperative graph shutdown.
@@ -96,6 +103,7 @@ class Scheduler:
         self.directory, self.policy = directory, policy or ShortestRemaining()
         self.diagrams, self.restore, self.notify = diagrams, restore, notify
         self.plots, self.routes, self.facts = plots, dict(routes or {}), facts or dict
+        self.delay_started: dict[str, float] = {}
         self.rewrites = rewrites if rewrites is not None else RewriteRegistry()
         self.states: dict[str, State] = {}
         self.active: dict[str, tuple[Future[Outcome], Control, float]] = {}
@@ -165,6 +173,9 @@ class Scheduler:
     def _publish_shape(self) -> None:
         """
         Publish one immutable local topology snapshot for recursive hashing.
+
+        Returns:
+            None: No return value.
         """
         self._shape_snapshot = (tuple((state.work, state.unit) for state in self.states.values()), dict(self.routes))
 
@@ -225,6 +236,9 @@ class Scheduler:
 
         Args:
             proposal (Rewrite): Additions, removals and replacement prerequisite lists.
+
+        Returns:
+            None: No return value.
         """
         removed = set(proposal.removals)
         added = {unit.work.name: unit for unit in proposal.additions}
@@ -249,6 +263,8 @@ class Scheduler:
         # Validate recursive containment before publication as well.
         shape_hash(self, tuple((state.work, state.unit) for state in proposed.values()), routes)
         self.states, self.routes = proposed, routes
+        for name in removed | links.keys():
+            self.delay_started.pop(name, None)
         self._publish_shape()
 
     def submit(self, units: Sequence[Workload]) -> Future[None]:
@@ -359,6 +375,12 @@ class Scheduler:
         admitted = []
         for name in ready:
             gate = self.routes.get(name)
+            if isinstance(gate, DelayGate):
+                now = time.monotonic()
+                started = self.delay_started.setdefault(name, now)
+                if self.states[name].status == "paused" or gate.elapsed(now - started):
+                    admitted.append(name)
+                continue
             decision = True if gate is None or self.states[name].status == "paused" else gate.evaluate(facts)
             if decision is True:
                 admitted.append(name)
@@ -379,7 +401,7 @@ class Scheduler:
                 _kind, payload = self.messages.get_nowait()
             except Empty:
                 break
-            rewrite_name, proposal, acknowledgement = cast(tuple[str, Rewrite, Future[None]], payload)
+            rewrite_name, proposal, acknowledgement = cast("tuple[str, Rewrite, Future[None]]", payload)
             try:
                 before = self.shape_hash
                 self._rewrite(proposal)
@@ -657,8 +679,8 @@ class Scheduler:
                 self.closed = True
                 while not self.messages.empty():
                     _, payload = self.messages.get_nowait()
-                    acknowledgement = cast(tuple[object, ...], payload)[-1]
-                    cast(Future[None], acknowledgement).set_exception(RuntimeError("scheduler stopped"))
+                    acknowledgement = cast("tuple[object, ...]", payload)[-1]
+                    cast("Future[None]", acknowledgement).set_exception(RuntimeError("scheduler stopped"))
             for _, control, _ in self.active.values():
                 control.cancel.set()
             if pool is not None:

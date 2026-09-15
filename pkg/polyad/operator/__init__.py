@@ -1,1 +1,1 @@
-"""Reconcile persistent and finite graph boundaries on Kubernetes."""
+"""Schedule Kubernetes workloads through finite, persistent and ephemeral graphs."""

@@ -2,16 +2,23 @@
 Run a small heartbeat pipeline and export each dependency-graph rewrite.
 """
 
+from __future__ import annotations
+
 import argparse
 import time
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
+from typing import TYPE_CHECKING
 
 from polyad.balance import BreadthFirst, Scheduler
-from polyad.graph import Control, Outcome, Rewrite, ShutdownContract, Statistics, Work
+from polyad.graph import Outcome, Rewrite, ShutdownContract, Statistics, Work
 from polyad.graph.gates import AND, NOT, OR, Signal
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from polyad.graph import Control
 
 
 @dataclass
@@ -102,3 +109,7 @@ def main() -> int:
     print(f"Final shape hash: {scheduler.shape_hash}")
     print(f"Plots and rewrite journal: {options.output}")
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

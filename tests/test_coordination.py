@@ -1,15 +1,17 @@
 """Exercise replica contention, failover and write guards with a CAS API."""
 
+from __future__ import annotations
+
 import asyncio
 import copy
 import threading
 from unittest.mock import MagicMock, Mock
 
 import pytest
+
 from polyad.operator.api import API
 from polyad.operator.controller import FINALIZER, Controller, Pending
 from polyad.operator.coordination import DURATION, SHARDS, Coordinator, NotOwner, active_shard, assignment
-
 from tests.test_operator import FakeAPI, resource
 
 
@@ -20,7 +22,13 @@ class LeaseAPI(FakeAPI):
         """List a fresh snapshot or delegate writes to the compare-and-swap fake."""
         await asyncio.sleep(0)
         if method == "GET":
-            return {"items": [copy.deepcopy(obj) for key, obj in self.objects.items() if key[:2] == (kind, namespace)]}
+            return {
+                "items": [
+                    {field: copy.deepcopy(value) for field, value in obj.items() if field not in {"kind", "apiVersion"}}
+                    for key, obj in self.objects.items()
+                    if key[:2] == (kind, namespace)
+                ]
+            }
         return await super().request(method, kind, namespace, name, body, **kwargs)
 
 
@@ -150,10 +158,13 @@ def test_finalizer_is_acknowledged_before_children_and_preserves_others():
         with pytest.raises(Pending):
             await controller.reconcile(key)
         assert api.objects[key]["metadata"]["finalizers"] == ["example.com/other", FINALIZER]
-        assert api.calls == [("PATCH", "Graph", "root")]
+        # The acknowledged finalizer is followed by a separate, refreshed status patch.
+        assert api.calls == [("PATCH", "Graph", "root"), ("PATCH", "Graph", "root")]
+        assert api.objects[key]["status"]["metrics"]["resources"]["total"] == 0
         api.objects[key]["metadata"]["deletionTimestamp"] = "now"
         await controller.reconcile(key)
         assert api.objects[key]["metadata"]["finalizers"] == ["example.com/other"]
+        assert api.objects[key]["status"]["phase"] == "Draining"
 
     asyncio.run(scenario())
 
@@ -187,6 +198,7 @@ def test_transport_cancellation_joins_outstanding_write():
 def test_config_resolution_and_guard(monkeypatch):
     """Prefer service-account credentials, fall back locally, and reject unowned writes."""
     from kubernetes import config
+
     from polyad.operator import api as module
 
     incluster, local = Mock(), Mock()

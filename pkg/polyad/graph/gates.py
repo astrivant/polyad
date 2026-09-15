@@ -2,8 +2,48 @@
 Compose Boolean routing expressions without treating missing observations as false.
 """
 
-from collections.abc import Mapping
+from __future__ import annotations
+
+import math
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+
+@dataclass(frozen=True)
+class DelayGate:
+    """
+    Wait after admission prerequisites are observed without occupying a worker.
+
+    Attributes:
+        seconds (float): Minimum delay before admitting the next workload.
+    """
+
+    seconds: float
+
+    def __post_init__(self) -> None:
+        """
+        Require a finite, nonnegative delay.
+
+        Returns:
+            None: No return value.
+        """
+        if isinstance(self.seconds, bool) or not math.isfinite(self.seconds) or not 0 <= self.seconds <= 315360000:
+            raise ValueError("delay seconds must be finite and between zero and 315360000")
+
+    def elapsed(self, seconds: float) -> bool:
+        """
+        Check an elapsed duration supplied by the owning scheduler.
+
+        Args:
+            seconds (float): Time since this node's prerequisites became eligible.
+
+        Returns:
+            bool: Whether the minimum delay has elapsed.
+        """
+        return seconds >= self.seconds
 
 
 @dataclass(frozen=True)
@@ -18,7 +58,7 @@ class Gate:
     """
 
     operator: str
-    operands: tuple["Gate", ...] = ()
+    operands: tuple[Gate, ...] = ()
     name: str = ""
 
     def __post_init__(self) -> None:

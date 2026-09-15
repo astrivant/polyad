@@ -275,9 +275,43 @@ spec:
                       description: One entry in tolerations.
                     description: Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations
                       allow placement on tainted nodes; they do not select or guarantee a node.
-                description: Shared placement for this execution boundary. Descendants intersect node selectors
-                  and required affinity, combine preferences, and add tolerations. This constrains eligible nodes;
-                  it does not reserve capacity atomically for the whole graph.
+                  enforce:
+                    type: boolean
+                    default: true
+                    description: Keep these constraints in every descendant pod. False allows a more specific workload
+                      or graph placement to replace these defaults; an enforced ancestor cannot be relaxed.
+                description: Placement defaults or enforced constraints copied to descendant pod templates. Tolerations
+                  permit matching taints; selectors and required affinity restrict eligible nodes. This does not
+                  reserve capacity.
+              persistence:
+                type: object
+                description: Optional persistent storage contract. Storage does not checkpoint or resume application
+                  execution; use non-spot capacity.
+                properties:
+                  enabled:
+                    type: boolean
+                    default: false
+                    description: Require an explicitly selected existing persistent volume claim.
+                  storageClass:
+                    type: string
+                    minLength: 1
+                    description: Required StorageClass name when enabled; must match the PVC storageClassName. The
+                      operator does not create StorageClasses.
+                  claimName:
+                    type: string
+                    minLength: 1
+                    description: Existing PVC in the workload namespace. External claims survive graph suspension,
+                      replacement and deletion.
+                  mountPath:
+                    type: string
+                    pattern: ^/[^/].*
+                    default: /var/lib/polyad
+                    description: Absolute non-root path mounted in application and init containers.
+                x-kubernetes-validations:
+                - rule: '!self.enabled || (has(self.storageClass) && has(self.claimName))'
+                  message: enabled persistence requires storageClass and claimName
+                - rule: '!self.enabled && !has(self.storageClass) && !has(self.claimName)'
+                  message: Ephemeral workloads cannot declare persistent storage or storage classes
             required:
             - template
             - placement

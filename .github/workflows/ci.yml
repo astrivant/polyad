@@ -9,12 +9,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Read shared tool versions
+        id: tools
+        run: |
+          echo "nodejs=$(bash scripts/tool-version.sh nodejs)" >> "$GITHUB_OUTPUT"
+          echo "poetry=$(bash scripts/tool-version.sh poetry)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-      - run: pip install poetry
+          python-version-file: .python-version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.tools.outputs.nodejs }}
+          cache: npm
+          cache-dependency-path: scripts/mermaid/package-lock.json
+      - run: pip install "poetry==${{ steps.tools.outputs.poetry }}"
       - run: poetry install
-      - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.28.1 --proactor_threads=1 --maxmemory=256mb
+      - run: bash scripts/ci/install-helm-tools.sh helm shellcheck shfmt
+      - run: helm dependency build charts/polyad
+      - run: poetry run pre-commit run --all-files
+      - run: npm test --prefix scripts/mermaid
+      - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0 --proactor_threads=1 --maxmemory=256mb
       - run: |
           for attempt in $(seq 1 30); do
             if poetry run python -c "import redis; redis.Redis().ping()"; then break; fi
@@ -24,34 +38,56 @@ jobs:
       - run: poetry run pytest
         env:
           POLYAD_TEST_DRAGONFLY_URL: redis://localhost:6379/0
-      - run: poetry run ruff check .
-      - run: poetry run mypy pkg
+      - name: Check installed wheel typing
+        run: |
+          poetry build --format wheel
+          poetry run python -m venv /tmp/polyad-typing
+          /tmp/polyad-typing/bin/python -m pip install dist/*.whl
+          POLYAD_TYPING_PYTHON=/tmp/polyad-typing/bin/python poetry run pytest tests/test_typing.py
   chart:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: bash scripts/ci/install-helm-tools.sh helm kubeconform
+      - run: helm dependency build charts/polyad
       - uses: astrivant/hypothesis-helm@main
         with:
           chart: charts/polyad
           max-examples: '10'
+          # Test the public chart interface, including exposed dependency options.
+          match: 'not dragonflyOperator or replicaCount or (nameOverride and not fullnameOverride) or crds or extraArgs'
           kubeconform: 'true'
+          kubeconform-binary: scripts/kubeconform.sh
           schema-version: '1.35.0'
   operator:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dragonfly-ha: [false, true]
+    env:
+      POLYAD_TEST_DRAGONFLY_HA: ${{ matrix.dragonfly-ha }}
     steps:
       - uses: actions/checkout@v4
       - uses: helm/kind-action@v1
         with:
           cluster_name: polyad-test
+          config: tests/kind.yaml
+      - name: Read Helm version
+        id: tools
+        run: echo "helm=v$(bash scripts/tool-version.sh helm)" >> "$GITHUB_OUTPUT"
       - uses: azure/setup-helm@v4.3.0
+        with:
+          version: ${{ steps.tools.outputs.helm }}
       - run: docker build -t polyad:test .
       - run: kind load docker-image polyad:test --name polyad-test
-      - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set image.repository=polyad --set image.tag=test --wait --timeout=180s
+      - run: helm dependency build charts/polyad
+      - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set image.repository=polyad --set image.tag=test --set dragonfly.ha.enabled=${{ matrix.dragonfly-ha }} --wait --timeout=300s
       - run: bash scripts/test-operator.sh
-      - run: kubectl -n polyad delete graphs,ephemeralgraphs,feedbacks --all --wait=true --timeout=120s
+      - run: kubectl -n polyad delete graphs,polygraphs,ephemeralgraphs,feedbacks --all --wait=true --timeout=120s
       - run: bash scripts/test-replacement.sh
       - run: bash scripts/test-coordination.sh
       - if: failure()
         run: |
-          kubectl -n polyad get pods,leases,graphs,ephemeralgraphs,feedbacks -o yaml
+          kubectl -n polyad get pods,leases,dragonflies,graphs,polygraphs,ephemeralgraphs,feedbacks -o yaml
           kubectl -n polyad logs deployment/polyad-polyad --tail=200
