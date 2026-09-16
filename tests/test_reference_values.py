@@ -38,7 +38,16 @@ def test_example_values_render_with_the_full_helm_schema(path):
     """
     Merge example overlays with chart and dependency defaults in their documented namespace.
     """
-    output = subprocess.check_output(["helm", "template", "test", str(CHART), "--namespace", "polyad", "-f", str(path)], text=True)
+    namespace, bases = "polyad", []
+    if path.parent.name == "helm-workers":
+        if path.name == "root-values.yaml":
+            bases = [CHART.parents[1] / "examples/root-control-plane/values.yaml"]
+        else:
+            namespace, bases = "workloads", [CHART / "values-worker.reference.yaml"]
+    command = ["helm", "template", "test", str(CHART), "--namespace", namespace]
+    for values in [*bases, path]:
+        command += ["-f", str(values)]
+    output = subprocess.check_output(command, text=True)
     assert any(obj and obj["kind"] == "Deployment" for obj in yaml.safe_load_all(output))
 
 
@@ -116,7 +125,10 @@ def test_reference_overlays_are_typed_and_render_independently(path):
     validator.validate(yaml.safe_load(source))
     assert not validator.is_valid({"ha": "true"})
     assert not validator.is_valid({"authentication": {"storage": {"enabled": "true"}}})
-    objects = yaml.safe_load_all(subprocess.check_output(["helm", "template", "test", str(CHART), "-f", str(path)], text=True))
+    namespace = "workloads" if path.name == "values-worker.reference.yaml" else "default"
+    objects = yaml.safe_load_all(
+        subprocess.check_output(["helm", "template", "test", str(CHART), "--namespace", namespace, "-f", str(path)], text=True)
+    )
     assert any(obj and obj["kind"] == "Deployment" for obj in objects)
 
 

@@ -130,6 +130,31 @@ def test_root_chart_registers_an_existing_worker_without_deploying_it(authority)
     assert not any(obj["kind"] == "Deployment" and obj["metadata"]["name"] == "west-polyad" for obj in objects)
 
 
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "rootControlPlane.pools[0].controller=DaemonSet",
+        "rootControlPlane.pools[0].resources.requests.cpu=100m",
+        "rootControlPlane.pools[0].nodeSelector.pool=execution",
+        "rootControlPlane.pools[0].scalingAuthority=Unknown",
+    ],
+)
+def test_attachment_schema_rejects_competing_configuration(setting):
+    """
+    An attachment cannot overwrite the administrator's controller or Pod configuration.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(setting, values_files=("root-values.yaml", "attached-pool-values.yaml"))
+
+
+def test_local_scaling_requires_a_helm_attachment():
+    """
+    Root-provisioned pools cannot lose their only replica owner.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render("rootControlPlane.pools[0].scalingAuthority=Local", values_files=("root-values.yaml", "pool-values.yaml"))
+
+
 def installed_pool(monkeypatch, authority="Root"):
     """
     Provide a Helm-owned worker and matching root attachment in isolated fake clusters.

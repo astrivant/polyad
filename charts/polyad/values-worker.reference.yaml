@@ -52,7 +52,8 @@ dragonfly:
   existingSecret: root-cache
 
 # Root scaling: leave operator.replicaCount null and operator.autoscaling disabled.
-# Local scaling: set worker.scalingAuthority=Local on both releases; use ha=true
+# Local scaling: set worker.scalingAuthority=Local here and scalingAuthority=Local
+# on the root pool; use ha=true
 # for two or more local replicas, and optionally operator.autoscaling.enabled=true.
 # Match operator.image to the root exactly; outdated workers do not get new shards.
 # Optional workload mesh, capacity and credential assignment settings must match

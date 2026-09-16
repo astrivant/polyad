@@ -840,6 +840,10 @@ Deployment pools support KEDA replica scaling; DaemonSet capacity follows node
 eligibility. The root Graph observes its existing Deployment, preserving Helm
 ownership and recovery. Application event streams exclude this operator tree.
 
+Administrators can also [install downstream workers with Helm](docs/deployment/helm-workers.md)
+and attach their existing Deployments. Helm retains installation and upgrades;
+each attachment explicitly chooses root/KEDA or downstream replica scaling.
+
 [PostgreSQL is optional](docs/deployment/postgresql.md), disabled by default, and stores
 graph observations and tracked parameters when enabled. Its optional
 [KEDA configuration](examples/postgresql/keda.yaml) scales CloudNativePG instances

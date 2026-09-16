@@ -11,6 +11,7 @@ health metrics, and installation examples.
 - [Template layout](#template-layout)
 - [Parameters](#parameters)
   - [Deployment profiles](#deployment-profiles)
+  - [Helm-installed downstream operator workers](#helm-installed-downstream-operator-workers)
   - [OpenTelemetry traces and logs](#opentelemetry-traces-and-logs)
   - [Operator and shared queue parameters](#operator-and-shared-queue-parameters)
   - [Optional PostgreSQL state storage](#optional-postgresql-state-storage)
@@ -138,6 +139,7 @@ with canonical field types; Helm validates all requirements after merging defaul
 | [`values-components.reference.yaml`](values-components.reference.yaml) | HA bootstrap plus a self-managed gateway/executor/telemetry Graph and KEDA scaling in the release cluster | [Components](../../docs/deployment/components.md) |
 | [`values-federation.reference.yaml`](values-federation.reference.yaml) | Remote cluster registrations for PolyGraph placement; destinations have independent execution operators | [Federation](../../docs/deployment/multicluster.md#placement-and-ownership) |
 | [`values-root-control-plane.reference.yaml`](values-root-control-plane.reference.yaml) | HA management release that installs and controls remote execution pools | [Root control plane](../../docs/deployment/root-control-plane.md) |
+| [`values-worker.reference.yaml`](values-worker.reference.yaml) | Downstream Helm-owned executors attached to a root, with explicit root or local scaling authority | [Helm workers](../../docs/deployment/helm-workers.md) |
 | [`values-multicluster.reference.yaml`](values-multicluster.reference.yaml) | Istio transport, peer gateways and local network identity; adapt separately per cluster | [Multicluster networking](../../docs/deployment/multicluster.md#istio-across-different-networks) |
 | [`values-observer.reference.yaml`](values-observer.reference.yaml) | Read-only observers alongside this release's operator | [Observers](../../docs/deployment/multicluster.md#optional-shared-observers) |
 | [`values-postgresql.reference.yaml`](values-postgresql.reference.yaml) | Optional persistent state, database HA and connection-driven KEDA scaling in the release cluster | [PostgreSQL](../../docs/deployment/postgresql.md) |
@@ -170,8 +172,9 @@ for federation and a split root installation.
 
 ## Template layout
 
-Choose the `singular` or `ha` deployment tag. With neither selected, HA is the
-default. `operator.replicaCount: null` resolves to one or two respectively.
+Set `ha: false` (default) for singular or `ha: true` for HA.
+`operator.replicaCount: null` resolves to one or two respectively. Root-scaled
+Helm workers instead omit replicas, leaving their count to the root OperatorPool.
 See [deployment profiles](../../docs/deployment/deployment-profiles.md) for install commands,
 replica floors and the management/workload cluster placement table.
 
@@ -182,6 +185,7 @@ Templates are grouped by the deployment architecture they support:
 | [`templates/singular/`](templates/singular) | One combined operator replica | `ha: false` (default) |
 | [`templates/ha/`](templates/ha) | Replicated dense operator and optional root-owned execution pool declarations | `ha: true` |
 | [`templates/ha/distributed/`](templates/ha/distributed) | Bootstrap Deployment and the gateway, executor and telemetry Graph, including component scaling | HA with `architecture.mode: Distributed` |
+| [`templates/worker/`](templates/worker) | Administrator-installed executor Deployment with explicit root attachment | `worker.enabled`; replaces the ordinary singular or HA Deployment |
 | [`templates/multicluster/`](templates/multicluster) | Federation and root-control-plane validation, east-west mesh resources and optional read-only observers | `federation.enabled`, `rootControlPlane.enabled`, `mesh.multicluster.enabled` and `observer.enabled`, independently of deployment mode |
 | [`templates/shared/`](templates/shared) | Shared Deployment definition, Services, access controls, credentials, storage, ingress and autoscaling support | Both modes, with each optional feature controlled by its existing values |
 
@@ -216,7 +220,7 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | ---- | ------------------------------------------------------------------------------------------------------------------------ | ------- |
 | `ha` | Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator | `false` |
 
-### Helm-installed downstream workers
+### Helm-installed downstream operator workers
 
 | Name                      | Description                                                                                                                     | Value   |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -247,7 +251,7 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | Name                                                                 | Description                                                                                                                                                                                                   | Value                      |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `operator.logLevel`                                                  | Operator and observer Python logging verbosity; INFO for normal operation, DEBUG for reconciliation diagnostics (DEBUG, INFO, WARNING, ERROR or CRITICAL)                                                     | `INFO`                     |
-| `operator.replicaCount`                                              | Operator replicas; null selects 1 for singular or 2 for ha                                                                                                                                                    | `nil`                      |
+| `operator.replicaCount`                                              | Operator replicas; null selects 1 for singular or 2 for ha, and must remain null for Root-scaled workers                                                                                                      | `nil`                      |
 | `operator.nodeSelector`                                              | Node labels selecting the operator node group, independent of workload graph placement                                                                                                                        | `{}`                       |
 | `operator.tolerations`                                               | Taints tolerated by the operator replicas                                                                                                                                                                     | `[]`                       |
 | `operator.autoscaling.enabled`                                       | Enable operator HPA using CPU and optional memory utilization                                                                                                                                                 | `false`                    |

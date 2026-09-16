@@ -169,6 +169,7 @@ queued background reconciliation starts a separate trace.
 | Split gateway | Operator runtime with enabled composition, connection and event APIs; does not execute graph mutation leases |
 | Split telemetry | Operator runtime for inventory and metrics serving; does not execute graph mutation leases |
 | Root-managed execution pool | Separate remote Pods running the executor role against root coordination; each has its own Tini and Python process |
+| Helm-installed downstream worker | The same executor process, gated by its root attachment; health only, with no independent planner or application API servers |
 
 Gateway intake can persist validated requests even though it does not execute
 graph reconciliation. All operator roles still use the Python main thread and
@@ -179,7 +180,9 @@ and each remote operator group's Graph. Deployment groups observe their existing
 controllers; DaemonSet groups own their controller. Those remote Python processes are **not
 OS child processes of the root operator**. Kubernetes ownership and network
 coordination connect them. Deployment pools scale by replicas; DaemonSet pools
-follow eligible nodes. See [root control plane](root-control-plane.md) and
+follow eligible nodes. [Helm-installed workers](helm-workers.md) use the same
+runtime while retaining administrator ownership of their Deployment and optional
+local replica scaling. See [root control plane](root-control-plane.md) and
 [component deployments](components.md).
 
 ## Observer process

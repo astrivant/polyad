@@ -27,6 +27,7 @@ that the existing feature guides require administrators to supply.
 - [One dense operator](#one-dense-operator)
 - [HA in one cluster](#ha-in-one-cluster)
 - [HA with a management cluster](#ha-with-a-management-cluster)
+- [Helm-installed downstream operator workers](#helm-installed-downstream-operator-workers)
 - [Source layout and switching profiles](#source-layout-and-switching-profiles)
 
 ## Combine reference values
@@ -190,9 +191,24 @@ do not also apply it over a Helm-owned pool with the same name. KEDA still targe
 the root's OperatorPool `/scale`. Coordinate Helm/GitOps ownership of replica
 counts with that autoscaler so configuration updates do not reset its intent.
 
+## Helm-installed downstream operator workers
+
+Use `worker.enabled: true` to install a downstream executor connected to the
+root through the same chart. The
+[worker reference](../../charts/polyad/values-worker.reference.yaml) separates root
+identity from the hosting cluster and documents required local Secrets. Follow
+the [attachment guide](helm-workers.md) to register its existing Deployment in
+the root's reserved PolyGraph.
+
+Choose `worker.scalingAuthority: Root` for root/KEDA replica management, with
+no Helm replica count or local HPA. Choose `Local` to retain downstream scaling;
+then `ha` and the normal operator replica/HPA settings apply locally. The root
+pool's authority must match. Helm owns installation and upgrades in both cases.
+Workers share root coordination, queues and endpoints and expose only health.
+
 ## Source layout and switching profiles
 
-Templates live under `singular/`, `ha/`, `ha/distributed/`, `shared/` and
+Templates live under `singular/`, `ha/`, `ha/distributed/`, `worker/`, `shared/` and
 `multicluster/`. Shared Services and access controls use the same resolved profile
 as the Deployment. The selected profile appears in Helm notes and the operator's
 `polyad.astrivant.com/deployment-profile` label.

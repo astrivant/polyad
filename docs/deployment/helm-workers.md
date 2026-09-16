@@ -222,5 +222,5 @@ Then uninstall the downstream release separately if desired. Uninstalling it
 first leaves the pool pending; the root will not recreate the missing Deployment.
 
 Attachment transitions and grant conflicts emit readable structured decisions,
-with optional [OpenTelemetry log export](../operations/tracing.md#structured-decision-logs).
+with optional [OpenTelemetry log export](../operations/tracing.md#decision-and-conflict-logs).
 Application event subscribers remain isolated from this reserved operator tree.

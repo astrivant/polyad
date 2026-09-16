@@ -11,8 +11,10 @@ Select the [HA profile](deployment-profiles.md) and enable
 clusters. Its Deployment can live in a dedicated management cluster containing
 no application Pods. Remote `OperatorPool` Deployments add execution capacity;
 they share the root's queues and leases and cannot elect their own planner.
-The root installs and upgrades these workers, including their Polyad CRDs and
-projected credentials. This is optional; an ordinary single-cluster install
+The root installs and upgrades these workers by default, including their Polyad
+CRDs and projected credentials. Administrators can instead
+[install workers with Helm](helm-workers.md) and choose root or local scaling
+while retaining lifecycle ownership. This is optional; an ordinary single-cluster install
 continues to work without remote credentials.
 
 All graph observations, topology events, queue demand and scaling intent converge
@@ -173,14 +175,16 @@ this same root registry, so every additional destination is registered at the ro
 | Field | Meaning |
 | --- | --- |
 | `rootControlPlane.enabled` | Opt in to central reconciliation, reports and worker management; default `false`. Requires the HA profile, federation and metrics. |
-| `rootControlPlane.pools` | Optional Helm-owned OperatorPool declarations with name, cluster, replicas and placement/resource overrides. Empty when pools are managed separately. Requires the HA profile and root mode. |
+| `rootControlPlane.pools` | Optional Helm-owned OperatorPool declarations with name, cluster, replicas and placement/resource overrides, or `existingDeployment` and `scalingAuthority` for attachments. Empty when pools are managed separately. Requires the HA profile and root mode. |
 | `rootControlPlane.kubeconfigSecret` | Root namespace Secret holding root credentials under `config`; required in root mode. |
 | `rootControlPlane.endpoints.api` | Reachable root composition URL advertised to workloads. |
 | `rootControlPlane.endpoints.events` | Reachable root events URL advertised to workloads. |
 | `rootControlPlane.endpoints.metrics` | Reachable root metrics URL advertised to workloads. |
 | `rootControlPlane.meshPeers` | Complete registry of workload-cluster mesh peers using the [existing peer fields](multicluster.md#remote-traffic-rules). Each controller excludes its own execution cluster. |
 | `OperatorPool.spec.cluster` | Immutable registered cluster in which worker Pods run. |
-| `OperatorPool.spec.replicas` | Requested worker count, 0–32; exposed through `/scale`. |
+| `OperatorPool.spec.replicas` | Requested worker count, 0–32; exposed through `/scale`. Unused for desired capacity with Local scaling, which rejects changes to this field. |
+| `OperatorPool.spec.existingDeployment` | Optional immutable name of a [Helm-installed worker](helm-workers.md) in the registered namespace; root observes its Graph and never overwrites its template or deletes the Deployment. |
+| `OperatorPool.spec.scalingAuthority` | `Root` (default) permits admitted replica changes. `Local` requires `existingDeployment` and leaves replicas to its administrator. Must match the downstream Helm grant. |
 | `OperatorPool.spec.resources` | Optional native container requests and limits, overriding the root container's resources. |
 | `OperatorPool.spec.nodeSelector` | Optional native node selector, overriding root Pod placement. |
 | `OperatorPool.spec.tolerations` | Optional native tolerations, overriding root Pod placement. |
@@ -369,8 +373,11 @@ writing desired counts at the root, but workers cannot apply them without root
 authority. On reconnect they reread intent, refresh live rules and resume; they
 never blindly replay an old admission verdict.
 
-Deleting an `OperatorPool` removes only its owned worker Deployment and copied
-Secrets. The pool finalizer waits for remote deletion observations. Application
+Deleting a root-provisioned `OperatorPool` removes only its owned worker Deployment
+and copied Secrets. Deleting a [Helm attachment](helm-workers.md#disconnection-and-detachment)
+instead pauses its workers and removes the observation definitions, preserving
+the administrator-owned Deployment and Secrets. The pool finalizer waits for
+remote deletion observations. Application
 workloads, namespaces, storage and shared CRDs remain. An unreachable cluster
 keeps cleanup pending rather than forgetting potentially live replicas.
 
@@ -384,7 +391,7 @@ for console examples and optional OpenTelemetry export.
 
 With root mode enabled, one reserved `PolyGraph/<release>-operators` models the
 whole operator deployment. Each operator group has its own Graph: the root group
-in the management cluster and one group for each provisioned remote OperatorPool.
+in the management cluster and one group for each provisioned or attached remote OperatorPool.
 Distributed mode also links the local gateway/executor/telemetry component Graph.
 The root group exists even before the first remote pool is added.
 
@@ -423,11 +430,12 @@ native workload counts and descendant metrics into the PolyGraph.
 
 Membership and workload ownership are separate. The root group's Graph observes
 the existing Helm-owned Deployment. Deployment pool Graphs similarly observe
-their pool-managed Deployment; DaemonSet group Graphs own their native DaemonSet.
+their root-provisioned or Helm-owned Deployment; DaemonSet group Graphs own their native DaemonSet.
 Observation bindings never create a second operator Deployment, change its Pod
 count, or delete it when the observation Graph is suspended or removed. Helm/HPA
-continue to manage root replicas, and OperatorPool/KEDA manage remote Deployment
-replicas. Root planners retain the reserved PolyGraph's mutation shard so remote
+continue to manage root replicas. OperatorPool/KEDA manage remote replicas with
+Root authority; [attached pools with Local authority](helm-workers.md#keep-scaling-local)
+leave replicas to the downstream administrator. Root planners retain the reserved PolyGraph's mutation shard so remote
 workers cannot become responsible for recovering the root hierarchy.
 
 The PolyGraph, group Graphs, definitions and operator workloads carry the internal

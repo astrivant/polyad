@@ -3,7 +3,7 @@
 ## @param ha Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
 ha: false
 
-## @section Helm-installed downstream workers
+## @section Helm-installed downstream operator workers
 worker:
   ## @param worker.enabled Install an execution replica connected to an existing root; disables root election and requires external root/cache credentials
   enabled: false
@@ -46,7 +46,7 @@ tracing:
 operator:
   ## @param operator.logLevel Operator and observer Python logging verbosity; INFO for normal operation, DEBUG for reconciliation diagnostics (DEBUG, INFO, WARNING, ERROR or CRITICAL)
   logLevel: INFO
-  ## @param operator.replicaCount [nullable] Operator replicas; null selects 1 for singular or 2 for ha
+  ## @param operator.replicaCount [nullable] Operator replicas; null selects 1 for singular or 2 for ha, and must remain null for Root-scaled workers
   replicaCount: null
   ## @param operator.nodeSelector Node labels selecting the operator node group, independent of workload graph placement
   nodeSelector: {}

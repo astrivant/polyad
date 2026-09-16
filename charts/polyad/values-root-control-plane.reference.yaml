@@ -42,7 +42,7 @@ rootControlPlane:
   # Its root Kubernetes API address must be reachable from remote workers.
   ## @param rootControlPlane.kubeconfigSecret [string] Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
   kubeconfigSecret: root-access
-  ## @param rootControlPlane.pools [array] Root-owned OperatorPools: unique name and registered cluster, replicas, and optional resources, nodeSelector and tolerations; requires rootControlPlane.enabled
+  ## @param rootControlPlane.pools [array] Root-owned OperatorPools: unique name and registered cluster, replicas and optional Pod overrides. To attach a Helm worker, replace Pod overrides with existingDeployment and scalingAuthority (Root or Local).
   pools:
     ## @param rootControlPlane.pools[].name [string] Stable identity within this configuration; choose a distinct name. Helm owns this OperatorPool in the ROOT namespace.
     - name: west-workers # Helm owns this OperatorPool in the ROOT namespace.
