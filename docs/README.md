@@ -6,11 +6,12 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 
 | Guide | Contents |
 | --- | --- |
-| [Graph boundaries and migration](graph-boundaries.md) | Three boundary types, repeated execution and migration from retired alpha types |
+| [Graph boundaries](graph-boundaries.md) | Three boundary types, repeated execution, placement and storage |
 | [Graph concepts](concepts.md) | Nodes, dependencies, subgraphs, placement and recurrence |
 | [Container profiles](containers.md) | Development and production builds, runtime permissions and image checks |
 | [Getting started](getting-started.md) | Installation, execution models and runnable examples |
 | [Networking and events](networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
+| [Temporary connections](temporary-connections.md) | Optional TTL-bound edges, caller and target scope, service-account authentication and cleanup |
 | [Operator model](operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
 | [Flux health](fluxcd.md) | CEL checks for graph readiness and descendant failures |
 | [Argo CD health](argocd.md) | Graph and leaf health, descendant failures and GitOps configuration |
@@ -34,5 +35,6 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 | [Composition API service](composition-api.md) | Service setup, authentication, gateway routing, shared shard rate limits and OpenAPI |
 | [Local scheduling](../pkg/polyad/balance/README.md) | Cooperative work, checkpoints, policies, rewrites and graph images |
 | [Python types and serialization](toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |
+| [Standalone types package](../pkg/polyad-types/README.md) | Resource, configuration and request models without operator dependencies |
 | [Helm parameters](../charts/polyad/README.md) | Operator, autoscaling and shared queue settings |
 | [Development toolchain](toolchain.md) | Pinned tools, editor settings, formatting and generated documentation |

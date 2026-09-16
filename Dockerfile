@@ -39,6 +39,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     && /opt/poetry/bin/pip install "poetry==$(bash scripts/tool-version.sh poetry)" \
     && python -m venv /opt/venv
 COPY pyproject.toml poetry.lock ./
+COPY pkg/polyad-types ./pkg/polyad-types
+RUN /opt/poetry/bin/poetry lock
 
 FROM build-tools AS production-build
 RUN --mount=type=cache,target=/var/cache/pypoetry \

@@ -12,8 +12,6 @@ import yaml
 from attrs import fields
 from attrs.exceptions import FrozenInstanceError
 
-from polyad.compiler.asts import GROUP, ResourceCounts
-from polyad.compiler.asts.resources import RESOURCE_CLASSES
 from polyad.compiler.registry import (
     AUXILIARY_KINDS,
     BOUNDARY_KINDS,
@@ -30,6 +28,8 @@ from polyad.compiler.registry import (
 from polyad.operator.api import API, BUILTINS, KINDS, WORKLOAD_KINDS
 from polyad.operator.graph_status import instance_metrics
 from polyad.operator.handlers import KINDS as WATCHED_KINDS
+from polyad_types.resources import GROUP, ResourceCounts
+from polyad_types.resources.resources import RESOURCE_CLASSES
 from tests.test_operator import resource
 
 
@@ -81,11 +81,11 @@ def test_inventory_and_reconciliation_roles():
     Derived capabilities preserve ownership boundaries and keep definitions out of execution duties.
     """
     assert set(KINDS) == POLYAD_KINDS
-    assert set(WORKLOAD_KINDS) == GRAPH_OWNED_KINDS - BOUNDARY_KINDS - {"Activation"}
-    assert set(WATCHED_KINDS) == RECONCILED_KINDS == BOUNDARY_KINDS | {"Rewrite", "Composition", "Activation"}
+    assert set(WORKLOAD_KINDS) == GRAPH_OWNED_KINDS - BOUNDARY_KINDS - {"Activation", "TemporaryConnection"}
+    assert set(WATCHED_KINDS) == RECONCILED_KINDS == BOUNDARY_KINDS | {"Rewrite", "Composition", "Activation", "TemporaryConnection"}
     assert DEFINITION_KINDS.isdisjoint(RECONCILED_KINDS)
     assert COMPOSABLE_KINDS == BOUNDARY_KINDS | (DEFINITION_KINDS - {"GraphRule"})
-    assert AUXILIARY_KINDS == CAPACITY_KINDS | NETWORK_POLICY_KINDS | {"Activation"}
+    assert AUXILIARY_KINDS == CAPACITY_KINDS | NETWORK_POLICY_KINDS | {"Activation", "TemporaryConnection"}
     assert RESOURCE_TYPES["Lease"].graph_owned is False
     assert RESOURCE_TYPES["ConfigMap"].api_group == ""
     assert BUILTINS["Job"] == ("/apis/batch/v1", "jobs")

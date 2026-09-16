@@ -4,15 +4,16 @@ Describe admission separately from persistent data-flow connections.
 
 from __future__ import annotations
 
-from typing import Generic, Literal, TypeVar
+from typing import Generic, Literal
 
 from attrs import field, frozen
-from cattrs import Converter
 from cattrs.errors import CattrsError
+from typing_extensions import TypeVar
 
-from polyad.graph.activation import ActivationPolicy
-from polyad.graph.capacity import CapacityPlan
-from polyad.graph.network import NetworkAccess, NetworkPort
+from polyad_types.activation import ActivationPolicy
+from polyad_types.capacity import CapacityPlan
+from polyad_types.codec import converter
+from polyad_types.network import NetworkAccess, NetworkPort
 
 
 @frozen
@@ -36,7 +37,7 @@ class Node:
 
     Attributes:
         name (str): Resource name within its namespace.
-        kind (Literal['Workload', 'Daemon', 'Ephemeral', 'Resource', 'Graph', 'PolyGraph', 'ReplicaGroup']):
+        kind (Literal['Workload', 'Daemon', 'Resource', 'Graph', 'PolyGraph', 'ReplicaGroup']):
             Kubernetes resource kind.
         ref (str): Name of the reusable execution definition.
         requires (tuple[Dependency, ...]): Admission dependencies; all must be satisfied.
@@ -46,7 +47,7 @@ class Node:
     """
 
     name: str
-    kind: Literal["Workload", "Daemon", "Ephemeral", "Resource", "Graph", "PolyGraph", "ReplicaGroup"]
+    kind: Literal["Workload", "Daemon", "Resource", "Graph", "PolyGraph", "ReplicaGroup"]
     ref: str
     requires: tuple[Dependency, ...] = ()
     gate: str | None = None
@@ -168,10 +169,6 @@ class Topology:
             raise ValueError("connection endpoint is absent")
 
 
-converter = Converter(forbid_extra_keys=True, detailed_validation=False)
-converter.register_structure_hook_func(lambda kind: kind is object, lambda value, _: value)
-
-
 def topology(spec: dict[str, object], kind: str = "Graph") -> Topology:
     """
     Decode a strict, serializable graph definition using cattrs.
@@ -187,24 +184,12 @@ def topology(spec: dict[str, object], kind: str = "Graph") -> Topology:
         raise ValueError(f"unsupported graph kind: {kind}")
     try:
         if kind == "ReplicaGroup" and "template" in spec:
-            from polyad.graph.replication import replica_topology
+            from polyad_types.replication import replica_topology
 
             spec = replica_topology(spec)
         return converter.structure(spec, PolyGraph[GraphNode] if kind == "PolyGraph" else Topology)
     except CattrsError as error:
         raise ValueError(str(error)) from error
-
-
-@frozen
-class Ephemeral(Node):
-    """
-    Reference restartable finite execution on interruptible Kubernetes capacity.
-
-    Attributes:
-        kind (Literal['Ephemeral']): Kubernetes resource kind.
-    """
-
-    kind: Literal["Ephemeral"] = field(default="Ephemeral", init=False)
 
 
 @frozen

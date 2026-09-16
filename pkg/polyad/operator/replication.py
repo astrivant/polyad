@@ -8,11 +8,11 @@ import copy
 import hashlib
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import AUXILIARY_KINDS, GROUP
-from polyad.graph.replication import Replication, replica_topology
-from polyad.graph.topology import converter
 from polyad.metrics.workloads import current_observation, observation_time
 from polyad.operator.graph_status import observed
+from polyad_types.codec import converter
+from polyad_types.replication import Replication, replica_topology
+from polyad_types.resources import AUXILIARY_KINDS, GROUP
 
 if TYPE_CHECKING:
     from typing import Any

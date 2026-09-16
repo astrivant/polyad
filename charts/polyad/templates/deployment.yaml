@@ -73,6 +73,18 @@ spec:
               value: {{ ternary (printf "http://%s-polyad-events.%s.svc:8091" .Release.Name .Release.Namespace) "" .Values.events.enabled | quote }}
             - name: POLYAD_WORKLOAD_METRICS_URL
               value: {{ ternary (printf "http://%s-polyad-metrics.%s.svc:8092" .Release.Name .Release.Namespace) "" .Values.metrics.enabled | quote }}
+            - name: POLYAD_WORKLOAD_CONNECTIONS_URL
+              value: {{ ternary (printf "http://%s-polyad-connections.%s.svc:8093" .Release.Name .Release.Namespace) "" .Values.connections.enabled | quote }}
+            - name: POLYAD_CONNECTIONS_ENABLED
+              value: {{ .Values.connections.enabled | quote }}
+            - name: POLYAD_CONNECTIONS_SCOPE
+              value: {{ .Values.connections.scope | quote }}
+            - name: POLYAD_CONNECTIONS_NAMESPACE
+              value: {{ .Values.connections.namespace | quote }}
+            - name: POLYAD_CONNECTIONS_MAX_TTL
+              value: {{ .Values.connections.maxTtlSeconds | quote }}
+            - name: POLYAD_CONNECTIONS_RETENTION
+              value: {{ .Values.connections.retentionSeconds | quote }}
             {{- if and .Values.metrics.enabled .Values.metrics.authentication.enabled }}
             - name: POLYAD_METRICS_AUTH_ENABLED
               value: "true"
@@ -122,7 +134,7 @@ spec:
               {{- else }}
               value: {{ required "dragonfly.externalUrl or dragonfly.existingSecret is required when the bundled cache is disabled" .Values.dragonfly.externalUrl | quote }}
               {{- end }}
-            {{- if or .Values.api.enabled .Values.events.enabled }}
+            {{- if or .Values.api.enabled .Values.events.enabled .Values.connections.enabled }}
             - name: POLYAD_API_RATE_LIMIT_ENABLED
               value: {{ .Values.api.rateLimit.enabled | quote }}
             - name: POLYAD_API_REQUESTS_PER_MINUTE
@@ -166,6 +178,10 @@ spec:
               readOnly: true
             {{- end }}
           ports:
+            {{- if .Values.connections.enabled }}
+            - name: connections
+              containerPort: 8093
+            {{- end }}
             {{- if .Values.metrics.enabled }}
             - name: metrics
               containerPort: 8092

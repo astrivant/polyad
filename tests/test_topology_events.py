@@ -11,14 +11,14 @@ from threading import Event
 from unittest.mock import AsyncMock
 
 import pytest
-from polyad_client import APIError, Client
 
-from polyad.compiler.asts import GROUP
 from polyad.events.builder import EventAPIBuilder
 from polyad.events.store import EventStore, TopologyReplaced
 from polyad.events.topology import neighbors, topology_snapshot
 from polyad.operator import handlers
 from polyad.operator.controller import Controller
+from polyad_client import APIError, Client
+from polyad_types.resources import GROUP
 from tests.test_client import Adapter
 from tests.test_operator import FakeAPI, resource, template
 from tests.test_replication import group, policy_family, start_family, turn

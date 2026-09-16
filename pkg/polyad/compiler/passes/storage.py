@@ -6,51 +6,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from polyad.graph.storage import Persistence
-from polyad.graph.topology import converter
+from polyad_types.codec import converter
+from polyad_types.storage import Persistence
 
 if TYPE_CHECKING:
     from typing import Any
 
 
-def storage_fields(value: Any) -> bool:
+def configure_storage(spec: dict[str, Any]) -> Persistence:
     """
-    Detect storage class and persistent claim declarations inside native specifications.
-
-    Args:
-        value (Any): Native pod or resource specification to inspect.
-
-    Returns:
-        bool: Whether this specification declares persistent storage or a storage class.
-    """
-    if isinstance(value, dict):
-        return bool({"storageClass", "storageClassName", "persistentVolumeClaim", "volumeClaimTemplates"} & value.keys()) or any(
-            storage_fields(item) for item in value.values()
-        )
-    return isinstance(value, list) and any(storage_fields(item) for item in value)
-
-
-def configure_storage(spec: dict[str, Any], *, ephemeral: bool) -> Persistence:
-    """
-    Mount declared persistent storage and reject it on interruptible graph boundaries.
+    Mount declared persistent storage while preserving native volume configuration.
 
     Args:
         spec (dict[str, Any]): Mutable workload definition after resource-name resolution.
-        ephemeral (bool): Whether this workload or any containing boundary is ephemeral.
 
     Returns:
         Persistence: Validated contract for checking the live claim before admission.
     """
     persistence = converter.structure(spec.get("persistence", {}), Persistence)
     pod = spec["template"]["spec"]
-    if ephemeral and (
-        persistence.enabled
-        or persistence.claimName is not None
-        or storage_fields(spec.get("persistence", {}))
-        or storage_fields(pod)
-        or storage_fields(spec.get("statefulSet", {}))
-    ):
-        raise ValueError("persistent storage and storage classes are invalid under Ephemeral nodes or graphs")
     if not persistence.enabled:
         return persistence
     name = "polyad-persistence"

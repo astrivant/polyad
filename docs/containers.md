@@ -71,7 +71,7 @@ timestamp. Supply the same metadata when building images locally:
 
 ```sh
 docker build --target production \
-    --build-arg VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["tool"]["poetry"]["version"])')" \
+    --build-arg VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')" \
     --build-arg VCS_REF="$(git rev-parse HEAD)" \
     --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     -t polyad:production .

@@ -13,6 +13,8 @@ permissions:
 jobs:
   python:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,7 +50,7 @@ jobs:
           else
             python .github/release-version.py --output "$GITHUB_OUTPUT"
           fi
-      - run: poetry install
+      - run: poetry lock && poetry install
       - run: bash scripts/ci/install-helm-tools.sh helm shellcheck shfmt argocd
       - name: Build chart dependencies
         run: |
@@ -77,15 +79,11 @@ jobs:
       - name: Check installed wheel typing
         run: |
           poetry build
-          poetry -C clients/python build --output ../../dist
+          poetry -C pkg/polyad-types build --output ../../dist
+          poetry -C pkg/client build --output ../../dist
           poetry run python -m venv /tmp/polyad-typing
           /tmp/polyad-typing/bin/python -m pip install dist/*.whl
           POLYAD_TYPING_PYTHON=/tmp/polyad-typing/bin/python poetry run pytest tests/test_typing.py
-      - name: Check standalone client wheel
-        run: |
-          python -m venv /tmp/polyad-client
-          /tmp/polyad-client/bin/python -m pip install --no-deps dist/polyad_client-*.whl
-          /tmp/polyad-client/bin/python -c 'from polyad_client import Client; import importlib.util; assert importlib.util.find_spec("polyad") is None; assert Client("http://localhost:8090", "test")'
       - name: Upload verified distributions
         uses: actions/upload-artifact@v4
         with:
@@ -93,6 +91,31 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 7
+  lightweight-packages:
+    needs: python
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions-${{ needs.python.outputs.version }}
+          path: dist/
+      - name: Check standalone types and client wheels
+        run: |
+          python -m venv /tmp/polyad-client
+          /tmp/polyad-client/bin/python -m pip install dist/polyad_types-*.whl
+          /tmp/polyad-client/bin/python -I scripts/check-types-package.py
+          /tmp/polyad-client/bin/python -m pip install --find-links dist dist/polyad_client-*.whl
+          /tmp/polyad-client/bin/python -I -c 'from polyad_client import Client; import importlib.util; assert importlib.util.find_spec("polyad") is None; assert Client("http://localhost:8090", "test")'
+          /tmp/polyad-client/bin/python -m pip check
   container:
     runs-on: ubuntu-latest
     strategy:
@@ -109,7 +132,7 @@ jobs:
       - name: Build container profile
         run: |
           docker build --target "${{ matrix.profile }}" \
-            --build-arg VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["tool"]["poetry"]["version"])')" \
+            --build-arg VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')" \
             --build-arg VCS_REF="$(git rev-parse HEAD)" \
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             -t polyad:container-test .

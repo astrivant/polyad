@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING
 
 from cattrs.errors import CattrsError
 
-from polyad.compiler.asts import AUXILIARY_KINDS, GROUP
-from polyad.graph.topology import topology
+from polyad.graph.temporary import overlay
 from polyad.operator.replication import effective_spec
+from polyad_types.resources import AUXILIARY_KINDS, GROUP
+from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any
@@ -41,7 +42,7 @@ async def topology_snapshot(api: API, obj: dict[str, Any]) -> dict[str, Any]:
     try:
         if obj["kind"] == "ReplicaGroup":
             spec, _ = await effective_spec(api, obj)
-        graph = topology(spec, obj["kind"])
+        graph = topology(overlay(obj, spec), obj["kind"])
         for vertex in graph.nodes:
             nodes[vertex.name] = {
                 "name": vertex.name,

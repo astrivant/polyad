@@ -11,13 +11,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from kubernetes.client.exceptions import ApiException
 
-from polyad.compiler import asts
 from polyad.compiler.passes.capacity import frontier, placeholder, requests
 from polyad.compiler.passes.schema import structural_schema
 from polyad.graph import CapacityPlan, Dependency, Node, Topology
-from polyad.graph.topology import converter
 from polyad.operator.capacity import CONSUME
 from polyad.operator.controller import Controller, Pending
+from polyad_types import resources as asts
+from polyad_types.codec import converter
 from tests.test_operator import FakeAPI, resource, template
 
 

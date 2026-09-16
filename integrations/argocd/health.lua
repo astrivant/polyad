@@ -26,6 +26,15 @@ end
 if phase == "Invalid" or phase == "Failed" or status.failed == true then
     return health("Degraded", message)
 end
+if obj.kind == "TemporaryConnection" then
+    if phase == "Rejected" then
+        return health("Degraded", message)
+    end
+    if phase == "Active" or phase == "Expired" or phase == "Revoked" then
+        return health("Healthy", message)
+    end
+    return health("Progressing", message)
+end
 if obj.kind == "Activation" and phase == "Superseded" then
     return health("Healthy", "Pulse coalesced into a newer pending request")
 end

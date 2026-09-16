@@ -1,0 +1,74 @@
+{{- if .Values.connections.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-polyad-connections
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: polyad
+  ports:
+    - name: http-connections
+      appProtocol: http
+      port: 8093
+      targetPort: connections
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-polyad-connection-reviews
+rules:
+  - apiGroups: [authentication.k8s.io]
+    resources: [tokenreviews]
+    verbs: [create]
+  - apiGroups: [authorization.k8s.io]
+    resources: [subjectaccessreviews]
+    verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-polyad-connection-reviews
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-polyad-connection-reviews
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-polyad
+    namespace: {{ .Release.Namespace }}
+{{- if ne .Values.connections.scope "OperatorNamespace" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: {{ ternary "ClusterRole" "Role" (eq .Values.connections.scope "Cluster") }}
+metadata:
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-polyad-connection-intake
+  {{- if eq .Values.connections.scope "Namespace" }}
+  namespace: {{ .Values.connections.namespace | quote }}
+  {{- end }}
+rules:
+  - apiGroups: [polyad.astrivant.com]
+    resources: [graphs, polygraphs, replicagroups]
+    verbs: [get]
+  - apiGroups: [polyad.astrivant.com]
+    resources: [temporaryconnections]
+    verbs: [get, create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: {{ ternary "ClusterRoleBinding" "RoleBinding" (eq .Values.connections.scope "Cluster") }}
+metadata:
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-polyad-connection-intake
+  {{- if eq .Values.connections.scope "Namespace" }}
+  namespace: {{ .Values.connections.namespace | quote }}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: {{ ternary "ClusterRole" "Role" (eq .Values.connections.scope "Cluster") }}
+  name: {{ .Release.Namespace }}-{{ .Release.Name }}-polyad-connection-intake
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-polyad
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}

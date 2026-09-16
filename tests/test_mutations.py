@@ -9,9 +9,9 @@ import asyncio
 import pytest
 from attrs import evolve
 
-from polyad.compiler.asts import Budget, BudgetDelta, Mutation, MutationPlan, Precondition, Scope, converter
 from polyad.compiler.passes.mutations import check_preconditions, compile_mutations, conflicts
 from polyad.operator.mutations import execute_mutations
+from polyad_types.resources import Budget, BudgetDelta, Mutation, MutationPlan, Precondition, Scope, converter
 
 
 def operation(name, **kwargs):

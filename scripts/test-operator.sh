@@ -79,10 +79,10 @@ assert rollup["nestingDepth"] == 3
 assert rollup["resourceCount"] == 7
 '
 kubectl -n "$namespace" delete polygraph/composed --wait=true --timeout=180s
-kubectl -n "$namespace" apply -f examples/ephemeral.yaml
+kubectl -n "$namespace" apply -f examples/spot-workload.yaml
 kubectl -n "$namespace" wait graph/spot-pipeline --for=jsonpath='{.status.completed}'=true --timeout=180s
 kubectl -n "$namespace" wait graph/spot-pipeline --for=jsonpath='{.status.metrics.execution.completedNodes}'=1 --timeout=60s
-kubectl -n "$namespace" apply -f examples/ephemeral-interruption.yaml
+kubectl -n "$namespace" apply -f examples/spot-interruption.yaml
 kubectl -n "$namespace" wait graph/interrupted --for=jsonpath='{.status.nodes.worker.started}'=true --timeout=60s
 interrupted_uid="$(kubectl -n "$namespace" get graph interrupted -o jsonpath='{.metadata.uid}')"
 job="$(kubectl -n "$namespace" get jobs -l "polyad.astrivant.com/owner=$interrupted_uid" -o jsonpath='{.items[0].metadata.name}')"

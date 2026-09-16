@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 
 from attrs import evolve
 
-from polyad.compiler import asts
 from polyad.compiler.passes.composition import request_name
+from polyad_types import resources as asts
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.graph.topology import Node
+    from polyad_types.topology import Node
 
 
 def trace_child(child: asts.Resource, parent: dict[str, Any], node: Node, definition: dict[str, Any]) -> asts.Resource:

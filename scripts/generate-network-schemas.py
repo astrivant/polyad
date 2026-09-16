@@ -11,12 +11,13 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from polyad.compiler.asts import CapacityStatus
 from polyad.compiler.passes.schema import structural_schema
-from polyad.graph.activation import ActivationPolicy
-from polyad.graph.capacity import CapacityPlan
-from polyad.graph.network import NetworkAccess, NetworkPort
-from polyad.graph.replication import Replication
+from polyad_types.activation import ActivationPolicy
+from polyad_types.capacity import CapacityPlan
+from polyad_types.network import NetworkAccess, NetworkPort
+from polyad_types.replication import Replication
+from polyad_types.requests import ConnectionRequest
+from polyad_types.resources import CapacityStatus
 
 if TYPE_CHECKING:
     from typing import Any
@@ -104,7 +105,7 @@ def main() -> int:
             changed.append(kind)
             if not args.check:
                 path.write_text(updated)
-    for kind in ("graphs", "polygraphs", "workloads", "ephemerals", "daemons"):
+    for kind in ("graphs", "polygraphs", "workloads", "daemons"):
         path = directory / f"{kind}.yaml"
         source = path.read_text()
         updated = refresh(source, ROOT, "activation", structural_schema(ActivationPolicy))
@@ -138,6 +139,27 @@ def main() -> int:
     updated = refresh(source, ROOT[:-2], "spec", schema)
     if updated != source:
         changed.append("replicagroups")
+        if not args.check:
+            path.write_text(updated)
+    path = directory / "temporaryconnections.yaml"
+    source = path.read_text()
+    schema = structural_schema(ConnectionRequest)
+    schema["properties"]["requester"] = {
+        "type": "object",
+        "required": ["username", "uid"],
+        "properties": {
+            "username": {"type": "string", "maxLength": 320, "pattern": "^system:serviceaccount:[a-z0-9-]+:[a-z0-9.-]+$"},
+            "uid": {"type": "string", "minLength": 1, "maxLength": 128},
+        },
+    }
+    schema["required"].append("requester")
+    schema["x-kubernetes-validations"] = [
+        {"rule": "self == oldSelf", "message": "Connection intent is immutable; a new requestId creates a new deadline."},
+        {"rule": "self.source != self.target", "message": "Temporary connections require distinct endpoints."},
+    ]
+    updated = refresh(source, ROOT[:-2], "spec", schema)
+    if updated != source:
+        changed.append("temporaryconnections")
         if not args.check:
             path.write_text(updated)
     if changed:

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import BOUNDARY_KINDS, GROUP, VERSION
+from polyad_types.resources import BOUNDARY_KINDS, GROUP, VERSION
 
 if TYPE_CHECKING:
     from typing import Any

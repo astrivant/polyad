@@ -16,8 +16,6 @@ from typing import TYPE_CHECKING
 from attrs import evolve
 from cattrs.errors import BaseValidationError
 
-from polyad.compiler import asts
-from polyad.compiler.asts.mutations import Mutation, Precondition, Scope
 from polyad.compiler.passes.audit import trace_child
 from polyad.compiler.passes.children import child_name as compile_child_name
 from polyad.compiler.passes.children import owned_child
@@ -26,9 +24,8 @@ from polyad.compiler.passes.identity import inject_environment, workload_identit
 from polyad.compiler.passes.mutations import PreconditionFailed
 from polyad.compiler.passes.network import configure_pod
 from polyad.compiler.passes.storage import configure_storage
-from polyad.graph.activation import ActivationPolicy
 from polyad.graph.gates import DelayGate, Gate
-from polyad.graph.topology import converter, topology
+from polyad.graph.temporary import active_entries, overlay
 from polyad.metrics.workloads import observation_time
 from polyad.operator.activations import TERMINAL, Activations
 from polyad.operator.api import GROUP
@@ -42,6 +39,11 @@ from polyad.operator.network import POLICY_KINDS, context, ensure_policies
 from polyad.operator.placement import merge_placement, place_pod
 from polyad.operator.rule_state import check_live_rules
 from polyad.operator.rules import check_rules
+from polyad_types import resources as asts
+from polyad_types.activation import ActivationPolicy
+from polyad_types.codec import converter
+from polyad_types.resources.mutations import Mutation, Precondition, Scope
+from polyad_types.topology import topology
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +51,9 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from typing import Any
 
-    from polyad.graph.storage import Persistence
     from polyad.operator.api import API
     from polyad.operator.queue import Key
+    from polyad_types.storage import Persistence
 
 BOUNDARIES = asts.BOUNDARY_KINDS
 FINALIZER = f"{GROUP}/drain"
@@ -299,6 +301,11 @@ class Controller:
         if obj is None:
             logger.debug("Reconciliation target absent kind=%s namespace=%s name=%s", *key)
             return
+        if kind == "TemporaryConnection":
+            from polyad.operator.connections import reconcile_connection
+
+            await reconcile_connection(self, obj)
+            return
         if kind == "Activation":
             parent = await self.api.get(obj["spec"]["kind"], namespace, obj["spec"]["graph"])
             if parent and parent["metadata"]["uid"] == obj["spec"]["graphUid"]:
@@ -526,7 +533,8 @@ class Controller:
         """
         raw = dict(obj["spec"])
         placement = raw.pop("placement", None)
-        graph = topology(raw, obj["kind"])
+        deadlines = [datetime.fromisoformat(grant["expiresAt"]) for grant in active_entries(obj).values()]
+        graph = topology(overlay(obj, raw), obj["kind"])
         meta, namespace = obj["metadata"], obj["metadata"]["namespace"]
         policy = {}
         if graph.shutdownPolicy:
@@ -562,6 +570,8 @@ class Controller:
                 None: Recomputed reports replace the previous observations.
             """
             nonlocal rule_reports
+            if any(deadline <= datetime.now(UTC) for deadline in deadlines):
+                raise Pending("temporary connection expired before workload mutation")
             rule_reports = await check_live_rules(self.api, obj, candidate=rule_candidate)
 
         persistence = {}
@@ -570,10 +580,8 @@ class Controller:
         definition_cache = {}
         network_plans = {}
         names = {node.name: child_name(obj, node.name) for node in graph.nodes}
-        ancestors = (
-            await graph_ancestry(self.api, obj) if any(node.kind in {"Workload", "Ephemeral", "Daemon"} for node in graph.nodes) else []
-        )
-        endpoints = {name: os.environ.get(f"POLYAD_WORKLOAD_{name}_URL", "") for name in ("API", "EVENTS", "METRICS")}
+        ancestors = await graph_ancestry(self.api, obj) if any(node.kind in {"Workload", "Daemon"} for node in graph.nodes) else []
+        endpoints = {name: os.environ.get(f"POLYAD_WORKLOAD_{name}_URL", "") for name in ("API", "EVENTS", "METRICS", "CONNECTIONS")}
         for node in graph.nodes:
             reference_key = (node.kind, node.ref)
             if reference_key not in definition_cache:
@@ -589,16 +597,14 @@ class Controller:
             spec = (
                 references(copy.deepcopy(definition["spec"]), names) if node.kind not in BOUNDARIES else copy.deepcopy(definition["spec"])
             )
-            if node.kind in {"Workload", "Ephemeral", "Daemon"}:
-                persistence[node.name] = configure_storage(spec, ephemeral=node.kind == "Ephemeral")
+            if node.kind in {"Workload", "Daemon"}:
+                persistence[node.name] = configure_storage(spec)
                 pod = spec["template"]
                 labels, scopes = await context(self.api, obj, node.name)
                 network_plans[node.name] = scopes
                 configure_pod(pod, labels, isolated=bool(scopes), mesh=any(scope.access.mesh for scope in scopes))
                 pod_spec = pod["spec"]
                 effective = merge_placement(placement, spec.get("placement"))
-                if node.kind == "Ephemeral" and not effective:
-                    raise ValueError("Ephemeral requires explicit spot placement")
                 place_pod(pod_spec, effective)
                 pod_spec["terminationGracePeriodSeconds"] = policy.get("graceSeconds", pod_spec.get("terminationGracePeriodSeconds", 30))
                 inject_environment(pod, workload_identity(ancestors, node, definition, names[node.name], endpoints))
@@ -789,9 +795,7 @@ class Controller:
             graph.mode == "finite"
             and len(states) == len(graph.nodes)
             and all(
-                states[node.name]["completed"]
-                if node.kind in {"Workload", "Ephemeral", "Graph", "PolyGraph"}
-                else states[node.name]["ready"]
+                states[node.name]["completed"] if node.kind in {"Workload", "Graph", "PolyGraph"} else states[node.name]["ready"]
                 for node in graph.nodes
             )
         )

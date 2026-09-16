@@ -6,15 +6,19 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from polyad_types import ActivationRequest, to_dict
+from polyad_types.events import Event
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any
+    from typing import Any, Literal
+
+    from polyad_types import CompositionRequest, ConnectionRequest
 
 
 class APIError(RuntimeError):
@@ -39,25 +43,9 @@ class _NoRedirect(HTTPRedirectHandler):
         return None
 
 
-@dataclass(frozen=True)
-class Event:
-    """
-    Carry an SSE cursor, event type and decoded JSON observation.
-
-    Attributes:
-        id (str): Stream cursor to persist after processing.
-        event (str): Event type, including graph, topology, reset or unavailable.
-        data (dict[str, Any]): Observation payload.
-    """
-
-    id: str
-    event: str
-    data: dict[str, Any]
-
-
 class Client:
     """
-    Call composition and activation APIs with no implicit mutation retries.
+    Call Polyad APIs with no implicit mutation retries.
     """
 
     def __init__(self, url: str, token: str, *, timeout: float = 30) -> None:
@@ -118,17 +106,17 @@ class Client:
             raise ValueError("expected a JSON object from Polyad")
         return value
 
-    def compose(self, document: dict[str, Any]) -> dict[str, Any]:
+    def compose(self, document: CompositionRequest | dict[str, Any]) -> dict[str, Any]:
         """
         Submit ID-addressed graph intent, retaining its requestId across retries.
 
         Args:
-            document (dict[str, Any]): Composition request with requestId, rootId and objects.
+            document (CompositionRequest | dict[str, Any]): Composition request with requestId, rootId and objects.
 
         Returns:
             dict[str, Any]: Accepted composition receipt.
         """
-        return self._request("POST", "/v1/compositions", document)
+        return self._request("POST", "/v1/compositions", to_dict(document))
 
     def composition(self, request_id: str, *, resources: bool = False) -> dict[str, Any]:
         """
@@ -143,7 +131,15 @@ class Client:
         """
         return self._request("GET", f"/v1/compositions/{quote(request_id, safe='')}" + ("/resources" if resources else ""))
 
-    def activate(self, *, request_id: str, graph: str, graph_uid: str, node: str, kind: str = "Graph") -> dict[str, Any]:
+    def activate(
+        self,
+        *,
+        request_id: str,
+        graph: str,
+        graph_uid: str,
+        node: str,
+        kind: Literal["Graph", "PolyGraph", "ReplicaGroup"] = "Graph",
+    ) -> dict[str, Any]:
         """
         Request a downstream execution governed by the definition's activation policy.
 
@@ -152,7 +148,7 @@ class Client:
             graph (str): Executable graph instance name.
             graph_uid (str): Persisted graph UID from composition audit or Kubernetes.
             node (str): Logical downstream node name.
-            kind (str): Graph, PolyGraph or ReplicaGroup.
+            kind (Literal['Graph', 'PolyGraph', 'ReplicaGroup']): Target graph kind.
 
         Returns:
             dict[str, Any]: Durable receipt, not a guarantee of admission.
@@ -160,13 +156,7 @@ class Client:
         return self._request(
             "POST",
             "/v1/activations",
-            {
-                "requestId": request_id,
-                "graph": graph,
-                "graphUid": graph_uid,
-                "node": node,
-                "kind": kind,
-            },
+            to_dict(ActivationRequest(requestId=request_id, graph=graph, graphUid=graph_uid, node=node, kind=kind)),
         )
 
     def activation(self, request_id: str) -> dict[str, Any]:
@@ -201,6 +191,44 @@ class Client:
             dict[str, Any]: OpenAPI document.
         """
         return self._request("GET", "/openapi.json")
+
+    def connect(self, document: ConnectionRequest | dict[str, Any]) -> dict[str, Any]:
+        """
+        Request a temporary edge using the connections Service and a projected token.
+
+        Args:
+            document (ConnectionRequest | dict[str, Any]): Request with namespace, graph identity, endpoints and ttlSeconds.
+
+        Returns:
+            dict[str, Any]: Durable receipt; poll connection for admission and expiry.
+        """
+        return self._request("POST", "/v1/connections", to_dict(document))
+
+    def connection(self, namespace: str, request_id: str) -> dict[str, Any]:
+        """
+        Read this service account's temporary connection receipt.
+
+        Args:
+            namespace (str): Target graph namespace.
+            request_id (str): Original idempotency key.
+
+        Returns:
+            dict[str, Any]: Immutable deadline and observed admission status.
+        """
+        return self._request("GET", f"/v1/connections/{quote(namespace, safe='')}/{quote(request_id, safe='')}")
+
+    def disconnect(self, namespace: str, request_id: str) -> dict[str, Any]:
+        """
+        Request early revocation while preserving retry identity until audit retention ends.
+
+        Args:
+            namespace (str): Target graph namespace.
+            request_id (str): Original idempotency key.
+
+        Returns:
+            dict[str, Any]: Accepted revocation; poll connection until cleanup is observed.
+        """
+        return self._request("DELETE", f"/v1/connections/{quote(namespace, safe='')}/{quote(request_id, safe='')}")
 
     def topology(self, *, graph: str, kind: str = "Graph", graph_uid: str | None = None, node: str | None = None) -> dict[str, Any]:
         """

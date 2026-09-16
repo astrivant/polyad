@@ -15,8 +15,8 @@ from attrs import evolve, field, frozen
 from flask import Flask, Response, jsonify, request
 
 from polyad.api.limits import RateLimitPolicy, install_limits
-from polyad.compiler.asts import BOUNDARY_KINDS
 from polyad.events.store import CursorExpired, TopologyReplaced
+from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

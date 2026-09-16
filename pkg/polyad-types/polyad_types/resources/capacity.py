@@ -8,7 +8,7 @@ from typing import Literal
 
 from attrs import field, frozen
 
-from polyad.compiler.asts.common import AST
+from polyad_types.resources.common import AST
 
 
 @frozen(kw_only=True)

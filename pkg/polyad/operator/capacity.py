@@ -14,16 +14,16 @@ from typing import TYPE_CHECKING
 
 from attrs import evolve
 
-from polyad.compiler import asts
 from polyad.compiler.passes.capacity import frontier, placeholder, requests
-from polyad.graph.topology import converter
+from polyad_types import resources as asts
+from polyad_types.codec import converter
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.graph.capacity import CapacityPlan
-    from polyad.graph.topology import Topology
     from polyad.operator.controller import Controller
+    from polyad_types.capacity import CapacityPlan
+    from polyad_types.topology import Topology
 
 CAPACITY_LABEL = f"{asts.GROUP}/capacity"
 CONSUME = "autoscaling.x-k8s.io/consume-provisioning-request"

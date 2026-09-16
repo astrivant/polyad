@@ -33,7 +33,6 @@ All CRDs are namespaced under `polyad.astrivant.com/v1alpha1` and shipped in `ch
 | --- | --- |
 | `Work`, `Workload`, command `Operation` | `Workload` definition plus a graph `Node`; execution uses a Job and explicit container command |
 | Persistent node | `Daemon` definition, executed as a Deployment or StatefulSet with application probes |
-| `Ephemeral` | Spot-placed, restartable Job definition |
 | `Graph`, `Topology` | `Graph` CR; nodes reference definitions and can contain nested boundaries |
 | `PolyGraph`, `GraphNode` | `PolyGraph` CR; nodes reference other graph types and descendant status aggregates at the root |
 | `Placement` on `Topology` / `Graph` | Shared node-group or labeled resource-slice placement, inherited by descendant pods |
@@ -51,11 +50,11 @@ Existing local `Scheduler` and `Graph` retain their cooperative Python behavior.
 The new descriptors can also build the graph spec from Python:
 
 ```python
-from polyad.graph import Ephemeral, Placement, Topology
-from polyad.graph.topology import converter
+from polyad.graph import Node, Placement, Topology
+from polyad_types.codec import converter
 
 boundary = Topology(
-    nodes=(Ephemeral(name="worker", ref="spot-worker"),),
+    nodes=(Node(name="worker", kind="Workload", ref="spot-worker"),),
     placement=Placement(nodeSelector={"polyad.astrivant.com/capacity": "spot"}),
 )
 cr = {
@@ -66,13 +65,13 @@ cr = {
 }
 ```
 
-Definitions (`Workload`, `Daemon`, `Ephemeral`, `Resource`, `Gate`, `ShutdownPolicy`) do not launch work by themselves. A Graph references them by name in the same namespace. Nested Graph/PolyGraph/ReplicaGroup definitions must set `templateOnly: true`; the parent instantiates an owned copy with that flag cleared. Recursive references and nesting deeper than 32 are rejected. A finite parent must reference finite children if it expects completion.
+Definitions (`Workload`, `Daemon`, `Resource`, `Gate`, `ShutdownPolicy`) do not launch work by themselves. A Graph references them by name in the same namespace. Nested Graph/PolyGraph/ReplicaGroup definitions must set `templateOnly: true`; the parent instantiates an owned copy with that flag cleared. Recursive references and nesting deeper than 32 are rejected. A finite parent must reference finite children if it expects completion.
 
 `connections` record topology; applications configure transport. Container/resource string fields can use `${nodes.NAME.name}` to refer to the generated Kubernetes resource name of another node, for example a PVC's `claimName` or a Service hostname. Names stay stable across resource replacement. Resources with probes, finalizers or readiness requirements should be dependencies before consumers start. A Service still needs an explicit selector; applications can use their own pod labels in templates.
 
 ## Scheduling a graph onto a resource slice
 
-Every `Graph` can set `spec.placement`; placement is independent of finite, persistent, or ephemeral lifetime. [Complete example](../examples/graph-placement.yaml):
+Every `Graph` can set `spec.placement`; placement is independent of finite or persistent lifecycle. [Complete example](../examples/graph-placement.yaml):
 
 ```yaml
 spec:
@@ -124,21 +123,23 @@ This is a **shared placement boundary**, not gang scheduling or an atomic capaci
 
 For advance capacity requests, see [capacity planning](capacity.md).
 
-## Ephemeral execution
+## Interruptible execution
 
-“Ephemeral” means compute can disappear before completion. Graph intent and observations remain durable in Kubernetes. It does **not** mean the CR deletes itself after running or checkpoints are stored on a disposable disk.
+Use a `Workload` with explicit `placement` to run a finite Job on spot or other
+interruptible capacity. Graphs and PolyGraphs can also select that capacity for
+their descendants. Label and toleration values are provider-specific; see the
+[spot workload example](../examples/spot-workload.yaml).
 
-`Ephemeral` executes as a Job on explicit spot placement and rejects persistent
-storage on that workload. Ordinary Graphs and PolyGraphs can also select spot
-capacity through `placement`; their workloads and storage choices remain under
-user control. The operator does not infer a graph-wide ephemeral policy from
-node labels. Label and toleration values are provider-specific.
+Placement selects machines. Users choose storage and recovery behavior appropriate
+to those machines; Polyad does not infer a storage prohibition from node labels.
+Graph intent and observations remain durable in Kubernetes when compute disappears.
 
-Kubernetes replaces failed/evicted Job pods within the declared `backoffLimit`.
+Kubernetes replaces failed or evicted Job Pods within the declared `backoffLimit`.
 After retry exhaustion the graph reports failure. Recreated compute starts the
-container entrypoint again; applications must tolerate repeated side effects.
-Ephemeral workloads should be disposable or reconstruct their inputs. Persistent
-workloads need an application recovery and storage plan appropriate to their capacity.
+container entrypoint again; applications must tolerate repeated side effects
+and restore any required durable state themselves. The
+[interruption example](../examples/spot-interruption.yaml) exercises this Job
+retry behavior using an ordinary Workload.
 
 ## Workload persistence
 
@@ -175,8 +176,7 @@ StorageClass resources. External claims are not adopted or deleted by graph
 cleanup. A claim created through a graph's own Resource node remains graph-owned
 and is drained with that graph. Use an external claim when data must outlive it.
 Users select capacity compatible with their storage and recovery requirements.
-The explicit `Ephemeral` workload type rejects persistent storage, including
-StorageClass declarations in native volume specs. See [Kubernetes persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+See [Kubernetes persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
 Storage preserves files; it does not preserve process memory or implement
 checkpointing. Kubernetes suspension currently drains execution, and clearing
@@ -216,7 +216,7 @@ it is not an application checkpoint.
 
 ## Resource compiler objects
 
-`polyad.compiler.asts` defines attrs objects for all ten Polyad CR kinds
+`polyad_types.resources` defines attrs objects for all ten Polyad CR kinds
 and the Job, Deployment, StatefulSet, Service, ConfigMap, PersistentVolumeClaim and Lease kinds the
 operator manages. Metadata, owner references, Job/Deployment/StatefulSet specs, status patches
 and deletion preconditions have dedicated types. A shared resource registry supplies
@@ -248,7 +248,7 @@ these objects to Kubernetes documents with cattrs immediately before sending the
 For example:
 
 ```python
-from polyad.compiler.asts import Graph, JobSpec, ObjectMeta, PodTemplate, to_document
+from polyad_types.resources import Graph, JobSpec, ObjectMeta, PodTemplate, to_document
 from polyad.compiler.passes.children import owned_child
 
 parent = Graph(
@@ -284,10 +284,10 @@ also have concrete types, so editors and Mypy can follow fields to their values.
 Field names match the Kubernetes document, including `observedGeneration`.
 
 ```python
-from polyad.compiler.asts import GraphMetrics, converter, to_document
+from polyad_types.resources import GraphMetrics, converter, to_document
 from polyad.compiler.passes.schema import structural_schema
 from polyad.graph import measure_topology
-from polyad.graph.topology import topology
+from polyad_types.topology import topology
 
 shape = measure_topology(topology({"nodes": []}))
 metrics = GraphMetrics(observedGeneration=1, topology=shape)
@@ -503,7 +503,7 @@ kubectl get polygraph composed -n polyad -o jsonpath='{.status.metrics.rollup}'
 ```
 
 The Python library exposes the same structural measurements with
-`polyad.graph.topology_metrics(topology)` and accepts an optional set of present
+`polyad_types.topology_metrics(topology)` and accepts an optional set of present
 node names to measure an observed subset.
 
 ## Debug logging

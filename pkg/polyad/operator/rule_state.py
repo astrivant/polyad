@@ -5,12 +5,15 @@ Recompute structural constraints from live graph families before scaling mutatio
 from __future__ import annotations
 
 import copy
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import AUXILIARY_KINDS, BOUNDARY_KINDS, GROUP, VERSION
-from polyad.graph.replication import Replication, replica_topology
-from polyad.graph.topology import converter, topology
+from polyad.graph.temporary import ANNOTATION, active_entries, overlay
 from polyad.operator.rules import RuleViolation, check_rules
+from polyad_types.codec import converter
+from polyad_types.replication import Replication, replica_topology
+from polyad_types.resources import AUXILIARY_KINDS, BOUNDARY_KINDS, GROUP, VERSION
+from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any
@@ -31,6 +34,7 @@ def _revision(obj: dict[str, Any]) -> dict[str, Any]:
     meta = obj["metadata"]
     return {
         "spec": obj.get("spec"),
+        "temporaryConnections": meta.get("annotations", {}).get(ANNOTATION),
         "membership": {key: value for key, value in meta.get("labels", {}).items() if key in {f"{GROUP}/node", f"{GROUP}/runtime-node"}},
         **{key: meta.get(key) for key in ("uid", "generation", "deletionTimestamp", "ownerReferences")},
     }
@@ -108,6 +112,7 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
     identities: dict[tuple[tuple[str, str], ...], dict[str, Any]] = {}
     boundaries = vertices = 0
     target_path: tuple[tuple[str, str], ...] | None = None
+    deadlines: list[datetime] = []
 
     async def read(kind: str, name: str) -> dict[str, Any]:
         """
@@ -148,6 +153,8 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
     current = await read(obj["kind"], obj["metadata"]["name"])
     if current["metadata"]["uid"] != target_uid or current["metadata"].get("generation") != obj["metadata"].get("generation"):
         raise Pending("graph changed before structural rule evaluation")
+    if _revision(current)["temporaryConnections"] != _revision(obj)["temporaryConnections"]:
+        raise Pending("temporary connections changed before structural rule evaluation")
     root = current
     ancestors = {target_uid}
     while True:
@@ -221,6 +228,9 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
             target_path = path
             if candidate is not None:
                 body = copy.deepcopy(candidate)
+        if instance is not None:
+            deadlines.extend(datetime.fromisoformat(grant["expiresAt"]) for grant in active_entries(instance).values())
+            body = overlay(instance, body)
         topology(body, kind)
         if not is_target or candidate is None:
             body = _activation_topology(body, live_children)
@@ -288,4 +298,6 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
         item["metadata"]["uid"]: _revision(item) for item in rule_documents
     }:
         raise Pending("GraphRules changed during structural rule evaluation")
+    if any(value <= datetime.now(UTC) for value in deadlines):
+        raise Pending("a temporary connection expired during structural rule evaluation")
     return reports

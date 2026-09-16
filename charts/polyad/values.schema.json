@@ -1527,6 +1527,13 @@
                 "minLength": 1,
                 "maxLength": 256
               }
+            },
+            "connectionPrincipals": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         },
@@ -2425,6 +2432,70 @@
               },
               "secrets": {
                 "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "connections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "scope",
+        "namespace",
+        "maxTtlSeconds",
+        "retentionSeconds"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "Cluster",
+            "OperatorNamespace",
+            "Namespace"
+          ]
+        },
+        "namespace": {
+          "type": "string",
+          "maxLength": 63,
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        },
+        "maxTtlSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "retentionSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "Namespace"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "namespace": {
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "namespace": {
+                "const": ""
               }
             }
           }

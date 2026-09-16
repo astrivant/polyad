@@ -8,7 +8,7 @@ from typing import Literal
 
 from attrs import field, frozen
 
-from polyad.compiler.asts.common import AST
+from polyad_types.resources.common import AST
 
 
 @frozen(kw_only=True)
@@ -63,7 +63,6 @@ class NodeCounts(AST):
     Attributes:
         Workload (int): Number of Workload nodes.
         Daemon (int): Number of Daemon nodes.
-        Ephemeral (int): Number of Ephemeral nodes.
         Resource (int): Number of Resource nodes.
         Graph (int): Number of Graph nodes.
         ReplicaGroup (int): Number of replication boundaries.
@@ -72,7 +71,6 @@ class NodeCounts(AST):
 
     Workload: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Workload nodes."}})
     Daemon: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Daemon nodes."}})
-    Ephemeral: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Ephemeral nodes."}})
     Resource: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Resource nodes."}})
     Graph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Graph nodes."}})
     ReplicaGroup: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of replication boundaries."}})
@@ -271,6 +269,7 @@ class ResourceCounts(AST):
 
     Attributes:
         Activation (int): Number of durable activation receipts.
+        TemporaryConnection (int): Number of durable temporary connection receipts.
         NetworkPolicy (int): Number of owned transport policies.
         AuthorizationPolicy (int): Number of owned Istio authorization policies.
         PeerAuthentication (int): Number of owned mutual TLS policies.
@@ -289,6 +288,7 @@ class ResourceCounts(AST):
     """
 
     Activation: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Durable activation receipts."}})
+    TemporaryConnection: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Temporary connection receipts."}})
     NetworkPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned transport policies."}})
     AuthorizationPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned Istio authorization policies."}})
     PeerAuthentication: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned mutual TLS policies."}})

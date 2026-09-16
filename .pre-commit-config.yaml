@@ -30,13 +30,13 @@ repos:
         entry: bash scripts/project-python.sh scripts/generate-status-schemas.py --check
         language: system
         pass_filenames: false
-        files: '^(pkg/polyad/compiler/|charts/polyad/crds/|scripts/generate-status-schemas\.py$|\.pre-commit-config\.yaml$)'
+        files: '^(pkg/polyad/compiler/|pkg/polyad-types/|charts/polyad/crds/|scripts/generate-status-schemas\.py$|\.pre-commit-config\.yaml$)'
       - id: network-schemas
         name: Generated graph network and capacity schemas
         entry: bash scripts/project-python.sh scripts/generate-network-schemas.py --check
         language: system
         pass_filenames: false
-        files: '^(pkg/polyad/(graph|compiler)/|charts/polyad/crds/|scripts/generate-network-schemas\.py$|\.pre-commit-config\.yaml$)'
+        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-types/|charts/polyad/crds/|scripts/generate-network-schemas\.py$|\.pre-commit-config\.yaml$)'
       - id: docstring-layout
         name: Multiline docstring layout
         entry: bash scripts/project-python.sh scripts/check-docstrings.py

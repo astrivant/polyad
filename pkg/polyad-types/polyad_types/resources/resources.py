@@ -9,7 +9,7 @@ from typing import Any, ClassVar
 
 from attrs import field, frozen
 
-from polyad.compiler.asts.common import AST, GROUP, VERSION, ObjectMeta, ResourceType
+from polyad_types.resources.common import AST, GROUP, VERSION, ObjectMeta, ResourceType
 
 
 @frozen(kw_only=True)
@@ -355,25 +355,6 @@ class Daemon(SpecResource):
 
 
 @frozen(kw_only=True)
-class Ephemeral(SpecResource):
-    """
-    A reusable finite workload definition for interruptible capacity.
-
-    Attributes:
-        resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
-    """
-
-    resource_type: ClassVar[ResourceType] = ResourceType(
-        "Ephemeral",
-        f"{GROUP}/{VERSION}",
-        "ephemerals",
-        description="Reusable workload definition for interruptible capacity.",
-        definition=True,
-        composable=True,
-    )
-
-
-@frozen(kw_only=True)
 class ResourceDefinition(SpecResource):
     """
     A Polyad Resource definition, distinct from the Kubernetes AST base class.
@@ -517,6 +498,26 @@ class Activation(SpecResource):
 
 
 @frozen(kw_only=True)
+class TemporaryConnection(SpecResource):
+    """
+    An expiring connection receipt owned by a persisted graph instance.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Namespaced connection receipt identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "TemporaryConnection",
+        f"{GROUP}/{VERSION}",
+        "temporaryconnections",
+        description="TTL-bound graph connection request and admission receipt.",
+        graph_owned=True,
+        reconciled=True,
+        auxiliary="connection",
+    )
+
+
+@frozen(kw_only=True)
 class Pod(SpecResource):
     """
     A native Pod observed for composition audit traces.
@@ -639,6 +640,7 @@ class PodTemplateResource(Resource):
 
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     Activation,
+    TemporaryConnection,
     ReplicaGroup,
     ProvisioningRequest,
     PodTemplateResource,
@@ -659,7 +661,6 @@ RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     PolyGraph,
     Workload,
     Daemon,
-    Ephemeral,
     ResourceDefinition,
     Gate,
     ShutdownPolicy,

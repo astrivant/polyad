@@ -51,7 +51,8 @@ spec:
 
 Reference this definition as a node in a persistent `Graph` or
 `PolyGraph` (the latter accepts graph definitions). Activation also works on
-`Ephemeral`, `Daemon`, and reusable `Graph` or `PolyGraph` definitions. Resources such as Services and PVCs are not pulse targets.
+`Daemon` and reusable `Graph` or `PolyGraph` definitions. Resources such as Services
+and PVCs are not pulse targets.
 Use a subgraph for a whole downstream batch that must repeat together. Ordinary
 nodes depending on a pulsed node do not automatically repeat themselves.
 
@@ -133,8 +134,8 @@ creation cannot consume another frequency allowance. Monitor
 
 Enable the existing composition API with `api.enabled=true`; activation uses its
 port, bearer authentication, rate limits, and optional Gateway API/Istio routing.
-The [standalone client](../clients/python/README.md) requires Python 3.11+ and no
-operator dependencies. Install it directly with `pip install ./clients/python`.
+The [standalone client](../pkg/client/README.md) requires Python 3.11+ and no
+operator dependencies. Install it directly with `pip install ./pkg/polyad-types ./pkg/client`.
 
 ```python
 import os

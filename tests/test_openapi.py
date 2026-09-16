@@ -13,7 +13,7 @@ import pytest
 from openapi_spec_validator import validate
 
 from polyad.api import APIBuilder
-from polyad.compiler.passes.composition import COMPOSITION_KINDS
+from polyad_types.requests import COMPOSITION_KINDS
 from tests.test_composition_api import document
 
 

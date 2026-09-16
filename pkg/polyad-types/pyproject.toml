@@ -1,0 +1,41 @@
+[project]
+name = "polyad-types"
+version = "0.0.1a3"
+description = "Shared resource, configuration and API models for Polyad"
+authors = [{name = "Emma Doyle"}]
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.11,<4"
+keywords = ["polyad", "kubernetes", "graphs", "topology", "types", "validation"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "attrs>=24,<27",
+    "cattrs>=24,<27",
+    "typing-extensions>=4.12,<5",
+]
+
+[project.urls]
+Homepage = "https://github.com/astrivant/polyad"
+Documentation = "https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/README.md"
+Repository = "https://github.com/astrivant/polyad"
+Issues = "https://github.com/astrivant/polyad/issues"
+Changelog = "https://github.com/astrivant/polyad/releases"
+
+[tool.poetry]
+packages = [{include = "polyad_types"}]
+
+[build-system]
+requires = ["poetry-core>=2.2,<3.0"]
+build-backend = "poetry.core.masonry.api"

@@ -216,6 +216,11 @@ available for the composition service. See [Istio Helm installation](https://ist
 
 ## Workload access to operator APIs
 
+For temporary edges between graph nodes or replicas, enable the separate
+[temporary connections API](temporary-connections.md). It uses projected service-account
+tokens, applies namespace scope to both callers and targets, and removes admitted
+grants after their TTL while preserving existing network constraints.
+
 Managed workloads can call the same APIs as external clients. Enable `api.enabled`
 for composition and status requests, and `events.enabled` for event subscriptions.
 Each Service routes to ready operator replicas; callers do not need to locate the

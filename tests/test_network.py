@@ -9,11 +9,11 @@ import copy
 
 import pytest
 
-from polyad.compiler import asts
 from polyad.compiler.passes.network import NetworkScope, configure_pod, policy_specs, scope_label, traffic
 from polyad.graph import NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.network import context
+from polyad_types import resources as asts
 from tests.test_operator import FakeAPI, resource, template
 
 

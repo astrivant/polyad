@@ -33,7 +33,7 @@ for kind in sorted(GRAPH_OWNED_KINDS):
 | `reconciled` | Receives operator reconciliation duties |
 | `composable` | May be declared in a composition request |
 | `required_feature` | Operator feature (`mesh` or `capacity`) required before graph inventory reads |
-| `auxiliary` | `network`, `capacity`, `activation`, or `None`; auxiliary resources do not count as graph vertices |
+| `auxiliary` | `network`, `capacity`, `activation`, `connection`, or `None`; auxiliary resources do not count as graph vertices |
 
 The module also exports immutable sets named `BOUNDARY_KINDS`,
 `GRAPH_OWNED_KINDS`, `DEFINITION_KINDS`, `RECONCILED_KINDS`, `COMPOSABLE_KINDS`,
@@ -49,7 +49,7 @@ control their use.
 ## Extending the catalog
 
 Declare metadata on the AST class's `resource_type` in
-[`asts/resources.py`](../pkg/polyad/compiler/asts/resources.py), then include the
+[`resources.py`](../pkg/polyad-types/polyad_types/resources/resources.py), then include the
 class in `RESOURCE_CLASSES`. The public catalog and its capability sets derive
 from those declarations. Both mappings and descriptors are immutable at runtime.
 
@@ -57,7 +57,7 @@ Supporting a new kind also requires its compiler or reconciliation behavior and
 any required RBAC or CRD. For graph-owned kinds, add the corresponding typed field
 to `ResourceCounts` and regenerate status schemas. Registry tests catch drift
 between owned kinds and typed counts, and between Python API identities and the
-shipped Polyad CRDs. Existing `polyad.compiler.asts.RESOURCE_TYPES` imports remain
+shipped Polyad CRDs. Existing `polyad_types.resources.RESOURCE_TYPES` imports remain
 available.
 
 `ReplicaGroup` is a composable, reconciled graph boundary with a Kubernetes scale
@@ -68,3 +68,7 @@ See [replication and KEDA](replication.md).
 `Daemon.spec.controller`. It participates in ownership inventory, cleanup,
 readiness, audit output and typed resource counts alongside `Deployment`.
 See [workload controllers and storage](workload-storage.md).
+
+`TemporaryConnection` is a reconciled, graph-owned receipt for the optional
+[temporary connections API](temporary-connections.md). It is auxiliary and cannot
+be composed as a graph vertex or submitted as a reusable definition.

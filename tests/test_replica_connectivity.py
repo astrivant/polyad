@@ -9,13 +9,14 @@ import asyncio
 import networkx as nx
 import pytest
 
-from polyad.compiler import asts
 from polyad.compiler.passes.network import scope_label, traffic
 from polyad.graph import ReplicaConnection, ReplicaConnectivity, Replication, graph_cheeger
-from polyad.graph.replication import replica_topology
-from polyad.graph.topology import converter, topology
 from polyad.operator.controller import Controller
 from polyad.operator.network import context
+from polyad_types import resources as asts
+from polyad_types.codec import converter
+from polyad_types.replication import replica_topology
+from polyad_types.topology import topology
 from tests.test_operator import FakeAPI, resource, template
 from tests.test_replication import group, policy_family, start_family, turn
 

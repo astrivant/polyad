@@ -1,5 +1,5 @@
 """
-Exercise the dependency-free client against real Flask routes through an HTTP adapter.
+Exercise the standalone client against real Flask routes through an HTTP adapter.
 """
 
 from __future__ import annotations
@@ -9,9 +9,10 @@ import json
 from urllib.error import HTTPError
 
 import pytest
-from polyad_client import APIError, Client
 
 from polyad.api import APIBuilder
+from polyad_client import APIError, Client
+from polyad_types import CompositionItem, CompositionRequest, Event, to_dict
 
 
 class Adapter:
@@ -56,6 +57,10 @@ def test_client_calls_authenticated_activation_and_composition_routes():
     assert client.activation("pulse") == {"requestId": "pulse"}
     assert client.stop("pulse") == {"stopped": "pulse"}
     assert client.composition("composition", resources=True)["audit"]
+    request = CompositionRequest("composition", "root", (CompositionItem("root", "Graph", {"nodes": []}),))
+    assert client.compose(request) == {"requestId": "composition"}
+    assert json.loads(adapter.calls[-1][0].data) == to_dict(request)
+    assert client.compose(to_dict(request)) == {"requestId": "composition"}
     assert "/v1/activations" in client.openapi()["paths"]
     assert all(timeout == 4 for _, timeout in adapter.calls)
     assert json.loads(adapter.calls[0][0].data)["graphUid"] == "uid"
@@ -81,6 +86,7 @@ def test_client_streams_cursors_and_control_messages():
 
     client._opener = Stream()
     events = list(client.events(last_event_id="0-0"))
+    assert isinstance(events[0], Event)
     assert events[0].id == "1-0" and events[0].data == {"name": "root"}
     assert events[1].event == "reset"
     assert response.closed

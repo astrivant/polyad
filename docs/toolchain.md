@@ -93,6 +93,12 @@ npm test --prefix scripts/mermaid
 
 ## Python types and serialization
 
+The shared models live in [`pkg/polyad-types`](../pkg/polyad-types/README.md), an
+independently installable Python 3.11+ distribution. Install it from a checkout
+with `pip install ./pkg/polyad-types`, then import `polyad_types`. Its runtime
+dependencies are attrs, cattrs and typing-extensions. The operator and client
+use these same definitions.
+
 Python applications can specialize the node types accepted by a `PolyGraph`.
 `PolyGraph[NodeT]` retains that type when code reads `graph.nodes`, so Mypy can
 check custom reference fields and reject incompatible nodes before execution.
@@ -112,8 +118,8 @@ For cattrs serialization, supply the same concrete graph type when converting
 in both directions:
 
 ```python
-from polyad.graph import GraphNode, PolyGraph
-from polyad.graph.topology import converter
+from polyad_types.codec import converter
+from polyad_types.topology import GraphNode, PolyGraph
 
 graph = PolyGraph(
     nodes=(GraphNode(name="batch", kind="Graph", ref="batch-template"),),
@@ -138,7 +144,7 @@ stub package to keep synchronized.
 After every successful Test workflow for a push on `main`,
 `.github/workflows/tag.yml` receives its completion event. It waits for the Python,
 chart and both operator integration jobs, then tags that exact tested commit using
-`tool.poetry.version` from `pyproject.toml`. Stable versions receive `vX.Y.Z`; Python
+`project.version` from `pyproject.toml`. Stable versions receive `vX.Y.Z`; Python
 prereleases use `vX.Y.Z-alphaN`, `vX.Y.Z-betaN` or `vX.Y.Z-rcN`. Pull requests and
 other branches cannot create tags.
 
@@ -170,15 +176,20 @@ example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the ch
 README's image-tag default. Alpha, beta and release-candidate spellings are
 normalized; malformed tags fail before metadata changes.
 
-The standalone `polyad-client` package receives the same Python version. CI builds
-and checks its wheel without operator dependencies and publishes it with the verified
-operator artifacts; the PyPI token must permit both package names.
+The standalone `polyad-client` and [`polyad-types`](../pkg/polyad-types/README.md)
+packages receive the same release version. The client and operator pin the matching
+types release; Poetry resolves that dependency from `pkg/polyad-types` in a checkout,
+while built distributions declare a version dependency suitable for PyPI. CI checks
+standalone types and client installations without operator dependencies and publishes
+types first, then the client and operator. The PyPI token must permit all three names.
 
 Python builds, both Docker profiles, operator integration tests, every Helm
 validation shard, Helm packaging and PyPI publishing use this preparation step.
 `.github/release-version.py` still verifies that the resulting package version
 matches the tag. Changes exist only in the build checkout: CI does not commit
-version bumps or move tags, and dependency locks are unchanged.
+version bumps or move tags. Release preparation updates the local types lock entry;
+Python and Docker builds refresh the lock metadata before installation, retaining
+the locked third-party versions.
 
 Branch and pull-request builds retain their declared versions. The automatic
 main-branch tagging workflow also continues to derive its tag from the declared
@@ -190,8 +201,37 @@ To reproduce release metadata locally before building:
 
 ```sh
 python .github/prepare-release.py --tag v0.0.1-alpha3
+poetry lock
 python .github/release-version.py --tag v0.0.1-alpha3
 ```
+
+### Manual PyPI publishing
+
+Each distribution has its own PyPI metadata and build configuration. Set
+`POETRY_PYPI_TOKEN_PYPI` in your shell to a PyPI API token authorized to publish
+the package names, then run these commands from the repository root with the
+project's Python 3.13 interpreter selected:
+
+```sh
+poetry -C pkg/polyad-types check --strict
+poetry -C pkg/client check --strict
+poetry check --strict
+
+poetry -C pkg/polyad-types publish --build
+poetry -C pkg/client publish --build
+poetry publish --build
+```
+
+Run only the first publish command to release `polyad-types` on its own. When
+releasing all three, publish types first because the client and operator require
+the matching version. Use the release-preparation commands above when changing
+versions so all three distributions and dependency pins stay aligned; PyPI
+requires a new version for a subsequent release.
+
+`publish --build` builds the wheel and source distribution, then uploads them to
+PyPI. Add `--dry-run` to validate the publishing flow without uploading. See
+[Poetry's publish command](https://python-poetry.org/docs/cli/#publish) and
+[token configuration](https://python-poetry.org/docs/repositories/#configuring-credentials).
 
 ## Verified Helm chart builds
 

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from polyad.compiler.asts import (
+from polyad_types.resources import (
     AdmissionMetrics,
     ConnectionMetrics,
     LayerMetrics,
@@ -22,7 +22,7 @@ from polyad.compiler.asts import (
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.graph.topology import Topology
+    from polyad_types.topology import Topology
 
 
 def _layers(graph: nx.DiGraph[str] | nx.DiGraph[int]) -> LayerMetrics:
@@ -75,7 +75,6 @@ def measure_topology(graph: Topology, present: set[str] | None = None) -> Topolo
                 for kind in (
                     "Workload",
                     "Daemon",
-                    "Ephemeral",
                     "Resource",
                     "Graph",
                     "PolyGraph",

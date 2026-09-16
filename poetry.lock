@@ -2382,6 +2382,25 @@ dev = ["pre-commit", "tox"]
 testing = ["coverage", "pytest", "pytest-benchmark"]
 
 [[package]]
+name = "polyad-types"
+version = "0.0.1a3"
+description = "Shared resource, configuration and API models for Polyad"
+optional = false
+python-versions = ">=3.11,<4"
+groups = ["main"]
+files = []
+develop = false
+
+[package.dependencies]
+attrs = ">=24,<27"
+cattrs = ">=24,<27"
+typing-extensions = ">=4.12,<5"
+
+[package.source]
+type = "directory"
+url = "pkg/polyad-types"
+
+[[package]]
 name = "pre-commit"
 version = "4.6.0"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
@@ -3622,4 +3641,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4.0"
-content-hash = "82f69a37618b32e063c4981a92f4de83a73cebc81a508e8ef41ab2f073f0585e"
+content-hash = "14d7f3dec1b6184d8b58e9b6f1cf8262413dae267ab2c8ca63b38b063a6f5c4d"

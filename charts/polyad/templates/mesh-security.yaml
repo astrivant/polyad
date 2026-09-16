@@ -66,4 +66,17 @@ spec:
             methods: [GET]
             paths: [/v1/events, /v1/graphs/*, /openapi.json]
     {{- end }}
+    {{- if .Values.connections.enabled }}
+    {{- with .Values.mesh.operator.connectionPrincipals }}
+    - from:
+        - source:
+            principals:
+              {{- toYaml . | nindent 14 }}
+      to:
+        - operation:
+            ports: ["8093"]
+            methods: [GET, POST, DELETE]
+            paths: [/v1/connections, /v1/connections/*, /openapi.json]
+    {{- end }}
+    {{- end }}
 {{- end }}

@@ -6,12 +6,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime
 from typing import TYPE_CHECKING, cast
 
 from attrs import frozen
 
-from polyad.compiler.asts import GROUP
-from polyad.graph.network import NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
+from polyad_types.network import NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
+from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
     from typing import Any
@@ -29,6 +30,7 @@ class NetworkScope:
         branch (str): Local node whose subtree contains the destination workload.
         access (NetworkAccess): Traffic restrictions at this scope.
         connections (tuple[tuple[str, str, tuple[NetworkPort, ...]], ...]): Transport edges declared by this boundary.
+        expires_at (datetime | None): Earliest temporary grant deadline in this compiled scope.
     """
 
     namespace: str
@@ -37,6 +39,7 @@ class NetworkScope:
     branch: str
     access: NetworkAccess
     connections: tuple[tuple[str, str, tuple[NetworkPort, ...]], ...] = ()
+    expires_at: datetime | None = None
 
 
 def scope_label(namespace: str, kind: str, name: str, node: str | None = None) -> str:

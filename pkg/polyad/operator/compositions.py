@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from polyad.compiler import asts
-from polyad.compiler.passes.composition import COMPOSITION_KINDS, compile_composition, read_receipt, request_name
+from polyad.compiler.passes.composition import compile_composition, read_receipt, request_name
 from polyad.operator.graph_status import observed
 from polyad.operator.rules import check_rules
+from polyad_types import resources as asts
+from polyad_types.requests import COMPOSITION_KINDS
 
 if TYPE_CHECKING:
     from typing import Any

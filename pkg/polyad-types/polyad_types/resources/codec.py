@@ -5,18 +5,20 @@ Structure Kubernetes documents and lower ASTs at the API serialization boundary.
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypeVar, cast
 
 from attrs import fields
 from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn
 
-from polyad.compiler.asts.common import AST
-from polyad.compiler.asts.resources import RESOURCE_REGISTRY, ConfigMap, Resource
+from polyad_types.resources.common import AST
+from polyad_types.resources.resources import RESOURCE_REGISTRY, ConfigMap, Resource
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
+
+T = TypeVar("T", bound=AST)
 
 converter = Converter(forbid_extra_keys=True, detailed_validation=False)
 
@@ -40,7 +42,7 @@ def _unstructure(value: AST) -> dict[str, Any]:
     return result
 
 
-def _structure_factory[T: AST](cls: type[T]) -> Callable[[dict[str, Any], Any], T]:
+def _structure_factory(cls: type[T]) -> Callable[[dict[str, Any], Any], T]:
     generated = make_dict_structure_fn(cls, converter)
     names = {field.name for field in fields(cls)} - {"extra"}
 

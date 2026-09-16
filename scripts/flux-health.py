@@ -43,6 +43,9 @@ def main() -> None:
             current, failed = "true", "false"
         elif kind == "Rewrite":
             current, failed = f"{CURRENT_GENERATION} && has(status.applied) && status.applied", FAILED
+        elif kind == "TemporaryConnection":
+            current = f"{CURRENT_GENERATION} && has(status.phase) && status.phase in ['Active', 'Expired', 'Revoked']"
+            failed = f"{CURRENT_GENERATION} && has(status.phase) && status.phase in ['Rejected', 'Invalid', 'Failed']"
         elif kind in {"Composition", "Activation"}:
             current, failed = READY, FAILED
             if kind == "Activation":

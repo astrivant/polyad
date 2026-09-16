@@ -357,7 +357,6 @@ spec:
                       enum:
                       - Workload
                       - Daemon
-                      - Ephemeral
                       - Resource
                       - Graph
                       - PolyGraph
@@ -839,7 +838,7 @@ spec:
                     failed:
                       type: boolean
                       description: Whether the node is failed.
-              # status.metrics is generated from polyad.compiler.asts.GraphMetrics.
+              # status.metrics is generated from polyad_types.GraphMetrics.
               # Regenerate with scripts/generate-status-schemas.py; edit the attrs models.
               metrics:
                 type: object
@@ -874,10 +873,6 @@ spec:
                           Daemon:
                             type: integer
                             description: Number of Daemon nodes.
-                            minimum: 0
-                          Ephemeral:
-                            type: integer
-                            description: Number of Ephemeral nodes.
                             minimum: 0
                           Resource:
                             type: integer
@@ -1019,10 +1014,6 @@ spec:
                           Daemon:
                             type: integer
                             description: Number of Daemon nodes.
-                            minimum: 0
-                          Ephemeral:
-                            type: integer
-                            description: Number of Ephemeral nodes.
                             minimum: 0
                           Resource:
                             type: integer
@@ -1217,6 +1208,10 @@ spec:
                             type: integer
                             description: Durable activation receipts.
                             minimum: 0
+                          TemporaryConnection:
+                            type: integer
+                            description: Temporary connection receipts.
+                            minimum: 0
                           NetworkPolicy:
                             type: integer
                             description: Owned transport policies.
@@ -1331,10 +1326,6 @@ spec:
                                 Daemon:
                                   type: integer
                                   description: Number of Daemon nodes.
-                                  minimum: 0
-                                Ephemeral:
-                                  type: integer
-                                  description: Number of Ephemeral nodes.
                                   minimum: 0
                                 Resource:
                                   type: integer

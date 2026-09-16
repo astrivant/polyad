@@ -156,5 +156,5 @@ conformance using the development `openapi-spec-validator` dependency.
 ## Workload activation
 
 The same service supports [durable activation requests](activation.md) for workloads,
-subgraphs and daemon replica groups. The [standalone Python client](../clients/python/README.md)
+subgraphs and daemon replica groups. The [standalone Python client](../pkg/client/README.md)
 can submit compositions, inspect audit identities, pulse nodes and subscribe to events.

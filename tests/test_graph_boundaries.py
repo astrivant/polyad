@@ -13,34 +13,55 @@ import yaml
 from cattrs.errors import CattrsError
 from jsonschema import Draft7Validator
 
-from polyad.compiler.activation import ActivationRequest
-from polyad.compiler.passes.composition import CompositionItem
 from polyad.compiler.registry import BOUNDARY_KINDS, RESOURCE_TYPES
-from polyad.graph.network import NetworkPeer
-from polyad.graph.replication import ReplicaTemplate
-from polyad.graph.topology import converter, topology
+from polyad_types.codec import converter
+from polyad_types.network import NetworkPeer
+from polyad_types.replication import ReplicaTemplate
+from polyad_types.requests import ActivationRequest, CompositionItem
+from polyad_types.topology import topology
 from tests.test_composition import settle
 from tests.test_operator import FakeAPI, resource
 
 
-@pytest.mark.parametrize("kind", ["Feedback", "EphemeralGraph"])
-def test_retired_boundaries_are_rejected_across_public_inputs(kind):
+def test_unknown_kinds_are_rejected_across_public_inputs():
     """
-    Reject retired kinds instead of silently interpreting them as ordinary graphs.
+    Accept only supported resource kinds across graph, composition and replica inputs.
     """
     assert BOUNDARY_KINDS == {"Graph", "PolyGraph", "ReplicaGroup"}
+    kind = "Unknown"
     assert kind not in RESOURCE_TYPES
     with pytest.raises(ValueError, match="unsupported graph kind"):
         topology({"nodes": []}, kind)
     with pytest.raises(ValueError):
-        topology({"nodes": [{"name": "removed", "kind": kind, "ref": "definition"}]})
+        topology({"nodes": [{"name": "work", "kind": kind, "ref": "definition"}]})
     with pytest.raises(ValueError, match="composition cannot create"):
-        CompositionItem(id="removed", kind=kind, spec={"nodes": []})
+        CompositionItem(id="work", kind=kind, spec={"nodes": []})
     with pytest.raises(ValueError):
         ActivationRequest(requestId="run", graph="root", graphUid="uid-root", node="work", kind=kind)
     for model, value in ((NetworkPeer, {"kind": kind, "graph": "root"}), (ReplicaTemplate, {"kind": kind, "ref": "definition"})):
         with pytest.raises(CattrsError, match="not in literal"):
             converter.structure(value, model)
+
+
+@pytest.mark.parametrize("filename", ["spot-workload.yaml", "spot-interruption.yaml"])
+def test_spot_examples_compile_ordinary_workloads_with_placement(filename):
+    """
+    Compile finite Jobs on explicit spot placement with the declared retry budget.
+    """
+
+    async def run():
+        documents = list(yaml.safe_load_all((Path("examples") / filename).read_text()))
+        for document in documents:
+            descriptor = RESOURCE_TYPES[document["kind"]]
+            crd = yaml.safe_load((Path("charts/polyad/crds") / f"{descriptor.plural}.yaml").read_text())
+            Draft7Validator(crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]).validate(document)
+        api = FakeAPI(*(resource(document["kind"], document["metadata"]["name"], document["spec"]) for document in documents))
+        await settle(api)
+        (job,) = api.children("Job")
+        assert job["spec"]["template"]["spec"]["nodeSelector"] == {"polyad.astrivant.com/capacity": "spot"}
+        assert job["spec"]["backoffLimit"] == 10
+
+    asyncio.run(run())
 
 
 def test_repeated_graph_example_uses_durable_activation_and_fresh_executions():

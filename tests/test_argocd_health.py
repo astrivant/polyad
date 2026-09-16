@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from polyad.compiler.asts import GROUP, RESOURCE_TYPES
 from polyad.operator.graph_status import instance_metrics, observed
+from polyad_types.resources import GROUP, RESOURCE_TYPES
 from tests.test_operator import resource
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,7 +100,7 @@ def test_graph_kinds_and_templates(tmp_path, argocd_config, kind):
     assert "Reusable definition" in assess(tmp_path, argocd_config, obj)["MESSAGE"]
 
 
-@pytest.mark.parametrize("kind", ["Workload", "Daemon", "Ephemeral", "Resource", "Gate", "ShutdownPolicy", "GraphRule"])
+@pytest.mark.parametrize("kind", ["Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule"])
 def test_definitions_do_not_claim_execution(tmp_path, argocd_config, kind):
     """
     Reusable library objects have no execution health to wait for.
@@ -257,4 +257,17 @@ def test_builtin_leaf_health_is_retained(tmp_path, argocd_config, kind, status, 
     obj = resource(kind, "leaf", {})
     obj["apiVersion"] = "batch/v1" if kind == "Job" else "v1"
     obj["status"] = status
+    assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected
+
+
+@pytest.mark.parametrize(
+    "phase,expected",
+    [("Pending", "Progressing"), ("Active", "Healthy"), ("Expired", "Healthy"), ("Revoked", "Healthy"), ("Rejected", "Degraded")],
+)
+def test_temporary_connection_health(tmp_path, argocd_config, phase, expected):
+    """
+    Connection receipts report admission and observed cleanup without requiring graph metrics.
+    """
+    obj = resource("TemporaryConnection", "edge")
+    obj["status"] = {"phase": phase, "observedGeneration": 1}
     assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected

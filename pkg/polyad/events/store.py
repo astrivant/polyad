@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, cast
 from redis.exceptions import ResponseError
 
 from polyad.cache import Cache
-from polyad.compiler.asts import GROUP
 from polyad.events.topology import neighbors
+from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable

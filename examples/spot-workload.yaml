@@ -1,5 +1,5 @@
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: Ephemeral
+kind: Workload
 metadata:
   name: spot-worker
 spec:
@@ -29,5 +29,5 @@ spec:
       polyad.astrivant.com/capacity: spot
   nodes:
     - name: worker
-      kind: Ephemeral
+      kind: Workload
       ref: spot-worker

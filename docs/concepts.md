@@ -100,8 +100,7 @@ taints and do not guarantee capacity or placement by themselves.<sup>[\[6\]](ope
 
 Workloads using `persistence.enabled: true` must specify `storageClass` and
 `claimName`. Users choose capacity compatible with storage and recovery needs.
-The explicit `Ephemeral` workload type rejects persistent storage; ordinary
-graphs leave storage policy to their users.<sup>[\[3\]](operator.md#workload-persistence)</sup><sup>[\[18\]](operator.md#ephemeral-execution)</sup>
+Graphs leave storage policy to their users, including on interruptible capacity.<sup>[\[3\]](operator.md#workload-persistence)</sup><sup>[\[18\]](operator.md#interruptible-execution)</sup>
 
 ## Finite pipelines
 
@@ -110,7 +109,7 @@ A **finite pipeline** is a workflow with an intended end. The
 express the order, while the two partition tasks can run in parallel.
 
 The partition tasks form a regular `Graph` with explicit spot placement.
-Their implementations must tolerate interruption and restart.<sup>[\[18\]](operator.md#ephemeral-execution)</sup>
+Their implementations must tolerate interruption and restart.<sup>[\[18\]](operator.md#interruptible-execution)</sup>
 A separate subgraph
 groups the tasks that publish the results.
 

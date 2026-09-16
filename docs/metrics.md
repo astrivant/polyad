@@ -102,7 +102,7 @@ unacknowledged entry can also be undergoing reconciliation. **Do not add inbound
 local refresh and API write counts together as independent work.**
 
 The inventory includes Graph, PolyGraph, ReplicaGroup, Rewrite,
-Composition, Activation, ReplicaGroup, Workload, Daemon, Ephemeral, Resource, Gate, ShutdownPolicy and
+Composition, Activation, ReplicaGroup, Workload, Daemon, Resource, Gate, ShutdownPolicy and
 GraphRule CRs. Reusable definitions count separately from instances. Definition
 references are not ownership links. Direct resources come from graph status,
 not a cluster-wide Pod or workload census; they include graph child CRs and

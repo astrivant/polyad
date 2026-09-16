@@ -11,19 +11,20 @@ from typing import TYPE_CHECKING
 from attrs import evolve
 
 from polyad.api.activations import ActivationStore
-from polyad.compiler import asts
-from polyad.compiler.activation import ActivationRequest, activation_name
+from polyad.compiler.activation import activation_name
 from polyad.compiler.passes.children import child_name
 from polyad.compiler.passes.identity import inject_environment
-from polyad.graph.topology import Dependency
 from polyad.operator.graph_status import observed
+from polyad_types import resources as asts
+from polyad_types.requests import ActivationRequest
+from polyad_types.topology import Dependency
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.graph.activation import ActivationPolicy
-    from polyad.graph.topology import Topology
     from polyad.operator.controller import Controller
+    from polyad_types.activation import ActivationPolicy
+    from polyad_types.topology import Topology
 
 TERMINAL = {"Completed", "Failed", "Rejected", "Superseded", "Stopped"}
 ACTIVE = {"Queued", "Running", "Ready", "Stopping"}

@@ -13,11 +13,11 @@ from kubernetes.client.exceptions import ApiException
 from polyad.api.activations import ActivationStore
 from polyad.api.app import Conflict
 from polyad.api.builder import APIBuilder
-from polyad.compiler.activation import ActivationRequest
-from polyad.compiler.asts import GROUP
-from polyad.graph.activation import ActivationPolicy
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.coordination import Coordinator
+from polyad_types.activation import ActivationPolicy
+from polyad_types.requests import ActivationRequest
+from polyad_types.resources import GROUP
 from tests.test_operator import FakeAPI, resource, template
 
 

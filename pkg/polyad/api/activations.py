@@ -9,16 +9,16 @@ from typing import TYPE_CHECKING
 from kubernetes.client.exceptions import ApiException
 
 from polyad.api.app import Conflict, Unavailable
-from polyad.compiler import asts
 from polyad.compiler.activation import activation_name
-from polyad.graph.activation import ActivationPolicy
-from polyad.graph.topology import converter
+from polyad_types import resources as asts
+from polyad_types.activation import ActivationPolicy
+from polyad_types.codec import converter
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.compiler.activation import ActivationRequest
     from polyad.operator.api import API
+    from polyad_types.requests import ActivationRequest
 
 
 class ActivationStore:
@@ -58,7 +58,7 @@ class ActivationStore:
             if request.kind != "ReplicaGroup" and graph["spec"].get("mode", "finite") != "persistent":
                 raise ValueError("activation-controlled nodes require a persistent containing graph")
             if request.kind == "ReplicaGroup":
-                from polyad.graph.replication import replica_topology
+                from polyad_types.replication import replica_topology
 
                 spec = dict(graph["spec"])
                 source_ref = spec.get("replicaSource")

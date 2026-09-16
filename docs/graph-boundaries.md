@@ -1,4 +1,4 @@
-# Graph boundaries and migration
+# Graph boundaries
 
 Polyad has three graph boundary types:
 
@@ -29,23 +29,7 @@ propagating pause and cancellation to active work.
 
 Use regular Graph or PolyGraph `placement` for interruptible capacity. Users
 choose appropriate node labels, tolerations, recovery behavior and storage;
-placement does not impose an inherited storage prohibition. The explicit
-`Ephemeral` workload type remains available and retains its per-workload
-placement and storage restrictions. See [storage configuration](workload-storage.md).
-
-## Retired alpha types
-
-`Feedback`, `EphemeralGraph`, and the local Python `FeedbackGraph` helper have
-been removed. There are no compatibility aliases. Replace an EphemeralGraph
-manifest with a Graph, retaining its placement. Replace Feedback's nested
-`spec.graph` with a reusable Graph definition and select an activation policy
-on that definition. Round counters and termination conditions move into the
-application; they are not automatically migrated.
-
-For an existing cluster, drain and delete instances of the retired kinds while
-the previous operator still manages their finalizers, then upgrade the operator
-and apply the revised CRDs and manifests. Helm does not automatically remove
-previously installed CRDs from its `crds/` directory when chart files disappear.
-Remove those old CRDs only after their instances and cleanup have finished.
-Existing Python imports, network peer selectors, rewrite targets, composition
-requests and replica templates must use the supported kinds above.
+placement does not impose a storage prohibition. Finite jobs use `Workload`,
+including on spot nodes; persistent services use `Daemon`. See
+[storage configuration](workload-storage.md) and the
+[spot workload example](../examples/spot-workload.yaml).

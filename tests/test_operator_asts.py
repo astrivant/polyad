@@ -11,10 +11,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from polyad.compiler import asts
-from polyad.compiler.asts.resources import RESOURCE_CLASSES
 from polyad.compiler.passes.children import owned_child
 from polyad.operator.api import API
+from polyad_types import resources as asts
+from polyad_types.resources.resources import RESOURCE_CLASSES
 
 
 def parent():

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import AUXILIARY_KINDS, BOUNDARY_KINDS, GROUP, RollupMetrics, converter, to_document
+from polyad_types.resources import AUXILIARY_KINDS, BOUNDARY_KINDS, GROUP, RollupMetrics, converter, to_document
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -58,5 +58,6 @@ jobs:
             echo '::error::Set PYPI_API_TOKEN in the pypi environment before publishing'
             exit 1
           fi
+          poetry -C pkg/polyad-types publish --dist-dir ../../dist --no-interaction
+          poetry -C pkg/client publish --dist-dir ../../dist --no-interaction
           poetry publish --no-interaction
-          poetry -C clients/python publish --dist-dir ../../dist --no-interaction

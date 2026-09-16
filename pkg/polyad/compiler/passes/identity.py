@@ -8,12 +8,12 @@ import copy
 import json
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import GROUP
+from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.graph.topology import Node
+    from polyad_types.topology import Node
 
 POD_FIELDS = {
     "POLYAD_POD_NAME": "metadata.name",
@@ -54,7 +54,7 @@ def workload_identity(
         node (Node): Logical workload vertex in the containing graph.
         definition (dict[str, Any]): Reusable workload definition and its current incarnation.
         resource_name (str): Generated native Job, Deployment or StatefulSet name.
-        endpoints (dict[str, str]): Enabled operator endpoint URLs, keyed by API, EVENTS or METRICS.
+        endpoints (dict[str, str]): Enabled operator URLs, keyed by API, EVENTS, METRICS or CONNECTIONS.
 
     Returns:
         dict[str, str]: Stable environment contract; unavailable optional identities are empty.
@@ -96,5 +96,5 @@ def workload_identity(
         "POLYAD_ACTIVATION_ID": annotations.get(f"{GROUP}/activation-id", ""),
         "POLYAD_ACTIVATION_UID": annotations.get(f"{GROUP}/activation-uid", ""),
     }
-    values.update({f"POLYAD_{name}_URL": endpoints.get(name, "") for name in ("API", "EVENTS", "METRICS")})
+    values.update({f"POLYAD_{name}_URL": endpoints.get(name, "") for name in ("API", "EVENTS", "METRICS", "CONNECTIONS")})
     return values

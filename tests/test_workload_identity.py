@@ -10,10 +10,10 @@ import json
 
 import pytest
 
-from polyad.compiler.asts import GROUP
 from polyad.compiler.passes.identity import inject_environment
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.identity import graph_ancestry
+from polyad_types.resources import GROUP
 from tests.test_activations import pulse, setup, turn
 from tests.test_composition import settle
 from tests.test_operator import FakeAPI, resource, template
@@ -26,10 +26,10 @@ def environment(pod):
     return {item["name"]: item.get("value", item.get("valueFrom")) for item in pod["spec"]["containers"][0]["env"]}
 
 
-@pytest.mark.parametrize("kind", ["Workload", "Daemon", "Ephemeral"])
+@pytest.mark.parametrize("kind", ["Workload", "Daemon"])
 def test_every_workload_container_gets_trusted_identity(monkeypatch, kind):
     """
-    Cover ordinary, persistent and spot work while preserving explicit credential references.
+    Cover finite and persistent work while preserving explicit credential references.
     """
     monkeypatch.setenv("POLYAD_WORKLOAD_API_URL", "http://operator-api.orchestration.svc:8090")
 
@@ -48,8 +48,6 @@ def test_every_workload_container_gets_trusted_identity(monkeypatch, kind):
             {"name": "sidecar", "image": "test", "restartPolicy": "Always"},
         ]
         spec = {"template": pod}
-        if kind == "Ephemeral":
-            spec["placement"] = {"nodeSelector": {"capacity": "spot"}}
         definition = resource(kind, "worker", spec)
         original = copy.deepcopy(definition)
         graph = resource("Graph", "processing", {"mode": "persistent", "nodes": [{"name": "process", "kind": kind, "ref": "worker"}]})

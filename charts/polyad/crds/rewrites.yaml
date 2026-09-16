@@ -305,7 +305,6 @@ spec:
                           enum:
                           - Workload
                           - Daemon
-                          - Ephemeral
                           - Resource
                           - Graph
                           - PolyGraph

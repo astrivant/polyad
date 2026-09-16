@@ -54,7 +54,6 @@ spec:
                       enum:
                       - Workload
                       - Daemon
-                      - Ephemeral
                       - Resource
                       - Graph
                       - PolyGraph
@@ -286,10 +285,6 @@ spec:
                               type: integer
                               description: Number of Daemon nodes.
                               minimum: 0
-                            Ephemeral:
-                              type: integer
-                              description: Number of Ephemeral nodes.
-                              minimum: 0
                             Resource:
                               type: integer
                               description: Number of Resource nodes.
@@ -430,10 +425,6 @@ spec:
                             Daemon:
                               type: integer
                               description: Number of Daemon nodes.
-                              minimum: 0
-                            Ephemeral:
-                              type: integer
-                              description: Number of Ephemeral nodes.
                               minimum: 0
                             Resource:
                               type: integer
@@ -628,6 +619,10 @@ spec:
                               type: integer
                               description: Durable activation receipts.
                               minimum: 0
+                            TemporaryConnection:
+                              type: integer
+                              description: Temporary connection receipts.
+                              minimum: 0
                             NetworkPolicy:
                               type: integer
                               description: Owned transport policies.
@@ -742,10 +737,6 @@ spec:
                                   Daemon:
                                     type: integer
                                     description: Number of Daemon nodes.
-                                    minimum: 0
-                                  Ephemeral:
-                                    type: integer
-                                    description: Number of Ephemeral nodes.
                                     minimum: 0
                                   Resource:
                                     type: integer

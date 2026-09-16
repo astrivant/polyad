@@ -1,0 +1,42 @@
+[project]
+name = "polyad-client"
+version = "0.0.1a3"
+description = "Small typed Python client for Polyad operator APIs"
+authors = [{name = "Emma Doyle"}]
+readme = {file = "README.md", content-type = "text/markdown"}
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<4"
+keywords = ["polyad", "kubernetes", "graphs", "topology", "client", "api"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "polyad-types==0.0.1a3",
+]
+
+[project.urls]
+Homepage = "https://github.com/astrivant/polyad"
+Documentation = "https://github.com/astrivant/polyad/blob/main/pkg/client/README.md"
+Repository = "https://github.com/astrivant/polyad"
+Issues = "https://github.com/astrivant/polyad/issues"
+Changelog = "https://github.com/astrivant/polyad/releases"
+
+[tool.poetry]
+packages = [{include = "polyad_client"}]
+
+[tool.poetry.dependencies]
+polyad-types = {path = "../polyad-types"}
+
+[build-system]
+requires = ["poetry-core>=2.2,<3.0"]
+build-backend = "poetry.core.masonry.api"

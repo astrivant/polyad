@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -41,29 +42,34 @@ export async function validate(source, filename) {
   return { count: blocks.length, errors };
 }
 
+export function repositoryPaths(directory) {
+  return execFileSync(
+    "git",
+    [
+      "-C",
+      directory,
+      "ls-files",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "-z",
+      "--",
+      "*.md",
+      "*.markdown",
+      "*.mmd",
+      "*.mermaid",
+    ],
+    { encoding: "utf8" },
+  )
+    .split("\0")
+    .filter(Boolean)
+    .map((path) => resolve(directory, path))
+    .filter(existsSync);
+}
+
 export async function main(paths) {
   if (paths.length === 0) {
-    paths = execFileSync(
-      "git",
-      [
-        "-C",
-        root,
-        "ls-files",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "-z",
-        "--",
-        "*.md",
-        "*.markdown",
-        "*.mmd",
-        "*.mermaid",
-      ],
-      { encoding: "utf8" },
-    )
-      .split("\0")
-      .filter(Boolean)
-      .map((path) => resolve(root, path));
+    paths = repositoryPaths(root);
   }
   let count = 0;
   let failures = 0;

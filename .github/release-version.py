@@ -54,7 +54,7 @@ def main() -> None:
     parser.add_argument("--tag")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    package = tomllib.loads(Path("pyproject.toml").read_text())["tool"]["poetry"]["version"]
+    package = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
     try:
         version = release_version(package, args.tag)
     except (InvalidVersion, ValueError) as error:

@@ -9,7 +9,8 @@ import hashlib
 import json
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import (
+from polyad.compiler.registry import RESOURCE_MODELS as RESOURCE_REGISTRY
+from polyad_types.resources import (
     GROUP,
     ConfigMap,
     Deployment,
@@ -23,13 +24,12 @@ from polyad.compiler.asts import (
     converter,
     to_document,
 )
-from polyad.compiler.asts.resources import SpecResource
-from polyad.compiler.registry import RESOURCE_MODELS as RESOURCE_REGISTRY
+from polyad_types.resources.resources import SpecResource
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.compiler.asts import (
+    from polyad_types.resources import (
         Resource,
     )
 

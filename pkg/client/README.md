@@ -1,12 +1,18 @@
 # Polyad client
 
-A typed Python 3.11+ client for Polyad's composition, activation and event APIs.
-It has no runtime dependencies and does not install the operator.
+A typed Python 3.11+ client for Polyad's composition, activation, event and temporary connection APIs.
+
+`connect(document)`, `connection(namespace, request_id)` and
+`disconnect(namespace, request_id)` use the separate connections Service and a
+projected service-account token. See the [temporary connections guide](https://github.com/astrivant/polyad/blob/main/docs/temporary-connections.md)
+for token rotation, namespace scope, TTL and cleanup semantics.
+It uses the shared [polyad-types](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/README.md) models and
+does not install the operator.
 
 Install from a checkout:
 
 ```sh
-pip install ./clients/python
+pip install ./pkg/polyad-types ./pkg/client
 ```
 
 Release CI builds and publishes `polyad-client` separately from `polyad`.
@@ -36,11 +42,15 @@ Inside a managed workload, Polyad injects the graph instance identity and enable
 operator endpoint URLs into every declared application and init container.
 `process-batch` is the downstream target in that graph; `POLYAD_NODE_NAME`
 identifies the calling workload's own node. Supply `POLYAD_API_TOKEN` explicitly
-from an authorized Secret. See [workload environment](../../docs/workload-environment.md)
+from an authorized Secret. See [workload environment](https://github.com/astrivant/polyad/blob/main/docs/workload-environment.md)
 for ancestry, Pod identity, activation IDs and the full variable contract.
 Outside managed Pods, supply the operator URL and graph instance identity yourself.
 
-`compose(document)` submits ID-addressed graph definitions.
+`compose(document)` submits ID-addressed graph definitions and accepts either a
+`polyad_types.CompositionRequest` or a dictionary. `connect(document)` likewise
+accepts `polyad_types.ConnectionRequest` or a dictionary. Requests and streamed
+`Event` values use the same classes as the operator. See the
+[shared model examples](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/README.md).
 `composition(request_id, resources=True)` returns generated resource names and UIDs.
 Use those instance identities when activating nodes. `openapi()` reads the service
 schema. HTTP failures raise `APIError` with `status` and `body`; transport failures
@@ -81,12 +91,14 @@ Topology notifications include ReplicaGroup scaling, connection edits and change
 to observed execution membership. Fetch the latest snapshot on a `topology`
 event for the relevant graph UID; compare its revision to the last snapshot applied
 by your application. Topology events can share a graph resource version. See
-[workload topology events](../../docs/workload-events.md) for startup and recovery.
+[workload topology events](https://github.com/astrivant/polyad/blob/main/docs/workload-events.md) for startup and recovery.
 
 Handle `reset` by refreshing the snapshot and cursor; reconnect explicitly
 after `unavailable`, disconnects or timeouts. HTTP 410 means the cursor expired.
 Closing the iterator closes its connection. API tokens remain namespace-scoped;
 cross-namespace callers also need the corresponding network and identity grants.
 
-See the repository's [activation guide](../../docs/activation.md) and
-[networking guide](../../docs/networking.md) for policies and deployment settings.
+See the repository's [activation guide](https://github.com/astrivant/polyad/blob/main/docs/activation.md) and
+[networking guide](https://github.com/astrivant/polyad/blob/main/docs/networking.md) for policies and deployment settings.
+
+See [manual PyPI publishing](https://github.com/astrivant/polyad/blob/main/docs/toolchain.md#manual-pypi-publishing) for Poetry release commands.

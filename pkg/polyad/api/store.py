@@ -9,14 +9,15 @@ from typing import TYPE_CHECKING
 from kubernetes.client.exceptions import ApiException
 
 from polyad.api.app import Conflict
-from polyad.compiler import asts
-from polyad.compiler.passes.composition import COMPOSITION_KINDS, read_receipt, receipt_spec, request_name
+from polyad.compiler.passes.composition import read_receipt, receipt_spec, request_name
+from polyad_types import resources as asts
+from polyad_types.requests import COMPOSITION_KINDS
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.compiler.passes.composition import CompositionRequest
     from polyad.operator.api import API
+    from polyad_types.requests import CompositionRequest
 
 
 class CompositionStore:

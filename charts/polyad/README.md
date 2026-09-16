@@ -135,6 +135,16 @@ grace settings under that key (for example, `image.tag` becomes `operator.image.
 | `api.gateway.hostnames`           | DNS hostnames matched by the HTTPRoute; empty matches all listener hostnames                                                     | `[]`         |
 | `api.gateway.tlsSecret`           | Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80 | `""`         |
 
+### Temporary connections
+
+| Name                           | Description                                                                   | Value     |
+| ------------------------------ | ----------------------------------------------------------------------------- | --------- |
+| `connections.enabled`          | Serve service-account authenticated temporary connections on port 8093        | `false`   |
+| `connections.scope`            | Allowed caller and target namespaces: Cluster, OperatorNamespace or Namespace | `Cluster` |
+| `connections.namespace`        | Allowed namespace when scope is Namespace; otherwise empty                    | `""`      |
+| `connections.maxTtlSeconds`    | Maximum connection lifetime from receipt creation, capped at 86400 seconds    | `3600`    |
+| `connections.retentionSeconds` | Retain terminal receipts for retry identity and audit before cleanup          | `3600`    |
+
 ### Event subscriptions
 
 | Name                    | Description                                                                               | Value           |
@@ -196,6 +206,7 @@ grace settings under that key (for example, `image.tag` becomes `operator.image.
 | `mesh.operator.compositionPrincipals` | Exact mTLS source identities allowed to use the composition endpoint                      | `[]`    |
 | `mesh.operator.metricsPrincipals`     | Exact mTLS source identities allowed to read scheduler metrics                            | `[]`    |
 | `mesh.operator.eventPrincipals`       | Exact mTLS source identities allowed to subscribe to events                               | `[]`    |
+| `mesh.operator.connectionPrincipals`  | Exact mTLS source identities allowed to request temporary connections                     | `[]`    |
 | `mesh.ingress.enabled`                | Install the optional upstream Istio gateway dependency                                    | `false` |
 | `mesh.ingress.hosts`                  | Hosts served by the Istio Gateway and VirtualService                                      | `[]`    |
 | `mesh.ingress.tlsSecret`              | TLS credential Secret in the gateway namespace, required when exposing the APIs           | `""`    |

@@ -5,7 +5,7 @@ that graph or its resources, and which changes may execute together. For example
 scaling ingestion and reporting can share a batch when their effects are independent
 and their combined demand fits the parent's capacity limit.
 
-The library provides attrs models in `polyad.compiler.asts.mutations`, a pure
+The library provides attrs models in `polyad_types.resources.mutations`, a pure
 `compiler.passes.mutations.compile_mutations` pass, and an async
 `operator.mutations.execute_mutations` executor. These are Python extension APIs;
 they do not add a CRD or accept executable callbacks through the composition API.
@@ -17,7 +17,7 @@ preservation, with their assumptions and current implementation limits.
 ## Describe effects and shared bounds
 
 ```python
-from polyad.compiler.asts.mutations import Budget, BudgetDelta, Mutation, Precondition, Scope
+from polyad_types.resources.mutations import Budget, BudgetDelta, Mutation, Precondition, Scope
 from polyad.compiler.passes.mutations import compile_mutations
 
 ingestion = Scope(("kubernetes", "apps/v1", "Deployment", "production", "ingestion"))
@@ -76,7 +76,7 @@ relevant. The default is `False`, which orders the operation against all others.
   rejects unsafe batches rather than inventing a migration order.
 - **Audit:** `plan.orderings` explains required sequencing; `plan.independences`
   records assumptions for every concurrent pair. Serialize plans with
-  `polyad.compiler.asts.converter.unstructure(plan)` and restore them with
+  `polyad_types.resources.converter.unstructure(plan)` and restore them with
   `converter.structure(document, MutationPlan)`.
 
 Represent a shared nonnumeric invariant with a common scope in the affected

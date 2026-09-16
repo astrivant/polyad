@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 
 from apispec import APISpec
 
-from polyad.compiler.passes.composition import COMPOSITION_KINDS
 from polyad.compiler.passes.schema import structural_schema
-from polyad.graph.activation import ActivationPolicy
-from polyad.graph.capacity import CapacityPlan
-from polyad.graph.replication import ReplicaConnectivity
+from polyad_types.activation import ActivationPolicy
+from polyad_types.capacity import CapacityPlan
+from polyad_types.replication import ReplicaConnectivity
+from polyad_types.requests import COMPOSITION_KINDS
 
 if TYPE_CHECKING:
     from typing import Any

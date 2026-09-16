@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from polyad.compiler.asts.mutations import Independence, MutationPlan, Ordering
+from polyad_types.resources.mutations import Independence, MutationPlan, Ordering
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from polyad.compiler.asts.mutations import Budget, Mutation, Scope
+    from polyad_types.resources.mutations import Budget, Mutation, Scope
 
 
 class PreconditionFailed(ValueError):

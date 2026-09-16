@@ -96,7 +96,7 @@ responsibility; snapshots do not expose Pod IPs or EndpointSlices.
 
 ## Subscribe from a workload
 
-Configure the [Python client](../clients/python/README.md) for the events Service:
+Configure the [Python client](../pkg/client/README.md) for the events Service:
 
 ```python
 import os

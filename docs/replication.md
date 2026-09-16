@@ -1,8 +1,8 @@
 # Replication and KEDA
 
 A **ReplicaGroup** is a scalable family of copies. Its template can reference a
-`Workload`, `Daemon`, `Ephemeral`, `Resource`, `Graph`,
-`PolyGraph`, or another `ReplicaGroup`. Replicating a graph copies its
+`Workload`, `Daemon`, `Resource`, `Graph`, `PolyGraph`, or another `ReplicaGroup`.
+Replicating a graph copies its
 whole service composition, including dependencies, gates and resource definitions.
 Each copy has a stable ordinal, separate owned resources and a status that rolls
 up to the group and its ancestors.
@@ -1598,8 +1598,8 @@ No application secrets or arbitrary Pod labels are exposed by the metrics API.
 ## Metric scopes and freshness
 
 `GET /v1/workloads/{kind}/{name}/{metric}` returns one scalar. Add `?node=NAME`
-to select one logical node of a graph. For a reusable Workload, Daemon or
-Ephemeral definition, the endpoint aggregates its observed uses by UID.
+to select one logical node of a graph. For a reusable Workload or Daemon
+definition, the endpoint aggregates its observed uses by UID.
 ReplicaGroup-specific signals are `replicas`, `desiredReplicas`, `readyReplicas`,
 `totalReplicas` and `instanceCount`. Node signals include:
 

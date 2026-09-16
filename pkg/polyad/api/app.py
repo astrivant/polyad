@@ -11,11 +11,13 @@ from cattrs.errors import CattrsError
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
 
+from polyad.api.errors import Conflict as Conflict
+from polyad.api.errors import Unavailable as Unavailable
 from polyad.api.limits import install_limits
 from polyad.api.openapi import openapi_document
-from polyad.compiler.activation import ActivationRequest
-from polyad.compiler.passes.composition import CompositionRequest, compile_composition, identity
-from polyad.graph.topology import converter
+from polyad.compiler.passes.composition import compile_composition
+from polyad_types.codec import converter
+from polyad_types.requests import ActivationRequest, CompositionRequest, identity
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -24,18 +26,6 @@ if TYPE_CHECKING:
     from flask import Response
 
     from polyad.api.limits import RateLimitPolicy
-
-
-class Conflict(ValueError):
-    """
-    Reject a request ID that already identifies different or deleting intent.
-    """
-
-
-class Unavailable(RuntimeError):
-    """
-    Report an uncertain submission without encouraging a new request identity.
-    """
 
 
 def _build_app(

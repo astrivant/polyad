@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from attrs import field, frozen
 
-from polyad.graph.network import NetworkPort
+from polyad_types.network import NetworkPort
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -90,7 +90,7 @@ class ReplicaConnectivity:
         Returns:
             list[dict[str, Any]]: Data-flow edges, including explicit transport grants.
         """
-        from polyad.graph.topology import converter
+        from polyad_types.codec import converter
 
         pairs: list[tuple[str, str]] = []
         if self.mode in {"Chain", "Ring"}:
@@ -119,12 +119,12 @@ class ReplicaTemplate:
     Select the reusable definition instantiated at each stable replica ordinal.
 
     Attributes:
-        kind (Literal['Workload', 'Daemon', 'Ephemeral', 'Resource', 'Graph', 'PolyGraph', 'ReplicaGroup']):
+        kind (Literal['Workload', 'Daemon', 'Resource', 'Graph', 'PolyGraph', 'ReplicaGroup']):
             Executable definition or resource abstraction.
         ref (str): Namespaced definition name.
     """
 
-    kind: Literal["Workload", "Daemon", "Ephemeral", "Resource", "Graph", "PolyGraph", "ReplicaGroup"]
+    kind: Literal["Workload", "Daemon", "Resource", "Graph", "PolyGraph", "ReplicaGroup"]
     ref: str = field(metadata={"schema": {"minLength": 1, "maxLength": 63, "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"}})
 
 
@@ -207,7 +207,7 @@ def replica_topology(spec: dict[str, Any], *, retained: Iterable[str] = ()) -> d
     Returns:
         dict[str, Any]: Persistent scheduling topology with one vertex per stable ordinal.
     """
-    from polyad.graph.topology import converter
+    from polyad_types.codec import converter
 
     policy = converter.structure(spec, Replication)
     names = tuple(sorted({*(f"replica-{index}" for index in range(policy.replicas)), *retained}, key=lambda name: int(name[8:])))

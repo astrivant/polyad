@@ -20,7 +20,7 @@ def release_tag(project: Path) -> str:
     Returns:
         str: Git tag prefixed with v, using alpha, beta or rc prerelease spelling.
     """
-    version = tomllib.loads(project.read_text(encoding="utf-8"))["tool"]["poetry"]["version"]
+    version = tomllib.loads(project.read_text(encoding="utf-8"))["project"]["version"]
     if not isinstance(version, str) or not re.fullmatch(
         r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:(?:a|b|rc)[0-9]+)?", version
     ):

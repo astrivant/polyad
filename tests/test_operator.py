@@ -13,13 +13,14 @@ from uuid import NAMESPACE_URL, uuid5
 import pytest
 from kubernetes.client.exceptions import ApiException
 
-from polyad.compiler.asts import encode_body
-from polyad.graph import Ephemeral, Placement, Topology
-from polyad.graph.topology import converter, topology
+from polyad.graph import Node, Placement, Topology
 from polyad.operator.api import GROUP, VERSION
 from polyad.operator.controller import FINALIZER, Controller, Pending, observed
 from polyad.operator.queue import RefreshQueue
 from polyad.operator.runtime import OperatorThread
+from polyad_types.codec import converter
+from polyad_types.resources import encode_body
+from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any
@@ -160,14 +161,14 @@ def test_topology_separates_cyclic_flow_from_admission():
         topology(spec)
 
 
-def test_ephemeral_python_types_roundtrip():
+def test_spot_workload_python_types_roundtrip():
     """
-    Expose explicit spot node and graph descriptors in the Python library.
+    Represent spot work with ordinary workload nodes and explicit placement.
     """
-    node = Ephemeral(name="worker", ref="spot")
+    node = Node(name="worker", kind="Workload", ref="spot")
     graph = Topology(nodes=(node,), placement=Placement({"capacity": "spot"}))
     data = converter.unstructure(graph)
-    assert data["nodes"][0]["kind"] == "Ephemeral"
+    assert data["nodes"][0]["kind"] == "Workload"
     assert converter.structure(data, Topology).placement == graph.placement
 
 
@@ -247,7 +248,7 @@ def test_replacement_and_finalizers_wait_for_absence():
     asyncio.run(scenario())
 
 
-def test_ephemeral_placement_and_interruption():
+def test_spot_placement_and_interruption():
     """
     Spot placement propagates and a replacement Pod is not reported as job completion.
     """

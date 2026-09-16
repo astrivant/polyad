@@ -11,12 +11,13 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from attrs import frozen
 
-from polyad.compiler import asts
 from polyad.graph import GraphNode, Node, PolyGraph
-from polyad.graph.topology import converter, topology
 from polyad.operator import handlers
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.coordination import Coordinator
+from polyad_types import resources as asts
+from polyad_types.codec import converter
+from polyad_types.topology import topology
 from tests.test_operator import FakeAPI, resource, template
 
 
@@ -111,7 +112,7 @@ def test_mixed_graph_types_roll_up_leaf_work_once():
                 {
                     "templateOnly": True,
                     "placement": {"nodeSelector": {"capacity": "spot"}},
-                    "nodes": [reference("worker", "Ephemeral", "worker")],
+                    "nodes": [reference("worker", "Workload", "worker")],
                 },
             ),
             resource(
@@ -122,7 +123,6 @@ def test_mixed_graph_types_roll_up_leaf_work_once():
             resource("PolyGraph", "group-template", {"templateOnly": True, "nodes": [reference("batch", "Graph", "batch-template")]}),
             resource("Graph", "batch-template", {"templateOnly": True, "nodes": [reference("worker", "Workload", "worker")]}),
             resource("Workload", "worker", {"template": template()}),
-            resource("Ephemeral", "worker", {"template": template()}),
             resource("Daemon", "server", {"template": template(True)}),
         )
         await settle(api)

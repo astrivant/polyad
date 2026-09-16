@@ -1,11 +1,28 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { diagrams, validate } from "./check.mjs";
+import { diagrams, repositoryPaths, validate } from "./check.mjs";
+
+test("repository discovery follows unstaged moves and skips deleted files", () => {
+  const directory = mkdtempSync(join(tmpdir(), "polyad-mermaid-move-"));
+  try {
+    execFileSync("git", ["init", "-q", directory]);
+    const oldPath = join(directory, "old.md");
+    const newPath = join(directory, "new.md");
+    writeFileSync(oldPath, "# Moving documentation\n");
+    execFileSync("git", ["-C", directory, "add", "old.md"]);
+    renameSync(oldPath, newPath);
+    assert.deepEqual(repositoryPaths(directory), [newPath]);
+    rmSync(newPath);
+    assert.deepEqual(repositoryPaths(directory), []);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test("rejects the billing diagram's semicolon-separated message", async () => {
   const result = await validate(

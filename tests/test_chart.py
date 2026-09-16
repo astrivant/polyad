@@ -223,7 +223,7 @@ def test_admission_and_deadline_fields_survive_crd_pruning():
         deadline = schemas[kind]["properties"]["status"]["properties"]["delays"]["additionalProperties"]
         assert set(deadline["required"]) == {"token", "notBefore"}
         assert deadline["properties"]["token"]["x-kubernetes-preserve-unknown-fields"] is True
-    for kind in ("Workload", "Daemon", "Ephemeral"):
+    for kind in ("Workload", "Daemon"):
         spec = schemas[kind]["properties"]["spec"]["properties"]
         assert spec["placement"]["properties"]["enforce"]["default"] is True
         assert spec["persistence"]["x-kubernetes-validations"]
@@ -384,9 +384,9 @@ def test_capacity_schemas_come_from_public_models():
     """
     Graphs and rewrites expose matching capacity policy schemas.
     """
-    from polyad.compiler.asts import CapacityStatus
     from polyad.compiler.passes.schema import structural_schema
     from polyad.graph import CapacityPlan
+    from polyad_types.resources import CapacityStatus
 
     for kind in ("graphs", "polygraphs", "rewrites"):
         crd = yaml.safe_load((CHART / "crds" / f"{kind}.yaml").read_text())
@@ -551,3 +551,72 @@ def test_invalid_endpoint_authentication_configuration_fails(settings):
     """
     with pytest.raises(subprocess.CalledProcessError):
         render(*settings)
+
+
+@pytest.mark.parametrize("scope,namespace", [("Cluster", ""), ("OperatorNamespace", ""), ("Namespace", "chosen")])
+def test_optional_connection_api_scope_authentication_and_transport(scope, namespace):
+    """
+    Render scoped transport and intake permissions with separate authentication review rights.
+    """
+    defaults = render()
+    assert not any(obj["kind"] == "Service" and obj["metadata"]["name"] == "test-polyad-connections" for obj in defaults)
+    assert not any("connection-" in obj["metadata"]["name"] for obj in defaults)
+    objects = render(
+        "connections.enabled=true",
+        f"connections.scope={scope}",
+        f"connections.namespace={namespace}",
+        "networkPolicy.enabled=true",
+        "networkPolicy.apiServerCIDRs[0]=10.0.0.1/32",
+        "mesh.enabled=true",
+        "mesh.operator.enabled=true",
+        "mesh.operator.connectionPrincipals[0]=cluster.local/ns/test/sa/worker",
+    )
+    service = next(obj for obj in objects if obj["kind"] == "Service" and obj["metadata"]["name"] == "test-polyad-connections")
+    assert service["spec"]["type"] == "ClusterIP"
+    assert service["spec"]["ports"][0]["port"] == 8093
+    operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    container = operator["spec"]["template"]["spec"]["containers"][0]
+    env = {entry["name"]: entry.get("value") for entry in container["env"]}
+    assert env["POLYAD_CONNECTIONS_SCOPE"] == scope
+    assert env["POLYAD_CONNECTIONS_MAX_TTL"] == "3600"
+    assert env["POLYAD_WORKLOAD_CONNECTIONS_URL"] == "http://test-polyad-connections.test.svc:8093"
+    review = next(obj for obj in objects if obj["kind"] == "ClusterRole" and obj["metadata"]["name"].endswith("connection-reviews"))
+    assert review["rules"] == [
+        {"apiGroups": ["authentication.k8s.io"], "resources": ["tokenreviews"], "verbs": ["create"]},
+        {"apiGroups": ["authorization.k8s.io"], "resources": ["subjectaccessreviews"], "verbs": ["create"]},
+    ]
+    intake = [obj for obj in objects if obj["kind"] in {"Role", "ClusterRole"} and obj["metadata"]["name"].endswith("connection-intake")]
+    if scope == "OperatorNamespace":
+        assert not intake
+    else:
+        assert intake[0]["kind"] == ("ClusterRole" if scope == "Cluster" else "Role")
+        assert intake[0]["metadata"].get("namespace") == ("chosen" if scope == "Namespace" else None)
+        assert intake[0]["rules"][0]["verbs"] == ["get"]
+        assert intake[0]["rules"][1]["verbs"] == ["get", "create", "patch"]
+    network = next(obj for obj in objects if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "test-polyad")
+    rule = next(rule for rule in network["spec"]["ingress"] if rule["ports"] == [{"protocol": "TCP", "port": 8093}])
+    assert rule["from"][0]["namespaceSelector"] == (
+        {} if scope == "Cluster" else {"matchLabels": {"kubernetes.io/metadata.name": "test" if scope == "OperatorNamespace" else "chosen"}}
+    )
+    mesh = next(obj for obj in objects if obj["kind"] == "AuthorizationPolicy")
+    rule = next(rule for rule in mesh["spec"]["rules"] if rule["to"][0]["operation"]["ports"] == ["8093"])
+    assert rule["to"][0]["operation"]["methods"] == ["GET", "POST", "DELETE"]
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "connections.scope=Other",
+        "connections.scope=Namespace",
+        "connections.namespace=unexpected",
+        "connections.maxTtlSeconds=0",
+        "connections.maxTtlSeconds=86401",
+        "connections.retentionSeconds=-1",
+    ],
+)
+def test_invalid_connection_settings_fail_rendering(setting):
+    """
+    Reject ambiguous namespace selection and unbounded TTL or retention values.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(setting)

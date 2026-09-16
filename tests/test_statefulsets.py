@@ -13,12 +13,11 @@ import yaml
 from jsonschema import validate
 
 from polyad.api.store import CompositionStore
-from polyad.compiler import asts
 from polyad.compiler.passes.composition import receipt_spec, request_name
 from polyad.compiler.passes.daemon import compile_daemon, execution_pod
-from polyad.compiler.passes.storage import configure_storage
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.graph_status import observed
+from polyad_types import resources as asts
 from tests.test_capacity import passes, scenario
 from tests.test_composition import settle
 from tests.test_composition_api import request_value
@@ -204,7 +203,7 @@ def test_stateful_options_reject_invalid_identity_and_rollout(options, error):
 
 def test_storage_validation_and_admission_pod_preserve_definition():
     """
-    Materialize implicit volumes only for admission and reject ambiguous or ephemeral claims.
+    Materialize implicit volumes only for admission and reject ambiguous claims.
     """
     spec = stateful_spec()
     original = copy.deepcopy(spec)
@@ -213,8 +212,6 @@ def test_storage_validation_and_admission_pod_preserve_definition():
     assert pod["spec"]["volumes"][-1] == {"name": "data", "persistentVolumeClaim": {"claimName": "data-database-2"}}
     assert native["spec"]["template"] == original["template"]
     assert spec == original
-    with pytest.raises(ValueError, match="invalid under Ephemeral"):
-        configure_storage(spec, ephemeral=True)
     spec["statefulSet"]["volumeClaimTemplates"].append(copy.deepcopy(spec["statefulSet"]["volumeClaimTemplates"][0]))
     with pytest.raises(ValueError, match="unique"):
         compile_daemon(spec, {})

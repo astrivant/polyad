@@ -1,6 +1,6 @@
 # Workload environment
 
-Every Job, Deployment and StatefulSet compiled from a Workload, Ephemeral or Daemon definition
+Every Job, Deployment and StatefulSet compiled from a Workload or Daemon definition
 receives graph context automatically. It is available in all declared application
 containers, init containers and native sidecars. This includes workloads inside
 nested graphs, ReplicaGroups and activation runs.
@@ -49,13 +49,13 @@ All values are strings. Optional context is the empty string when absent.
 | `POLYAD_NODE_ID` | Composition node ID when supplied, otherwise the node name |
 | `POLYAD_NODE_PATH` | Hierarchical audit path through the containing graphs to this node |
 | `POLYAD_RUNTIME_NODE_NAME` | Execution node key; distinct from the logical name for individual activation runs |
-| `POLYAD_DEFINITION_NAME`, `POLYAD_DEFINITION_KIND`, `POLYAD_DEFINITION_UID`, `POLYAD_DEFINITION_GENERATION` | Reusable Workload, Ephemeral or Daemon definition used to compile this execution |
+| `POLYAD_DEFINITION_NAME`, `POLYAD_DEFINITION_KIND`, `POLYAD_DEFINITION_UID`, `POLYAD_DEFINITION_GENERATION` | Reusable Workload or Daemon definition used to compile this execution |
 | `POLYAD_RESOURCE_NAME`, `POLYAD_RESOURCE_KIND` | Native Job, Deployment or StatefulSet containing this Pod |
 | `POLYAD_REQUEST_ID`, `POLYAD_COMPOSITION_UID` | Original composition request and persisted receipt identity, when present |
 | `POLYAD_ACTIVATION_ID`, `POLYAD_ACTIVATION_UID` | Current activation receipt, or nearest enclosing graph activation |
 | `POLYAD_POD_NAME`, `POLYAD_POD_UID`, `POLYAD_POD_NAMESPACE` | This concrete Pod's identity |
 | `POLYAD_KUBERNETES_NODE_NAME`, `POLYAD_SERVICE_ACCOUNT_NAME` | Assigned Kubernetes node and Pod service account |
-| `POLYAD_API_URL`, `POLYAD_EVENTS_URL`, `POLYAD_METRICS_URL` | Namespace-qualified internal Service URL for each enabled operator listener |
+| `POLYAD_API_URL`, `POLYAD_EVENTS_URL`, `POLYAD_METRICS_URL`, `POLYAD_CONNECTIONS_URL` | Namespace-qualified internal Service URL for each enabled operator listener |
 
 Kubernetes supplies Pod identity, node and service account fields through the
 [Downward API](https://kubernetes.io/docs/concepts/workloads/pods/downward-api/).
@@ -68,8 +68,10 @@ terminating. Cycles and ancestry beyond 32 boundaries are rejected.
 
 The chart configures endpoint discovery from its release name and namespace.
 An endpoint URL is empty when that listener is disabled. Outside Helm, configure
-`POLYAD_WORKLOAD_API_URL`, `POLYAD_WORKLOAD_EVENTS_URL` and
-`POLYAD_WORKLOAD_METRICS_URL` on the operator. Credentials are supplied separately
+`POLYAD_WORKLOAD_API_URL`, `POLYAD_WORKLOAD_EVENTS_URL`,
+`POLYAD_WORKLOAD_METRICS_URL` and `POLYAD_WORKLOAD_CONNECTIONS_URL` on the operator.
+The [connections endpoint](temporary-connections.md) requires a projected service-account token.
+Credentials are supplied separately
 by workloads; the operator does not copy its own Secrets into them.
 
 The variable names above are reserved. The compiler replaces conflicting explicit

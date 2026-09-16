@@ -5,43 +5,8 @@ Represent immutable activation requests with explicit graph incarnation fences.
 from __future__ import annotations
 
 import hashlib
-from typing import Literal
 
-from attrs import frozen
-
-from polyad.compiler.passes.composition import identity
-
-
-@frozen
-class ActivationRequest:
-    """
-    Request one execution of an activation-controlled graph vertex.
-
-    Attributes:
-        requestId (str): Idempotency identity retained for the receipt lifetime.
-        graph (str): Executable graph instance name, not its reusable definition.
-        graphUid (str): Kubernetes UID fencing graph deletion and recreation.
-        node (str): Vertex name inside the selected graph instance.
-        kind (Literal['Graph', 'PolyGraph', 'ReplicaGroup']): Target graph kind.
-    """
-
-    requestId: str
-    graph: str
-    graphUid: str
-    node: str
-    kind: Literal["Graph", "PolyGraph", "ReplicaGroup"] = "Graph"
-
-    def __attrs_post_init__(self) -> None:
-        """
-        Require portable identities and a graph incarnation.
-
-        Returns:
-            None: Invalid identities raise before API access.
-        """
-        for value in (self.requestId, self.graph, self.node):
-            identity(value)
-        if not self.graphUid or len(self.graphUid) > 128 or self.kind not in {"Graph", "PolyGraph", "ReplicaGroup"}:
-            raise ValueError("activation requires a valid graph kind and UID")
+from polyad_types.requests import identity
 
 
 def activation_name(request_id: str) -> str:

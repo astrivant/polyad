@@ -53,9 +53,9 @@ Workloads must cooperate with pause and shutdown requests.<sup>[\[11\]](../pkg/p
 Restarting with saved state requires application support and suitable storage;
 Polyad does not automatically checkpoint or resume arbitrary containers.<sup>[\[12\]](operator.md#workload-persistence)</sup>
 
-On Kubernetes, persistent workloads require an explicit storage class and PVC.
-Use non-spot capacity: persistent storage declarations are invalid under
-`Ephemeral` workloads. Ordinary graphs leave storage policy to their users.<sup>[\[12\]](operator.md#workload-persistence)</sup><sup>[\[13\]](operator.md#ephemeral-execution)</sup>
+On Kubernetes, `persistence.enabled: true` requires an explicit storage class and PVC.
+Users choose capacity compatible with their storage and recovery requirements.
+Spot placement is available on ordinary Workloads and graphs.<sup>[\[12\]](operator.md#workload-persistence)</sup><sup>[\[13\]](operator.md#interruptible-execution)</sup>
 
 ### Quick start: local work
 
@@ -99,12 +99,12 @@ See [deployment and lifecycle checks](operator.md#build-install-and-exercise).
 | [Storage and delay](../examples/storage-and-delay.yaml) | Require an explicit StorageClass and PVC, then delay workload admission |
 | [Persistent service](../examples/persistent.yaml) | Run a daemon with startup, readiness and liveness probes |
 | [Repeated execution](../examples/repeated-graph.yaml) | Activate a finite Graph from a persistent Graph using a timer |
-| [Spot work](../examples/ephemeral.yaml) | Apply explicit spot placement to an ephemeral graph |
+| [Spot work](../examples/spot-workload.yaml) | Run ordinary Workloads with explicit spot placement |
 | [Advance capacity](../examples/capacity.yaml) | Prewarm capacity for downstream work while preparation runs |
 | [Graph composition](../examples/polygraph.yaml) | Compose nested graph types and inspect root status rollups |
 
 Apply examples after installing the operator. Spot examples require node labels
-and tolerations that match your cluster; update their placement before applying.<sup>[\[13\]](operator.md#ephemeral-execution)</sup><sup>[\[8\]](operator.md#scheduling-a-graph-onto-a-resource-slice)</sup>
+and tolerations that match your cluster; update their placement before applying.<sup>[\[13\]](operator.md#interruptible-execution)</sup><sup>[\[8\]](operator.md#scheduling-a-graph-onto-a-resource-slice)</sup>
 
 ## Development
 

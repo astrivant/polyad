@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING, cast
 from kubernetes import client, config
 from kubernetes.client.exceptions import ApiException
 
-from polyad.compiler.asts import GROUP as GROUP
-from polyad.compiler.asts import VERSION as VERSION
-from polyad.compiler.asts import DeleteOptions, UIDPreconditions, encode_body
 from polyad.compiler.registry import GRAPH_OWNED_KINDS, RESOURCE_TYPES
 from polyad.operator.metrics import WriteBacklog
+from polyad_types.resources import GROUP as GROUP
+from polyad_types.resources import VERSION as VERSION
+from polyad_types.resources import DeleteOptions, UIDPreconditions, encode_body
 
 logger = logging.getLogger(__name__)
 
@@ -126,10 +126,16 @@ class API:
         Returns:
             Any: Decoded API response, or None for an absent GET or DELETE target.
         """
-        prefix, plural = BUILTINS.get(kind, (f"/apis/{GROUP}/{VERSION}", KINDS.get(kind, "")))
+        reviews = {
+            "TokenReview": ("/apis/authentication.k8s.io/v1", "tokenreviews"),
+            "SubjectAccessReview": ("/apis/authorization.k8s.io/v1", "subjectaccessreviews"),
+        }
+        prefix, plural = reviews.get(kind, BUILTINS.get(kind, (f"/apis/{GROUP}/{VERSION}", KINDS.get(kind, ""))))
         if not plural:
             raise ValueError(f"unsupported kind: {kind}")
-        path = f"{prefix}/namespaces/{namespace}/{plural}"
+        if kind in reviews and (method != "POST" or name or status or namespace):
+            raise ValueError("authentication reviews require a cluster-scoped POST")
+        path = f"{prefix}/{plural}" if kind in reviews else f"{prefix}/namespaces/{namespace}/{plural}"
         if name:
             path += f"/{name}"
         if status:

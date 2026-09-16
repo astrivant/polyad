@@ -9,8 +9,8 @@ from pathlib import Path
 
 import yaml
 
-from polyad.compiler.asts import GROUP
 from polyad.compiler.registry import DEFINITION_KINDS, RESOURCE_TYPES
+from polyad_types.resources import GROUP
 
 
 def main() -> None:

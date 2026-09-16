@@ -29,11 +29,13 @@ ROOT = Path(__file__).resolve().parents[1]
 )
 def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart):
     """
-    Apply the same release version before every artifact is built, without changing dependencies.
+    Stamp every distribution and its shared-model pin without changing third-party dependencies.
     """
     for name in (
         "pyproject.toml",
-        "clients/python/pyproject.toml",
+        "pkg/client/pyproject.toml",
+        "pkg/polyad-types/pyproject.toml",
+        "poetry.lock",
         "charts/polyad/Chart.yaml",
         "charts/polyad/values.yaml",
         "charts/polyad/README.md",
@@ -44,16 +46,26 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
     project = tmp_path / "pyproject.toml"
     original = tomllib.loads(project.read_text())
     # Always exercise stamping a mismatched source version, even on a release checkout.
-    project.write_text(project.read_text().replace(f'version = "{original["tool"]["poetry"]["version"]}"', 'version = "0.0.0"', 1))
+    project.write_text(project.read_text().replace(f'version = "{original["project"]["version"]}"', 'version = "0.0.0"', 1))
     command = [sys.executable, str(ROOT / ".github/prepare-release.py"), "--tag", tag]
     subprocess.run(command, cwd=tmp_path, check=True, capture_output=True, text=True)
     first = {path: path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
     subprocess.run(command, cwd=tmp_path, check=True, capture_output=True, text=True)
     assert all(path.read_bytes() == content for path, content in first.items())
     actual = tomllib.loads(project.read_text())
-    assert actual["tool"]["poetry"]["version"] == package
-    assert tomllib.loads((tmp_path / "clients/python/pyproject.toml").read_text())["tool"]["poetry"]["version"] == package
-    actual["tool"]["poetry"]["version"] = original["tool"]["poetry"]["version"]
+    assert actual["project"]["version"] == package
+    assert tomllib.loads((tmp_path / "pkg/client/pyproject.toml").read_text())["project"]["version"] == package
+    assert tomllib.loads((tmp_path / "pkg/polyad-types/pyproject.toml").read_text())["project"]["version"] == package
+    for filename in ("pyproject.toml", "pkg/client/pyproject.toml"):
+        metadata = tomllib.loads((tmp_path / filename).read_text())
+        assert f"polyad-types=={package}" in metadata["project"]["dependencies"]
+    lock = tomllib.loads((tmp_path / "poetry.lock").read_text())
+    assert next(item for item in lock["package"] if item["name"] == "polyad-types")["version"] == package
+    actual["project"]["version"] = original["project"]["version"]
+    actual["project"]["dependencies"] = [
+        f"polyad-types=={original['project']['version']}" if item.startswith("polyad-types==") else item
+        for item in actual["project"]["dependencies"]
+    ]
     assert actual == original
     metadata = yaml.safe_load((tmp_path / "charts/polyad/Chart.yaml").read_text())
     assert metadata["version"] == metadata["appVersion"] == chart
@@ -122,7 +134,7 @@ def test_release_tag_preserves_package_version(tmp_path, version, tag):
     Read package metadata and append exactly one output without overwriting prior values.
     """
     project = tmp_path / "pyproject.toml"
-    project.write_text(f"[tool.poetry]\nversion = {json.dumps(version)}\n")
+    project.write_text(f"[project]\nversion = {json.dumps(version)}\n")
     output = tmp_path / "output"
     output.write_text("previous=value\n")
     result = subprocess.run(
@@ -141,7 +153,7 @@ def test_invalid_versions_cannot_emit_tag_outputs(tmp_path, version):
     Reject unsupported or multiline metadata before writing any workflow output.
     """
     project = tmp_path / "pyproject.toml"
-    project.write_text(f"[tool.poetry]\nversion = {json.dumps(version)}\n")
+    project.write_text(f"[project]\nversion = {json.dumps(version)}\n")
     output = tmp_path / "output"
     result = subprocess.run(
         [sys.executable, str(ROOT / "scripts/release-tag.py"), "--project", str(project), "--output", str(output)],
@@ -192,7 +204,7 @@ def test_publishing_validates_the_package_tag(tmp_path, package, tag, normalized
     """
     Normalize equivalent prerelease spellings while rejecting a different release before emitting outputs.
     """
-    (tmp_path / "pyproject.toml").write_text(f"[tool.poetry]\nversion = {json.dumps(package)}\n")
+    (tmp_path / "pyproject.toml").write_text(f"[project]\nversion = {json.dumps(package)}\n")
     output = tmp_path / "outputs"
     result = subprocess.run(
         [sys.executable, str(ROOT / ".github/release-version.py"), "--tag", tag, "--output", str(output)],

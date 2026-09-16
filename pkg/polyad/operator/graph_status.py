@@ -10,7 +10,11 @@ from typing import TYPE_CHECKING
 from attrs import evolve
 from cattrs.errors import BaseValidationError
 
-from polyad.compiler.asts import (
+from polyad.compiler.registry import GRAPH_OWNED_KINDS
+from polyad.graph.metrics import measure_topology
+from polyad.graph.temporary import overlay
+from polyad.operator.rollup import measure_subtree
+from polyad_types.resources import (
     AUXILIARY_KINDS,
     BOUNDARY_KINDS,
     GROUP,
@@ -23,10 +27,7 @@ from polyad.compiler.asts import (
     converter,
     to_document,
 )
-from polyad.compiler.registry import GRAPH_OWNED_KINDS
-from polyad.graph.metrics import measure_topology
-from polyad.graph.topology import topology
-from polyad.operator.rollup import measure_subtree
+from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any
@@ -126,14 +127,14 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
         # Metrics use execution aliases; traffic guards retain logical identities.
         base_spec = obj["spec"]
         if obj["kind"] == "ReplicaGroup":
-            from polyad.graph.replication import replica_topology
+            from polyad_types.replication import replica_topology
 
             base_spec = replica_topology(base_spec)
         obj = {**obj, "spec": {**base_spec, "nodes": runtime["nodes"], "connections": runtime["connections"], "network": None}}
     else:
         runtime = {}
     if obj["kind"] == "ReplicaGroup" and "template" in obj["spec"]:
-        from polyad.graph.replication import replica_topology
+        from polyad_types.replication import replica_topology
 
         obj = {**obj, "spec": replica_topology(obj["spec"])}
     spec = obj["spec"]
@@ -172,7 +173,7 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
             )
         )
     try:
-        graph = topology(spec, obj["kind"])
+        graph = topology(overlay(obj, spec), obj["kind"])
     except (ValueError, TypeError, BaseValidationError) as error:
         return evolve(result, topologyError=str(error), rollup=measure_subtree(obj, children, observed, valid=False))
     result = evolve(result, rollup=measure_subtree(obj, children, observed, valid=True), topology=measure_topology(graph))

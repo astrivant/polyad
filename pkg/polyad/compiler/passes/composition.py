@@ -7,34 +7,19 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-import re
-from typing import Any
+from typing import TYPE_CHECKING
 
 import networkx as nx
-from attrs import frozen
 
-from polyad.compiler import asts
-from polyad.compiler.asts.resources import SpecResource
-from polyad.compiler.registry import COMPOSABLE_KINDS
+if TYPE_CHECKING:
+    from typing import Any
+
 from polyad.compiler.registry import RESOURCE_MODELS as RESOURCE_REGISTRY
-from polyad.graph.topology import converter, topology
-
-COMPOSITION_KINDS = COMPOSABLE_KINDS
-
-
-def identity(value: str) -> str:
-    """
-    Validate a portable ID usable in node references and audit paths.
-
-    Args:
-        value (str): Client-generated identifier, commonly a UUID or a short slug.
-
-    Returns:
-        str: Validated identifier.
-    """
-    if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", value):
-        raise ValueError("IDs must be lowercase DNS labels of at most 63 characters")
-    return value
+from polyad_types import resources as asts
+from polyad_types.codec import converter
+from polyad_types.requests import CompositionRequest, identity
+from polyad_types.resources.resources import SpecResource
+from polyad_types.topology import topology
 
 
 def request_name(request_id: str) -> str:
@@ -48,74 +33,6 @@ def request_name(request_id: str) -> str:
         str: Deterministic Composition name.
     """
     return "composition-" + hashlib.sha256(identity(request_id).encode()).hexdigest()[:32]
-
-
-@frozen
-class CompositionItem:
-    """
-    Supply one reusable definition in a request-local ID namespace.
-
-    Attributes:
-        id (str): Request-local definition ID.
-        kind (str): Supported graph or workload definition kind.
-        spec (dict[str, Any]): Definition configuration, using ID references for graph nodes.
-    """
-
-    id: str
-    kind: str
-    spec: dict[str, Any]
-
-    def __attrs_post_init__(self) -> None:
-        """
-        Reject unsafe identifiers and kinds outside the composition surface.
-
-        Returns:
-            None: No return value.
-        """
-        identity(self.id)
-        if self.kind not in COMPOSITION_KINDS:
-            raise ValueError(f"composition cannot create kind {self.kind}")
-
-
-@frozen
-class CompositionRequest:
-    """
-    Describe an immutable composition with reusable definitions and one executable root.
-
-    Attributes:
-        requestId (str): Idempotency identity across replica handoff and HTTP retries.
-        rootId (str): ID of the executable root boundary.
-        objects (tuple[CompositionItem, ...]): Reusable graph and workload definitions.
-    """
-
-    requestId: str
-    rootId: str
-    objects: tuple[CompositionItem, ...]
-
-    def __attrs_post_init__(self) -> None:
-        """
-        Bound request size and require unique IDs with an executable graph root.
-
-        Returns:
-            None: No return value.
-        """
-        identity(self.requestId)
-        by_id = {item.id: item for item in self.objects}
-        if not 1 <= len(self.objects) <= 128 or len(by_id) != len(self.objects):
-            raise ValueError("composition requires 1 to 128 definitions with unique IDs")
-        if self.rootId not in by_id or by_id[self.rootId].kind not in asts.BOUNDARY_KINDS:
-            raise ValueError("composition rootId must identify a graph boundary")
-
-    def digest(self) -> str:
-        """
-        Hash the immutable request independently of object ordering.
-
-        Returns:
-            str: Canonical content digest used to reject conflicting ID reuse.
-        """
-        document = converter.unstructure(self)
-        document["objects"].sort(key=lambda item: item["id"])
-        return hashlib.sha256(json.dumps(document, sort_keys=True, allow_nan=False).encode()).hexdigest()
 
 
 def compile_composition(request: CompositionRequest, namespace: str, *, owner_uid: str | None = None) -> dict[str, asts.Resource]:

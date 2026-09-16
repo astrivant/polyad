@@ -10,11 +10,11 @@ from unittest.mock import patch
 
 import pytest
 
-from polyad.compiler.asts import GROUP
 from polyad.compiler.passes.storage import configure_storage
 from polyad.graph import DelayGate
 from polyad.operator.controller import Controller
 from polyad.operator.placement import merge_placement, place_pod
+from polyad_types.resources import GROUP
 from tests.test_composition import settle
 from tests.test_operator import FakeAPI, resource, template
 
@@ -117,7 +117,7 @@ def test_persistence_requires_storage_class(persistence):
     Reject implicit default StorageClasses when persistence is enabled.
     """
     with pytest.raises(ValueError, match="requires storageClass"):
-        configure_storage({"template": template(), "persistence": persistence}, ephemeral=False)
+        configure_storage({"template": template(), "persistence": persistence})
 
 
 @pytest.mark.parametrize(
@@ -129,23 +129,27 @@ def test_persistence_requires_storage_class(persistence):
         {"volumes": [{"name": "data", "ephemeral": {"volumeClaimTemplate": {"spec": {"storageClassName": "disk"}}}}]},
     ],
 )
-def test_ephemeral_storage_rejection(configuration):
+def test_workload_storage_configuration_is_preserved(configuration):
     """
-    Reject storage declarations even when hidden in native volume templates.
+    Preserve user-selected claims and native volume templates on ordinary workloads.
     """
     spec = {"template": template()}
     if "volumes" in configuration:
         spec["template"]["spec"].update(configuration)
     else:
         spec.update(configuration)
-    with pytest.raises(ValueError, match="invalid under Ephemeral"):
-        configure_storage(spec, ephemeral=True)
+    persistence = configure_storage(spec)
+    if "volumes" in configuration:
+        assert spec["template"]["spec"]["volumes"] == configuration["volumes"]
+    elif persistence.enabled:
+        assert spec["template"]["spec"]["volumes"][0]["persistentVolumeClaim"]["claimName"] == "data"
+    else:
+        assert persistence.storageClass == "durable"
 
 
-@pytest.mark.parametrize("kind", ["Workload", "Ephemeral"])
-def test_spot_placement_leaves_storage_policy_to_workload_type(kind):
+def test_spot_placement_leaves_storage_policy_to_users():
     """
-    Allow user-chosen storage on spot graphs while preserving the explicit Ephemeral leaf contract.
+    Allow user-chosen persistent storage on workloads beneath spot-placed graph boundaries.
     """
 
     async def scenario():
@@ -159,24 +163,19 @@ def test_spot_placement_leaves_storage_policy_to_workload_type(kind):
             resource(
                 "Graph",
                 "loop",
-                {"templateOnly": True, "nodes": [{"name": "worker", "kind": kind, "ref": "worker"}]},
+                {"templateOnly": True, "nodes": [{"name": "worker", "kind": "Workload", "ref": "worker"}]},
             ),
             resource(
-                kind,
+                "Workload",
                 "worker",
                 {"template": template(), "persistence": {"enabled": True, "storageClass": "durable", "claimName": "data"}},
             ),
         )
         api.objects[("PersistentVolumeClaim", "test", "data")] = resource("PersistentVolumeClaim", "data", {"storageClassName": "durable"})
-        if kind == "Ephemeral":
-            with pytest.raises(ValueError, match="invalid under Ephemeral"):
-                await settle(api, 20)
-            assert not api.children("Job")
-        else:
-            await settle(api)
-            pod = api.children("Job")[0]["spec"]["template"]["spec"]
-            assert pod["nodeSelector"] == {"capacity": "spot"}
-            assert pod["volumes"][0]["persistentVolumeClaim"]["claimName"] == "data"
+        await settle(api)
+        pod = api.children("Job")[0]["spec"]["template"]["spec"]
+        assert pod["nodeSelector"] == {"capacity": "spot"}
+        assert pod["volumes"][0]["persistentVolumeClaim"]["claimName"] == "data"
 
     asyncio.run(scenario())
 

@@ -11,6 +11,7 @@ their work and tracks progress across the application and integrations.<sup>[\[2
 - [Polyad](#polyad)
   - [Table of contents](#table-of-contents)
   - [What Polyad abstracts](#what-polyad-abstracts)
+    - [Motivation](#motivation)
     - [Graphs of graphs](#graphs-of-graphs)
     - [Replica connections](#replica-connections)
     - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
@@ -31,13 +32,46 @@ Its **nodes** can be tasks, services, resources or other graphs. A data pipeline
 might fetch records, process partitions in parallel, then publish the results;
 a service graph might keep consumers and their supporting resources running.<sup>[\[3\]](docs/concepts.md)</sup>
 
-Green marks work and graph summaries, amber marks constraints or recurrence,
-and gray marks resources and containing boundaries.
+### Motivation
+
+Deploying a distributed application means deciding how its services connect,
+which work can run together, and how those relationships should change as demand
+grows. Polyad makes that topology an explicit, reusable part of the deployment,
+with [rules](docs/graph-rules.md) that constrain its size, structure and permitted
+connections across nested graphs.
+
+This lets teams scale individual services, complete pipelines or compositions of
+graphs while preserving the application's topology requirements.
+[KEDA requests replica counts](docs/replication.md#connect-keda) through
+ReplicaGroups; Polyad recomputes the live graph family's measurements and checks
+applicable constraints before creating or retiring copies. A scaling decision
+must fit the surrounding application's rules as well as the group's own limits.
+
+For data pipelines, [Cheeger bounds](docs/graph-rules.md#cheeger-bottleneck-bounds)
+provide a structural assurance against bottlenecks: a minimum requires enough
+edges across every split relative to the size of its smaller side, at each
+configured boundary. This supports throughput goals by rejecting topologies with
+overly sparse connections between stages or replicas. Actual throughput still
+depends on processing capacity, bandwidth and workload; the Cheeger measurement
+counts connections and does not guarantee a data rate.
+
+Services can also participate in changing their own topology. By installing the
+[Python client](pkg/client/README.md), applications can submit
+[compositions](docs/composition-requests.md), activate work and request
+[temporary connections](docs/temporary-connections.md) with a bounded lifetime
+through enabled, authorized APIs. Polyad checks requested changes against the
+applicable rules and removes temporary connection grants after expiry.
+[Topology events](docs/workload-events.md) let workloads discover their current
+neighbors as connections and replica membership change. This gives applications
+room to adapt while keeping deployment constraints under operator control.
 
 ### Graphs of graphs
 
 Compose smaller workflows into an application with `PolyGraph`. Each child
 reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/concepts.md#graphs-of-graphs)</sup>
+
+In the diagrams below, green marks work and graph summaries, amber marks
+constraints or recurrence, and gray marks resources and containing boundaries.
 
 <details open>
 <summary>Example: nested graphs reporting to an application root</summary>
@@ -497,8 +531,8 @@ flowchart TB
         gate{"Gate · admission condition"}
         subgraph workers["Graph · spot placement"]
             direction TB
-            left["Ephemeral · partition A"]
-            right["Ephemeral · partition B"]
+            left["Workload · partition A"]
+            right["Workload · partition B"]
         end
         subgraph publish["Graph · publish results"]
             merge["Workload · merge"]
@@ -634,9 +668,15 @@ with the Helm chart, or try the [local Python scheduler](docs/getting-started.md
 The [examples](docs/getting-started.md#examples) cover pipelines, services,
 spot work, storage and nested graphs.
 
+Applications can install the [Python client](pkg/client/README.md) or just the
+[shared types](pkg/polyad-types/README.md) without installing the operator. From a
+checkout, use `pip install ./pkg/polyad-types`; the standalone distribution is
+named `polyad-types` and exposes `polyad_types`.
+
 Explore [graph concepts](docs/concepts.md), [graph rules](docs/graph-rules.md),
 [composition requests](docs/composition-requests.md), the [composition API](docs/composition-api.md),
-[networking and event subscriptions](docs/networking.md), or the
+[networking and event subscriptions](docs/networking.md),
+[temporary connections](docs/temporary-connections.md), or the
 [development guide](docs/toolchain.md). See the [documentation index](docs/README.md)
 for lifecycle, status, health and configuration references.
 

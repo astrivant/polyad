@@ -6,13 +6,16 @@ from __future__ import annotations
 
 import copy
 import os
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from polyad.compiler import asts
 from polyad.compiler.passes.network import NetworkScope, policy_specs, scope_label
-from polyad.graph.rules import StructuralRule
-from polyad.graph.topology import converter, topology
+from polyad.graph.temporary import active_entries, overlay
 from polyad.operator.replication import effective_spec, replica_selector
+from polyad_types import resources as asts
+from polyad_types.codec import converter
+from polyad_types.rules import StructuralRule
+from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any
@@ -60,7 +63,8 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
                 labels[replica_selector(source["uid"])] = "true"
         labels[scope_label(namespace, kind, meta["name"])] = "true"
         labels[scope_label(namespace, kind, meta["name"], branch)] = "true"
-        graph = topology(graph_spec, kind)
+        observed_at = datetime.now(UTC)
+        graph = topology(overlay(current, graph_spec, now=observed_at), kind)
         selected = {name for name, rule in rules.items() if rule.enforcement == "Namespace"} | set(graph.rules)
         if selected - rules.keys():
             raise ValueError("a referenced network GraphRule is unavailable")
@@ -82,6 +86,10 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
                         branch,
                         access,
                         tuple((edge.source, edge.target, edge.ports) for edge in graph.connections),
+                        min(
+                            (datetime.fromisoformat(grant["expiresAt"]) for grant in active_entries(current, now=observed_at).values()),
+                            default=None,
+                        ),
                     )
                 )
         owners = [
@@ -134,6 +142,8 @@ async def ensure_policies(controller: Controller, obj: dict[str, Any], plans: di
             wanted.add((kind, name))
             current = await controller.api.get(kind, namespace, name)
             if current is None:
+                if any(scope.expires_at is not None and scope.expires_at <= datetime.now(UTC) for scope in scopes):
+                    raise Pending("temporary connection expired before network policy creation")
                 await controller.api.request("POST", kind, namespace, body=desired)
                 changed = True
                 continue
@@ -142,6 +152,8 @@ async def ensure_policies(controller: Controller, obj: dict[str, Any], plans: di
             if current["metadata"].get("deletionTimestamp"):
                 raise Pending("waiting for deleted network guards to disappear")
             if current.get("spec") != spec:
+                if any(scope.expires_at is not None and scope.expires_at <= datetime.now(UTC) for scope in scopes):
+                    raise Pending("temporary connection expired before network policy update")
                 replacement = copy.deepcopy(current)
                 replacement["spec"] = spec
                 replacement["metadata"].setdefault("annotations", {}).update(desired["metadata"]["annotations"])

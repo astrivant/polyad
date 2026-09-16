@@ -12,7 +12,7 @@ from polyad.compiler.passes.mutations import advance_budgets, check_precondition
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Mapping
 
-    from polyad.compiler.asts.mutations import Budget, Mutation, MutationPlan, Scope
+    from polyad_types.resources.mutations import Budget, Mutation, MutationPlan, Scope
 
 
 async def execute_mutations(

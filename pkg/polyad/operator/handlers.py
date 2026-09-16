@@ -15,9 +15,9 @@ import kopf
 from cattrs.errors import CattrsError
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.server import CompositionServer
+from polyad.api.connections.store import ConnectionSettings
+from polyad.api.server import CompositionServer, ConnectionServer
 from polyad.cache import cache_url
-from polyad.compiler.asts import BOUNDARY_KINDS
 from polyad.compiler.registry import RECONCILED_KINDS, RESOURCE_TYPES
 from polyad.events.server import EventServer
 from polyad.events.store import EventStore
@@ -32,6 +32,7 @@ from polyad.operator.health import credential_token, lifecycle, watch_credential
 from polyad.operator.queue import RefreshQueue
 from polyad.operator.shared_queue import SharedQueue
 from polyad.operator.tuning import OperatorTuning
+from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
     from typing import Any
@@ -46,6 +47,7 @@ http: CompositionServer | None = None
 events: EventStore | None = None
 event_http: EventServer | None = None
 metrics_http: MetricsServer | None = None
+connections_http: ConnectionServer | None = None
 metrics_store = MetricsStore()
 inventory_sample: tuple[float, dict[str, Any]] | None = None
 inventory_sample_ok = False
@@ -69,7 +71,7 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     Returns:
         None: No return value.
     """
-    global queue, controller, coordinator, shared, initialized, http, events, event_http, metrics_http, tuning
+    global queue, controller, coordinator, shared, initialized, http, events, event_http, metrics_http, connections_http, tuning
     tuning = OperatorTuning.from_environment()
     settings.posting.enabled = False
     settings.scanning.disabled = True
@@ -86,6 +88,9 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     shared = SharedQueue(cache_url(), namespace, coordinator.identity)
     queue = RefreshQueue(reconcile)
     queue.start()
+    if os.environ.get("POLYAD_CONNECTIONS_ENABLED", "false").lower() == "true":
+        connections_http = ConnectionServer(API(), ConnectionSettings.from_environment(namespace))
+        background.append(asyncio.create_task(connection_sweep_loop()))
     if os.environ.get("POLYAD_API_ENABLED", "false").lower() == "true":
         http = CompositionServer(API(), namespace, credential_token("API"))
     if os.environ.get("POLYAD_EVENTS_ENABLED", "false").lower() == "true":
@@ -135,6 +140,24 @@ async def coordination_loop() -> None:
         await asyncio.sleep(5)
 
 
+async def connection_sweep_loop() -> None:
+    """
+    Rediscover expiring receipts across replica restarts and missed watch events.
+
+    Returns:
+        None: Receipt reconciliation is published through the existing shared graph-family queue.
+    """
+    assert coordinator is not None
+    while True:
+        try:
+            listing = await coordinator.api.request("GET", "TemporaryConnection", coordinator.namespace)
+            for receipt in listing.get("items", []):
+                await publish(("TemporaryConnection", coordinator.namespace, receipt["metadata"]["name"]))
+        except Exception:
+            logger.exception("Temporary connection sweep failed; durable receipts will be retried")
+        await asyncio.sleep(5)
+
+
 async def backlog_loop() -> None:
     """
     Sample shared backlog independently so slow API writes cannot freeze telemetry.
@@ -164,7 +187,7 @@ async def rescan_loop() -> None:
         try:
             scan_started = time.monotonic()
             objects = []
-            definitions = ("Workload", "Daemon", "Ephemeral", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if metrics_http else ()
+            definitions = ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if metrics_http else ()
             for kind in (*KINDS, *definitions):
                 result = await coordinator.api.request("GET", kind, coordinator.namespace)
                 last_api_success = time.monotonic()
@@ -265,6 +288,10 @@ async def publish_observation(key: Key) -> None:
         return
     obj = await controller.api.get(*key)
     if obj is not None:
+        if key[0] == "TemporaryConnection":
+            target = await controller.api.get(obj["spec"]["kind"], key[1], obj["spec"]["graph"])
+            if target is not None and target["metadata"]["uid"] == obj["spec"]["graphUid"]:
+                await publish_observation((target["kind"], key[1], target["metadata"]["name"]))
         snapshot = await topology_snapshot(controller.api, obj) if key[0] in BOUNDARY_KINDS else None
         await coordinator.guard()
         await events.publish(obj, topology=snapshot)
@@ -360,12 +387,14 @@ def write_backlog() -> dict[str, Any]:
     workloads = controller.api.writes.snapshot()
     coordination = coordinator.api.writes.snapshot()
     intake = http.api.writes.snapshot() if http else {"queued": 0, "inFlight": 0, "total": 0}
+    connections = connections_http.api.writes.snapshot() if connections_http else {"queued": 0, "inFlight": 0, "total": 0}
     return {
         "scope": "replica",
-        **{key: workloads[key] + coordination[key] + intake[key] for key in ("queued", "inFlight", "total")},
+        **{key: workloads[key] + coordination[key] + intake[key] + connections[key] for key in ("queued", "inFlight", "total")},
         "workloads": workloads,
         "coordination": coordination,
         "compositionIntake": intake,
+        "connectionIntake": connections,
     }
 
 
@@ -392,9 +421,12 @@ def health(**_: Any) -> dict[str, Any]:
         raise RuntimeError("events API thread is unavailable")
     if metrics_http is not None and not metrics_http.thread.is_alive():
         raise RuntimeError("metrics API thread is unavailable")
+    if connections_http is not None and not connections_http.thread.is_alive():
+        raise RuntimeError("connections API thread is unavailable")
     return {
         "metricsEnabled": metrics_http is not None,
         "eventsEnabled": event_http is not None,
+        "connectionsEnabled": connections_http is not None,
         "initialized": initialized,
         "worker": True,
         "pending": queue.queue.qsize(),
@@ -426,6 +458,8 @@ async def cleanup(**_: Any) -> None:
     global initialized
     logger.debug("Operator cleanup started; joining listeners, queued work and API transports")
     initialized = False
+    if connections_http:
+        await connections_http.close()
     if metrics_http:
         await metrics_http.close()
     if event_http:

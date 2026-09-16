@@ -140,6 +140,19 @@ api:
     ## @param api.gateway.tlsSecret Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80
     tlsSecret: ''
 
+## @section Temporary connections
+connections:
+  ## @param connections.enabled Serve service-account authenticated temporary connections on port 8093
+  enabled: false
+  ## @param connections.scope Allowed caller and target namespaces: Cluster, OperatorNamespace or Namespace
+  scope: Cluster
+  ## @param connections.namespace Allowed namespace when scope is Namespace; otherwise empty
+  namespace: ''
+  ## @param connections.maxTtlSeconds Maximum connection lifetime from receipt creation, capped at 86400 seconds
+  maxTtlSeconds: 3600
+  ## @param connections.retentionSeconds Retain terminal receipts for retry identity and audit before cleanup
+  retentionSeconds: 3600
+
 ## @section Event subscriptions
 events:
   ## @param events.enabled Serve namespace graph observations through a separate SSE Service on port 8091
@@ -226,6 +239,8 @@ mesh:
     metricsPrincipals: []
     ## @param mesh.operator.eventPrincipals [array] Exact mTLS source identities allowed to subscribe to events
     eventPrincipals: []
+    ## @param mesh.operator.connectionPrincipals [array] Exact mTLS source identities allowed to request temporary connections
+    connectionPrincipals: []
   ingress:
     ## @param mesh.ingress.enabled Install the optional upstream Istio gateway dependency
     enabled: false

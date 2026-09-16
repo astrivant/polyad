@@ -8,7 +8,7 @@ import copy
 import re
 from typing import TYPE_CHECKING
 
-from polyad.compiler import asts
+from polyad_types import resources as asts
 
 if TYPE_CHECKING:
     from typing import Any

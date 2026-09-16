@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from polyad.compiler.asts import GraphMetrics
 from polyad.compiler.passes.schema import structural_schema
+from polyad_types.resources import GraphMetrics
 
 if TYPE_CHECKING:
     from typing import Any

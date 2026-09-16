@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING
 
 from kubernetes.client.exceptions import ApiException
 
-from polyad.compiler.asts import Lease, LeaseSpec, ObjectMeta
 from polyad.operator.api import GROUP
+from polyad_types.resources import Lease, LeaseSpec, ObjectMeta
 
 logger = logging.getLogger(__name__)
 

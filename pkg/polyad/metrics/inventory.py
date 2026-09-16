@@ -7,9 +7,9 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from polyad.compiler.asts import GROUP
 from polyad.operator.coordination import root_shard
 from polyad.operator.rollup import PHASES
+from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
     from typing import Any
@@ -27,7 +27,7 @@ def inventory(objects: list[dict[str, Any]]) -> dict[str, Any]:
     """
     indexed = {(obj["kind"], obj["metadata"]["name"]): obj for obj in objects}
     records = []
-    definitions = {"Workload", "Daemon", "Ephemeral", "Resource", "Gate", "ShutdownPolicy", "GraphRule"}
+    definitions = {"Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule"}
     counts: Counter[tuple[str, str]] = Counter()
     for obj in objects:
         meta, status = obj["metadata"], obj.get("status", {})

@@ -131,8 +131,7 @@ binding. A graph-owned PVC `Resource` can be referenced with
 `started` so the consuming Pod can cause binding. An owned PVC is deleted during
 graph cleanup; use an external PVC for data that must outlive that graph.
 
-The explicit `Ephemeral` workload type rejects PVC and StorageClass declarations.
-Ordinary Graphs and PolyGraphs leave storage policy to users, including when
+Graphs and PolyGraphs leave storage policy to users, including when
 placement selects interruptible nodes. Storage persists files; the application still needs to flush
 and restore its own state.
 
