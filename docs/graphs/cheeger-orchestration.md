@@ -2,9 +2,10 @@
 
 Polyad uses the same structural Cheeger measurement for two different policies:
 **GraphRules define permitted topology**, while **throughput policies select a
-desired topology in response to measured application demand**. The second policy
-has an `Observe` mode and an `Adapt` mode. Neither computes a new Cheeger constant
-in records per second.
+desired topology in response to measured application demand**.
+[Soul searching](throughput-feedback.md), Polyad's bounded topology optimizer,
+implements the second policy with `Observe` and `Adapt` modes. Neither policy
+computes a new Cheeger constant in records per second.
 
 ## Table of contents
 

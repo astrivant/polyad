@@ -1,4 +1,7 @@
-# Application throughput and graph structure
+# Soul searching: application throughput and graph structure
+
+**Soul searching** is Polyad's bounded topology optimizer. It uses application
+throughput reports to recommend or apply administrator-approved connection layouts.
 
 Polyad keeps **hard structural Cheeger bounds** in GraphRules and a separate
 **application-driven Cheeger target** in `Graph.spec.throughput` or
@@ -33,7 +36,7 @@ Deployment or StatefulSet bypasses that admission path.
 ```mermaid
 flowchart TB
     application["Application reporter<br/>Offered and completed records per second"]
-    feedback["Graph throughput policy<br/>Fresh samples and sustained shortfall"]
+    feedback["Soul searching<br/>Fresh samples and sustained shortfall"]
     targets["Separate Cheeger target<br/>Calibrated demand tiers"]
     layouts["Approved connection layouts"]
     rules["Hard GraphRules<br/>Fresh family checks and revision fence"]

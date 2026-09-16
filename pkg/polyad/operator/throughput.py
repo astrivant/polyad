@@ -1,5 +1,5 @@
 """
-Relate application demand to independent Cheeger targets and bounded topology changes.
+Soul searching: relate application demand to Cheeger targets and bounded topology changes.
 """
 
 from __future__ import annotations

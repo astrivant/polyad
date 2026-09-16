@@ -15,7 +15,7 @@ in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deplo
   scale individual services, whole graphs or nested compositions. Polyad refreshes
   live graph state and enforces [GraphRules](docs/graphs/graph-rules.md), including size,
   shape and structural Cheeger bounds, before applying scaling changes.
-  Optional [throughput feedback](docs/graphs/throughput-feedback.md) maps application demand
+  Optional [Soul searching](docs/graphs/throughput-feedback.md), Polyad's topology optimizer, maps application demand
   to separate Cheeger targets and recommends or applies approved connection layouts.
 - **Make connectivity explicit.** Choose replica connection patterns, including
   custom edges, and enforce [network boundaries](docs/deployment/networking.md) with optional
@@ -103,7 +103,7 @@ overly sparse connections between stages or replicas. Actual throughput still
 depends on processing capacity, bandwidth and workload; the Cheeger measurement
 counts connections and does not guarantee a data rate.
 
-[Application throughput feedback](docs/graphs/throughput-feedback.md) connects those
+[Soul searching](docs/graphs/throughput-feedback.md) connects those
 structural measurements to workload-specific demand tiers. Keep hard GraphRules
 bounds separate from calibrated targets, use Observe mode to inspect recommendations,
 and opt into Adapt for bounded changes with stabilization and cooldowns.

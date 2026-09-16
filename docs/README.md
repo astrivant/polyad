@@ -32,7 +32,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Graph rules](graphs/graph-rules.md) | Every structural, spectral, Cheeger and network constraint, with Mermaid examples |
 | [Comparing Cheeger policies](graphs/cheeger-orchestration.md) | Hard bounds versus throughput targets, with diagrams of Observe, Adapt, conflicts and replica scaling |
 | [Replication and KEDA](graphs/replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
-| [Throughput feedback](graphs/throughput-feedback.md) | Separate application Cheeger targets, Observe/Adapt modes and bounded connection restructuring |
+| [Soul searching](graphs/throughput-feedback.md) | Topology optimization through application throughput feedback, separate Cheeger targets and bounded Observe/Adapt modes |
 | [Advance capacity](graphs/capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
 
 ## Workloads
