@@ -94,7 +94,9 @@ spec:
 | `ports` | `[]` | Destination ports for built-in connected modes; each port is 1–65535 with protocol `TCP` (default), `UDP`, or `SCTP`; invalid with `Independent` or `Custom` |
 | `edges` | `[]` | At most 4096 custom edges with unique directed source/target pairs; nonempty only with `Custom` |
 
-**Independent** creates no connections between copies.
+### Independent
+
+Creates no connections between copies.
 
 ```mermaid
 flowchart LR
@@ -103,21 +105,27 @@ flowchart LR
     c["replica-2"]
 ```
 
-**Chain** connects each ordinal to the next one, in ascending order.
+### Chain
+
+Connects each ordinal to the next one, in ascending order.
 
 ```mermaid
 flowchart LR
     a["replica-0"] --> b["replica-1"] --> c["replica-2"]
 ```
 
-**Ring** adds an edge from the last ordinal back to the first.
+### Ring
+
+Connects each ordinal to the next and adds an edge from the last back to the first.
 
 ```mermaid
 flowchart LR
     a["replica-0"] --> b["replica-1"] --> c["replica-2"] --> a
 ```
 
-**Star** sends from `replica-0` to every other copy.
+### Star
+
+Sends from `replica-0` to every other copy.
 
 ```mermaid
 flowchart LR
@@ -126,7 +134,9 @@ flowchart LR
     a --> d["replica-3"]
 ```
 
-**FullMesh** connects every distinct pair in both directions, even when
+### FullMesh
+
+Connects every distinct pair in both directions, even when
 `bidirectional` is false.
 
 ```mermaid
@@ -136,7 +146,9 @@ flowchart LR
     c <--> a
 ```
 
-**Custom** uses explicit ordinal names and per-edge ports. Endpoints must be
+### Custom
+
+Uses explicit ordinal names and per-edge ports. Endpoints must be
 canonical names such as `replica-0`, with indices below `maxReplicas`; leading
 zeros and self connections are rejected. Edges whose endpoints are not both
 within the requested count remain dormant. This lets a declaration describe
@@ -165,6 +177,8 @@ flowchart LR
     c -. "dormant until replicas ≥ 4" .-> d["replica-3"]
 ```
 
+### Bidirectional connections
+
 Setting `bidirectional: true` on Chain, Ring, Star, or Custom adds reverse edges.
 Each reverse edge grants the same ports at its new destination. Identical
 connections are deduplicated; distinct port grants are retained.
@@ -174,6 +188,8 @@ flowchart LR
     a["replica-0"] <-->|"TCP 8080 each way"| b["replica-1"]
     b <-->|"TCP 8080 each way"| c["replica-2"]
 ```
+
+### Scaling and topology changes
 
 All built-in modes have no edges at zero or one copy. A two-copy Ring has two
 opposing edges. On scaling, built-in patterns are rebuilt over the new ordinals;
