@@ -1199,7 +1199,7 @@
     },
     "tracing": {
       "type": "object",
-      "description": "Opt-in OTLP/HTTP tracing for operator processes and observers.",
+      "description": "Opt-in OTLP/HTTP traces and independently enabled logs for operators and observers.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -1222,6 +1222,18 @@
         },
         "headersSecret": {
           "$ref": "values.schema.json#/properties/tracing/properties/headersSecret"
+        },
+        "logs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/tracing/properties/logs/properties/enabled"
+            },
+            "endpoint": {
+              "$ref": "values.schema.json#/properties/tracing/properties/logs/properties/endpoint"
+            }
+          }
         }
       }
     }

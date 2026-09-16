@@ -17,6 +17,7 @@ from kubernetes.client.exceptions import ApiException
 from opentelemetry import trace
 
 from polyad.compiler.registry import GRAPH_OWNED_KINDS, RESOURCE_TYPES
+from polyad.operator.decisions import decision
 from polyad.operator.metrics import WriteBacklog
 from polyad.operator.tracing import traced
 from polyad_types.resources import GROUP as GROUP
@@ -42,7 +43,11 @@ class API:
     """
 
     def __init__(
-        self, before_write: Callable[[], Awaitable[None]] | None = None, *, configuration: client.Configuration | None = None
+        self,
+        before_write: Callable[[], Awaitable[None]] | None = None,
+        *,
+        configuration: client.Configuration | None = None,
+        cluster: str | None = None,
     ) -> None:
         """
         Load in-cluster credentials or the developer's kubeconfig.
@@ -50,6 +55,7 @@ class API:
         Args:
             before_write (Callable[[], Awaitable[None]] | None): Optional ownership check awaited before dispatching each mutation.
             configuration (client.Configuration | None): Isolated remote credentials; omitted uses the local cluster.
+            cluster (str | None): Registry identity for decision logs; omitted selects the local cluster setting.
         """
         if configuration is None:
             try:
@@ -59,6 +65,7 @@ class API:
         self.writes = WriteBacklog()
         self.client = client.ApiClient(configuration=configuration)
         self.before_write = before_write
+        self.cluster = cluster if cluster is not None else os.environ.get("POLYAD_CLUSTER_NAME", "")
         self.client.rest_client.pool_manager.connection_pool_kw["retries"] = False
 
     @cached_property
@@ -199,6 +206,20 @@ class API:
                     await asyncio.gather(request, return_exceptions=True)
                     raise
             except ApiException as error:
+                if error.status == 409:
+                    decision(
+                        "polyad.kubernetes.conflict",
+                        "Kubernetes rejected a competing write; refresh the resource before retrying.",
+                        key=(kind, namespace, name),
+                        outcome="deferred",
+                        reason="resource_version_conflict",
+                        level=logging.WARNING,
+                        attributes={
+                            "http.request.method": method,
+                            "http.response.status_code": 409,
+                            "polyad.target.cluster": getattr(self, "cluster", os.environ.get("POLYAD_CLUSTER_NAME", "")),
+                        },
+                    )
                 logger.debug(
                     "API request failed method=%s kind=%s namespace=%s name=%s http_status=%s elapsed_seconds=%.3f",
                     method,

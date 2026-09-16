@@ -11,7 +11,7 @@ health metrics, and installation examples.
 - [Template layout](#template-layout)
 - [Parameters](#parameters)
   - [Deployment profiles](#deployment-profiles)
-  - [OpenTelemetry tracing](#opentelemetry-tracing)
+  - [OpenTelemetry traces and logs](#opentelemetry-traces-and-logs)
   - [Operator and shared queue parameters](#operator-and-shared-queue-parameters)
   - [Optional PostgreSQL state storage](#optional-postgresql-state-storage)
   - [Optional HA component deployment architecture](#optional-ha-component-deployment-architecture)
@@ -143,7 +143,7 @@ with canonical field types; Helm validates all requirements after merging defaul
 | [`values-postgresql.reference.yaml`](values-postgresql.reference.yaml) | Optional persistent state, database HA and connection-driven KEDA scaling in the release cluster | [PostgreSQL](../../docs/deployment/postgresql.md) |
 | [`values-authentication.reference.yaml`](values-authentication.reference.yaml) | Scoped service/operator keys, workload Secret assignments and optional dedicated authentication storage | [API keys](../../docs/operations/api-keys.md) |
 | [`values-demo.reference.yaml`](values-demo.reference.yaml) | Public demonstration endpoints without authentication or HTTP quotas | [Demo mode](../../docs/operations/api-keys.md#demonstrations-without-authentication) |
-| [`values-tracing.reference.yaml`](values-tracing.reference.yaml) | OTLP/HTTP traces, parent-based sampling and optional exporter credentials | [OpenTelemetry traces](../../docs/operations/tracing.md) |
+| [`values-tracing.reference.yaml`](values-tracing.reference.yaml) | OTLP/HTTP traces and independent decision logs, parent-based trace sampling and optional exporter credentials | [OpenTelemetry traces and logs](../../docs/operations/tracing.md) |
 | [`values-tuning.reference.yaml`](values-tuning.reference.yaml) | Runtime polling intervals, exposed metrics, cardinality and authenticated scraping | [Performance tuning](../../docs/operations/performance.md) |
 
 Each file can render with chart defaults. Installation also requires the
@@ -216,17 +216,19 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | ---- | ------------------------------------------------------------------------------------------------------------------------ | ------- |
 | `ha` | Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator | `false` |
 
-### OpenTelemetry tracing
+### OpenTelemetry traces and logs
 
-| Name                         | Description                                                                                                      | Value                                  |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `tracing.enabled`            | Export operator and observer traces over OTLP/HTTP; disabled creates no exporter                                 | `false`                                |
-| `tracing.endpoint`           | Full HTTP/protobuf trace URL, including /v1/traces; use a Collector reachable from every execution cluster       | `http://otel-collector:4318/v1/traces` |
-| `tracing.serviceName`        | Service identity in the trace backend; resource attributes can identify cluster and environment                  | `polyad-operator`                      |
-| `tracing.samplingRatio`      | Fraction of new root traces to sample (number, 0-1); child spans honor their parent's sampling decision          | `1`                                    |
-| `tracing.timeoutSeconds`     | Export request timeout in seconds; exports are batched off the reconciliation path                               | `10`                                   |
-| `tracing.resourceAttributes` | Comma-separated OpenTelemetry resource attributes, for example deployment.environment.name=production            | `""`                                   |
-| `tracing.headersSecret`      | Existing Secret with a headers key containing OTLP exporter headers; empty for collectors without authentication | `""`                                   |
+| Name                         | Description                                                                                                                         | Value                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `tracing.enabled`            | Export operator and observer traces over OTLP/HTTP; disabled creates no exporter                                                    | `false`                                |
+| `tracing.endpoint`           | Full HTTP/protobuf trace URL, including /v1/traces; use a Collector reachable from every execution cluster                          | `http://otel-collector:4318/v1/traces` |
+| `tracing.serviceName`        | Service identity in the trace backend; resource attributes can identify cluster and environment                                     | `polyad-operator`                      |
+| `tracing.samplingRatio`      | Fraction of new root traces to sample (number, 0-1); child spans honor their parent's sampling decision                             | `1`                                    |
+| `tracing.timeoutSeconds`     | Export request timeout in seconds; exports are batched off the reconciliation path                                                  | `10`                                   |
+| `tracing.resourceAttributes` | Comma-separated OpenTelemetry resource attributes, for example deployment.environment.name=production                               | `""`                                   |
+| `tracing.headersSecret`      | Existing Secret with a headers key containing OTLP exporter headers; empty for collectors without authentication                    | `""`                                   |
+| `tracing.logs.enabled`       | Export structured operator logs independently of trace enablement and sampling; console logging remains available                   | `false`                                |
+| `tracing.logs.endpoint`      | Full HTTP/protobuf log URL, including /v1/logs; shares service identity, timeout, resource attributes and headersSecret with traces | `http://otel-collector:4318/v1/logs`   |
 
 ### Operator and shared queue parameters
 

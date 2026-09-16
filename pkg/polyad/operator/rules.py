@@ -5,9 +5,11 @@ Refresh structural policies and validate a complete graph family before admissio
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING
 
 from polyad.graph.rules import evaluate_rule
+from polyad.operator.decisions import decision
 from polyad_types.codec import converter
 from polyad_types.resources import BOUNDARY_KINDS
 from polyad_types.rules import StructuralRule
@@ -116,7 +118,25 @@ async def check_rules(
                 observations.append({**reports[-1], "path": path})
             if not report["allowed"]:
                 location = "/".join(name for _, name in path) or "root"
+                decision(
+                    "polyad.rules.rejected",
+                    f"GraphRule {name} blocks boundary {location}: {'; '.join(report['violations'])}.",
+                    obj=documents[name],
+                    outcome="blocked",
+                    reason="structural_constraint",
+                    level=logging.WARNING,
+                    attributes={"polyad.boundary.path": location, "polyad.boundary.kind": boundary_kind},
+                )
                 raise RuleViolation(f"GraphRule/{name} at {location}: {'; '.join(report['violations'])}")
+            decision(
+                "polyad.rules.allowed",
+                f"GraphRule {name} permits the measured boundary.",
+                obj=documents[name],
+                outcome="allowed",
+                reason="structural_constraints_passed",
+                level=logging.DEBUG,
+                attributes={"polyad.boundary.path": "/".join(name for _, name in path) or "root"},
+            )
         return expanded, depth, reports
 
     return (await visit(kind, spec, (), set()))[2]

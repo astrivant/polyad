@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from kubernetes.client.exceptions import ApiException
 
 from polyad.operator.api import GROUP
+from polyad.operator.decisions import decision, decision_context
 from polyad.operator.roles import role
 from polyad_types.resources import Lease, LeaseSpec, ObjectMeta
 
@@ -95,8 +96,10 @@ class Coordinator:
         self.identity = identity or str(uuid.uuid4())
         self.planner = planner
         self.component = role()
-        self.self_graph = os.environ.get("POLYAD_SELF_GRAPH", "")
-        self.self_graph_kind = os.environ.get("POLYAD_SELF_GRAPH_KIND", "Graph")
+        root_mode = os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true"
+        root_deployment = os.environ.get("POLYAD_ROOT_DEPLOYMENT", "")
+        self.self_graph = os.environ.get("POLYAD_SELF_GRAPH") or (f"{root_deployment}-operators" if root_mode and root_deployment else "")
+        self.self_graph_kind = os.environ.get("POLYAD_SELF_GRAPH_KIND", "PolyGraph" if root_mode else "Graph")
         if self.self_graph_kind not in {"Graph", "PolyGraph"}:
             raise ValueError("POLYAD_SELF_GRAPH_KIND must be Graph or PolyGraph")
         self.image = os.environ.get("POLYAD_OPERATOR_IMAGE", "") if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true" else ""
@@ -174,6 +177,7 @@ class Coordinator:
             None: No return value.
         """
         async with self.lock:
+            previous = self.leader, frozenset(self.owned)
             await self.claim(
                 f"polyad-member-{self.identity}",
                 annotations={
@@ -218,6 +222,15 @@ class Coordinator:
                 await self.claim("polyad-leader", annotations={f"{GROUP}/assignments": json.dumps(planned, sort_keys=True)})
             leader = await self.api.get("Lease", self.namespace, "polyad-leader")
             if not leader or self.expired(leader):
+                if self.owned:
+                    decision(
+                        "polyad.coordination.paused",
+                        "Root planner heartbeat is unavailable; all workload mutations are paused.",
+                        outcome="deferred",
+                        reason="root_heartbeat_unavailable",
+                        level=logging.WARNING,
+                        attributes={"polyad.replica.id": self.identity, "polyad.shards": sorted(self.owned)},
+                    )
                 self.owned.clear()
                 return
             planned = json.loads((leader or {}).get("metadata", {}).get("annotations", {}).get(f"{GROUP}/assignments", "{}"))
@@ -233,6 +246,14 @@ class Coordinator:
                     # no handoff can bypass an outstanding transport request.
                     self.owned.discard(shard)
             self.last_success = time.monotonic()
+            if previous != (self.leader, frozenset(self.owned)):
+                decision(
+                    "polyad.coordination.assignment",
+                    "Refreshed this operator replica's leadership and permitted graph shards.",
+                    outcome="assigned",
+                    reason="assignment_changed",
+                    attributes={"polyad.replica.id": self.identity, "polyad.leader": self.leader, "polyad.shards": sorted(self.owned)},
+                )
             logger.debug(
                 "Coordination refreshed namespace=%s replica=%s leader=%s owned_shards=%s busy_shards=%s",
                 self.namespace,
@@ -290,15 +311,39 @@ class Coordinator:
         """
         shard = active_shard.get()
         if shard is None or shard not in self.owned:
+            decision(
+                "polyad.coordination.fenced",
+                "This replica does not own the active shard; the write is blocked.",
+                outcome="blocked",
+                reason="shard_not_owned",
+                level=logging.DEBUG,
+                attributes={"polyad.replica.id": self.identity, "polyad.shard": shard},
+            )
             logger.debug("Write guard rejected replica=%s shard=%s reason=unowned", self.identity, shard)
             raise NotOwner("no active shard ownership")
         name = f"polyad-shard-{shard}"
         if not self.planner:
             leader = await self.api.get("Lease", self.namespace, "polyad-leader")
             if not leader or self.expired(leader):
+                decision(
+                    "polyad.coordination.fenced",
+                    "The worker cannot confirm root authority; the write is blocked.",
+                    outcome="blocked",
+                    reason="root_heartbeat_unavailable",
+                    level=logging.WARNING,
+                    attributes={"polyad.replica.id": self.identity, "polyad.shard": shard},
+                )
                 raise NotOwner("root planner heartbeat is unavailable")
             observed = self.observed["polyad-leader"][1]
             if time.monotonic() >= observed + DURATION - WRITE_BUDGET:
+                decision(
+                    "polyad.coordination.fenced",
+                    "The root heartbeat is overdue; the worker pauses mutations until authority is refreshed.",
+                    outcome="blocked",
+                    reason="root_heartbeat_overdue",
+                    level=logging.WARNING,
+                    attributes={"polyad.replica.id": self.identity, "polyad.shard": shard},
+                )
                 raise NotOwner("root planner heartbeat is overdue")
         lease = await self.api.get("Lease", self.namespace, name)
         if (
@@ -307,6 +352,18 @@ class Coordinator:
             or time.monotonic() >= self.deadlines.get(name, 0) - WRITE_BUDGET
         ):
             logger.debug("Write guard rejected replica=%s shard=%s reason=lease-expired-or-lost", self.identity, shard)
+            decision(
+                "polyad.coordination.fenced",
+                "The shard lease expired or changed owner; this replica cannot continue writing.",
+                outcome="blocked",
+                reason="lease_lost",
+                level=logging.WARNING,
+                attributes={
+                    "polyad.replica.id": self.identity,
+                    "polyad.shard": shard,
+                    "polyad.lease.holder": (lease or {}).get("spec", {}).get("holderIdentity", ""),
+                },
+            )
             raise NotOwner("shard lease lost or renewal overdue")
 
     @asynccontextmanager
@@ -328,11 +385,19 @@ class Coordinator:
         await self.duties[shard].acquire()
         self.busy.add(shard)
         token = active_shard.set(shard)
+        log_token = decision_context.set(
+            {
+                "polyad.target.cluster": cluster or os.environ.get("POLYAD_CLUSTER_NAME", ""),
+                "polyad.replica.id": self.identity,
+                "polyad.shard": shard,
+            }
+        )
         try:
             await self.guard()
             logger.debug("Duty acquired replica=%s shard=%s kind=%s namespace=%s name=%s", self.identity, shard, *key)
             yield
         finally:
+            decision_context.reset(log_token)
             active_shard.reset(token)
             self.busy.discard(shard)
             self.duties[shard].release()

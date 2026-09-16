@@ -5,9 +5,11 @@ Execute compiled mutation batches without abandoning in-flight side effects.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING
 
-from polyad.compiler.passes.mutations import advance_budgets, check_preconditions, compile_mutations
+from polyad.compiler.passes.mutations import PreconditionFailed, advance_budgets, check_preconditions, compile_mutations
+from polyad.operator.decisions import decision
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Mapping
@@ -39,6 +41,19 @@ async def execute_mutations(
         MutationPlan: Executed plan, suitable for audit serialization after successful completion.
     """
     plan = compile_mutations(mutations, budgets=budgets, max_parallelism=max_parallelism)
+    for ordering in plan.orderings:
+        decision(
+            "polyad.mutation.ordered",
+            "These requests must run in order because their declared effects or dependencies overlap.",
+            outcome="serialized",
+            reason="mutation_ordering",
+            level=logging.DEBUG,
+            attributes={
+                "polyad.request.before": ordering.before,
+                "polyad.request.after": ordering.after,
+                "polyad.ordering.reasons": ordering.reasons,
+            },
+        )
     if budgets and observe_budgets is None:
         raise ValueError("shared budgets require a refreshed counter reader")
     indexed = {item.name: item for item in plan.mutations}
@@ -55,15 +70,41 @@ async def execute_mutations(
             None: No return value.
         """
         await apply(mutation)
+        decision(
+            "polyad.mutation.applied",
+            "The admitted mutation completed.",
+            outcome="applied",
+            reason="preconditions_passed",
+            attributes={"polyad.request.name": mutation.name},
+        )
 
     for names in plan.batches:
         batch = tuple(indexed[name] for name in names)
         if observe_budgets is not None:
             current = await observe_budgets()
             if any(name not in current or type(current[name]) is not int or current[name] != value for name, value in usage.items()):
+                decision(
+                    "polyad.mutation.conflict",
+                    "Shared capacity changed after planning; the batch must be replanned before dispatch.",
+                    outcome="blocked",
+                    reason="budget_changed",
+                    level=logging.WARNING,
+                    attributes={"polyad.requests": names},
+                )
                 raise ValueError("shared budget observations changed; replan before dispatch")
         for mutation in batch:
-            check_preconditions(mutation, await observe(mutation))
+            try:
+                check_preconditions(mutation, await observe(mutation))
+            except PreconditionFailed:
+                decision(
+                    "polyad.mutation.conflict",
+                    "A mutation's required observations changed; the batch was not dispatched.",
+                    outcome="blocked",
+                    reason="precondition_changed",
+                    level=logging.WARNING,
+                    attributes={"polyad.request.name": mutation.name},
+                )
+                raise
 
         # A failed sibling or cancelled caller must not release coordination while
         # another callback is still completing a transport request.

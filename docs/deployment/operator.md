@@ -541,8 +541,11 @@ node names to measure an observed subset.
 
 ## Debug logging
 
-For distributed trace collection, see [OpenTelemetry tracing](../operations/tracing.md).
-Tracing is configured separately from Python log verbosity.
+See [OpenTelemetry traces and decision logs](../operations/tracing.md) for
+structured outcomes, conflict explanations, trace correlation and optional OTLP
+log export. Trace sampling, log export and Python log verbosity are configured
+separately. INFO reports committed decisions and transitions; WARNING reports
+conflicts and rejected constraints.
 
 Set Helm `operator.logLevel: DEBUG` to trace reconciliation, admission decisions,
 queue coalescing and delivery, shard leases, and API dispatch/completion timings.

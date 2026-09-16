@@ -17,6 +17,7 @@ from attrs import evolve
 from kubernetes import client, config
 
 from polyad.operator.api import API
+from polyad.operator.decisions import decision
 from polyad_types import resources as asts
 
 if TYPE_CHECKING:
@@ -109,7 +110,7 @@ class Federation:
             config.load_kube_config_from_dict(
                 document, client_configuration=configuration, persist_config=False, temp_file_path="/var/run/polyad/transport"
             )
-            remote = API(before_write=getattr(self.api, "before_write", None), configuration=configuration)
+            remote = API(before_write=getattr(self.api, "before_write", None), configuration=configuration, cluster=name)
             if name in self.clients:
                 self.clients[name][1].client.close()
             self.clients[name] = digest, remote
@@ -253,3 +254,11 @@ class Federation:
         cluster = child["metadata"].get("annotations", {}).get(REMOTE)
         api = self.target(cluster)[0] if cluster else self.api
         await api.delete(child)
+        decision(
+            "polyad.resource.deleting",
+            "Requested deletion of an owned resource; waiting for its finalizers and disappearance.",
+            obj=child,
+            outcome="applied",
+            reason="owned_resource_retired",
+            attributes={"polyad.target.cluster": cluster} if cluster else None,
+        )

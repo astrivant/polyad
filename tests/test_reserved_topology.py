@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import logging
 from unittest.mock import AsyncMock
 
 import pytest
@@ -34,7 +35,7 @@ def operator_deployment(name):
     return deployment
 
 
-def test_new_operator_groups_join_one_root_polygraph_without_replacing_the_root(monkeypatch):
+def test_new_operator_groups_join_one_root_polygraph_without_replacing_the_root(monkeypatch, caplog):
     """
     Add Deployment and DaemonSet groups and roll their live observations into one root model.
     """
@@ -94,8 +95,18 @@ def test_new_operator_groups_join_one_root_polygraph_without_replacing_the_root(
             assert not await public_observation(api, graph)
         assert not await public_observation(local, poly)
         assert not DeepDiff(root, local.children("Deployment")[0])
+        before = len([record for record in caplog.records if getattr(record, "event_name", "") == "polyad.operator_topology.membership"])
+        await pools.topology()
+        assert (
+            len([record for record in caplog.records if getattr(record, "event_name", "") == "polyad.operator_topology.membership"])
+            == before
+        )
 
-    asyncio.run(run())
+    with caplog.at_level(logging.INFO, logger="polyad"):
+        asyncio.run(run())
+    members = [record for record in caplog.records if getattr(record, "event_name", "") == "polyad.operator_topology.membership"]
+    assert len(members) == 3
+    assert {record.polyad_attributes["polyad.target.cluster"] for record in members} == {"management", "west", "east"}
 
 
 def test_root_observation_refreshes_readiness_and_never_mutates_its_deployment():
@@ -183,5 +194,40 @@ def test_reserved_polygraph_shard_stays_with_root_planners(monkeypatch, componen
         assignments = json.loads(api.objects["Lease", "test", "polyad-leader"]["metadata"]["annotations"][f"{GROUP}/assignments"])
         assert assignments[str(root_shard("PolyGraph", "test", "operators"))] == "root"
         assert "remote" in assignments.values()
+
+    asyncio.run(run())
+
+
+def test_root_mode_defaults_match_pool_topology_without_helm_environment(monkeypatch):
+    """
+    Reserve the same family for bootstrap recovery when a root is configured outside Helm.
+    """
+    monkeypatch.setenv("POLYAD_ROOT_ENABLED", "true")
+    monkeypatch.setenv("POLYAD_ROOT_DEPLOYMENT", "root")
+    monkeypatch.delenv("POLYAD_SELF_GRAPH", raising=False)
+    monkeypatch.delenv("POLYAD_SELF_GRAPH_KIND", raising=False)
+    coordinator = Coordinator(LeaseAPI(), "test", "root")
+    assert coordinator.self_graph_kind == "PolyGraph"
+    assert coordinator.self_graph == manager(ManagementAPI(), ManagementAPI()).topology_name == "root-operators"
+
+
+def test_pool_status_refreshes_registration_but_never_acknowledges_newer_intent():
+    """
+    Metadata-only bootstrap updates permit status, while concurrent scale edits invalidate it.
+    """
+
+    async def run():
+        pool = resource("OperatorPool", "west", {"cluster": "west", "replicas": 2})
+        local = ManagementAPI(pool)
+        pools = manager(local, ManagementAPI())
+        live = local.objects["OperatorPool", "test", "west"]
+        live["metadata"].update(resourceVersion="2", annotations={REGISTERED: live["metadata"]["uid"]})
+        await pools.status(pool, phase="Pending", replicas=0)
+        assert local.children("OperatorPool")[0]["status"]["phase"] == "Pending"
+        live["metadata"]["generation"] += 1
+        live["spec"]["replicas"] = 3
+        await pools.status(pool, phase="Ready", replicas=2)
+        assert local.children("OperatorPool")[0]["status"]["phase"] == "Pending"
+        assert local.children("OperatorPool")[0]["status"]["observedGeneration"] == 1
 
     asyncio.run(run())

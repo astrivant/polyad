@@ -3842,7 +3842,7 @@
     "tracing": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Opt-in OTLP/HTTP tracing for operator processes and observers.",
+      "description": "Opt-in OTLP/HTTP traces and independently enabled logs for operators and observers.",
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -3877,6 +3877,21 @@
         "headersSecret": {
           "type": "string",
           "description": "Optional existing Secret with exporter credentials in its headers key."
+        },
+        "logs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Export decision logs independently of trace sampling; disabled keeps console logs without a log exporter."
+            },
+            "endpoint": {
+              "type": "string",
+              "pattern": "^https?://[^/]+/.*",
+              "description": "Full HTTP/protobuf log URL, usually /v1/logs. Shares trace service identity, timeout, resource attributes and exporter Secret."
+            }
+          }
         }
       }
     }

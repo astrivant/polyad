@@ -779,6 +779,9 @@ Queue pressure and graph hierarchies are available through the optional
 Optional [OpenTelemetry tracing](docs/operations/tracing.md) exports API request,
 reconciliation and Kubernetes operation spans to an OTLP/HTTP collector, with
 configurable sampling and Secret-backed exporter credentials.
+[Decision logs](docs/operations/tracing.md#decision-and-conflict-logs) explain
+admissions, scaling, topology membership and conflicts, with trace correlation
+and independently enabled OTLP log export.
 [KEDA can scale services or whole graph compositions](docs/graphs/replication.md) through
 `ReplicaGroup`, using workload metrics served by the operator.
 

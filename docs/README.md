@@ -75,7 +75,7 @@ then [run your first workload](introduction/getting-started.md).
 | Guide | Contents |
 | --- | --- |
 | [Metrics API](operations/metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |
-| [OpenTelemetry traces](operations/tracing.md) | Opt-in request and reconciliation spans, OTLP export, sampling and collector configuration |
+| [OpenTelemetry traces and decision logs](operations/tracing.md) | Readable decisions and conflicts, trace correlation, independent OTLP log export, sampling and collector configuration |
 | [Performance tuning](operations/performance.md) | Autoscaling stabilization, rate policies, queue polling and observation intervals |
 | [Authentication and ESO](operations/authentication.md) | KEDA bearer credentials, ExternalSecrets, namespace boundaries and rotation |
 | [API keys and request lanes](operations/api-keys.md) | Service/operator groups, credential directions and HA-wide per-key rate/concurrency limits |

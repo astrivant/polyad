@@ -276,6 +276,12 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
                                     {"name": "POLYAD_CACHE_URL", "valueFrom": {"secretKeyRef": {"name": "access", "key": "url"}}},
                                     {"name": "POLYAD_AUTH_CONFIG_FILE", "value": "/var/run/polyad/authentication/config.json"},
                                     {"name": "POLYAD_TRACING_ENABLED", "value": "true"},
+                                    {"name": "POLYAD_LOGS_ENABLED", "value": "true"},
+                                    {"name": "POLYAD_POD_CLUSTER", "value": "management"},
+                                    {
+                                        "name": "OTEL_EXPORTER_OTLP_LOGS_HEADERS",
+                                        "valueFrom": {"secretKeyRef": {"name": "tracing", "key": "headers"}},
+                                    },
                                     {
                                         "name": "OTEL_EXPORTER_OTLP_TRACES_HEADERS",
                                         "valueFrom": {"secretKeyRef": {"name": "tracing", "key": "headers"}},
@@ -318,8 +324,15 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
         assert env["POLYAD_CACHE_URL"]["valueFrom"]["secretKeyRef"]["name"] == remote.children("Secret")[0]["metadata"]["name"]
         assert "POLYAD_AUTH_CONFIG_FILE" not in env
         assert env["POLYAD_TRACING_ENABLED"]["value"] == "true"
+        assert env["POLYAD_LOGS_ENABLED"]["value"] == "true"
+        assert env["POLYAD_POD_CLUSTER"]["value"] == "west"
         trace_secret_name = env["OTEL_EXPORTER_OTLP_TRACES_HEADERS"]["valueFrom"]["secretKeyRef"]["name"]
         assert trace_secret_name != "tracing"
+        assert env["OTEL_EXPORTER_OTLP_LOGS_HEADERS"]["valueFrom"]["secretKeyRef"]["name"] == trace_secret_name
+        hierarchy = root_api.children("PolyGraph")[0]
+        assert [node["name"] for node in hierarchy["spec"]["nodes"]] == ["root", "pool-uid-west"]
+        assert hierarchy["spec"]["nodes"][1]["cluster"] == "west"
+        assert len(root_api.children("Deployment")) == len(remote.children("Deployment")) == 1
         assert (
             next(obj for obj in remote.children("Secret") if obj["metadata"]["name"] == trace_secret_name)["data"] == tracing_secret["data"]
         )

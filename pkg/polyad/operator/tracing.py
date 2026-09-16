@@ -5,6 +5,7 @@ Own opt-in, batched OpenTelemetry traces without collecting request payloads.
 from __future__ import annotations
 
 import os
+import uuid
 from contextlib import contextmanager
 from functools import wraps
 from typing import TYPE_CHECKING, ParamSpec, TypeVar
@@ -15,12 +16,39 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterator
 
     from opentelemetry.context import Context
+    from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
 
 _provider: TracerProvider | None = None
 _noop = trace.NoOpTracerProvider()
+_instance_id = str(uuid.uuid4())
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+def telemetry_resource() -> Resource:
+    """
+    Use the same process identity for exported logs and traces.
+
+    Returns:
+        Resource: Service identity plus administrator-supplied OpenTelemetry resource attributes.
+    """
+    from opentelemetry.sdk.resources import Resource
+
+    attributes: dict[str, str | int] = {
+        "service.name": os.environ.get("OTEL_SERVICE_NAME", "polyad-operator"),
+        "service.instance.id": _instance_id,
+        "process.pid": os.getpid(),
+    }
+    for name, variable in (
+        ("k8s.pod.name", "POLYAD_POD_NAME"),
+        ("k8s.pod.uid", "POLYAD_POD_UID"),
+        ("k8s.namespace.name", "POLYAD_POD_NAMESPACE"),
+        ("k8s.cluster.name", "POLYAD_POD_CLUSTER"),
+    ):
+        if value := os.environ.get(variable):
+            attributes[name] = value
+    return Resource.create(attributes)
 
 
 def configure_tracing() -> None:
@@ -39,11 +67,10 @@ def configure_tracing() -> None:
     if protocol != "http/protobuf":
         raise ValueError("Polyad tracing requires OTLP http/protobuf")
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-    from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-    resource = Resource.create({"service.name": os.environ.get("OTEL_SERVICE_NAME", "polyad-operator")})
+    resource = telemetry_resource()
     # The SDK reads OTEL_TRACES_SAMPLER, OTEL_RESOURCE_ATTRIBUTES and OTEL_BSP_*.
     # The exporter reads standard OTEL_EXPORTER_OTLP[_TRACES]_* configuration.
     exporter = OTLPSpanExporter()

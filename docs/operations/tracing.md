@@ -1,7 +1,7 @@
-# OpenTelemetry traces
+# OpenTelemetry traces and decision logs
 
-Polyad includes the OpenTelemetry Python API, SDK and OTLP/HTTP trace exporter as
-operator dependencies. Tracing is opt-in and disabled by default. It uses the
+Polyad includes the OpenTelemetry Python API, SDK and OTLP/HTTP trace and log
+exporters as operator dependencies. Both exports are opt-in and disabled by default. Tracing uses the
 existing Flask application and exports batches in a background thread; it does
 not start another API server. Metrics remain available through the existing
 Prometheus endpoint for KEDA.
@@ -10,6 +10,10 @@ Prometheus endpoint for KEDA.
 
 - [Enable tracing](#enable-tracing)
 - [Span coverage and propagation](#span-coverage-and-propagation)
+- [Decision and conflict logs](#decision-and-conflict-logs)
+  - [Read a decision](#read-a-decision)
+  - [Export logs](#export-logs)
+  - [Coverage and severity](#coverage-and-severity)
 - [Export configuration and lifecycle](#export-configuration-and-lifecycle)
 - [References](#references)
 
@@ -73,6 +77,9 @@ networkPolicy:
 | `METHOD /route/<parameter>` | Dispatch of a request through the shared Flask application, including authentication and handler execution |
 | `polyad.reconcile` | One awaited controller reconciliation pass |
 | `polyad.kubernetes.request` | An awaited Kubernetes API operation, including admission/transport waits |
+| `polyad.operator_topology.refresh` | Refresh reserved root PolyGraph membership |
+| `polyad.operator_pool.reconcile` | Install, update or retire a root-managed remote operator group |
+| `polyad.remote_scale.reconcile` | Forward a locally authorized remote scale request or reject a conflict |
 
 HTTP spans continue valid W3C `traceparent` headers. Invalid headers start a new
 trace. Only trace identity and sampling are consumed; baggage and arbitrary
@@ -91,6 +98,111 @@ Resource attributes supplied by administrators are exported as configured.
 span ends after dispatch prepares the response; it does not remain open for the
 SSE subscription or cover later stream iteration. Requests rejected before Flask,
 such as by the HTTP server, do not produce Flask spans.
+
+## Decision and conflict logs
+
+Operator decisions use Python logging with a human-readable explanation and
+structured attributes. Console logging works without a collector. Optional OTLP
+export maps records to the [OpenTelemetry log data model](https://opentelemetry.io/docs/specs/otel/logs/data-model/):
+the message is the `Body`, with timestamps, normalized severity, instrumentation
+scope, resource identity, `EventName` and decision attributes. When a current span
+exists, the SDK attaches its trace ID, span ID and flags.
+
+### Read a decision
+
+For example, a local ReplicaGroup edit can invalidate a remote scaling request:
+
+```text
+2026-09-16T12:00:00Z WARNING [polyad-kopf] polyad.operator.decisions:
+A local edit superseded this remote scaling request; local intent takes precedence.
+| event=polyad.remote_scale.conflict polyad.decision.outcome=blocked
+  polyad.decision.reason=local_edit_wins polyad.resource.kind=RemoteScale
+  k8s.namespace.name=management polyad.resource.name=consumers
+  polyad.resource.uid=request-123 polyad.target.cluster=west
+  polyad.generation.expected=7 polyad.generation.observed=8
+```
+
+The example wraps one console record across lines for readability. A real traced
+record also includes `trace_id`, `span_id` and `trace_flags`. Records outside a
+trace omit these identifiers. The request UID distinguishes competing requests
+with similar names; the generations explain why local intent won.
+
+| Field | Meaning |
+| --- | --- |
+| `event` in console / `EventName` in OTLP | Stable class of decision, such as `polyad.remote_scale.conflict` |
+| `polyad.decision.outcome`, `polyad.decision.reason` | Result and a machine-readable explanation |
+| `polyad.resource.*`, `k8s.namespace.name` attributes | Subject kind, name, UID and generation where available, and its namespace |
+| `polyad.target.cluster` | Cluster whose resource or operator group the decision concerns |
+| `polyad.replica.id`, `polyad.shard` | Replica and graph shard holding the reconciliation duty, when available |
+| `polyad.request.*` | Mutation identities that must be ordered or whose preconditions failed |
+| Resource `service.name`, `service.instance.id`, `process.pid` | Emitting service and this process incarnation, shared by logs and traces |
+| Resource `k8s.cluster.name`, `k8s.namespace.name`, `k8s.pod.name`, `k8s.pod.uid` | Hosting cluster and Pod; populated by Helm and retained correctly when the root provisions a remote worker |
+
+The emitting Pod may be in a different cluster from the target. Follow
+`polyad.operator_topology.membership` to see the root group and remote operator
+groups enter or leave the [reserved root PolyGraph](../deployment/root-control-plane.md#reserved-operator-hierarchy).
+Membership logs identify the group node, Graph definition and destination cluster.
+Registering credentials alone does not add a workload group: provision an
+OperatorPool to create and link its Graph.
+
+### Export logs
+
+Log export is independently enabled; trace sampling does not discard decision
+logs. This configuration exports logs while leaving tracing disabled:
+
+```yaml
+operator:
+  logLevel: INFO
+tracing:
+  enabled: false
+  serviceName: polyad-operator
+  timeoutSeconds: 10
+  resourceAttributes: deployment.environment.name=production
+  headersSecret: otel-credentials
+  logs:
+    enabled: true
+    endpoint: http://otel-collector.observability.svc:4318/v1/logs
+```
+
+`headersSecret` is optional; omit it for an unauthenticated collector. Logs share
+the trace configuration's service name, resource attributes, timeout and Secret,
+but use their own full `/v1/logs` endpoint. Root-managed workers inherit the export
+configuration and copied Secret references. The collector needs a logs receiver
+and pipeline as well as any traces pipeline. Both endpoints must be reachable
+from each hosting cluster.
+
+Outside Helm, set `POLYAD_LOGS_ENABLED=true` and
+`OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://localhost:4318/v1/logs`. Standard
+`OTEL_EXPORTER_OTLP_LOGS_*` settings configure log headers, TLS and timeouts;
+`OTEL_BLRP_*` configures the bounded batch queue. Only HTTP/protobuf is supported.
+`OTEL_SDK_DISABLED=true` disables both exporters. Log filtering still follows
+`operator.logLevel`, `POLYAD_LOG_LEVEL` or the CLI verbosity setting.
+
+### Coverage and severity
+
+| Decision | Normal visibility |
+| --- | --- |
+| Operator group linked/unlinked; root-managed resources created/updated | INFO after an acknowledged write; unchanged membership is quiet |
+| Workload creation/deletion, committed phase, scale and capacity transitions | INFO; heartbeat and metric-only status updates do not repeat decisions |
+| Throughput observation, stabilization, recommendation, cooldown and applied layout | INFO when the decision, target, mode or recommended layout changes |
+| GraphRule rejection, ownership collision, rewrite/remote-scale generation conflict | WARNING, with the rule or conflicting resource/request identities |
+| Kubernetes HTTP 409 | WARNING; refresh state before retrying, without logging the API error body |
+| Root authority or shard lease lost during a write | WARNING; mutation is fenced until valid authority returns |
+| Another replica owns the work, dependency/delay/gate/capacity waits, successful rule checks | DEBUG for detailed reconciliation diagnostics |
+| Mutation ordering and dependency explanations | DEBUG with both request identities; changed preconditions or shared budgets are WARNING |
+| Unexpected reconciliation failure | ERROR with its exception type and resource identity |
+
+Repeated failed attempts can emit repeated warnings. These records are diagnostic
+observations, not an exactly-once audit journal. They neither bypass GraphRules nor
+change conflict resolution. Logs are independent of downstream workload event
+subscriptions: logging an internal operator graph does not expose it through those
+[event streams](../workloads/workload-events.md).
+
+Structured decisions select identities and bounded scalar details; they do not
+serialize resource specifications, Secret contents, authorization headers or
+application payloads. OTLP exception records include the exception type without
+copying its message or traceback. Existing console exception diagnostics retain
+their traceback behavior.
 
 ## Export configuration and lifecycle
 
@@ -127,8 +239,16 @@ builders directly can call `polyad.operator.tracing.configure_tracing()` before
 starting workers and `shutdown_tracing()` after stopping them. Standalone client
 and types packages do not gain the operator's SDK dependencies.
 
+Log export similarly owns one process-local provider and one bounded batch
+processor. Entrypoints initialize it before workers start and drain it after they
+stop. Embedders use `polyad.operator.logging.configure_log_export()` and
+`shutdown_log_export()`. Collector failures do not change admitted operations;
+buffer overflow or abrupt termination can lose records. Disabled log export loads
+no log SDK/exporter and starts no log export thread.
+
 ## References
 
 - [OpenTelemetry Python](https://opentelemetry.io/docs/languages/python/)
 - [Python instrumentation](https://opentelemetry.io/docs/languages/python/instrumentation/)
 - [Python exporters](https://opentelemetry.io/docs/languages/python/exporters/)
+- [OpenTelemetry log data model](https://opentelemetry.io/docs/specs/otel/logs/data-model/)

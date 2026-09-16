@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import kopf
 
 from polyad.operator.health import lifecycle
-from polyad.operator.logging import add_logging_options, configure_logging
+from polyad.operator.logging import add_logging_options, configure_log_export, configure_logging, shutdown_log_export
 from polyad.operator.tracing import configure_tracing, shutdown_tracing
 
 if TYPE_CHECKING:
@@ -136,6 +136,7 @@ def main() -> None:
     previous = {sig: signal.signal(sig, stop) for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
     try:
         configure_tracing()
+        configure_log_export()
         runtime.start()
         runtime.join()
     finally:
@@ -147,6 +148,7 @@ def main() -> None:
             for sig, handler in previous.items():
                 signal.signal(sig, handler)
             shutdown_tracing()
+            shutdown_log_export()
 
 
 if __name__ == "__main__":

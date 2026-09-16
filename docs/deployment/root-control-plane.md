@@ -376,6 +376,12 @@ keeps cleanup pending rather than forgetting potentially live replicas.
 
 ## Reserved operator hierarchy
 
+Membership changes produce `polyad.operator_topology.membership` decision logs
+with the group node, Graph reference and destination cluster. Ownership,
+generation and admission conflicts explain why a change was rejected. See
+[decision and conflict logs](../operations/tracing.md#decision-and-conflict-logs)
+for console examples and optional OpenTelemetry export.
+
 With root mode enabled, one reserved `PolyGraph/<release>-operators` models the
 whole operator deployment. Each operator group has its own Graph: the root group
 in the management cluster and one group for each provisioned remote OperatorPool.

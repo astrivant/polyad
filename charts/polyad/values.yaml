@@ -3,7 +3,7 @@
 ## @param ha Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
 ha: false
 
-## @section OpenTelemetry tracing
+## @section OpenTelemetry traces and logs
 tracing:
   ## @param tracing.enabled Export operator and observer traces over OTLP/HTTP; disabled creates no exporter
   enabled: false
@@ -19,6 +19,11 @@ tracing:
   resourceAttributes: ''
   ## @param tracing.headersSecret Existing Secret with a headers key containing OTLP exporter headers; empty for collectors without authentication
   headersSecret: ''
+  logs:
+    ## @param tracing.logs.enabled Export structured operator logs independently of trace enablement and sampling; console logging remains available
+    enabled: false
+    ## @param tracing.logs.endpoint Full HTTP/protobuf log URL, including /v1/logs; shares service identity, timeout, resource attributes and headersSecret with traces
+    endpoint: http://otel-collector:4318/v1/logs
 
 ## @section Operator and shared queue parameters
 operator:

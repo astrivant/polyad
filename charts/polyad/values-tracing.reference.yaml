@@ -13,3 +13,10 @@ tracing:
   # Optional existing Secret: its 'headers' key uses key=value,key=value syntax.
   # Values must be URL-encoded when required by the OpenTelemetry exporter.
   headersSecret: ''
+  logs:
+    # Independent of tracing.enabled and samplingRatio: use this for decision
+    # records even when traces are disabled or sampled out. Console logs remain.
+    enabled: true
+    # Full OTLP/HTTP logs URL. Shares serviceName, resourceAttributes,
+    # timeoutSeconds and the optional headersSecret above.
+    endpoint: http://otel-collector.observability.svc:4318/v1/logs

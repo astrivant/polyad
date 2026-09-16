@@ -20,9 +20,11 @@ from polyad.events.visibility import INTERNAL, public_observation
 from polyad.metrics.workloads import current_observation
 from polyad.operator.controller import Pending
 from polyad.operator.coordination import NotOwner
+from polyad.operator.decisions import decision, status_decisions
 from polyad.operator.remote_scaling import INTENT, remote_revision
 from polyad.operator.reserved import DEPLOYMENT
 from polyad.operator.rule_state import check_live_rules
+from polyad.operator.tracing import traced
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
@@ -83,6 +85,7 @@ class PoolManager:
         """
         return os.environ.get("POLYAD_SELF_GRAPH") or f"{os.environ['POLYAD_ROOT_DEPLOYMENT']}-operators"
 
+    @traced("polyad.operator_topology.refresh")
     async def topology(self) -> dict[str, Any]:
         """
         Link the root and each provisioned operator group into one live PolyGraph.
@@ -94,6 +97,7 @@ class PoolManager:
         if source is None:
             raise Pending("waiting for the root operator Deployment")
         name = self.topology_name
+        previous = await self.api.get("PolyGraph", self.namespace, name)
         owner = json.dumps([self.root.federation.name, self.namespace, "Deployment", source["metadata"]["name"]])
         labels = {INTERNAL: "true"}
         await self.apply(
@@ -141,7 +145,7 @@ class PoolManager:
                     "cluster": pool["spec"]["cluster"],
                 }
             )
-        return await self.apply(
+        boundary = await self.apply(
             self.api,
             {
                 "apiVersion": f"{GROUP}/v1alpha1",
@@ -159,6 +163,27 @@ class PoolManager:
             },
             owner,
         )
+        previous_nodes = {node["name"]: node for node in (previous or {}).get("spec", {}).get("nodes", [])}
+        current_nodes = {node["name"]: node for node in nodes}
+        for node_name in sorted(previous_nodes.keys() | current_nodes.keys()):
+            if previous_nodes.get(node_name) == current_nodes.get(node_name):
+                continue
+            linked = node_name in current_nodes
+            node = current_nodes[node_name] if linked else previous_nodes[node_name]
+            decision(
+                "polyad.operator_topology.membership",
+                f"{'Linked' if linked else 'Unlinked'} operator group {node_name} "
+                f"{'in' if linked else 'from'} the reserved root PolyGraph.",
+                obj=boundary,
+                outcome="applied",
+                reason="group_linked" if linked else "group_unlinked",
+                attributes={
+                    "polyad.node.name": node_name,
+                    "polyad.target.graph": node["ref"],
+                    "polyad.target.cluster": node.get("cluster", self.root.federation.name),
+                },
+            )
+        return boundary
 
     async def apply(self, api: API, body: dict[str, Any], owner: str) -> dict[str, Any]:
         """
@@ -178,6 +203,15 @@ class PoolManager:
         current = await api.get(kind, namespace, name)
         if current:
             if current["metadata"].get("annotations", {}).get(OWNER) != owner:
+                decision(
+                    "polyad.operator_pool.conflict",
+                    "The root cannot adopt this resource because another owner controls it.",
+                    obj=current,
+                    outcome="blocked",
+                    reason="ownership_conflict",
+                    level=logging.WARNING,
+                    attributes={"polyad.target.cluster": getattr(api, "cluster", self.root.federation.name)},
+                )
                 raise ValueError(f"refusing to adopt unmanaged {kind}/{name}")
             # API defaulting is retained by merge-patching only declared desired fields.
             digest = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
@@ -187,10 +221,28 @@ class PoolManager:
             meta["annotations"][f"{GROUP}/root-revision"] = digest
             if kind == "Secret":
                 body["data"].update({key: None for key in current.get("data", {}) if key not in body["data"]})
-            return cast("dict[str, Any]", await api.request("PATCH", kind, namespace, name, body))
+            result = cast("dict[str, Any]", await api.request("PATCH", kind, namespace, name, body))
+            decision(
+                "polyad.operator_pool.resource",
+                "Updated the root-managed resource to match its declared configuration.",
+                obj=result,
+                outcome="applied",
+                reason="resource_updated",
+                attributes={"polyad.target.cluster": getattr(api, "cluster", self.root.federation.name)},
+            )
+            return result
         digest = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
         meta["annotations"][f"{GROUP}/root-revision"] = digest
-        return cast("dict[str, Any]", await api.request("POST", kind, namespace, body=body))
+        result = cast("dict[str, Any]", await api.request("POST", kind, namespace, body=body))
+        decision(
+            "polyad.operator_pool.resource",
+            "Created a resource required by the root-managed operator hierarchy.",
+            obj=result,
+            outcome="applied",
+            reason="resource_created",
+            attributes={"polyad.target.cluster": getattr(api, "cluster", self.root.federation.name)},
+        )
+        return result
 
     async def status(self, obj: dict[str, Any], **values: Any) -> None:
         """
@@ -203,7 +255,20 @@ class PoolManager:
         Returns:
             None: Conflicts require a complete reread on the next pass.
         """
-        meta = obj["metadata"]
+        original = obj["metadata"]
+        latest = await self.api.get(obj["kind"], self.namespace, original["name"])
+        if latest is None or any(latest["metadata"].get(field) != original.get(field) for field in ("uid", "generation")):
+            decision(
+                "polyad.operator_pool.observation",
+                "Root intent changed during reconciliation; the old observation is not published.",
+                obj=obj,
+                outcome="deferred",
+                reason="intent_changed",
+                level=logging.DEBUG,
+            )
+            return
+        meta = latest["metadata"]
+        # Registration/finalizer writes can advance resourceVersion within this pass.
         # HPA validates a nonempty selector even for external AverageValue metrics.
         # This root-local identity intentionally selects no remote workload Pods.
         values["labelSelector"] = f"{GROUP}/root-scale={meta['uid']}"
@@ -218,7 +283,9 @@ class PoolManager:
             },
             status=True,
         )
+        status_decisions(latest, values)
 
+    @traced("polyad.remote_scale.reconcile")
     async def scale(self, obj: dict[str, Any]) -> None:
         """
         Forward a root-local request to a remote ReplicaGroup's existing admission path.
@@ -245,8 +312,31 @@ class PoolManager:
             "uid": obj["metadata"]["uid"],
         }
         if target["spec"].get("remoteScaling") != owner:
+            decision(
+                "polyad.remote_scale.conflict",
+                "The destination has not granted this request authority to scale the ReplicaGroup.",
+                obj=obj,
+                outcome="blocked",
+                reason="local_approval_missing",
+                level=logging.WARNING,
+                attributes={"polyad.target.name": target["metadata"]["name"], "polyad.target.uid": target["metadata"]["uid"]},
+            )
             raise ValueError(f"destination has not approved RemoteScale {owner}")
         if target["metadata"].get("generation", 1) != spec["target"].get("generation"):
+            decision(
+                "polyad.remote_scale.conflict",
+                "A local edit superseded this remote scaling request; local intent takes precedence.",
+                obj=obj,
+                outcome="blocked",
+                reason="local_edit_wins",
+                level=logging.WARNING,
+                attributes={
+                    "polyad.target.name": target["metadata"]["name"],
+                    "polyad.target.uid": target["metadata"]["uid"],
+                    "polyad.generation.expected": spec["target"].get("generation"),
+                    "polyad.generation.observed": target["metadata"].get("generation", 1),
+                },
+            )
             raise ValueError("local ReplicaGroup edits superseded this request; new local approval is required")
         if not await public_observation(remote, target):
             raise ValueError("remote scaling cannot control reserved operator graphs or unresolved ancestry")
@@ -277,6 +367,14 @@ class PoolManager:
                 },
             )
             observed = target.get("status", {})
+            decision(
+                "polyad.remote_scale.submitted",
+                "Submitted locally authorized replica intent; the destination must admit it before scaling.",
+                obj=obj,
+                outcome="submitted",
+                reason="local_approval_matches",
+                attributes={"polyad.target.name": target["metadata"]["name"], "polyad.replicas.requested": replicas},
+            )
             await self.status(
                 obj,
                 replicas=observed.get("replicas", 0),
@@ -300,6 +398,7 @@ class PoolManager:
             message=status.get("message", ""),
         )
 
+    @traced("polyad.operator_pool.reconcile")
     async def pool(self, obj: dict[str, Any]) -> None:
         """
         Install or upgrade a remote worker from the root Deployment and projected credentials.
@@ -337,8 +436,25 @@ class PoolManager:
                 listing = await remote.request("GET", kind, namespace, query=[("labelSelector", f"{GROUP}/operator-pool={meta['uid']}")])
                 for child in (listing or {}).get("items", []):
                     if child["metadata"].get("annotations", {}).get(OWNER) != owner:
+                        decision(
+                            "polyad.operator_pool.conflict",
+                            "Worker cleanup found a resource with different ownership; deletion is blocked.",
+                            obj=child,
+                            outcome="blocked",
+                            reason="cleanup_ownership_conflict",
+                            level=logging.WARNING,
+                            attributes={"polyad.target.cluster": spec["cluster"]},
+                        )
                         raise ValueError("remote pool ownership changed during cleanup")
                     await remote.delete({**child, "kind": kind})
+                    decision(
+                        "polyad.operator_pool.deleting",
+                        "Requested removal of this pool's execution machinery after unlinking its Graph.",
+                        obj=child,
+                        outcome="applied",
+                        reason="pool_deleted",
+                        attributes={"polyad.target.cluster": spec["cluster"]},
+                    )
                 if (listing or {}).get("items"):
                     raise Pending("waiting for remote worker cleanup")
             if FINALIZER in finalizers:
@@ -416,6 +532,7 @@ class PoolManager:
         for feature in ("API", "EVENTS", "CONNECTIONS", "OPERATOR_MESH"):
             env[f"POLYAD_{feature}_ENABLED"] = {"name": f"POLYAD_{feature}_ENABLED", "value": "false"}
         env["POLYAD_ROOT_WORKER"] = {"name": "POLYAD_ROOT_WORKER", "value": "true"}
+        env["POLYAD_POD_CLUSTER"] = {"name": "POLYAD_POD_CLUSTER", "value": spec["cluster"]}
         env["POLYAD_COMPONENT"] = {"name": "POLYAD_COMPONENT", "value": "executor"}
         env["KUBECONFIG"] = {"name": "KUBECONFIG", "value": "/var/run/polyad/root/config"}
         # Every Kubernetes request from the replica uses the root credentials or a registered remote adapter.
@@ -486,7 +603,6 @@ class PoolManager:
             raise Pending("waiting for the operator group's graph definition")
         await check_live_rules(remote, group)
         result = await self.apply(remote, body, owner)
-        obj = await self.api.get("OperatorPool", self.namespace, meta["name"]) or obj
         status = result.get("status", {})
         await self.status(
             obj,

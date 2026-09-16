@@ -32,7 +32,7 @@ flowchart TB
         http["polyad-http thread · optional<br/>All enabled API listener sockets"]
         wsgi["Waitress worker threads · optional<br/>One shared Flask application"]
         executor["Asyncio executor threads · on demand<br/>Blocking Kubernetes calls and computations"]
-        helpers["Optional helper threads<br/>Credential lanes, trace exporter and database pool"]
+        helpers["Optional helper threads<br/>Credential lanes, trace/log exporters and database pool"]
         main -->|"Starts"| kopf
         kopf -->|"Starts shared HTTP runtime"| http
         kopf -->|"Creates dispatcher"| wsgi
@@ -56,7 +56,7 @@ processes. Threads share the Python process's memory.
 | Asyncio default executor | Workers created on demand by `asyncio.to_thread`, including synchronous Kubernetes transport, graph rule/Cheeger computations, credential-file reads and metrics serialization |
 | Kopf callback executor | Framework-managed execution of synchronous callbacks, including Polyad's health probe; async handlers stay on the event loop |
 | `polyad-credential-lanes` | Optional daemon thread renewing named API-key concurrency permits; the shared HTTP `Access` runtime owns one renewer |
-| OpenTelemetry batch worker | Optional SDK export thread, initialized before operator work and shut down afterward |
+| OpenTelemetry batch workers | One optional SDK worker per enabled signal (traces and logs), initialized before operator work and drained afterward |
 | Authentication database pool workers | Optional library-managed threads for the synchronous PostgreSQL credential store |
 
 The state database uses an async pool; its maintenance work belongs to the event
@@ -196,7 +196,7 @@ flowchart TB
         http["polyad-http<br/>Observation listener on 8094"]
         wsgi["Eight Waitress workers<br/>One Flask application"]
         executor["Asyncio executor<br/>Blocking read transport"]
-        helpers["Optional credential and tracing workers"]
+        helpers["Optional credential, tracing and log-export workers"]
         main --> http
         main --> wsgi
         main --> executor
@@ -210,7 +210,7 @@ flowchart TB
 There is no local reconciliation FIFO, shard coordination loop or Kopf health
 listener in this process. Requests use the same bounded HTTP bridge and optional
 authentication/tracing support. Observer shutdown waits for HTTP work before
-closing the Kubernetes client and trace exporter.
+closing the Kubernetes client and enabled telemetry exporters.
 
 ## Signals and shutdown
 
@@ -253,7 +253,7 @@ deployed workloads running; resource deletion follows graph lifecycle rules.
 | [api.py](../../pkg/polyad/operator/api.py) | Kubernetes transport offloading and write fences |
 | [roles.py](../../pkg/polyad/operator/roles.py) / [root.py](../../pkg/polyad/operator/root.py) | Role selection and remote cluster tasks |
 | [observer.py](../../pkg/polyad/operator/observer.py) | Observer's main-thread event loop |
-| [lanes.py](../../pkg/polyad/auth/lanes.py) / [tracing.py](../../pkg/polyad/operator/tracing.py) | Optional renewal and trace-export workers |
+| [lanes.py](../../pkg/polyad/auth/lanes.py) / [tracing.py](../../pkg/polyad/operator/tracing.py) / [logging.py](../../pkg/polyad/operator/logging.py) | Optional renewal, trace-export and log-export workers |
 
 [Debug logging](operator.md#debug-logging) includes thread names. Use
 [queue and write metrics](../operations/metrics.md) to distinguish waiting work

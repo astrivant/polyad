@@ -13,7 +13,7 @@ import signal
 from polyad.api.observations import ObservationAPI, build_app, observe
 from polyad.api.server import APIServer
 from polyad.operator.health import credential_token
-from polyad.operator.logging import add_logging_options, configure_logging
+from polyad.operator.logging import add_logging_options, configure_log_export, configure_logging, shutdown_log_export
 from polyad.operator.tracing import configure_tracing, shutdown_tracing
 
 
@@ -62,9 +62,11 @@ def main() -> None:
     configure_logging(parser, args.log_level)
     try:
         configure_tracing()
+        configure_log_export()
         asyncio.run(run())
     finally:
         shutdown_tracing()
+        shutdown_log_export()
 
 
 if __name__ == "__main__":

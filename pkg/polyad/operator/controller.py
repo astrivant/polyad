@@ -33,6 +33,7 @@ from polyad.operator.activations import TERMINAL, Activations
 from polyad.operator.api import GROUP
 from polyad.operator.capacity import CapacityManager
 from polyad.operator.compositions import drain_composition, reconcile_composition
+from polyad.operator.decisions import decision, status_decisions
 from polyad.operator.federation import REMOTE, Federation
 from polyad.operator.graph_status import instance_metrics
 from polyad.operator.graph_status import observed as observed
@@ -197,6 +198,7 @@ class Controller:
             asts.StatusPatch(metadata=asts.ObjectMeta(resourceVersion=meta["resourceVersion"]), status=values),
             status=True,
         )
+        status_decisions(obj, values)
 
     async def definition(self, kind: str, namespace: str, name: str) -> dict[str, Any]:
         """
@@ -273,16 +275,35 @@ class Controller:
         try:
             await self._reconcile(key)
         except Pending as error:
+            decision("polyad.reconcile.deferred", str(error), key=key, outcome="deferred", reason=error.phase, level=logging.DEBUG)
             logger.debug("Reconciliation deferred kind=%s namespace=%s name=%s phase=%s", *key, error.phase)
             await self.report_metrics(key, pending=error)
             raise
-        except (ValueError, TypeError, BaseValidationError):
+        except (ValueError, TypeError, BaseValidationError) as error:
+            decision(
+                "polyad.reconcile.rejected",
+                "Reconciliation failed validation; fresh valid intent is required before admission.",
+                key=key,
+                outcome="blocked",
+                reason="validation_failed",
+                level=logging.WARNING,
+                attributes={"error.type": type(error).__name__},
+            )
             latest = await self.api.get(*key)
             if latest is not None:
                 await CapacityManager(self, latest).cancel("graph validation failed")
             await self.report_metrics(key)
             raise
-        except Exception:
+        except Exception as error:
+            decision(
+                "polyad.reconcile.failed",
+                "Reconciliation could not finish; fresh state is required before retrying.",
+                key=key,
+                outcome="deferred",
+                reason="reconciliation_failed",
+                level=logging.ERROR,
+                attributes={"error.type": type(error).__name__},
+            )
             await self.report_metrics(key)
             raise
         else:
@@ -455,6 +476,19 @@ class Controller:
         token = meta["uid"]
         if target["metadata"].get("annotations", {}).get(f"{GROUP}/rewrite") != token:
             if target["metadata"]["generation"] != spec["expectedGeneration"]:
+                decision(
+                    "polyad.rewrite.conflict",
+                    "The rewrite targets an older graph generation; the current graph takes precedence.",
+                    obj=obj,
+                    outcome="blocked",
+                    reason="generation_changed",
+                    level=logging.WARNING,
+                    attributes={
+                        "polyad.target.name": spec["graph"],
+                        "polyad.generation.expected": spec["expectedGeneration"],
+                        "polyad.generation.observed": target["metadata"]["generation"],
+                    },
+                )
                 raise ValueError("rewrite target generation changed")
             target_ast = asts.from_document(target)
             if not isinstance(target_ast, (asts.Graph, asts.PolyGraph)):
@@ -509,6 +543,14 @@ class Controller:
                 """
                 logger.debug("Applying mutation name=%s writes=%s", operation.name, operation.writes)
                 await self.api.request("PUT", target["kind"], meta["namespace"], target["metadata"]["name"], replacement)
+                decision(
+                    "polyad.rewrite.applied",
+                    "The admitted rewrite replaced the graph topology.",
+                    obj=obj,
+                    outcome="applied",
+                    reason="preconditions_passed",
+                    attributes={"polyad.target.name": spec["graph"]},
+                )
 
             try:
                 await execute_mutations((mutation,), observe=observe_rewrite, apply=apply_rewrite)
@@ -564,11 +606,28 @@ class Controller:
         if current is not None:
             current_meta = asts.converter.structure(current["metadata"], asts.ObjectMeta)
             if (current_meta.ownerReferences or ()) != (meta.ownerReferences or ()):
+                decision(
+                    "polyad.resource.conflict",
+                    "An existing resource belongs to another owner; adoption is blocked.",
+                    obj=current,
+                    outcome="blocked",
+                    reason="ownership_conflict",
+                    level=logging.WARNING,
+                )
                 raise ValueError("refusing to adopt a resource with different ownership")
             if remote_cluster:
                 from polyad.operator.federation import PARENT
 
                 if (current_meta.annotations or {}).get(PARENT) != (meta.annotations or {}).get(PARENT):
+                    decision(
+                        "polyad.resource.conflict",
+                        "The remote Graph belongs to another parent; adoption is blocked.",
+                        obj=current,
+                        outcome="blocked",
+                        reason="remote_ownership_conflict",
+                        level=logging.WARNING,
+                        attributes={"polyad.target.cluster": remote_cluster},
+                    )
                     raise ValueError("refusing to adopt a remote graph with different ownership")
             if current_meta.deletionTimestamp or (current_meta.annotations or {}).get(f"{GROUP}/desired-hash") != (
                 meta.annotations or {}
@@ -591,6 +650,14 @@ class Controller:
             await before_create()
         logger.debug("Creating owned resource kind=%s namespace=%s name=%s", kind, meta.namespace, meta.name)
         await api.request("POST", kind, meta.namespace, body=desired)
+        decision(
+            "polyad.resource.created",
+            "Created the admitted resource; readiness will be checked on the next observation.",
+            obj=document,
+            outcome="applied",
+            reason="admission_passed",
+            attributes={"polyad.target.cluster": remote_cluster} if remote_cluster else None,
+        )
         return None  # Creation acknowledgement is not readiness; observe it on a fresh pass.
 
     async def graph(self, obj: dict[str, Any]) -> None:
