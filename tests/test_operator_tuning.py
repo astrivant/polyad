@@ -39,7 +39,8 @@ def test_tuning_rejects_invalid_intervals(settings):
 
 
 @pytest.mark.parametrize("name", ["rescan", "consume", "metrics", "backlog"])
-def test_worker_uses_configured_pause(monkeypatch, name):
+@pytest.mark.parametrize("database_outage", [False, True])
+def test_worker_uses_configured_pause(monkeypatch, name, database_outage):
     """
     Complete one worker pass and observe its actual scheduled pause.
     """
@@ -63,7 +64,13 @@ def test_worker_uses_configured_pause(monkeypatch, name):
         monkeypatch.setattr(handlers, "metrics_http", None)
         monkeypatch.setattr(handlers, "metrics_store", SimpleNamespace(publish=Mock()))
         monkeypatch.setattr(handlers, "inventory_sample", None)
+        monkeypatch.setattr(
+            handlers,
+            "state",
+            SimpleNamespace(begin=AsyncMock(side_effect=OSError("database unavailable"))) if database_outage and name == "rescan" else None,
+        )
         monkeypatch.setattr(handlers, "write_backlog", Mock(return_value={}))
+        monkeypatch.setattr(handlers, "collect", AsyncMock(return_value={"fresh": False, "roles": {}}))
         monkeypatch.setattr(
             handlers,
             "shared",
@@ -74,5 +81,8 @@ def test_worker_uses_configured_pause(monkeypatch, name):
         with pytest.raises(asyncio.CancelledError):
             await getattr(handlers, f"{name}_loop")()
         sleep.assert_awaited_once_with(getattr(tuning, name))
+        if name == "rescan":
+            assert handlers.inventory_sample_ok
+            assert handlers.inventory_sample[1]["total"] == 0
 
     asyncio.run(scenario())

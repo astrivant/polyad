@@ -1,6 +1,6 @@
 # Polyad client
 
-A typed Python 3.11+ client for Polyad's composition, activation, event and temporary connection APIs.
+A typed Python 3.11–3.14 client for Polyad's composition, activation, event and temporary connection APIs.
 
 `connect(document)`, `connection(namespace, request_id)` and
 `disconnect(namespace, request_id)` use the separate connections Service and a

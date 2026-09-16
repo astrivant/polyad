@@ -80,6 +80,32 @@ Operator deployment settings are grouped under `operator`. When upgrading existi
 values files, nest replicas, placement, autoscaling, image, resources and shutdown
 grace settings under that key (for example, `image.tag` becomes `operator.image.tag`).
 
+## Template layout
+
+Templates are grouped by the deployment architecture they support:
+
+| Directory | Purpose | Enabled by |
+| --- | --- | --- |
+| [`templates/dense/`](templates/dense/) | Combined operator Deployment | `architecture.mode: Dense` (default) |
+| [`templates/distributed/`](templates/distributed/) | Bootstrap Deployment and the gateway, executor and telemetry Graph, including component scaling | `architecture.mode: Distributed` |
+| [`templates/multicluster/`](templates/multicluster/) | Federation and root-control-plane validation, east-west mesh resources and optional read-only observers | `federation.enabled`, `rootControlPlane.enabled`, `mesh.multicluster.enabled` and `observer.enabled`, independently of deployment mode |
+| [`templates/shared/`](templates/shared/) | Shared Deployment definition, Services, access controls, credentials, storage, ingress and autoscaling support | Both modes, with each optional feature controlled by its existing values |
+
+Dense and Distributed use the same `polyad.operatorDeployment` named template in
+[`shared/_deployment.tpl`](templates/shared/_deployment.tpl). Distributed components
+also reuse its Pod template so image, credentials, placement and security settings
+stay consistent. The shared CPU HPA targets the dense operator or the distributed
+bootstrap; component KEDA resources live with the distributed Graph.
+
+Multicluster features can extend either architecture. Remote execution Deployments
+are created by the root operator from OperatorPools, rather than rendered separately
+by Helm. `NOTES.txt` remains at the template root, and install-time CRDs remain in
+`crds/`. Directory placement organizes the source; values select the rendered
+resources.
+
+See [Dense and Distributed deployments](../../docs/components.md) and
+[the root control plane](../../docs/root-control-plane.md) for architecture details.
+
 ## Parameters
 
 ### Operator and shared queue parameters

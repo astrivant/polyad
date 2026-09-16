@@ -1,3 +1,5 @@
+{{/* Shared by the Dense operator, Distributed bootstrap and component Pod templates. */}}
+{{- define "polyad.operatorDeployment" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,7 +25,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/credentials: {{ include (print $.Template.BasePath "/credentials.yaml") . | sha256sum }}
+        checksum/credentials: {{ include (print $.Template.BasePath "/shared/credentials.yaml") . | sha256sum }}
         {{- if .Values.mesh.operator.enabled }}
         sidecar.istio.io/inject: "true"
         sidecar.istio.io/nativeSidecar: "true"
@@ -353,3 +355,4 @@ spec:
               - key: url
                 path: url
         {{- end }}
+{{- end -}}

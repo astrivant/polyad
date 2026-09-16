@@ -1,5 +1,11 @@
 # Root control plane
 
+The root can use the default dense Deployment or the
+[distributed component Graph](components.md), keeping bootstrap authority in the
+management cluster. [Optional PostgreSQL](postgresql.md) persists observations
+from every registered cluster; metrics and KEDA continue to use the root operator
+endpoints. Remote OperatorPools run the executor role in either deployment layout.
+
 Enable `rootControlPlane.enabled` to run one logical operator across registered
 clusters. Its Deployment can live in a dedicated management cluster containing
 no application Pods. Remote `OperatorPool` Deployments add execution capacity;
@@ -12,6 +18,11 @@ All graph observations, topology events, queue demand and scaling intent converg
 at the root. Application payloads travel over the graphs' configured networking;
 they do not pass through the operator. Read-only observers remain optional readers,
 separate from these execution workers.
+
+The [graph rollout and rotation proposal](rotations.md) describes how the root
+could coordinate versioned changes in either direction through this hierarchy,
+with breadth-first waves or depth-first branches. Ordered rollout requests and
+their graph policy bindings are proposed extensions, not current root behavior.
 
 ## Authority and execution
 

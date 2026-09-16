@@ -1,0 +1,3 @@
+{{- if eq .Values.architecture.mode "Dense" }}
+{{ include "polyad.operatorDeployment" . }}
+{{- end }}

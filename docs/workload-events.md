@@ -50,6 +50,15 @@ observations, not a synchronous barrier or a complete log of every intermediate
 Kubernetes change. Several changes can be coalesced before an observation.
 GraphRules control admission independently of event delivery.
 
+## Proposed rollout events
+
+The [rollout sparsity and events proposal](rollout-sparsity.md) adds a separate
+`rollout` event type for queued, coalesced, deferred and executing changes, down
+to individual workloads. Deferrals would report the limiting graph or workload
+scope and earliest eligible time. These events and frequency settings are not
+implemented yet. A delayed or suppressed rollout would not itself emit a topology
+change; actual structural or execution-identity changes retain the behavior above.
+
 ## Read current neighbors
 
 Use the events Service on port 8091:

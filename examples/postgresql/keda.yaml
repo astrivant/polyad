@@ -1,0 +1,51 @@
+# Standalone equivalent of the Helm-generated autoscaling resources.
+# Use this only when postgresql.autoscaling.enabled is false in Helm.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: polyad-state
+  namespace: polyad
+spec:
+  scaleTargetRef:
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    name: polyad-state
+  pollingInterval: 15
+  minReplicaCount: 3
+  maxReplicaCount: 6
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 60
+          policies:
+          - type: Pods
+            value: 1
+            periodSeconds: 120
+        scaleDown:
+          stabilizationWindowSeconds: 1800
+          policies:
+          - type: Pods
+            value: 1
+            periodSeconds: 300
+  triggers:
+  - type: metrics-api
+    metricType: AverageValue
+    metadata:
+      url: http://polyad-polyad-metrics.polyad.svc:8092/v1/postgresql/connections
+      valueLocation: value
+      targetValue: '20'
+      authMode: bearer
+    authenticationRef:
+      name: polyad-polyad-metrics
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: polyad-polyad-metrics
+  namespace: polyad
+spec:
+  secretTargetRef:
+  - parameter: token
+    name: polyad-metrics
+    key: token

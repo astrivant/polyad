@@ -95,6 +95,10 @@ copied into Prometheus labels.
 | `polyad_observed_resources` | Sum of direct owned resources in current-generation graph status, by `kind` |
 | `polyad_graph_status_observations` | Instance graphs with `current` or `unknown` status observations |
 | `polyad_owned_shards` / `polyad_leader` | Local shard assignment count and planner leadership flag |
+| `polyad_postgresql_connections` | Global primary connections from this operator state scope; available when optional PostgreSQL storage is enabled |
+| `polyad_postgresql_sample_fresh` / `polyad_postgresql_state_fresh` | Freshness of the connection sample and this process's persisted inventory |
+| `polyad_component_requests_per_second` / `polyad_component_requests_in_flight` | Global HTTP arrival rate and open responses by component, including event streams |
+| `polyad_component_sample_fresh` | Whether all recent component process reports are available |
 
 Writers are `workloads`, `coordination` and `compositionIntake`. Queue entries
 are refresh notifications: several can refer to the same object, and an
@@ -192,6 +196,15 @@ See [per-workload metric scopes and freshness](replication.md#metric-scopes-and-
 for scalar KEDA endpoints and `polyad_workload_signal` series.
 
 ## Central reports across clusters
+
+[Distributed component deployments](components.md) keep these APIs on the
+telemetry Service, with the same URLs and authentication as dense deployments.
+`/v1/components/{component}/{metric}` provides global queue or HTTP demand for
+component KEDA targets. `/v1/postgresql/connections` provides the optional
+[database scaler](postgresql.md#scale-postgresql-with-operator-connection-counts)
+with one global count. Both return HTTP 503 for unavailable samples. All
+collection runs in background loops; HTTP scrapes perform no database, cache
+or Kubernetes I/O. Deduplicate global values across HA metrics replicas.
 
 [Root mode](root-control-plane.md) gathers cluster-qualified inventories, topology
 streams and queue demand in root storage. Its metrics API accepts `?cluster=NAME`

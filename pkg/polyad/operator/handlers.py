@@ -154,6 +154,14 @@ async def coordination_loop() -> None:
                 await coordinator.tick()
             else:
                 await coordinator.api.request("GET", "Graph", coordinator.namespace)
+                listing = await coordinator.api.request(
+                    "GET", "Lease", coordinator.namespace, query=[("labelSelector", f"{GROUP}/coordination=true")]
+                )
+                coordinator.members = [
+                    lease["spec"]["holderIdentity"]
+                    for lease in listing.get("items", [])
+                    if lease["metadata"]["name"].startswith("polyad-member-") and not coordinator.expired(lease)
+                ]
                 coordinator.last_success = time.monotonic()
         except Exception:
             coordinator.leader = False
@@ -232,9 +240,18 @@ async def rescan_loop() -> None:
     while True:
         try:
             scan_started = time.monotonic()
-            ticket = await state.begin() if state else None
+            ticket = None
+            if state:
+                try:
+                    ticket = await state.begin()
+                except Exception:
+                    logger.warning("PostgreSQL unavailable; continuing live observation without persistence")
             objects = []
-            definitions = ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if metrics_http or state else ()
+            definitions: tuple[str, ...] = (
+                ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if metrics_http or state else ()
+            )
+            if root_plane and (metrics_http or state):
+                definitions += ("OperatorPool", "RemoteScale")
             for kind in (*KINDS, *definitions):
                 result = await coordinator.api.request("GET", kind, coordinator.namespace)
                 last_api_success = time.monotonic()
@@ -245,10 +262,13 @@ async def rescan_loop() -> None:
                     for obj in result.get("items", []):
                         await publish((kind, coordinator.namespace, obj["metadata"]["name"]))
             tracked = inventory(objects)
-            if state:
-                await state.save(
-                    os.environ.get("POLYAD_CLUSTER_NAME") or "local", coordinator.namespace, ticket, objects, {"inventory": tracked}
-                )
+            if state and ticket is not None:
+                try:
+                    await state.save(
+                        os.environ.get("POLYAD_CLUSTER_NAME") or "local", coordinator.namespace, ticket, objects, {"inventory": tracked}
+                    )
+                except Exception:
+                    logger.warning("PostgreSQL state commit failed; retaining the previous durable observation")
             inventory_sample = (scan_started, tracked)
             inventory_sample_ok = True
         except Exception:

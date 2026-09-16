@@ -177,6 +177,11 @@ Changing the Daemon opt-in or the operator's reload setting changes the desired
 controller revision and uses Polyad's normal replacement admission. Subsequent
 Secret rotations let Reloader update that controller in place.
 
+These restarts are independent and do not enforce ordering between graph nodes,
+replicas or clusters. The [graph rollout and rotation proposal](rotations.md)
+describes separate policies for ordered adoption, readiness barriers and root
+coordination; that proposed API is not implemented yet.
+
 ## Namespace, transport and rotation
 
 The chart creates ExternalSecrets and TriggerAuthentication in its release

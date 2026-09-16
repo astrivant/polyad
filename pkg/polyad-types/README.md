@@ -1,6 +1,6 @@
 # Polyad types
 
-Shared Python 3.11+ resource, configuration and API models for Polyad. This
+Shared Python 3.11–3.14 resource, configuration and API models for Polyad. This
 package provides the same definitions used by the operator and Python client,
 including constructor validation, serialization and a `py.typed` marker.
 Its only dependencies are attrs, cattrs and typing-extensions.

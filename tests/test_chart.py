@@ -571,7 +571,14 @@ def test_optional_metrics_service_and_access_policies():
     mesh = next(obj for obj in objects if obj["kind"] == "AuthorizationPolicy")
     rule = next(rule for rule in mesh["spec"]["rules"] if rule["to"][0]["operation"]["ports"] == ["8092"])
     assert rule["from"][0]["source"]["principals"] == ["cluster.local/ns/monitoring/sa/prometheus"]
-    assert rule["to"][0]["operation"]["paths"] == ["/metrics", "/v1/metrics", "/v1/workloads/*", "/openapi.json"]
+    assert rule["to"][0]["operation"]["paths"] == [
+        "/metrics",
+        "/v1/metrics",
+        "/v1/workloads/*",
+        "/v1/components/*",
+        "/v1/postgresql/connections",
+        "/openapi.json",
+    ]
 
 
 def test_keda_bearer_secret_mount_and_optional_resources():
@@ -828,3 +835,103 @@ def test_root_control_plane_requires_reachable_credentials_and_exposes_scale_crd
     for invalid in ("rootControlPlane.kubeconfigSecret=", "federation.enabled=false", "dragonfly.existingSecret=", "metrics.enabled=false"):
         with pytest.raises(subprocess.CalledProcessError):
             render(*settings, invalid)
+
+
+@pytest.mark.parametrize("ha", [False, True])
+def test_optional_postgresql_persists_state_and_scales_from_operator_connections(ha):
+    """
+    Deploy durable storage with a single primary or HA and target the CNPG scale subresource.
+    """
+    objects = render("postgresql.enabled=true", f"postgresql.ha.enabled={str(ha).lower()}", "metrics.enabled=true")
+    cluster = next(obj for obj in objects if obj["kind"] == "Cluster")
+    assert cluster["spec"]["instances"] == (3 if ha else 1)
+    assert ("synchronous" in cluster["spec"]["postgresql"]) == ha
+    assert cluster["spec"]["storage"]["size"] == "10Gi"
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    pod = deployment["spec"]["template"]["spec"]
+    env = {entry["name"]: entry.get("value") for entry in pod["containers"][0]["env"]}
+    assert env["POLYAD_POSTGRES_DSN_FILE"] == "/var/run/polyad/postgresql/uri"
+    volume = next(volume for volume in pod["volumes"] if volume["name"] == "postgres-credentials")
+    assert volume["secret"]["secretName"] == "test-state-app"
+    scaled = render("postgresql.enabled=true", "postgresql.autoscaling.enabled=true", "metrics.enabled=true")
+    target = next(obj for obj in scaled if obj["kind"] == "ScaledObject")
+    assert target["spec"]["scaleTargetRef"] == {"apiVersion": "postgresql.cnpg.io/v1", "kind": "Cluster", "name": "test-state"}
+    assert target["spec"]["minReplicaCount"] >= 1
+    assert target["spec"]["triggers"][0]["metricType"] == "AverageValue"
+    assert target["spec"]["triggers"][0]["metadata"]["url"].endswith("/v1/postgresql/connections")
+
+
+def test_postgresql_default_off_and_external_connection_secret():
+    """
+    Keep PostgreSQL optional in both architectures and allow administrator-managed databases.
+    """
+    assert not any(obj["apiVersion"] == "postgresql.cnpg.io/v1" for obj in render())
+    objects = render("postgresql.enabled=true", "postgresql.managed=false", "postgresql.existingSecret=state-access")
+    assert not any(obj["kind"] == "Cluster" for obj in objects)
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    volume = next(volume for volume in deployment["spec"]["template"]["spec"]["volumes"] if volume["name"] == "postgres-credentials")
+    assert volume["secret"]["secretName"] == "state-access"
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        ["postgresql.autoscaling.enabled=true"],
+        ["postgresql.enabled=true", "postgresql.managed=false"],
+        ["postgresql.enabled=true", "postgresql.autoscaling.enabled=true"],
+        [
+            "postgresql.enabled=true",
+            "postgresql.ha.enabled=true",
+            "postgresql.autoscaling.enabled=true",
+            "postgresql.autoscaling.minInstances=1",
+            "metrics.enabled=true",
+        ],
+        ["architecture.mode=Distributed"],
+        ["architecture.mode=Distributed", "metrics.enabled=true"],
+    ],
+)
+def test_invalid_state_and_component_configurations_fail_before_install(settings):
+    """
+    Reject absent storage credentials, unsafe replica floors and unservable split deployments.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(*settings)
+
+
+def test_distributed_components_form_a_real_constrained_graph_without_postgresql():
+    """
+    Compose executable Daemons, independently scaled groups and correctly routed stable Services.
+    """
+    objects = render("architecture.mode=Distributed", "architecture.autoscaling=true", "api.enabled=true", "metrics.enabled=true")
+    assert not any(obj["kind"] == "Cluster" for obj in objects)
+    graph = next(obj for obj in objects if obj["kind"] == "Graph")
+    assert graph["spec"]["rules"] == ["test-control-plane"]
+    assert len(graph["spec"]["nodes"]) == 3
+    assert len(graph["spec"]["connections"]) == 2
+    groups = [obj for obj in objects if obj["kind"] == "ReplicaGroup"]
+    assert len(groups) == 3 and all(obj["spec"]["templateOnly"] for obj in groups)
+    scaled = [obj for obj in objects if obj["kind"] == "ScaledObject"]
+    assert {obj["spec"]["scaleTargetRef"]["name"] for obj in scaled} == {obj["metadata"]["name"] for obj in groups}
+    daemons = [obj for obj in objects if obj["kind"] == "Daemon"]
+    for daemon in daemons:
+        role = daemon["metadata"]["name"].removeprefix("test-")
+        pod = daemon["spec"]["template"]
+        assert daemon["spec"]["replicas"] == 1
+        assert pod["metadata"]["labels"]["polyad.astrivant.com/component"] == role
+        assert "polyad.astrivant.com/bootstrap" not in pod["metadata"]["labels"]
+        env = {entry["name"]: entry.get("value") for entry in pod["spec"]["containers"][0]["env"]}
+        assert env["POLYAD_COMPONENT"] == role
+        assert env["POLYAD_SELF_GRAPH"] == graph["metadata"]["name"]
+    for service in (
+        obj for obj in objects if obj["kind"] == "Service" and obj["metadata"]["name"] in {"test-polyad-api", "test-polyad-metrics"}
+    ):
+        expected = "gateway" if service["metadata"]["name"].endswith("-api") else "telemetry"
+        assert service["spec"]["selector"]["polyad.astrivant.com/component"] == expected
+    schemas = {
+        obj["spec"]["names"]["kind"]: obj["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
+        for obj in objects
+        if obj["kind"] == "CustomResourceDefinition"
+    }
+    for obj in objects:
+        if obj["kind"] in {"Daemon", "GraphRule", "Graph", "ReplicaGroup"}:
+            jsonschema.Draft7Validator(schemas[obj["kind"]]).validate(obj)

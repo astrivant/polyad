@@ -88,10 +88,12 @@ async def report(shared: SharedQueue, component: str) -> None:
         None: Missing heartbeats remain visible as stale during the membership grace period.
     """
     prefix = f"{shared.prefix}:components"
+    seconds, microseconds = await shared.client.time()
+    observed = seconds + microseconds / 1_000_000
     async with shared.client.pipeline(transaction=True) as transaction:
         transaction.set(prefix + ":" + shared.consumer, json.dumps({"component": component, **pressure.snapshot()}), ex=15)
-        transaction.zadd(prefix, {shared.consumer: time.time()})
-        transaction.zremrangebyscore(prefix, "-inf", time.time() - 90)
+        transaction.zadd(prefix, {shared.consumer: observed})
+        transaction.zremrangebyscore(prefix, "-inf", observed - 90)
         await transaction.execute()
 
 

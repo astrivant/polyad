@@ -73,7 +73,12 @@ class ClusterWorker:
             None: Failed or incomplete scans remain unavailable to autoscaling.
         """
         started = time.monotonic()
-        ticket = await self.root.state.begin() if self.root.state else None
+        ticket = None
+        if self.root.state:
+            try:
+                ticket = await self.root.state.begin()
+            except Exception:
+                logger.warning("PostgreSQL unavailable; continuing remote observation without persistence")
         objects = []
         self.sample["inventory"]["fresh"] = False
         self.controller.api = self.root.federation.target(self.cluster)[0]
@@ -95,8 +100,11 @@ class ClusterWorker:
             "inbound": self.shared.backlog(range(SHARDS)),
             "shardBacklogs": self.shared.backlog_sample[1] if self.shared.backlog_sample else {},
         }
-        if self.root.state:
-            await self.root.state.save(self.cluster, self.namespace, ticket, objects, self.sample)
+        if self.root.state and ticket is not None:
+            try:
+                await self.root.state.save(self.cluster, self.namespace, ticket, objects, self.sample)
+            except Exception:
+                logger.warning("Remote state commit failed; retaining previous durable observation")
         # Redis TTL measures transit freshness without trusting a remote worker's wall clock.
         await self.root.shared.client.set(self.root.sample_key(self.cluster), json.dumps(self.sample), ex=max(1, min(15, int(30 - age))))
 

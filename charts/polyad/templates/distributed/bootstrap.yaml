@@ -1,0 +1,3 @@
+{{- if eq .Values.architecture.mode "Distributed" }}
+{{ include "polyad.operatorDeployment" . }}
+{{- end }}

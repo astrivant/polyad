@@ -1,10 +1,38 @@
 # Polyad
 
-Polyad<sup>[\[1\]](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29)</sup> is a graph-based workload scheduler for Kubernetes. Describe tasks,
-long-running services and resources as composable graphs; the operator schedules
-their work and tracks progress across the application and integrations.<sup>[\[2\]](docs/operator.md#api-and-python-abstractions)</sup>
+Polyad<sup>[\[1\]](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29)</sup> is a Kubernetes operator for deploying, connecting and scaling applications as graphs.
+Compose batch jobs, persistent services and supporting resources into reusable
+Graphs and PolyGraphs. Define how work starts, how components communicate and
+which structural constraints must hold as the application changes—from a workflow
+in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/operator.md#api-and-python-abstractions)</sup>
 
 **[Get started](docs/getting-started.md)** · **[Documentation](docs/README.md)** · **[Helm chart](charts/polyad/README.md)**
+
+- **Compose workloads and resources.** Run finite pipelines and persistent services
+  using Jobs, Deployments or StatefulSets, with dependencies, activation policies,
+  [storage](docs/workload-storage.md) and [placement](#graphs-across-node-groups).
+- **Scale within graph constraints.** [KEDA and ReplicaGroups](docs/replication.md)
+  scale individual services, whole graphs or nested compositions. Polyad refreshes
+  live graph state and enforces [GraphRules](docs/graph-rules.md), including size,
+  shape and structural Cheeger bounds, before applying scaling changes.
+- **Make connectivity explicit.** Choose replica connection patterns, including
+  custom edges, and enforce [network boundaries](docs/networking.md) with optional
+  NetworkPolicy and Istio integration.
+- **Let services participate.** Through the [standalone Python client](pkg/client/README.md),
+  workloads can submit compositions, activate work, request [TTL-bound connections](docs/temporary-connections.md)
+  and discover neighbors through [topology events](docs/workload-events.md).
+  [Shared types](pkg/polyad-types/README.md) are also available separately from the operator.
+- **Coordinate across clusters.** A [root operator](docs/root-control-plane.md) can
+  run in a dedicated management cluster, deploy graphs and execution replicas into
+  registered workload clusters, and collect their observations centrally.
+- **Choose the control-plane layout.** Run a compact HA deployment or
+  [separate gateway, executor and telemetry components](docs/components.md)
+  managed through the operator's own Graph. Optionally persist graph state and
+  tracked measurements in [PostgreSQL](docs/postgresql.md).
+
+**Design proposals:** [Ordered rollouts and credential rotations](docs/rotations.md),
+plus [rollout frequency limits and lifecycle events](docs/rollout-sparsity.md),
+describe planned extensions; these APIs are not implemented yet.
 
 ## Table of contents
 
@@ -17,10 +45,12 @@ their work and tracks progress across the application and integrations.<sup>[\[2
     - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
     - [Constrained compositions](#constrained-compositions)
     - [Network boundaries](#network-boundaries)
+    - [Graphs across clusters](#graphs-across-clusters)
     - [Graphs across node groups](#graphs-across-node-groups)
     - [Workloads calling the operator](#workloads-calling-the-operator)
     - [Finite pipelines](#finite-pipelines)
     - [Persistent services and recurrence](#persistent-services-and-recurrence)
+    - [The operator as a Graph](#the-operator-as-a-graph)
   - [What Polyad is not](#what-polyad-is-not)
   - [Get started](#get-started)
   - [License](#license)
@@ -67,27 +97,14 @@ room to adapt while keeping deployment constraints under operator control.
 
 ### Graphs of graphs
 
-A [root operator control plane](docs/root-control-plane.md) can manage this entire
-hierarchy from a separate management cluster. It installs remote execution replicas,
-collects their observations centrally and coordinates KEDA through root-local scale
-targets. See the [deployment architecture](docs/root-control-plane.md#authority-and-execution)
-and [complete configuration example](examples/root-control-plane/values.yaml).
-
-
 Compose smaller workflows into an application with `PolyGraph`. Each child
 reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/concepts.md#graphs-of-graphs)</sup>
-
-Graphs execute within one cluster. PolyGraphs can optionally place child Graphs
-and nested PolyGraphs in registered remote clusters, composing regions and higher
-levels. Optional shared observers expose read-only graph snapshots while each
-cluster's operator enforces its own rules and executes its workloads. See
-[cross-cluster placement, Istio transport and observers](docs/multicluster.md).
 
 In the diagrams below, green marks work and graph summaries, amber marks
 constraints or recurrence, and gray marks resources and containing boundaries.
 
 <details open>
-<summary>Example: nested PolyGraphs composing three clusters</summary>
+<summary>Example: nested graphs reporting to an application root</summary>
 
 ```mermaid
 ---
@@ -108,39 +125,20 @@ config:
       top: 8
       bottom: 20
 ---
-flowchart TB
-    subgraph east["Cluster east"]
-        root["PolyGraph<br/>Global application"]
-        region["PolyGraph<br/>East region"]
-        batch["Graph · batch<br/>Local Jobs"]
-        root --> region --> batch
-    end
-    subgraph west["Cluster west"]
-        group["PolyGraph<br/>Western regions"]
-        service["Graph · service<br/>Local Deployments or StatefulSets"]
-        group --> service
-    end
-    subgraph north["Cluster north"]
-        analytics["Graph · analytics<br/>Local Jobs and resources"]
-    end
-    root -->|"cluster: west"| group
-    group -->|"cluster: north"| analytics
+flowchart BT
+    job["Workload"] --> batch["Graph · batch"]
+    daemon["Daemon"] --> service["Graph · service"]
+    spot["Graph · spot work"] --> group["PolyGraph · processing"]
+    batch --> group
+    group --> root["PolyGraph · application"]
+    service --> root
     classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
-    class root,region,batch,group,service,analytics execution
+    classDef constraint fill:#fff3d6,stroke:#926000,color:#513900
+    class job,daemon,batch,service,group,root execution
+    class spot constraint
 ```
 
-Arrows show declared parent-child ownership; child status rolls back up to the
-root. Each Graph's workloads stay inside its cluster. The east operator manages
-the western PolyGraph's intent; the west operator manages that PolyGraph's
-children, including the Graph in north. Each destination operator executes its
-local work. The same hierarchy can be entirely local by omitting `cluster`.
-
-Read about [graphs of graphs](docs/concepts.md#graphs-of-graphs),
-[remote placement and ownership](docs/multicluster.md#placement-and-ownership),
-and the [execution architecture](docs/multicluster.md#execution-and-observation).
-The [two-cluster example](examples/multicluster/application.yaml) demonstrates
-local nesting in east with a remote Graph in west; the diagram extends this
-pattern with another remote PolyGraph and cluster.
+Read about [graphs of graphs](docs/concepts.md#graphs-of-graphs).
 
 </details>
 
@@ -388,6 +386,78 @@ flowchart TB
 Read about [network scope and inheritance](docs/networking.md#selection-scope-and-inheritance) and [cross-namespace authorization](docs/networking.md#cross-namespace-peers-and-http-authorization).
 This diagram shows one cluster; [remote traffic rules](docs/multicluster.md#remote-traffic-rules)
 are configured separately at each end of a cross-cluster connection.
+
+</details>
+
+### Graphs across clusters
+
+Graphs execute within one cluster. PolyGraphs can optionally place child Graphs
+and nested PolyGraphs in registered remote clusters, composing regions and higher
+levels. Optional shared observers expose read-only graph snapshots while each
+cluster's operator enforces its own rules and executes its workloads. See
+[cross-cluster placement, Istio transport and observers](docs/multicluster.md).
+
+A [root operator control plane](docs/root-control-plane.md) can manage this entire
+hierarchy from a separate management cluster. It installs remote execution replicas,
+collects their observations centrally and coordinates KEDA through root-local scale
+targets. See the [deployment architecture](docs/root-control-plane.md#authority-and-execution)
+and [complete configuration example](examples/root-control-plane/values.yaml).
+
+<details open>
+<summary>Example: nested PolyGraphs composing three clusters</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    secondaryTextColor: "#513900"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    titleColor: "#344054"
+    edgeLabelBackground: "#f2f4f7"
+    lineColor: "#667085"
+  flowchart:
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph east["Cluster east"]
+        root["PolyGraph<br/>Global application"]
+        region["PolyGraph<br/>East region"]
+        batch["Graph · batch<br/>Local Jobs"]
+        root --> region --> batch
+    end
+    subgraph west["Cluster west"]
+        group["PolyGraph<br/>Western regions"]
+        service["Graph · service<br/>Local Deployments or StatefulSets"]
+        group --> service
+    end
+    subgraph north["Cluster north"]
+        analytics["Graph · analytics<br/>Local Jobs and resources"]
+    end
+    root -->|"cluster: west"| group
+    group -->|"cluster: north"| analytics
+    classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
+    class root,region,batch,group,service,analytics execution
+```
+
+Arrows show declared parent-child ownership; child status rolls back up to the
+root. Each Graph's workloads stay inside its cluster. The east operator manages
+the western PolyGraph's intent; the west operator manages that PolyGraph's
+children, including the Graph in north. Each destination operator executes its
+local work. The same hierarchy can be entirely local by omitting `cluster`.
+
+Read about [graphs of graphs](docs/concepts.md#graphs-of-graphs),
+[remote placement and ownership](docs/multicluster.md#placement-and-ownership),
+and the [execution architecture](docs/multicluster.md#execution-and-observation).
+The [two-cluster example](examples/multicluster/application.yaml) demonstrates
+local nesting in east with a remote Graph in west; the diagram extends this
+pattern with another remote PolyGraph and cluster.
 
 </details>
 
@@ -684,6 +754,44 @@ Queue pressure and graph hierarchies are available through the optional
 `ReplicaGroup`, using workload metrics served by the operator.
 
 [Argo CD](docs/argocd.md) and [Flux health checks](docs/fluxcd.md) report graph and leaf health across nested applications.
+
+### The operator as a Graph
+
+Polyad can run as a compact HA Deployment or manage its own service components
+in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemetry
+ReplicaGroups scale independently through KEDA and fresh GraphRule checks. A
+separate root bootstrap Deployment retains planning and recovery responsibility.
+
+```mermaid
+flowchart TB
+    root["Root bootstrap Deployment<br/>planning and recovery"]
+    subgraph self["Polyad control-plane Graph"]
+        direction LR
+        gateway["Gateway replicas<br/>APIs and event subscriptions"]
+        executor["Executor replicas<br/>graph admission and workloads"]
+        telemetry["Telemetry replicas<br/>observations and metrics"]
+        gateway --> executor --> telemetry
+    end
+    root -->|"manage and recover"| self
+    rules["GraphRule<br/>Cheeger ≥ 1; recursive size bound"] -. constrains .-> self
+    keda["KEDA"] -->|"scrape demand"| telemetry
+    keda -->|"request replica counts"| root
+    root -. "optional state storage" .-> pg["PostgreSQL<br/>single instance or HA"]
+    telemetry -. "persist graph state and parameters" .-> pg
+```
+
+The arrows inside the Graph describe logical stages; actual coordination uses
+Kubernetes and Dragonfly. Cheeger constrains topology, while queue backlog and
+HTTP demand drive capacity decisions. See the
+[component and networking diagrams](docs/components.md#the-operators-own-graph)
+and [deployable example](examples/components/values.yaml).
+
+[PostgreSQL is optional](docs/postgresql.md), disabled by default, and stores
+graph observations and tracked parameters when enabled. Its optional
+[KEDA configuration](examples/postgresql/keda.yaml) scales CloudNativePG instances
+from operator connection counts, still scraped from the operator. Additional
+database instances provide standby/read capacity; writes continue through the
+primary.
 
 ## What Polyad is not
 

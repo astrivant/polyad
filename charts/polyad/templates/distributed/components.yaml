@@ -2,7 +2,7 @@
 {{- if not .Values.metrics.enabled }}{{ fail "Distributed architecture requires metrics.enabled" }}{{ end }}
 {{- if not (or .Values.api.enabled .Values.events.enabled .Values.connections.enabled) }}{{ fail "Distributed architecture requires at least one gateway API" }}{{ end }}
 {{- if and .Values.architecture.autoscaling .Values.metrics.authentication.enabled (not .Values.keda.authentication.enabled) }}{{ fail "authenticated component autoscaling requires keda.authentication.enabled" }}{{ end }}
-{{- $deployment := include (print $.Template.BasePath "/deployment.yaml") . | fromYaml }}
+{{- $deployment := include "polyad.operatorDeployment" . | fromYaml }}
 {{- range $component, $settings := .Values.architecture.components }}
 {{- if or (lt (int $settings.replicas) (int $settings.minReplicas)) (gt (int $settings.replicas) (int $settings.maxReplicas)) }}{{ fail "component replicas must be within minReplicas and maxReplicas" }}{{ end }}
 {{- $pod := deepCopy $deployment.spec.template }}

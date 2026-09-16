@@ -12,6 +12,8 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 | [Getting started](getting-started.md) | Installation, execution models and runnable examples |
 | [Networking and events](networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
 | [Root control plane](root-control-plane.md) | Dedicated management clusters, root-managed execution replicas, centralized reports and KEDA targets |
+| [Component deployments](components.md) | Dense or split services, the operator's own Graph, bootstrap recovery and KEDA demand |
+| [Optional PostgreSQL](postgresql.md) | Durable graph state, HA database setup and connection-based KEDA scaling |
 | [Multicluster and observers](multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |
 | [Temporary connections](temporary-connections.md) | Optional TTL-bound edges, caller and target scope, service-account authentication and cleanup |
 | [Operator model](operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
@@ -28,6 +30,8 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 | [Metrics API](metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |
 | [Performance tuning](performance.md) | Autoscaling stabilization, rate policies, queue polling and observation intervals |
 | [Authentication and ESO](authentication.md) | KEDA bearer credentials, ExternalSecrets, namespace boundaries and rotation |
+| [Graph rollouts and rotations (proposal)](rotations.md) | Root-coordinated waves, graph policy bindings, Secret revisions, traversal and KEDA coordination |
+| [Rollout sparsity and events (proposal)](rollout-sparsity.md) | Inherited frequency limits, bounded debounce, queued triggers and rollout lifecycle notifications |
 | [Health and backlog](operator.md#health) | Pod probes, inbound updates and API write pressure |
 | [Activation and client](activation.md) | Workload pulses, parallel daemons, frequency bounds and the standalone Python client |
 | [Workload environment](workload-environment.md) | Automatic graph identity, ancestry, activation receipts and operator endpoint discovery |
