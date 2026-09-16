@@ -12,6 +12,13 @@ workload creation and audit reads in the operator namespace; it does not provide
 per-user identities or tenant isolation. Apply workload RBAC, Pod Security and
 resource quotas for that namespace.
 
+## Table of contents
+
+- [Request lifecycle](#request-lifecycle)
+- [Compose by ID](#compose-by-id)
+- [Durability, ordering and audit](#durability-ordering-and-audit)
+- [Related APIs](#related-apis)
+
 ## Request lifecycle
 
 ```mermaid

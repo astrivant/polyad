@@ -26,6 +26,12 @@ configured bounds. Both bounds accept 2–9 instances. Provide enough eligible
 nodes or zones and persistent storage for the maximum; required anti-affinity
 can leave extra instances Pending when that capacity is unavailable.
 
+## Table of contents
+
+- [What scales](#what-scales)
+- [How requests reach Dragonfly](#how-requests-reach-dragonfly)
+- [Access and upgrades](#access-and-upgrades)
+
 ## What scales
 
 KEDA reads `/v1/dragonfly/connections` on Polyad's metrics Service. Polyad samples

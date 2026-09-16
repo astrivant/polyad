@@ -24,6 +24,14 @@ flowchart LR
     ordinal1 --> claim1["data-setname-1 PVC"]
 ```
 
+## Table of contents
+
+- [StatefulSet configuration](#statefulset-configuration)
+- [Three storage paths](#three-storage-paths)
+- [Retention and revisions](#retention-and-revisions)
+- [Replication, rules and capacity](#replication-rules-and-capacity)
+- [DaemonSet execution](#daemonset-execution)
+
 ## StatefulSet configuration
 
 ```yaml

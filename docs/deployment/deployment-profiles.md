@@ -21,6 +21,14 @@ PostgreSQL stays optional, and `dragonfly.ha.enabled` and `postgresql.ha.enabled
 retain their own meanings. Profiles do not install KEDA or cluster infrastructure
 that the existing feature guides require administrators to supply.
 
+## Table of contents
+
+- [Combine reference values](#combine-reference-values)
+- [One dense operator](#one-dense-operator)
+- [HA in one cluster](#ha-in-one-cluster)
+- [HA with a management cluster](#ha-with-a-management-cluster)
+- [Source layout and switching profiles](#source-layout-and-switching-profiles)
+
 ## Combine reference values
 
 The chart includes [commented reference values](../../charts/polyad/README.md#reference-values)

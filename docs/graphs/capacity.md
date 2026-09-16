@@ -12,6 +12,17 @@ For example, a preparation Job can run while Polyad requests machines for the
 next processing stage. The processing Jobs remain behind their dependencies
 and gates until both their admission conditions and capacity checks pass.
 
+## Table of contents
+
+- [Enable the integration](#enable-the-integration)
+- [Describe a forecast](#describe-a-forecast)
+- [Scheduling demand and placement](#scheduling-demand-and-placement)
+- [Backend selection and handoff](#backend-selection-and-handoff)
+  - [ProvisioningRequest](#provisioningrequest)
+  - [Placeholder Pods](#placeholder-pods)
+- [Ownership, cancellation and expiry](#ownership-cancellation-and-expiry)
+- [Status and limits](#status-and-limits)
+
 ## Enable the integration
 
 Enable the additional namespaced permissions and placeholder PriorityClass:

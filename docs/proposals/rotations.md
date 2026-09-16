@@ -16,6 +16,17 @@ Creating and revoking credentials in an external provider requires a separate,
 explicit integration; synchronizing a Kubernetes Secret is not equivalent to
 changing a database password or revoking a certificate.
 
+## Table of contents
+
+- [Policies paired with graphs](#policies-paired-with-graphs)
+- [Sparsity and event notifications](#sparsity-and-event-notifications)
+- [Direction and traversal are separate choices](#direction-and-traversal-are-separate-choices)
+- [Secret rotation has preparation, adoption and retirement](#secret-rotation-has-preparation-adoption-and-retirement)
+- [Admission, KEDA and graph constraints](#admission-keda-and-graph-constraints)
+- [Root coordination, recovery and overlap](#root-coordination-recovery-and-overlap)
+- [Rolling the operator itself](#rolling-the-operator-itself)
+- [Implementation boundaries](#implementation-boundaries)
+
 ## Policies paired with graphs
 
 Use two new resources, with several named policy bindings per graph:

@@ -4,6 +4,13 @@ Flux can evaluate Polyad custom resources with CEL health expressions. The
 integration uses the supported-type registry and the same graph lifecycle and
 descendant observations as the [Argo CD integration](argocd.md).
 
+## Table of contents
+
+- [Configure a Kustomization](#configure-a-kustomization)
+- [Semantics](#semantics)
+- [HelmRelease support](#helmrelease-support)
+- [Validation](#validation)
+
 ## Configure a Kustomization
 
 Generate the health configuration from a Polyad checkout:

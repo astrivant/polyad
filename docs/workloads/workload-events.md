@@ -15,6 +15,15 @@ Named API keys additionally need `events` or `topology` capabilities and explici
 only its assigned trees, including verified descendants when enabled. Remote
 operator PolyGraphs and their descendants remain private.
 
+## Table of contents
+
+- [Application stream boundary](#application-stream-boundary)
+- [Changes that notify workloads](#changes-that-notify-workloads)
+- [Proposed rollout events](#proposed-rollout-events)
+- [Read current neighbors](#read-current-neighbors)
+- [Subscribe from a workload](#subscribe-from-a-workload)
+- [Nested graphs](#nested-graphs)
+
 ## Application stream boundary
 
 The workload events Service exposes application observations within its namespace.

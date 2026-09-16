@@ -11,6 +11,14 @@ Its bearer credential authorizes workload creation and audit reads in the operat
 namespace; it is not a per-user identity or tenant isolation mechanism. Apply
 normal workload RBAC, Pod Security and resource quotas as well.
 
+## Table of contents
+
+- [Enable the service](#enable-the-service)
+- [Optional Gateway API routing](#optional-gateway-api-routing)
+- [Shared shard rate limits](#shared-shard-rate-limits)
+- [OpenAPI schema](#openapi-schema)
+- [Workload activation](#workload-activation)
+
 ## Enable the service
 
 Create a Secret containing a `token` key in the operator namespace, then install

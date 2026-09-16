@@ -6,6 +6,16 @@ parameters in a managed CloudNativePG database or an existing PostgreSQL databas
 Dragonfly continues to hold reconciliation queues, event replay, rate limits and
 short-lived component observations. KEDA reads the operator's metrics endpoint.
 
+## Table of contents
+
+- [Install the database operator](#install-the-database-operator)
+- [State and tracked parameters](#state-and-tracked-parameters)
+- [Shipped SQL artifacts](#shipped-sql-artifacts)
+- [Snapshot ordering and recovery](#snapshot-ordering-and-recovery)
+- [Scale PostgreSQL with operator connection counts](#scale-postgresql-with-operator-connection-counts)
+- [Existing PostgreSQL](#existing-postgresql)
+- [Event history and authentication storage](#event-history-and-authentication-storage)
+
 ## Install the database operator
 
 Install CloudNativePG before enabling the managed database. Keeping its

@@ -32,6 +32,16 @@ inside it.<sup>[\[6\]](../deployment/operator.md#scheduling-a-graph-onto-a-resou
 Polyad also tracks the resources it creates
 for that graph through their cleanup.<sup>[\[8\]](../deployment/operator.md#reconciliation-and-shutdown)</sup>
 
+## Table of contents
+
+- [Conditions and admission](#conditions-and-admission)
+- [Graphs of graphs](#graphs-of-graphs)
+- [Constrained compositions](#constrained-compositions)
+- [Network boundaries](#network-boundaries)
+- [Graphs across node groups](#graphs-across-node-groups)
+- [Finite pipelines](#finite-pipelines)
+- [Persistent services and recurrence](#persistent-services-and-recurrence)
+
 ## Conditions and admission
 
 A **predicate** is a condition with a true-or-false answer, such as “has the

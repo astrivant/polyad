@@ -19,6 +19,19 @@ Management needs access to remote Kubernetes APIs. Application traffic needs a
 working network and, for Polyad's remote traffic policies, Istio. Observers expose
 state for services and monitoring; they have no execution authority.
 
+## Table of contents
+
+- [Root-managed execution](#root-managed-execution)
+- [Execution and observation](#execution-and-observation)
+- [Placement and ownership](#placement-and-ownership)
+- [GraphRules, Cheeger bounds and scaling](#graphrules-cheeger-bounds-and-scaling)
+- [Istio across different networks](#istio-across-different-networks)
+  - [Configurable gateway listener](#configurable-gateway-listener)
+  - [Mesh prerequisites](#mesh-prerequisites)
+- [Remote traffic rules](#remote-traffic-rules)
+- [Same-network clusters](#same-network-clusters)
+- [Optional shared observers](#optional-shared-observers)
+
 ## Root-managed execution
 
 Use the [root control plane](root-control-plane.md) when one operator Deployment

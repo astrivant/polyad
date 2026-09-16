@@ -18,6 +18,11 @@ for kind in sorted(GRAPH_OWNED_KINDS):
     print(kind, descriptor.boundary, descriptor.auxiliary)
 ```
 
+## Table of contents
+
+- [Metadata](#metadata)
+- [Extending the catalog](#extending-the-catalog)
+
 ## Metadata
 
 | Field | Meaning |

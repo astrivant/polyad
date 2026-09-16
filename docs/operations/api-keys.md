@@ -18,6 +18,17 @@ including calls handled by different listeners. Group and key name determine
 the lane; equal names in different groups are independent. Group membership
 alone grants no additional API permissions.
 
+## Table of contents
+
+- [Configuration](#configuration)
+- [Shared admission and rotation](#shared-admission-and-rotation)
+- [Outbound calls](#outbound-calls)
+- [KEDA and metrics](#keda-and-metrics)
+- [Graph access and workload assignments](#graph-access-and-workload-assignments)
+- [Optional authentication database](#optional-authentication-database)
+- [Demonstrations without authentication](#demonstrations-without-authentication)
+- [Optional Flask authentication adapter](#optional-flask-authentication-adapter)
+
 ## Configuration
 
 Use [the complete reference values](../../charts/polyad/values-authentication.reference.yaml)

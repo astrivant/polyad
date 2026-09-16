@@ -5,6 +5,17 @@
 Run the commands below from the repository root. Choose the Kubernetes
 operator for container workloads, or the local scheduler for Python work.
 
+## Table of contents
+
+- [Install](#install)
+- [Python library](#python-library)
+- [Choose an execution model](#choose-an-execution-model)
+  - [Cooperative execution and persistence](#cooperative-execution-and-persistence)
+  - [Quick start: local work](#quick-start-local-work)
+  - [Quick start: Kubernetes](#quick-start-kubernetes)
+- [Examples](#examples)
+- [Development](#development)
+
 ## Install
 
 Supports Python 3.13 and 3.14. From this checkout, install the Python package with:

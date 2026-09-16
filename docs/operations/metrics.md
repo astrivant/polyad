@@ -6,6 +6,14 @@ through a dedicated, optional HTTP service. It uses the
 for `/metrics`; `/v1/metrics` provides the corresponding JSON snapshot, including
 parent/root identities and graph status. `/openapi.json` describes the HTTP API.
 
+## Table of contents
+
+- [Enable and scrape](#enable-and-scrape)
+- [Metric inventory and scope](#metric-inventory-and-scope)
+- [Freshness and failures](#freshness-and-failures)
+- [Operator scaling with KEDA](#operator-scaling-with-keda)
+- [Central reports across clusters](#central-reports-across-clusters)
+
 ## Enable and scrape
 
 ```yaml

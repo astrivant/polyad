@@ -8,6 +8,13 @@ Argo CD evaluates custom health checks against one resource at a time. Polyad's
 [status rollups](../deployment/operator.md#graph-instance-status) carry the descendant observations
 that make this possible.<sup>[\[1\]](https://argo-cd.readthedocs.io/en/stable/operator-manual/health/#health-checks)</sup>
 
+## Table of contents
+
+- [Install into an existing Argo CD release](#install-into-an-existing-argo-cd-release)
+- [What the health checks report](#what-the-health-checks-report)
+- [Finding each leaf](#finding-each-leaf)
+- [Validate locally](#validate-locally)
+
 ## Install into an existing Argo CD release
 
 Run these commands from a Polyad checkout with its Python dependencies installed.

@@ -5,6 +5,12 @@ receives graph context automatically. It is available in all declared applicatio
 containers, init containers and native sidecars. This includes workloads inside
 nested graphs, ReplicaGroups and activation runs.
 
+## Table of contents
+
+- [Activate a downstream workload](#activate-a-downstream-workload)
+- [Variables](#variables)
+- [Configuration and lifecycle](#configuration-and-lifecycle)
+
 ## Activate a downstream workload
 
 A service can address another vertex in its containing graph without looking up

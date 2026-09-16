@@ -12,6 +12,22 @@ under a stated notion of equivalence. Drawing two paths into the same box is a
 claim to justify, not evidence by itself. Here, "classes" means diagram patterns;
 most are not Python classes or automatically verified relations in Polyad.
 
+## Table of contents
+
+- [Choose what counts as equivalent](#choose-what-counts-as-equivalent)
+- [Catalog](#catalog)
+- [Independence square](#independence-square)
+- [Idempotence triangle](#idempotence-triangle)
+- [Refinement triangle](#refinement-triangle)
+- [Joinability diamond](#joinability-diamond)
+- [Commuting cube](#commuting-cube)
+- [Compiler-preservation square](#compiler-preservation-square)
+- [When a commuting diagram does not apply](#when-a-commuting-diagram-does-not-apply)
+  - [Required order](#required-order)
+  - [Capacity makes one path inadmissible](#capacity-makes-one-path-inadmissible)
+  - [Compensation is not an inverse](#compensation-is-not-an-inverse)
+- [Map diagrams to the library](#map-diagrams-to-the-library)
+
 ## Choose what counts as equivalent
 
 For each diagram, state what is compared:

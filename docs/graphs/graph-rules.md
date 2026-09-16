@@ -13,6 +13,50 @@ Role grants read access, and the composition HTTP API cannot create or modify ru
 These are scheduler admission and graph networking policies, rather than a
 validating webhook for arbitrary native Pods.
 
+## Table of contents
+
+- [Configuration reference](#configuration-reference)
+- [Selection and measurement](#selection-and-measurement)
+  - [Enforcement](#enforcement)
+  - [Scope](#scope)
+  - [Relation](#relation)
+- [Structural limits](#structural-limits)
+  - [Nodes](#nodes)
+  - [Edges](#edges)
+  - [Depth](#depth)
+  - [Breadth](#breadth)
+  - [Fan-in](#fan-in)
+  - [Fan-out](#fan-out)
+  - [Cycle rank](#cycle-rank)
+  - [Strong components](#strong-components)
+  - [Expanded nodes](#expanded-nodes)
+  - [Nesting depth](#nesting-depth)
+- [Required shapes](#required-shapes)
+  - [Acyclic](#acyclic)
+  - [Connected](#connected)
+  - [Tree](#tree)
+  - [Planar](#planar)
+- [Spectral bounds](#spectral-bounds)
+  - [Maximum radius](#maximum-radius)
+  - [Minimum connectivity](#minimum-connectivity)
+  - [Maximum Laplacian](#maximum-laplacian)
+- [Cheeger bottleneck bounds](#cheeger-bottleneck-bounds)
+  - [Minimum Cheeger constant](#minimum-cheeger-constant)
+  - [Maximum Cheeger constant](#maximum-cheeger-constant)
+- [Network contracts](#network-contracts)
+  - [Network scope](#network-scope)
+  - [Directional isolation](#directional-isolation)
+  - [Traffic within the graph](#traffic-within-the-graph)
+  - [DNS access](#dns-access)
+  - [Ingress and egress exceptions](#ingress-and-egress-exceptions)
+  - [Peer selection](#peer-selection)
+  - [Mesh identity and HTTP constraints](#mesh-identity-and-http-constraints)
+  - [Combining network contracts](#combining-network-contracts)
+- [Complete rule examples](#complete-rule-examples)
+- [PolyGraphs and autoscaling](#polygraphs-and-autoscaling)
+- [Admission, reporting and computation limits](#admission-reporting-and-computation-limits)
+- [Application throughput targets](#application-throughput-targets)
+
 ## Configuration reference
 
 All fields below are under `spec`. Omitted bounds impose no constraint. Defaults

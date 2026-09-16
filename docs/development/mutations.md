@@ -14,6 +14,13 @@ See [mutation diagram patterns](mutation-diagrams.md) for independence squares,
 retry and refinement triangles, joinability diamonds, commuting cubes and compiler
 preservation, with their assumptions and current implementation limits.
 
+## Table of contents
+
+- [Describe effects and shared bounds](#describe-effects-and-shared-bounds)
+- [Ordering and evidence](#ordering-and-evidence)
+- [Execute a plan](#execute-a-plan)
+- [Operator integration and limits](#operator-integration-and-limits)
+
 ## Describe effects and shared bounds
 
 ```python

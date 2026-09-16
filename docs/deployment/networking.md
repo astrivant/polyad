@@ -22,6 +22,17 @@ For every `GraphRule` field, default, validation constraint and configuration
 diagram, see the [graph rules guide](../graphs/graph-rules.md#network-contracts). This guide
 covers how traffic contracts are compiled, enforced and operated.
 
+## Table of contents
+
+- [Selection, scope and inheritance](#selection-scope-and-inheritance)
+- [Isolating a subgraph](#isolating-a-subgraph)
+- [Cross-namespace peers and HTTP authorization](#cross-namespace-peers-and-http-authorization)
+- [Enforcement and lifecycle](#enforcement-and-lifecycle)
+- [Optional chart networking](#optional-chart-networking)
+- [Workload access to operator APIs](#workload-access-to-operator-apis)
+- [Event subscriptions](#event-subscriptions)
+- [Credentials, health and process signals](#credentials-health-and-process-signals)
+
 ## Selection, scope and inheritance
 
 Selection and propagation answer different questions:

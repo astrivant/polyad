@@ -18,6 +18,10 @@ even when the bundled cache is disabled, like the other APIs shipped here.
 `spec.versions[0].schema.openAPIV3Schema` as JSON. The CI Kubeconform wrapper uses
 it alongside Kubernetes schemas to validate the managed Dragonfly instance.
 
+## Table of contents
+
+- [Refresh the dependency and CRD together](#refresh-the-dependency-and-crd-together)
+
 ## Refresh the dependency and CRD together
 
 After reviewing an upstream release, update the version in `Chart.yaml`, resolve

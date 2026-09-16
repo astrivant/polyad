@@ -9,6 +9,12 @@ Start with the typed [tuning values reference](../../charts/polyad/values-tuning
 The [metric inventory](metrics.md#metric-inventory-and-scope) lists every exposed
 family, its scope and the feature required to publish it.
 
+## Table of contents
+
+- [Autoscaling response](#autoscaling-response)
+- [Worker cadence](#worker-cadence)
+- [KEDA-managed targets](#keda-managed-targets)
+
 ## Autoscaling response
 
 Configure CPU and optional memory targets, and tune both HPA scaling directions

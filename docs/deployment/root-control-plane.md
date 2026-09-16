@@ -25,6 +25,15 @@ could coordinate versioned changes in either direction through this hierarchy,
 with breadth-first waves or depth-first branches. Ordered rollout requests and
 their graph policy bindings are proposed extensions, not current root behavior.
 
+## Table of contents
+
+- [Authority and execution](#authority-and-execution)
+- [Install and register clusters](#install-and-register-clusters)
+- [Configuration](#configuration)
+- [KEDA from the root](#keda-from-the-root)
+- [Reports, disconnection and deletion](#reports-disconnection-and-deletion)
+- [Reserved graphs for node workers](#reserved-graphs-for-node-workers)
+
 ## Authority and execution
 
 ```mermaid

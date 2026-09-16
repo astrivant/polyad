@@ -8,6 +8,18 @@ Python 3.13 and 3.14; the standalone client and types packages support Python
 the standalone wheels on each supported version. `.editorconfig` supplies
 editor indentation.
 
+## Table of contents
+
+- [Setup](#setup)
+- [Formatting and checks](#formatting-and-checks)
+- [Python types and serialization](#python-types-and-serialization)
+- [Version tags](#version-tags)
+- [Verified package releases](#verified-package-releases)
+  - [Manual PyPI publishing](#manual-pypi-publishing)
+- [Verified Helm chart builds](#verified-helm-chart-builds)
+- [Helm documentation](#helm-documentation)
+- [Compose artifact on main](#compose-artifact-on-main)
+
 ## Setup
 
 Install asdf and Bash 4.4 or newer, then run from the repository root:

@@ -46,6 +46,13 @@ flowchart TB
     replicas --> application
 ```
 
+## Table of contents
+
+- [Calibrate the relationship](#calibrate-the-relationship)
+- [Configure a bounded policy](#configure-a-bounded-policy)
+- [Report measurements](#report-measurements)
+- [Bounds, observations and scalability](#bounds-observations-and-scalability)
+
 ## Calibrate the relationship
 
 Cheeger is an unweighted structural measurement of the simple undirected

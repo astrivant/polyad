@@ -5,6 +5,14 @@
 new rollout operations may begin. It is independent of graph edge density,
 Cheeger bounds, batch concurrency and ordinary reconciliation frequency.
 
+## Table of contents
+
+- [Configure frequency limits](#configure-frequency-limits)
+- [Inheritance and durable accounting](#inheritance-and-durable-accounting)
+- [Repeated triggers and deadlines](#repeated-triggers-and-deadlines)
+- [Events for decisions and execution](#events-for-decisions-and-execution)
+- [Required implementation and verification](#required-implementation-and-verification)
+
 ## Configure frequency limits
 
 Propose one configuration shape in two places:

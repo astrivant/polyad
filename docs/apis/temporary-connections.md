@@ -6,6 +6,15 @@ checks the live graph family's [GraphRules](../graphs/graph-rules.md), adds admi
 to the instance's effective topology, and removes their grants after expiry.
 The graph's reusable specification is unchanged.
 
+## Table of contents
+
+- [Enable the endpoint and choose its scope](#enable-the-endpoint-and-choose-its-scope)
+- [Authenticate workloads](#authenticate-workloads)
+- [Submit, observe and revoke](#submit-observe-and-revoke)
+- [Meaning at each graph layer](#meaning-at-each-graph-layer)
+- [Deadline, retries and cleanup](#deadline-retries-and-cleanup)
+- [Implementation boundaries](#implementation-boundaries)
+
 ## Enable the endpoint and choose its scope
 
 The listener is disabled by default. Enable it in Helm:

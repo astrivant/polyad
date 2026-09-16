@@ -16,6 +16,11 @@ independent optional extensions. PolyGraphs manage remote child Graph intent;
 destination operators execute it and enforce local GraphRules. Observers share
 state without participating in execution. See [multicluster configuration](../deployment/multicluster.md).
 
+## Table of contents
+
+- [Repeated execution](#repeated-execution)
+- [Placement and storage](#placement-and-storage)
+
 ## Repeated execution
 
 Use a persistent Graph containing a finite Graph definition with an activation

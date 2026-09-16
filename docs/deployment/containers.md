@@ -11,6 +11,15 @@ async task ownership and shutdown order.
 | `production` | Installed Polyad wheel and runtime dependencies from `poetry.lock` | Kubernetes operator deployments |
 | `development` | Editable source, locked development dependencies, Poetry and Git | Python development, debugging and unit tests |
 
+## Table of contents
+
+- [Production](#production)
+- [Runtime capabilities](#runtime-capabilities)
+- [Development](#development)
+- [Health and build checks](#health-and-build-checks)
+  - [Image metadata](#image-metadata)
+  - [Runtime checks](#runtime-checks)
+
 ## Production
 
 Create a Buildx builder once, or select an existing one that supports the desired

@@ -29,6 +29,13 @@ retain all responsibilities. A Daemon definition has `replicas: 1`; each
 ReplicaGroup copy becomes a separate one-Pod Deployment, so scaling passes
 through graph admission at every copy boundary.
 
+## Table of contents
+
+- [Install](#install)
+- [The operator's own Graph](#the-operators-own-graph)
+- [Scaling and structural bounds](#scaling-and-structural-bounds)
+- [Recovery and root-managed clusters](#recovery-and-root-managed-clusters)
+
 ## Install
 
 Install KEDA and prepare the `polyad-api`, `polyad-events` and `polyad-metrics`

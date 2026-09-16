@@ -11,6 +11,13 @@ and OpenAPI. This credential grants read-only access to the operator namespace's
 metrics; it does not authorize composition submissions or event subscriptions.
 Use separate credentials for those APIs.
 
+## Table of contents
+
+- [Connect KEDA with a Secret](#connect-keda-with-a-secret)
+- [Populate Secrets with ESO](#populate-secrets-with-eso)
+- [Restart consumers after rotation](#restart-consumers-after-rotation)
+- [Namespace, transport and rotation](#namespace-transport-and-rotation)
+
 ## Connect KEDA with a Secret
 
 Create a Secret named `polyad-metrics` in the operator namespace with a `token`

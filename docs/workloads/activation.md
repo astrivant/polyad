@@ -13,6 +13,15 @@ its dependencies, gates, slots, placement, storage and capacity requirements.
 Definitions without a policy keep their existing automatic
 [admission behavior](../introduction/concepts.md#conditions-and-admission).
 
+## Table of contents
+
+- [Terms used in this guide](#terms-used-in-this-guide)
+- [Policy on the downstream definition](#policy-on-the-downstream-definition)
+- [Parallel daemons and replica bounds](#parallel-daemons-and-replica-bounds)
+- [Frequency bounds](#frequency-bounds)
+- [API and standalone Python client](#api-and-standalone-python-client)
+- [Durability, cleanup and limits](#durability-cleanup-and-limits)
+
 ## Terms used in this guide
 
 | Term | Meaning | Example |
