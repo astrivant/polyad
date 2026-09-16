@@ -1,5 +1,10 @@
 # Replication and KEDA
 
+ReplicaGroups can also replicate PolyGraph templates that place child Graphs in
+remote clusters. Each copy owns its complete composition, while destination
+operators enforce cluster-local rules. See
+[cross-cluster placement and scaling](multicluster.md#graphrules-cheeger-bounds-and-scaling).
+
 A **ReplicaGroup** is a scalable family of copies. Its template can reference a
 `Workload`, `Daemon`, `Resource`, `Graph`, `PolyGraph`, or another `ReplicaGroup`.
 Replicating a graph copies its
@@ -11,7 +16,7 @@ up to the group and its ancestors.
 flowchart LR
     signal["Workload metrics"] --> keda["KEDA"]
     keda -->|"Kubernetes /scale · desired count"| group["ReplicaGroup"]
-    group --> check{"Fresh rules at every boundary"}
+    group --> check{"Fresh rules at each<br/>local boundary"}
     check -->|"allowed"| first["Copy 0 · graph"]
     check --> second["Copy 1 · graph"]
     check --> third["Copy 2 · graph"]
@@ -25,6 +30,11 @@ flowchart LR
     class group,first,second,third boundary
     class a,b,c execution
 ```
+
+This diagram shows one cluster. The
+[multicluster scaling diagram](multicluster.md#graphrules-cheeger-bounds-and-scaling)
+extends it to PolyGraph copies that own remote Graphs, with separate destination
+operators and local rule checks.
 
 ## Declare a scalable abstraction
 
@@ -1525,6 +1535,13 @@ ReplicaGroup definition. Replication is explicit rather than a namespace-wide
 mutation of every reference to a library object.
 
 ## Connect KEDA
+
+For a [root-managed control plane](root-control-plane.md), install KEDA at the root.
+Use `RemoteScale` for a ReplicaGroup in another cluster and `OperatorPool` for
+remote operator capacity; the [root KEDA examples](root-control-plane.md#keda-from-the-root)
+show both. The direct ReplicaGroup example below applies to a target in KEDA's
+own cluster.
+
 
 Enable `metrics.enabled`, `metrics.authentication.enabled` and
 `keda.authentication.enabled` in the Helm chart, and supply the metrics Secret

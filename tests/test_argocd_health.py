@@ -271,3 +271,14 @@ def test_temporary_connection_health(tmp_path, argocd_config, phase, expected):
     obj = resource("TemporaryConnection", "edge")
     obj["status"] = {"phase": phase, "observedGeneration": 1}
     assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected
+
+
+@pytest.mark.parametrize("kind", ["OperatorPool", "RemoteScale"])
+@pytest.mark.parametrize("phase,expected", [("Ready", "Healthy"), ("Pending", "Progressing"), ("Blocked", "Degraded")])
+def test_root_control_health(tmp_path, argocd_config, kind, phase, expected):
+    """
+    Central scale resources report progress without pretending to own graph metrics.
+    """
+    obj = resource(kind, "remote")
+    obj["status"] = {"phase": phase, "observedGeneration": 1}
+    assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected

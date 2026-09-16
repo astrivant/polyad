@@ -84,6 +84,8 @@ def test_resource_roundtrip(cls):
     }
     if cls is asts.ConfigMap:
         document.update(data={}, binaryData={"key": "YQ=="}, immutable=False)
+    elif cls is asts.Secret:
+        document.update(data={"config": "e30="}, type="Opaque", immutable=False)
     elif cls is asts.PodTemplateResource:
         document["template"] = execution_spec("Job")["template"]
     else:
@@ -142,6 +144,21 @@ def test_child_wire_compatibility(kind):
             spec, {"Job": asts.JobSpec, "Deployment": asts.DeploymentSpec, "StatefulSet": asts.StatefulSetSpec}[kind]
         )
         assert owned_child(parent(), "worker", kind, typed_spec) == child
+
+
+def test_controller_annotations_participate_in_revision_without_changing_defaults():
+    """
+    Make annotation enablement and removal visible to replacement admission.
+    """
+    spec = execution_spec("Deployment")
+    plain = owned_child(parent(), "worker", "Deployment", spec)
+    supplied = {"reloader.stakater.com/search": "true"}
+    annotated = owned_child(parent(), "worker", "Deployment", spec, annotations=supplied)
+    assert annotated.metadata.annotations["reloader.stakater.com/search"] == "true"
+    key = f"{asts.GROUP}/desired-hash"
+    assert annotated.metadata.annotations[key] != plain.metadata.annotations[key]
+    assert owned_child(parent(), "worker", "Deployment", spec, annotations={}) == plain
+    assert supplied == {"reloader.stakater.com/search": "true"}
 
 
 def test_identity_and_extension_guards():

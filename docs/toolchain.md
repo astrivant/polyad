@@ -2,7 +2,11 @@
 
 Polyad uses pre-commit checks and four-space indentation for Python and shell
 scripts. `.tool-versions` pins the local and CI tools; `.python-version` keeps
-the Python 3.13 interpreter selected. `.editorconfig` supplies editor indentation.
+the Python 3.13 interpreter selected for development. The operator supports
+Python 3.13 and 3.14; the standalone client and types packages support Python
+3.11 through 3.14. CI runs operator tests on both supported versions and checks
+the standalone wheels on each supported version. `.editorconfig` supplies
+editor indentation.
 
 ## Setup
 
@@ -81,8 +85,9 @@ Ruff requires postponed annotations and separates imports used only by type
 checkers behind `if TYPE_CHECKING:`. Attrs field annotations remain importable
 at runtime for cattrs serialization; constructors, base classes, decorators and
 other runtime expressions also keep their imports. Dataclass annotations and
-Kopf callback annotations receive no blanket exemption. Python remains targeted
-at 3.13.
+Kopf callback annotations receive no blanket exemption. Operator syntax and
+static checks target the minimum supported Python version, 3.13; the client
+and types packages target 3.11.
 
 Mermaid checker regression tests run with:
 

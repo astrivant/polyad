@@ -21,6 +21,7 @@ from polyad.api.errors import RequestError, Unavailable
 from polyad.api.limits import RateLimitPolicy
 from polyad.api.store import CompositionStore
 from polyad.operator.health import lifecycle
+from polyad.operator.pressure import pressure
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -75,10 +76,10 @@ class APIServer:
                 return jsonify(error="replica is retiring; reconnect to a healthy replica"), 503
             return None
 
-        self.limiter = app.extensions["polyad.limiter"]
+        self.limiter = app.extensions.get("polyad.limiter")
         self.sockets: wasyncore._SocketMap = {}
         self.server = create_server(
-            app,
+            pressure.wrap(app),
             map=self.sockets,
             host=host,
             port=port,
@@ -155,7 +156,7 @@ class APIServer:
             pending = list(self.pending)
         await asyncio.gather(*(asyncio.wrap_future(future) for future in pending), return_exceptions=True)
         self.api.client.close()
-        if self.limiter.enabled:
+        if self.limiter is not None and self.limiter.enabled:
             self.limiter.storage.storage.close()
 
 

@@ -69,6 +69,91 @@ operator:
   ## @param operator.terminationGracePeriodSeconds Time allowed for operator shutdown and outstanding API calls
   terminationGracePeriodSeconds: 60
 
+## @section Optional PostgreSQL state storage
+postgresql:
+  ## @param postgresql.enabled Persist graph state and tracked parameters in PostgreSQL
+  enabled: false
+  ## @param postgresql.managed Create a CloudNativePG Cluster; install its operator first
+  managed: true
+  ## @param postgresql.existingSecret External database Secret containing the connection DSN when managed is false
+  existingSecret: ''
+  ## @param postgresql.secretKey DSN key in the external database Secret
+  secretKey: uri
+  ## @param postgresql.scope State identity within the database; empty uses the release namespace and name
+  scope: ''
+  ## @param postgresql.image PostgreSQL image for the managed cluster
+  image: ghcr.io/cloudnative-pg/postgresql:18.3-standard-trixie
+  ## @param postgresql.maxConnections Maximum connections per managed database instance, including administration
+  maxConnections: 100
+  storage:
+    ## @param postgresql.storage.size Persistent storage per PostgreSQL instance
+    size: 10Gi
+    ## @param postgresql.storage.storageClass Storage class; empty uses the cluster default
+    storageClass: ''
+  ha:
+    ## @param postgresql.ha.enabled Enable primary plus standby instances and synchronous replication
+    enabled: false
+    ## @param postgresql.ha.instances Total instances when HA is enabled and autoscaling is disabled
+    instances: 3
+    ## @param postgresql.ha.topologyKey Failure-domain label for required database pod anti-affinity
+    topologyKey: kubernetes.io/hostname
+  ## @param postgresql.resources [object] Resource requests and limits for each PostgreSQL instance
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {memory: 1Gi}
+  autoscaling:
+    ## @param postgresql.autoscaling.enabled Create a KEDA ScaledObject for the managed Cluster using operator connection counts
+    enabled: false
+    ## @param postgresql.autoscaling.minInstances Minimum instances; at least 3 with HA, never zero
+    minInstances: 3
+    ## @param postgresql.autoscaling.maxInstances Maximum database instances
+    maxInstances: 6
+    ## @param postgresql.autoscaling.connectionsPerInstance Operator connections per desired database instance; does not add primary write capacity
+    connectionsPerInstance: 20
+
+## @section Optional component deployment architecture
+architecture:
+  ## @param architecture.mode Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph
+  mode: Dense
+  ## @param architecture.cheegerMinimum Minimum edge expansion of the three-component Graph; the default chain has h=1
+  cheegerMinimum: 1
+  ## @param architecture.expandedNodes Maximum recursive vertices in the self-managed Graph
+  expandedNodes: 27
+  ## @param architecture.autoscaling Enable KEDA scaling of all component ReplicaGroup definitions
+  autoscaling: false
+  components:
+    gateway:
+      ## @param architecture.components.gateway.replicas Initial gateway copies
+      replicas: 2
+      ## @param architecture.components.gateway.minReplicas Minimum gateway copies
+      minReplicas: 1
+      ## @param architecture.components.gateway.maxReplicas Maximum gateway copies
+      maxReplicas: 8
+      ## @param architecture.components.gateway.requestsPerSecond Target total HTTP requests per second per copy
+      requestsPerSecond: 50
+      ## @param architecture.components.gateway.concurrentRequests Target open HTTP requests and event streams per copy
+      concurrentRequests: 8
+    executor:
+      ## @param architecture.components.executor.replicas Initial execution copies
+      replicas: 2
+      ## @param architecture.components.executor.minReplicas Minimum execution copies
+      minReplicas: 1
+      ## @param architecture.components.executor.maxReplicas Maximum execution copies
+      maxReplicas: 8
+      ## @param architecture.components.executor.backlog Target outstanding graph hints per execution copy across all managed clusters
+      backlog: 8
+    telemetry:
+      ## @param architecture.components.telemetry.replicas Initial metrics-serving copies
+      replicas: 2
+      ## @param architecture.components.telemetry.minReplicas Minimum metrics-serving copies
+      minReplicas: 1
+      ## @param architecture.components.telemetry.maxReplicas Maximum metrics-serving copies
+      maxReplicas: 8
+      ## @param architecture.components.telemetry.requestsPerSecond Target total metrics requests per second per copy
+      requestsPerSecond: 50
+      ## @param architecture.components.telemetry.concurrentRequests Target concurrent metrics requests per copy
+      concurrentRequests: 2
+
 dragonfly:
   ## @param dragonfly.enabled Deploy Dragonfly through the upstream operator Helm dependency
   enabled: true
@@ -195,6 +280,8 @@ keda:
 externalSecrets:
   ## @param externalSecrets.enabled Generate ExternalSecret resources; requires an installed ESO operator and SecretStore
   enabled: false
+  ## @param externalSecrets.reloadOnChange Opt into Stakater Reloader annotations for ESO Secrets, operator and observer Deployments, and Daemons with spec.reloadOnSecretChange; requires externalSecrets.enabled and an installed Reloader
+  reloadOnChange: false
   ## @param externalSecrets.refreshInterval ESO credential refresh interval
   refreshInterval: 1h
   secretStoreRef:
@@ -230,6 +317,18 @@ mesh:
   enabled: false
   ## @param mesh.install Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled
   install: false
+  multicluster:
+    ## @param mesh.multicluster.enabled Enable the existing or bundled sidecar mesh's multicluster configuration
+    enabled: false
+    eastWest:
+      ## @param mesh.multicluster.eastWest.enabled Install a dedicated east-west gateway for separate networks
+      enabled: false
+      ## @param mesh.multicluster.eastWest.portName Istio Gateway listener name; protocol TLS and AUTO_PASSTHROUGH mode are required by this integration
+      portName: tls
+      ## @param mesh.multicluster.eastWest.hosts [array] Service SNI suffixes exposed through AUTO_PASSTHROUGH
+      hosts: ['*.local']
+    ## @param mesh.multicluster.peers [array] Remote transport registrations; see docs/multicluster.md for same-network and gateway configurations
+    peers: []
   operator:
     ## @param mesh.operator.enabled Inject the operator pods and authorize their API and event ports with Istio
     enabled: false
@@ -262,11 +361,64 @@ istiod:
 istioIngress:
   labels:
     istio: polyad-ingress
+## @param istioEastWest [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
+istioEastWest:
+  name: polyad-eastwest
+  labels:
+    istio: polyad-eastwest
+  networkGateway: ''
+  networkGatewayPorts:
+    status-port:
+      port: 15021
+      targetPort: 15021
+    tls:
+      # Gateway.port.number uses this Service port. For a custom port, also set
+      # labels.networking.istio.io/gatewayPort to its string value for discovery.
+      port: 15443
+      # Istio translates the Gateway's Service port to this Pod listener port.
+      targetPort: 15443
 
 ## @section Shared Istio namespace
 global:
   ## @param global.istioNamespace Istio control-plane namespace; must equal the release namespace when mesh.install is enabled
   istioNamespace: istio-system
+  ## @param global.meshID Shared mesh identity across participating clusters
+  meshID: ''
+  ## @param global.network Network containing this cluster; different networks use east-west gateways
+  network: ''
+  multiCluster:
+    ## @param global.multiCluster.clusterName Unique, stable cluster identity used by Istio and Polyad
+    clusterName: ''
+
+## @section Cross-cluster PolyGraph management
+federation:
+  ## @param federation.enabled Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
+  enabled: false
+  ## @param federation.clusters [array] Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only
+  clusters: []
+
+## @section Optional shared graph observers
+observer:
+  ## @param observer.enabled Deploy shared read-only observers independently of execution operators
+  enabled: false
+  ## @param observer.replicaCount Number of stateless read replicas in this cluster and namespace
+  replicaCount: 1
+  ## @param observer.existingSecret Existing Secret containing a dedicated read credential under token
+  existingSecret: ''
+  ## @param observer.mesh Enable native sidecar injection, strict mTLS and source-identity authorization for observer Pods
+  mesh: false
+  ## @param observer.principals [array] Exact source principals allowed to read the observer when observer.mesh is enabled
+  principals: []
+  ## @param observer.peers [array] NetworkPolicy peers allowed to reach observer TCP 8094 when networkPolicy.enabled is set
+  peers: []
+  ## @param observer.resources [object] CPU and memory requests and limits for the read replicas
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: '1'
+      memory: 512Mi
 
 ## @section Advance graph capacity
 capacity:
@@ -285,3 +437,19 @@ capacity:
     name: ""
     ## @param capacity.priorityClass.value Placeholder priority; must meet the autoscaler's cutoff and be below workload priorities
     value: -5
+
+## @section Root control plane
+rootControlPlane:
+  ## @param rootControlPlane.enabled Manage registered clusters and remote execution replicas through one root scheduler
+  enabled: false
+  ## @param rootControlPlane.kubeconfigSecret Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
+  kubeconfigSecret: ''
+  ## @param rootControlPlane.meshPeers [array] Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster
+  meshPeers: []
+  endpoints:
+    ## @param rootControlPlane.endpoints.api Externally reachable root composition API URL advertised to workloads
+    api: ''
+    ## @param rootControlPlane.endpoints.events Externally reachable root events URL advertised to workloads
+    events: ''
+    ## @param rootControlPlane.endpoints.metrics Externally reachable root metrics URL advertised to workloads
+    metrics: ''

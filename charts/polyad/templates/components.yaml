@@ -1,0 +1,112 @@
+{{- if eq .Values.architecture.mode "Distributed" }}
+{{- if not .Values.metrics.enabled }}{{ fail "Distributed architecture requires metrics.enabled" }}{{ end }}
+{{- if not (or .Values.api.enabled .Values.events.enabled .Values.connections.enabled) }}{{ fail "Distributed architecture requires at least one gateway API" }}{{ end }}
+{{- if and .Values.architecture.autoscaling .Values.metrics.authentication.enabled (not .Values.keda.authentication.enabled) }}{{ fail "authenticated component autoscaling requires keda.authentication.enabled" }}{{ end }}
+{{- $deployment := include (print $.Template.BasePath "/deployment.yaml") . | fromYaml }}
+{{- range $component, $settings := .Values.architecture.components }}
+{{- if or (lt (int $settings.replicas) (int $settings.minReplicas)) (gt (int $settings.replicas) (int $settings.maxReplicas)) }}{{ fail "component replicas must be within minReplicas and maxReplicas" }}{{ end }}
+{{- $pod := deepCopy $deployment.spec.template }}
+{{- $_ := unset $pod.metadata.labels "polyad.astrivant.com/bootstrap" }}
+{{- $_ := set $pod.metadata.labels "polyad.astrivant.com/component" $component }}
+{{- $container := index $pod.spec.containers 0 }}
+{{- $environment := list }}
+{{- range $container.env }}
+{{- if eq .name "POLYAD_COMPONENT" }}
+{{- $environment = append $environment (dict "name" .name "value" $component) }}
+{{- else }}
+{{- $environment = append $environment . }}
+{{- end }}
+{{- end }}
+{{- $_ := set $container "env" $environment }}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: {{ $.Release.Name }}-{{ $component }}
+spec:
+  replicas: 1
+  reloadOnSecretChange: {{ and $.Values.externalSecrets.enabled $.Values.externalSecrets.reloadOnChange }}
+  template:
+    {{- toYaml $pod | nindent 4 }}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ReplicaGroup
+metadata:
+  name: {{ $.Release.Name }}-{{ $component }}
+spec:
+  templateOnly: true
+  replicas: {{ $settings.replicas }}
+  minReplicas: {{ $settings.minReplicas }}
+  maxReplicas: {{ $settings.maxReplicas }}
+  template:
+    kind: Daemon
+    ref: {{ $.Release.Name }}-{{ $component }}
+{{- if $.Values.architecture.autoscaling }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $.Release.Name }}-{{ $component }}
+spec:
+  scaleTargetRef:
+    apiVersion: polyad.astrivant.com/v1alpha1
+    kind: ReplicaGroup
+    name: {{ $.Release.Name }}-{{ $component }}
+  minReplicaCount: {{ $settings.minReplicas }}
+  maxReplicaCount: {{ $settings.maxReplicas }}
+  pollingInterval: 15
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies: [{type: Pods, value: 1, periodSeconds: 60}]
+  triggers:
+    {{- $signals := dict "requestsPerSecond" $settings.requestsPerSecond "inFlight" $settings.concurrentRequests }}
+    {{- if eq $component "executor" }}{{ $signals = dict "backlog" $settings.backlog }}{{ end }}
+    {{- range $metric, $target := $signals }}
+    - type: metrics-api
+      metricType: AverageValue
+      metadata:
+        url: {{ printf "http://%s-polyad-metrics.%s.svc:8092/v1/components/%s/%s" $.Release.Name $.Release.Namespace $component $metric | quote }}
+        valueLocation: value
+        targetValue: {{ $target | quote }}
+        {{- if $.Values.metrics.authentication.enabled }}
+        authMode: bearer
+      authenticationRef:
+        name: {{ default (printf "%s-polyad-metrics" $.Release.Name) $.Values.keda.authentication.name | quote }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: GraphRule
+metadata:
+  name: {{ .Release.Name }}-control-plane
+spec:
+  enforcement: Referenced
+  scope: Boundary
+  relation: connections
+  shapes: [connected]
+  cheeger:
+    minimum: {{ .Values.architecture.cheegerMinimum }}
+  limits:
+    nodes: 3
+    expandedNodes: {{ .Values.architecture.expandedNodes }}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: {{ .Release.Name }}-control-plane
+spec:
+  mode: persistent
+  rules: [{{ .Release.Name }}-control-plane]
+  nodes:
+    - {name: gateway, kind: ReplicaGroup, ref: {{ .Release.Name }}-gateway}
+    - {name: executor, kind: ReplicaGroup, ref: {{ .Release.Name }}-executor}
+    - {name: telemetry, kind: ReplicaGroup, ref: {{ .Release.Name }}-telemetry}
+  connections:
+    - {source: gateway, target: executor}
+    - {source: executor, target: telemetry}
+{{- end }}

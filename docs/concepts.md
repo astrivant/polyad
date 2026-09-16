@@ -43,9 +43,16 @@ is the **root**.
 ordinary `Graph` workflows, scalable `ReplicaGroup` boundaries, and other PolyGraphs. A reusable graph definition
 acts as a blueprint; each reference creates a separate instance of it.<sup>[\[4\]](operator.md#composing-graph-types-with-polygraph)</sup>
 
-The [graphs-of-graphs diagram](../README.md#graphs-of-graphs) shows progress
-summaries passing from each child to its parent, until the root has a view of
-the application as a whole.
+A Graph's execution stays within one Kubernetes cluster. PolyGraphs can
+optionally compose across registered clusters and nest to represent higher
+levels. Destination operators retain execution authority; optional shared
+observers provide read-only snapshots. See [multicluster configuration](multicluster.md).
+
+The [graphs-of-graphs diagram](../README.md#graphs-of-graphs) shows ownership
+across three clusters. Progress summaries return from each child to its parent,
+until the root has a view of the application as a whole. The
+[execution and observation diagram](multicluster.md#execution-and-observation)
+shows the operators responsible for those boundaries.
 
 The root reports its own graph shape and a recursive summary of descendant
 work. Missing or stale child observations make that summary explicitly

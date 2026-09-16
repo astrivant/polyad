@@ -1,0 +1,23 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: PolyGraph
+metadata:
+  name: regional-application
+  namespace: polyad
+spec:
+  templateOnly: true
+  nodes:
+    - name: west-workflow
+      kind: Graph
+      ref: regional-workflow
+      cluster: west
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: PolyGraph
+metadata:
+  name: global-application
+  namespace: polyad
+spec:
+  nodes:
+    - name: region
+      kind: PolyGraph
+      ref: regional-application

@@ -1,0 +1,34 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: process-batch
+  namespace: polyad
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command: [sh, -c, 'echo processing in west']
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: regional-workflow
+  namespace: polyad
+spec:
+  templateOnly: true
+  nodes:
+    - name: process
+      kind: Workload
+      ref: process-batch
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: GraphRule
+metadata:
+  name: regional-limits
+  namespace: polyad
+spec:
+  enforcement: Namespace
+  limits:
+    nodes: 8

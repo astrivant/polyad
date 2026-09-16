@@ -83,6 +83,13 @@ spec:
                               additionalProperties:
                                 type: string
                               description: Additional exact pod-label matches, combined with graph selection.
+                            cluster:
+                              type: string
+                              nullable: true
+                              description: Registered remote transport; cannot be combined with local pod or namespace
+                                selectors.
+                              maxLength: 63
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                         ports:
                           type: array
                           items:
@@ -160,6 +167,13 @@ spec:
                               additionalProperties:
                                 type: string
                               description: Additional exact pod-label matches, combined with graph selection.
+                            cluster:
+                              type: string
+                              nullable: true
+                              description: Registered remote transport; cannot be combined with local pod or namespace
+                                selectors.
+                              maxLength: 63
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                         ports:
                           type: array
                           items:

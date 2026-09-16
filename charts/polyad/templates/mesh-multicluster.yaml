@@ -1,0 +1,47 @@
+{{- if .Values.mesh.multicluster.enabled }}
+{{- $_ := required "multicluster requires global.meshID" .Values.global.meshID }}
+{{- $_ := required "multicluster requires global.network" .Values.global.network }}
+{{- $_ := required "multicluster requires global.multiCluster.clusterName" .Values.global.multiCluster.clusterName }}
+{{- $local := .Values.global.multiCluster.clusterName }}
+{{- $names := dict }}
+{{- range .Values.mesh.multicluster.peers }}
+{{- if or (hasKey $names .name) (eq .name $local) }}{{ fail "mesh peer names must be unique and distinct from the local cluster" }}{{ end }}
+{{- $_ := set $names .name true }}
+{{- end }}
+{{- if .Values.mesh.multicluster.eastWest.enabled }}
+{{- if and .Values.mesh.ingress.enabled (eq (default .Release.Name .Values.istioIngress.name) .Values.istioEastWest.name) }}
+{{- fail "Istio ingress and east-west gateway names must be distinct" }}
+{{- end }}
+{{- $ports := .Values.istioEastWest.networkGatewayPorts | default dict }}
+{{- $tunnel := get $ports "tls" | default dict }}
+{{- $port := int (required "istioEastWest.networkGatewayPorts.tls.port is required" (get $tunnel "port")) }}
+{{- $discoveryPort := default "15443" (get .Values.istioEastWest.labels "networking.istio.io/gatewayPort") }}
+{{- if ne $discoveryPort (toString $port) }}
+{{- fail "istioEastWest.labels[networking.istio.io/gatewayPort] must match istioEastWest.networkGatewayPorts.tls.port (Istio defaults to 15443 when the label is omitted)" }}
+{{- end }}
+{{- if ne .Values.istioEastWest.networkGateway .Values.global.network }}
+{{- fail "istioEastWest.networkGateway must equal global.network" }}
+{{- end }}
+{{- if ne (get .Values.istioEastWest.labels "istio") "polyad-eastwest" }}
+{{- fail "istioEastWest.labels.istio must be polyad-eastwest" }}
+{{- end }}
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Release.Name }}-polyad-eastwest
+spec:
+  selector:
+    istio: polyad-eastwest
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  servers:
+    - port:
+        number: {{ $port }}
+        name: {{ .Values.mesh.multicluster.eastWest.portName | quote }}
+        # TLS with AUTO_PASSTHROUGH preserves workload mTLS and Istio SNI routing.
+        protocol: TLS
+      tls:
+        mode: AUTO_PASSTHROUGH
+      hosts:
+        {{- toYaml .Values.mesh.multicluster.eastWest.hosts | nindent 8 }}
+{{- end }}
+{{- end }}

@@ -18,6 +18,12 @@ pip install ./pkg/polyad-types ./pkg/client
 Release CI builds and publishes `polyad-client` separately from `polyad`.
 Once that release is available, install it with `pip install polyad-client`.
 
+Optional shared read replicas expose `observe(name, kind="Graph")` on a separate
+observer Service. Construct a client with that Service's URL and read credential
+to retrieve cluster identity, observation time, topology and execution metrics.
+Observers have no execution authority. See
+[observer configuration](https://github.com/astrivant/polyad/blob/main/docs/multicluster.md#optional-shared-observers).
+
 ```python
 import os
 from polyad_client import Client
@@ -102,3 +108,7 @@ See the repository's [activation guide](https://github.com/astrivant/polyad/blob
 [networking guide](https://github.com/astrivant/polyad/blob/main/docs/networking.md) for policies and deployment settings.
 
 See [manual PyPI publishing](https://github.com/astrivant/polyad/blob/main/docs/toolchain.md#manual-pypi-publishing) for Poetry release commands.
+
+With a [root control plane](../../docs/root-control-plane.md), pass `cluster="west"`
+to `topology()` and `events()` when reading a registered remote cluster through the
+root event endpoint. Replay cursors belong to their selected cluster stream.

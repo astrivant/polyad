@@ -2,6 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-polyad
+  {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange }}
+  annotations:
+    reloader.stakater.com/search: "true"
+  {{- end }}
 spec:
   {{- if not .Values.operator.autoscaling.enabled }}
   replicas: {{ .Values.operator.replicaCount }}
@@ -15,6 +19,7 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/name: polyad
+      polyad.astrivant.com/bootstrap: "true"
   template:
     metadata:
       annotations:
@@ -27,6 +32,8 @@ spec:
       labels:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/name: polyad
+        polyad.astrivant.com/bootstrap: "true"
+        polyad.astrivant.com/component: {{ ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed") }}
         {{- if .Values.mesh.operator.enabled }}
         sidecar.istio.io/inject: "true"
         {{- end }}
@@ -45,6 +52,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 65532
         runAsGroup: 65532
+        fsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -55,6 +63,32 @@ spec:
             - --namespace={{ .Release.Namespace }}
             - --liveness=http://0.0.0.0:8080/healthz
           env:
+            - name: POLYAD_COMPONENT
+              value: {{ ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed") | quote }}
+            {{- if eq .Values.architecture.mode "Distributed" }}
+            - name: POLYAD_SELF_GRAPH
+              value: {{ printf "%s-control-plane" .Release.Name | quote }}
+            {{- end }}
+            - name: POLYAD_POSTGRES_ENABLED
+              value: {{ .Values.postgresql.enabled | quote }}
+            {{- if .Values.postgresql.enabled }}
+            - name: POLYAD_POSTGRES_DSN_FILE
+              value: /var/run/polyad/postgresql/uri
+            - name: POLYAD_STATE_SCOPE
+              value: {{ default (printf "%s/%s" .Release.Namespace .Release.Name) .Values.postgresql.scope | quote }}
+            {{- end }}
+            - name: POLYAD_OPERATOR_IMAGE
+              value: {{ printf "%s:%s" .Values.operator.image.repository .Values.operator.image.tag | quote }}
+            - name: POLYAD_ROOT_ENABLED
+              value: {{ .Values.rootControlPlane.enabled | quote }}
+            {{- if .Values.rootControlPlane.enabled }}
+            - name: POLYAD_ROOT_MESH_PEERS
+              value: {{ .Values.rootControlPlane.meshPeers | toJson | quote }}
+            - name: POLYAD_ROOT_DEPLOYMENT
+              value: {{ printf "%s-polyad" .Release.Name | quote }}
+            {{- end }}
+            - name: POLYAD_ESO_RELOAD_ENABLED
+              value: {{ and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange | quote }}
             - name: POLYAD_LOG_LEVEL
               value: {{ .Values.operator.logLevel | quote }}
             - name: POLYAD_RESCAN_INTERVAL_SECONDS
@@ -68,11 +102,11 @@ spec:
             - name: POLYAD_METRICS_ENABLED
               value: {{ .Values.metrics.enabled | quote }}
             - name: POLYAD_WORKLOAD_API_URL
-              value: {{ ternary (printf "http://%s-polyad-api.%s.svc:8090" .Release.Name .Release.Namespace) "" .Values.api.enabled | quote }}
+              value: {{ default (ternary (printf "http://%s-polyad-api.%s.svc:8090" .Release.Name .Release.Namespace) "" .Values.api.enabled) .Values.rootControlPlane.endpoints.api | quote }}
             - name: POLYAD_WORKLOAD_EVENTS_URL
-              value: {{ ternary (printf "http://%s-polyad-events.%s.svc:8091" .Release.Name .Release.Namespace) "" .Values.events.enabled | quote }}
+              value: {{ default (ternary (printf "http://%s-polyad-events.%s.svc:8091" .Release.Name .Release.Namespace) "" .Values.events.enabled) .Values.rootControlPlane.endpoints.events | quote }}
             - name: POLYAD_WORKLOAD_METRICS_URL
-              value: {{ ternary (printf "http://%s-polyad-metrics.%s.svc:8092" .Release.Name .Release.Namespace) "" .Values.metrics.enabled | quote }}
+              value: {{ default (ternary (printf "http://%s-polyad-metrics.%s.svc:8092" .Release.Name .Release.Namespace) "" .Values.metrics.enabled) .Values.rootControlPlane.endpoints.metrics | quote }}
             - name: POLYAD_WORKLOAD_CONNECTIONS_URL
               value: {{ ternary (printf "http://%s-polyad-connections.%s.svc:8093" .Release.Name .Release.Namespace) "" .Values.connections.enabled | quote }}
             - name: POLYAD_CONNECTIONS_ENABLED
@@ -119,6 +153,16 @@ spec:
               value: {{ .Values.mesh.enabled | quote }}
             - name: POLYAD_ISTIO_NAMESPACE
               value: {{ .Values.global.istioNamespace | quote }}
+            - name: POLYAD_CLUSTER_NAME
+              value: {{ .Values.global.multiCluster.clusterName | quote }}
+            {{- if .Values.mesh.multicluster.enabled }}
+            - name: POLYAD_MESH_PEERS
+              value: {{ .Values.mesh.multicluster.peers | toJson | quote }}
+            {{- end }}
+            {{- if .Values.federation.enabled }}
+            - name: POLYAD_FEDERATION_CLUSTERS
+              value: {{ .Values.federation.clusters | toJson | quote }}
+            {{- end }}
             {{- if .Values.dragonfly.existingSecret }}
             - name: POLYAD_CACHE_URL_FILE
               value: /var/run/polyad/cache/url
@@ -156,7 +200,26 @@ spec:
             - name: POLYAD_EVENTS_TOKEN_FILE
               value: /var/run/polyad/events/token
             {{- end }}
-          volumeMounts:{{ if not (or .Values.api.enabled .Values.events.enabled .Values.dragonfly.existingSecret (and .Values.metrics.enabled .Values.metrics.authentication.enabled)) }} []{{ end }}
+          volumeMounts:{{ if not (or .Values.postgresql.enabled .Values.federation.enabled .Values.api.enabled .Values.events.enabled .Values.dragonfly.existingSecret (and .Values.metrics.enabled .Values.metrics.authentication.enabled)) }} []{{ end }}
+            {{- if .Values.postgresql.enabled }}
+            - name: postgres-credentials
+              mountPath: /var/run/polyad/postgresql
+              readOnly: true
+            {{- end }}
+            {{- if .Values.rootControlPlane.enabled }}
+            - name: root-credentials
+              mountPath: /var/run/polyad/root
+              readOnly: true
+            {{- end }}
+            {{- if .Values.federation.enabled }}
+            - name: remote-transport
+              mountPath: /var/run/polyad/transport
+            {{- range .Values.federation.clusters }}
+            - name: cluster-{{ .name }}
+              mountPath: /var/run/polyad/clusters/{{ .name }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
             {{- if .Values.api.enabled }}
             - name: api-credentials
               mountPath: /var/run/polyad/api
@@ -225,7 +288,39 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
-      volumes:{{ if not (or .Values.api.enabled .Values.events.enabled .Values.dragonfly.existingSecret (and .Values.metrics.enabled .Values.metrics.authentication.enabled)) }} []{{ end }}
+      volumes:{{ if not (or .Values.postgresql.enabled .Values.federation.enabled .Values.api.enabled .Values.events.enabled .Values.dragonfly.existingSecret (and .Values.metrics.enabled .Values.metrics.authentication.enabled)) }} []{{ end }}
+        {{- if .Values.postgresql.enabled }}
+        - name: postgres-credentials
+          secret:
+            secretName: {{ ternary (printf "%s-state-app" .Release.Name) .Values.postgresql.existingSecret .Values.postgresql.managed | quote }}
+            items:
+              - key: {{ ternary "uri" .Values.postgresql.secretKey .Values.postgresql.managed | quote }}
+                path: uri
+        {{- end }}
+        {{- if .Values.rootControlPlane.enabled }}
+        - name: root-credentials
+          secret:
+            secretName: {{ .Values.rootControlPlane.kubeconfigSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: config
+                path: config
+        {{- end }}
+        {{- if .Values.federation.enabled }}
+        - name: remote-transport
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        {{- range .Values.federation.clusters }}
+        - name: cluster-{{ .name }}
+          secret:
+            secretName: {{ .kubeconfigSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: config
+                path: config
+        {{- end }}
+        {{- end }}
         {{- if .Values.api.enabled }}
         - name: api-credentials
           secret:

@@ -107,6 +107,12 @@ def main() -> None:
         help="Polyad log verbosity (default: POLYAD_LOG_LEVEL or INFO)",
     )
     args = parser.parse_args()
+    if os.environ.get("POLYAD_ROOT_WORKER", "false").lower() == "true":
+        if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() != "true" or not os.environ.get("KUBECONFIG"):
+            parser.error("root workers require root mode and an explicit root kubeconfig")
+        # Never accidentally coordinate against the cluster hosting this worker Pod.
+        os.environ.pop("KUBERNETES_SERVICE_HOST", None)
+        os.environ.pop("KUBERNETES_SERVICE_PORT", None)
     if args.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
         parser.error("POLYAD_LOG_LEVEL must be DEBUG, INFO, WARNING, ERROR or CRITICAL")
     os.environ["POLYAD_NAMESPACE"] = args.namespace

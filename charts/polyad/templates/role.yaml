@@ -50,3 +50,15 @@ rules:
     resources: [podtemplates, pods]
     verbs: [get, list, create, delete]
   {{- end }}
+
+  {{- if .Values.rootControlPlane.enabled }}
+  - apiGroups: [polyad.astrivant.com]
+    resources: [operatorpools, remotescales]
+    verbs: [get, list, watch, patch]
+  - apiGroups: [polyad.astrivant.com]
+    resources: [operatorpools/status, remotescales/status, operatorpools/finalizers]
+    verbs: [get, patch, update]
+  - apiGroups: ['']
+    resources: [secrets]
+    verbs: [get]
+  {{- end }}

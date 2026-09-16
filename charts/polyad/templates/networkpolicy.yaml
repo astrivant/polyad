@@ -3,6 +3,9 @@
 {{- if and (or (not .Values.dragonfly.enabled) .Values.dragonfly.existingSecret) (not .Values.networkPolicy.extraEgress) }}
 {{- fail "an external cache requires networkPolicy.extraEgress" }}
 {{- end }}
+{{- if and .Values.postgresql.enabled (not .Values.postgresql.managed) (not .Values.networkPolicy.extraEgress) }}
+{{- fail "an external PostgreSQL database requires networkPolicy.extraEgress" }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -65,6 +68,14 @@ spec:
         - {protocol: TCP, port: 8091}
     {{- end }}
   egress:
+    {{- if and .Values.postgresql.enabled .Values.postgresql.managed }}
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ .Release.Name }}-state
+      ports:
+        - {protocol: TCP, port: 5432}
+    {{- end }}
     - to:
         {{- range .Values.networkPolicy.apiServerCIDRs }}
         - ipBlock:

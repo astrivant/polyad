@@ -1,0 +1,14 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: OperatorPool
+metadata:
+  name: west-workers
+  namespace: polyad
+spec:
+  cluster: west
+  replicas: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 1Gi

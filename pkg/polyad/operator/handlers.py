@@ -29,8 +29,12 @@ from polyad.operator.api import API, GROUP, VERSION
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.coordination import SHARDS, Coordinator, NotOwner, active_shard
 from polyad.operator.health import credential_token, lifecycle, watch_credentials
+from polyad.operator.pressure import collect, report
 from polyad.operator.queue import RefreshQueue
+from polyad.operator.roles import executes, role, serves
+from polyad.operator.root import RootControlPlane
 from polyad.operator.shared_queue import SharedQueue
+from polyad.operator.state import StateStore
 from polyad.operator.tuning import OperatorTuning
 from polyad_types.resources import BOUNDARY_KINDS
 
@@ -55,6 +59,8 @@ last_api_success = 0.0
 initialized = False
 tuning = OperatorTuning()
 background: list[asyncio.Task[None]] = []
+root_plane: RootControlPlane | None = None
+state: StateStore | None = None
 KINDS = tuple(sorted(RECONCILED_KINDS))
 logger = logging.getLogger(__name__)
 
@@ -71,7 +77,8 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     Returns:
         None: No return value.
     """
-    global queue, controller, coordinator, shared, initialized, http, events, event_http, metrics_http, connections_http, tuning
+    global queue, controller, coordinator, shared, initialized, http, events, event_http, metrics_http, connections_http, tuning, root_plane
+    global state
     tuning = OperatorTuning.from_environment()
     settings.posting.enabled = False
     settings.scanning.disabled = True
@@ -83,22 +90,34 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     if os.environ.get("POLYAD_CACHE_URL_FILE"):
         os.environ["POLYAD_CACHE_URL"] = credential_token("CACHE", setting="URL")
     namespace = os.environ.get("POLYAD_NAMESPACE", "default")
-    coordinator = Coordinator(API(), namespace)
+    coordinator = Coordinator(
+        API(), namespace, planner=role() in {"dense", "bootstrap"} and os.environ.get("POLYAD_ROOT_WORKER", "false").lower() != "true"
+    )
+    state = StateStore.from_environment(namespace)
     controller = Controller(API(before_write=coordinator.guard))
     shared = SharedQueue(cache_url(), namespace, coordinator.identity)
+    if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true":
+        root_plane = RootControlPlane(coordinator, controller, shared, state=state)
+        background.extend(root_plane.start(tuning))
     queue = RefreshQueue(reconcile)
     queue.start()
-    if os.environ.get("POLYAD_CONNECTIONS_ENABLED", "false").lower() == "true":
+    if serves("CONNECTIONS"):
         connections_http = ConnectionServer(API(), ConnectionSettings.from_environment(namespace))
         background.append(asyncio.create_task(connection_sweep_loop()))
-    if os.environ.get("POLYAD_API_ENABLED", "false").lower() == "true":
+    if serves("API"):
         http = CompositionServer(API(), namespace, credential_token("API"))
-    if os.environ.get("POLYAD_EVENTS_ENABLED", "false").lower() == "true":
+    if executes() or serves("EVENTS"):
         events = EventStore(cache_url(), namespace, retention=int(os.environ.get("POLYAD_EVENTS_RETENTION", "10000")))
+    if serves("EVENTS"):
+        assert events is not None
         event_http = EventServer(
-            events, namespace, credential_token("EVENTS"), connections=int(os.environ.get("POLYAD_EVENTS_CONNECTIONS", "16"))
+            events,
+            namespace,
+            credential_token("EVENTS"),
+            connections=int(os.environ.get("POLYAD_EVENTS_CONNECTIONS", "16")),
+            clusters={name: worker.events for name, worker in root_plane.workers.items()} if root_plane else None,
         )
-    if os.environ.get("POLYAD_METRICS_ENABLED", "false").lower() == "true":
+    if serves("METRICS"):
         token = credential_token("METRICS") if os.environ.get("POLYAD_METRICS_AUTH_ENABLED", "false").lower() == "true" else None
         metrics_http = MetricsServer(metrics_store, token=token)
         background.append(asyncio.create_task(metrics_loop()))
@@ -112,14 +131,12 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
         http is not None,
     )
     initialized = True
-    background.extend(
-        [
-            asyncio.create_task(coordination_loop()),
-            asyncio.create_task(rescan_loop()),
-            asyncio.create_task(consume_loop()),
-            asyncio.create_task(backlog_loop()),
-        ]
-    )
+    background.extend([asyncio.create_task(coordination_loop()), asyncio.create_task(backlog_loop())])
+    background.append(asyncio.create_task(component_loop()))
+    if role() in {"dense", "bootstrap", "telemetry"}:
+        background.append(asyncio.create_task(rescan_loop()))
+    if executes():
+        background.append(asyncio.create_task(consume_loop()))
 
 
 async def coordination_loop() -> None:
@@ -133,11 +150,40 @@ async def coordination_loop() -> None:
     while True:
         try:
             await shared.ping()  # A replica unable to consume must stop advertising availability.
-            await coordinator.tick()
+            if executes():
+                await coordinator.tick()
+            else:
+                await coordinator.api.request("GET", "Graph", coordinator.namespace)
+                coordinator.last_success = time.monotonic()
         except Exception:
             coordinator.leader = False
             logger.exception("Coordination failed; expired ownership will stop writes")
         await asyncio.sleep(5)
+
+
+async def component_loop() -> None:
+    """
+    Publish worker and HTTP demand independently of which role serves metrics.
+
+    Returns:
+        None: Failed heartbeats expire and prevent treating unavailable demand as zero.
+    """
+    assert shared is not None and coordinator is not None and queue is not None
+    while True:
+        try:
+            await report(shared, role())
+            if root_plane and not serves("METRICS"):
+                await root_plane.telemetry(
+                    {
+                        "replica": coordinator.identity,
+                        "shards": sorted(coordinator.owned),
+                        "pending": queue.queue.qsize(),
+                        "writes": write_backlog(),
+                    }
+                )
+        except Exception:
+            logger.warning("Component demand publication failed")
+        await asyncio.sleep(tuning.metrics)
 
 
 async def connection_sweep_loop() -> None:
@@ -186,19 +232,25 @@ async def rescan_loop() -> None:
     while True:
         try:
             scan_started = time.monotonic()
+            ticket = await state.begin() if state else None
             objects = []
-            definitions = ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if metrics_http else ()
+            definitions = ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if metrics_http or state else ()
             for kind in (*KINDS, *definitions):
                 result = await coordinator.api.request("GET", kind, coordinator.namespace)
                 last_api_success = time.monotonic()
-                if metrics_http:
-                    objects.extend(result.get("items", []))
+                for obj in result.get("items", []):
+                    obj.setdefault("kind", kind)
+                    objects.append(obj)
                 if kind in KINDS:
                     for obj in result.get("items", []):
                         await publish((kind, coordinator.namespace, obj["metadata"]["name"]))
-            if metrics_http:
-                inventory_sample = (scan_started, inventory(objects))
-                inventory_sample_ok = True
+            tracked = inventory(objects)
+            if state:
+                await state.save(
+                    os.environ.get("POLYAD_CLUSTER_NAME") or "local", coordinator.namespace, ticket, objects, {"inventory": tracked}
+                )
+            inventory_sample = (scan_started, tracked)
+            inventory_sample_ok = True
         except Exception:
             inventory_sample_ok = False
             logger.exception("Resource rescan failed; retrying from fresh state")
@@ -217,19 +269,26 @@ async def metrics_loop() -> None:
         age = time.monotonic() - inventory_sample[0] if inventory_sample else None
         tracked = dict(inventory_sample[1]) if inventory_sample else {"total": None, "byKind": [], "objects": []}
         tracked.update(sampleAgeSeconds=age, fresh=inventory_sample_ok and age is not None and age < 30)
+        snapshot = {
+            "namespace": coordinator.namespace,
+            "replica": coordinator.identity,
+            "leader": coordinator.leader,
+            "shards": sorted(coordinator.owned),
+            "pending": queue.queue.qsize(),
+            "writes": write_backlog(),
+            "inbound": shared.backlog(tuple(coordinator.owned)),
+            "shardBacklogs": shared.backlog_sample[1] if shared.backlog_sample else {},
+            "inventory": tracked,
+        }
+        if root_plane:
+            snapshot["workers"] = await root_plane.telemetry(snapshot)
+            snapshot["clusters"] = await root_plane.observations()
+        if state:
+            snapshot["postgresql"] = await state.connections()
+        snapshot["components"] = await collect(shared)
         await asyncio.to_thread(
             metrics_store.publish,
-            {
-                "namespace": coordinator.namespace,
-                "replica": coordinator.identity,
-                "leader": coordinator.leader,
-                "shards": sorted(coordinator.owned),
-                "pending": queue.queue.qsize(),
-                "writes": write_backlog(),
-                "inbound": shared.backlog(tuple(coordinator.owned)),
-                "shardBacklogs": shared.backlog_sample[1] if shared.backlog_sample else {},
-                "inventory": tracked,
-            },
+            snapshot,
             graph_labels=os.environ.get("POLYAD_METRICS_GRAPH_LABELS", "false").lower() == "true",
         )
         await asyncio.sleep(tuning.metrics)
@@ -292,7 +351,7 @@ async def publish_observation(key: Key) -> None:
             target = await controller.api.get(obj["spec"]["kind"], key[1], obj["spec"]["graph"])
             if target is not None and target["metadata"]["uid"] == obj["spec"]["graphUid"]:
                 await publish_observation((target["kind"], key[1], target["metadata"]["name"]))
-        snapshot = await topology_snapshot(controller.api, obj) if key[0] in BOUNDARY_KINDS else None
+        snapshot = await topology_snapshot(controller.api, obj, await controller.children(obj)) if key[0] in BOUNDARY_KINDS else None
         await coordinator.guard()
         await events.publish(obj, topology=snapshot)
 
@@ -366,6 +425,8 @@ async def handle(namespace: str | None, name: str, body: kopf.Body, **_: Any) ->
         None: No return value.
     """
     assert namespace is not None
+    if role() not in {"dense", "bootstrap"}:
+        return
     await publish((body["kind"], namespace, name))
     for owner in body.get("metadata", {}).get("ownerReferences", []):
         if owner.get("controller") and owner.get("apiVersion") == f"{GROUP}/{VERSION}" and owner.get("kind") in KINDS:
@@ -385,6 +446,13 @@ def write_backlog() -> dict[str, Any]:
     """
     assert controller is not None and coordinator is not None
     workloads = controller.api.writes.snapshot()
+    if root_plane:
+        for _, api in root_plane.federation.clients.values():
+            pressure = api.writes.snapshot()
+            for key in ("queued", "inFlight", "total"):
+                workloads[key] += pressure[key]
+            for key in ("oldestQueuedSeconds", "oldestInFlightSeconds"):
+                workloads[key] = max(workloads.get(key, 0), pressure.get(key, 0))
     coordination = coordinator.api.writes.snapshot()
     intake = http.api.writes.snapshot() if http else {"queued": 0, "inFlight": 0, "total": 0}
     connections = connections_http.api.writes.snapshot() if connections_http else {"queued": 0, "inFlight": 0, "total": 0}
@@ -434,9 +502,7 @@ def health(**_: Any) -> dict[str, Any]:
             "inboundUpdates": shared.backlog(tuple(coordinator.owned)) if shared and coordinator else None,
             "kubernetesWrites": write_backlog(),
         },
-        "apiFresh": time.monotonic() - last_api_success < 120
-        and coordinator is not None
-        and time.monotonic() - coordinator.last_success < 60,
+        "apiFresh": coordinator is not None and time.monotonic() - coordinator.last_success < 60,
         "cacheFresh": shared is not None and time.monotonic() - shared.last_success < 30,
         "identity": coordinator.identity if coordinator else None,
         "leader": coordinator.leader if coordinator else False,
@@ -472,7 +538,13 @@ async def cleanup(**_: Any) -> None:
         task.cancel()
     await asyncio.gather(*background, return_exceptions=True)
     background.clear()
+    if root_plane:
+        await root_plane.close()
+    if controller and "federation" in controller.__dict__:
+        controller.federation.close()
     if events:
         await events.close()
     if shared:
         await shared.close()
+    if state:
+        await state.close()

@@ -15,6 +15,7 @@ from prometheus_client import CONTENT_TYPE_LATEST
 from polyad.metrics.store import MetricsStore
 from polyad.metrics.workloads import workload_metric
 from polyad.operator.health import lifecycle
+from polyad.operator.pressure import demand
 
 
 @frozen
@@ -107,7 +108,7 @@ class MetricsAPIBuilder:
                     "parameters": [
                         {"name": key, "in": "path", "required": True, "schema": {"type": "string"}} for key in ("kind", "name", "metric")
                     ]
-                    + [{"name": "node", "in": "query", "schema": {"type": "string"}}],
+                    + [{"name": key, "in": "query", "schema": {"type": "string"}} for key in ("node", "cluster")],
                     "responses": {
                         "200": {
                             "description": "Fresh workload metric; reusable definitions aggregate all observed uses",
@@ -134,12 +135,58 @@ class MetricsAPIBuilder:
             if sample is None or lifecycle.replacement.is_set() or lifecycle.draining.is_set():
                 return Response('{"error":"metrics snapshot unavailable"}', status=503, content_type="application/json")
             try:
-                value = workload_metric(json.loads(sample[1]), kind, name, metric, request.args.get("node"))
+                snapshot = json.loads(sample[1])
+                cluster = request.args.get("cluster")
+                if cluster is not None:
+                    snapshot = snapshot.get("clusters", {})[cluster]
+                value = workload_metric(snapshot, kind, name, metric, request.args.get("node"))
+                if cluster is not None:
+                    value["cluster"] = cluster
             except (KeyError, ValueError) as error:
                 return Response(
                     json.dumps({"error": str(error)}), status=404 if isinstance(error, KeyError) else 503, content_type="application/json"
                 )
             return Response(json.dumps(value), content_type="application/json")
+
+        for path in ("/v1/postgresql/connections", "/v1/components/{component}/{metric}"):
+            spec.path(
+                path=path,
+                operations={
+                    "get": {
+                        "parameters": [
+                            {"name": key, "in": "path", "required": True, "schema": {"type": "string"}}
+                            for key in ("component", "metric")
+                            if "{" + key + "}" in path
+                        ],
+                        "responses": {
+                            "200": {"description": "Fresh global demand", "content": {"application/json": {"schema": {"type": "object"}}}},
+                            "404": {"description": "Unknown component metric"},
+                            "503": {"description": "Sample unavailable, disabled or stale"},
+                        },
+                    }
+                },
+            )
+
+        @app.get("/v1/postgresql/connections")
+        @app.get("/v1/components/<component>/<metric>")
+        def capacity(component: str | None = None, metric: str | None = None) -> Response:
+            sample = store.read()
+            if sample is None or lifecycle.replacement.is_set() or lifecycle.draining.is_set():
+                return Response('{"error":"metrics snapshot unavailable"}', status=503, content_type="application/json")
+            snapshot = json.loads(sample[1])
+            try:
+                if component is not None and metric is not None:
+                    value = demand(snapshot, component, metric)
+                else:
+                    postgres = snapshot.get("postgresql", {})
+                    if not postgres.get("enabled") or not postgres.get("fresh"):
+                        raise ValueError("PostgreSQL connection observation unavailable")
+                    value = postgres["connections"]
+            except (KeyError, ValueError) as error:
+                return Response(
+                    json.dumps({"error": str(error)}), status=404 if isinstance(error, KeyError) else 503, content_type="application/json"
+                )
+            return Response(json.dumps({"value": value, "fresh": True}), content_type="application/json")
 
         @app.get("/openapi.json")
         def openapi() -> Response:

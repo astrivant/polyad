@@ -5,6 +5,14 @@ constraints and admission gates. Storage and application recovery are explicit
 workload responsibilities. A graph's `mode: persistent` describes a long-running
 lifecycle; it does not enable persistent storage or checkpointing.
 
+The [root control-plane architecture](root-control-plane.md#authority-and-execution)
+lets a dedicated management cluster own remote execution replicas, central
+observations and [KEDA scaling decisions](root-control-plane.md#keda-from-the-root).
+Graph families retain fresh local rule checks at execution. The optional
+[independent federation pattern](multicluster.md#execution-and-observation) and
+[read-only observers](multicluster.md#optional-shared-observers) are documented
+separately.
+
 ## Daemons change the graph's contract
 
 A job produces a terminal result. A daemon maintains a capability over time. Its success condition is a temporal invariant, such as “accept requests while healthy,” with an explicit stop condition. A persistent graph is therefore a supervised system rather than a computation with an expected return value.

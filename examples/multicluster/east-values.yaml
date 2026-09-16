@@ -1,0 +1,29 @@
+global:
+  istioNamespace: polyad
+  meshID: application-mesh
+  network: east-network
+  multiCluster:
+    clusterName: east
+mesh:
+  enabled: true
+  install: true
+  multicluster:
+    enabled: true
+    eastWest:
+      enabled: true
+    peers:
+      - name: west
+        mode: Gateway
+        cidrs: [192.0.2.20/32] # Replace with the reachable west gateway address.
+        gatewayNamespace: polyad
+istioEastWest:
+  networkGateway: east-network
+federation:
+  enabled: true
+  clusters:
+    - name: west
+      namespace: polyad
+      kubeconfigSecret: west-graph-access
+observer:
+  enabled: true
+  existingSecret: graph-observer-token

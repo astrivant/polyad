@@ -42,6 +42,8 @@ def compile_daemon(spec: dict[str, Any], selector: dict[str, str]) -> asts.Deplo
     replicas = spec.get("replicas", 1)
     if type(replicas) is not int or replicas < 1:
         raise ValueError("daemon replicas must be a positive integer")
+    if type(spec.get("reloadOnSecretChange", False)) is not bool:
+        raise ValueError("daemon reloadOnSecretChange must be a boolean")
     common = {"template": spec["template"], "selector": {"matchLabels": selector}, "replicas": replicas}
     if kind == "Deployment":
         if "statefulSet" in spec:

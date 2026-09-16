@@ -63,6 +63,54 @@ def stateful_spec():
     }
 
 
+@pytest.mark.parametrize("kind", ["Deployment", "StatefulSet"])
+@pytest.mark.parametrize("enabled,opt_in", [(False, False), (False, True), (True, False), (True, True)])
+def test_daemon_secret_reload_is_opt_in_and_preserves_reloader_updates(monkeypatch, kind, enabled, opt_in):
+    """
+    Emit restart controls on opted-in native controllers and retain externally triggered rollouts.
+    """
+    monkeypatch.setenv("POLYAD_ESO_RELOAD_ENABLED", str(enabled).lower())
+
+    async def run():
+        definition = {"controller": kind, "reloadOnSecretChange": opt_in, "template": template(True)}
+        definition["template"]["spec"]["containers"][0]["envFrom"] = [{"secretRef": {"name": "service-credentials"}}]
+        if kind == "StatefulSet":
+            definition["statefulSet"] = {"serviceName": "server-peers"}
+        graph = resource(
+            "Graph",
+            "application",
+            {
+                "mode": "persistent",
+                "nodes": [{"name": "server", "kind": "Daemon", "ref": "server"}, {"name": "job", "kind": "Workload", "ref": "job"}],
+            },
+        )
+        api = FakeAPI(graph, resource("Daemon", "server", definition), resource("Workload", "job", {"template": template()}))
+        controller = Controller(api)
+        key = "Graph", "test", "application"
+        await controller.reconcile(key)
+        child = api.children(kind)[0]
+        expected = "true" if enabled and opt_in else None
+        assert child["metadata"]["annotations"].get("reloader.stakater.com/search") == expected
+        assert "reloader.stakater.com/search" not in child["spec"]["template"]["metadata"].get("annotations", {})
+        assert "reloader.stakater.com/search" not in api.children("Job")[0]["metadata"]["annotations"]
+        # Reloader changes the native Pod template; Polyad retains the owned controller.
+        child["spec"]["template"]["spec"]["containers"][0]["env"].append({"name": "STAKATER_SECRET_HASH", "value": "changed"})
+        api.calls.clear()
+        await controller.reconcile(key)
+        assert not any(call[0] in {"POST", "DELETE"} and call[1] == kind for call in api.calls)
+        assert api.children(kind)[0] is child
+
+    asyncio.run(run())
+
+
+def test_daemon_rejects_nonboolean_secret_reload():
+    """
+    Validate the opt-in for definitions received outside Kubernetes schema validation.
+    """
+    with pytest.raises(ValueError, match="reloadOnSecretChange"):
+        compile_daemon({"template": template(True), "reloadOnSecretChange": "false"}, {})
+
+
 def test_composition_carries_stateful_storage_identity_and_audit():
     """
     Resolve a governing Service and preserve both shared and per-replica PVC configuration.

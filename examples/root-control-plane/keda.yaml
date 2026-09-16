@@ -1,0 +1,26 @@
+# Install KEDA in the root cluster. Configure prometheus-auth separately if required.
+# This illustrates worker capacity, not application throughput or CPU-based remote scaling.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: west-workers
+  namespace: polyad
+spec:
+  scaleTargetRef:
+    apiVersion: polyad.astrivant.com/v1alpha1
+    kind: OperatorPool
+    name: west-workers
+  minReplicaCount: 0
+  maxReplicaCount: 8
+  cooldownPeriod: 300
+  triggers:
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: http://prometheus.monitoring.svc:9090
+        metricName: polyad_remote_backlog
+        threshold: '20'
+        ignoreNullValues: 'false'
+        query: >-
+          sum(max by (cluster, shard, state)
+          (polyad_cluster_inbound_updates{namespace="polyad",cluster="west"}))

@@ -5,6 +5,12 @@ A `Daemon` can execute as a Kubernetes Deployment or StatefulSet. Choose
 persistent claims. Deployment remains the default. Finite `Workload` definitions
 execute as Jobs and can mount persistent storage too.
 
+Services can also set `spec.reloadOnSecretChange: true` to restart their generated
+Deployment or StatefulSet after an opted-in ESO Secret changes. This requires
+the executing operator's `externalSecrets.enabled` and
+`externalSecrets.reloadOnChange` settings and an installed Stakater Reloader.
+See [Secret rotation and workload opt-in](authentication.md#restart-consumers-after-rotation).
+
 ```mermaid
 flowchart LR
     definition["Daemon definition"] --> choice{"spec.controller"}

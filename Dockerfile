@@ -63,7 +63,8 @@ COPY --chown=65532:65532 . .
 RUN /opt/poetry/bin/poetry install --only-root \
     && python -m pip check \
     && chown -R 65532:65532 /app /opt/venv
-ENV POETRY_CACHE_DIR=/home/polyad/.cache/pypoetry \
+ENV POLYAD_CRD_DIRECTORY=/app/charts/polyad/crds \
+    POETRY_CACHE_DIR=/home/polyad/.cache/pypoetry \
     HOME=/home/polyad
 USER 65532:65532
 ARG VERSION
@@ -75,6 +76,7 @@ LABEL org.opencontainers.image.version="${VERSION}" \
 # Keep production last: an ordinary docker build creates the deployment image.
 FROM base AS production
 COPY --from=production-build /opt/venv /opt/venv
+COPY charts/polyad/crds /opt/polyad/crds
 USER 65532:65532
 ARG VERSION
 ARG VCS_REF

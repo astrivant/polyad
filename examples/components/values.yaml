@@ -1,0 +1,22 @@
+# Optional component architecture; works without PostgreSQL or remote clusters.
+architecture:
+  mode: Distributed
+  autoscaling: true
+  cheegerMinimum: 1
+  expandedNodes: 27
+operator:
+  replicaCount: 2
+api:
+  enabled: true
+  existingSecret: polyad-api
+events:
+  enabled: true
+  existingSecret: polyad-events
+metrics:
+  enabled: true
+  authentication:
+    enabled: true
+    existingSecret: polyad-metrics
+keda:
+  authentication:
+    enabled: true

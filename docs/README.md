@@ -11,6 +11,8 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 | [Container profiles](containers.md) | Development and production builds, runtime permissions and image checks |
 | [Getting started](getting-started.md) | Installation, execution models and runnable examples |
 | [Networking and events](networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
+| [Root control plane](root-control-plane.md) | Dedicated management clusters, root-managed execution replicas, centralized reports and KEDA targets |
+| [Multicluster and observers](multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |
 | [Temporary connections](temporary-connections.md) | Optional TTL-bound edges, caller and target scope, service-account authentication and cleanup |
 | [Operator model](operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
 | [Flux health](fluxcd.md) | CEL checks for graph readiness and descendant failures |

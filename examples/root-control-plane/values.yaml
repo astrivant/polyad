@@ -1,0 +1,38 @@
+# Install only in the management cluster, in namespace polyad.
+global:
+  multiCluster:
+    clusterName: management
+rootControlPlane:
+  enabled: true
+  kubeconfigSecret: root-access
+  endpoints:
+    api: https://polyad.example.com/composition
+    events: https://polyad.example.com/events
+    metrics: https://polyad.example.com/metrics
+federation:
+  enabled: true
+  clusters:
+    - name: west
+      namespace: workloads
+      kubeconfigSecret: west-access
+operator:
+  replicaCount: 2
+  autoscaling:
+    enabled: false
+# This existing Secret holds a root Dragonfly URL reachable from all worker clusters.
+# Manage its credentials and TLS outside this example; do not use a public unauthenticated cache.
+dragonfly:
+  enabled: false
+  existingSecret: root-cache
+metrics:
+  enabled: true
+  graphLabels: true
+  authentication:
+    enabled: true
+    existingSecret: metrics-access
+events:
+  enabled: true
+  existingSecret: events-access
+api:
+  enabled: true
+  existingSecret: api-access

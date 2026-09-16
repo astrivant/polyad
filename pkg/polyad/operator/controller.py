@@ -11,6 +11,7 @@ import logging
 import os
 import re
 from datetime import UTC, datetime, timedelta
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 from attrs import evolve
@@ -26,11 +27,12 @@ from polyad.compiler.passes.network import configure_pod
 from polyad.compiler.passes.storage import configure_storage
 from polyad.graph.gates import DelayGate, Gate
 from polyad.graph.temporary import active_entries, overlay
-from polyad.metrics.workloads import observation_time
+from polyad.metrics.workloads import current_observation, observation_time
 from polyad.operator.activations import TERMINAL, Activations
 from polyad.operator.api import GROUP
 from polyad.operator.capacity import CapacityManager
 from polyad.operator.compositions import drain_composition, reconcile_composition
+from polyad.operator.federation import REMOTE, Federation
 from polyad.operator.graph_status import instance_metrics
 from polyad.operator.graph_status import observed as observed
 from polyad.operator.identity import graph_ancestry
@@ -139,6 +141,33 @@ class Controller:
         """
         self.api = api
 
+    @cached_property
+    def federation(self) -> Federation:
+        """
+        Load optional remote destinations only when this controller needs them.
+
+        Returns:
+            Federation: Remote ownership and credential adapter sharing the local write fence.
+        """
+        return Federation(self.api)
+
+    async def children(self, obj: dict[str, Any]) -> list[dict[str, Any]]:
+        """
+        Observe local ownership and durable remote ownership before lifecycle decisions.
+
+        Args:
+            obj (dict[str, Any]): Fresh parent boundary.
+
+        Returns:
+            list[dict[str, Any]]: Fresh local and remote children, including terminating instances.
+        """
+        local = await self.api.owned(obj["metadata"]["namespace"], obj["metadata"]["uid"])
+        remote = await self.federation.children(obj)
+        for child in remote:
+            if not current_observation(child.get("status", {}).get("metricsObservedAt")):
+                child["status"] = {}  # Stale remote status cannot become a fresh aggregate metric.
+        return [*local, *remote]
+
     async def status(self, obj: dict[str, Any], values: dict[str, Any]) -> None:
         """
         Commit observations only against the resource version that produced them.
@@ -197,7 +226,7 @@ class Controller:
         meta = obj["metadata"]
         if obj["kind"] == "Composition":
             return await drain_composition(self, obj)
-        children = await self.api.owned(meta["namespace"], meta["uid"])
+        children = await self.children(obj)
         if not meta.get("deletionTimestamp"):
             receipts = [child for child in children if child["kind"] == "Activation"]
             children = [child for child in children if child["kind"] != "Activation"]
@@ -209,7 +238,7 @@ class Controller:
         work = [child for child in children if child["kind"] not in POLICY_KINDS]
         for child in work or children:
             if not child["metadata"].get("deletionTimestamp"):
-                await self.api.delete(child)
+                await self.federation.delete(child)
         return not children
 
     async def storage_claim(self, namespace: str, storage: Persistence) -> None:
@@ -250,6 +279,9 @@ class Controller:
                 await CapacityManager(self, latest).cancel("graph validation failed")
             await self.report_metrics(key)
             raise
+        except Exception:
+            await self.report_metrics(key)
+            raise
         else:
             await self.report_metrics(key)
             logger.debug("Reconciliation completed kind=%s namespace=%s name=%s", *key)
@@ -275,7 +307,12 @@ class Controller:
         obj = await self.api.get(*key)
         if obj is None or obj.get("spec", {}).get("templateOnly", False):
             return
-        children = await self.api.owned(key[1], obj["metadata"]["uid"])
+        try:
+            children = await self.children(obj)
+        except Exception:
+            # Failed remote reads cannot preserve the previous Ready report.
+            await self.status(obj, {"phase": "Reconciling", "ready": False, "completed": False, "message": "remote inventory unavailable"})
+            raise
         values: dict[str, Any] = {}
         if pending or obj.get("status", {}).get("phase") != "Invalid":
             values["message"] = str(pending) if pending else ""
@@ -462,6 +499,7 @@ class Controller:
         spec: dict[str, Any] | asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec,
         *,
         extra: dict[str, Any] | None = None,
+        annotations: dict[str, str] | None = None,
     ) -> asts.Resource:
         """
         Compile a resource AST with stable revision hashes and typed controller ownership.
@@ -472,11 +510,12 @@ class Controller:
             kind (str): Kubernetes resource kind.
             spec (dict[str, Any] | asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec): Desired resource configuration.
             extra (dict[str, Any] | None): Unmodeled native fields preserved during serialization.
+            annotations (dict[str, str] | None): Compiler-supplied controller annotations included in the desired revision.
 
         Returns:
             asts.Resource: Owned resource AST ready for serialization.
         """
-        return owned_child(asts.from_document(parent), node_name, kind, spec, extra=extra)
+        return owned_child(asts.from_document(parent), node_name, kind, spec, extra=extra, annotations=annotations)
 
     async def ensure(self, desired: asts.Resource, *, before_create: Callable[[], Awaitable[None]] | None = None) -> dict[str, Any] | None:
         """
@@ -493,11 +532,18 @@ class Controller:
         if not meta.namespace or not meta.name:
             raise ValueError("admission requires a namespaced resource name")
         kind = desired.resource_type.kind
-        current = await self.api.get(kind, meta.namespace, meta.name)
+        remote_cluster = (meta.annotations or {}).get(REMOTE)
+        api = self.federation.target(remote_cluster)[0] if remote_cluster else self.api
+        current = await api.get(kind, meta.namespace, meta.name)
         if current is not None:
             current_meta = asts.converter.structure(current["metadata"], asts.ObjectMeta)
-            if current_meta.ownerReferences != meta.ownerReferences:
+            if (current_meta.ownerReferences or ()) != (meta.ownerReferences or ()):
                 raise ValueError("refusing to adopt a resource with different ownership")
+            if remote_cluster:
+                from polyad.operator.federation import PARENT
+
+                if (current_meta.annotations or {}).get(PARENT) != (meta.annotations or {}).get(PARENT):
+                    raise ValueError("refusing to adopt a remote graph with different ownership")
             if current_meta.deletionTimestamp or (current_meta.annotations or {}).get(f"{GROUP}/desired-hash") != (
                 meta.annotations or {}
             ).get(f"{GROUP}/desired-hash"):
@@ -518,7 +564,7 @@ class Controller:
         if before_create is not None:
             await before_create()
         logger.debug("Creating owned resource kind=%s namespace=%s name=%s", kind, meta.namespace, meta.name)
-        await self.api.request("POST", kind, meta.namespace, body=desired)
+        await api.request("POST", kind, meta.namespace, body=desired)
         return None  # Creation acknowledgement is not readiness; observe it on a fresh pass.
 
     async def graph(self, obj: dict[str, Any]) -> None:
@@ -561,6 +607,7 @@ class Controller:
         desired: dict[str, asts.Resource] = {}
         rule_reports = await check_live_rules(self.api, obj)
         rule_candidate = None
+        remote_snapshot = None
 
         async def refresh_rules() -> None:
             """
@@ -573,6 +620,19 @@ class Controller:
             if any(deadline <= datetime.now(UTC) for deadline in deadlines):
                 raise Pending("temporary connection expired before workload mutation")
             rule_reports = await check_live_rules(self.api, obj, candidate=rule_candidate)
+            # Connectivity loss is not evidence that a remote child has stopped.
+            refreshed = await self.federation.children(obj)
+            if any(
+                (item.get("status", {}).get("ready") or item.get("status", {}).get("completed"))
+                and not current_observation(item.get("status", {}).get("metricsObservedAt"))
+                for item in refreshed
+            ):
+                raise Pending("remote lifecycle heartbeat expired before dispatch")
+            if (
+                remote_snapshot is not None
+                and {(item["metadata"]["uid"], item["metadata"]["resourceVersion"]) for item in refreshed} != remote_snapshot
+            ):
+                raise Pending("remote children changed before dispatch; refresh lifecycle observations")
 
         persistence = {}
         activation_policies = {}
@@ -582,13 +642,23 @@ class Controller:
         names = {node.name: child_name(obj, node.name) for node in graph.nodes}
         ancestors = await graph_ancestry(self.api, obj) if any(node.kind in {"Workload", "Daemon"} for node in graph.nodes) else []
         endpoints = {name: os.environ.get(f"POLYAD_WORKLOAD_{name}_URL", "") for name in ("API", "EVENTS", "METRICS", "CONNECTIONS")}
+        root_mode = os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true"
+        if root_mode and self.federation.name != os.environ.get("POLYAD_CLUSTER_NAME"):
+            endpoints["CONNECTIONS"] = ""  # Kubernetes caller tokens remain cluster-scoped.
         for node in graph.nodes:
-            reference_key = (node.kind, node.ref)
+            cluster = getattr(node, "cluster", None)
+            reference_key = (cluster, node.kind, node.ref)
             if reference_key not in definition_cache:
-                definition_cache[reference_key] = await self.definition(node.kind, namespace, node.ref)
+                if cluster:
+                    remote, remote_namespace = self.federation.target(cluster)
+                    definition_cache[reference_key] = await Controller(remote).definition(node.kind, remote_namespace, node.ref)
+                else:
+                    definition_cache[reference_key] = await self.definition(node.kind, namespace, node.ref)
             definition = definition_cache[reference_key]
             definitions[node.name] = definition
             if "activation" in definition["spec"]:
+                if cluster:
+                    raise ValueError("configure activations inside the remote Graph; remote boundary activation is not supported")
                 if node.kind == "Resource":
                     raise ValueError("resources cannot be pulse-activated")
                 activation_policies[node.name] = converter.structure(definition["spec"]["activation"], ActivationPolicy)
@@ -607,7 +677,10 @@ class Controller:
                 effective = merge_placement(placement, spec.get("placement"))
                 place_pod(pod_spec, effective)
                 pod_spec["terminationGracePeriodSeconds"] = policy.get("graceSeconds", pod_spec.get("terminationGracePeriodSeconds", 30))
-                inject_environment(pod, workload_identity(ancestors, node, definition, names[node.name], endpoints))
+                identity = workload_identity(ancestors, node, definition, names[node.name], endpoints)
+                if root_mode:
+                    identity["POLYAD_CLUSTER_NAME"] = self.federation.name
+                inject_environment(pod, identity)
                 if node.kind == "Daemon":
                     for container in pod_spec["containers"]:
                         if any(probe not in container for probe in ("startupProbe", "readinessProbe", "livenessProbe")):
@@ -623,7 +696,14 @@ class Controller:
                         template=asts.converter.structure(pod, asts.PodTemplate), backoffLimit=spec.get("backoffLimit", 6)
                     )
                     kind = "Job"
-                desired[node.name] = self.child(obj, node.name, kind, runtime)
+                annotations = None
+                if (
+                    node.kind == "Daemon"
+                    and spec.get("reloadOnSecretChange", False)
+                    and os.environ.get("POLYAD_ESO_RELOAD_ENABLED", "false").lower() == "true"
+                ):
+                    annotations = {"reloader.stakater.com/search": "true"}
+                desired[node.name] = self.child(obj, node.name, kind, runtime, annotations=annotations)
             elif node.kind == "Resource":
                 manifest = spec["manifest"]
                 if manifest["kind"] not in {"Service", "ConfigMap", "PersistentVolumeClaim"}:
@@ -645,7 +725,7 @@ class Controller:
                 spec["templateOnly"] = False
                 if graph.capacity is not None:
                     spec.setdefault("capacity", converter.unstructure(graph.capacity))
-                if graph.rules:
+                if graph.rules and not cluster:
                     inherited_rules = set()
                     for rule_name in graph.rules:
                         rule = await self.definition("GraphRule", namespace, rule_name)
@@ -656,7 +736,7 @@ class Controller:
                     spec["placement"] = merge_placement(placement, spec.get("placement"))
                 kind = node.kind
                 lineage = json.loads(meta.get("annotations", {}).get(f"{GROUP}/lineage", "[]"))
-                reference = f"{node.kind}/{node.ref}"
+                reference = f"{cluster or self.federation.name}/{node.kind}/{node.ref}"
                 if reference in lineage or len(lineage) >= 32:
                     raise ValueError("recursive boundary reference or nesting exceeds 32")
                 desired[node.name] = self.child(obj, node.name, kind, spec)
@@ -668,7 +748,10 @@ class Controller:
                         annotations={**(compiled_child.metadata.annotations or {}), f"{GROUP}/lineage": json.dumps([*lineage, reference])},
                     ),
                 )
+                if cluster:
+                    desired[node.name] = self.federation.compile(obj, node.name, cluster, desired[node.name])
             desired[node.name] = trace_child(desired[node.name], obj, node, definition)
+        await self.federation.journal(self, obj, desired)
         for name in activation_policies:
             if any(
                 "${nodes." + name + ".name}" in json.dumps(definition["spec"])
@@ -677,9 +760,7 @@ class Controller:
             ):
                 raise ValueError("activation-controlled targets have per-run names; use a Service for discovery")
         activations = Activations(self, obj)
-        graph, desired = await activations.prepare(
-            graph, desired, activation_policies, definitions, await self.api.owned(namespace, meta["uid"])
-        )
+        graph, desired = await activations.prepare(graph, desired, activation_policies, definitions, await self.children(obj))
         for runtime_name, receipt in activations.records.items():
             if receipt["spec"]["node"] in persistence:
                 persistence[runtime_name] = persistence[receipt["spec"]["node"]]
@@ -688,7 +769,12 @@ class Controller:
             rule_candidate = converter.unstructure(graph)
             await refresh_rules()
         await ensure_policies(self, obj, network_plans)
-        children = [child for child in await self.api.owned(namespace, meta["uid"]) if child["kind"] not in asts.AUXILIARY_KINDS]
+        children = [child for child in await self.children(obj) if child["kind"] not in asts.AUXILIARY_KINDS]
+        remote_snapshot = {
+            (item["metadata"]["uid"], item["metadata"]["resourceVersion"])
+            for item in children
+            if item["metadata"].get("annotations", {}).get(REMOTE)
+        }
         present_names = {child["metadata"]["name"] for child in children}
         for name, present_storage in persistence.items():
             if present_storage.enabled and desired[name].metadata.name in present_names:
@@ -714,7 +800,7 @@ class Controller:
                     continue  # Scale-in waits for finite work; it never cancels an active Job.
                 if not child["metadata"].get("deletionTimestamp"):
                     await refresh_rules()
-                    await self.api.delete(child)
+                    await self.federation.delete(child)
             raise Pending("draining removed or replaced nodes before admitting the new topology", phase="Draining")
         current = {child["metadata"]["name"]: child for child in children}
         states = {
@@ -722,6 +808,11 @@ class Controller:
             for node in graph.nodes
             if desired[node.name].metadata.name in current
         }
+        for node in graph.nodes:
+            if getattr(node, "cluster", None) and node.name in states:
+                child = current[desired[node.name].metadata.name]
+                if not current_observation(child.get("status", {}).get("metricsObservedAt")):
+                    states[node.name].update(ready=False, completed=False, failed=False)
         capacity = CapacityManager(self, obj)
         await capacity.prepare(graph, desired, states, excluded=activations.blocked)
         facts = {f"{name}.{condition}": value for name, state in states.items() for condition, value in state.items()}

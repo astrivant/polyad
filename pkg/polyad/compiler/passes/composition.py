@@ -71,6 +71,10 @@ def compile_composition(request: CompositionRequest, namespace: str, *, owner_ui
                     raise ValueError("replicaSource is assigned by the compiler")
                 uses.add_edge(item.id, target.id)
             for node in body.get("nodes", []):
+                if node.get("cluster"):
+                    raise ValueError(
+                        "composition refId definitions are cluster-local; submit remote PolyGraph nodes with installed target-cluster refs"
+                    )
                 node_id = identity(node.pop("id"))
                 target = by_id.get(node.pop("refId"))
                 if target is None:

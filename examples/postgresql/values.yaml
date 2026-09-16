@@ -1,0 +1,21 @@
+# Install CloudNativePG and KEDA first. PostgreSQL is disabled in chart defaults.
+postgresql:
+  enabled: true
+  ha:
+    enabled: true
+    instances: 3
+  storage:
+    size: 20Gi
+  autoscaling:
+    enabled: true
+    minInstances: 3
+    maxInstances: 6
+    connectionsPerInstance: 20
+metrics:
+  enabled: true
+  authentication:
+    enabled: true
+    existingSecret: polyad-metrics
+keda:
+  authentication:
+    enabled: true

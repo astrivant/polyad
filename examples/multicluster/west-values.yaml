@@ -1,0 +1,23 @@
+global:
+  istioNamespace: polyad
+  meshID: application-mesh
+  network: west-network
+  multiCluster:
+    clusterName: west
+mesh:
+  enabled: true
+  install: true
+  multicluster:
+    enabled: true
+    eastWest:
+      enabled: true
+    peers:
+      - name: east
+        mode: Gateway
+        cidrs: [192.0.2.10/32] # Replace with the reachable east gateway address.
+        gatewayNamespace: polyad
+istioEastWest:
+  networkGateway: west-network
+observer:
+  enabled: true
+  existingSecret: graph-observer-token

@@ -12,6 +12,7 @@ from waitress import wasyncore
 from waitress.server import create_server
 
 from polyad.metrics.builder import MetricsAPIBuilder
+from polyad.operator.pressure import pressure
 
 if TYPE_CHECKING:
     from polyad.metrics.store import MetricsStore
@@ -38,7 +39,7 @@ class MetricsServer:
         self.stopping = Event()
         self.sockets: wasyncore._SocketMap = {}
         self.server = create_server(
-            builder.build(),
+            pressure.wrap(builder.build()),
             map=self.sockets,
             host=host,
             port=port,

@@ -1,0 +1,82 @@
+{{- if .Values.postgresql.enabled }}
+{{- if and (not .Values.postgresql.managed) (not .Values.postgresql.existingSecret) }}{{ fail "external PostgreSQL requires postgresql.existingSecret" }}{{ end }}
+{{- if .Values.postgresql.managed }}
+{{- if .Values.postgresql.existingSecret }}{{ fail "postgresql.existingSecret is only for external databases" }}{{ end }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Release.Name }}-state
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  instances: {{ ternary .Values.postgresql.autoscaling.minInstances (ternary .Values.postgresql.ha.instances 1 .Values.postgresql.ha.enabled) .Values.postgresql.autoscaling.enabled }}
+  imageName: {{ .Values.postgresql.image | quote }}
+  enableSuperuserAccess: false
+  bootstrap:
+    initdb:
+      database: polyad
+      owner: polyad
+  storage:
+    size: {{ .Values.postgresql.storage.size | quote }}
+    {{- with .Values.postgresql.storage.storageClass }}
+    storageClass: {{ . | quote }}
+    {{- end }}
+  resources:
+    {{- toYaml .Values.postgresql.resources | nindent 4 }}
+  postgresql:
+    parameters:
+      max_connections: {{ .Values.postgresql.maxConnections | quote }}
+    {{- if .Values.postgresql.ha.enabled }}
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+    {{- end }}
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: {{ .Values.postgresql.ha.topologyKey | quote }}
+{{- end }}
+{{- if .Values.postgresql.autoscaling.enabled }}
+{{- if not (and .Values.postgresql.managed .Values.metrics.enabled) }}{{ fail "PostgreSQL autoscaling requires a managed database and metrics.enabled" }}{{ end }}
+{{- if gt (int .Values.postgresql.autoscaling.minInstances) (int .Values.postgresql.autoscaling.maxInstances) }}{{ fail "PostgreSQL minInstances must not exceed maxInstances" }}{{ end }}
+{{- if and .Values.postgresql.ha.enabled (lt (int .Values.postgresql.autoscaling.minInstances) 3) }}{{ fail "HA PostgreSQL autoscaling requires minInstances >= 3" }}{{ end }}
+{{- if and .Values.metrics.authentication.enabled (not .Values.keda.authentication.enabled) }}{{ fail "authenticated autoscaling requires keda.authentication.enabled" }}{{ end }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}-state
+spec:
+  scaleTargetRef:
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    name: {{ .Release.Name }}-state
+  pollingInterval: 15
+  minReplicaCount: {{ .Values.postgresql.autoscaling.minInstances }}
+  maxReplicaCount: {{ .Values.postgresql.autoscaling.maxInstances }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 60
+          policies: [{type: Pods, value: 1, periodSeconds: 120}]
+        scaleDown:
+          stabilizationWindowSeconds: 1800
+          policies: [{type: Pods, value: 1, periodSeconds: 300}]
+  triggers:
+    - type: metrics-api
+      metricType: AverageValue
+      metadata:
+        url: {{ printf "http://%s-polyad-metrics.%s.svc:8092/v1/postgresql/connections" .Release.Name .Release.Namespace | quote }}
+        valueLocation: value
+        targetValue: {{ .Values.postgresql.autoscaling.connectionsPerInstance | quote }}
+        {{- if .Values.metrics.authentication.enabled }}
+        authMode: bearer
+      authenticationRef:
+        name: {{ default (printf "%s-polyad-metrics" .Release.Name) .Values.keda.authentication.name | quote }}
+        {{- end }}
+{{- end }}
+{{- else if .Values.postgresql.autoscaling.enabled }}
+{{- fail "PostgreSQL autoscaling requires postgresql.enabled" }}
+{{- end }}

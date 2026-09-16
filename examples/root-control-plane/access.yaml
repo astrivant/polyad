@@ -1,0 +1,76 @@
+# Apply in the workload cluster. The namespace is an administrator-owned boundary.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workloads
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: polyad-root
+  namespace: workloads
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: polyad-root
+  namespace: workloads
+rules:
+  - apiGroups: [polyad.astrivant.com]
+    resources: ['*']
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets]
+    verbs: [get, list, create, update, patch, delete]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list, create, delete]
+  - apiGroups: ['']
+    resources: [services, configmaps, persistentvolumeclaims, pods, podtemplates, secrets]
+    verbs: [get, list, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list, create, update, patch, delete]
+  - apiGroups: [security.istio.io]
+    resources: [authorizationpolicies, peerauthentications]
+    verbs: [get, list, create, update, patch, delete]
+  - apiGroups: [autoscaling.x-k8s.io]
+    resources: [provisioningrequests]
+    verbs: [get, list, create, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: polyad-root
+  namespace: workloads
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: polyad-root
+subjects:
+  - kind: ServiceAccount
+    name: polyad-root
+    namespace: workloads
+---
+# Bootstrap/upgrade Polyad's schemas; cluster-wide graph execution permission is not needed.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: polyad-root-crds
+rules:
+  - apiGroups: [apiextensions.k8s.io]
+    resources: [customresourcedefinitions]
+    verbs: [get, create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: polyad-root-crds
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: polyad-root-crds
+subjects:
+  - kind: ServiceAccount
+    name: polyad-root
+    namespace: workloads

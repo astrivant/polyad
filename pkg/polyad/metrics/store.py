@@ -55,6 +55,35 @@ class MetricsStore:
         gauge("snapshot_timestamp_seconds", "Unix time of this replica snapshot.", [({}, time.time())])
         gauge("leader", "Whether this replica currently reports planner leadership.", [({}, int(snapshot["leader"]))])
         gauge("owned_shards", "Number of shards assigned to this replica.", [({}, len(snapshot["shards"]))])
+        postgres = snapshot.get("postgresql", {})
+        if postgres.get("enabled"):
+            gauge(
+                "postgresql_sample_fresh", "Whether the operator's PostgreSQL connection sample is current.", [({}, int(postgres["fresh"]))]
+            )
+            gauge(
+                "postgresql_state_fresh",
+                "Whether this process committed a complete state scan recently.",
+                [({}, int(postgres["stateFresh"]))],
+            )
+            if postgres["fresh"]:
+                gauge(
+                    "postgresql_connections",
+                    "All primary sessions from this control plane; deduplicate scrape replicas.",
+                    [({}, postgres["connections"])],
+                )
+        components = snapshot.get("components", {})
+        gauge(
+            "component_sample_fresh",
+            "Whether all recent component processes reported fresh demand.",
+            [({}, int(components.get("fresh", False)))],
+        )
+        if components.get("fresh"):
+            for field, suffix in (("requestsPerSecond", "requests_per_second"), ("inFlight", "requests_in_flight")):
+                gauge(
+                    "component_" + suffix,
+                    "Global component HTTP demand; deduplicate scrape replicas.",
+                    [({"component": name}, entry[field]) for name, entry in components["roles"].items()],
+                )
         gauge(
             "refresh_queue_entries", "Replica-local queued reconciliation keys, excluding the active attempt.", [({}, snapshot["pending"])]
         )
@@ -173,6 +202,55 @@ class MetricsStore:
                     "Direct owned resources from current-generation graph status; excludes recursive rollups.",
                     resources,
                 )
+        clusters = snapshot.get("clusters", {})
+        workers = snapshot.get("workers", {})
+        gauge(
+            "worker_sample_fresh",
+            "Root-held worker heartbeat and pressure sample availability.",
+            [({"worker": name}, int(report.get("fresh", False))) for name, report in workers.items()],
+        )
+        gauge(
+            "worker_writes_queued",
+            "Worker API writes observed centrally; deduplicate root scrape replicas.",
+            [({"worker": name}, report["writes"]["queued"]) for name, report in workers.items() if report.get("fresh", False)],
+        )
+        gauge(
+            "cluster_inventory_sample_fresh",
+            "Fresh root-held remote inventory.",
+            [({"cluster": cluster}, int(sample["inventory"]["fresh"])) for cluster, sample in clusters.items()],
+        )
+        gauge(
+            "cluster_inbound_updates",
+            "Remote stream backlog in root storage; deduplicate root replicas.",
+            [
+                ({"cluster": cluster, "shard": str(shard), "state": state}, value)
+                for cluster, sample in clusters.items()
+                if sample["inventory"]["fresh"] and sample.get("inbound", {}).get("fresh")
+                for shard, (total, pending) in sample.get("shardBacklogs", {}).items()
+                for state, value in (("queued", total - pending), ("unacknowledged", pending))
+            ],
+        )
+        remote_signals = []
+        if graph_labels:
+            for cluster, sample in clusters.items():
+                if not sample["inventory"]["fresh"]:
+                    continue
+                for obj in sample["inventory"]["objects"]:
+                    candidates = [(None, key) for key in GROUP_SIGNALS] if obj["kind"] == "ReplicaGroup" else []
+                    candidates += [(None, key) for key in obj.get("boundarySignals", {}) if key not in GROUP_SIGNALS]
+                    candidates += [(node, key) for node, entry in (obj.get("workloads") or {}).items() for key in entry["values"]]
+                    for node, signal_name in candidates:
+                        try:
+                            value = workload_metric(sample, obj["kind"], obj["name"], signal_name, node)["value"]
+                        except (KeyError, ValueError):
+                            continue
+                        remote_signals.append(
+                            (
+                                {"cluster": cluster, "kind": obj["kind"], "name": obj["name"], "node": node or "", "signal": signal_name},
+                                value,
+                            )
+                        )
+        gauge("cluster_workload_signal", "Fresh remote workload signals observed by the root.", remote_signals)
         rendered = generate_latest(registry)
         document = json.dumps(snapshot, allow_nan=False).encode()
         with self.lock:

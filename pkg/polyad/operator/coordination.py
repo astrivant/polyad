@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -18,6 +19,7 @@ from typing import TYPE_CHECKING
 from kubernetes.client.exceptions import ApiException
 
 from polyad.operator.api import GROUP
+from polyad.operator.roles import role
 from polyad_types.resources import Lease, LeaseSpec, ObjectMeta
 
 logger = logging.getLogger(__name__)
@@ -79,7 +81,7 @@ class Coordinator:
     Keep leader planning separate from exclusive, renewable worker ownership.
     """
 
-    def __init__(self, api: API, namespace: str, identity: str | None = None) -> None:
+    def __init__(self, api: API, namespace: str, identity: str | None = None, *, planner: bool = True) -> None:
         """
         Use a unique process identity, even when a pod restarts under the same name.
 
@@ -87,16 +89,23 @@ class Coordinator:
             api (API): Kubernetes adapter used for refreshed reads and guarded writes.
             namespace (str): Namespace containing the operator resources.
             identity (str | None): Optional process identity; generated uniquely when omitted.
+            planner (bool): Whether this process belongs to the root deployment and may plan assignments.
         """
         self.api, self.namespace = api, namespace
         self.identity = identity or str(uuid.uuid4())
+        self.planner = planner
+        self.component = role()
+        self.self_graph = os.environ.get("POLYAD_SELF_GRAPH", "")
+        self.image = os.environ.get("POLYAD_OPERATOR_IMAGE", "") if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true" else ""
         self.observed: dict[str, tuple[str, float]] = {}
         self.deadlines: dict[str, float] = {}
         self.owned: set[int] = set()
         self.busy: set[int] = set()
         self.leader = False
         self.last_success = 0.0
+        self.members: list[str] = []
         self.lock = asyncio.Lock()
+        self.duties = [asyncio.Lock() for _ in range(SHARDS)]
 
     def expired(self, lease: dict[str, Any]) -> bool:
         """
@@ -162,13 +171,22 @@ class Coordinator:
             None: No return value.
         """
         async with self.lock:
-            await self.claim(f"polyad-member-{self.identity}")
+            await self.claim(
+                f"polyad-member-{self.identity}",
+                annotations={f"{GROUP}/operator-image": self.image, f"{GROUP}/component": self.component},
+            )
             listing = await self.api.request("GET", "Lease", self.namespace, query=[("labelSelector", f"{GROUP}/coordination=true")])
             for lease in listing.get("items", []):
                 self.expired(lease)
-            self.leader = await self.claim("polyad-leader")
+            self.members = [
+                lease["spec"]["holderIdentity"]
+                for lease in listing.get("items", [])
+                if lease["metadata"]["name"].startswith("polyad-member-") and not self.expired(lease)
+            ]
+            self.leader = self.planner and await self.claim("polyad-leader")
             if self.leader:
                 members = []
+                bootstrap = []
                 for lease in listing.get("items", []):
                     if lease["metadata"]["name"].startswith("polyad-member-"):
                         if self.expired(lease):
@@ -177,10 +195,21 @@ class Coordinator:
                             except ApiException as error:
                                 if error.status != 409:
                                     raise
-                        else:
-                            members.append(lease["spec"]["holderIdentity"])
-                await self.claim("polyad-leader", annotations={f"{GROUP}/assignments": json.dumps(assignment(members), sort_keys=True)})
+                        elif not self.image or lease["metadata"].get("annotations", {}).get(f"{GROUP}/operator-image") == self.image:
+                            component = lease["metadata"].get("annotations", {}).get(f"{GROUP}/component", "dense")
+                            if component == "bootstrap":
+                                bootstrap.append(lease["spec"]["holderIdentity"])
+                            elif component in {"dense", "executor"}:
+                                members.append(lease["spec"]["holderIdentity"])
+                planned = assignment(members or bootstrap)
+                if self.self_graph and bootstrap:
+                    reserved = str(root_shard("Graph", self.namespace, self.self_graph))
+                    planned[reserved] = assignment(bootstrap)[reserved]
+                await self.claim("polyad-leader", annotations={f"{GROUP}/assignments": json.dumps(planned, sort_keys=True)})
             leader = await self.api.get("Lease", self.namespace, "polyad-leader")
+            if not leader or self.expired(leader):
+                self.owned.clear()
+                return
             planned = json.loads((leader or {}).get("metadata", {}).get("annotations", {}).get(f"{GROUP}/assignments", "{}"))
             for shard in range(SHARDS):
                 name = f"polyad-shard-{shard}"
@@ -203,12 +232,14 @@ class Coordinator:
                 sorted(self.busy),
             )
 
-    async def shard_for(self, key: Key) -> int:
+    async def shard_for(self, key: Key, *, api: API | None = None, cluster: str = "") -> int:
         """
         Co-locate nested boundaries and rewrites with their owning root graph.
 
         Args:
             key (Key): Resource kind, namespace and name to reconcile from fresh API state.
+            api (API | None): Workload cluster adapter; coordination always uses the root adapter.
+            cluster (str): Cluster identity isolating otherwise identical graph addresses.
 
         Returns:
             int: Shard assigned to the root graph family.
@@ -220,7 +251,7 @@ class Coordinator:
             if current_key in seen:
                 raise ValueError("cyclic graph ownership")
             seen.add(current_key)
-            obj = await self.api.get(kind, namespace, name)
+            obj = await (api or self.api).get(kind, namespace, name)
             if obj is None:
                 break
             if kind == "Rewrite":
@@ -238,7 +269,7 @@ class Coordinator:
             kind, name = owners[0]["kind"], owners[0]["name"]
         else:
             raise ValueError("graph ownership exceeds 64 levels")
-        return root_shard(kind, namespace, name)
+        return root_shard(kind, f"{cluster}/{namespace}" if cluster else namespace, name)
 
     async def guard(self) -> None:
         """
@@ -252,6 +283,13 @@ class Coordinator:
             logger.debug("Write guard rejected replica=%s shard=%s reason=unowned", self.identity, shard)
             raise NotOwner("no active shard ownership")
         name = f"polyad-shard-{shard}"
+        if not self.planner:
+            leader = await self.api.get("Lease", self.namespace, "polyad-leader")
+            if not leader or self.expired(leader):
+                raise NotOwner("root planner heartbeat is unavailable")
+            observed = self.observed["polyad-leader"][1]
+            if time.monotonic() >= observed + DURATION - WRITE_BUDGET:
+                raise NotOwner("root planner heartbeat is overdue")
         lease = await self.api.get("Lease", self.namespace, name)
         if (
             not lease
@@ -262,19 +300,22 @@ class Coordinator:
             raise NotOwner("shard lease lost or renewal overdue")
 
     @asynccontextmanager
-    async def duty(self, key: Key) -> AsyncIterator[None]:
+    async def duty(self, key: Key, *, api: API | None = None, cluster: str = "") -> AsyncIterator[None]:
         """
         Hold a shard through one ordered, freshly read reconciliation attempt.
 
         Args:
             key (Key): Resource kind, namespace and name to reconcile from fresh API state.
+            api (API | None): Adapter for resolving ownership in the workload cluster.
+            cluster (str): Workload cluster identity included in shard routing.
 
         Yields:
             None: Control while the guarded mutation or reconciliation slot is held.
         """
-        shard = await self.shard_for(key)
+        shard = await self.shard_for(key, api=api, cluster=cluster)
         if shard not in self.owned:
             raise NotOwner("graph assigned to another replica")
+        await self.duties[shard].acquire()
         self.busy.add(shard)
         token = active_shard.set(shard)
         try:
@@ -284,4 +325,5 @@ class Coordinator:
         finally:
             active_shard.reset(token)
             self.busy.discard(shard)
+            self.duties[shard].release()
             logger.debug("Duty released replica=%s shard=%s kind=%s namespace=%s name=%s", self.identity, shard, *key)

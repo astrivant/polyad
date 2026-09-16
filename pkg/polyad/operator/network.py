@@ -5,6 +5,7 @@ Refresh ancestor policies and persist network guards before admitting workload p
 from __future__ import annotations
 
 import copy
+import json
 import os
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -14,6 +15,7 @@ from polyad.graph.temporary import active_entries, overlay
 from polyad.operator.replication import effective_spec, replica_selector
 from polyad_types import resources as asts
 from polyad_types.codec import converter
+from polyad_types.network import MeshPeer
 from polyad_types.rules import StructuralRule
 from polyad_types.topology import topology
 
@@ -134,9 +136,19 @@ async def ensure_policies(controller: Controller, obj: dict[str, Any], plans: di
     namespace, uid = obj["metadata"]["namespace"], obj["metadata"]["uid"]
     wanted = set()
     changed = False
+    root_mode = os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true"
+    configured = os.environ.get("POLYAD_ROOT_MESH_PEERS", "[]") if root_mode else os.environ.get("POLYAD_MESH_PEERS", "[]")
+    entries = converter.structure(json.loads(configured), tuple[MeshPeer, ...])
+    mesh_peers = {entry.name: entry for entry in entries}
+    if len(entries) > 32 or len(mesh_peers) != len(entries) or (not root_mode and os.environ.get("POLYAD_CLUSTER_NAME") in mesh_peers):
+        raise ValueError("mesh peers require at most 32 unique remote cluster names")
+    if root_mode:
+        mesh_peers.pop(controller.federation.name, None)
     for node, scopes in plans.items():
         selector = {f"{asts.GROUP}/network-owner": uid, f"{asts.GROUP}/network-node": node}
-        for kind, spec in policy_specs(selector, scopes, mesh_namespace=os.environ.get("POLYAD_ISTIO_NAMESPACE", "istio-system")).items():
+        for kind, spec in policy_specs(
+            selector, scopes, mesh_namespace=os.environ.get("POLYAD_ISTIO_NAMESPACE", "istio-system"), mesh_peers=mesh_peers
+        ).items():
             desired = asts.to_document(controller.child(obj, f"net-{node}", kind, spec))
             name = desired["metadata"]["name"]
             wanted.add((kind, name))

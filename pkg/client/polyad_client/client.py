@@ -192,6 +192,19 @@ class Client:
         """
         return self._request("GET", "/openapi.json")
 
+    def observe(self, name: str, *, kind: Literal["Graph", "PolyGraph", "ReplicaGroup"] = "Graph") -> dict[str, Any]:
+        """
+        Read a timestamped cluster-local snapshot from an optional observer service.
+
+        Args:
+            name (str): Graph instance name in the observer's configured namespace.
+            kind (Literal['Graph', 'PolyGraph', 'ReplicaGroup']): Boundary kind to observe.
+
+        Returns:
+            dict[str, Any]: Identity, observation time, topology and local execution metrics.
+        """
+        return self._request("GET", f"/v1/observations/{quote(kind, safe='')}/{quote(name, safe='')}")
+
     def connect(self, document: ConnectionRequest | dict[str, Any]) -> dict[str, Any]:
         """
         Request a temporary edge using the connections Service and a projected token.
@@ -230,7 +243,9 @@ class Client:
         """
         return self._request("DELETE", f"/v1/connections/{quote(namespace, safe='')}/{quote(request_id, safe='')}")
 
-    def topology(self, *, graph: str, kind: str = "Graph", graph_uid: str | None = None, node: str | None = None) -> dict[str, Any]:
+    def topology(
+        self, *, graph: str, kind: str = "Graph", graph_uid: str | None = None, node: str | None = None, cluster: str | None = None
+    ) -> dict[str, Any]:
         """
         Read neighbors and a starting cursor using the events Service and its credential.
 
@@ -239,20 +254,22 @@ class Client:
             kind (str): Graph, PolyGraph or ReplicaGroup.
             graph_uid (str | None): Expected graph incarnation; replacements return HTTP 409.
             node (str | None): Logical node to inspect; omitted returns the entire boundary.
+            cluster (str | None): Registered cluster when reading through a root control plane.
 
         Returns:
             dict[str, Any]: Current topology or neighbors, including revision and replay cursor.
         """
-        query = urlencode({key: value for key, value in {"uid": graph_uid, "node": node}.items() if value is not None})
+        query = urlencode({key: value for key, value in {"uid": graph_uid, "node": node, "cluster": cluster}.items() if value is not None})
         path = f"/v1/graphs/{quote(kind, safe='')}/{quote(graph, safe='')}/topology"
         return self._request("GET", path + (f"?{query}" if query else ""))
 
-    def events(self, *, last_event_id: str | None = None) -> Iterator[Event]:
+    def events(self, *, last_event_id: str | None = None, cluster: str | None = None) -> Iterator[Event]:
         """
         Stream observations using a client configured for the separate events Service.
 
         Args:
             last_event_id (str | None): Last processed cursor for explicit reconnection.
+            cluster (str | None): Registered cluster stream; cursors belong to that selected stream.
 
         Yields:
             Event: One bounded JSON observation or stream control message.
@@ -262,7 +279,8 @@ class Client:
             if any(char in last_event_id for char in "\r\n"):
                 raise ValueError("event cursor must fit one HTTP header")
             headers["Last-Event-ID"] = last_event_id
-        with self._open("GET", "/v1/events", headers=headers) as response:
+        path = "/v1/events" + ("?" + urlencode({"cluster": cluster}) if cluster is not None else "")
+        with self._open("GET", path, headers=headers) as response:
             data: list[str] = []
             event_id, event_type, size = "", "message", 0
             while raw := response.readline(1024 * 1024 + 1):

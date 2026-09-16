@@ -5,6 +5,7 @@ Describe graph traffic independently of workload kind and admission dependencies
 from __future__ import annotations
 
 import re
+from ipaddress import ip_network
 from typing import Literal
 
 from attrs import field, frozen
@@ -45,6 +46,7 @@ class NetworkPeer:
         kind (Literal['Graph', 'PolyGraph', 'ReplicaGroup']): Kind of the referenced graph instance.
         node (str | None): Node and its descendants inside the selected graph.
         podLabels (dict[str, str]): Additional exact pod-label matches, combined with graph selection.
+        cluster (str | None): Registered remote transport; cannot be combined with local pod or namespace selectors.
     """
 
     namespace: str | None = None
@@ -52,6 +54,7 @@ class NetworkPeer:
     kind: Literal["Graph", "PolyGraph", "ReplicaGroup"] = "Graph"
     node: str | None = None
     podLabels: dict[str, str] = field(factory=dict)
+    cluster: str | None = field(default=None, metadata={"schema": {"maxLength": 63, "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"}})
 
     def __attrs_post_init__(self) -> None:
         """
@@ -60,11 +63,13 @@ class NetworkPeer:
         Returns:
             None: No return value.
         """
-        for value in (self.namespace, self.graph, self.node):
+        for value in (self.namespace, self.graph, self.node, self.cluster):
             if value is not None and not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", value):
                 raise ValueError("network namespace, graph and node references must be DNS labels")
         if self.namespace is not None and self.node is not None and self.graph is None:
             raise ValueError("cross-namespace node references require an explicit graph")
+        if self.cluster and (self.namespace or self.graph or self.node or self.podLabels):
+            raise ValueError("remote transports cannot use cluster-local namespace, graph, node or pod selectors")
 
 
 @frozen
@@ -73,7 +78,7 @@ class TrafficRule:
     Allow one peer on selected ports, with optional inbound mesh authorization.
 
     Attributes:
-        peer (NetworkPeer): Peer selected by namespace, graph and pod labels.
+        peer (NetworkPeer): Local pod selectors or a registered remote transport.
         ports (tuple[NetworkPort, ...]): Destination ports; empty means every transport port.
         node (str | None): Local node subtree to which this rule applies; omitted selects every local node.
         principals (tuple[str, ...]): Exact Istio source identities such as cluster.local/ns/team/sa/client.
@@ -147,3 +152,51 @@ class NetworkAccess:
             raise ValueError("HTTP and identity constraints require network.mesh")
         if self.mesh and not self.isolateIngress:
             raise ValueError("mesh authorization requires isolated ingress")
+        for direction, rules in (("ingress", self.ingress), ("egress", self.egress)):
+            for rule in rules:
+                if rule.peer.cluster:
+                    if not self.mesh or not rule.ports or any(port.protocol != "TCP" for port in rule.ports):
+                        raise ValueError("remote transports require network.mesh and explicit TCP ports")
+                    if direction == "ingress" and not rule.principals:
+                        raise ValueError("remote ingress requires exact source principals")
+
+
+@frozen
+class MeshPeer:
+    """
+    Register administrator-controlled remote transport addresses independently of graph policy.
+
+    Attributes:
+        name (str): Remote cluster identity used by NetworkPeer.cluster.
+        mode (Literal['Direct', 'Gateway']): Direct Pod routing or east-west gateway routing.
+        cidrs (tuple[str, ...]): Remote Pod CIDRs for Direct or gateway load-balancer CIDRs for Gateway.
+        gatewayNamespace (str): Local gateway namespace for inbound Gateway-mode transport.
+        gatewayLabels (dict[str, str]): Exact local east-west gateway Pod labels.
+        gatewayPort (int): Remote gateway destination port for outbound tunnel grants; defaults to 15443.
+    """
+
+    name: str
+    mode: Literal["Direct", "Gateway"]
+    cidrs: tuple[str, ...]
+    gatewayNamespace: str = "istio-system"
+    gatewayLabels: dict[str, str] = field(factory=lambda: {"istio": "polyad-eastwest"})
+    gatewayPort: int = field(default=15443, metadata={"schema": {"minimum": 1, "maximum": 65535}})
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject malformed addresses and ambiguous gateway selectors before policy compilation.
+
+        Returns:
+            None: No return value.
+        """
+        if self.mode not in {"Direct", "Gateway"} or not 1 <= len(self.cidrs) <= 32:
+            raise ValueError("mesh peers require Direct or Gateway mode and 1 through 32 CIDRs")
+        if not self.gatewayLabels:
+            raise ValueError("gateway Pod selectors cannot be empty")
+        if type(self.gatewayPort) is not int or not 1 <= self.gatewayPort <= 65535:
+            raise ValueError("mesh gateway ports must be integers from 1 through 65535")
+        for value in (self.name, self.gatewayNamespace):
+            if not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", value):
+                raise ValueError("mesh peer names and namespaces must be DNS labels")
+        for cidr in self.cidrs:
+            ip_network(cidr, strict=True)

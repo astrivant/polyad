@@ -190,3 +190,11 @@ is installed separately.
 
 See [per-workload metric scopes and freshness](replication.md#metric-scopes-and-freshness)
 for scalar KEDA endpoints and `polyad_workload_signal` series.
+
+## Central reports across clusters
+
+[Root mode](root-control-plane.md) gathers cluster-qualified inventories, topology
+streams and queue demand in root storage. Its metrics API accepts `?cluster=NAME`
+for workload scalar queries. See [root reports and freshness](root-control-plane.md#reports-disconnection-and-deletion)
+and [root-local KEDA targets](root-control-plane.md#keda-from-the-root) before scaling
+remote workloads or execution replicas.

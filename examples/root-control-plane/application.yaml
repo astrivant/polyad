@@ -1,0 +1,13 @@
+# The management cluster contains intent; all application Pods run in west.
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: PolyGraph
+metadata:
+  name: application
+  namespace: polyad
+spec:
+  mode: persistent
+  nodes:
+    - name: western-services
+      kind: Graph
+      ref: services
+      cluster: west

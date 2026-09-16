@@ -4,6 +4,7 @@ Describe admission separately from persistent data-flow connections.
 
 from __future__ import annotations
 
+import re
 from typing import Generic, Literal
 
 from attrs import field, frozen
@@ -211,9 +212,27 @@ class GraphNode(Node):
 
     Attributes:
         kind (Literal['Graph', 'PolyGraph', 'ReplicaGroup']): Referenced boundary kind.
+        cluster (str | None): Registered destination cluster; omitted keeps the child in this cluster.
     """
 
     kind: Literal["Graph", "PolyGraph", "ReplicaGroup"]
+    cluster: str | None = field(
+        default=None,
+        metadata={"schema": {"maxLength": 63, "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"}},
+    )
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Restrict remote placement to managed Graph and PolyGraph boundaries.
+
+        Returns:
+            None: No return value.
+        """
+        if self.cluster is not None:
+            if not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", self.cluster):
+                raise ValueError("cluster references must be DNS labels")
+            if self.kind == "ReplicaGroup":
+                raise ValueError("place a Graph or PolyGraph containing the ReplicaGroup in the remote cluster")
 
 
 NodeT = TypeVar("NodeT", bound=GraphNode, default=GraphNode, covariant=True)
@@ -222,7 +241,7 @@ NodeT = TypeVar("NodeT", bound=GraphNode, default=GraphNode, covariant=True)
 @frozen(kw_only=True)
 class PolyGraph(Topology, Generic[NodeT]):
     """
-    Compose graph boundaries under one lifecycle and placement contract.
+    Compose local or remotely placed graph boundaries under one lifecycle.
 
     Attributes:
         nodes (tuple[NodeT, ...]): Nested graph references, preserving their concrete type for consumers.

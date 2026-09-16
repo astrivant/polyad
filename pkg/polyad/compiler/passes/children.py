@@ -58,6 +58,7 @@ def owned_child(
     spec: dict[str, Any] | JobSpec | DeploymentSpec | StatefulSetSpec,
     *,
     extra: dict[str, Any] | None = None,
+    annotations: dict[str, str] | None = None,
 ) -> Resource:
     """
     Create typed resource identity, ownership and payload without mutating graph definitions.
@@ -68,6 +69,7 @@ def owned_child(
         kind (str): Kubernetes resource kind.
         spec (dict[str, Any] | JobSpec | DeploymentSpec | StatefulSetSpec): Desired resource configuration.
         extra (dict[str, Any] | None): Unmodeled native fields preserved during serialization.
+        annotations (dict[str, str] | None): Compiler-supplied controller annotations included in the desired revision.
 
     Returns:
         Resource: Owned resource AST ready for serialization.
@@ -83,8 +85,11 @@ def owned_child(
     raw_spec = to_document(spec) if isinstance(spec, (JobSpec, DeploymentSpec, StatefulSetSpec)) else copy.deepcopy(spec)
     # Preserve the pre-AST hash contract: this refactor must not replace existing workloads.
     hashed_spec = {key: value for key, value in raw_spec.items() if key != "replicas"} if kind == "ReplicaGroup" else raw_spec
-    digest = hashlib.sha256(json.dumps([kind, hashed_spec, extra], sort_keys=True).encode()).hexdigest()[:12]
-    annotations = {f"{GROUP}/desired-hash": digest}
+    payload = [kind, hashed_spec, extra]
+    if annotations:
+        payload.append(annotations)
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:12]
+    annotations = {**(annotations or {}), f"{GROUP}/desired-hash": digest}
     if f"{GROUP}/lineage" in (meta.annotations or {}):
         annotations[f"{GROUP}/lineage"] = (meta.annotations or {})[f"{GROUP}/lineage"]
     for key in ("request-id", "composition-uid", "object-id", "node-path"):

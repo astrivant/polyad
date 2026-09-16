@@ -13,6 +13,20 @@ permissions:
 jobs:
   python:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.3
+        env:
+          POSTGRES_PASSWORD: polyad-test
+          POSTGRES_DB: polyad
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d polyad"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.13', '3.14']
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -29,7 +43,7 @@ jobs:
           echo "poetry=$(bash scripts/tool-version.sh poetry)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with:
-          python-version-file: .python-version
+          python-version: ${{ matrix.python }}
       - uses: actions/setup-go@v6
         with:
           go-version-file: tests/flux/go.mod
@@ -57,6 +71,7 @@ jobs:
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
           helm dependency build charts/polyad
       - run: poetry run pre-commit run --all-files
+        if: matrix.python == '3.13'
       - name: Validate Flux health expressions
         env:
           POLYAD_FLUX_CHECKS: ${{ runner.temp }}/polyad-flux-checks.json
@@ -76,6 +91,7 @@ jobs:
         run: poetry run pytest
         env:
           POLYAD_TEST_DRAGONFLY_URL: redis://localhost:6379/0
+          POLYAD_TEST_POSTGRES_DSN: postgresql://postgres:polyad-test@localhost:5432/polyad
       - name: Check installed wheel typing
         run: |
           poetry build
@@ -85,6 +101,7 @@ jobs:
           /tmp/polyad-typing/bin/python -m pip install dist/*.whl
           POLYAD_TYPING_PYTHON=/tmp/polyad-typing/bin/python poetry run pytest tests/test_typing.py
       - name: Upload verified distributions
+        if: matrix.python == '3.13'
         uses: actions/upload-artifact@v4
         with:
           name: python-distributions-${{ steps.version.outputs.version }}
@@ -96,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.11', '3.13']
+        python: ['3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
         with:

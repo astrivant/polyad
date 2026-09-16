@@ -1,0 +1,239 @@
+{{- if .Values.observer.enabled }}
+{{- $_ := required "observer requires global.multiCluster.clusterName" .Values.global.multiCluster.clusterName }}
+{{- $_ := required "observer requires observer.existingSecret" .Values.observer.existingSecret }}
+{{- if and .Values.observer.mesh (not .Values.mesh.enabled) }}{{ fail "observer.mesh requires mesh.enabled" }}{{ end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-polyad-observer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-polyad-observer
+rules:
+  - apiGroups: [polyad.astrivant.com]
+    resources: [graphs, polygraphs, replicagroups, activations, temporaryconnections]
+    verbs: [get, list]
+  - apiGroups: ['']
+    resources: [services, configmaps, persistentvolumeclaims, pods]
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets]
+    verbs: [get, list]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list]
+  {{- if .Values.mesh.enabled }}
+  - apiGroups: [security.istio.io]
+    resources: [authorizationpolicies, peerauthentications]
+    verbs: [get, list]
+  {{- end }}
+  {{- if .Values.capacity.enabled }}
+  - apiGroups: [autoscaling.x-k8s.io]
+    resources: [provisioningrequests]
+    verbs: [get, list]
+  - apiGroups: ['']
+    resources: [podtemplates]
+    verbs: [get, list]
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-polyad-observer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-polyad-observer
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-polyad-observer
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-polyad-observer
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: polyad-observer
+  ports:
+    - name: http-observations
+      port: 8094
+      targetPort: observations
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-polyad-observer
+  {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange }}
+  annotations:
+    reloader.stakater.com/search: "true"
+  {{- end }}
+spec:
+  replicas: {{ .Values.observer.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad-observer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: polyad-observer
+      {{- if .Values.observer.mesh }}
+      annotations:
+        sidecar.istio.io/inject: 'true'
+        sidecar.istio.io/nativeSidecar: 'true'
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts":true}'
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-polyad-observer
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: observer
+          image: {{ printf "%s:%s" .Values.operator.image.repository .Values.operator.image.tag | quote }}
+          imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+          command: [python, -m, polyad.operator.observer]
+          env:
+            - name: POLYAD_CLUSTER_NAME
+              value: {{ .Values.global.multiCluster.clusterName | quote }}
+            - name: POLYAD_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: POLYAD_OBSERVER_TOKEN_FILE
+              value: /var/run/polyad/observer/token
+            - name: POLYAD_MESH_ENABLED
+              value: {{ .Values.mesh.enabled | quote }}
+            - name: POLYAD_CAPACITY_ENABLED
+              value: {{ .Values.capacity.enabled | quote }}
+          ports:
+            - name: observations
+              containerPort: 8094
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            {{- toYaml .Values.observer.resources | nindent 12 }}
+          volumeMounts:
+            - name: credential
+              mountPath: /var/run/polyad/observer
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: observations
+          livenessProbe:
+            tcpSocket:
+              port: observations
+      volumes:
+        - name: credential
+          secret:
+            secretName: {{ .Values.observer.existingSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: token
+                path: token
+{{- if .Values.observer.mesh }}
+---
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: {{ .Release.Name }}-polyad-observer
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad-observer
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ .Release.Name }}-polyad-observer
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad-observer
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: {{ .Values.observer.principals | toJson }}
+      to:
+        - operation:
+            ports: ['8094']
+            methods: [GET]
+{{- end }}
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-polyad-observer
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad-observer
+  policyTypes: [Ingress, Egress]
+  ingress:
+    {{- if .Values.observer.peers }}
+    - from:
+        {{- toYaml .Values.observer.peers | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: 8094
+    {{- else }} []
+    {{- end }}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        {{- range .Values.networkPolicy.apiServerCIDRs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    {{- if .Values.observer.mesh }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.global.istioNamespace | quote }}
+          podSelector:
+            matchLabels:
+              app: istiod
+      ports:
+        - protocol: TCP
+          port: 15012
+    {{- end }}
+{{- end }}
+{{- end }}

@@ -15,6 +15,15 @@ import pytest
 import yaml
 
 CHART = Path(__file__).resolve().parents[1] / "charts" / "polyad"
+EAST_WEST_SETTINGS = (
+    "mesh.enabled=true",
+    "mesh.multicluster.enabled=true",
+    "mesh.multicluster.eastWest.enabled=true",
+    "global.meshID=shared",
+    "global.network=east-network",
+    "global.multiCluster.clusterName=east",
+    "istioEastWest.networkGateway=east-network",
+)
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="requires Helm and helm dependency build charts/polyad")
 
 
@@ -24,7 +33,7 @@ def render(*settings):
     """
     command = ["helm", "template", "test", str(CHART), "--namespace", "test", "--include-crds"]
     for setting in settings:
-        flag = "--set-string" if setting.startswith("dragonfly.existingSecret=") else "--set"
+        flag = "--set-string" if setting.startswith(("dragonfly.existingSecret=", "istioEastWest.labels.")) else "--set"
         if setting.startswith("operator.tuning."):
             flag = "--set-json"
         command.extend([flag, setting])
@@ -346,6 +355,141 @@ def test_optional_network_policies_and_mesh_auth_are_separate_from_workloads():
     assert {"test-polyad-api", "test-polyad-events"} <= services
 
 
+def test_multicluster_gateways_and_optional_observers():
+    """
+    Render distinct gateways and read-only observers without changing the default installation.
+    """
+    default = render()
+    assert not any("observer" in item["metadata"]["name"] or "eastwest" in item["metadata"]["name"] for item in default)
+    objects = render(
+        *EAST_WEST_SETTINGS,
+        "mesh.ingress.enabled=true",
+        "mesh.ingress.hosts[0]=api.example.com",
+        "mesh.ingress.tlsSecret=api-cert",
+        "api.enabled=true",
+        "observer.enabled=true",
+        "observer.existingSecret=read-token",
+        "observer.mesh=true",
+        "observer.principals[0]=cluster.local/ns/control/sa/reader",
+        "networkPolicy.enabled=true",
+        "networkPolicy.apiServerCIDRs[0]=10.0.0.1/32",
+        "observer.peers[0].podSelector.matchLabels.istio=polyad-eastwest",
+    )
+    identities = [(item["apiVersion"], item["kind"], item["metadata"]["name"]) for item in objects]
+    assert len(identities) == len(set(identities))
+    gateway = next(item for item in objects if item["kind"] == "Gateway" and item["metadata"]["name"].endswith("eastwest"))
+    assert gateway["spec"]["servers"][0]["tls"] == {"mode": "AUTO_PASSTHROUGH"}
+    assert gateway["spec"]["servers"][0]["port"] == {"number": 15443, "name": "tls", "protocol": "TLS"}
+    schema = json.loads((CHART / "schemas/gateway-networking-v1.json").read_text())
+    jsonschema.Draft7Validator(schema).validate(gateway)
+    deployment = next(item for item in objects if item["kind"] == "Deployment" and item["metadata"]["name"] == "polyad-eastwest")
+    assert gateway["spec"]["selector"].items() <= deployment["spec"]["template"]["metadata"]["labels"].items()
+    service = next(item for item in objects if item["kind"] == "Service" and item["metadata"]["name"] == "polyad-eastwest")
+    assert {port["port"] for port in service["spec"]["ports"]} == {15012, 15017, 15021, 15443}
+    observer = next(item for item in objects if item["kind"] == "Deployment" and item["metadata"]["name"] == "test-polyad-observer")
+    assert observer["spec"]["template"]["spec"]["containers"][0]["command"] == ["python", "-m", "polyad.operator.observer"]
+    role = next(item for item in objects if item["kind"] == "Role" and item["metadata"]["name"] == "test-polyad-observer")
+    assert all(set(rule["verbs"]) <= {"get", "list"} for rule in role["rules"])
+    assert not any("secrets" in rule["resources"] for rule in role["rules"])
+    assert not any(item["kind"] == "Secret" and "observer" in item["metadata"]["name"] for item in objects)
+
+
+@pytest.mark.parametrize("port,target_port", [(15443, 16443), (16443, 16443), (443, 15443)])
+def test_east_west_custom_listener_matches_service_and_discovery(port, target_port):
+    """
+    Keep custom gateway listeners, Service translation and Istio discovery consistent.
+    """
+    objects = render(
+        *EAST_WEST_SETTINGS,
+        f"istioEastWest.networkGatewayPorts.tls.port={port}",
+        f"istioEastWest.networkGatewayPorts.tls.targetPort={target_port}",
+        rf"istioEastWest.labels.networking\.istio\.io/gatewayPort={port}",
+        "mesh.multicluster.eastWest.portName=tls-services",
+        "mesh.multicluster.eastWest.hosts[0]=*.svc.corp.example",
+        "mesh.multicluster.peers[0].name=west",
+        "mesh.multicluster.peers[0].mode=Gateway",
+        "mesh.multicluster.peers[0].cidrs[0]=192.0.2.20/32",
+        "mesh.multicluster.peers[0].gatewayPort=26443",
+    )
+    gateway = next(item for item in objects if item["kind"] == "Gateway" and item["metadata"]["name"].endswith("eastwest"))
+    assert gateway["spec"]["servers"] == [
+        {
+            "port": {"number": port, "name": "tls-services", "protocol": "TLS"},
+            "tls": {"mode": "AUTO_PASSTHROUGH"},
+            "hosts": ["*.svc.corp.example"],
+        }
+    ]
+    schema = json.loads((CHART / "schemas/gateway-networking-v1.json").read_text())
+    jsonschema.Draft7Validator(schema).validate(gateway)
+    service = next(item for item in objects if item["kind"] == "Service" and item["metadata"]["name"] == "polyad-eastwest")
+    assert service["metadata"]["labels"]["networking.istio.io/gatewayPort"] == str(port)
+    assert next(item for item in service["spec"]["ports"] if item["name"] == "tls") == {
+        "name": "tls",
+        "port": port,
+        "targetPort": target_port,
+        "protocol": "TCP",
+    }
+    operator = next(item for item in objects if item["kind"] == "Deployment" and item["metadata"]["name"] == "test-polyad")
+    env = {entry["name"]: entry.get("value") for entry in operator["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert json.loads(env["POLYAD_MESH_PEERS"])[0]["gatewayPort"] == 26443
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "istioEastWest.networkGatewayPorts.tls.port=16443",
+        r"istioEastWest.labels.networking\.istio\.io/gatewayPort=16443",
+        "istioEastWest.networkGatewayPorts.tls.port=0",
+        "istioEastWest.networkGatewayPorts.tls.port=65536",
+        "istioEastWest.networkGatewayPorts.tls.targetPort=0",
+        "istioEastWest.networkGatewayPorts.tls.targetPort=65536",
+        "istioEastWest.networkGatewayPorts.tls.protocol=UDP",
+        "mesh.multicluster.eastWest.portName=Invalid_Name",
+        "mesh.multicluster.eastWest.portName=",
+        "mesh.multicluster.eastWest.hosts=[]",
+    ],
+)
+def test_east_west_invalid_listener_settings_fail(setting):
+    """
+    Reject invalid listeners and discovery mismatches before installing the gateway.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(*EAST_WEST_SETTINGS, setting)
+
+
+def test_federation_mounts_scoped_credentials_without_secret_read_permissions():
+    """
+    Project remote credentials and provide writable memory for embedded TLS certificates.
+    """
+    objects = render(
+        "federation.enabled=true",
+        "global.multiCluster.clusterName=east",
+        "federation.clusters[0].name=west",
+        "federation.clusters[0].namespace=workflows",
+        "federation.clusters[0].kubeconfigSecret=west-credentials",
+    )
+    deployment = next(item for item in objects if item["kind"] == "Deployment" and item["metadata"]["name"] == "test-polyad")
+    pod = deployment["spec"]["template"]["spec"]
+    env = {entry["name"]: entry.get("value") for entry in pod["containers"][0]["env"]}
+    assert json.loads(env["POLYAD_FEDERATION_CLUSTERS"])[0]["namespace"] == "workflows"
+    assert pod["securityContext"]["fsGroup"] == 65532
+    assert next(volume for volume in pod["volumes"] if volume["name"] == "remote-transport")["emptyDir"]["medium"] == "Memory"
+    mount = next(item for item in pod["containers"][0]["volumeMounts"] if item["name"] == "cluster-west")
+    assert mount["readOnly"] and "subPath" not in mount
+
+
+@pytest.mark.parametrize(
+    "setting",
+    ["mesh.multicluster.enabled=true", "mesh.multicluster.eastWest.enabled=true", "observer.enabled=true", "federation.enabled=true"],
+)
+def test_remote_features_fail_closed_without_configuration(setting):
+    """
+    Require explicit identities and credentials when optional cross-cluster features are enabled.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(setting)
+
+
 def test_inline_keys_create_secrets_and_checksum_rollouts():
     """
     Inline credentials live in Secrets; existing credentials are projected without subPath.
@@ -469,7 +613,8 @@ def test_keda_bearer_secret_mount_and_optional_resources():
     )
 
 
-def test_eso_generates_references_for_endpoint_and_cache_secrets(tmp_path):
+@pytest.mark.parametrize("reload", [False, True])
+def test_eso_generates_references_for_endpoint_and_cache_secrets(tmp_path, reload):
     """
     Render provider references without including credentials or duplicating target Secrets.
     """
@@ -481,6 +626,7 @@ def test_eso_generates_references_for_endpoint_and_cache_secrets(tmp_path):
         "dragonfly": {"enabled": False, "existingSecret": "polyad-cache"},
         "externalSecrets": {
             "enabled": True,
+            "reloadOnChange": reload,
             "secretStoreRef": {"name": "vault", "kind": "ClusterSecretStore"},
             "secrets": [
                 {
@@ -515,6 +661,8 @@ def test_eso_generates_references_for_endpoint_and_cache_secrets(tmp_path):
         assert item["spec"]["secretStoreRef"] == {"name": "vault", "kind": "ClusterSecretStore"}
         assert item["spec"]["target"]["name"] == item["metadata"]["name"]
         assert "remoteRef" in item["spec"]["data"][0]
+        target_annotations = item["spec"]["target"].get("template", {}).get("metadata", {}).get("annotations", {})
+        assert target_annotations == ({"reloader.stakater.com/match": "true"} if reload else {})
     pod = next(item for item in objects if item["kind"] == "Deployment")["spec"]["template"]["spec"]
     assert {"name": "POLYAD_CACHE_URL_FILE", "value": "/var/run/polyad/cache/url"} in pod["containers"][0]["env"]
     assert next(item for item in pod["volumes"] if item["name"] == "cache-credentials")["secret"]["secretName"] == "polyad-cache"
@@ -533,6 +681,32 @@ def test_eso_generates_references_for_endpoint_and_cache_secrets(tmp_path):
     path.write_text(yaml.safe_dump(config))
     with pytest.raises(subprocess.CalledProcessError):
         render_config()
+
+
+@pytest.mark.parametrize("eso,reload", [(False, False), (False, True), (True, False), (True, True)])
+def test_secret_reload_annotations_require_eso_and_opt_in(eso, reload):
+    """
+    Annotate controller metadata and enable Daemon support only with both chart opt-ins.
+    """
+    objects = render(
+        f"externalSecrets.enabled={str(eso).lower()}",
+        f"externalSecrets.reloadOnChange={str(reload).lower()}",
+        "externalSecrets.secretStoreRef.name=vault",
+        "externalSecrets.secrets[0].name=observer-token",
+        "externalSecrets.secrets[0].data[0].secretKey=token",
+        "externalSecrets.secrets[0].data[0].remoteRef.key=polyad/observer",
+        "observer.enabled=true",
+        "observer.existingSecret=observer-token",
+        "global.multiCluster.clusterName=east",
+    )
+    expected = "true" if eso and reload else None
+    for name in ("test-polyad", "test-polyad-observer"):
+        workload = next(item for item in objects if item["kind"] == "Deployment" and item["metadata"]["name"] == name)
+        assert workload["metadata"].get("annotations", {}).get("reloader.stakater.com/search") == expected
+        assert "reloader.stakater.com/search" not in workload["spec"]["template"]["metadata"].get("annotations", {})
+        if name == "test-polyad":
+            env = {entry["name"]: entry.get("value") for entry in workload["spec"]["template"]["spec"]["containers"][0]["env"]}
+            assert env["POLYAD_ESO_RELOAD_ENABLED"] == (expected or "false")
 
 
 @pytest.mark.parametrize(
@@ -620,3 +794,37 @@ def test_invalid_connection_settings_fail_rendering(setting):
     """
     with pytest.raises(subprocess.CalledProcessError):
         render(setting)
+
+
+def test_root_control_plane_requires_reachable_credentials_and_exposes_scale_crds():
+    """
+    Root mode is explicit, passes worker bootstrap inputs and supplies KEDA scale endpoints.
+    """
+    settings = (
+        "rootControlPlane.enabled=true",
+        "rootControlPlane.kubeconfigSecret=root-access",
+        "federation.enabled=true",
+        "global.multiCluster.clusterName=management",
+        "federation.clusters[0].name=west",
+        "federation.clusters[0].namespace=workloads",
+        "federation.clusters[0].kubeconfigSecret=west-access",
+        "dragonfly.existingSecret=root-cache",
+        "metrics.enabled=true",
+    )
+    objects = render(*settings)
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    env = {item["name"]: item for item in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert env["POLYAD_ROOT_ENABLED"]["value"] == "true"
+    assert env["POLYAD_ROOT_DEPLOYMENT"]["value"] == "test-polyad"
+    assert any(item.get("secret", {}).get("secretName") == "root-access" for item in deployment["spec"]["template"]["spec"]["volumes"])
+    for kind in ("OperatorPool", "RemoteScale"):
+        crd = next(obj for obj in objects if obj["kind"] == "CustomResourceDefinition" and obj["spec"]["names"]["kind"] == kind)
+        version = crd["spec"]["versions"][0]
+        assert version["subresources"]["scale"]["specReplicasPath"] == ".spec.replicas"
+        spec = {"cluster": "west", "replicas": 2}
+        if kind == "RemoteScale":
+            spec["target"] = {"name": "consumers", "uid": "exact-uid"}
+        jsonschema.Draft7Validator(version["schema"]["openAPIV3Schema"]).validate({"spec": spec})
+    for invalid in ("rootControlPlane.kubeconfigSecret=", "federation.enabled=false", "dragonfly.existingSecret=", "metrics.enabled=false"):
+        with pytest.raises(subprocess.CalledProcessError):
+            render(*settings, invalid)

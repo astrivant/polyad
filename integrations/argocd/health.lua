@@ -26,6 +26,15 @@ end
 if phase == "Invalid" or phase == "Failed" or status.failed == true then
     return health("Degraded", message)
 end
+if obj.kind == "OperatorPool" or obj.kind == "RemoteScale" then
+    if phase == "Blocked" then
+        return health("Degraded", message)
+    end
+    if phase == "Ready" then
+        return health("Healthy", message)
+    end
+    return health("Progressing", message)
+end
 if obj.kind == "TemporaryConnection" then
     if phase == "Rejected" then
         return health("Degraded", message)

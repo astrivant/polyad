@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: polyad-graph-manager
+  namespace: polyad
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: polyad-graph-manager
+  namespace: polyad
+rules:
+  - apiGroups: [polyad.astrivant.com]
+    resources: [graphs, polygraphs]
+    verbs: [get, list, create, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: polyad-graph-manager
+  namespace: polyad
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: polyad-graph-manager
+subjects:
+  - kind: ServiceAccount
+    name: polyad-graph-manager
+    namespace: polyad

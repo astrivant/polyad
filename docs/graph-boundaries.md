@@ -4,12 +4,17 @@ Polyad has three graph boundary types:
 
 | Type | Purpose |
 | --- | --- |
-| `Graph` | Combine workloads, daemons, resources and nested boundaries |
-| `PolyGraph` | Compose graph boundaries under shared placement, rules and lifecycle |
+| `Graph` | Combine workloads, daemons, resources and nested boundaries within one Kubernetes cluster |
+| `PolyGraph` | Compose graph boundaries locally or across registered clusters, including nested compositions |
 | `ReplicaGroup` | Scale copies of a reusable definition through the Kubernetes scale API |
 
 All three participate in ownership, live GraphRule evaluation and recursive
 status. StatefulSet and Deployment execution remain choices on Daemon definitions.
+
+Cross-cluster placement, Istio transport and shared read-only observers are
+independent optional extensions. PolyGraphs manage remote child Graph intent;
+destination operators execute it and enforce local GraphRules. Observers share
+state without participating in execution. See [multicluster configuration](multicluster.md).
 
 ## Repeated execution
 

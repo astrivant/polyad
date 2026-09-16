@@ -52,7 +52,7 @@ spec:
         - operation:
             ports: ["8092"]
             methods: [GET]
-            paths: [/metrics, /v1/metrics, /v1/workloads/*, /openapi.json]
+            paths: [/metrics, /v1/metrics, /v1/workloads/*, /v1/components/*, /v1/postgresql/connections, /openapi.json]
     {{- end }}
     {{- end }}
     {{- with .Values.mesh.operator.eventPrincipals }}

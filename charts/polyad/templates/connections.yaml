@@ -8,6 +8,7 @@ spec:
   selector:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/name: polyad
+    polyad.astrivant.com/component: {{ ternary "gateway" "dense" (eq .Values.architecture.mode "Distributed") }}
   ports:
     - name: http-connections
       appProtocol: http

@@ -62,13 +62,14 @@ async def check_rules(
     boundaries = 0
 
     async def visit(
-        boundary_kind: str, body: dict[str, Any], path: tuple[tuple[str, str], ...], inherited: set[str]
+        boundary_kind: str, body: dict[str, Any], path: tuple[tuple[str, str], ...], inherited: set[str], cluster_local: bool = False
     ) -> tuple[int, int, list[dict[str, Any]]]:
         nonlocal visited_nodes, boundaries
         boundaries += 1
         if len(path) >= 32 or boundaries > 256:
             raise RuleViolation("graph expansion exceeds 32 nesting levels or 256 boundaries")
         graph = topology(body, boundary_kind)
+        cluster_local |= boundary_kind == "Graph"
         selected = mandatory | inherited | set(graph.rules)
         missing = selected - rules.keys()
         if missing:
@@ -82,6 +83,12 @@ async def check_rules(
         for node in graph.nodes:
             if node.kind not in BOUNDARY_KINDS:
                 continue
+            if getattr(node, "cluster", None):
+                if cluster_local:
+                    raise RuleViolation("Graph descendants must stay in one cluster; place cross-cluster compositions in a PolyGraph")
+                # The remote boundary is a vertex here. Its own operator enforces
+                # destination namespace rules against its live local family.
+                continue
             key = node.kind, node.ref
             if key in path:
                 raise RuleViolation("recursive graph definition references are invalid")
@@ -93,7 +100,7 @@ async def check_rules(
                     raise Pending(f"waiting for graph definition: {node.kind}/{node.ref}")
                 cache[key] = definition
             count, levels, _ = await visit(
-                node.kind, cache[key]["spec"], (*path, key), {name for name in selected if rules[name].scope == "Subtree"}
+                node.kind, cache[key]["spec"], (*path, key), {name for name in selected if rules[name].scope == "Subtree"}, cluster_local
             )
             expanded += count
             depth = max(depth, levels + 1)

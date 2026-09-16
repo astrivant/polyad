@@ -12,7 +12,7 @@ from threading import BoundedSemaphore, Event
 from typing import TYPE_CHECKING, Any
 
 from attrs import evolve, field, frozen
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, jsonify, request, stream_with_context
 
 from polyad.api.limits import RateLimitPolicy, install_limits
 from polyad.events.store import CursorExpired, TopologyReplaced
@@ -159,7 +159,11 @@ class EventAPIBuilder:
                         yield 'event: unavailable\ndata: {"reason":"reconnect with Last-Event-ID"}\n\n'
                         return
 
-            response = Response(stream(), mimetype="text/event-stream", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+            response = Response(
+                stream_with_context(stream()),
+                mimetype="text/event-stream",
+                headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+            )
             response.call_on_close(slots.release)
             return response
 
@@ -177,7 +181,10 @@ class EventAPIBuilder:
                                 "Namespace graph observations and topology-change notifications with bounded, at-least-once replay. "
                                 "Read a topology snapshot first, then subscribe with its cursor as Last-Event-ID."
                             ),
-                            "parameters": [{"name": "Last-Event-ID", "in": "header", "schema": {"type": "string"}}],
+                            "parameters": [
+                                {"name": "Last-Event-ID", "in": "header", "schema": {"type": "string"}},
+                                {"name": "cluster", "in": "query", "schema": {"type": "string"}},
+                            ],
                             "responses": {
                                 "200": {
                                     "description": "Graph observations with IDs and audit references.",
@@ -212,6 +219,7 @@ class EventAPIBuilder:
                                 },
                                 {"name": "name", "in": "path", "required": True, "schema": {"type": "string"}},
                                 {"name": "uid", "in": "query", "schema": {"type": "string"}, "description": "Expected graph UID."},
+                                {"name": "cluster", "in": "query", "schema": {"type": "string"}},
                                 {
                                     "name": "node",
                                     "in": "query",

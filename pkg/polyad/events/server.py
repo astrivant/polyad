@@ -8,13 +8,14 @@ import asyncio
 from threading import Event, Thread
 from typing import TYPE_CHECKING, TypeVar
 
-from flask import jsonify
+from flask import abort, jsonify, request
 from waitress import wasyncore
 from waitress.server import create_server
 
 from polyad.api.limits import RateLimitPolicy
 from polyad.events.builder import EventAPIBuilder
 from polyad.operator.health import lifecycle
+from polyad.operator.pressure import pressure
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -33,7 +34,16 @@ class EventServer:
     Bridge dedicated streaming workers to the operator's asynchronous shared cache.
     """
 
-    def __init__(self, store: EventStore, namespace: str, token: str, *, port: int = 8091, connections: int = 16) -> None:
+    def __init__(
+        self,
+        store: EventStore,
+        namespace: str,
+        token: str,
+        *,
+        port: int = 8091,
+        connections: int = 16,
+        clusters: dict[str, EventStore] | None = None,
+    ) -> None:
         """
         Start the event listener with independent workers and subscriber credentials.
 
@@ -43,14 +53,25 @@ class EventServer:
             token (str): Subscriber-only bearer credential.
             port (int): Dedicated HTTP port.
             connections (int): Maximum active streams on this replica.
+            clusters (dict[str, EventStore] | None): Registered cluster streams held in root storage.
         """
         self.loop = asyncio.get_running_loop()
         self.stopping = Event()
         policy = RateLimitPolicy.from_environment(namespace + ":events")
+
+        def selected() -> EventStore:
+            cluster = request.args.get("cluster")
+            if cluster is None:
+                return store
+            if cluster not in (clusters or {}):
+                abort(404, "cluster is not registered")
+            assert clusters is not None
+            return clusters[cluster]
+
         app = (
             EventAPIBuilder(stopping=self.stopping, max_connections=connections, limits=policy)
-            .with_handlers(lambda cursor: self.invoke(store.cursor(cursor)), lambda cursor: self.invoke(store.read(cursor)))
-            .with_topology_handler(lambda kind, name, uid, node: self.invoke(store.topology(kind, name, uid, node)))
+            .with_handlers(lambda cursor: self.invoke(selected().cursor(cursor)), lambda cursor: self.invoke(selected().read(cursor)))
+            .with_topology_handler(lambda kind, name, uid, node: self.invoke(selected().topology(kind, name, uid, node)))
             .with_bearer_token(token)
             .build()
         )
@@ -64,7 +85,7 @@ class EventServer:
         self.limiter = app.extensions["polyad.limiter"]
         self.sockets: wasyncore._SocketMap = {}
         self.server = create_server(
-            app,
+            pressure.wrap(app),
             map=self.sockets,
             host="0.0.0.0",
             port=port,

@@ -87,6 +87,8 @@ The same mappings support all operator credentials:
 | Composition API | `api.existingSecret` | `token` |
 | Event subscriptions | `events.existingSecret` | `token` |
 | Shared Redis/Dragonfly connection | `dragonfly.existingSecret` | `url` containing the complete Redis connection URL |
+| Read-only observers | `observer.existingSecret` | `token` |
+| Remote Graph management | `federation.clusters[].kubeconfigSecret` | `config` containing the destination kubeconfig |
 
 Add one `externalSecrets.secrets` entry per target and point the corresponding
 `existingSecret` value at its name. For example, a cache Secret can map the
@@ -103,6 +105,77 @@ are disabled by default. No KEDA or ESO controllers are installed by this chart.
 Inline `metrics.authentication.key` is also supported when `existingSecret` is
 empty. Inline credentials become part of Helm release data; prefer an existing
 Secret or ESO for production. Do not configure both owners for the same Secret.
+
+## Restart consumers after rotation
+
+ESO synchronizes Secret data. To request workload restarts, install
+[Stakater Reloader](https://github.com/stakater/Reloader#3--targeted-reload-match--search-annotations)
+in the cluster and enable both chart settings:
+
+```yaml
+externalSecrets:
+  enabled: true
+  reloadOnChange: true
+```
+
+Keep the SecretStore and Secret mappings from the example above. Reloading is
+disabled by default. The chart adds `reloader.stakater.com/match: "true"` under
+each ExternalSecret's `spec.target.template.metadata.annotations`, so the
+generated **Secret** carries the marker. It adds
+`reloader.stakater.com/search: "true"` to the operator and enabled observer
+Deployments' **top-level metadata**. Pod template annotations are a different
+location and do not opt a controller into Reloader.
+
+Reloader's search mode restarts a consumer only when it references a marked
+Secret that changes. Operator API, metrics, event, cache and federation credentials
+are covered when their references point to these ESO targets. Observer tokens
+are covered in the same way. No Secret data is embedded in reload annotations,
+and the chart does not install Reloader. Use its opt-in configuration rather
+than `--auto-reload-all` if these per-workload choices should control restarts.
+
+Graph services opt in individually through their Daemon definition:
+
+```yaml
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: secret-aware-service
+spec:
+  reloadOnSecretChange: true
+  controller: Deployment
+  template:
+    spec:
+      containers:
+        - name: service
+          image: your-service-image
+          envFrom:
+            - secretRef:
+                name: service-credentials
+          startupProbe:
+            tcpSocket: {port: 8080}
+          readinessProbe:
+            tcpSocket: {port: 8080}
+          livenessProbe:
+            tcpSocket: {port: 8080}
+```
+
+Declare `service-credentials` as an ESO target in the workload's namespace and
+reference this Daemon from a Graph or ReplicaGroup. The operator emits the
+search annotation on the resulting Deployment, or StatefulSet when selected.
+`spec.reloadOnSecretChange` defaults to `false` and takes effect only when both
+chart settings are enabled on the **executing cluster's operator**. Replicas and
+activations of the Daemon retain the setting. For an ESO target managed outside
+this chart, add the same match annotation to that ExternalSecret's target
+template. Secret mounts and Secret environment references can trigger reloads.
+
+Finite Workloads remain Jobs; this option does not rerun completed work.
+Reloader follows the native controller's update behavior: Daemon Deployments
+use `Recreate`, while StatefulSets use their configured update strategy.
+`OnDelete` still requires Pod deletion, and a rolling partition can retain older
+Pods. Choose a rollout strategy consistent with the service's availability needs.
+Changing the Daemon opt-in or the operator's reload setting changes the desired
+controller revision and uses Polyad's normal replacement admission. Subsequent
+Secret rotations let Reloader update that controller in place.
 
 ## Namespace, transport and rotation
 

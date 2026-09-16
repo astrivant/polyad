@@ -105,6 +105,10 @@ spec:
                 enum: [Deployment, StatefulSet]
                 default: Deployment
                 description: Native controller for this persistent workload.
+              reloadOnSecretChange:
+                type: boolean
+                default: false
+                description: Opt this Deployment or StatefulSet into Stakater Reloader search for referenced Secrets marked for reload. Requires the operator's externalSecrets.enabled and externalSecrets.reloadOnChange settings and an installed Reloader.
               statefulSet:
                 type: object
                 description: StatefulSet identity, storage and rollout options; requires controller StatefulSet.

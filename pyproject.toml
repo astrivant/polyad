@@ -15,15 +15,18 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: System :: Systems Administration",
     "Typing :: Typed",
 ]
 dependencies = [
     "kopf>=1.37,<2",
     "kubernetes>=32,<36",
+    "PyYAML>=6,<7",
     "attrs>=24,<27",
     "cattrs>=24,<27",
     "redis>=5.2,<7",
+    "psycopg[binary,pool]>=3.3,<4",
     "networkx>=3.6,<4",
     "flask>=3.1,<4",
     "apispec>=6.10,<7",

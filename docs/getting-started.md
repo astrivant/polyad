@@ -7,7 +7,7 @@ operator for container workloads, or the local scheduler for Python work.
 
 ## Install
 
-Requires Python 3.13+. From this checkout, install the Python package with:
+Supports Python 3.13 and 3.14. From this checkout, install the Python package with:
 
 ```sh
 python -m pip install .

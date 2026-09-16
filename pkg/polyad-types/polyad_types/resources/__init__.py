@@ -52,6 +52,7 @@ from polyad_types.resources.resources import LabelSelector as LabelSelector
 from polyad_types.resources.resources import Lease as Lease
 from polyad_types.resources.resources import LeaseSpec as LeaseSpec
 from polyad_types.resources.resources import NetworkPolicy as NetworkPolicy
+from polyad_types.resources.resources import OperatorPool as OperatorPool
 from polyad_types.resources.resources import PeerAuthentication as PeerAuthentication
 from polyad_types.resources.resources import PersistentVolumeClaim as PersistentVolumeClaim
 from polyad_types.resources.resources import Pod as Pod
@@ -59,10 +60,12 @@ from polyad_types.resources.resources import PodTemplate as PodTemplate
 from polyad_types.resources.resources import PodTemplateResource as PodTemplateResource
 from polyad_types.resources.resources import PolyGraph as PolyGraph
 from polyad_types.resources.resources import ProvisioningRequest as ProvisioningRequest
+from polyad_types.resources.resources import RemoteScale as RemoteScale
 from polyad_types.resources.resources import ReplicaGroup as ReplicaGroup
 from polyad_types.resources.resources import Resource as Resource
 from polyad_types.resources.resources import ResourceDefinition as ResourceDefinition
 from polyad_types.resources.resources import Rewrite as Rewrite
+from polyad_types.resources.resources import Secret as Secret
 from polyad_types.resources.resources import Service as Service
 from polyad_types.resources.resources import ShutdownPolicy as ShutdownPolicy
 from polyad_types.resources.resources import StatefulSet as StatefulSet

@@ -61,6 +61,21 @@ See the [networking guide](../../docs/networking.md) for scoped graph isolation,
 optional Istio installation and endpoint authorization, event subscribers, and
 Secret-driven health replacement. Both networking integrations are disabled by default.
 
+Cross-cluster placement (`federation.enabled`), sidecar mesh transport
+(`mesh.multicluster.enabled`) and shared read-only replicas (`observer.enabled`)
+are separate optional extensions. See [the multicluster guide](../../docs/multicluster.md)
+for registered credentials, east-west gateways, cluster-local rule scope and
+complete values examples.
+The [gateway listener settings](../../docs/multicluster.md#configurable-gateway-listener)
+explain configurable names, hosts and ports, required TLS behavior, and matching
+discovery labels and remote traffic grants.
+
+With ESO enabled, `externalSecrets.reloadOnChange=true` adds Stakater Reloader
+match/search annotations for generated Secrets and their operator/observer
+consumers. Graph Daemons opt in with `spec.reloadOnSecretChange: true`.
+See [Secret rotation](../../docs/authentication.md#restart-consumers-after-rotation)
+for the required Reloader installation and controller update behavior.
+
 Operator deployment settings are grouped under `operator`. When upgrading existing
 values files, nest replicas, placement, autoscaling, image, resources and shutdown
 grace settings under that key (for example, `image.tag` becomes `operator.image.tag`).
@@ -69,43 +84,88 @@ grace settings under that key (for example, `image.tag` becomes `operator.image.
 
 ### Operator and shared queue parameters
 
-| Name                                                                 | Description                                                                                                   | Value                                                 |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `operator.logLevel`                                                  | Polyad logging verbosity (DEBUG, INFO, WARNING, ERROR or CRITICAL)                                            | `INFO`                                                |
-| `operator.replicaCount`                                              | Operator replicas when autoscaling is disabled                                                                | `2`                                                   |
-| `operator.nodeSelector`                                              | Node labels selecting the operator node group, independent of workload graph placement                        | `{}`                                                  |
-| `operator.tolerations`                                               | Taints tolerated by the operator replicas                                                                     | `[]`                                                  |
-| `operator.autoscaling.enabled`                                       | Enable CPU-based operator autoscaling                                                                         | `false`                                               |
-| `operator.autoscaling.minReplicas`                                   | Minimum operator replicas                                                                                     | `2`                                                   |
-| `operator.autoscaling.maxReplicas`                                   | Maximum operator replicas, at least minReplicas and at most 32                                                | `8`                                                   |
-| `operator.autoscaling.targetCPUUtilizationPercentage`                | Target operator CPU utilization relative to requested CPU                                                     | `70`                                                  |
-| `operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds`   | Scale-up recommendation window in seconds (0-3600)                                                            | `0`                                                   |
-| `operator.autoscaling.behavior.scaleUp.selectPolicy`                 | Choose the largest or smallest permitted change, or disable scale-up (Max, Min, Disabled)                     | `Max`                                                 |
-| `operator.autoscaling.behavior.scaleUp.policies`                     | Rate limits (Pods or Percent); defaults to 100 percent or 4 Pods per 15 seconds; periodSeconds accepts 1-1800 | `[]`                                                  |
-| `operator.autoscaling.behavior.scaleDown.stabilizationWindowSeconds` | Scale-down recommendation window in seconds (0-3600)                                                          | `300`                                                 |
-| `operator.autoscaling.behavior.scaleDown.selectPolicy`               | Choose the largest or smallest permitted change, or disable scale-down (Max, Min, Disabled)                   | `Max`                                                 |
-| `operator.autoscaling.behavior.scaleDown.policies`                   | Rate limits (Pods or Percent); defaults to 100 percent per 15 seconds; periodSeconds accepts 1-1800           | `[]`                                                  |
-| `operator.tuning.rescanIntervalSeconds`                              | Delay after namespace rescans; lower values increase Kubernetes reads (1-15)                                  | `5`                                                   |
-| `operator.tuning.consumeIntervalSeconds`                             | Delay after each shared-queue consumption pass (0.1-5)                                                        | `1`                                                   |
-| `operator.tuning.metricsIntervalSeconds`                             | Delay between cached metrics publications (1-5)                                                               | `5`                                                   |
-| `operator.tuning.backlogIntervalSeconds`                             | Delay between shared-queue backlog samples (1-5)                                                              | `5`                                                   |
-| `operator.image.repository`                                          | Operator image repository                                                                                     | `ghcr.io/astrivant/polyad`                            |
-| `operator.image.tag`                                                 | Operator image tag                                                                                            | `0.0.1-alpha3`                                        |
-| `operator.image.pullPolicy`                                          | Operator image pull policy                                                                                    | `IfNotPresent`                                        |
-| `operator.resources.requests.cpu`                                    | Requested operator CPU, required for CPU autoscaling                                                          | `100m`                                                |
-| `operator.resources.requests.memory`                                 | Requested operator memory                                                                                     | `128Mi`                                               |
-| `operator.resources.limits.memory`                                   | Operator memory limit                                                                                         | `512Mi`                                               |
-| `operator.terminationGracePeriodSeconds`                             | Time allowed for operator shutdown and outstanding API calls                                                  | `60`                                                  |
-| `dragonfly.enabled`                                                  | Deploy Dragonfly through the upstream operator Helm dependency                                                | `true`                                                |
-| `dragonfly.image`                                                    | Bundled Dragonfly image                                                                                       | `docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0` |
-| `dragonfly.ha.enabled`                                               | Enable primary/replica replication and automatic failover                                                     | `false`                                               |
-| `dragonfly.ha.replicas`                                              | Total Dragonfly instances in HA mode, including the primary                                                   | `2`                                                   |
-| `dragonfly.ha.topologyKey`                                           | Place HA instances on distinct values of this node label                                                      | `kubernetes.io/hostname`                              |
-| `dragonfly.externalUrl`                                              | External Redis-compatible URL when bundled Dragonfly is disabled                                              | `redis://dragonfly:6379/0`                            |
-| `dragonfly.existingSecret`                                           | Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings          | `""`                                                  |
-| `dragonfly.persistence.enabled`                                      | Persist bundled Dragonfly snapshots on a PVC                                                                  | `true`                                                |
-| `dragonfly.persistence.size`                                         | Snapshot volume capacity                                                                                      | `1Gi`                                                 |
-| `dragonfly.persistence.storageClass`                                 | Snapshot volume storage class; empty uses the cluster default                                                 | `""`                                                  |
+| Name                                                                 | Description                                                                                                   | Value                      |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `operator.logLevel`                                                  | Polyad logging verbosity (DEBUG, INFO, WARNING, ERROR or CRITICAL)                                            | `INFO`                     |
+| `operator.replicaCount`                                              | Operator replicas when autoscaling is disabled                                                                | `2`                        |
+| `operator.nodeSelector`                                              | Node labels selecting the operator node group, independent of workload graph placement                        | `{}`                       |
+| `operator.tolerations`                                               | Taints tolerated by the operator replicas                                                                     | `[]`                       |
+| `operator.autoscaling.enabled`                                       | Enable CPU-based operator autoscaling                                                                         | `false`                    |
+| `operator.autoscaling.minReplicas`                                   | Minimum operator replicas                                                                                     | `2`                        |
+| `operator.autoscaling.maxReplicas`                                   | Maximum operator replicas, at least minReplicas and at most 32                                                | `8`                        |
+| `operator.autoscaling.targetCPUUtilizationPercentage`                | Target operator CPU utilization relative to requested CPU                                                     | `70`                       |
+| `operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds`   | Scale-up recommendation window in seconds (0-3600)                                                            | `0`                        |
+| `operator.autoscaling.behavior.scaleUp.selectPolicy`                 | Choose the largest or smallest permitted change, or disable scale-up (Max, Min, Disabled)                     | `Max`                      |
+| `operator.autoscaling.behavior.scaleUp.policies`                     | Rate limits (Pods or Percent); defaults to 100 percent or 4 Pods per 15 seconds; periodSeconds accepts 1-1800 | `[]`                       |
+| `operator.autoscaling.behavior.scaleDown.stabilizationWindowSeconds` | Scale-down recommendation window in seconds (0-3600)                                                          | `300`                      |
+| `operator.autoscaling.behavior.scaleDown.selectPolicy`               | Choose the largest or smallest permitted change, or disable scale-down (Max, Min, Disabled)                   | `Max`                      |
+| `operator.autoscaling.behavior.scaleDown.policies`                   | Rate limits (Pods or Percent); defaults to 100 percent per 15 seconds; periodSeconds accepts 1-1800           | `[]`                       |
+| `operator.tuning.rescanIntervalSeconds`                              | Delay after namespace rescans; lower values increase Kubernetes reads (1-15)                                  | `5`                        |
+| `operator.tuning.consumeIntervalSeconds`                             | Delay after each shared-queue consumption pass (0.1-5)                                                        | `1`                        |
+| `operator.tuning.metricsIntervalSeconds`                             | Delay between cached metrics publications (1-5)                                                               | `5`                        |
+| `operator.tuning.backlogIntervalSeconds`                             | Delay between shared-queue backlog samples (1-5)                                                              | `5`                        |
+| `operator.image.repository`                                          | Operator image repository                                                                                     | `ghcr.io/astrivant/polyad` |
+| `operator.image.tag`                                                 | Operator image tag                                                                                            | `0.0.1-alpha3`             |
+| `operator.image.pullPolicy`                                          | Operator image pull policy                                                                                    | `IfNotPresent`             |
+| `operator.resources.requests.cpu`                                    | Requested operator CPU, required for CPU autoscaling                                                          | `100m`                     |
+| `operator.resources.requests.memory`                                 | Requested operator memory                                                                                     | `128Mi`                    |
+| `operator.resources.limits.memory`                                   | Operator memory limit                                                                                         | `512Mi`                    |
+| `operator.terminationGracePeriodSeconds`                             | Time allowed for operator shutdown and outstanding API calls                                                  | `60`                       |
+
+### Optional PostgreSQL state storage
+
+| Name                                            | Description                                                                             | Value                                                    |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `postgresql.enabled`                            | Persist graph state and tracked parameters in PostgreSQL                                | `false`                                                  |
+| `postgresql.managed`                            | Create a CloudNativePG Cluster; install its operator first                              | `true`                                                   |
+| `postgresql.existingSecret`                     | External database Secret containing the connection DSN when managed is false            | `""`                                                     |
+| `postgresql.secretKey`                          | DSN key in the external database Secret                                                 | `uri`                                                    |
+| `postgresql.scope`                              | State identity within the database; empty uses the release namespace and name           | `""`                                                     |
+| `postgresql.image`                              | PostgreSQL image for the managed cluster                                                | `ghcr.io/cloudnative-pg/postgresql:18.3-standard-trixie` |
+| `postgresql.maxConnections`                     | Maximum connections per managed database instance, including administration             | `100`                                                    |
+| `postgresql.storage.size`                       | Persistent storage per PostgreSQL instance                                              | `10Gi`                                                   |
+| `postgresql.storage.storageClass`               | Storage class; empty uses the cluster default                                           | `""`                                                     |
+| `postgresql.ha.enabled`                         | Enable primary plus standby instances and synchronous replication                       | `false`                                                  |
+| `postgresql.ha.instances`                       | Total instances when HA is enabled and autoscaling is disabled                          | `3`                                                      |
+| `postgresql.ha.topologyKey`                     | Failure-domain label for required database pod anti-affinity                            | `kubernetes.io/hostname`                                 |
+| `postgresql.resources`                          | Resource requests and limits for each PostgreSQL instance                               | `{}`                                                     |
+| `postgresql.autoscaling.enabled`                | Create a KEDA ScaledObject for the managed Cluster using operator connection counts     | `false`                                                  |
+| `postgresql.autoscaling.minInstances`           | Minimum instances; at least 3 with HA, never zero                                       | `3`                                                      |
+| `postgresql.autoscaling.maxInstances`           | Maximum database instances                                                              | `6`                                                      |
+| `postgresql.autoscaling.connectionsPerInstance` | Operator connections per desired database instance; does not add primary write capacity | `20`                                                     |
+
+### Optional component deployment architecture
+
+| Name                                                   | Description                                                                                                       | Value                                                 |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `architecture.mode`                                    | Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph | `Dense`                                               |
+| `architecture.cheegerMinimum`                          | Minimum edge expansion of the three-component Graph; the default chain has h=1                                    | `1`                                                   |
+| `architecture.expandedNodes`                           | Maximum recursive vertices in the self-managed Graph                                                              | `27`                                                  |
+| `architecture.autoscaling`                             | Enable KEDA scaling of all component ReplicaGroup definitions                                                     | `false`                                               |
+| `architecture.components.gateway.replicas`             | Initial gateway copies                                                                                            | `2`                                                   |
+| `architecture.components.gateway.minReplicas`          | Minimum gateway copies                                                                                            | `1`                                                   |
+| `architecture.components.gateway.maxReplicas`          | Maximum gateway copies                                                                                            | `8`                                                   |
+| `architecture.components.gateway.requestsPerSecond`    | Target total HTTP requests per second per copy                                                                    | `50`                                                  |
+| `architecture.components.gateway.concurrentRequests`   | Target open HTTP requests and event streams per copy                                                              | `8`                                                   |
+| `architecture.components.executor.replicas`            | Initial execution copies                                                                                          | `2`                                                   |
+| `architecture.components.executor.minReplicas`         | Minimum execution copies                                                                                          | `1`                                                   |
+| `architecture.components.executor.maxReplicas`         | Maximum execution copies                                                                                          | `8`                                                   |
+| `architecture.components.executor.backlog`             | Target outstanding graph hints per execution copy across all managed clusters                                     | `8`                                                   |
+| `architecture.components.telemetry.replicas`           | Initial metrics-serving copies                                                                                    | `2`                                                   |
+| `architecture.components.telemetry.minReplicas`        | Minimum metrics-serving copies                                                                                    | `1`                                                   |
+| `architecture.components.telemetry.maxReplicas`        | Maximum metrics-serving copies                                                                                    | `8`                                                   |
+| `architecture.components.telemetry.requestsPerSecond`  | Target total metrics requests per second per copy                                                                 | `50`                                                  |
+| `architecture.components.telemetry.concurrentRequests` | Target concurrent metrics requests per copy                                                                       | `2`                                                   |
+| `dragonfly.enabled`                                    | Deploy Dragonfly through the upstream operator Helm dependency                                                    | `true`                                                |
+| `dragonfly.image`                                      | Bundled Dragonfly image                                                                                           | `docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0` |
+| `dragonfly.ha.enabled`                                 | Enable primary/replica replication and automatic failover                                                         | `false`                                               |
+| `dragonfly.ha.replicas`                                | Total Dragonfly instances in HA mode, including the primary                                                       | `2`                                                   |
+| `dragonfly.ha.topologyKey`                             | Place HA instances on distinct values of this node label                                                          | `kubernetes.io/hostname`                              |
+| `dragonfly.externalUrl`                                | External Redis-compatible URL when bundled Dragonfly is disabled                                                  | `redis://dragonfly:6379/0`                            |
+| `dragonfly.existingSecret`                             | Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings              | `""`                                                  |
+| `dragonfly.persistence.enabled`                        | Persist bundled Dragonfly snapshots on a PVC                                                                      | `true`                                                |
+| `dragonfly.persistence.size`                           | Snapshot volume capacity                                                                                          | `1Gi`                                                 |
+| `dragonfly.persistence.storageClass`                   | Snapshot volume storage class; empty uses the cluster default                                                     | `""`                                                  |
 
 ### Upstream Dragonfly operator dependency
 
@@ -175,13 +235,14 @@ grace settings under that key (for example, `image.tag` becomes `operator.image.
 
 ### Optional External Secrets Operator resources
 
-| Name                                  | Description                                                                                                        | Value         |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------- |
-| `externalSecrets.enabled`             | Generate ExternalSecret resources; requires an installed ESO operator and SecretStore                              | `false`       |
-| `externalSecrets.refreshInterval`     | ESO credential refresh interval                                                                                    | `1h`          |
-| `externalSecrets.secretStoreRef.name` | Existing SecretStore or ClusterSecretStore name                                                                    | `""`          |
-| `externalSecrets.secretStoreRef.kind` | Secret store reference kind                                                                                        | `SecretStore` |
-| `externalSecrets.secrets`             | Secret mappings with name and data entries of secretKey and remoteRef; reference names via existingSecret settings | `[]`          |
+| Name                                  | Description                                                                                                                                                                                       | Value         |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `externalSecrets.enabled`             | Generate ExternalSecret resources; requires an installed ESO operator and SecretStore                                                                                                             | `false`       |
+| `externalSecrets.reloadOnChange`      | Opt into Stakater Reloader annotations for ESO Secrets, operator and observer Deployments, and Daemons with spec.reloadOnSecretChange; requires externalSecrets.enabled and an installed Reloader | `false`       |
+| `externalSecrets.refreshInterval`     | ESO credential refresh interval                                                                                                                                                                   | `1h`          |
+| `externalSecrets.secretStoreRef.name` | Existing SecretStore or ClusterSecretStore name                                                                                                                                                   | `""`          |
+| `externalSecrets.secretStoreRef.kind` | Secret store reference kind                                                                                                                                                                       | `SecretStore` |
+| `externalSecrets.secrets`             | Secret mappings with name and data entries of secretKey and remoteRef; reference names via existingSecret settings                                                                                | `[]`          |
 
 ### Operator endpoint and cache isolation
 
@@ -198,27 +259,55 @@ grace settings under that key (for example, `image.tag` becomes `operator.image.
 
 ### Optional Istio integration
 
-| Name                                  | Description                                                                               | Value   |
-| ------------------------------------- | ----------------------------------------------------------------------------------------- | ------- |
-| `mesh.enabled`                        | Allow graph HTTP and service-identity authorization and generate Istio security resources | `false` |
-| `mesh.install`                        | Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled     | `false` |
-| `mesh.operator.enabled`               | Inject the operator pods and authorize their API and event ports with Istio               | `false` |
-| `mesh.operator.compositionPrincipals` | Exact mTLS source identities allowed to use the composition endpoint                      | `[]`    |
-| `mesh.operator.metricsPrincipals`     | Exact mTLS source identities allowed to read scheduler metrics                            | `[]`    |
-| `mesh.operator.eventPrincipals`       | Exact mTLS source identities allowed to subscribe to events                               | `[]`    |
-| `mesh.operator.connectionPrincipals`  | Exact mTLS source identities allowed to request temporary connections                     | `[]`    |
-| `mesh.ingress.enabled`                | Install the optional upstream Istio gateway dependency                                    | `false` |
-| `mesh.ingress.hosts`                  | Hosts served by the Istio Gateway and VirtualService                                      | `[]`    |
-| `mesh.ingress.tlsSecret`              | TLS credential Secret in the gateway namespace, required when exposing the APIs           | `""`    |
-| `istioBase`                           | Upstream Istio base chart overrides                                                       | `{}`    |
-| `istiod`                              | Upstream Istio control-plane chart overrides                                              | `{}`    |
-| `istioIngress`                        | Upstream Istio gateway chart overrides                                                    | `{}`    |
+| Name                                  | Description                                                                                                                                                     | Value   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `mesh.enabled`                        | Allow graph HTTP and service-identity authorization and generate Istio security resources                                                                       | `false` |
+| `mesh.install`                        | Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled                                                                           | `false` |
+| `mesh.multicluster.enabled`           | Enable the existing or bundled sidecar mesh's multicluster configuration                                                                                        | `false` |
+| `mesh.multicluster.eastWest.enabled`  | Install a dedicated east-west gateway for separate networks                                                                                                     | `false` |
+| `mesh.multicluster.eastWest.portName` | Istio Gateway listener name; protocol TLS and AUTO_PASSTHROUGH mode are required by this integration                                                            | `tls`   |
+| `mesh.multicluster.eastWest.hosts`    | Service SNI suffixes exposed through AUTO_PASSTHROUGH                                                                                                           | `[]`    |
+| `mesh.multicluster.peers`             | Remote transport registrations; see docs/multicluster.md for same-network and gateway configurations                                                            | `[]`    |
+| `mesh.operator.enabled`               | Inject the operator pods and authorize their API and event ports with Istio                                                                                     | `false` |
+| `mesh.operator.compositionPrincipals` | Exact mTLS source identities allowed to use the composition endpoint                                                                                            | `[]`    |
+| `mesh.operator.metricsPrincipals`     | Exact mTLS source identities allowed to read scheduler metrics                                                                                                  | `[]`    |
+| `mesh.operator.eventPrincipals`       | Exact mTLS source identities allowed to subscribe to events                                                                                                     | `[]`    |
+| `mesh.operator.connectionPrincipals`  | Exact mTLS source identities allowed to request temporary connections                                                                                           | `[]`    |
+| `mesh.ingress.enabled`                | Install the optional upstream Istio gateway dependency                                                                                                          | `false` |
+| `mesh.ingress.hosts`                  | Hosts served by the Istio Gateway and VirtualService                                                                                                            | `[]`    |
+| `mesh.ingress.tlsSecret`              | TLS credential Secret in the gateway namespace, required when exposing the APIs                                                                                 | `""`    |
+| `istioBase`                           | Upstream Istio base chart overrides                                                                                                                             | `{}`    |
+| `istiod`                              | Upstream Istio control-plane chart overrides                                                                                                                    | `{}`    |
+| `istioIngress`                        | Upstream Istio gateway chart overrides                                                                                                                          | `{}`    |
+| `istioEastWest`                       | Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label | `{}`    |
 
 ### Shared Istio namespace
 
-| Name                    | Description                                                                                  | Value          |
-| ----------------------- | -------------------------------------------------------------------------------------------- | -------------- |
-| `global.istioNamespace` | Istio control-plane namespace; must equal the release namespace when mesh.install is enabled | `istio-system` |
+| Name                              | Description                                                                                  | Value          |
+| --------------------------------- | -------------------------------------------------------------------------------------------- | -------------- |
+| `global.istioNamespace`           | Istio control-plane namespace; must equal the release namespace when mesh.install is enabled | `istio-system` |
+| `global.meshID`                   | Shared mesh identity across participating clusters                                           | `""`           |
+| `global.network`                  | Network containing this cluster; different networks use east-west gateways                   | `""`           |
+| `global.multiCluster.clusterName` | Unique, stable cluster identity used by Istio and Polyad                                     | `""`           |
+
+### Cross-cluster PolyGraph management
+
+| Name                  | Description                                                                                   | Value   |
+| --------------------- | --------------------------------------------------------------------------------------------- | ------- |
+| `federation.enabled`  | Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters           | `false` |
+| `federation.clusters` | Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only | `[]`    |
+
+### Optional shared graph observers
+
+| Name                      | Description                                                                                      | Value   |
+| ------------------------- | ------------------------------------------------------------------------------------------------ | ------- |
+| `observer.enabled`        | Deploy shared read-only observers independently of execution operators                           | `false` |
+| `observer.replicaCount`   | Number of stateless read replicas in this cluster and namespace                                  | `1`     |
+| `observer.existingSecret` | Existing Secret containing a dedicated read credential under token                               | `""`    |
+| `observer.mesh`           | Enable native sidecar injection, strict mTLS and source-identity authorization for observer Pods | `false` |
+| `observer.principals`     | Exact source principals allowed to read the observer when observer.mesh is enabled               | `[]`    |
+| `observer.peers`          | NetworkPolicy peers allowed to reach observer TCP 8094 when networkPolicy.enabled is set         | `[]`    |
+| `observer.resources`      | CPU and memory requests and limits for the read replicas                                         | `{}`    |
 
 ### Advance graph capacity
 
@@ -231,5 +320,16 @@ grace settings under that key (for example, `image.tag` becomes `operator.image.
 | `capacity.priorityClass.create`  | Install a release-scoped PriorityClass for placeholder Pods                              | `true`                                             |
 | `capacity.priorityClass.name`    | Existing PriorityClass name, or an override for the generated name                       | `""`                                               |
 | `capacity.priorityClass.value`   | Placeholder priority; must meet the autoscaler's cutoff and be below workload priorities | `-5`                                               |
+
+### Root control plane
+
+| Name                                 | Description                                                                                                         | Value   |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ------- |
+| `rootControlPlane.enabled`           | Manage registered clusters and remote execution replicas through one root scheduler                                 | `false` |
+| `rootControlPlane.kubeconfigSecret`  | Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters | `""`    |
+| `rootControlPlane.meshPeers`         | Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster                 | `[]`    |
+| `rootControlPlane.endpoints.api`     | Externally reachable root composition API URL advertised to workloads                                               | `""`    |
+| `rootControlPlane.endpoints.events`  | Externally reachable root events URL advertised to workloads                                                        | `""`    |
+| `rootControlPlane.endpoints.metrics` | Externally reachable root metrics URL advertised to workloads                                                       | `""`    |
 
 <!-- The parameters table is maintained by the helm-readme-generator pre-commit hook. -->

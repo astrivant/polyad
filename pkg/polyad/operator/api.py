@@ -39,19 +39,23 @@ class API:
     Use namespaced, JSON Kubernetes requests with finite transport timeouts.
     """
 
-    def __init__(self, before_write: Callable[[], Awaitable[None]] | None = None) -> None:
+    def __init__(
+        self, before_write: Callable[[], Awaitable[None]] | None = None, *, configuration: client.Configuration | None = None
+    ) -> None:
         """
         Load in-cluster credentials or the developer's kubeconfig.
 
         Args:
             before_write (Callable[[], Awaitable[None]] | None): Optional ownership check awaited before dispatching each mutation.
+            configuration (client.Configuration | None): Isolated remote credentials; omitted uses the local cluster.
         """
-        try:
-            config.load_incluster_config()
-        except config.ConfigException:
-            config.load_kube_config()
+        if configuration is None:
+            try:
+                config.load_incluster_config()
+            except config.ConfigException:
+                config.load_kube_config()
         self.writes = WriteBacklog()
-        self.client = client.ApiClient()
+        self.client = client.ApiClient(configuration=configuration)
         self.before_write = before_write
         self.client.rest_client.pool_manager.connection_pool_kw["retries"] = False
 
@@ -135,7 +139,7 @@ class API:
             raise ValueError(f"unsupported kind: {kind}")
         if kind in reviews and (method != "POST" or name or status or namespace):
             raise ValueError("authentication reviews require a cluster-scoped POST")
-        path = f"{prefix}/{plural}" if kind in reviews else f"{prefix}/namespaces/{namespace}/{plural}"
+        path = f"{prefix}/{plural}" if kind in {*reviews, "CustomResourceDefinition"} else f"{prefix}/namespaces/{namespace}/{plural}"
         if name:
             path += f"/{name}"
         if status:

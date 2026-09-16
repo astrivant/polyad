@@ -1,0 +1,15 @@
+{{- if .Values.federation.enabled }}
+{{- $local := required "federation requires global.multiCluster.clusterName" .Values.global.multiCluster.clusterName }}
+{{- $names := dict }}
+{{- range .Values.federation.clusters }}
+{{- if or (hasKey $names .name) (eq .name $local) }}{{ fail "federation cluster names must be unique and distinct from the local cluster" }}{{ end }}
+{{- $_ := set $names .name true }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.rootControlPlane.enabled }}
+{{- if not .Values.federation.enabled }}{{ fail "rootControlPlane requires federation.enabled" }}{{ end }}
+{{- if not .Values.rootControlPlane.kubeconfigSecret }}{{ fail "rootControlPlane requires kubeconfigSecret for worker access to the root" }}{{ end }}
+{{- if not .Values.dragonfly.existingSecret }}{{ fail "rootControlPlane requires dragonfly.existingSecret with a cache URL reachable from every worker cluster" }}{{ end }}
+{{- if not .Values.metrics.enabled }}{{ fail "rootControlPlane requires metrics.enabled for centralized observations" }}{{ end }}
+{{- end }}

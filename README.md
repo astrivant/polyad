@@ -67,14 +67,27 @@ room to adapt while keeping deployment constraints under operator control.
 
 ### Graphs of graphs
 
+A [root operator control plane](docs/root-control-plane.md) can manage this entire
+hierarchy from a separate management cluster. It installs remote execution replicas,
+collects their observations centrally and coordinates KEDA through root-local scale
+targets. See the [deployment architecture](docs/root-control-plane.md#authority-and-execution)
+and [complete configuration example](examples/root-control-plane/values.yaml).
+
+
 Compose smaller workflows into an application with `PolyGraph`. Each child
 reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/concepts.md#graphs-of-graphs)</sup>
+
+Graphs execute within one cluster. PolyGraphs can optionally place child Graphs
+and nested PolyGraphs in registered remote clusters, composing regions and higher
+levels. Optional shared observers expose read-only graph snapshots while each
+cluster's operator enforces its own rules and executes its workloads. See
+[cross-cluster placement, Istio transport and observers](docs/multicluster.md).
 
 In the diagrams below, green marks work and graph summaries, amber marks
 constraints or recurrence, and gray marks resources and containing boundaries.
 
 <details open>
-<summary>Example: nested graphs reporting to an application root</summary>
+<summary>Example: nested PolyGraphs composing three clusters</summary>
 
 ```mermaid
 ---
@@ -95,20 +108,39 @@ config:
       top: 8
       bottom: 20
 ---
-flowchart BT
-    job["Workload"] --> batch["Graph · batch"]
-    daemon["Daemon"] --> service["Graph · service"]
-    spot["Graph · spot work"] --> group["PolyGraph · processing"]
-    batch --> group
-    group --> root["PolyGraph · application"]
-    service --> root
+flowchart TB
+    subgraph east["Cluster east"]
+        root["PolyGraph<br/>Global application"]
+        region["PolyGraph<br/>East region"]
+        batch["Graph · batch<br/>Local Jobs"]
+        root --> region --> batch
+    end
+    subgraph west["Cluster west"]
+        group["PolyGraph<br/>Western regions"]
+        service["Graph · service<br/>Local Deployments or StatefulSets"]
+        group --> service
+    end
+    subgraph north["Cluster north"]
+        analytics["Graph · analytics<br/>Local Jobs and resources"]
+    end
+    root -->|"cluster: west"| group
+    group -->|"cluster: north"| analytics
     classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
-    classDef constraint fill:#fff3d6,stroke:#926000,color:#513900
-    class job,daemon,batch,service,group,root execution
-    class spot constraint
+    class root,region,batch,group,service,analytics execution
 ```
 
-Read about [graphs of graphs](docs/concepts.md#graphs-of-graphs).
+Arrows show declared parent-child ownership; child status rolls back up to the
+root. Each Graph's workloads stay inside its cluster. The east operator manages
+the western PolyGraph's intent; the west operator manages that PolyGraph's
+children, including the Graph in north. Each destination operator executes its
+local work. The same hierarchy can be entirely local by omitting `cluster`.
+
+Read about [graphs of graphs](docs/concepts.md#graphs-of-graphs),
+[remote placement and ownership](docs/multicluster.md#placement-and-ownership),
+and the [execution architecture](docs/multicluster.md#execution-and-observation).
+The [two-cluster example](examples/multicluster/application.yaml) demonstrates
+local nesting in east with a remote Graph in west; the diagram extends this
+pattern with another remote PolyGraph and cluster.
 
 </details>
 
@@ -211,6 +243,11 @@ subject to inherited restrictions. Copies without a configured mode remain
 [Independent](docs/replication.md#independent), with no inter-copy edges. Scaling rebuilds the selected pattern and
 notifies workloads through [topology events](docs/workload-events.md).
 
+This example fits within one cluster. For remote Graph workloads, see the
+[east-west gateway diagram](docs/multicluster.md#istio-across-different-networks)
+and [direct Pod routing diagram](docs/multicluster.md#same-network-clusters).
+Remote placement and data-flow edges need separately configured traffic policies.
+
 </details>
 
 ### Autoscaling the hierarchy
@@ -238,6 +275,11 @@ limits and Cheeger constraints. KEDA supplies the requested count;
 constraints can block its application. Target the ReplicaGroup to use these
 checks: directly autoscaling a generated Deployment or StatefulSet bypasses graph
 admission. See [constraints before scaling](docs/replication.md#constraints-before-scaling).
+
+A ReplicaGroup of PolyGraphs can also scale a complete cross-cluster composition.
+Each destination can independently scale its own local groups. The
+[multicluster scaling diagram](docs/multicluster.md#graphrules-cheeger-bounds-and-scaling)
+shows where each cluster refreshes live values and enforces its own rules.
 
 ### Constrained compositions
 
@@ -344,6 +386,8 @@ flowchart TB
 ```
 
 Read about [network scope and inheritance](docs/networking.md#selection-scope-and-inheritance) and [cross-namespace authorization](docs/networking.md#cross-namespace-peers-and-http-authorization).
+This diagram shows one cluster; [remote traffic rules](docs/multicluster.md#remote-traffic-rules)
+are configured separately at each end of a cross-cluster connection.
 
 </details>
 

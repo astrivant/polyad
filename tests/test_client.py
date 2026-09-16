@@ -92,6 +92,17 @@ def test_client_streams_cursors_and_control_messages():
     assert response.closed
 
 
+def test_client_reads_shared_observer_snapshots():
+    """
+    Use the standalone client's existing authentication transport for optional read replicas.
+    """
+    from polyad.api.observations import build_app
+
+    client = Client("http://observer:8094", "read-token")
+    client._opener = Adapter(build_app(lambda kind, name: {"kind": kind, "name": name, "cluster": "west"}, "read-token"))
+    assert client.observe("workflow", kind="PolyGraph") == {"kind": "PolyGraph", "name": "workflow", "cluster": "west"}
+
+
 @pytest.mark.parametrize("url", ["file:///etc/passwd", "https://user:password@example.org", "http://example.org?token=secret"])
 def test_client_rejects_unsafe_base_urls(url):
     """

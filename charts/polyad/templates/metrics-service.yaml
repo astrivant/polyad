@@ -12,6 +12,7 @@ spec:
   selector:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/name: polyad
+    polyad.astrivant.com/component: {{ ternary "telemetry" "dense" (eq .Values.architecture.mode "Distributed") }}
   ports:
     - name: metrics
       port: 8092

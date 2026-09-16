@@ -9,6 +9,7 @@ import json
 import re
 import time
 from typing import TYPE_CHECKING, cast
+from urllib.parse import urlencode
 
 from redis.exceptions import ResponseError
 
@@ -88,7 +89,7 @@ class EventStore:
     Share at-least-once observation delivery without retaining workload payloads or credentials.
     """
 
-    def __init__(self, url: str, namespace: str, *, retention: int = 10000) -> None:
+    def __init__(self, url: str, namespace: str, *, retention: int = 10000, cluster: str | None = None) -> None:
         """
         Configure the namespace stream and maximum retained event count.
 
@@ -96,12 +97,14 @@ class EventStore:
             url (str): Shared Redis or Dragonfly URL.
             namespace (str): Namespace visible to subscribers.
             retention (int): Maximum retained observations and deduplication identities.
+            cluster (str | None): Remote stream identity when reports are held at the root.
         """
         if not 100 <= retention <= 100000:
             raise ValueError("event retention must be between 100 and 100000")
         self.cache = Cache(url, namespace)
         self.key = f"polyad:{{events:{namespace}}}:observations"
         self.retention = retention
+        self.cluster = cluster
 
     async def publish(self, obj: dict[str, Any], *, topology: dict[str, Any] | None = None) -> None:
         """
@@ -117,6 +120,7 @@ class EventStore:
         meta, status = obj["metadata"], obj.get("status", {})
         metrics = status.get("metrics", {})
         payload = {
+            **({"cluster": self.cluster} if self.cluster else {}),
             "type": "deleting" if meta.get("deletionTimestamp") else "observation",
             "apiVersion": obj["apiVersion"],
             "kind": obj["kind"],
@@ -144,11 +148,15 @@ class EventStore:
         )
         if topology is not None:
             snapshot = {**topology, "observedAt": time.time()}
+            if self.cluster:
+                snapshot["graph"] = {**snapshot["graph"], "cluster": self.cluster}
             event = {
+                **({"cluster": self.cluster} if self.cluster else {}),
                 **{key: payload[key] for key in ("apiVersion", "kind", "namespace", "name", "uid", "generation", "resourceVersion")},
                 "type": "topology",
                 "revision": topology["revision"],
-                "snapshot": f"/v1/graphs/{obj['kind']}/{meta['name']}/topology",
+                "snapshot": f"/v1/graphs/{obj['kind']}/{meta['name']}/topology"
+                + ("?" + urlencode({"cluster": self.cluster}) if self.cluster else ""),
                 "valid": topology["valid"],
                 "nodeCount": len(topology["nodes"]),
                 "connectionCount": len(topology["connections"]),

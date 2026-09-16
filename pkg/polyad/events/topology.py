@@ -21,13 +21,14 @@ if TYPE_CHECKING:
     from polyad.operator.api import API
 
 
-async def topology_snapshot(api: API, obj: dict[str, Any]) -> dict[str, Any]:
+async def topology_snapshot(api: API, obj: dict[str, Any], children: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """
     Read desired connections and actual children independently of lifecycle status updates.
 
     Args:
         api (API): Fresh Kubernetes reader under graph-family ownership.
         obj (dict[str, Any]): Persisted graph boundary whose neighbors are being observed.
+        children (list[dict[str, Any]] | None): Optional freshly verified local and remote child inventory.
 
     Returns:
         dict[str, Any]: Canonical, revisioned snapshot with no Pod templates or credentials.
@@ -44,10 +45,12 @@ async def topology_snapshot(api: API, obj: dict[str, Any]) -> dict[str, Any]:
             spec, _ = await effective_spec(api, obj)
         graph = topology(overlay(obj, spec), obj["kind"])
         for vertex in graph.nodes:
+            cluster = getattr(vertex, "cluster", None)
             nodes[vertex.name] = {
                 "name": vertex.name,
                 "kind": vertex.kind,
                 "ref": vertex.ref,
+                **({"cluster": cluster} if cluster else {}),
                 "desired": True,
                 "requires": sorted(
                     [{"node": edge.node, "condition": edge.condition} for edge in vertex.requires],
@@ -70,7 +73,7 @@ async def topology_snapshot(api: API, obj: dict[str, Any]) -> dict[str, Any]:
         # Invalid intent must invalidate a cached neighbor declaration, while
         # still reporting the execution resources that actually remain present.
         valid = False
-    for child in await api.owned(meta["namespace"], meta["uid"]):
+    for child in children if children is not None else await api.owned(meta["namespace"], meta["uid"]):
         if child["kind"] in AUXILIARY_KINDS:
             continue
         child_meta = child["metadata"]
@@ -86,6 +89,8 @@ async def topology_snapshot(api: API, obj: dict[str, Any]) -> dict[str, Any]:
             "runtimeNode": labels.get(f"{GROUP}/runtime-node", name),
             "terminating": bool(child_meta.get("deletionTimestamp")),
         }
+        if cluster := child_meta.get("annotations", {}).get(f"{GROUP}/remote-cluster"):
+            execution.update(cluster=cluster, namespace=child_meta["namespace"])
         if child["kind"] in {"Deployment", "StatefulSet"}:
             execution["replicas"] = child.get("spec", {}).get("replicas", 1)
         node["executions"].append(execution)

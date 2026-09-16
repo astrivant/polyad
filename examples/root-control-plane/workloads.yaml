@@ -1,0 +1,52 @@
+# Reusable definitions in the registered workload namespace.
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: consumer
+  namespace: workloads
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: consumer
+          image: busybox:1.37
+          command: [httpd, -f, -p, '8080']
+          ports:
+            - containerPort: 8080
+          startupProbe:
+            tcpSocket:
+              port: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ReplicaGroup
+metadata:
+  name: consumers
+  namespace: workloads
+spec:
+  templateOnly: true
+  replicas: 2
+  minReplicas: 1
+  maxReplicas: 8
+  template:
+    kind: Daemon
+    ref: consumer
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: services
+  namespace: workloads
+spec:
+  templateOnly: true
+  mode: persistent
+  nodes:
+    - name: consumers
+      kind: ReplicaGroup
+      ref: consumers

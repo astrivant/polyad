@@ -99,6 +99,12 @@ directed edges become one undirected edge.
 
 ## Structural limits
 
+With optional [cross-cluster PolyGraphs](multicluster.md), a remote boundary is
+one vertex in its parent's cluster. Recursive expansion and inherited rules stop
+there. Its destination operator enforces that cluster's rules against local
+descendants. Cheeger values describe each evaluated boundary's declared
+structure; they do not measure network throughput across clusters.
+
 Each `limits` field is an independent inclusive maximum: equality passes, and a
 larger measured value fails. An SCC (strongly connected component) groups vertices
 that can reach one another. Collapsing SCCs gives a condensation DAG, used for
@@ -647,6 +653,7 @@ Explicit selectors combine with AND.
 | `kind` | `Graph` | Kind of a named graph instance: `Graph`, `PolyGraph`, `ReplicaGroup` |
 | `node` | Omitted | Selected graph's node and its descendants; without `graph`, selects a node in the declaring boundary; a DNS label |
 | `podLabels` | `{}` | Additional exact key/value matches, combined with namespace and graph selection |
+| `cluster` | Omitted | Registered remote transport; requires mesh and explicit TCP ports; cannot combine with local selectors |
 
 An explicit `namespace` together with `node` requires an explicit `graph`, even
 if the namespace is the current one. Without `graph` or `node`, only namespace
@@ -664,6 +671,27 @@ flowchart TB
 ```
 
 ### Mesh identity and HTTP constraints
+
+For `peer.cluster`, remote ingress additionally requires exact source principals.
+Gateway-mode egress permits only TCP on the registered peer's `gatewayPort`
+(default 15443); destination ingress uses the real service ports. Direct mode
+uses registered remote Pod CIDRs and service ports. Every inherited local
+contract must permit the remote peer. Cluster
+registration does not authenticate a cluster identity; use distinct workload
+principals when clusters share a trust domain. See
+[remote traffic configuration](multicluster.md#remote-traffic-rules).
+
+```mermaid
+flowchart TB
+    peer["peer.cluster: west"] --> mesh["network.mesh: true<br/>Explicit TCP ports required"]
+    peer --> selectors["namespace, graph, node, podLabels<br/>cannot accompany a remote peer"]
+    mesh --> ingress["Ingress<br/>Exact source principals required<br/>Destination service ports"]
+    mesh --> gateway["Gateway egress<br/>TCP gatewayPort to registered gateway CIDRs"]
+    mesh --> direct["Direct egress<br/>Declared ports to registered Pod CIDRs"]
+    ingress --> inherited["Every applicable local contract<br/>must allow this connection"]
+    gateway --> inherited
+    direct --> inherited
+```
 
 `network.mesh: true` requires the operator's mesh integration and Istio. It
 requests native sidecar injection, strict mutual TLS and inbound authorization.

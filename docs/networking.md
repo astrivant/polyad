@@ -10,6 +10,14 @@ workloads inside nested graphs receive the same membership labels. Connections
 can therefore join a task to a service, two subgraphs, or explicitly selected
 workloads in different namespaces.
 
+Optional [multicluster networking](multicluster.md#remote-traffic-rules) adds
+registered remote transports and exact inbound workload identities. PolyGraphs
+can place child Graphs in other clusters; each cluster enforces its own traffic
+contracts. Namespace, graph and Pod selectors remain cluster-local.
+See the [gateway traffic path](multicluster.md#istio-across-different-networks)
+and [direct Pod routing path](multicluster.md#same-network-clusters) for diagrams
+of the policies and sidecars involved at each end.
+
 For every `GraphRule` field, default, validation constraint and configuration
 diagram, see the [graph rules guide](graph-rules.md#network-contracts). This guide
 covers how traffic contracts are compiled, enforced and operated.
@@ -34,6 +42,12 @@ restriction to reach descendants. A `PolyGraph` has no direct workload nodes,
 so a boundary-only network contract on it selects no pods. Structural limits
 such as `expandedNodes` still measure the declared recursive quantity, regardless
 of reference propagation.
+
+At a remote PolyGraph node, inheritance and recursive rule expansion stop.
+The remote boundary counts as one local vertex; its executing operator evaluates
+its descendants using destination-cluster rules. Remote connections require
+explicit endpoint traffic contracts, as described in the
+[multicluster rule scope](multicluster.md#graphrules-cheeger-bounds-and-scaling).
 
 For each workload, the operator walks refreshed Kubernetes owner references and
 intersects all applicable contracts. Each contract contains a union of allowed

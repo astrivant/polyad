@@ -9,6 +9,7 @@ from polyad_types.capacity import CapacityPlan as CapacityPlan
 from polyad_types.codec import from_dict as from_dict
 from polyad_types.codec import to_dict as to_dict
 from polyad_types.events import Event as Event
+from polyad_types.network import MeshPeer as MeshPeer
 from polyad_types.network import NetworkAccess as NetworkAccess
 from polyad_types.network import NetworkPeer as NetworkPeer
 from polyad_types.network import NetworkPort as NetworkPort

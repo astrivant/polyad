@@ -241,6 +241,8 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
         for node in body.get("nodes", []):
             if node["kind"] not in BOUNDARY_KINDS:
                 continue
+            if node.get("cluster"):
+                continue  # Remote execution belongs to its destination's independent rule family.
             reference = node["kind"], node["ref"]
             if reference in references:
                 raise RuleViolation("recursive graph definition references are invalid")

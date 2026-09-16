@@ -18,6 +18,7 @@ from polyad_types.network import NetworkAccess, NetworkPort
 from polyad_types.replication import Replication
 from polyad_types.requests import ConnectionRequest
 from polyad_types.resources import CapacityStatus
+from polyad_types.topology import GraphNode
 
 if TYPE_CHECKING:
     from typing import Any
@@ -87,6 +88,10 @@ def main() -> int:
                 },
             )
         if kind != "graphrules":
+            cluster_schema = structural_schema(GraphNode)["properties"]["cluster"]
+            if kind == "graphs":
+                cluster_schema["x-kubernetes-validations"] = [{"rule": "false", "message": "Cluster placement belongs on PolyGraph nodes."}]
+            updated = refresh(updated, (*props, "nodes", "items", "properties"), "cluster", cluster_schema)
             updated = refresh(updated, props, "capacity", structural_schema(CapacityPlan))
             if kind != "rewrites":
                 status_props = ROOT[:-2] + ("status", "properties")

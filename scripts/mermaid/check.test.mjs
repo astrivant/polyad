@@ -31,7 +31,7 @@ test("rejects the billing diagram's semicolon-separated message", async () => {
       "",
       "```mermaid",
       "sequenceDiagram",
-      "    Relay->>Kafka: Report UUID; wait for acknowledgment",
+      "    Relay->>Database: Report UUID; wait for acknowledgment",
       "```",
     ].join("\n"),
     "billing.md",
@@ -46,7 +46,7 @@ test("accepts sequence labels and HTML flowchart labels", async () => {
     [
       "```mermaid",
       "sequenceDiagram",
-      "    Relay->>Kafka: Report UUID, wait for acknowledgment",
+      "    Relay->>Database: Report UUID, wait for acknowledgment",
       "```",
       "~~~mermaid",
       'flowchart LR\nA["Report<br/>worker"] --> B[(Database)]',

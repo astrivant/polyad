@@ -15,12 +15,13 @@ if TYPE_CHECKING:
     from typing import Any
 
 
-def inventory(objects: list[dict[str, Any]]) -> dict[str, Any]:
+def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, Any]:
     """
     Build identity-only hierarchy records and generation-fenced status observations.
 
     Args:
         objects (list[dict[str, Any]]): Objects from a complete namespace rescan.
+        cluster (str): Remote cluster qualifier matching root shard routing.
 
     Returns:
         dict[str, Any]: Counts and hierarchy records without workload manifests or arbitrary labels.
@@ -107,7 +108,9 @@ def inventory(objects: list[dict[str, Any]]) -> dict[str, Any]:
                 "root": root,
                 "depth": depth if complete else None,
                 "hierarchyComplete": complete,
-                "shard": root_shard(duty_root["kind"], meta["namespace"], duty_root["name"])
+                "shard": root_shard(
+                    duty_root["kind"], f"{cluster}/{meta['namespace']}" if cluster else meta["namespace"], duty_root["name"]
+                )
                 if duty_root and obj["kind"] not in definitions
                 else None,
                 "phase": phase if phase in PHASES else "Unknown",

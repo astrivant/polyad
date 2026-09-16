@@ -46,6 +46,9 @@ def main() -> None:
         elif kind == "TemporaryConnection":
             current = f"{CURRENT_GENERATION} && has(status.phase) && status.phase in ['Active', 'Expired', 'Revoked']"
             failed = f"{CURRENT_GENERATION} && has(status.phase) && status.phase in ['Rejected', 'Invalid', 'Failed']"
+        elif kind in {"OperatorPool", "RemoteScale"}:
+            current = f"{CURRENT_GENERATION} && has(status.phase) && status.phase == 'Ready'"
+            failed = f"{CURRENT_GENERATION} && has(status.phase) && status.phase == 'Blocked'"
         elif kind in {"Composition", "Activation"}:
             current, failed = READY, FAILED
             if kind == "Activation":

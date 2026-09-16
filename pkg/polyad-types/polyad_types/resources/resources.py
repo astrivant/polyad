@@ -287,7 +287,7 @@ class ConfigMap(Resource):
 @frozen(kw_only=True)
 class Graph(SpecResource):
     """
-    A Polyad graph boundary; its topology is validated by the graph library.
+    A cluster-local Polyad graph boundary validated by the graph library.
 
     Attributes:
         resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
@@ -298,7 +298,7 @@ class Graph(SpecResource):
         f"{GROUP}/{VERSION}",
         "graphs",
         boundary=True,
-        description="Scheduling boundary for dependent workload vertices.",
+        description="Cluster-local scheduling boundary for dependent workload vertices.",
         graph_owned=True,
         reconciled=True,
         composable=True,
@@ -308,7 +308,7 @@ class Graph(SpecResource):
 @frozen(kw_only=True)
 class PolyGraph(SpecResource):
     """
-    A composition boundary whose nodes are graphs of any supported boundary type.
+    A composition boundary for local graphs and optionally remote Graphs and PolyGraphs.
 
     Attributes:
         resource_type (ClassVar[ResourceType]): Kind descriptor for routing and serialization.
@@ -638,7 +638,73 @@ class PodTemplateResource(Resource):
     template: PodTemplate
 
 
+@frozen(kw_only=True)
+class OperatorPool(SpecResource):
+    """
+    Root-managed remote operator execution capacity.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Root control-plane API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "OperatorPool", f"{GROUP}/{VERSION}", "operatorpools", description="Root-managed remote operator execution capacity."
+    )
+
+
+@frozen(kw_only=True)
+class RemoteScale(SpecResource):
+    """
+    Root-local scale intent for a remote ReplicaGroup.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Root control-plane API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "RemoteScale", f"{GROUP}/{VERSION}", "remotescales", description="Root-local scale intent for a remote ReplicaGroup."
+    )
+
+
+@frozen(kw_only=True)
+class Secret(Resource):
+    """
+    A root-managed Secret used to bootstrap execution replicas.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Kubernetes management API identity.
+        data (dict[str, str]): Base64-encoded credential entries.
+        type (str): Native Kubernetes Secret type.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType("Secret", "v1", "secrets", description="Root-managed worker credentials.")
+    data: dict[str, str] = field(factory=dict)
+    type: str = "Opaque"
+
+
+@frozen(kw_only=True)
+class CustomResourceDefinition(SpecResource):
+    """
+    A root-managed CustomResourceDefinition used to bootstrap execution replicas.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Kubernetes management API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "CustomResourceDefinition",
+        "apiextensions.k8s.io/v1",
+        "customresourcedefinitions",
+        namespaced=False,
+        description="Root-installed Polyad API schemas.",
+    )
+
+
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
+    Secret,
+    CustomResourceDefinition,
+    OperatorPool,
+    RemoteScale,
     Activation,
     TemporaryConnection,
     ReplicaGroup,
