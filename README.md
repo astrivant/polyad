@@ -185,12 +185,12 @@ notifies workloads through [topology events](docs/workload-events.md).
 by targeting a ReplicaGroup's Kubernetes `/scale` subresource. The group's
 template determines what each additional replica creates:
 
-- **Daemon replicas:** another service instance, backed by its selected Deployment
+- **[Daemon replicas](docs/replication.md#example-daemon-replicas):** another service instance, backed by its selected Deployment
   or StatefulSet. Set the Daemon's own `replicas: 1` when each group copy should
   represent one desired Pod.
-- **Graph replicas:** another complete workflow or service graph, including its
+- **[Graph replicas](docs/replication.md#example-graph-replicas):** another complete workflow or service graph, including its
   workloads, resources and internal connections.
-- **PolyGraph or nested ReplicaGroup replicas:** another composition of graphs or
+- **[PolyGraph](docs/replication.md#example-polygraph-replicas) or [nested ReplicaGroup replicas](docs/replication.md#example-nested-replicagroups):** another composition of graphs or
   replica groups, allowing scaling at multiple levels of the same application.
 
 For example, scale a worker pool inside a processing graph as its queue grows,

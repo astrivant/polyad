@@ -62,6 +62,203 @@ when work must repeat. Replicating a Daemon copies its selected
 Deployment or StatefulSet controller; each copy retains that definition's own replica setting. Bounds count copies of
 the selected abstraction, not the total Pods in their descendant graphs.
 
+## Examples at each scaling level
+
+These examples use namespace `polyad`, with Polyad's CRDs and operator already
+installed. Graph and group templates use `templateOnly: true` so defining them
+does not start an extra standalone execution. The examples share the Daemon
+definition below; the PolyGraph example also uses the Graph definition from the
+Graph example. Each top-level ReplicaGroup is a separate scaling target.
+
+### Example: Daemon replicas
+
+This group requests two independent Deployments, each with one desired Pod.
+Increasing `services.spec.replicas` from 2 to 3 adds one Deployment and one desired
+Pod. It does not resize the existing Deployments.
+
+```yaml
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: replicated-server
+  namespace: polyad
+spec:
+  controller: Deployment
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: server
+          image: busybox:1.37
+          command: [sh, -c, 'mkdir -p /www; echo ready > /www/index.html; exec httpd -f -p 8080 -h /www']
+          startupProbe:
+            httpGet: {path: /, port: 8080}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /, port: 8080}
+          livenessProbe:
+            httpGet: {path: /, port: 8080}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ReplicaGroup
+metadata:
+  name: services
+  namespace: polyad
+spec:
+  replicas: 2
+  minReplicas: 0
+  maxReplicas: 20
+  template:
+    kind: Daemon
+    ref: replicated-server
+```
+
+For StatefulSet copies, select `controller: StatefulSet` on the Daemon and supply
+its `statefulSet` configuration, including the governing Service. Keep the
+Daemon's `replicas: 1` for one desired Pod per group copy. See the
+[StatefulSet and storage example](workload-storage.md#statefulset-configuration).
+KEDA targets `ReplicaGroup/services`, using the [ScaledObject below](#connect-keda).
+
+### Example: Graph replicas
+
+Define this persistent service graph and use the `processors` ReplicaGroup from
+[Declare a scalable abstraction](#declare-a-scalable-abstraction). It references
+this exact definition by `template.kind: Graph` and `template.ref: processing-pipeline`.
+
+```yaml
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: processing-pipeline
+  namespace: polyad
+spec:
+  templateOnly: true
+  mode: persistent
+  nodes:
+    - name: ingress
+      kind: Daemon
+      ref: replicated-server
+    - name: processor
+      kind: Daemon
+      ref: replicated-server
+      requires:
+        - node: ingress
+          condition: ready
+  connections:
+    - source: ingress
+      target: processor
+      ports:
+        - port: 8080
+          protocol: TCP
+```
+
+At `processors.spec.replicas: 2`, there are two Graph instances, each with its own
+ingress and processor Deployments: four desired Pods in total. Scaling to 3 adds
+one whole Graph, including both Daemons, their readiness dependency and their
+declared connection. Any Resource nodes added to the template would also be
+instantiated separately in each copy.
+
+The HTTP servers make execution and readiness observable; the declared edge
+does not implement application forwarding. See [graph networking](networking.md)
+for transport grants. KEDA targets `ReplicaGroup/processors`, exactly as shown in
+the [ScaledObject below](#connect-keda). Finite Graphs can be replicated too;
+completed copies require [activation pulses](activation.md) to run again.
+
+### Example: PolyGraph replicas
+
+This reusable PolyGraph contains two instances of `processing-pipeline` from the
+Graph example. The outer group copies the entire composition.
+
+```yaml
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: PolyGraph
+metadata:
+  name: processing-application
+  namespace: polyad
+spec:
+  templateOnly: true
+  mode: persistent
+  nodes:
+    - name: primary
+      kind: Graph
+      ref: processing-pipeline
+    - name: secondary
+      kind: Graph
+      ref: processing-pipeline
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ReplicaGroup
+metadata:
+  name: applications
+  namespace: polyad
+spec:
+  replicas: 2
+  minReplicas: 0
+  maxReplicas: 20
+  template:
+    kind: PolyGraph
+    ref: processing-application
+```
+
+Two application copies contain four Graph instances and eight desired Daemon
+Pods. Scaling `applications` from 2 to 3 adds one PolyGraph, two Graphs and four
+desired Pods. These counts belong to `applications`; the separately declared
+`processors` group is not part of this composition. KEDA targets
+`ReplicaGroup/applications`, using the [ScaledObject below](#connect-keda).
+
+### Example: nested ReplicaGroups
+
+An outer group can replicate a reusable group directly. Here, each pool contains
+three copies of the `replicated-server` Daemon from the first example.
+
+```yaml
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ReplicaGroup
+metadata:
+  name: worker-pool
+  namespace: polyad
+spec:
+  templateOnly: true
+  replicas: 3
+  minReplicas: 0
+  maxReplicas: 20
+  template:
+    kind: Daemon
+    ref: replicated-server
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ReplicaGroup
+metadata:
+  name: worker-pools
+  namespace: polyad
+spec:
+  replicas: 2
+  minReplicas: 0
+  maxReplicas: 20
+  template:
+    kind: ReplicaGroup
+    ref: worker-pool
+```
+
+Initially, two pool instances each request three one-Pod Daemons: six desired
+Pods. Scaling `worker-pools` from 2 to 3 adds a whole pool, producing nine desired
+Pods. Instead, keeping two pools and scaling the shared `worker-pool` definition
+from 3 to 4 updates both inheriting pools, producing eight desired Pods.
+
+Use separate ScaledObjects targeting `ReplicaGroup/worker-pools` for pool count
+and `ReplicaGroup/worker-pool` for copies per inheriting pool. To scale just one
+generated pool independently, first set its `inheritReplicas: false` and target
+that instance's generated name; see [instance and shared scaling](#independent-instances-and-all-uses-of-a-definition).
+
+For each example, adapt the [KEDA ScaledObject](#connect-keda) by setting both its
+`metadata.name` and `spec.scaleTargetRef.name` to the target named above. All these
+groups have bounds 0–20, matching that example. Choose an actual demand metric
+for the layer being scaled; the sample metric URL is not created by these
+manifests. Counts describe desired steady state after admission. Applicable
+[GraphRules are checked before creating or retiring copies](#constraints-before-scaling)
+throughout the hierarchy, and can block an otherwise in-bounds request.
+
 ## Connections between copies
 
 `spec.connectivity` selects the data-flow connections between replica vertices.
