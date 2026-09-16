@@ -261,7 +261,18 @@ throughout the hierarchy, and can block an otherwise in-bounds request.
 
 ## Connections between copies
 
-`spec.connectivity` selects the data-flow connections between replica vertices.
+`spec.connectivity` selects the data-flow connections between copies in a
+ReplicaGroup. Each **replica vertex** is one complete copy of the selected
+template, named `replica-0`, `replica-1`, and so on:
+
+| `spec.template.kind` | What one replica vertex represents |
+| --- | --- |
+| `Daemon` | One Daemon execution, backed by its Deployment or StatefulSet. |
+| `Graph` | One Graph instance, including its workload and resource nodes and internal connections. |
+| `PolyGraph` | One PolyGraph instance, including all of its nested graphs, workloads, resources and connections. |
+| `ReplicaGroup` | One nested group instance, with its own copies and connectivity mode. |
+
+The selected mode connects these copies at the enclosing ReplicaGroup boundary.
 Omitting it keeps the default `Independent` mode. Connections do not add
 `requires` dependencies: copies remain independently admissible, including when
 the data-flow pattern contains cycles.
@@ -286,62 +297,831 @@ spec:
 
 | Field | Default | Meaning and constraints |
 | --- | --- | --- |
-| `mode` | `Independent` | `Independent`, `Chain`, `Ring`, `Star`, `FullMesh`, or `Custom`; case sensitive |
+| `mode` | `Independent` | [Independent](#independent), [Chain](#chain), [Ring](#ring), [Star](#star), [FullMesh](#fullmesh), or [Custom](#custom); case sensitive |
 | `bidirectional` | `false` | Add the reverse of each edge, with the same port grants; invalid with `Independent` |
 | `ports` | `[]` | Destination ports for built-in connected modes; each port is 1–65535 with protocol `TCP` (default), `UDP`, or `SCTP`; invalid with `Independent` or `Custom` |
 | `edges` | `[]` | At most 4096 custom edges with unique directed source/target pairs; nonempty only with `Custom` |
+
+### Graph and PolyGraph connections
+
+For example, set `replicas: 3` and `connectivity.mode: Ring` on the
+[`processors` group](#example-graph-replicas). Its three vertices are whole
+`processing-pipeline` Graph instances. The group declares
+`replica-0 → replica-1 → replica-2 → replica-0`, while each copy keeps its own
+`ingress → processor` connection and readiness dependency. The Ring does not
+change the internal shape of those Graphs or pair up equally named workloads
+across copies.
+
+With `template.kind: PolyGraph`, the same Ring connects entire compositions.
+For the [`applications` example](#example-polygraph-replicas), each vertex contains
+both the `primary` and `secondary` Graph instances and their Daemons. Connections
+inside each Graph, connections between those Graphs inside a PolyGraph, and
+connections between PolyGraph copies belong to separate boundaries. Configure
+each boundary's connections independently. Likewise, an outer group's mode does
+not replace a nested ReplicaGroup's own mode.
+
+**Network access covers the connected subtrees.** When the ReplicaGroup has an
+applicable network contract with `network.scope: Subtree` (the default), an edge
+`replica-0 → replica-1` with TCP port 8080 contributes an egress allowance for
+descendant Pods in copy 0 and a matching ingress allowance for descendant Pods
+in copy 1. At this boundary, any source Pod in copy 0 can reach any destination
+Pod in copy 1 on that port, subject to every other applicable contract. For a
+PolyGraph copy, this includes Pods throughout its nested graphs. The edge does
+not select a particular entry-point workload. A boundary-only network contract
+on a group of Graphs or PolyGraphs does not reach their descendant Pods.
+
+These grants are intersected with ancestor and child restrictions. A child's
+internal connection cannot override a restrictive group contract; the group
+contract must also allow the traffic needed inside each copy. For narrower
+access, omit broad inter-copy port grants and declare explicit
+[network peers and selectors](networking.md#cross-namespace-peers-and-http-authorization),
+or enforce narrower child contracts. Adding a narrower peer to the same contract
+does not restrict an existing broad allowance. `Custom` connectivity endpoints are
+still replica ordinals, such as `replica-1`; they cannot be descendant paths such
+as `replica-1/processor`.
+
+Ports without an applicable network contract do not install network policies,
+and edges without ports do not grant transport access. `Independent` therefore
+means no declared connections between copies; it does not itself isolate their
+Pods. Connections also do not create Services, DNS names, forwarding, or load
+balancing. Applications provide their addressing and communication behavior;
+see [graph networking](networking.md#isolating-a-subgraph).
+
+GraphRules with `relation: connections` evaluate these same boundaries. A rule
+evaluated at a three-copy ReplicaGroup sees three vertices and the selected
+inter-copy edges for its Cheeger calculation. Rules evaluated inside a Graph or
+PolyGraph copy see that copy's own nodes and edges. The outer calculation does
+not flatten all descendant Pods into one graph; recursive size limits remain
+separate from this boundary's connectivity measures.
+
+### Reading the networking diagrams
+
+Each mode below has three views: [Daemon](#example-daemon-replicas),
+[Graph](#example-graph-replicas), and [PolyGraph](#example-polygraph-replicas)
+replicas. Expand the Graph and PolyGraph examples to see their descendant
+workloads. All views use three live copies; Custom also shows a fourth,
+uncreated copy to explain dormant edges.
+
+Green boxes represent Pods. Daemon examples set the Daemon's own `replicas: 1`;
+Graph examples show two workload Pods per copy. PolyGraph examples show two
+child Graphs per copy, with one representative Pod in each; those Graphs can
+contain more workloads. These are schematic templates, with internal edges
+declared separately from `spec.connectivity`.
+
+An arrow between copy boundaries represents the declared connection and its
+destination port grant across their Pod subtrees. Double arrows grant both
+directions. Thin arrows labeled **internal** show connections within a copy
+(TCP 8080 in these examples); they remain present even in Independent mode.
+Dotted arrows to an amber **Not created** box are dormant declarations, with no
+live destination Pod or active grant.
+
+The diagrams assume a subtree network contract and that all applicable contracts
+allow the depicted traffic, including traffic inside each copy. They show the
+grants associated with the selected mode; other configured allowances can permit
+additional traffic. The [scope and intersection rules above](#graph-and-polygraph-connections)
+still apply.
 
 ### Independent
 
 Creates no connections between copies.
 
+<details open>
+<summary>Daemon replicas — one desired Pod per copy</summary>
+
 ```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
 flowchart LR
-    a["replica-0"]
-    b["replica-1"]
-    c["replica-2"]
+    r0["replica-0<br/>Daemon Pod"]
+    r1["replica-1<br/>Daemon Pod"]
+    r2["replica-2<br/>Daemon Pod"]
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class r0,r1,r2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
 ```
+
+</details>
+
+<details>
+<summary>Graph replicas — two workloads inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["Graph · replica-0"]
+        direction LR
+        a0["Ingress Pod"] -->|"internal"| b0["Processor Pod"]
+    end
+    subgraph r1["Graph · replica-1"]
+        direction LR
+        a1["Ingress Pod"] -->|"internal"| b1["Processor Pod"]
+    end
+    subgraph r2["Graph · replica-2"]
+        direction LR
+        a2["Ingress Pod"] -->|"internal"| b2["Processor Pod"]
+    end
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    %% Invisible links arrange independent copies; they are not network edges.
+    r0 ~~~ r1 ~~~ r2
+    linkStyle 3,4 opacity:0
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
+
+<details>
+<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["PolyGraph · replica-0"]
+        direction LR
+        subgraph p0["Graph · primary"]
+            a0["Daemon Pod"]
+        end
+        subgraph s0["Graph · secondary"]
+            b0["Daemon Pod"]
+        end
+        p0 -->|"internal"| s0
+    end
+    subgraph r1["PolyGraph · replica-1"]
+        direction LR
+        subgraph p1["Graph · primary"]
+            a1["Daemon Pod"]
+        end
+        subgraph s1["Graph · secondary"]
+            b1["Daemon Pod"]
+        end
+        p1 -->|"internal"| s1
+    end
+    subgraph r2["PolyGraph · replica-2"]
+        direction LR
+        subgraph p2["Graph · primary"]
+            a2["Daemon Pod"]
+        end
+        subgraph s2["Graph · secondary"]
+            b2["Daemon Pod"]
+        end
+        p2 -->|"internal"| s2
+    end
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    %% Invisible links arrange independent copies; they are not network edges.
+    r0 ~~~ r1 ~~~ r2
+    linkStyle 3,4 opacity:0
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
 
 ### Chain
 
 Connects each ordinal to the next one, in ascending order.
 
+<details open>
+<summary>Daemon replicas — one desired Pod per copy</summary>
+
 ```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
 flowchart LR
-    a["replica-0"] --> b["replica-1"] --> c["replica-2"]
+    r0["replica-0<br/>Daemon Pod"]
+    r1["replica-1<br/>Daemon Pod"]
+    r2["replica-2<br/>Daemon Pod"]
+    r0 -->|"TCP 8080"| r1
+    r1 -->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class r0,r1,r2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
 ```
+
+</details>
+
+<details>
+<summary>Graph replicas — two workloads inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["Graph · replica-0"]
+        direction LR
+        a0["Ingress Pod"] -->|"internal"| b0["Processor Pod"]
+    end
+    subgraph r1["Graph · replica-1"]
+        direction LR
+        a1["Ingress Pod"] -->|"internal"| b1["Processor Pod"]
+    end
+    subgraph r2["Graph · replica-2"]
+        direction LR
+        a2["Ingress Pod"] -->|"internal"| b2["Processor Pod"]
+    end
+    r0 -->|"TCP 8080"| r1
+    r1 -->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
+
+<details>
+<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["PolyGraph · replica-0"]
+        direction LR
+        subgraph p0["Graph · primary"]
+            a0["Daemon Pod"]
+        end
+        subgraph s0["Graph · secondary"]
+            b0["Daemon Pod"]
+        end
+        p0 -->|"internal"| s0
+    end
+    subgraph r1["PolyGraph · replica-1"]
+        direction LR
+        subgraph p1["Graph · primary"]
+            a1["Daemon Pod"]
+        end
+        subgraph s1["Graph · secondary"]
+            b1["Daemon Pod"]
+        end
+        p1 -->|"internal"| s1
+    end
+    subgraph r2["PolyGraph · replica-2"]
+        direction LR
+        subgraph p2["Graph · primary"]
+            a2["Daemon Pod"]
+        end
+        subgraph s2["Graph · secondary"]
+            b2["Daemon Pod"]
+        end
+        p2 -->|"internal"| s2
+    end
+    r0 -->|"TCP 8080"| r1
+    r1 -->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
 
 ### Ring
 
 Connects each ordinal to the next and adds an edge from the last back to the first.
 
+<details open>
+<summary>Daemon replicas — one desired Pod per copy</summary>
+
 ```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
 flowchart LR
-    a["replica-0"] --> b["replica-1"] --> c["replica-2"] --> a
+    r0["replica-0<br/>Daemon Pod"]
+    r1["replica-1<br/>Daemon Pod"]
+    r2["replica-2<br/>Daemon Pod"]
+    r0 -->|"TCP 8080"| r1
+    r1 -->|"TCP 8080"| r2
+    r2 -->|"TCP 8080"| r0
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class r0,r1,r2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
 ```
+
+</details>
+
+<details>
+<summary>Graph replicas — two workloads inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["Graph · replica-0"]
+        direction LR
+        a0["Ingress Pod"] -->|"internal"| b0["Processor Pod"]
+    end
+    subgraph r1["Graph · replica-1"]
+        direction LR
+        a1["Ingress Pod"] -->|"internal"| b1["Processor Pod"]
+    end
+    subgraph r2["Graph · replica-2"]
+        direction LR
+        a2["Ingress Pod"] -->|"internal"| b2["Processor Pod"]
+    end
+    r0 -->|"TCP 8080"| r1
+    r1 -->|"TCP 8080"| r2
+    r2 -->|"TCP 8080"| r0
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
+
+<details>
+<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["PolyGraph · replica-0"]
+        direction LR
+        subgraph p0["Graph · primary"]
+            a0["Daemon Pod"]
+        end
+        subgraph s0["Graph · secondary"]
+            b0["Daemon Pod"]
+        end
+        p0 -->|"internal"| s0
+    end
+    subgraph r1["PolyGraph · replica-1"]
+        direction LR
+        subgraph p1["Graph · primary"]
+            a1["Daemon Pod"]
+        end
+        subgraph s1["Graph · secondary"]
+            b1["Daemon Pod"]
+        end
+        p1 -->|"internal"| s1
+    end
+    subgraph r2["PolyGraph · replica-2"]
+        direction LR
+        subgraph p2["Graph · primary"]
+            a2["Daemon Pod"]
+        end
+        subgraph s2["Graph · secondary"]
+            b2["Daemon Pod"]
+        end
+        p2 -->|"internal"| s2
+    end
+    r0 -->|"TCP 8080"| r1
+    r1 -->|"TCP 8080"| r2
+    r2 -->|"TCP 8080"| r0
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
 
 ### Star
 
 Sends from `replica-0` to every other copy.
 
+<details open>
+<summary>Daemon replicas — one desired Pod per copy</summary>
+
 ```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
 flowchart LR
-    a["replica-0"] --> b["replica-1"]
-    a --> c["replica-2"]
-    a --> d["replica-3"]
+    r0["replica-0<br/>Daemon Pod"]
+    r1["replica-1<br/>Daemon Pod"]
+    r2["replica-2<br/>Daemon Pod"]
+    r0 -->|"TCP 8080"| r1
+    r0 -->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class r0,r1,r2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
 ```
+
+</details>
+
+<details>
+<summary>Graph replicas — two workloads inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["Graph · replica-0"]
+        direction LR
+        a0["Ingress Pod"] -->|"internal"| b0["Processor Pod"]
+    end
+    subgraph r1["Graph · replica-1"]
+        direction LR
+        a1["Ingress Pod"] -->|"internal"| b1["Processor Pod"]
+    end
+    subgraph r2["Graph · replica-2"]
+        direction LR
+        a2["Ingress Pod"] -->|"internal"| b2["Processor Pod"]
+    end
+    r0 -->|"TCP 8080"| r1
+    r0 -->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
+
+<details>
+<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["PolyGraph · replica-0"]
+        direction LR
+        subgraph p0["Graph · primary"]
+            a0["Daemon Pod"]
+        end
+        subgraph s0["Graph · secondary"]
+            b0["Daemon Pod"]
+        end
+        p0 -->|"internal"| s0
+    end
+    subgraph r1["PolyGraph · replica-1"]
+        direction LR
+        subgraph p1["Graph · primary"]
+            a1["Daemon Pod"]
+        end
+        subgraph s1["Graph · secondary"]
+            b1["Daemon Pod"]
+        end
+        p1 -->|"internal"| s1
+    end
+    subgraph r2["PolyGraph · replica-2"]
+        direction LR
+        subgraph p2["Graph · primary"]
+            a2["Daemon Pod"]
+        end
+        subgraph s2["Graph · secondary"]
+            b2["Daemon Pod"]
+        end
+        p2 -->|"internal"| s2
+    end
+    r0 -->|"TCP 8080"| r1
+    r0 -->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
 
 ### FullMesh
 
 Connects every distinct pair in both directions, even when
 `bidirectional` is false.
 
+<details open>
+<summary>Daemon replicas — one desired Pod per copy</summary>
+
 ```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
 flowchart LR
-    a["replica-0"] <--> b["replica-1"]
-    b <--> c["replica-2"]
-    c <--> a
+    r0["replica-0<br/>Daemon Pod"]
+    r1["replica-1<br/>Daemon Pod"]
+    r2["replica-2<br/>Daemon Pod"]
+    r0 <-->|"TCP 8080"| r1
+    r1 <-->|"TCP 8080"| r2
+    r2 <-->|"TCP 8080"| r0
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class r0,r1,r2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
 ```
+
+</details>
+
+<details>
+<summary>Graph replicas — two workloads inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["Graph · replica-0"]
+        direction LR
+        a0["Ingress Pod"] -->|"internal"| b0["Processor Pod"]
+    end
+    subgraph r1["Graph · replica-1"]
+        direction LR
+        a1["Ingress Pod"] -->|"internal"| b1["Processor Pod"]
+    end
+    subgraph r2["Graph · replica-2"]
+        direction LR
+        a2["Ingress Pod"] -->|"internal"| b2["Processor Pod"]
+    end
+    r0 <-->|"TCP 8080"| r1
+    r1 <-->|"TCP 8080"| r2
+    r2 <-->|"TCP 8080"| r0
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
+
+<details>
+<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["PolyGraph · replica-0"]
+        direction LR
+        subgraph p0["Graph · primary"]
+            a0["Daemon Pod"]
+        end
+        subgraph s0["Graph · secondary"]
+            b0["Daemon Pod"]
+        end
+        p0 -->|"internal"| s0
+    end
+    subgraph r1["PolyGraph · replica-1"]
+        direction LR
+        subgraph p1["Graph · primary"]
+            a1["Daemon Pod"]
+        end
+        subgraph s1["Graph · secondary"]
+            b1["Daemon Pod"]
+        end
+        p1 -->|"internal"| s1
+    end
+    subgraph r2["PolyGraph · replica-2"]
+        direction LR
+        subgraph p2["Graph · primary"]
+            a2["Daemon Pod"]
+        end
+        subgraph s2["Graph · secondary"]
+            b2["Daemon Pod"]
+        end
+        p2 -->|"internal"| s2
+    end
+    r0 <-->|"TCP 8080"| r1
+    r1 <-->|"TCP 8080"| r2
+    r2 <-->|"TCP 8080"| r0
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
 
 ### Custom
 
@@ -361,18 +1141,167 @@ connectivity:
         - port: 8080
     - source: replica-1
       target: replica-2
+      ports:
+        - port: 9090
     - source: replica-2
       target: replica-3
+      ports:
+        - port: 8080
 ```
 
 With `replicas: 3` and `maxReplicas: 4`:
 
+<details open>
+<summary>Daemon replicas — one desired Pod per copy</summary>
+
 ```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
 flowchart LR
-    a["replica-0"] -->|"TCP 8080"| c["replica-2"]
-    b["replica-1"] --> c
-    c -. "dormant until replicas ≥ 4" .-> d["replica-3"]
+    r0["replica-0<br/>Daemon Pod"]
+    r1["replica-1<br/>Daemon Pod"]
+    r2["replica-2<br/>Daemon Pod"]
+    r0 -->|"TCP 8080"| r2
+    r1 -->|"TCP 9090"| r2
+    r3["Daemon · replica-3<br/>Not created"]
+    r2 -. "TCP 8080 · dormant" .-> r3
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class r0,r1,r2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    style r3 fill:#fff3d6,stroke:#926000,stroke-dasharray:5 5,color:#513900
 ```
+
+</details>
+
+<details>
+<summary>Graph replicas — two workloads inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["Graph · replica-0"]
+        direction LR
+        a0["Ingress Pod"] -->|"internal"| b0["Processor Pod"]
+    end
+    subgraph r1["Graph · replica-1"]
+        direction LR
+        a1["Ingress Pod"] -->|"internal"| b1["Processor Pod"]
+    end
+    subgraph r2["Graph · replica-2"]
+        direction LR
+        a2["Ingress Pod"] -->|"internal"| b2["Processor Pod"]
+    end
+    r0 -->|"TCP 8080"| r2
+    r1 -->|"TCP 9090"| r2
+    r3["Graph · replica-3<br/>Not created"]
+    r2 -. "TCP 8080 · dormant" .-> r3
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+    style r3 fill:#fff3d6,stroke:#926000,stroke-dasharray:5 5,color:#513900
+```
+
+</details>
+
+<details>
+<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["PolyGraph · replica-0"]
+        direction LR
+        subgraph p0["Graph · primary"]
+            a0["Daemon Pod"]
+        end
+        subgraph s0["Graph · secondary"]
+            b0["Daemon Pod"]
+        end
+        p0 -->|"internal"| s0
+    end
+    subgraph r1["PolyGraph · replica-1"]
+        direction LR
+        subgraph p1["Graph · primary"]
+            a1["Daemon Pod"]
+        end
+        subgraph s1["Graph · secondary"]
+            b1["Daemon Pod"]
+        end
+        p1 -->|"internal"| s1
+    end
+    subgraph r2["PolyGraph · replica-2"]
+        direction LR
+        subgraph p2["Graph · primary"]
+            a2["Daemon Pod"]
+        end
+        subgraph s2["Graph · secondary"]
+            b2["Daemon Pod"]
+        end
+        p2 -->|"internal"| s2
+    end
+    r0 -->|"TCP 8080"| r2
+    r1 -->|"TCP 9090"| r2
+    r3["PolyGraph · replica-3<br/>Not created"]
+    r2 -. "TCP 8080 · dormant" .-> r3
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+    style r3 fill:#fff3d6,stroke:#926000,stroke-dasharray:5 5,color:#513900
+```
+
+</details>
 
 ### Bidirectional connections
 
@@ -380,11 +1309,148 @@ Setting `bidirectional: true` on Chain, Ring, Star, or Custom adds reverse edges
 Each reverse edge grants the same ports at its new destination. Identical
 connections are deduplicated; distinct port grants are retained.
 
+<details open>
+<summary>Daemon replicas — one desired Pod per copy</summary>
+
 ```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
 flowchart LR
-    a["replica-0"] <-->|"TCP 8080 each way"| b["replica-1"]
-    b <-->|"TCP 8080 each way"| c["replica-2"]
+    r0["replica-0<br/>Daemon Pod"]
+    r1["replica-1<br/>Daemon Pod"]
+    r2["replica-2<br/>Daemon Pod"]
+    r0 <-->|"TCP 8080"| r1
+    r1 <-->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class r0,r1,r2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
 ```
+
+</details>
+
+<details>
+<summary>Graph replicas — two workloads inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["Graph · replica-0"]
+        direction LR
+        a0["Ingress Pod"] -->|"internal"| b0["Processor Pod"]
+    end
+    subgraph r1["Graph · replica-1"]
+        direction LR
+        a1["Ingress Pod"] -->|"internal"| b1["Processor Pod"]
+    end
+    subgraph r2["Graph · replica-2"]
+        direction LR
+        a2["Ingress Pod"] -->|"internal"| b2["Processor Pod"]
+    end
+    r0 <-->|"TCP 8080"| r1
+    r1 <-->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
+
+<details>
+<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    edgeLabelBackground: "#ffffff"
+    lineColor: "#667085"
+  flowchart:
+    nodeSpacing: 35
+    rankSpacing: 55
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph r0["PolyGraph · replica-0"]
+        direction LR
+        subgraph p0["Graph · primary"]
+            a0["Daemon Pod"]
+        end
+        subgraph s0["Graph · secondary"]
+            b0["Daemon Pod"]
+        end
+        p0 -->|"internal"| s0
+    end
+    subgraph r1["PolyGraph · replica-1"]
+        direction LR
+        subgraph p1["Graph · primary"]
+            a1["Daemon Pod"]
+        end
+        subgraph s1["Graph · secondary"]
+            b1["Daemon Pod"]
+        end
+        p1 -->|"internal"| s1
+    end
+    subgraph r2["PolyGraph · replica-2"]
+        direction LR
+        subgraph p2["Graph · primary"]
+            a2["Daemon Pod"]
+        end
+        subgraph s2["Graph · secondary"]
+            b2["Daemon Pod"]
+        end
+        p2 -->|"internal"| s2
+    end
+    r0 <-->|"TCP 8080"| r1
+    r1 <-->|"TCP 8080"| r2
+    classDef workload fill:#e3f3e8,stroke:#247047,color:#163b29
+    class a0,b0,a1,b1,a2,b2 workload
+    linkStyle default stroke:#526d82,stroke-width:2px
+    linkStyle 0,1,2 stroke:#667085,stroke-width:1px
+```
+
+</details>
 
 ### Scaling and topology changes
 
