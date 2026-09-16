@@ -143,28 +143,36 @@ def test_busy_policy_decisions(mode, expected):
     asyncio.run(scenario())
 
 
-def test_parallel_daemons_have_independent_selectors_and_stop_releases_capacity():
+@pytest.mark.parametrize("kind", ["Deployment", "StatefulSet"])
+def test_parallel_daemons_have_independent_selectors_and_stop_releases_capacity(kind):
     """
     Bound replica groups and keep stop requests durable until deletion finishes.
     """
 
     async def scenario():
         api, controller, store = setup("Parallel", daemon=True, maxConcurrent=2, replicasPerActivation=3)
+        if kind == "StatefulSet":
+            from tests.test_statefulsets import stateful_spec
+
+            api.objects[("Daemon", "test", "target")]["spec"].update(stateful_spec())
         for name in ("one", "two", "three"):
             await store.submit(pulse(name))
         await turn(controller)
-        deployments = api.children("Deployment")
-        assert len(deployments) == 2
-        assert all(item["spec"]["replicas"] == 3 for item in deployments)
-        assert deployments[0]["spec"]["selector"] != deployments[1]["spec"]["selector"]
+        executions = api.children(kind)
+        assert len(executions) == 2
+        assert all(item["spec"]["replicas"] == 3 for item in executions)
+        assert executions[0]["spec"]["selector"] != executions[1]["spec"]["selector"]
+        if kind == "StatefulSet":
+            assert all(item["spec"]["volumeClaimTemplates"] for item in executions)
+            assert executions[0]["metadata"]["name"] != executions[1]["metadata"]["name"]
         active = next(record for record in api.children("Activation") if record.get("status", {}).get("phase") == "Running")
         await store.stop(active["spec"]["requestId"])
         await turn(controller)
-        assert any(item["metadata"].get("deletionTimestamp") for item in deployments)
-        assert len(api.children("Deployment")) == 2
+        assert any(item["metadata"].get("deletionTimestamp") for item in executions)
+        assert len(api.children(kind)) == 2
         collect(api)
         await turn(controller)
-        assert len(api.children("Deployment")) == 2
+        assert len(api.children(kind)) == 2
         assert (await store.lookup(active["spec"]["requestId"]))["status"]["phase"] == "Stopped"
 
     asyncio.run(scenario())

@@ -33,7 +33,7 @@ assert_type(PolyGraph(nodes=(batch,)).nodes[0], BatchGraph)
 
 # The default accepts a mixture of supported graph boundary kinds.
 mixed: PolyGraph = PolyGraph(
-    nodes=(batch, GraphNode(name="recurrence", kind="Feedback", ref="recurrence-template")),
+    nodes=(batch, GraphNode(name="followup", kind="Graph", ref="followup-template")),
 )
 assert_type(mixed.nodes[0], GraphNode)
 

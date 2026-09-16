@@ -14,7 +14,7 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.compiler.asts import encode_body
-from polyad.graph import Ephemeral, EphemeralGraph, Placement
+from polyad.graph import Ephemeral, Placement, Topology
 from polyad.graph.topology import converter, topology
 from polyad.operator.api import GROUP, VERSION
 from polyad.operator.controller import FINALIZER, Controller, Pending, observed
@@ -165,10 +165,10 @@ def test_ephemeral_python_types_roundtrip():
     Expose explicit spot node and graph descriptors in the Python library.
     """
     node = Ephemeral(name="worker", ref="spot")
-    graph = EphemeralGraph(nodes=(node,), placement=Placement({"capacity": "spot"}))
+    graph = Topology(nodes=(node,), placement=Placement({"capacity": "spot"}))
     data = converter.unstructure(graph)
     assert data["nodes"][0]["kind"] == "Ephemeral"
-    assert converter.structure(data, EphemeralGraph).placement == graph.placement
+    assert converter.structure(data, Topology).placement == graph.placement
 
 
 def test_readiness_and_creation_timeout():
@@ -254,13 +254,13 @@ def test_ephemeral_placement_and_interruption():
 
     async def scenario():
         graph = resource(
-            "EphemeralGraph",
+            "Graph",
             "spot",
             {"placement": {"nodeSelector": {"capacity": "spot"}}, "nodes": [{"name": "job", "kind": "Workload", "ref": "job"}]},
         )
         api = FakeAPI(graph, resource("Workload", "job", {"template": template()}))
         controller = Controller(api)
-        key = ("EphemeralGraph", "test", "spot")
+        key = ("Graph", "test", "spot")
         await controller.reconcile(key)
         job = api.children("Job")[0]
         assert job["spec"]["template"]["spec"]["nodeSelector"] == {"capacity": "spot"}
@@ -270,29 +270,6 @@ def test_ephemeral_placement_and_interruption():
         job["status"] = {"conditions": [{"type": "Complete", "status": "True"}]}
         await controller.reconcile(key)
         assert api.objects[key]["status"]["completed"]
-
-    asyncio.run(scenario())
-
-
-def test_feedback_epoch_is_durable_before_cleanup():
-    """
-    An operator restart between epoch advancement and child cleanup cannot rerun the epoch.
-    """
-
-    async def scenario():
-        api = FakeAPI(resource("Feedback", "loop", {"rounds": 1, "graph": {"nodes": []}}))
-        key = ("Feedback", "test", "loop")
-        await Controller(api).reconcile(key)
-        child = api.children("Graph")[0]
-        child["status"] = {"completed": True, "ready": True, "observedGeneration": 1}
-        await Controller(api).reconcile(key)
-        assert api.objects[key]["status"]["epoch"] == 1
-        with pytest.raises(Pending):
-            await Controller(api).reconcile(key)
-        del api.objects[("Graph", "test", child["metadata"]["name"])]
-        await Controller(api).reconcile(key)
-        assert api.objects[key]["status"]["completed"]
-        assert not api.children("Graph")
 
     asyncio.run(scenario())
 
@@ -444,7 +421,7 @@ def test_resources_and_gates_resolve_node_names():
     asyncio.run(scenario())
 
 
-def test_nested_ephemeral_graph_inherits_placement():
+def test_nested_graph_inherits_spot_placement():
     """
     Templates remain inert while instantiated nested boundaries inherit spot placement.
     """
@@ -452,7 +429,7 @@ def test_nested_ephemeral_graph_inherits_placement():
     async def scenario():
         api = FakeAPI(
             resource(
-                "EphemeralGraph",
+                "Graph",
                 "outer",
                 {"placement": {"nodeSelector": {"capacity": "spot"}}, "nodes": [{"name": "inner", "kind": "Graph", "ref": "definition"}]},
             ),
@@ -461,8 +438,8 @@ def test_nested_ephemeral_graph_inherits_placement():
         controller = Controller(api)
         await controller.reconcile(("Graph", "test", "definition"))
         assert len(api.objects) == 2
-        await controller.reconcile(("EphemeralGraph", "test", "outer"))
-        nested = [obj for obj in api.children("EphemeralGraph") if obj["metadata"]["name"] != "outer"][0]
+        await controller.reconcile(("Graph", "test", "outer"))
+        nested = [obj for obj in api.children("Graph") if obj["metadata"].get("ownerReferences")][0]
         assert nested["spec"]["placement"]["nodeSelector"] == {"capacity": "spot"}
         assert nested["spec"]["templateOnly"] is False
 
@@ -557,9 +534,9 @@ def test_placement_intersects_affinity_alternatives_and_does_not_mutate_inputs()
         place_pod({"nodeName": "escape"}, parent)
 
 
-def test_feedback_inherits_general_placement_without_becoming_ephemeral():
+def test_nested_graph_merges_general_placement():
     """
-    Recurrence carries group placement into finite epoch bodies.
+    Nested graphs combine parent and child placement without another boundary type.
     """
 
     async def scenario():
@@ -567,17 +544,16 @@ def test_feedback_inherits_general_placement_without_becoming_ephemeral():
             resource(
                 "Graph",
                 "outer",
-                {"placement": {"nodeSelector": {"pool": "batch"}}, "nodes": [{"name": "loop", "kind": "Feedback", "ref": "loop-template"}]},
+                {"placement": {"nodeSelector": {"pool": "batch"}}, "nodes": [{"name": "loop", "kind": "Graph", "ref": "loop-template"}]},
             ),
             resource(
-                "Feedback",
+                "Graph",
                 "loop-template",
-                {"templateOnly": True, "rounds": 1, "graph": {"placement": {"nodeSelector": {"zone": "east"}}, "nodes": []}},
+                {"templateOnly": True, "placement": {"nodeSelector": {"zone": "east"}}, "nodes": []},
             ),
         )
         await Controller(api).reconcile(("Graph", "test", "outer"))
-        child = [g for g in api.children("Feedback") if g["metadata"].get("ownerReferences")][0]
-        assert child["spec"].get("kind", "Graph") == "Graph"
-        assert child["spec"]["graph"]["placement"]["nodeSelector"] == {"pool": "batch", "zone": "east"}
+        child = [g for g in api.children("Graph") if g["metadata"].get("ownerReferences")][0]
+        assert child["spec"]["placement"]["nodeSelector"] == {"pool": "batch", "zone": "east"}
 
     asyncio.run(scenario())

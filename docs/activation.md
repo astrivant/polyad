@@ -49,10 +49,9 @@ spec:
           image: YOUR_REGISTRY/batch-worker:VERSION
 ```
 
-Reference this definition as a node in a persistent `Graph`, `EphemeralGraph` or
+Reference this definition as a node in a persistent `Graph` or
 `PolyGraph` (the latter accepts graph definitions). Activation also works on
-`Ephemeral`, `Daemon`, and reusable `Graph`, `EphemeralGraph`, `PolyGraph` or
-`Feedback` definitions. Resources such as Services and PVCs are not pulse targets.
+`Ephemeral`, `Daemon`, and reusable `Graph` or `PolyGraph` definitions. Resources such as Services and PVCs are not pulse targets.
 Use a subgraph for a whole downstream batch that must repeat together. Ordinary
 nodes depending on a pulsed node do not automatically repeat themselves.
 
@@ -75,7 +74,7 @@ their own idempotency or transactional storage where required.
 
 ## Parallel daemons and replica bounds
 
-A daemon activation starts its own Deployment and remains active until stopped,
+A daemon activation starts its own Deployment or StatefulSet and remains active until stopped,
 failed or drained with its containing graph. It does not complete when ready.
 For example, this policy allows three concurrent groups of two replicas each:
 
@@ -90,7 +89,8 @@ activation:
 ```
 
 `replicasPerActivation` replaces the daemon definition's ordinary `replicas` for
-each pulse. Separate groups have disjoint Deployment selectors. `maxReplicas`
+each pulse. Separate groups have disjoint controller selectors. StatefulSet activations also
+have separate PVC identities; see [storage retention](workload-storage.md#retention-and-revisions). `maxReplicas`
 bounds `maxConcurrent × replicasPerActivation`; it defaults to 1,024. Per-pulse
 replica counts apply only to Daemons. Concurrent subgraphs remain subject to their
 own workload replica settings and graph rules.

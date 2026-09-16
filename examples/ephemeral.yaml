@@ -20,7 +20,7 @@ spec:
           command: [sh, -c, 'echo restartable work']
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: EphemeralGraph
+kind: Graph
 metadata:
   name: spot-pipeline
 spec:

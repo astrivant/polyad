@@ -212,6 +212,8 @@ class CapacityManager:
             return
         if os.environ.get("POLYAD_CAPACITY_ENABLED", "false").lower() != "true":
             raise ValueError("graph capacity requires capacity.enabled on the operator Helm chart")
+        if any(isinstance(resource, asts.StatefulSet) and resource.spec.volumeClaimTemplates for resource in desired.values()):
+            raise ValueError("advance capacity planning cannot model per-replica StatefulSet volumeClaimTemplates")
         plan = graph.capacity
         generation = self.obj["metadata"]["generation"]
         policy = converter.unstructure(plan)
@@ -222,7 +224,7 @@ class CapacityManager:
         revisions = {
             name: hashlib.sha256(json.dumps([generation, asts.to_document(resource), policy], sort_keys=True).encode()).hexdigest()[:20]
             for name, resource in desired.items()
-            if resource.resource_type.kind in {"Job", "Deployment"} and name not in (excluded or set())
+            if resource.resource_type.kind in {"Job", "Deployment", "StatefulSet"} and name not in (excluded or set())
         }
         for name, record in list(self.state.nodes.items()):
             if revisions.get(name) != record.revision or (record.phase == "Consumed" and name not in states):
@@ -293,7 +295,7 @@ class CapacityManager:
         Retain provisioning requests until workload Pods have consumed their capacity.
 
         Args:
-            desired (asts.Resource): Desired Job or Deployment.
+            desired (asts.Resource): Desired Job, Deployment or StatefulSet.
             count (int): Number of Pods expected to consume the request.
 
         Returns:

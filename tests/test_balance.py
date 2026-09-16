@@ -464,65 +464,6 @@ def test_graph_checkpoint_restores_completed_members(tmp_path: Path) -> None:
     assert counts == {"first": 1, "second": 1}
 
 
-def test_feedback_graph_repeats_and_pauses_between_rounds(tmp_path: Path) -> None:
-    """
-    Repeat a graph body, then resume its next round rather than replaying completed rounds.
-
-    Args:
-        tmp_path (Path): Feedback and per-round journals.
-
-    Returns:
-        None: Explicit feedback is finite when requested and preserves its iteration cursor.
-    """
-    from polyad.balance import FeedbackGraph, Graph
-
-    rounds: list[int] = []
-    pause = Event()
-
-    def factory(iteration: int) -> Graph:
-        """
-        Construct deterministic work for one feedback activation.
-
-        Args:
-            iteration (int): Zero-based activation number.
-
-        Returns:
-            Graph: A fresh body with its own scheduler journal.
-        """
-
-        def action(control: Control, checkpoint: dict[str, object] | None) -> Outcome:
-            """
-            Record one round and pause after the first.
-
-            Args:
-                control (Control): Child graph control.
-                checkpoint (dict[str, object] | None): Saved child state.
-
-            Returns:
-                Outcome: Completed round body.
-            """
-            rounds.append(iteration)
-            if iteration == 0:
-                pause.set()
-            return Outcome()
-
-        return Graph(
-            Work("body", f"round-{iteration}"),
-            [Unit(Work("unit", f"round-{iteration}"), action)],
-            directory=tmp_path / str(iteration),
-            notify=lambda _: None,
-        )
-
-    work = Work("feedback", "v1", resumable=True)
-    feedback = FeedbackGraph(work, factory, directory=tmp_path / "loop", rounds=3, diagrams=True, notify=lambda _: None)
-    checkpoint = feedback.run(Control(pause, Event(), lambda _: None), None).checkpoint
-    assert checkpoint is not None and checkpoint["round"] == 1
-    assert rounds == [0]
-    assert feedback.run(Control(Event(), Event(), lambda _: None), checkpoint).checkpoint is None
-    assert rounds == [0, 1, 2]
-    assert (tmp_path / "loop/feedback.mmd").exists()
-
-
 def test_shutdown_checkpoints_then_finalizes(tmp_path: Path) -> None:
     """
     Drain active work before finalizers run and block dependent admissions.
@@ -634,53 +575,9 @@ def test_shutdown_deadline_joins_active_worker(tmp_path: Path) -> None:
     assert joined.is_set()
 
 
-@pytest.mark.parametrize(("limit", "stop", "expected"), [(8, 2, 2), (3, 99, 3)])
-def test_feedback_condition_and_hard_limit(tmp_path: Path, limit: int, stop: int, expected: int) -> None:
+def test_shutdown_reaches_nested_worker(tmp_path: Path) -> None:
     """
-    Stop feedback on an early condition or its finite cap when that condition never holds.
-
-    Args:
-        tmp_path (Path): Isolated graph journals.
-        limit (int): Hard round bound.
-        stop (int): Early condition threshold.
-        expected (int): Number of completed rounds.
-
-    Returns:
-        None: Each stop reason prevents subsequent round admission.
-    """
-    from polyad.balance import FeedbackGraph, Graph
-
-    visited: list[int] = []
-
-    def factory(index: int) -> Graph:
-        """
-        Record activation and construct a completed empty graph.
-
-        Args:
-            index (int): Round being activated.
-
-        Returns:
-            Graph: Independent round boundary.
-        """
-        visited.append(index)
-        return Graph(Work("round", "v1"), [], directory=tmp_path / str(limit) / str(index), notify=lambda _: None)
-
-    feedback = FeedbackGraph(
-        Work("loop", "v1"),
-        factory,
-        directory=tmp_path / str(limit) / "feedback",
-        rounds=limit,
-        stop_when=lambda iteration: iteration >= stop,
-        interval_seconds=0,
-        notify=lambda _: None,
-    )
-    assert feedback.run(Control(Event(), Event(), lambda _: None), None).checkpoint is None
-    assert visited == list(range(expected))
-
-
-def test_feedback_shutdown_reaches_nested_worker(tmp_path: Path) -> None:
-    """
-    Propagate a root shutdown through a feedback round and join its nested worker.
+    Propagate a root shutdown through nested graphs and join their worker.
 
     Args:
         tmp_path (Path): Isolated parent and child journals.
@@ -688,7 +585,7 @@ def test_feedback_shutdown_reaches_nested_worker(tmp_path: Path) -> None:
     Returns:
         None: Nested cleanup precedes root finalization.
     """
-    from polyad.balance import FeedbackGraph, Graph
+    from polyad.balance import Graph
     from polyad.graph import Finalizer, ShutdownContract
 
     started, stopped = Event(), Event()
@@ -709,20 +606,21 @@ def test_feedback_shutdown_reaches_nested_worker(tmp_path: Path) -> None:
         stopped.set()
         return Outcome()
 
-    feedback = FeedbackGraph(
-        Work("cycle", "v1"),
-        lambda index: Graph(
-            Work("round", "v1"),
-            [Unit(Work("leaf", "v1"), action)],
-            directory=tmp_path / f"round-{index}",
-            notify=lambda _: None,
-        ),
-        directory=tmp_path / "feedback",
-        rounds=10,
+    nested = Graph(
+        Work("outer", "v1"),
+        [
+            Graph(
+                Work("inner", "v1"),
+                [Unit(Work("leaf", "v1"), action)],
+                directory=tmp_path / "inner",
+                notify=lambda _: None,
+            )
+        ],
+        directory=tmp_path / "outer",
         notify=lambda _: None,
     )
     scheduler = Scheduler(
-        [feedback],
+        [nested],
         slots=1,
         directory=tmp_path / "root",
         shutdown=ShutdownContract(
@@ -732,9 +630,9 @@ def test_feedback_shutdown_reaches_nested_worker(tmp_path: Path) -> None:
         ),
         notify=lambda _: None,
     )
-    assert scheduler.run() == {"cycle": "cancelled"}
+    assert scheduler.run() == {"outer": "cancelled"}
     assert stopped.is_set()
-    assert not (tmp_path / "round-0" / "scheduler.lock").exists()
+    assert not (tmp_path / "inner" / "scheduler.lock").exists()
 
 
 def test_finalizer_failure_retries_and_interruption_retains_lock(tmp_path: Path) -> None:

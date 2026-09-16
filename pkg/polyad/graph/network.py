@@ -42,14 +42,14 @@ class NetworkPeer:
     Attributes:
         namespace (str | None): Peer namespace; omitted means this graph's namespace.
         graph (str | None): Named graph instance; omitted with node selects a node in this boundary.
-        kind (Literal['Graph', 'PolyGraph', 'EphemeralGraph', 'Feedback', 'ReplicaGroup']): Kind of the referenced graph instance.
+        kind (Literal['Graph', 'PolyGraph', 'ReplicaGroup']): Kind of the referenced graph instance.
         node (str | None): Node and its descendants inside the selected graph.
         podLabels (dict[str, str]): Additional exact pod-label matches, combined with graph selection.
     """
 
     namespace: str | None = None
     graph: str | None = None
-    kind: Literal["Graph", "PolyGraph", "EphemeralGraph", "Feedback", "ReplicaGroup"] = "Graph"
+    kind: Literal["Graph", "PolyGraph", "ReplicaGroup"] = "Graph"
     node: str | None = None
     podLabels: dict[str, str] = field(factory=dict)
 

@@ -143,9 +143,7 @@ def compile_composition(request: CompositionRequest, namespace: str, *, owner_ui
         spec = copy.deepcopy(item.spec)
         if item.kind in asts.BOUNDARY_KINDS:
             spec["templateOnly"] = item.id != request.rootId
-            body = spec["graph"] if item.kind == "Feedback" else spec
-            if item.kind == "Feedback":
-                body["templateOnly"] = False
+            body = spec
             if item.kind == "ReplicaGroup":
                 target_id = spec["template"].pop("refId")
                 target = by_id.get(target_id)
@@ -187,7 +185,7 @@ def compile_composition(request: CompositionRequest, namespace: str, *, owner_ui
                     raise ValueError("shutdownPolicyId must identify a ShutdownPolicy")
                 body["shutdownPolicy"] = names[policy_id]
                 uses.add_edge(item.id, policy_id)
-            parsed = topology(body, spec.get("kind", "Graph") if item.kind == "Feedback" else item.kind)
+            parsed = topology(body, item.kind)
             node_count += len(parsed.nodes)
         specs[item.id] = spec
     if node_count > 4096 or not nx.is_directed_acyclic_graph(uses):

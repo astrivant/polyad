@@ -55,7 +55,7 @@ spec:
                     maximum: 1024
                   replicasPerActivation:
                     type: integer
-                    description: Deployment replicas in each daemon activation.
+                    description: Deployment or StatefulSet replicas in each daemon activation.
                     minimum: 1
                     maximum: 1024
                   maxReplicas:
@@ -100,12 +100,90 @@ spec:
                 - spec
                 description: Kubernetes Pod template for graph-owned execution. Container commands, resource requests,
                   volumes and probes are application-defined; the operator sets restart policy and inherited placement.
+              controller:
+                type: string
+                enum: [Deployment, StatefulSet]
+                default: Deployment
+                description: Native controller for this persistent workload.
+              statefulSet:
+                type: object
+                description: StatefulSet identity, storage and rollout options; requires controller StatefulSet.
+                required: [serviceName]
+                properties:
+                  serviceName:
+                    type: string
+                    minLength: 1
+                    description: Existing governing headless Service; supports graph resource-name references.
+                  volumeClaimTemplates:
+                    type: array
+                    description: Native per-replica PVC templates. Mount each template by name in the Pod template.
+                    items:
+                      type: object
+                      required: [metadata, spec]
+                      properties:
+                        metadata:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                          required: [name]
+                          properties:
+                            name:
+                              type: string
+                              minLength: 1
+                              maxLength: 63
+                        spec:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                          description: Native PVC spec including storageClassName, accessModes, resources, volumeMode and data sources.
+                  podManagementPolicy:
+                    type: string
+                    enum: [OrderedReady, Parallel]
+                    default: OrderedReady
+                  updateStrategy:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [RollingUpdate, OnDelete]
+                      rollingUpdate:
+                        type: object
+                        properties:
+                          partition:
+                            type: integer
+                            minimum: 0
+                          maxUnavailable:
+                            x-kubernetes-int-or-string: true
+                            anyOf:
+                            - type: integer
+                            - type: string
+                  persistentVolumeClaimRetentionPolicy:
+                    type: object
+                    description: PVC retention after set deletion and native replica reduction; both default to Retain.
+                    properties:
+                      whenDeleted:
+                        type: string
+                        enum: [Retain, Delete]
+                      whenScaled:
+                        type: string
+                        enum: [Retain, Delete]
+                  minReadySeconds:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  revisionHistoryLimit:
+                    type: integer
+                    minimum: 0
+                    default: 10
+                  ordinals:
+                    type: object
+                    properties:
+                      start:
+                        type: integer
+                        minimum: 0
               replicas:
                 type: integer
                 minimum: 1
                 default: 1
-                description: Desired number of daemon replicas. Readiness requires the current Deployment generation
-                  to have the requested updated, ready and available replicas.
+                description: Desired number of daemon replicas. Readiness requires the selected controller to observe its current generation and requested rollout.
               placement:
                 type: object
                 properties:
@@ -361,8 +439,13 @@ spec:
                   message: enabled persistence requires storageClass and claimName
             required:
             - template
+            x-kubernetes-validations:
+            - rule: "!has(self.controller) || self.controller != 'StatefulSet' || has(self.statefulSet)"
+              message: controller StatefulSet requires statefulSet options and serviceName.
+            - rule: "!has(self.statefulSet) || (has(self.controller) && self.controller == 'StatefulSet')"
+              message: statefulSet options require controller StatefulSet.
             description: Desired configuration for this Daemon resource. Define a reusable persistent capability,
-              instantiated by a graph as a Deployment. Containers must provide startup, readiness and liveness probes.
+              instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes.
               Daemons become ready and stop explicitly; they do not complete.
           status:
             type: object
@@ -371,6 +454,6 @@ spec:
               or currently publish lifecycle status.
         required:
         - spec
-        description: Define a reusable persistent capability, instantiated by a graph as a Deployment. Containers
+        description: Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers
           must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do
           not complete.

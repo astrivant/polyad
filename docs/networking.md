@@ -5,7 +5,7 @@ while exposing only a few connections to the rest of an application. A subgraph
 is a useful boundary for that group. Polyad compiles its traffic contract into
 Kubernetes NetworkPolicies and, optionally, Istio authorization policies.
 
-Graph membership is independent of workload kind: Jobs, daemon Deployments and
+Graph membership is independent of workload kind: Jobs, daemon Deployments or StatefulSets, and
 workloads inside nested graphs receive the same membership labels. Connections
 can therefore join a task to a service, two subgraphs, or explicitly selected
 workloads in different namespaces.
@@ -52,8 +52,7 @@ See [Kubernetes NetworkPolicy semantics](https://kubernetes.io/docs/concepts/ser
 
 ## Isolating a subgraph
 
-Attach `network` to `Graph`, `EphemeralGraph`, `PolyGraph`, a Feedback epoch's
-`spec.graph`, or a `GraphRule`. A rewrite can replace it through `spec.topology`.
+Attach `network` to a `Graph`, `PolyGraph`, or `GraphRule` specification. A rewrite can replace it through `spec.topology`.
 The public Python types are `NetworkAccess`, `NetworkPeer`, `NetworkPort` and
 `TrafficRule`; their attrs fields generate the CRD schemas.
 
@@ -146,7 +145,7 @@ peer address, while ownership of the generated policy remains UID-fenced.
 NetworkPolicy requires a CNI that enforces it. Istio is additionally required for
 HTTP and service-identity checks. With `mesh: true`, Polyad requests native sidecar
 injection, emits strict `PeerAuthentication` and an `AuthorizationPolicy`, and
-verifies injection with a dry-run Pod admission before creating a Job or Deployment.
+verifies injection with a dry-run Pod admission before creating a Job, Deployment or StatefulSet.
 Native sidecars allow finite Jobs to complete. Mesh application containers must
 run as non-root, avoid Istio's reserved UID 1337, and work with dropped capabilities.
 Host namespaces, hostPath volumes, elevated capabilities and user-supplied mesh

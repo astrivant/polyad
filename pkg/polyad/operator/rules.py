@@ -24,7 +24,14 @@ class RuleViolation(ValueError):
 
 
 async def check_rules(
-    api: API, namespace: str, kind: str, spec: dict[str, Any], *, definitions: dict[tuple[str, str], dict[str, Any]] | None = None
+    api: API,
+    namespace: str,
+    kind: str,
+    spec: dict[str, Any],
+    *,
+    definitions: dict[tuple[str, str], dict[str, Any]] | None = None,
+    rule_documents: list[dict[str, Any]] | None = None,
+    observations: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Apply mandatory and inherited rules to every referenced boundary using refreshed definitions.
@@ -35,12 +42,15 @@ async def check_rules(
         kind (str): Root boundary kind.
         spec (dict[str, Any]): Root desired specification.
         definitions (dict[tuple[str, str], dict[str, Any]] | None): Not-yet-created composition definitions for preflight.
+        rule_documents (list[dict[str, Any]] | None): Fresh rule snapshot when the caller also verifies revisions.
+        observations (list[dict[str, Any]] | None): Optional collector for verdicts at every visited boundary.
 
     Returns:
         list[dict[str, Any]]: Root rule verdicts with persisted rule identities and measurements.
     """
-    inventory = await api.request("GET", "GraphRule", namespace)
-    documents = {item["metadata"]["name"]: item for item in inventory.get("items", [])}
+    if rule_documents is None:
+        rule_documents = (await api.request("GET", "GraphRule", namespace)).get("items", [])
+    documents = {item["metadata"]["name"]: item for item in rule_documents}
     if len(documents) > 32:
         raise RuleViolation("a namespace supports at most 32 GraphRules")
     rules = {name: converter.structure(item["spec"], StructuralRule) for name, item in documents.items()}
@@ -56,9 +66,7 @@ async def check_rules(
         boundaries += 1
         if len(path) >= 32 or boundaries > 256:
             raise RuleViolation("graph expansion exceeds 32 nesting levels or 256 boundaries")
-        actual_kind = body.get("kind", "Graph") if boundary_kind == "Feedback" else boundary_kind
-        raw = body["graph"] if boundary_kind == "Feedback" else body
-        graph = topology(raw, actual_kind)
+        graph = topology(body, boundary_kind)
         selected = mandatory | inherited | set(graph.rules)
         missing = selected - rules.keys()
         if missing:
@@ -95,6 +103,8 @@ async def check_rules(
             if report["spectrum"] is not None:
                 report["spectrum"] = {key: value for key, value in report["spectrum"].items() if key not in {"adjacency", "laplacian"}}
             reports.append({"name": name, "uid": meta["uid"], "generation": meta.get("generation", 1), **report})
+            if observations is not None:
+                observations.append({**reports[-1], "path": path})
             if not report["allowed"]:
                 location = "/".join(name for _, name in path) or "root"
                 raise RuleViolation(f"GraphRule/{name} at {location}: {'; '.join(report['violations'])}")

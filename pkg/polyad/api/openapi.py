@@ -58,7 +58,7 @@ def schemas() -> dict[str, dict[str, Any]]:
                 "graph": reference("ID"),
                 "node": reference("ID"),
                 "graphUid": {"type": "string", "minLength": 1, "maxLength": 128},
-                "kind": {"type": "string", "enum": ["Graph", "EphemeralGraph", "PolyGraph", "ReplicaGroup"], "default": "Graph"},
+                "kind": {"type": "string", "enum": ["Graph", "PolyGraph", "ReplicaGroup"], "default": "Graph"},
             },
         },
         "ActivationReceipt": {
@@ -146,32 +146,17 @@ def schemas() -> dict[str, dict[str, Any]]:
                 "rules": {"type": "array", "items": reference("ID")},
             },
         },
-        "FeedbackSpec": {
-            "type": "object",
-            "required": ["graph"],
-            "additionalProperties": False,
-            "properties": {
-                "activation": reference("ActivationPolicy"),
-                "graph": reference("GraphSpec"),
-                "kind": {"type": "string", "enum": ["Graph", "EphemeralGraph", "PolyGraph"], "default": "Graph"},
-                "rounds": {"type": "integer", "minimum": 0},
-                "intervalSeconds": {"type": "number", "minimum": 1, "default": 1},
-                "suspend": {"type": "boolean", "default": False},
-                "templateOnly": {"type": "boolean", "description": "Compiler-controlled template flag."},
-            },
-        },
         "CompositionItem": {
             "type": "object",
             "required": ["id", "kind", "spec"],
             "additionalProperties": False,
             "properties": {"id": reference("ID"), "kind": {"type": "string", "enum": sorted(COMPOSITION_KINDS)}, "spec": free_object},
             "oneOf": [
-                {"properties": {"kind": {"enum": ["Graph", "PolyGraph", "EphemeralGraph"]}, "spec": reference("GraphSpec")}},
+                {"properties": {"kind": {"enum": ["Graph", "PolyGraph"]}, "spec": reference("GraphSpec")}},
                 {"properties": {"kind": {"const": "ReplicaGroup"}, "spec": reference("ReplicaGroupSpec")}},
-                {"properties": {"kind": {"const": "Feedback"}, "spec": reference("FeedbackSpec")}},
                 {
                     "properties": {
-                        "kind": {"enum": sorted(COMPOSITION_KINDS - {"Graph", "PolyGraph", "EphemeralGraph", "Feedback", "ReplicaGroup"})},
+                        "kind": {"enum": sorted(COMPOSITION_KINDS - {"Graph", "PolyGraph", "ReplicaGroup"})},
                         "spec": {
                             **free_object,
                             "description": (

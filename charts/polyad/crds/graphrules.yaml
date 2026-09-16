@@ -72,8 +72,6 @@ spec:
                               enum:
                               - Graph
                               - PolyGraph
-                              - EphemeralGraph
-                              - Feedback
                               - ReplicaGroup
                               description: Kind of the referenced graph instance.
                             node:
@@ -151,8 +149,6 @@ spec:
                               enum:
                               - Graph
                               - PolyGraph
-                              - EphemeralGraph
-                              - Feedback
                               - ReplicaGroup
                               description: Kind of the referenced graph instance.
                             node:
@@ -283,7 +279,7 @@ spec:
                   expandedNodes:
                     type: integer
                     description: Maximum recursively expanded vertex occurrences, counting boundary vertices and repeated
-                      instances; Feedback counts one epoch template.
+                      instances.
                     minimum: 0
                     maximum: 1000000
                   nestingDepth:

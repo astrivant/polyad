@@ -22,14 +22,14 @@ class ActivationRequest:
         graph (str): Executable graph instance name, not its reusable definition.
         graphUid (str): Kubernetes UID fencing graph deletion and recreation.
         node (str): Vertex name inside the selected graph instance.
-        kind (Literal['Graph', 'EphemeralGraph', 'PolyGraph', 'ReplicaGroup']): Target graph kind.
+        kind (Literal['Graph', 'PolyGraph', 'ReplicaGroup']): Target graph kind.
     """
 
     requestId: str
     graph: str
     graphUid: str
     node: str
-    kind: Literal["Graph", "EphemeralGraph", "PolyGraph", "ReplicaGroup"] = "Graph"
+    kind: Literal["Graph", "PolyGraph", "ReplicaGroup"] = "Graph"
 
     def __attrs_post_init__(self) -> None:
         """
@@ -40,7 +40,7 @@ class ActivationRequest:
         """
         for value in (self.requestId, self.graph, self.node):
             identity(value)
-        if not self.graphUid or len(self.graphUid) > 128 or self.kind not in {"Graph", "EphemeralGraph", "PolyGraph", "ReplicaGroup"}:
+        if not self.graphUid or len(self.graphUid) > 128 or self.kind not in {"Graph", "PolyGraph", "ReplicaGroup"}:
             raise ValueError("activation requires a valid graph kind and UID")
 
 

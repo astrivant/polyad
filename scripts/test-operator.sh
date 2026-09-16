@@ -42,9 +42,9 @@ kubectl -n "$namespace" get pvc application-data
 kubectl -n "$namespace" delete pvc application-data --wait=true --timeout=120s
 kubectl -n "$namespace" apply -f examples/resources-and-gates.yaml
 kubectl -n "$namespace" wait graph/configured --for=jsonpath='{.status.completed}'=true --timeout=180s
-kubectl -n "$namespace" apply -f examples/feedback.yaml
-kubectl -n "$namespace" wait feedback/recurring --for=jsonpath='{.status.completed}'=true --timeout=180s
-kubectl -n "$namespace" wait feedback/recurring --for=jsonpath='{.status.metrics.resources.total}'=0 --timeout=60s
+kubectl -n "$namespace" apply -f examples/repeated-graph.yaml
+kubectl -n "$namespace" wait graph/recurring --for=jsonpath='{.status.activations.run.completed}'=1 --timeout=180s
+kubectl -n "$namespace" delete graph/recurring --wait=true --timeout=120s
 kubectl -n "$namespace" apply -f examples/persistent.yaml
 kubectl -n "$namespace" wait graph/persistent --for=jsonpath='{.status.ready}'=true --timeout=180s
 kubectl -n "$namespace" wait graph/persistent --for=jsonpath='{.status.metrics.execution.readyNodes}'=1 --timeout=60s
@@ -69,19 +69,19 @@ kubectl -n "$namespace" wait graph/persistent --for=delete --timeout=120s
 kubectl label nodes --all polyad.astrivant.com/capacity=spot --overwrite
 kubectl -n "$namespace" apply -f examples/polygraph.yaml
 kubectl -n "$namespace" wait polygraph/composed --for=jsonpath='{.status.completed}'=true --timeout=300s
-kubectl -n "$namespace" wait polygraph/composed --for=jsonpath='{.status.metrics.rollup.completedLeafNodes}'=2 --timeout=60s
+kubectl -n "$namespace" wait polygraph/composed --for=jsonpath='{.status.metrics.rollup.completedLeafNodes}'=3 --timeout=60s
 kubectl -n "$namespace" get polygraph composed -o json | python3 -c '
 import json, sys
 rollup = json.load(sys.stdin)["status"]["metrics"]["rollup"]
 assert rollup["observationsComplete"]
 assert rollup["graphCount"] == 5
 assert rollup["nestingDepth"] == 3
-assert rollup["resourceCount"] == 6
+assert rollup["resourceCount"] == 7
 '
 kubectl -n "$namespace" delete polygraph/composed --wait=true --timeout=180s
 kubectl -n "$namespace" apply -f examples/ephemeral.yaml
-kubectl -n "$namespace" wait ephemeralgraph/spot-pipeline --for=jsonpath='{.status.completed}'=true --timeout=180s
-kubectl -n "$namespace" wait ephemeralgraph/spot-pipeline --for=jsonpath='{.status.metrics.execution.completedNodes}'=1 --timeout=60s
+kubectl -n "$namespace" wait graph/spot-pipeline --for=jsonpath='{.status.completed}'=true --timeout=180s
+kubectl -n "$namespace" wait graph/spot-pipeline --for=jsonpath='{.status.metrics.execution.completedNodes}'=1 --timeout=60s
 kubectl -n "$namespace" apply -f examples/ephemeral-interruption.yaml
 kubectl -n "$namespace" wait graph/interrupted --for=jsonpath='{.status.nodes.worker.started}'=true --timeout=60s
 interrupted_uid="$(kubectl -n "$namespace" get graph interrupted -o jsonpath='{.metadata.uid}')"
@@ -91,4 +91,4 @@ kubectl -n "$namespace" wait pods -l "job-name=$job" --for=condition=Ready --tim
 kubectl -n "$namespace" delete pods -l "job-name=$job" --grace-period=0 --force --wait=true
 kubectl -n "$namespace" get graph interrupted -o jsonpath='{.status.completed}' | python3 -c 'import sys; assert sys.stdin.read() == "false"'
 kubectl -n "$namespace" wait graph/interrupted --for=jsonpath='{.status.completed}'=true --timeout=180s
-kubectl -n "$namespace" delete graph/interrupted graph/finite graph/configured feedback/recurring ephemeralgraph/spot-pipeline --wait=false
+kubectl -n "$namespace" delete graph/interrupted graph/finite graph/configured graph/spot-pipeline --wait=false

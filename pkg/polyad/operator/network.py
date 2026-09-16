@@ -58,33 +58,30 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
                 labels[replica_selector(source["uid"])] = "true"
         labels[scope_label(namespace, kind, meta["name"])] = "true"
         labels[scope_label(namespace, kind, meta["name"], branch)] = "true"
-        # Feedback's graph specification is applied by its epoch instance. Its identity
-        # label is still inherited so peers can select all epochs through Feedback.
-        if kind != "Feedback":
-            graph = topology(current["spec"], kind)
-            selected = {name for name, rule in rules.items() if rule.enforcement == "Namespace"} | set(graph.rules)
-            if selected - rules.keys():
-                raise ValueError("a referenced network GraphRule is unavailable")
-            if any(documents[name]["metadata"].get("deletionTimestamp") for name in selected):
-                raise Pending("a selected network GraphRule is being deleted")
-            accesses = [
-                graph.network,
-                *(rules[name].network for name in sorted(selected) if current is obj or rules[name].scope == "Subtree"),
-            ]
-            for access in accesses:
-                if access is not None and (current is obj or access.scope == "Subtree"):
-                    if access.mesh and os.environ.get("POLYAD_MESH_ENABLED", "false").lower() != "true":
-                        raise ValueError("network.mesh requires the operator's mesh integration to be enabled")
-                    scopes.append(
-                        NetworkScope(
-                            namespace,
-                            kind,
-                            meta["name"],
-                            branch,
-                            access,
-                            tuple((edge.source, edge.target, edge.ports) for edge in graph.connections),
-                        )
+        graph = topology(current["spec"], kind)
+        selected = {name for name, rule in rules.items() if rule.enforcement == "Namespace"} | set(graph.rules)
+        if selected - rules.keys():
+            raise ValueError("a referenced network GraphRule is unavailable")
+        if any(documents[name]["metadata"].get("deletionTimestamp") for name in selected):
+            raise Pending("a selected network GraphRule is being deleted")
+        accesses = [
+            graph.network,
+            *(rules[name].network for name in sorted(selected) if current is obj or rules[name].scope == "Subtree"),
+        ]
+        for access in accesses:
+            if access is not None and (current is obj or access.scope == "Subtree"):
+                if access.mesh and os.environ.get("POLYAD_MESH_ENABLED", "false").lower() != "true":
+                    raise ValueError("network.mesh requires the operator's mesh integration to be enabled")
+                scopes.append(
+                    NetworkScope(
+                        namespace,
+                        kind,
+                        meta["name"],
+                        branch,
+                        access,
+                        tuple((edge.source, edge.target, edge.ports) for edge in graph.connections),
                     )
+                )
         owners = [
             owner
             for owner in meta.get("ownerReferences", [])
@@ -101,10 +98,8 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
         branch = meta.get("labels", {}).get(f"{asts.GROUP}/node", "")
         if not branch:
             raise ValueError("nested graph lacks its compiler-assigned node identity")
-        if parent["kind"] != "Feedback":
-            parent_node = next((item for item in parent["spec"]["nodes"] if item["name"] == branch), None)
-            if parent_node is None:
-                raise Pending("ancestor is replacing this graph branch", phase="Draining")
+        if branch not in {item.name for item in topology(parent["spec"], parent["kind"]).nodes}:
+            raise Pending("ancestor is replacing this graph branch", phase="Draining")
         current = parent
     raise ValueError("network inheritance exceeds 32 graph boundaries")
 

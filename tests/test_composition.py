@@ -81,7 +81,7 @@ def test_specialized_polygraph_roundtrip():
 
 def test_mixed_graph_types_roll_up_leaf_work_once():
     """
-    Graph, spot, recurrence and nested PolyGraph counts all reach the same root.
+    Graphs, spot placement and nested PolyGraph counts all reach the same root.
     """
 
     async def scenario():
@@ -92,8 +92,8 @@ def test_mixed_graph_types_roll_up_leaf_work_once():
                 "mode": "persistent",
                 "nodes": [
                     reference("service", "Graph", "service-template"),
-                    reference("spot", "EphemeralGraph", "spot-template"),
-                    reference("loop", "Feedback", "loop-template"),
+                    reference("spot", "Graph", "spot-template"),
+                    reference("loop", "Graph", "loop-template"),
                     reference("group", "PolyGraph", "group-template"),
                 ],
             },
@@ -106,7 +106,7 @@ def test_mixed_graph_types_roll_up_leaf_work_once():
                 {"templateOnly": True, "mode": "persistent", "nodes": [reference("server", "Daemon", "server")]},
             ),
             resource(
-                "EphemeralGraph",
+                "Graph",
                 "spot-template",
                 {
                     "templateOnly": True,
@@ -115,9 +115,9 @@ def test_mixed_graph_types_roll_up_leaf_work_once():
                 },
             ),
             resource(
-                "Feedback",
+                "Graph",
                 "loop-template",
-                {"templateOnly": True, "rounds": 1, "graph": {"nodes": [reference("worker", "Workload", "worker")]}},
+                {"templateOnly": True, "nodes": [reference("worker", "Workload", "worker")]},
             ),
             resource("PolyGraph", "group-template", {"templateOnly": True, "nodes": [reference("batch", "Graph", "batch-template")]}),
             resource("Graph", "batch-template", {"templateOnly": True, "nodes": [reference("worker", "Workload", "worker")]}),
@@ -129,9 +129,9 @@ def test_mixed_graph_types_roll_up_leaf_work_once():
         key = "PolyGraph", "test", "root"
         rollup = api.objects[key]["status"]["metrics"]["rollup"]
         assert rollup["observationsComplete"] is True
-        assert rollup["graphCount"] == 7
+        assert rollup["graphCount"] == 6
         assert rollup["leafNodes"] == rollup["observedLeafNodes"] == rollup["activeLeafNodes"] == 4
-        assert rollup["resourceCount"] == 10  # Six child boundary CRs plus four leaves.
+        assert rollup["resourceCount"] == 9  # Five child boundary CRs plus four leaves.
         assert rollup["nestingDepth"] == 3
         assert rollup["unobservedGraphs"] == 0
         assert len(api.children("Job")) == 3
@@ -293,7 +293,7 @@ def test_polygraph_placement_and_persistent_completion_contracts():
     asyncio.run(scenario())
 
 
-def test_example_completes_with_epoch_cleanup_and_root_totals():
+def test_example_completes_with_root_totals():
     """
     The shipped mixed composition finishes with only retained executions counted.
     """
@@ -327,10 +327,10 @@ def test_example_completes_with_epoch_cleanup_and_root_totals():
         assert status["completed"] is True
         rollup = status["metrics"]["rollup"]
         assert rollup["observationsComplete"] is True
-        assert rollup["completedLeafNodes"] == 2
+        assert rollup["completedLeafNodes"] == 3
         assert rollup["graphCount"] == 5
         assert rollup["nestingDepth"] == 3
-        assert rollup["resourceCount"] == 6
+        assert rollup["resourceCount"] == 7
         # Template definitions have no execution status and are excluded from root totals.
         assert all("status" not in obj for obj in api.objects.values() if obj["spec"].get("templateOnly"))
 

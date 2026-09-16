@@ -95,8 +95,7 @@ def test_cycle_components_and_duplicate_edges():
     }
 
 
-@pytest.mark.parametrize("kind", ["Graph", "EphemeralGraph"])
-def test_instance_metrics_progress_and_idempotence(kind):
+def test_instance_metrics_progress_and_idempotence():
     """
     Refresh counts after creation and completion without issuing unchanged status writes.
     """
@@ -104,10 +103,8 @@ def test_instance_metrics_progress_and_idempotence(kind):
     async def scenario():
         spec = diamond()
         spec["slots"] = 2
-        if kind == "EphemeralGraph":
-            spec["placement"] = {"nodeSelector": {"capacity": "spot"}}
-        key = kind, "test", "pipeline"
-        api = FakeAPI(resource(kind, "pipeline", spec), resource("Workload", "worker", {"template": template()}))
+        key = "Graph", "test", "pipeline"
+        api = FakeAPI(resource("Graph", "pipeline", spec), resource("Workload", "worker", {"template": template()}))
         controller = Controller(api)
         await controller.reconcile(key)
         metrics = api.objects[key]["status"]["metrics"]
@@ -193,20 +190,23 @@ def test_replacement_and_suspension_retain_live_inventory():
     asyncio.run(scenario())
 
 
-def test_nested_metrics_and_feedback_epoch_freshness():
+def test_nested_metrics_require_current_child_generation():
     """
     Expose immediate summaries and reject stale generations without flattening descendants.
     """
 
     async def scenario():
-        key = "Feedback", "test", "loop"
-        api = FakeAPI(resource("Feedback", "loop", {"rounds": 1, "graph": {"nodes": []}}))
+        key = "Graph", "test", "loop"
+        api = FakeAPI(
+            resource("Graph", "loop", {"nodes": [{"name": "child", "kind": "Graph", "ref": "body"}]}),
+            resource("Graph", "body", {"templateOnly": True, "nodes": []}),
+        )
         controller = Controller(api)
         await controller.reconcile(key)
-        assert api.objects[key]["status"]["metrics"]["execution"] is None
-        child = api.children("Graph")[0]
+        assert api.objects[key]["status"]["metrics"]["execution"]["observedNodes"] == 1
+        child = next(item for item in api.children("Graph") if item["metadata"].get("ownerReferences"))
         child_key = "Graph", "test", child["metadata"]["name"]
-        # First persist the finalizer; the next pass can execute the epoch.
+        # First persist the finalizer; the next pass can execute the child graph.
         with pytest.raises(Pending):
             await controller.reconcile(child_key)
         await controller.reconcile(child_key)
@@ -214,17 +214,16 @@ def test_nested_metrics_and_feedback_epoch_freshness():
         child = api.objects[child_key]
         metrics = instance_metrics(parent, [child])
         assert metrics["subgraphs"][0]["current"] is True
-        assert metrics["execution"]["observedNodes"] == 0
+        assert metrics["execution"]["observedNodes"] == 1
         assert metrics["subgraphs"][0]["topology"]["nodeCount"] == 0
         stale = copy.deepcopy(child)
         stale["metadata"]["generation"] += 1
         metrics = instance_metrics(parent, [stale])
         assert metrics["subgraphs"][0]["current"] is False
         assert metrics["subgraphs"][0]["topology"] is None
-        assert metrics["execution"] is None
+        assert metrics["execution"]["readyNodes"] == 0
         await controller.reconcile(key)
-        assert api.objects[key]["status"]["epoch"] == 1
-        assert api.objects[key]["status"]["metrics"]["execution"] is None
+        assert api.objects[key]["status"]["completed"]
 
     asyncio.run(scenario())
 
@@ -289,10 +288,12 @@ def test_absent_nullable_metrics_do_not_cause_repeated_patches():
     """
 
     async def scenario():
-        key = "Feedback", "test", "waiting"
-        api = FakeAPI(resource("Feedback", "waiting", {"graph": {"nodes": []}}))
+        key = "Graph", "test", "waiting"
+        api = FakeAPI(
+            resource("Graph", "waiting", {"nodes": [{"name": "bad", "kind": "Workload", "ref": "job", "requires": [{"node": "bad"}]}]})
+        )
         controller = Controller(api)
-        await controller.reconcile(key)
+        await controller.report_metrics(key)
         metrics = api.objects[key]["status"]["metrics"]
         del metrics["execution"]
         del metrics["observedTopology"]
@@ -303,12 +304,10 @@ def test_absent_nullable_metrics_do_not_cause_repeated_patches():
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize(
-    "kind,filename", [("Graph", "graphs"), ("PolyGraph", "polygraphs"), ("EphemeralGraph", "ephemeralgraphs"), ("Feedback", "feedbacks")]
-)
+@pytest.mark.parametrize("kind,filename", [("Graph", "graphs"), ("PolyGraph", "polygraphs")])
 def test_emitted_status_matches_crd_schema(kind, filename):
     """
-    Validate wire metrics, nullable epoch observations and schema rejection of bad gauges.
+    Validate wire metrics, nullable observations and schema rejection of bad gauges.
     """
     from pathlib import Path
 
@@ -330,7 +329,7 @@ def test_emitted_status_matches_crd_schema(kind, filename):
         return result
 
     validator = jsonschema.Draft7Validator(json_schema(schema))
-    spec = {"graph": diamond()} if kind == "Feedback" else diamond()
+    spec = diamond()
     if kind == "PolyGraph":
         spec = {"nodes": [{"name": "child", "kind": "Graph", "ref": "template"}]}
     parent = resource(kind, "graph", spec)

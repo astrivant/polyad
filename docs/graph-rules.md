@@ -4,7 +4,9 @@
 may exchange. Administrators create rules in the operator namespace; end-users
 select optional rules through a graph's `spec.rules`, including in
 [composition requests](composition-requests.md). Namespace rules apply automatically.
-Every selected structural constraint must pass before new work is admitted.
+Every selected structural constraint must pass before new work is admitted or
+a replica scaling action is dispatched. `PolyGraph` supports `spec.rules` exactly
+as `Graph` and `ReplicaGroup` do.
 
 Only policy administrators should have write access to `graphrules`. The operator's
 Role grants read access, and the composition HTTP API cannot create or modify rules.
@@ -257,7 +259,6 @@ flowchart LR
 At the root below, `nodes = 2` and `expandedNodes = 6`: two graph vertices plus
 two workload vertices in each child instance. Reusing a definition does not
 reduce the occurrence count. `limits.expandedNodes: 6` passes; `5` fails.
-Feedback contributes one epoch template, not all future repetitions.
 
 ```mermaid
 flowchart TB
@@ -643,7 +644,7 @@ Explicit selectors combine with AND.
 | --- | --- | --- |
 | `namespace` | Declaring graph's namespace | Exact namespace; a DNS label |
 | `graph` | Omitted | Persisted graph instance name, not reusable definition name; a DNS label |
-| `kind` | `Graph` | Kind of a named graph instance: `Graph`, `PolyGraph`, `EphemeralGraph`, `Feedback`, `ReplicaGroup` |
+| `kind` | `Graph` | Kind of a named graph instance: `Graph`, `PolyGraph`, `ReplicaGroup` |
 | `node` | Omitted | Selected graph's node and its descendants; without `graph`, selects a node in the declaring boundary; a DNS label |
 | `podLabels` | `{}` | Additional exact key/value matches, combined with namespace and graph selection |
 
@@ -794,8 +795,7 @@ spec:
 ```
 
 End-users set `spec.rules: [bounded-flow]` on their graph, or `rules` inside a
-composition graph object's `spec`. A Feedback epoch carries this selection in
-`spec.graph.rules`. Namespace rules still apply. An isolated caller in `consumers`
+composition graph object's `spec`. Namespace rules still apply. An isolated caller in `consumers`
 also needs egress permission to the API, and the database needs any applicable
 ingress permission.
 
@@ -813,12 +813,109 @@ report = evaluate_rule(rule, topology, expanded_nodes=6, nesting_depth=2)
 `graph_spectrum` additionally returns the full sorted adjacency and Laplacian
 spectra; status reports keep compact summaries.
 
+## PolyGraphs and autoscaling
+
+A PolyGraph is itself a graph boundary. Its immediate vertices are child graphs;
+its `nodes`, shape, spectral and Cheeger measurements describe connections between
+those child graphs. `expandedNodes` and `nestingDepth` include descendants. For
+example, two ReplicaGroup children with two Daemon copies each contribute
+`expandedNodes = 2 + 2 + 2 = 6` at the PolyGraph.
+
+```yaml
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: GraphRule
+metadata:
+  name: application-budget
+spec:
+  enforcement: Referenced
+  scope: Boundary
+  relation: connections
+  limits:
+    expandedNodes: 6
+  cheeger:
+    minimum: 1
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: PolyGraph
+metadata:
+  name: application
+spec:
+  mode: persistent
+  rules: [application-budget]
+  nodes:
+    - name: producers
+      kind: ReplicaGroup
+      ref: producer-copies
+    - name: consumers
+      kind: ReplicaGroup
+      ref: consumer-copies
+  connections:
+    - source: producers
+      target: consumers
+```
+
+The referenced ReplicaGroup definitions must already exist with
+`templateOnly: true`. With two Daemon copies per group, this PolyGraph has
+`h = 1` and meets its recursive budget. Growing either group to three would make
+`expandedNodes = 7` and is blocked, even though `scope: Boundary` does not copy
+this rule to the children. Removing the connection would make `h = 0`, so a
+subsequent scaling action is blocked by the recomputed parent Cheeger bound.
+
+```mermaid
+flowchart TB
+    rule["PolyGraph rule<br/>expandedNodes ≤ 6; Cheeger ≥ 1"] -. checks .-> parent["Application · h = 1"]
+    parent --> left["Producers · 2 copies"]
+    parent --> right["Consumers · 2 copies"]
+    left ---|"declared connection"| right
+    keda["KEDA requests producers: 3"] --> evaluate{"Fresh family evaluation"}
+    parent --> evaluate
+    evaluate --> rejected["Proposed expandedNodes = 7<br/>Keep existing copies; block creation"]
+```
+
+Before each replica creation or scale-in deletion, Polyad reloads the owning
+family, resolves shared replica sources, and recomputes all selected structural,
+spectral and Cheeger constraints at their respective boundaries. Independent
+sibling counts and every inheriting use of a shared source in that family count
+toward ancestor budgets. Retiring siblings continue to consume capacity until
+their execution resources disappear. Active pulse instances also count as
+separate vertices in the structural projection.
+
+The requested target topology must pass before its scaling mutations proceed.
+Inputs are checked again after computation; changed identities, specifications,
+children or rules defer the action for a fresh reconciliation. Graph status
+measurements and KEDA demand metrics are not reused as admission verdicts.
+Scale-out and scale-in use the same rule checks; a connectivity or lower-bound
+constraint can prohibit scaling to zero. A violating request stays requested but
+is not applied, and failed or deferred reconciliation sets `scaleCurrent: false`.
+Later reconciliations retry when intent or policy changes. Explicit deletion,
+suspension and shutdown retain their drain behavior.
+
+ReplicaGroup projects copies as **independent vertices with no edges between
+them**, so its Cheeger constant is zero at every count. A positive Cheeger minimum
+inherited onto such a group will reject it. Use `scope: Boundary` for a Cheeger
+rule intended only for a PolyGraph's connections, and separate subtree rules for
+recursive budgets or other applicable constraints. The parent's Cheeger constant
+does not change merely because a child has more copies; the graphs are not
+flattened, and internal Pod replicas do not become extra graph vertices.
+
+KEDA must target the `ReplicaGroup` scale subresource to use this admission path.
+For individual Pod scaling, replicate a `Daemon` definition with `replicas: 1`;
+each group ordinal creates one Deployment or StatefulSet with one desired Pod. Larger native
+Daemon replica counts stay internal to each graph vertex. Direct HPA/KEDA writes
+to generated Deployments or StatefulSets bypass Polyad's graph scheduler; these checks do not
+intercept those writes. See [KEDA and constraint enforcement](replication.md#constraints-before-scaling).
+
 ## Admission, reporting and computation limits
 
 Rules and nested definitions are refreshed before admission, including rewrite
 targets. A violation reports phase `Invalid` with the rule and explanation.
 Successful observations include `status.structuralRules` with rule names, UIDs,
 generations, measured limits, optional Cheeger measurements and compact spectra.
+Live checks annotate the reconciling boundary's verdicts with `boundary.kind`,
+`boundary.name`, `boundary.uid` and an occurrence `boundary.path`. All family
+constraints are evaluated, but each graph stores its own verdicts to keep status
+size bounded. An ancestor or sibling violation still blocks the action and names
+the failing rule and boundary in the error.
 Check phase and observed generation for current validity; the stored successful
 report may describe an earlier observation.
 
@@ -827,8 +924,8 @@ Spectral and Cheeger comparisons allow
 outside the operator's event loop. Independent preflight caps are 4,096 expanded
 node occurrences, 256 boundaries, 32 nesting levels and 32 GraphRules per namespace.
 User bounds cannot raise these caps, the 256-vertex spectral cap or the 20-vertex
-Cheeger cap. Recursive counts include one Feedback epoch template; they do not
-bound the lifetime work of indefinitely recurring graphs.
+Cheeger cap. Recursive counts describe the current composition; they do not
+bound lifetime work submitted through repeated activation requests.
 
 Structural rule updates block further admission on subsequent reconciliations;
 they do not evict running workloads. Network contract updates have their own

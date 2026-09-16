@@ -51,7 +51,7 @@ and startup to finish.<sup>[\[1\]](https://fluxcd.io/flux/components/kustomize/k
 
 | Observation | Flux result |
 | --- | --- |
-| Ready graph, completed finite graph or Feedback waiting between epochs | Current |
+| Ready graph or completed finite graph | Current |
 | Current failed leaf, failed subgraph or invalid graph | Failed |
 | Missing/stale observations, admission delays, startup or cleanup | InProgress |
 | Suspended or stopped execution, including a suspended descendant | InProgress |
@@ -73,7 +73,7 @@ unresolved `status` variable. Flux keeps waiting and retries until status appear
 or the health-check timeout expires. Expressions guard missing fields inside
 status; they do not use the invalid `has(status)` top-level macro.<sup>[\[1\]](https://fluxcd.io/flux/components/kustomize/kustomizations/#health-check-expressions)</sup>
 
-Native Jobs, Deployments, Pods and claims retain Flux's built-in health checks.
+Native Jobs, Deployments, StatefulSets, Pods and claims retain Flux's built-in health checks.
 The root graph carries descendant failures into Flux health even when those
 resources were created by Polyad rather than applied by Flux. Installing only the
 operator HelmRelease does not monitor every workload graph in the cluster.

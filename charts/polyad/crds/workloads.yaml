@@ -55,7 +55,7 @@ spec:
                     maximum: 1024
                   replicasPerActivation:
                     type: integer
-                    description: Deployment replicas in each daemon activation.
+                    description: Deployment or StatefulSet replicas in each daemon activation.
                     minimum: 1
                     maximum: 1024
                   maxReplicas:

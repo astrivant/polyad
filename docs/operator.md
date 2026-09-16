@@ -19,7 +19,7 @@ For a data-flow graph, contract each strongly connected component into one verte
 There are two useful interpretations of a cycle:
 
 1. **Concurrent stream processing:** start all participants, then exchange messages. The cycle needs buffering, backpressure, and usually an initial token or independent producer. All participants waiting for each other's readiness is a startup deadlock; keep that relation acyclic.
-2. **Recurrence:** run a finite graph in epochs, advancing durable state between iterations. `Feedback` implements this interpretation, with optional finite `rounds` or indefinite recurrence.
+2. **Recurrence:** activate a finite graph repeatedly, with application-owned durable state and termination conditions between runs. Use activation requests or an application-controlled loop.
 
 For a recurrence `x[t+1] = F(x[t], input[t])`, a fixed point satisfies `F(x*, input*) = x*`. Existence does not imply convergence. A contraction provides convergence; a linear autonomous recurrence converges to zero when its matrix has spectral radius below one. Stream stability instead depends on arrival/service rates, queues, and feedback gain. These mathematical properties are application contracts, not conclusions the operator can draw from connectivity alone.
 
@@ -32,15 +32,13 @@ All CRDs are namespaced under `polyad.astrivant.com/v1alpha1` and shipped in `ch
 | Python abstraction | Kubernetes representation |
 | --- | --- |
 | `Work`, `Workload`, command `Operation` | `Workload` definition plus a graph `Node`; execution uses a Job and explicit container command |
-| Persistent node | `Daemon` definition, executed as a Deployment with application probes |
+| Persistent node | `Daemon` definition, executed as a Deployment or StatefulSet with application probes |
 | `Ephemeral` | Spot-placed, restartable Job definition |
 | `Graph`, `Topology` | `Graph` CR; nodes reference definitions and can contain nested boundaries |
 | `PolyGraph`, `GraphNode` | `PolyGraph` CR; nodes reference other graph types and descendant status aggregates at the root |
 | `Placement` on `Topology` / `Graph` | Shared node-group or labeled resource-slice placement, inherited by descendant pods |
 | `Persistence` | Workload/Daemon `spec.persistence` with an explicit StorageClass and existing PVC |
 | `DelayGate` | `Gate` CR with `spec.delaySeconds`; deadlines belong to graph instances |
-| `EphemeralGraph` | Graph with required placement for interruptible capacity |
-| `Feedback` | `Feedback` CR with a finite graph body and optional round limit |
 | `Gate` | `Gate` CR containing the library's Boolean expression; signals are `NODE.ready`, `NODE.started`, `NODE.completed`, `NODE.failed` |
 | `ShutdownContract` | `ShutdownPolicy` CR with runtime limit and pod termination grace period |
 | `Finalizer` | Operator `polyad.astrivant.com/drain` finalizer and application/controller-owned Kubernetes finalizers on descendants |
@@ -48,27 +46,27 @@ All CRDs are namespaced under `polyad.astrivant.com/v1alpha1` and shipped in `ch
 | Resource ownership | `Resource` definition for Service, ConfigMap, or PVC |
 | `Control`, `Outcome`, `Estimate`, `Statistics`, scheduling policies | Runtime values/contracts, not independent cluster objects; Kubernetes execution reports lifecycle in graph status |
 
-Existing local `Scheduler`, `Graph`, and bounded `Feedback` retain their cooperative Python behavior. The Kubernetes controller is a separate execution backend. Python callables, factories, `ProcessOwner` objects, checkpoint callbacks and arbitrary finalizer functions are not serialized or executed from CRs. Package application code into containers. Container probes, signal handlers and external checkpoint storage provide the remote lifecycle contract. Admission is deterministic inventory order with `slots` reservations per boundary; Kubernetes schedules actual CPU/memory requests. Local shortest-remaining/FIFO/BFS/DFS policies are not remotely executed by this backend.
+Existing local `Scheduler` and `Graph` retain their cooperative Python behavior. The Kubernetes controller is a separate execution backend. Python callables, factories, `ProcessOwner` objects, checkpoint callbacks and arbitrary finalizer functions are not serialized or executed from CRs. Package application code into containers. Container probes, signal handlers and external checkpoint storage provide the remote lifecycle contract. Admission is deterministic inventory order with `slots` reservations per boundary; Kubernetes schedules actual CPU/memory requests. Local shortest-remaining/FIFO/BFS/DFS policies are not remotely executed by this backend.
 
 The new descriptors can also build the graph spec from Python:
 
 ```python
-from polyad.graph import Ephemeral, EphemeralGraph, Placement
+from polyad.graph import Ephemeral, Placement, Topology
 from polyad.graph.topology import converter
 
-boundary = EphemeralGraph(
+boundary = Topology(
     nodes=(Ephemeral(name="worker", ref="spot-worker"),),
     placement=Placement(nodeSelector={"polyad.astrivant.com/capacity": "spot"}),
 )
 cr = {
     "apiVersion": "polyad.astrivant.com/v1alpha1",
-    "kind": "EphemeralGraph",
+    "kind": "Graph",
     "metadata": {"name": "spot-pipeline"},
     "spec": converter.unstructure(boundary),
 }
 ```
 
-Definitions (`Workload`, `Daemon`, `Ephemeral`, `Resource`, `Gate`, `ShutdownPolicy`) do not launch work by themselves. A Graph references them by name in the same namespace. Nested Graph/PolyGraph/EphemeralGraph/Feedback definitions must set `templateOnly: true`; the parent instantiates an owned copy with that flag cleared. Recursive references and nesting deeper than 32 are rejected. A finite parent must reference finite children if it expects completion.
+Definitions (`Workload`, `Daemon`, `Ephemeral`, `Resource`, `Gate`, `ShutdownPolicy`) do not launch work by themselves. A Graph references them by name in the same namespace. Nested Graph/PolyGraph/ReplicaGroup definitions must set `templateOnly: true`; the parent instantiates an owned copy with that flag cleared. Recursive references and nesting deeper than 32 are rejected. A finite parent must reference finite children if it expects completion.
 
 `connections` record topology; applications configure transport. Container/resource string fields can use `${nodes.NAME.name}` to refer to the generated Kubernetes resource name of another node, for example a PVC's `claimName` or a Service hostname. Names stay stable across resource replacement. Resources with probes, finalizers or readiness requirements should be dependencies before consumers start. A Service still needs an explicit selector; applications can use their own pod labels in templates.
 
@@ -96,7 +94,7 @@ spec:
 Use Kubernetes node labels for node groups, tenant partitions, GPU pools, zones, disk tiers, or other tagged slices. Cloud tags must first be reflected in Kubernetes labels. `nodeAffinity` supports required label expressions and weighted preferences. Tolerations permit the graph's pods to use matching tainted nodes; selectors and required affinity determine the target slice. See [Kubernetes node placement](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) and [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
 
 Placement defaults to `enforce: true`. The compiler propagates it through nested
-graphs and feedback epochs into every Job and daemon Deployment pod template.
+graphs into every Job and daemon Deployment or StatefulSet pod template.
 Workload definitions and pod templates can narrow enforced selectors and required
 affinity, combine preferences and add tolerations. Conflicting exact selectors
 are rejected before admitting the revision; incompatible affinity predicates can
@@ -108,7 +106,7 @@ more specific graph, workload or pod placement then replaces that default in
 full. For example, a workload may select `pool: gpu` beneath a default `pool: cpu`.
 Omitting a child placement retains the defaults. An enforced ancestor cannot be
 relaxed by a child setting `enforce: false`. General placement does not change a
-graph's lifecycle type or remove inherited ephemeral storage restrictions.
+graph's lifecycle type or change the selected workload's storage contract.
 
 Tolerations on CRDs define fields that Polyad reads; Kubernetes does not schedule
 custom resources themselves. The guard is in the compiler: it merges and validates
@@ -130,19 +128,22 @@ For advance capacity requests, see [capacity planning](capacity.md).
 
 “Ephemeral” means compute can disappear before completion. Graph intent and observations remain durable in Kubernetes. It does **not** mean the CR deletes itself after running or checkpoints are stored on a disposable disk.
 
-`Ephemeral` executes as a Job on explicit spot placement. `EphemeralGraph`
-propagates placement and its storage prohibition through all nested boundaries,
-including PolyGraphs and Feedback epochs. Persistent PVC mounts, PVC resource
-nodes, persistence declarations and storage classes are rejected before leaf
-workloads are admitted. Label and toleration values are provider-specific.
+`Ephemeral` executes as a Job on explicit spot placement and rejects persistent
+storage on that workload. Ordinary Graphs and PolyGraphs can also select spot
+capacity through `placement`; their workloads and storage choices remain under
+user control. The operator does not infer a graph-wide ephemeral policy from
+node labels. Label and toleration values are provider-specific.
 
 Kubernetes replaces failed/evicted Job pods within the declared `backoffLimit`.
 After retry exhaustion the graph reports failure. Recreated compute starts the
 container entrypoint again; applications must tolerate repeated side effects.
 Ephemeral workloads should be disposable or reconstruct their inputs. Persistent
-workloads belong on non-spot capacity in regular graphs.
+workloads need an application recovery and storage plan appropriate to their capacity.
 
 ## Workload persistence
+
+For controller selection, per-replica StatefulSet claims and native storage
+configuration, see [workload controllers and storage](workload-storage.md).
 
 Workload and Daemon definitions can opt into an existing PVC:
 
@@ -173,10 +174,9 @@ Administrators provision StorageClasses; Polyad does not create cluster-scoped
 StorageClass resources. External claims are not adopted or deleted by graph
 cleanup. A claim created through a graph's own Resource node remains graph-owned
 and is drained with that graph. Use an external claim when data must outlive it.
-These workloads are not intended for spot instances. The compiler rejects
-persistence beneath ephemeral boundaries, even when placement overrides are
-allowed. StorageClass declarations in preserved native volume specs are also
-checked. See [Kubernetes persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+Users select capacity compatible with their storage and recovery requirements.
+The explicit `Ephemeral` workload type rejects persistent storage, including
+StorageClass declarations in native volume specs. See [Kubernetes persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
 Storage preserves files; it does not preserve process memory or implement
 checkpointing. Kubernetes suspension currently drains execution, and clearing
@@ -217,8 +217,8 @@ it is not an application checkpoint.
 ## Resource compiler objects
 
 `polyad.compiler.asts` defines attrs objects for all ten Polyad CR kinds
-and the Job, Deployment, Service, ConfigMap, PersistentVolumeClaim and Lease kinds the
-operator manages. Metadata, owner references, Job/Deployment specs, status patches
+and the Job, Deployment, StatefulSet, Service, ConfigMap, PersistentVolumeClaim and Lease kinds the
+operator manages. Metadata, owner references, Job/Deployment/StatefulSet specs, status patches
 and deletion preconditions have dedicated types. A shared resource registry supplies
 API versions, plural names and graph-boundary membership.
 
@@ -230,6 +230,7 @@ API versions, plural names and graph-boundary membership.
 | `children` | Build owned resources with deterministic names and revision hashes |
 | `audit` | Carry request and definition provenance into child manifests |
 | `identity` | Inject graph, execution, Pod and operator endpoint context into workload containers |
+| `daemon` | Compile Deployment or StatefulSet execution and native claim templates |
 | `storage` | Validate persistence and configure workload storage |
 | `network` | Intersect inherited traffic rules and generate network and mesh policies |
 | `capacity` | Identify upcoming work and compile capacity reservation templates |
@@ -312,8 +313,7 @@ omission behavior. Attrs types provide the Python contract; generated CRD
 constraints validate API writes. Python constructor defaults do not become
 Kubernetes defaults, and unknown metrics fields remain subject to CRD pruning.
 
-The models generate **the `status.metrics` schema** for Graph, PolyGraph,
-EphemeralGraph and Feedback. Descriptions and numeric limits live in attrs field
+The models generate **the `status.metrics` schema** for Graph, PolyGraph and ReplicaGroup. Descriptions and numeric limits live in attrs field
 metadata; nested objects, lists, literals and nullable fields come from their
 annotations. CRD specs and other status fields are maintained separately.
 
@@ -324,42 +324,23 @@ bash scripts/project-python.sh scripts/generate-status-schemas.py
 bash scripts/project-python.sh scripts/generate-status-schemas.py --check
 ```
 
-The pre-commit hook and CI reject schema drift across all four CRDs. Generation
+The pre-commit hook and CI reject schema drift across all three boundary CRDs. Generation
 replaces only the metrics property, preserving unrelated manifest sections.
 As with other CRD changes, apply updated CRDs before upgrading an existing Helm
 release; Helm does not upgrade files under `crds/` automatically.
 
-## Feedback epochs
+## Repeated execution
 
-A `Feedback` resource repeatedly creates an execution instance of a finite graph.
-An epoch includes the whole graph, with its dependencies, gates and nested work.
-For example, a sample-and-adjust graph can read current measurements, calculate
-new settings and apply them; the next epoch observes the updated system.
+A persistent Graph can contain an activation-controlled finite Graph definition.
+Each pulse creates a new execution instance, with the normal dependencies,
+gates, rules and cleanup. Use `activation.mode: Queue` to serialize accepted
+requests; parallel mode permits bounded concurrency. Timer-driven requests use
+`maxIntervalSeconds` with `onDeadline: Activate`.
 
-The operator records completion in `status.epoch` and `status.lastEpochTime`,
-then deletes the finished epoch's graph and waits for its resources to disappear.
-Only one epoch executes at a time. A failed or unfinished epoch does not advance
-the completion counter or start the next epoch.
-
-| Setting | Meaning |
-| --- | --- |
-| `spec.graph` | Finite graph template instantiated for every epoch |
-| `spec.kind` | Epoch graph kind: Graph, PolyGraph or EphemeralGraph; defaults to Graph |
-| `spec.rounds` | Maximum completed epochs; omit for indefinite recurrence, or set zero to finish without starting work |
-| `spec.intervalSeconds` | Minimum wait from recorded epoch completion; defaults to one second. Cleanup and reconciliation can extend it |
-| `spec.suspend` | Drain active execution and prevent new epochs; clearing it permits fresh execution |
-
-Epoch counters and completion timestamps live in Kubernetes status, so an operator
-restart does not reset the round limit. Each epoch starts fresh containers.
-Applications must explicitly read and write any state or results needed by later
-epochs. Use storage that outlives the epoch, such as an external PVC configured
-through [workload persistence](#workload-persistence), when preserving files.
-
-Feedback supplies repetition; the workloads implement any feedback algorithm.
-There is no automatic result-to-input transfer or convergence test. See the
-[two-epoch example](../examples/feedback.yaml) and
-[local Feedback guide](../pkg/polyad/balance/README.md#feedback-graphs-and-daemon-like-work)
-for the separate Python factory-based execution model.
+Applications own iteration counts, termination conditions and state shared
+between runs. A timer bounds admission frequency; it is not a delay measured
+from completion. See [activation policies](activation.md) and the
+[repeated graph example](../examples/repeated-graph.yaml).
 
 ## Reconciliation and shutdown
 
@@ -393,13 +374,13 @@ On CR deletion, the owning shard retains `polyad.astrivant.com/drain` while chil
 
 ## Graph instance status
 
-Executable `Graph`, `PolyGraph`, `EphemeralGraph`, and `Feedback` CRs publish lifecycle state
+Executable `Graph`, `PolyGraph`, and `ReplicaGroup` CRs publish lifecycle state
 and `status.metrics`. Reusable `Workload`/`Daemon` definitions and `templateOnly`
 graphs remain inert; their instances report through the owning graph. Inspect
 an instance with:
 
 ```bash
-kubectl get graphs,polygraphs,ephemeralgraphs,feedbacks -n polyad -o wide
+kubectl get graphs,polygraphs,replicagroups -n polyad -o wide
 kubectl get graph finite -n polyad -o jsonpath='{.status.metrics}'
 ```
 
@@ -408,7 +389,7 @@ Wide output also includes breadth and depth.
 
 | Field under `status.metrics` | Meaning |
 | --- | --- |
-| `topology` | Shape of the current desired graph; Feedback uses its epoch template |
+| `topology` | Shape of the current desired graph |
 | `observedTopology` | Induced graph of declared nodes with owned execution resources |
 | `execution` | Observed, pending, active, ready, completed, failed and terminating node counts; reserved and available slots |
 | `resources` | All directly owned resources by kind, including obsolete and terminating children |
@@ -439,9 +420,7 @@ node; its own CR reports its internal breadth, depth and progress. Nested
 summaries include a `current` flag comparing both lifecycle and metric generations
 with the child spec generation. Stale or terminating children expose identity
 and phase but omit their metric summaries. This flag measures generation
-freshness, not elapsed time. Feedback mirrors execution only from its current
-epoch with current observations; between epochs or before observation, execution
-and observed shape are absent or null. Completed epochs remain represented by `status.epoch`.
+freshness, not elapsed time.
 
 Observed inventory includes terminating or superseded execution until the API
 confirms removal. Removed nodes disappear from topology while their resources
@@ -463,7 +442,7 @@ be persisted in separate ordered requests.
 ### Composing graph types with PolyGraph
 
 `PolyGraph` is the explicit graph-of-graphs abstraction. Its nodes reference
-`Graph`, `EphemeralGraph`, `Feedback`, or other `PolyGraph` templates. Each
+`Graph`, `ReplicaGroup`, or other `PolyGraph` templates. Each
 reference creates a distinct owned instance, so using the same template twice
 creates two independent executions. Ordinary `Graph` boundaries can mix these
 graph references with workloads, daemons and resources.
@@ -474,7 +453,7 @@ from polyad.graph import GraphNode, PolyGraph
 application = PolyGraph(
     nodes=(
         GraphNode(name="batch", kind="Graph", ref="batch-template"),
-        GraphNode(name="spot", kind="EphemeralGraph", ref="spot-template"),
+        GraphNode(name="spot", kind="Graph", ref="spot-template"),
         GraphNode(name="group", kind="PolyGraph", ref="group-template"),
     ),
 )
@@ -502,10 +481,8 @@ Every boundary, including an ordinary Graph, publishes `status.metrics.rollup`:
 Each parent combines its direct leaf observations with each child's recursive
 summary exactly once. An intermediate graph's node reservation is not counted
 as another leaf workload. Slot capacities remain local scheduling budgets and
-are not summed as physical cluster capacity. Feedback's template is not a
-second execution: its epoch instance contributes the actual work. Counts
-describe present inventory; historical epochs remain in the durable epoch
-counter after their resources are removed.
+are not summed as physical cluster capacity. Counts describe present inventory;
+application-level history belongs in durable application state or activation receipts.
 
 Missing instances, older operators without rollups, stale generations and
 terminating subgraphs mark the aggregate incomplete. Their unknown contents
@@ -517,7 +494,7 @@ The entire ownership tree belongs to the root's shard. Terminal failures and
 invalid child definitions propagate through lifecycle status to the root.
 
 See [the mixed composition example](../examples/polygraph.yaml). It combines
-a nested PolyGraph, spot execution, and a finite Feedback boundary:
+a nested PolyGraph and sequential finite Graphs, including explicit spot placement:
 
 ```bash
 kubectl apply -n polyad -f examples/polygraph.yaml
@@ -557,7 +534,7 @@ back to `INFO` after troubleshooting to reduce volume.
 
 The operator's startup and liveness probes use Kopf's `/healthz` endpoint and the registered worker probe. Readiness also checks API/Lease renewal freshness and Dragonfly connectivity (`apiFresh` and `cacheFresh`). Periodic API scans and cache pings keep connectivity observations current even in an empty namespace. A slow or unavailable API can make the pod unready without triggering a restart loop. A stopped worker fails liveness. The health handler never treats an indefinitely running workload as a fault.
 
-Daemon containers must supply startup, readiness and liveness probes. Graph admission observes current-generation Deployment ready/available replicas. Readiness edges control initial admission only: downstream work already admitted continues if upstream readiness later drops. End-to-end availability and recovery require application retry/backpressure contracts.
+Daemon containers must supply startup, readiness and liveness probes. Graph admission observes current-generation Deployment or StatefulSet rollout and readiness. StatefulSets also respect configured partitions, `OnDelete`, and `minReadySeconds`; see [controller readiness](workload-storage.md#statefulset-configuration). Readiness edges control initial admission only: downstream work already admitted continues if upstream readiness later drops. End-to-end availability and recovery require application retry/backpressure contracts.
 
 The optional [metrics API](metrics.md) exposes Prometheus and JSON snapshots on
 a separate listener, including queue pressure and graph hierarchy inventory.

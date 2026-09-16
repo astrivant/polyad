@@ -217,36 +217,3 @@ def test_api_builder_branches_configuration_and_validates_before_build():
     assert first is not second and not base.token
     assert first.test_client().get("/v1/compositions/one", headers={"Authorization": "Bearer secret"}).status_code == 404
     assert second.test_client().get("/v1/compositions/one", headers={"Authorization": "Bearer secret"}).status_code == 401
-
-
-def test_feedback_epoch_preserves_request_lineage():
-    """
-    Give recurring graph instances an explicit epoch segment in their audit paths.
-    """
-
-    async def scenario():
-        value = document()
-        value["objects"] = [
-            value["objects"][0],
-            {"id": "root", "kind": "Feedback", "spec": {"rounds": 2, "graph": {"nodes": [{"id": "execute", "refId": "work"}]}}},
-        ]
-        request = request_value(value)
-        receipt = resource("Composition", request_name(request.requestId), receipt_spec(request))
-        api = FakeAPI(receipt)
-        controller = Controller(api)
-        for _ in range(8):
-            for key in list(api.objects):
-                if key[0] not in asts.BOUNDARY_KINDS | {"Composition"}:
-                    continue
-                try:
-                    await controller.reconcile(key)
-                except Pending:
-                    pass
-        job = next(obj for obj in api.objects.values() if obj["kind"] == "Job")
-        trace = job["spec"]["template"]["metadata"]["annotations"]
-        assert trace[f"{asts.GROUP}/node-path"] == "root/epoch-0/execute"
-        assert trace[f"{asts.GROUP}/request-id"] == "request-one"
-        env = {item["name"]: item.get("value") for item in job["spec"]["template"]["spec"]["containers"][0]["env"]}
-        assert env["POLYAD_NODE_PATH"] == trace[f"{asts.GROUP}/node-path"]
-
-    asyncio.run(scenario())

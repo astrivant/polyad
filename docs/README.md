@@ -6,6 +6,7 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 
 | Guide | Contents |
 | --- | --- |
+| [Graph boundaries and migration](graph-boundaries.md) | Three boundary types, repeated execution and migration from retired alpha types |
 | [Graph concepts](concepts.md) | Nodes, dependencies, subgraphs, placement and recurrence |
 | [Container profiles](containers.md) | Development and production builds, runtime permissions and image checks |
 | [Getting started](getting-started.md) | Installation, execution models and runnable examples |
@@ -18,6 +19,7 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 | [Compiler objects](operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
 | [Mutation plans](mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |
 | [Mutation diagrams](mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
+| [Workload controllers and storage](workload-storage.md) | Deployment or StatefulSet execution, native volumes, PVC templates and retention |
 | [Advance capacity](capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
 | [Replication and KEDA](replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
 | [Metrics API](metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |

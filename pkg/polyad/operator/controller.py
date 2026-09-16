@@ -21,10 +21,11 @@ from polyad.compiler.asts.mutations import Mutation, Precondition, Scope
 from polyad.compiler.passes.audit import trace_child
 from polyad.compiler.passes.children import child_name as compile_child_name
 from polyad.compiler.passes.children import owned_child
+from polyad.compiler.passes.daemon import compile_daemon, execution_pod
 from polyad.compiler.passes.identity import inject_environment, workload_identity
 from polyad.compiler.passes.mutations import PreconditionFailed
 from polyad.compiler.passes.network import configure_pod
-from polyad.compiler.passes.storage import configure_storage, storage_fields
+from polyad.compiler.passes.storage import configure_storage
 from polyad.graph.activation import ActivationPolicy
 from polyad.graph.gates import DelayGate, Gate
 from polyad.graph.topology import converter, topology
@@ -39,11 +40,13 @@ from polyad.operator.identity import graph_ancestry
 from polyad.operator.mutations import execute_mutations
 from polyad.operator.network import POLICY_KINDS, context, ensure_policies
 from polyad.operator.placement import merge_placement, place_pod
+from polyad.operator.rule_state import check_live_rules
 from polyad.operator.rules import check_rules
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from typing import Any
 
     from polyad.graph.storage import Persistence
@@ -337,9 +340,7 @@ class Controller:
             await reconcile_composition(self, obj)
         elif kind == "Rewrite":
             await self.rewrite(obj)
-        elif kind == "Feedback":
-            await self.feedback(obj)
-        elif kind in {"Graph", "EphemeralGraph", "PolyGraph"}:
+        elif kind in {"Graph", "PolyGraph"}:
             await self.graph(obj)
 
     async def finalizers(self, obj: dict[str, Any], *, remove: bool = False) -> None:
@@ -387,7 +388,7 @@ class Controller:
             if target["metadata"]["generation"] != spec["expectedGeneration"]:
                 raise ValueError("rewrite target generation changed")
             target_ast = asts.from_document(target)
-            if not isinstance(target_ast, (asts.Graph, asts.EphemeralGraph, asts.PolyGraph)):
+            if not isinstance(target_ast, (asts.Graph, asts.PolyGraph)):
                 raise ValueError("rewrites require a graph target")
             replacement = evolve(
                 target_ast,
@@ -451,7 +452,7 @@ class Controller:
         parent: dict[str, Any],
         node_name: str,
         kind: str,
-        spec: dict[str, Any] | asts.JobSpec | asts.DeploymentSpec,
+        spec: dict[str, Any] | asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec,
         *,
         extra: dict[str, Any] | None = None,
     ) -> asts.Resource:
@@ -462,7 +463,7 @@ class Controller:
             parent (dict[str, Any]): Persisted parent identity and ownership boundary.
             node_name (str): Node name used for child identity and ownership labels.
             kind (str): Kubernetes resource kind.
-            spec (dict[str, Any] | asts.JobSpec | asts.DeploymentSpec): Desired resource configuration.
+            spec (dict[str, Any] | asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec): Desired resource configuration.
             extra (dict[str, Any] | None): Unmodeled native fields preserved during serialization.
 
         Returns:
@@ -470,12 +471,13 @@ class Controller:
         """
         return owned_child(asts.from_document(parent), node_name, kind, spec, extra=extra)
 
-    async def ensure(self, desired: asts.Resource) -> dict[str, Any] | None:
+    async def ensure(self, desired: asts.Resource, *, before_create: Callable[[], Awaitable[None]] | None = None) -> dict[str, Any] | None:
         """
         Create once; never adopt a same-name object owned by somebody else.
 
         Args:
             desired (asts.Resource): Compiled resource with the required ownership and revision.
+            before_create (Callable[[], Awaitable[None]] | None): Fresh structural check immediately before creation.
 
         Returns:
             dict[str, Any] | None: Existing matching resource, or None after a new creation request.
@@ -495,7 +497,7 @@ class Controller:
                 raise Pending("waiting for resource replacement", phase="Draining")
             return current
         document = asts.to_document(desired)
-        pod = document.get("spec", {}).get("template", {}) if kind in {"Job", "Deployment"} else {}
+        pod = execution_pod(document) if kind in {"Job", "Deployment", "StatefulSet"} else {}
         if pod.get("metadata", {}).get("annotations", {}).get("sidecar.istio.io/inject") == "true":
             probe = copy.deepcopy(pod)
             probe.update(apiVersion="v1", kind="Pod")
@@ -506,6 +508,8 @@ class Controller:
                 for container in admitted.get("spec", {}).get("initContainers", [])
             ):
                 raise ValueError("Istio native sidecar injection must succeed before admitting mesh workloads")
+        if before_create is not None:
+            await before_create()
         logger.debug("Creating owned resource kind=%s namespace=%s name=%s", kind, meta.namespace, meta.name)
         await self.api.request("POST", kind, meta.namespace, body=desired)
         return None  # Creation acknowledgement is not readiness; observe it on a fresh pass.
@@ -524,9 +528,6 @@ class Controller:
         placement = raw.pop("placement", None)
         graph = topology(raw, obj["kind"])
         meta, namespace = obj["metadata"], obj["metadata"]["namespace"]
-        ephemeral = obj["kind"] == "EphemeralGraph" or meta.get("annotations", {}).get(f"{GROUP}/ephemeral") == "true"
-        if obj["kind"] == "EphemeralGraph" and not placement:
-            raise ValueError("EphemeralGraph requires explicit spot placement")
         policy = {}
         if graph.shutdownPolicy:
             policy = (await self.definition("ShutdownPolicy", namespace, graph.shutdownPolicy))["spec"]
@@ -550,7 +551,19 @@ class Controller:
             )
             return
         desired: dict[str, asts.Resource] = {}
-        rule_reports = await check_rules(self.api, namespace, obj["kind"], obj["spec"])
+        rule_reports = await check_live_rules(self.api, obj)
+        rule_candidate = None
+
+        async def refresh_rules() -> None:
+            """
+            Recheck the live family immediately before each execution resource creation.
+
+            Returns:
+                None: Recomputed reports replace the previous observations.
+            """
+            nonlocal rule_reports
+            rule_reports = await check_live_rules(self.api, obj, candidate=rule_candidate)
+
         persistence = {}
         activation_policies = {}
         definitions = {}
@@ -577,7 +590,7 @@ class Controller:
                 references(copy.deepcopy(definition["spec"]), names) if node.kind not in BOUNDARIES else copy.deepcopy(definition["spec"])
             )
             if node.kind in {"Workload", "Ephemeral", "Daemon"}:
-                persistence[node.name] = configure_storage(spec, ephemeral=ephemeral or node.kind == "Ephemeral")
+                persistence[node.name] = configure_storage(spec, ephemeral=node.kind == "Ephemeral")
                 pod = spec["template"]
                 labels, scopes = await context(self.api, obj, node.name)
                 network_plans[node.name] = scopes
@@ -596,13 +609,8 @@ class Controller:
                     pod_spec["restartPolicy"] = "Always"
                     label = {f"{GROUP}/instance": hashlib.sha256(f"{meta['uid']}/{node.name}".encode()).hexdigest()[:32]}
                     pod.setdefault("metadata", {}).setdefault("labels", {}).update(label)
-                    runtime: asts.JobSpec | asts.DeploymentSpec = asts.DeploymentSpec(
-                        replicas=spec.get("replicas", 1),
-                        selector=asts.LabelSelector(matchLabels=label),
-                        template=asts.converter.structure(pod, asts.PodTemplate),
-                        strategy=asts.DeploymentStrategy(type="Recreate"),
-                    )
-                    kind = "Deployment"
+                    runtime: asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec = compile_daemon(spec, label)
+                    kind = spec.get("controller", "Deployment")
                 else:
                     pod_spec["restartPolicy"] = "Never"
                     runtime = asts.JobSpec(
@@ -612,10 +620,6 @@ class Controller:
                 desired[node.name] = self.child(obj, node.name, kind, runtime)
             elif node.kind == "Resource":
                 manifest = spec["manifest"]
-                if ephemeral and (
-                    manifest["kind"] in {"PersistentVolumeClaim", "StorageClass"} or storage_fields(manifest.get("spec", {}))
-                ):
-                    raise ValueError("persistent storage and storage classes are invalid under Ephemeral graphs")
                 if manifest["kind"] not in {"Service", "ConfigMap", "PersistentVolumeClaim"}:
                     raise ValueError("resource kind is outside the operator's namespaced allowlist")
                 extra = {key: value for key, value in manifest.items() if key not in {"apiVersion", "kind", "metadata", "spec"}}
@@ -623,11 +627,7 @@ class Controller:
             else:
                 if not spec.get("templateOnly", False):
                     raise ValueError("nested boundaries must reference templateOnly definitions")
-                finite_child = (
-                    spec.get("rounds") is not None
-                    if node.kind == "Feedback"
-                    else node.kind != "ReplicaGroup" and spec.get("mode", "finite") == "finite"
-                )
+                finite_child = node.kind != "ReplicaGroup" and spec.get("mode", "finite") == "finite"
                 if not finite_child and (
                     graph.mode == "finite"
                     or any(edge.node == node.name and edge.condition == "completed" for other in graph.nodes for edge in other.requires)
@@ -638,24 +638,17 @@ class Controller:
                 spec.pop("activation", None)
                 spec["templateOnly"] = False
                 if graph.capacity is not None:
-                    target_spec = spec["graph"] if node.kind == "Feedback" else spec
-                    target_spec.setdefault("capacity", converter.unstructure(graph.capacity))
+                    spec.setdefault("capacity", converter.unstructure(graph.capacity))
                 if graph.rules:
-                    target_spec = spec["graph"] if node.kind == "Feedback" else spec
                     inherited_rules = set()
                     for rule_name in graph.rules:
                         rule = await self.definition("GraphRule", namespace, rule_name)
                         if rule["spec"].get("scope", "Subtree") == "Subtree":
                             inherited_rules.add(rule_name)
-                    target_spec["rules"] = sorted(set(target_spec.get("rules", [])) | inherited_rules)
+                    spec["rules"] = sorted(set(spec.get("rules", [])) | inherited_rules)
                 if placement:
-                    if node.kind == "Feedback":
-                        spec["graph"]["placement"] = merge_placement(placement, spec["graph"].get("placement"))
-                        if obj["kind"] == "EphemeralGraph" and spec.get("kind", "Graph") == "Graph":
-                            spec["kind"] = "EphemeralGraph"
-                    else:
-                        spec["placement"] = merge_placement(placement, spec.get("placement"))
-                kind = "EphemeralGraph" if obj["kind"] == "EphemeralGraph" and node.kind == "Graph" else node.kind
+                    spec["placement"] = merge_placement(placement, spec.get("placement"))
+                kind = node.kind
                 lineage = json.loads(meta.get("annotations", {}).get(f"{GROUP}/lineage", "[]"))
                 reference = f"{node.kind}/{node.ref}"
                 if reference in lineage or len(lineage) >= 32:
@@ -669,15 +662,6 @@ class Controller:
                         annotations={**(compiled_child.metadata.annotations or {}), f"{GROUP}/lineage": json.dumps([*lineage, reference])},
                     ),
                 )
-                if ephemeral:
-                    compiled_child = desired[node.name]
-                    desired[node.name] = evolve(
-                        compiled_child,
-                        metadata=evolve(
-                            compiled_child.metadata,
-                            annotations={**(compiled_child.metadata.annotations or {}), f"{GROUP}/ephemeral": "true"},
-                        ),
-                    )
             desired[node.name] = trace_child(desired[node.name], obj, node, definition)
         for name in activation_policies:
             if any(
@@ -695,7 +679,8 @@ class Controller:
                 persistence[runtime_name] = persistence[receipt["spec"]["node"]]
         persistence = {name: storage for name, storage in persistence.items() if name in desired}
         if activation_policies:
-            rule_reports = await check_rules(self.api, namespace, obj["kind"], converter.unstructure(graph))
+            rule_candidate = converter.unstructure(graph)
+            await refresh_rules()
         await ensure_policies(self, obj, network_plans)
         children = [child for child in await self.api.owned(namespace, meta["uid"]) if child["kind"] not in asts.AUXILIARY_KINDS]
         present_names = {child["metadata"]["name"] for child in children}
@@ -722,6 +707,7 @@ class Controller:
                 ):
                     continue  # Scale-in waits for finite work; it never cancels an active Job.
                 if not child["metadata"].get("deletionTimestamp"):
+                    await refresh_rules()
                     await self.api.delete(child)
             raise Pending("draining removed or replaced nodes before admitting the new topology", phase="Draining")
         current = {child["metadata"]["name"]: child for child in children}
@@ -796,7 +782,7 @@ class Controller:
                 continue
             if not await activations.admit(node.name):
                 continue
-            await self.ensure(admitted)
+            await self.ensure(admitted, before_create=refresh_rules)
             used += node.slots
         failed = any(state["failed"] for state in states.values()) or any(value["overdue"] for value in activations.summary.values())
         complete = (
@@ -804,7 +790,7 @@ class Controller:
             and len(states) == len(graph.nodes)
             and all(
                 states[node.name]["completed"]
-                if node.kind in {"Workload", "Ephemeral", "Graph", "EphemeralGraph", "Feedback", "PolyGraph"}
+                if node.kind in {"Workload", "Ephemeral", "Graph", "PolyGraph"}
                 else states[node.name]["ready"]
                 for node in graph.nodes
             )
@@ -858,72 +844,3 @@ class Controller:
                 "observedGeneration": meta["generation"],
             },
         )
-
-    async def feedback(self, obj: dict[str, Any]) -> None:
-        """
-        Run durable graph epochs; omitted rounds means recurrence until deletion or suspension.
-
-        Args:
-            obj (dict[str, Any]): Resource document from the latest API observation.
-
-        Returns:
-            None: No return value.
-        """
-        spec, meta = obj["spec"], obj["metadata"]
-        if spec.get("suspend", False):
-            if not await self.drain(obj):
-                raise Pending("draining feedback", phase="Draining")
-            await self.status(
-                obj, {"phase": "Suspended", "ready": False, "completed": False, "failed": False, "observedGeneration": meta["generation"]}
-            )
-            return
-        body = dict(spec["graph"])
-        rule_reports = await check_rules(self.api, meta["namespace"], "Feedback", spec)
-        body.pop("placement", None)
-        if topology(body, spec.get("kind", "Graph")).mode != "finite" or body.get("templateOnly", False):
-            raise ValueError("feedback epochs must be executable finite graphs")
-        epoch = obj.get("status", {}).get("epoch", 0)
-        children = await self.api.owned(meta["namespace"], meta["uid"])
-        desired = self.child(obj, f"epoch-{epoch}", spec.get("kind", "Graph"), spec["graph"])
-        obsolete = [
-            child
-            for child in children
-            if child["metadata"]["name"] != desired.metadata.name
-            or child["metadata"].get("annotations", {}).get(f"{GROUP}/desired-hash")
-            != (desired.metadata.annotations or {})[f"{GROUP}/desired-hash"]
-        ]
-        if obsolete:
-            for child in obsolete:
-                await self.api.delete(child)
-            raise Pending("waiting for previous epoch cleanup", phase="Draining")
-        if spec.get("rounds") is not None and epoch >= spec["rounds"]:
-            if not await self.drain(obj):
-                raise Pending("waiting for final epoch cleanup", phase="Draining")
-            await self.status(
-                obj, {"phase": "Completed", "completed": True, "ready": True, "failed": False, "observedGeneration": meta["generation"]}
-            )
-            return
-        previous = obj.get("status", {}).get("lastEpochTime")
-        if previous and (datetime.now(UTC) - datetime.fromisoformat(previous)).total_seconds() < spec.get("intervalSeconds", 1):
-            await self.status(
-                obj, {"phase": "Waiting", "ready": False, "completed": False, "failed": False, "observedGeneration": meta["generation"]}
-            )
-            return
-        instance = await self.ensure(desired)
-        if instance:
-            state = observed(instance)
-            values: dict[str, Any] = {
-                "structuralRules": rule_reports,
-                "ready": state["ready"],
-                "failed": state["failed"],
-                "completed": False,
-                "phase": "Failed" if state["failed"] else "Running",
-                "observedGeneration": meta["generation"],
-            }
-            if state["completed"]:
-                values.update(epoch=epoch + 1, lastEpochTime=datetime.now(UTC).isoformat())
-            await self.status(obj, values)
-        else:
-            await self.status(
-                obj, {"phase": "Reconciling", "ready": False, "completed": False, "failed": False, "observedGeneration": meta["generation"]}
-            )

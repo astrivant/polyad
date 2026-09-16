@@ -18,6 +18,8 @@ from polyad.compiler.asts import (
     JobSpec,
     ObjectMeta,
     OwnerReference,
+    StatefulSet,
+    StatefulSetSpec,
     converter,
     to_document,
 )
@@ -53,7 +55,7 @@ def owned_child(
     parent: Resource,
     node_name: str,
     kind: str,
-    spec: dict[str, Any] | JobSpec | DeploymentSpec,
+    spec: dict[str, Any] | JobSpec | DeploymentSpec | StatefulSetSpec,
     *,
     extra: dict[str, Any] | None = None,
 ) -> Resource:
@@ -64,7 +66,7 @@ def owned_child(
         parent (Resource): Persisted parent identity and ownership boundary.
         node_name (str): Node name used for child identity and ownership labels.
         kind (str): Kubernetes resource kind.
-        spec (dict[str, Any] | JobSpec | DeploymentSpec): Desired resource configuration.
+        spec (dict[str, Any] | JobSpec | DeploymentSpec | StatefulSetSpec): Desired resource configuration.
         extra (dict[str, Any] | None): Unmodeled native fields preserved during serialization.
 
     Returns:
@@ -78,15 +80,13 @@ def owned_child(
     extension = copy.deepcopy(extra or {})
     if {"apiVersion", "kind", "metadata", "spec", "status"} & extension.keys():
         raise ValueError("child extension fields cannot override identity, ownership, spec or status")
-    raw_spec = to_document(spec) if isinstance(spec, (JobSpec, DeploymentSpec)) else copy.deepcopy(spec)
+    raw_spec = to_document(spec) if isinstance(spec, (JobSpec, DeploymentSpec, StatefulSetSpec)) else copy.deepcopy(spec)
     # Preserve the pre-AST hash contract: this refactor must not replace existing workloads.
     hashed_spec = {key: value for key, value in raw_spec.items() if key != "replicas"} if kind == "ReplicaGroup" else raw_spec
     digest = hashlib.sha256(json.dumps([kind, hashed_spec, extra], sort_keys=True).encode()).hexdigest()[:12]
     annotations = {f"{GROUP}/desired-hash": digest}
     if f"{GROUP}/lineage" in (meta.annotations or {}):
         annotations[f"{GROUP}/lineage"] = (meta.annotations or {})[f"{GROUP}/lineage"]
-    if (meta.annotations or {}).get(f"{GROUP}/ephemeral") == "true":
-        annotations[f"{GROUP}/ephemeral"] = "true"
     for key in ("request-id", "composition-uid", "object-id", "node-path"):
         if f"{GROUP}/{key}" in (meta.annotations or {}):
             annotations[f"{GROUP}/{key}"] = (meta.annotations or {})[f"{GROUP}/{key}"]
@@ -117,6 +117,8 @@ def owned_child(
         return Job(metadata=metadata, spec=converter.structure(raw_spec, JobSpec), extra=extension)
     if kind == "Deployment":
         return Deployment(metadata=metadata, spec=converter.structure(raw_spec, DeploymentSpec), extra=extension)
+    if kind == "StatefulSet":
+        return StatefulSet(metadata=metadata, spec=converter.structure(raw_spec, StatefulSetSpec), extra=extension)
     if kind == "ConfigMap":
         if raw_spec:
             raise ValueError("ConfigMap has no spec")

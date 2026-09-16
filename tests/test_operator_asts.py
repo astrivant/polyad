@@ -41,6 +41,25 @@ def execution_spec(kind):
             "selector": {"matchLabels": {"app": "test"}},
             "strategy": {"type": "Recreate"},
         }
+    if kind == "StatefulSet":
+        return asts.to_document(
+            asts.StatefulSetSpec(
+                template=asts.converter.structure(template, asts.PodTemplate),
+                replicas=2,
+                selector=asts.LabelSelector(matchLabels={"app": "test"}),
+                serviceName="headless",
+                volumeClaimTemplates=(
+                    {
+                        "metadata": {"name": "data"},
+                        "spec": {
+                            "accessModes": ["ReadWriteOnce"],
+                            "resources": {"requests": {"storage": "10Gi"}},
+                            "storageClassName": "durable",
+                        },
+                    },
+                ),
+            )
+        )
     return {}
 
 
@@ -82,7 +101,9 @@ def test_resource_roundtrip(cls):
     assert asts.from_document(without_identity, kind=descriptor.kind) == model
 
 
-@pytest.mark.parametrize("kind", ["Job", "Deployment", "ConfigMap", "Service", "PersistentVolumeClaim", "Graph", "Feedback"])
+@pytest.mark.parametrize(
+    "kind", ["Job", "Deployment", "StatefulSet", "ConfigMap", "Service", "PersistentVolumeClaim", "Graph", "PolyGraph"]
+)
 def test_child_wire_compatibility(kind):
     """
     Keep the original child payload and digest to avoid replacing live workloads.
@@ -116,8 +137,10 @@ def test_child_wire_compatibility(kind):
     else:
         expected["spec"] = spec
     assert asts.to_document(child) == expected
-    if kind in {"Job", "Deployment"}:
-        typed_spec = asts.converter.structure(spec, asts.JobSpec if kind == "Job" else asts.DeploymentSpec)
+    if kind in {"Job", "Deployment", "StatefulSet"}:
+        typed_spec = asts.converter.structure(
+            spec, {"Job": asts.JobSpec, "Deployment": asts.DeploymentSpec, "StatefulSet": asts.StatefulSetSpec}[kind]
+        )
         assert owned_child(parent(), "worker", kind, typed_spec) == child
 
 

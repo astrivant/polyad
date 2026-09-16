@@ -284,7 +284,7 @@ class Activations:
         """
         document = asts.to_document(prototype)
         uid = receipt["metadata"]["uid"]
-        if document["kind"] == "Deployment":
+        if document["kind"] in {"Deployment", "StatefulSet"}:
             instance = hashlib.sha256(uid.encode()).hexdigest()[:32]
             document["spec"]["replicas"] = self.policies[node].replicasPerActivation
             document["spec"]["selector"]["matchLabels"][f"{asts.GROUP}/instance"] = instance
@@ -299,7 +299,7 @@ class Activations:
         annotations[f"{asts.GROUP}/desired-hash"] = hashlib.sha256(
             f"{annotations[f'{asts.GROUP}/desired-hash']}/{uid}/{self.policies[node].replicasPerActivation}".encode()
         ).hexdigest()
-        if document["kind"] in {"Job", "Deployment"}:
+        if document["kind"] in {"Job", "Deployment", "StatefulSet"}:
             inject_environment(
                 document["spec"]["template"],
                 {

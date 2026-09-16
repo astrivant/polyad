@@ -80,7 +80,5 @@ end
 if (phase == "Ready" or phase == "Running") and status.ready == true then
     return health("Healthy", message)
 end
-if obj.kind == "Feedback" and phase == "Waiting" then
-    return health("Healthy", "Waiting between feedback epochs; " .. message)
-end
+
 return health("Progressing", message)

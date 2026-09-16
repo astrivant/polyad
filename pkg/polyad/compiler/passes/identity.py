@@ -53,7 +53,7 @@ def workload_identity(
         ancestors (list[dict[str, Any]]): Root first, containing graph last, with verified owner UIDs.
         node (Node): Logical workload vertex in the containing graph.
         definition (dict[str, Any]): Reusable workload definition and its current incarnation.
-        resource_name (str): Generated native Job or Deployment name.
+        resource_name (str): Generated native Job, Deployment or StatefulSet name.
         endpoints (dict[str, str]): Enabled operator endpoint URLs, keyed by API, EVENTS or METRICS.
 
     Returns:
@@ -90,7 +90,7 @@ def workload_identity(
         "POLYAD_DEFINITION_UID": source["uid"],
         "POLYAD_DEFINITION_GENERATION": str(source.get("generation", 1)),
         "POLYAD_RESOURCE_NAME": resource_name,
-        "POLYAD_RESOURCE_KIND": "Deployment" if node.kind == "Daemon" else "Job",
+        "POLYAD_RESOURCE_KIND": definition["spec"].get("controller", "Deployment") if node.kind == "Daemon" else "Job",
         "POLYAD_REQUEST_ID": annotations.get(f"{GROUP}/request-id", ""),
         "POLYAD_COMPOSITION_UID": annotations.get(f"{GROUP}/composition-uid", ""),
         "POLYAD_ACTIVATION_ID": annotations.get(f"{GROUP}/activation-id", ""),

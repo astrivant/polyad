@@ -34,7 +34,6 @@ from polyad.graph.topology import Connection as Connection
 from polyad.graph.topology import Daemon as Daemon
 from polyad.graph.topology import Dependency as Dependency
 from polyad.graph.topology import Ephemeral as Ephemeral
-from polyad.graph.topology import EphemeralGraph as EphemeralGraph
 from polyad.graph.topology import GraphNode as GraphNode
 from polyad.graph.topology import Node as Node
 from polyad.graph.topology import Placement as Placement

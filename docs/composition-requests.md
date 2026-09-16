@@ -36,8 +36,7 @@ curl --fail-with-body http://localhost:8090/v1/compositions \
 ```
 
 A request contains `requestId`, `rootId`, and `objects`. Each object has its own
-`id`, supported `kind`, and `spec`. The root must be a Graph, PolyGraph,
-EphemeralGraph or Feedback. All definitions must be reachable from the root;
+`id`, supported `kind`, and `spec`. The root must be a Graph, PolyGraph or ReplicaGroup. All definitions must be reachable from the root;
 references between definitions cannot recurse.
 
 Inside graph specifications, use:
@@ -49,9 +48,10 @@ Inside graph specifications, use:
 - `rules` for administrator-defined [GraphRule names](graph-rules.md#enforcement) in the operator namespace.
 
 A graph definition can be referenced by several vertices. Each reference gets an
-independent execution instance and audit path. Graph placement, delays, persistence
-and ephemeral restrictions retain their existing meanings. Feedback's `graph`
-contains an epoch topology in the same ID-based format. IDs are lowercase DNS
+independent execution instance and audit path. Daemon controller selection and
+[storage configuration](workload-storage.md), including StatefulSet claim
+templates, pass through each object's `spec`. Graph placement, delays, persistence
+and workload-specific storage restrictions retain their existing meanings. IDs are lowercase DNS
 labels of up to 63 characters; requests permit 1–128 definitions and a 1 MiB body.
 
 ## Durability, ordering and audit
@@ -94,7 +94,7 @@ trace annotations. Results are bounded to 200 resources per kind and report
 `truncated` when more exist. Request, object and node IDs link intent to manifests;
 `composition-uid`, `definition-uid`, `definition-generation` and `node-path`
 disambiguate receipt lifetimes, source revisions and repeated graph instances.
-Jobs and Deployments copy provenance into Pod templates, so their Pods are
+Jobs, Deployments and StatefulSets copy provenance into Pod templates, so their Pods are
 queryable through the same endpoint. This is live resource lineage, not an
 append-only audit log: deleted resources require Kubernetes audit logging or an
 external event archive for historical lookup.

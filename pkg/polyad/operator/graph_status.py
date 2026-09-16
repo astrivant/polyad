@@ -69,6 +69,19 @@ def observed(obj: dict[str, Any]) -> dict[str, bool]:
             and status.get("readyReplicas", 0) >= spec.get("replicas", 1)
             and status.get("availableReplicas", 0) >= spec.get("replicas", 1)
         )
+    elif obj["kind"] == "StatefulSet":
+        current = status.get("observedGeneration", 0) >= obj["metadata"].get("generation", 1)
+        replicas = spec.get("replicas", 1)
+        strategy = spec.get("updateStrategy", {})
+        partition = strategy.get("rollingUpdate", {}).get("partition", 0)
+        expected_updated = max(0, replicas - partition)
+        ready = (
+            current
+            and status.get("replicas", 0) == replicas
+            and status.get("readyReplicas", 0) >= replicas
+            and (not spec.get("minReadySeconds", 0) or status.get("availableReplicas", 0) >= replicas)
+            and (strategy.get("type") == "OnDelete" or status.get("updatedReplicas", 0) >= expected_updated)
+        )
     elif obj["kind"] in BOUNDARIES:
         current = status.get("observedGeneration") == obj["metadata"].get("generation", 1)
         ready, completed, failed = (current and status.get(k, False) for k in ("ready", "completed", "failed"))
@@ -88,7 +101,7 @@ def instance_metrics(obj: dict[str, Any], children: list[dict[str, Any]]) -> dic
     Report boundary-local desired shape, observed work and nested graph freshness.
 
     Args:
-        obj (dict[str, Any]): Latest graph or Feedback instance document.
+        obj (dict[str, Any]): Latest graph instance document.
         children (list[dict[str, Any]]): Fresh inventory fenced by the parent's UID.
 
     Returns:
@@ -102,14 +115,14 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
     Build the typed status metrics tree from a graph and its owned resources.
 
     Args:
-        obj (dict[str, Any]): Latest graph or Feedback instance document.
+        obj (dict[str, Any]): Latest graph instance document.
         children (list[dict[str, Any]]): Fresh inventory fenced by the parent's UID.
 
     Returns:
         GraphMetrics: Local observations and generation-fenced descendant summaries.
     """
     runtime = obj.get("status", {}).get("activationRuntime") or {}
-    if runtime.get("generation") == obj["metadata"].get("generation", 1) and obj["kind"] != "Feedback":
+    if runtime.get("generation") == obj["metadata"].get("generation", 1):
         # Metrics use execution aliases; traffic guards retain logical identities.
         base_spec = obj["spec"]
         if obj["kind"] == "ReplicaGroup":
@@ -123,7 +136,7 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
         from polyad.graph.replication import replica_topology
 
         obj = {**obj, "spec": replica_topology(obj["spec"])}
-    spec = obj["spec"]["graph"] if obj["kind"] == "Feedback" else obj["spec"]
+    spec = obj["spec"]
     counts = Counter(child["kind"] for child in children)
     by_kind: dict[str, Any] = {kind: counts[kind] for kind in sorted(GRAPH_OWNED_KINDS)}
     result = GraphMetrics(
@@ -159,22 +172,10 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
             )
         )
     try:
-        graph = topology(spec, obj["spec"].get("kind", "Graph") if obj["kind"] == "Feedback" else obj["kind"])
+        graph = topology(spec, obj["kind"])
     except (ValueError, TypeError, BaseValidationError) as error:
         return evolve(result, topologyError=str(error), rollup=measure_subtree(obj, children, observed, valid=False))
     result = evolve(result, rollup=measure_subtree(obj, children, observed, valid=True), topology=measure_topology(graph))
-    if obj["kind"] == "Feedback":
-        epoch = f"epoch-{obj.get('status', {}).get('epoch', 0)}"
-        current_epoch = next((child for child in result.subgraphs if child.node == epoch and child.current), None)
-        if current_epoch:
-            # The epoch graph owns the workload inventory. Never aggregate historical epochs.
-            instance = next(child for child in children if child["metadata"]["uid"] == current_epoch.uid)
-            result = evolve(
-                result,
-                execution=current_epoch.execution,
-                observedTopology=_metric(instance["status"]["metrics"].get("observedTopology"), TopologyMetrics),
-            )
-        return result
     by_node = {
         child["metadata"].get("labels", {}).get(f"{GROUP}/runtime-node", child["metadata"].get("labels", {}).get(f"{GROUP}/node")): child
         for child in children

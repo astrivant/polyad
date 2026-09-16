@@ -42,7 +42,6 @@ network access or operator RBAC is required.<sup>[\[2\]](https://argo-cd.readthe
 | Resource or observation | Argo CD health |
 | --- | --- |
 | Current `Ready` graph or successfully `Completed` finite graph | Healthy |
-| `Feedback` with a ready epoch, or waiting between epochs | Healthy |
 | Admission, gates, delays, pending capacity, startup or cleanup | Progressing |
 | Missing status, stale generation or incomplete descendant observations | Progressing |
 | Failed leaf, failed subgraph or invalid graph | Degraded |
@@ -64,9 +63,9 @@ a failure to the graph's node status and rollup.
 
 ## Finding each leaf
 
-Graph nodes become Kubernetes Jobs, Deployments, Services, claims and nested graph
+Graph nodes become Kubernetes Jobs, Deployments, StatefulSets, Services, claims and nested graph
 instances. Argo CD uses their owner references to show the resource hierarchy.
-Jobs, Deployments, Pods and claims retain Argo CD's built-in health checks; the
+Jobs, Deployments, StatefulSets, Pods and claims retain Argo CD's built-in health checks; the
 integration only registers checks for `polyad.astrivant.com` resources.
 
 A reusable Workload definition can serve many executions, so its health does not
@@ -74,7 +73,7 @@ represent any one Job. Inspect each instance under its graph. Nodes waiting for
 admission do not yet have Kubernetes resources: inspect the graph's `spec.nodes`,
 `status.nodes` and `status.metrics` for their intent and observations.
 
-Include the root Graph, PolyGraph, EphemeralGraph, Feedback or Composition in the
+Include the root Graph, PolyGraph, ReplicaGroup or Composition in the
 Argo Application's desired manifests. Installing only the operator Helm chart
 tracks the operator installation; it does not automatically add every graph in
 the cluster to that Application. The Argo application controller needs read

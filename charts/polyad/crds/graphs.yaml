@@ -80,7 +80,7 @@ spec:
                     maximum: 1024
                   replicasPerActivation:
                     type: integer
-                    description: Deployment replicas in each daemon activation.
+                    description: Deployment or StatefulSet replicas in each daemon activation.
                     minimum: 1
                     maximum: 1024
                   maxReplicas:
@@ -177,8 +177,6 @@ spec:
                               enum:
                               - Graph
                               - PolyGraph
-                              - EphemeralGraph
-                              - Feedback
                               - ReplicaGroup
                               description: Kind of the referenced graph instance.
                             node:
@@ -256,8 +254,6 @@ spec:
                               enum:
                               - Graph
                               - PolyGraph
-                              - EphemeralGraph
-                              - Feedback
                               - ReplicaGroup
                               description: Kind of the referenced graph instance.
                             node:
@@ -365,18 +361,15 @@ spec:
                       - Resource
                       - Graph
                       - PolyGraph
-                      - EphemeralGraph
-                      - Feedback
                       - ReplicaGroup
                       description: Kind of the definition referenced by this node; determines whether execution
-                        uses a Job, Deployment, resource or nested graph boundary.
+                        uses a Job, Deployment, StatefulSet, resource or nested graph boundary.
                     ref:
                       type: string
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       maxLength: 63
                       minLength: 1
-                      description: Name of the reusable definition in the same namespace. Nested Graph, PolyGraph, EphemeralGraph
-                        and Feedback definitions must set templateOnly to true.
+                      description: Name of the reusable definition in the same namespace. Nested Graph and PolyGraph definitions must set templateOnly to true.
                     requires:
                       type: array
                       items:
@@ -805,7 +798,7 @@ spec:
                   current validity.
                 items:
                   type: object
-                  description: One evaluated root policy verdict.
+                  description: One evaluated policy verdict; live family checks include the measured boundary identity.
                   x-kubernetes-preserve-unknown-fields: true
               phase:
                 type: string
@@ -864,7 +857,7 @@ spec:
                     minimum: 0
                   topology:
                     type: object
-                    description: Desired shape of the current graph spec, or Feedback epoch template. Null when invalid.
+                    description: Desired shape of the current graph spec. Null when invalid.
                     properties:
                       nodeCount:
                         type: integer
@@ -894,17 +887,9 @@ spec:
                             type: integer
                             description: Number of Graph nodes.
                             minimum: 0
-                          EphemeralGraph:
-                            type: integer
-                            description: Number of EphemeralGraph nodes.
-                            minimum: 0
                           ReplicaGroup:
                             type: integer
                             description: Number of replication boundaries.
-                            minimum: 0
-                          Feedback:
-                            type: integer
-                            description: Number of Feedback nodes.
                             minimum: 0
                           PolyGraph:
                             type: integer
@@ -912,7 +897,7 @@ spec:
                             minimum: 0
                       subgraphCount:
                         type: integer
-                        description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                        description: Number of immediate nested Graph, PolyGraph and ReplicaGroup nodes.
                         minimum: 0
                       admission:
                         type: object
@@ -1017,8 +1002,7 @@ spec:
                   observedTopology:
                     type: object
                     description: Induced graph of declared nodes with observed child resources, including terminating
-                      or superseded execution. Feedback mirrors the current epoch only when its status is current; otherwise
-                      null.
+                      or superseded execution. Null when the topology is invalid.
                     properties:
                       nodeCount:
                         type: integer
@@ -1048,17 +1032,9 @@ spec:
                             type: integer
                             description: Number of Graph nodes.
                             minimum: 0
-                          EphemeralGraph:
-                            type: integer
-                            description: Number of EphemeralGraph nodes.
-                            minimum: 0
                           ReplicaGroup:
                             type: integer
                             description: Number of replication boundaries.
-                            minimum: 0
-                          Feedback:
-                            type: integer
-                            description: Number of Feedback nodes.
                             minimum: 0
                           PolyGraph:
                             type: integer
@@ -1066,7 +1042,7 @@ spec:
                             minimum: 0
                       subgraphCount:
                         type: integer
-                        description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                        description: Number of immediate nested Graph, PolyGraph and ReplicaGroup nodes.
                         minimum: 0
                       admission:
                         type: object
@@ -1171,9 +1147,7 @@ spec:
                   execution:
                     type: object
                     description: 'Fresh observations for nodes in this boundary. Counts overlap: a completed Job can
-                      also be ready. Terminating or failed execution retains slots until cleanup or completion. Feedback
-                      mirrors only the current epoch and reports null before it has current observations or between
-                      epochs.'
+                      also be ready. Terminating or failed execution retains slots until cleanup or completion.'
                     properties:
                       observedNodes:
                         type: integer
@@ -1263,6 +1237,10 @@ spec:
                             type: integer
                             description: Number of owned Deployment resources.
                             minimum: 0
+                          StatefulSet:
+                            type: integer
+                            description: Number of owned StatefulSet resources.
+                            minimum: 0
                           Service:
                             type: integer
                             description: Number of owned Service resources.
@@ -1279,17 +1257,9 @@ spec:
                             type: integer
                             description: Number of owned Graph resources.
                             minimum: 0
-                          EphemeralGraph:
-                            type: integer
-                            description: Number of owned EphemeralGraph resources.
-                            minimum: 0
                           ReplicaGroup:
                             type: integer
                             description: Number of replication boundaries.
-                            minimum: 0
-                          Feedback:
-                            type: integer
-                            description: Number of owned Feedback resources.
                             minimum: 0
                           PolyGraph:
                             type: integer
@@ -1311,7 +1281,7 @@ spec:
                     type: array
                     items:
                       type: object
-                      description: Identity and freshness of a nested graph or Feedback epoch.
+                      description: Identity and freshness of a nested graph boundary.
                       properties:
                         kind:
                           type: string
@@ -1324,7 +1294,7 @@ spec:
                           description: Persisted nested instance identity.
                         node:
                           type: string
-                          description: Parent node name or Feedback epoch label.
+                          description: Parent node name.
                         phase:
                           type: string
                           description: Last reported lifecycle phase; consult current before using it.
@@ -1343,8 +1313,8 @@ spec:
                             is not terminating. This is generation freshness, not a heartbeat.
                         topology:
                           type: object
-                          description: Boundary-local graph shape. Nested Graph, PolyGraph, EphemeralGraph and Feedback
-                            instances count as single nodes. Duplicate directed edges are collapsed.
+                          description: Boundary-local graph shape. Nested Graph, PolyGraph and ReplicaGroup instances
+                            count as single nodes. Duplicate directed edges are collapsed.
                           properties:
                             nodeCount:
                               type: integer
@@ -1374,17 +1344,9 @@ spec:
                                   type: integer
                                   description: Number of Graph nodes.
                                   minimum: 0
-                                EphemeralGraph:
-                                  type: integer
-                                  description: Number of EphemeralGraph nodes.
-                                  minimum: 0
                                 ReplicaGroup:
                                   type: integer
                                   description: Number of replication boundaries.
-                                  minimum: 0
-                                Feedback:
-                                  type: integer
-                                  description: Number of Feedback nodes.
                                   minimum: 0
                                 PolyGraph:
                                   type: integer
@@ -1392,7 +1354,7 @@ spec:
                                   minimum: 0
                             subgraphCount:
                               type: integer
-                              description: Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+                              description: Number of immediate nested Graph, PolyGraph and ReplicaGroup nodes.
                               minimum: 0
                             admission:
                               type: object
@@ -1548,8 +1510,7 @@ spec:
                   rollup:
                     type: object
                     description: Recursive status fold across mixed graph types. Local leaves are combined with each
-                      child subtree exactly once; Feedback templates do not duplicate epoch work. Missing or stale summaries
-                      are omitted and flagged.
+                      child subtree exactly once. Missing or stale summaries are omitted and flagged.
                     properties:
                       scope:
                         type: string
@@ -1652,8 +1613,7 @@ spec:
                         minimum: 0
                       completedLeafNodes:
                         type: integer
-                        description: Observed finite leaf nodes that completed. Completed Feedback epochs are not retained
-                          after garbage collection.
+                        description: Observed finite leaf nodes that completed.
                         minimum: 0
                       failedLeafNodes:
                         type: integer

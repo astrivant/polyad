@@ -1,0 +1,88 @@
+# Replace "standard" with a StorageClass available in your cluster.
+# Generated PVCs are retained when the graph or its StatefulSet is deleted.
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Resource
+metadata:
+  name: stored-service-discovery
+spec:
+  manifest:
+    apiVersion: v1
+    kind: Service
+    spec:
+      clusterIP: None
+      publishNotReadyAddresses: true
+      selector:
+        app: stored-service
+      ports:
+        - name: http
+          port: 8080
+          targetPort: http
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: stored-service
+spec:
+  controller: StatefulSet
+  replicas: 2
+  statefulSet:
+    serviceName: "${nodes.discovery.name}"
+    podManagementPolicy: OrderedReady
+    persistentVolumeClaimRetentionPolicy:
+      whenDeleted: Retain
+      whenScaled: Retain
+    volumeClaimTemplates:
+      - metadata:
+          name: data
+        spec:
+          storageClassName: standard
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 1Gi
+  template:
+    metadata:
+      labels:
+        app: stored-service
+    spec:
+      containers:
+        - name: server
+          image: busybox:1.37
+          command: [sh, -c]
+          args:
+            - 'date >> /data/starts; exec httpd -f -p 8080 -h /data'
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+          startupProbe:
+            httpGet: {path: /starts, port: http}
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet: {path: /starts, port: http}
+          livenessProbe:
+            httpGet: {path: /starts, port: http}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: stored-service
+spec:
+  mode: persistent
+  nodes:
+    - name: discovery
+      kind: Resource
+      ref: stored-service-discovery
+    - name: service
+      kind: Daemon
+      ref: stored-service
+      requires:
+        - node: discovery
+          condition: ready

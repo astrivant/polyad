@@ -63,3 +63,8 @@ available.
 `ReplicaGroup` is a composable, reconciled graph boundary with a Kubernetes scale
 subresource. It accepts any executable node definition, including nested groups.
 See [replication and KEDA](replication.md).
+
+`StatefulSet` is a graph-owned native execution kind selected through
+`Daemon.spec.controller`. It participates in ownership inventory, cleanup,
+readiness, audit output and typed resource counts alongside `Deployment`.
+See [workload controllers and storage](workload-storage.md).

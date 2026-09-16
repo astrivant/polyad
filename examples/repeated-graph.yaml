@@ -1,0 +1,41 @@
+# Repetition uses ordinary graph activation. The application owns shared state,
+# iteration limits and stop conditions; suspend the root to drain execution.
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: repeated-worker
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command: [sh, -c, 'echo independent graph activation']
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: repeated-body
+spec:
+  templateOnly: true
+  activation:
+    mode: Queue
+    maxPending: 1
+    minIntervalSeconds: 60
+    maxIntervalSeconds: 60
+    onDeadline: Activate
+  nodes:
+    - name: worker
+      kind: Workload
+      ref: repeated-worker
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: recurring
+spec:
+  mode: persistent
+  nodes:
+    - name: run
+      kind: Graph
+      ref: repeated-body

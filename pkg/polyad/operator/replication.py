@@ -59,7 +59,8 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
             and not item["metadata"].get("deletionTimestamp")
         ]
         current = all(
-            item.get("status", {}).get("sourceGeneration") == meta["generation"]
+            item.get("status", {}).get("scaleCurrent", False)
+            and item.get("status", {}).get("sourceGeneration") == meta["generation"]
             and item.get("status", {}).get("observedGeneration") == item["metadata"]["generation"]
             and current_observation(item.get("status", {}).get("scaleObservedAt"))
             for item in instances
@@ -95,8 +96,10 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
         source_generation = source["metadata"]["generation"]
     count = effective["spec"].get("replicas", policy.replicas)
     effective["spec"] = replica_topology(effective["spec"])
+    reconciled = False
     try:
         await controller.graph(effective)
+        reconciled = True
     finally:
         # A cached replica count is never a substitute for observing terminating children.
         children = [item for item in await controller.api.owned(meta["namespace"], meta["uid"]) if item["kind"] not in AUXILIARY_KINDS]
@@ -111,7 +114,7 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
                     "labelSelector": f"{replica_selector(meta['uid'])}=true",
                     "sourceGeneration": source_generation,
                     "scaleObservedAt": observation_time(obj.get("status", {}).get("scaleObservedAt")),
-                    "scaleCurrent": True,
+                    "scaleCurrent": reconciled,
                     "instanceCount": 1,
                     "totalReplicas": len(children),
                 },

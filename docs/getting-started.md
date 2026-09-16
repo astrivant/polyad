@@ -37,7 +37,7 @@ dictionaries.<sup>[\[2\]](toolchain.md#python-types-and-serialization)</sup>
 | Model | Use it for | Execution and observations |
 | --- | --- | --- |
 | Local Python scheduler | Cooperative workloads with checkpoints, runtime estimates and graph rewrites | Python workers report progress; the scheduler records events and can export diagrams and plots.<sup>[\[3\]](../pkg/polyad/balance/README.md#scheduling-and-feedback)</sup><sup>[\[4\]](../pkg/polyad/balance/README.md#logs-and-diagrams)</sup> |
-| Kubernetes operator | Container workloads, persistent services, spot execution and graphs of graphs | Jobs, Deployments and nested CRs report lifecycle and graph metrics; replicas coordinate ownership and API writes.<sup>[\[5\]](operator.md#graph-instance-status)</sup><sup>[\[1\]](operator.md#replicas-shared-queues-and-autoscaling)</sup> |
+| Kubernetes operator | Container workloads, persistent services, spot execution and graphs of graphs | Jobs, Deployments, StatefulSets and nested CRs report lifecycle and graph metrics; replicas coordinate ownership and API writes.<sup>[\[5\]](operator.md#graph-instance-status)</sup><sup>[\[1\]](operator.md#replicas-shared-queues-and-autoscaling)</sup> |
 
 The local scheduler supports estimated-duration, FIFO, breadth-first and
 depth-first ordering.<sup>[\[3\]](../pkg/polyad/balance/README.md#scheduling-and-feedback)</sup><sup>[\[6\]](../pkg/polyad/balance/README.md#graph-traversal-ordering)</sup>
@@ -55,7 +55,7 @@ Polyad does not automatically checkpoint or resume arbitrary containers.<sup>[\[
 
 On Kubernetes, persistent workloads require an explicit storage class and PVC.
 Use non-spot capacity: persistent storage declarations are invalid under
-`Ephemeral` and `EphemeralGraph`.<sup>[\[12\]](operator.md#workload-persistence)</sup><sup>[\[13\]](operator.md#ephemeral-execution)</sup>
+`Ephemeral` workloads. Ordinary graphs leave storage policy to their users.<sup>[\[12\]](operator.md#workload-persistence)</sup><sup>[\[13\]](operator.md#ephemeral-execution)</sup>
 
 ### Quick start: local work
 
@@ -98,7 +98,7 @@ See [deployment and lifecycle checks](operator.md#build-install-and-exercise).
 | [Resources and gates](../examples/resources-and-gates.yaml) | Create configuration, resolve generated names and gate dependent work |
 | [Storage and delay](../examples/storage-and-delay.yaml) | Require an explicit StorageClass and PVC, then delay workload admission |
 | [Persistent service](../examples/persistent.yaml) | Run a daemon with startup, readiness and liveness probes |
-| [Recurring epochs](../examples/feedback.yaml) | Run finite graph instances with a durable round counter |
+| [Repeated execution](../examples/repeated-graph.yaml) | Activate a finite Graph from a persistent Graph using a timer |
 | [Spot work](../examples/ephemeral.yaml) | Apply explicit spot placement to an ephemeral graph |
 | [Advance capacity](../examples/capacity.yaml) | Prewarm capacity for downstream work while preparation runs |
 | [Graph composition](../examples/polygraph.yaml) | Compose nested graph types and inspect root status rollups |

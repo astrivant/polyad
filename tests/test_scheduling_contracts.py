@@ -142,35 +142,41 @@ def test_ephemeral_storage_rejection(configuration):
         configure_storage(spec, ephemeral=True)
 
 
-def test_ephemeral_restriction_crosses_polygraph_and_feedback():
+@pytest.mark.parametrize("kind", ["Workload", "Ephemeral"])
+def test_spot_placement_leaves_storage_policy_to_workload_type(kind):
     """
-    Propagate ephemeral ancestry through every kind of nested boundary.
+    Allow user-chosen storage on spot graphs while preserving the explicit Ephemeral leaf contract.
     """
 
     async def scenario():
         api = FakeAPI(
             resource(
-                "EphemeralGraph",
+                "Graph",
                 "root",
                 {"placement": {"nodeSelector": {"capacity": "spot"}}, "nodes": [{"name": "group", "kind": "PolyGraph", "ref": "group"}]},
             ),
-            resource("PolyGraph", "group", {"templateOnly": True, "nodes": [{"name": "loop", "kind": "Feedback", "ref": "loop"}]}),
+            resource("PolyGraph", "group", {"templateOnly": True, "nodes": [{"name": "loop", "kind": "Graph", "ref": "loop"}]}),
             resource(
-                "Feedback",
+                "Graph",
                 "loop",
-                {"templateOnly": True, "rounds": 1, "graph": {"nodes": [{"name": "worker", "kind": "Workload", "ref": "worker"}]}},
+                {"templateOnly": True, "nodes": [{"name": "worker", "kind": kind, "ref": "worker"}]},
             ),
             resource(
-                "Workload",
+                kind,
                 "worker",
                 {"template": template(), "persistence": {"enabled": True, "storageClass": "durable", "claimName": "data"}},
             ),
         )
-        with pytest.raises(ValueError, match="invalid under Ephemeral"):
-            await settle(api, 20)
-        assert not api.children("Job")
-        instantiated = [o for o in api.children("Graph") if not o["spec"].get("templateOnly")]
-        assert instantiated[0]["metadata"]["annotations"][f"{GROUP}/ephemeral"] == "true"
+        api.objects[("PersistentVolumeClaim", "test", "data")] = resource("PersistentVolumeClaim", "data", {"storageClassName": "durable"})
+        if kind == "Ephemeral":
+            with pytest.raises(ValueError, match="invalid under Ephemeral"):
+                await settle(api, 20)
+            assert not api.children("Job")
+        else:
+            await settle(api)
+            pod = api.children("Job")[0]["spec"]["template"]["spec"]
+            assert pod["nodeSelector"] == {"capacity": "spot"}
+            assert pod["volumes"][0]["persistentVolumeClaim"]["claimName"] == "data"
 
     asyncio.run(scenario())
 

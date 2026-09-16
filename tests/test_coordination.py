@@ -118,7 +118,7 @@ def test_nested_graphs_and_rewrites_share_duty():
 
     async def scenario():
         root = resource("Graph", "root")
-        child = resource("Feedback", "nested")
+        child = resource("PolyGraph", "nested")
         child["metadata"]["ownerReferences"] = [
             {
                 "apiVersion": root["apiVersion"],
@@ -128,7 +128,7 @@ def test_nested_graphs_and_rewrites_share_duty():
                 "controller": True,
             }
         ]
-        rewrite = resource("Rewrite", "edit", {"graph": "nested", "kind": "Feedback"})
+        rewrite = resource("Rewrite", "edit", {"graph": "nested", "kind": "PolyGraph"})
         coordinator = Coordinator(LeaseAPI(root, child, rewrite), "test")
         shards = [await coordinator.shard_for((obj["kind"], "test", obj["metadata"]["name"])) for obj in (root, child, rewrite)]
         assert len(set(shards)) == 1

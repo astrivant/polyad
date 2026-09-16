@@ -17,7 +17,7 @@ from polyad.compiler.passes.schema import structural_schema
 if TYPE_CHECKING:
     from typing import Any
 
-CRDS = ("graphs.yaml", "polygraphs.yaml", "ephemeralgraphs.yaml", "feedbacks.yaml", "replicagroups.yaml")
+CRDS = ("graphs.yaml", "polygraphs.yaml", "replicagroups.yaml")
 PROPERTY_PATH = ("spec", "versions", 0, "schema", "openAPIV3Schema", "properties", "status", "properties", "metrics")
 
 

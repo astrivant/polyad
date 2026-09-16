@@ -66,9 +66,7 @@ class NodeCounts(AST):
         Ephemeral (int): Number of Ephemeral nodes.
         Resource (int): Number of Resource nodes.
         Graph (int): Number of Graph nodes.
-        EphemeralGraph (int): Number of EphemeralGraph nodes.
         ReplicaGroup (int): Number of replication boundaries.
-        Feedback (int): Number of Feedback nodes.
         PolyGraph (int): Number of PolyGraph boundaries.
     """
 
@@ -77,9 +75,7 @@ class NodeCounts(AST):
     Ephemeral: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Ephemeral nodes."}})
     Resource: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Resource nodes."}})
     Graph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Graph nodes."}})
-    EphemeralGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of EphemeralGraph nodes."}})
     ReplicaGroup: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of replication boundaries."}})
-    Feedback: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of Feedback nodes."}})
     PolyGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of PolyGraph boundaries."}})
 
 
@@ -163,13 +159,13 @@ class TopologyMetrics(AST):
     """
     Boundary-local graph shape.
 
-    Nested Graph, PolyGraph, EphemeralGraph and Feedback instances count as single nodes. Duplicate directed edges
+    Nested Graph, PolyGraph and ReplicaGroup instances count as single nodes. Duplicate directed edges
     are collapsed.
 
     Attributes:
         nodeCount (int): Number of nodes in this graph or induced observed subset.
         nodesByKind (NodeCounts): Node counts by execution abstraction.
-        subgraphCount (int): Number of immediate nested Graph, EphemeralGraph and Feedback nodes.
+        subgraphCount (int): Number of immediate nested Graph, PolyGraph and ReplicaGroup nodes.
         admission (AdmissionMetrics): Acyclic lifecycle dependencies used for admission.
         connections (ConnectionMetrics): Directed data-flow connections, which may contain cycles.
     """
@@ -180,7 +176,7 @@ class TopologyMetrics(AST):
     nodesByKind: NodeCounts = field(factory=NodeCounts, metadata={"schema": {"description": "Node counts by execution abstraction."}})
     subgraphCount: int = field(
         default=0,
-        metadata={"schema": {"minimum": 0, "description": "Number of immediate nested Graph, EphemeralGraph and Feedback nodes."}},
+        metadata={"schema": {"minimum": 0, "description": "Number of immediate nested Graph, PolyGraph and ReplicaGroup nodes."}},
     )
     admission: AdmissionMetrics = field(
         factory=AdmissionMetrics, metadata={"schema": {"description": "Acyclic lifecycle dependencies used for admission."}}
@@ -201,8 +197,7 @@ class ExecutionMetrics(AST):
     Fresh observations for nodes in this boundary.
 
     Counts overlap: a completed Job can also be ready. Terminating or failed execution retains slots until cleanup
-    or completion. Feedback mirrors only the current epoch and reports null before it has current observations or
-    between epochs.
+    or completion.
 
     Attributes:
         observedNodes (int): Declared nodes with an owned execution resource, including terminating resources.
@@ -281,13 +276,12 @@ class ResourceCounts(AST):
         PeerAuthentication (int): Number of owned mutual TLS policies.
         Job (int): Number of owned Job resources.
         Deployment (int): Number of owned Deployment resources.
+        StatefulSet (int): Number of owned StatefulSet resources.
         Service (int): Number of owned Service resources.
         ConfigMap (int): Number of owned ConfigMap resources.
         PersistentVolumeClaim (int): Number of owned PersistentVolumeClaim resources.
         Graph (int): Number of owned Graph resources.
-        EphemeralGraph (int): Number of owned EphemeralGraph resources.
         ReplicaGroup (int): Number of owned replication boundaries.
-        Feedback (int): Number of owned Feedback resources.
         PolyGraph (int): Number of PolyGraph boundaries.
         Pod (int): Owned capacity placeholder Pods.
         PodTemplate (int): Owned scheduling templates for capacity plans.
@@ -300,15 +294,14 @@ class ResourceCounts(AST):
     PeerAuthentication: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned mutual TLS policies."}})
     Job: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Job resources."}})
     Deployment: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Deployment resources."}})
+    StatefulSet: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned StatefulSet resources."}})
     Service: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Service resources."}})
     ConfigMap: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned ConfigMap resources."}})
     PersistentVolumeClaim: int = field(
         default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned PersistentVolumeClaim resources."}}
     )
     Graph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Graph resources."}})
-    EphemeralGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned EphemeralGraph resources."}})
     ReplicaGroup: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of replication boundaries."}})
-    Feedback: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Feedback resources."}})
     PolyGraph: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of PolyGraph boundaries."}})
 
     Pod: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned capacity placeholder Pods."}})
@@ -339,13 +332,13 @@ class ResourceMetrics(AST):
 @frozen(kw_only=True)
 class SubgraphMetrics(AST):
     """
-    Identity and freshness of a nested graph or Feedback epoch.
+    Identity and freshness of a nested graph boundary.
 
     Attributes:
         kind (str): Nested boundary kind.
         name (str): Nested instance name in the parent namespace.
         uid (str): Persisted nested instance identity.
-        node (str): Parent node name or Feedback epoch label.
+        node (str): Parent node name.
         phase (str): Last reported lifecycle phase; consult current before using it.
         generation (int): Current child spec generation.
         observedGeneration (int | None): Child generation evaluated by its metrics.
@@ -358,7 +351,7 @@ class SubgraphMetrics(AST):
     kind: str = field(default="", metadata={"schema": {"description": "Nested boundary kind."}})
     name: str = field(default="", metadata={"schema": {"description": "Nested instance name in the parent namespace."}})
     uid: str = field(default="", metadata={"schema": {"description": "Persisted nested instance identity."}})
-    node: str = field(default="", metadata={"schema": {"description": "Parent node name or Feedback epoch label."}})
+    node: str = field(default="", metadata={"schema": {"description": "Parent node name."}})
     phase: str = field(default="", metadata={"schema": {"description": "Last reported lifecycle phase; consult current before using it."}})
     generation: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Current child spec generation."}})
     observedGeneration: int | None = field(
@@ -380,7 +373,7 @@ class SubgraphMetrics(AST):
         metadata={
             "schema": {
                 "description": (
-                    "Boundary-local graph shape. Nested Graph, PolyGraph, EphemeralGraph and Feedback instances "
+                    "Boundary-local graph shape. Nested Graph, PolyGraph and ReplicaGroup instances "
                     "count as single nodes. Duplicate directed edges are collapsed."
                 )
             },
@@ -438,7 +431,7 @@ class RollupMetrics(AST):
     """
     Recursive status fold across mixed graph types.
 
-    Local leaves are combined with each child subtree exactly once; Feedback templates do not duplicate epoch work.
+    Local leaves are combined with each child subtree exactly once.
     Missing or stale summaries are omitted and flagged.
 
     Attributes:
@@ -552,9 +545,7 @@ class RollupMetrics(AST):
         metadata={
             "schema": {
                 "minimum": 0,
-                "description": (
-                    "Observed finite leaf nodes that completed. Completed Feedback epochs are not retained after garbage collection."
-                ),
+                "description": "Observed finite leaf nodes that completed.",
             }
         },
     )
@@ -603,7 +594,7 @@ class GraphMetrics(AST):
         scope (Literal['boundary']): Metrics cover this scheduling boundary only.
         observedGeneration (int): Parent spec generation used to compute these metrics, independently of lifecycle
             observedGeneration.
-        topology (TopologyMetrics | None): Desired shape of the current graph spec, or Feedback epoch template.
+        topology (TopologyMetrics | None): Desired shape of the current graph spec.
         observedTopology (TopologyMetrics | None): Induced graph of declared nodes with observed child resources,
             including terminating or superseded execution.
         execution (ExecutionMetrics | None): Fresh observations for nodes in this boundary.
@@ -629,7 +620,7 @@ class GraphMetrics(AST):
     topology: TopologyMetrics | None = field(
         default=None,
         metadata={
-            "schema": {"description": "Desired shape of the current graph spec, or Feedback epoch template. Null when invalid."},
+            "schema": {"description": "Desired shape of the current graph spec. Null when invalid."},
             "emit_none": True,
         },
     )
@@ -639,8 +630,7 @@ class GraphMetrics(AST):
             "schema": {
                 "description": (
                     "Induced graph of declared nodes with observed child resources, including terminating or "
-                    "superseded execution. Feedback mirrors the current epoch only when its status is current; "
-                    "otherwise null."
+                    "superseded execution. Null when the topology is invalid."
                 )
             },
             "emit_none": True,
@@ -652,9 +642,7 @@ class GraphMetrics(AST):
             "schema": {
                 "description": (
                     "Fresh observations for nodes in this boundary. Counts overlap: a completed Job can also be "
-                    "ready. Terminating or failed execution retains slots until cleanup or completion. Feedback "
-                    "mirrors only the current epoch and reports null before it has current observations or between "
-                    "epochs."
+                    "ready. Terminating or failed execution retains slots until cleanup or completion."
                 )
             },
             "emit_none": True,
@@ -681,7 +669,7 @@ class GraphMetrics(AST):
             "schema": {
                 "description": (
                     "Recursive status fold across mixed graph types. Local leaves are combined with each child "
-                    "subtree exactly once; Feedback templates do not duplicate epoch work. Missing or stale "
+                    "subtree exactly once. Missing or stale "
                     "summaries are omitted and flagged."
                 )
             }

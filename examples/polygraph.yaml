@@ -33,7 +33,7 @@ spec:
       ref: composition-stage
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: EphemeralGraph
+kind: Graph
 metadata:
   name: composition-spot
 spec:
@@ -48,17 +48,15 @@ spec:
       ref: composition-worker
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: Feedback
+kind: Graph
 metadata:
-  name: composition-feedback
+  name: composition-final
 spec:
   templateOnly: true
-  rounds: 1
-  graph:
-    nodes:
-      - name: worker
-        kind: Workload
-        ref: composition-worker
+  nodes:
+    - name: worker
+      kind: Workload
+      ref: composition-worker
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
 kind: PolyGraph
@@ -70,14 +68,14 @@ spec:
       kind: PolyGraph
       ref: composition-group
     - name: spot
-      kind: EphemeralGraph
+      kind: Graph
       ref: composition-spot
       requires:
         - node: group
           condition: completed
-    - name: feedback
-      kind: Feedback
-      ref: composition-feedback
+    - name: final
+      kind: Graph
+      ref: composition-final
       requires:
         - node: spot
           condition: completed

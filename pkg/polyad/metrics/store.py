@@ -108,7 +108,7 @@ class MetricsStore:
             direct: Counter[str] = Counter()
             coverage: Counter[str] = Counter({"current": 0, "unknown": 0})
             for obj in tracked["objects"]:
-                if obj["kind"] not in {"Graph", "PolyGraph", "EphemeralGraph", "Feedback", "ReplicaGroup"} or obj["role"] != "instance":
+                if obj["kind"] not in {"Graph", "PolyGraph", "ReplicaGroup"} or obj["role"] != "instance":
                     continue
                 coverage["current" if obj["statusCurrent"] else "unknown"] += 1
                 if obj["statusCurrent"]:

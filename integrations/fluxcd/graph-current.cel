@@ -2,8 +2,7 @@
   has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
   has(status.phase) && (
     (status.phase == 'Completed' && has(status.completed) && status.completed) ||
-    (status.phase in ['Ready', 'Running'] && has(status.ready) && status.ready) ||
-    (kind == 'Feedback' && status.phase == 'Waiting')
+    (status.phase in ['Ready', 'Running'] && has(status.ready) && status.ready)
   ) &&
   has(status.metrics) && has(status.metrics.observedGeneration) &&
   status.metrics.observedGeneration == metadata.generation &&

@@ -152,7 +152,7 @@ class Client:
             graph (str): Executable graph instance name.
             graph_uid (str): Persisted graph UID from composition audit or Kubernetes.
             node (str): Logical downstream node name.
-            kind (str): Graph, EphemeralGraph or PolyGraph.
+            kind (str): Graph, PolyGraph or ReplicaGroup.
 
         Returns:
             dict[str, Any]: Durable receipt, not a guarantee of admission.

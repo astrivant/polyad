@@ -34,29 +34,34 @@ def group(replicas=2, kind="Daemon", **spec):
     return resource("ReplicaGroup", "copies", {"replicas": replicas, "template": {"kind": kind, "ref": "worker"}, **spec})
 
 
-def test_replica_growth_keeps_existing_uids_and_scale_zero_waits_for_cleanup():
+@pytest.mark.parametrize("kind", ["Deployment", "StatefulSet"])
+def test_replica_growth_keeps_existing_uids_and_scale_zero_waits_for_cleanup(kind):
     """
     Scale an ordinary daemon abstraction without replacing existing ordinal identities.
     """
 
     async def scenario():
         api = FakeAPI(group(), resource("Daemon", "worker", {"template": template(True)}))
+        if kind == "StatefulSet":
+            from tests.test_statefulsets import stateful_spec
+
+            api.objects[("Daemon", "test", "worker")]["spec"].update(stateful_spec())
         await turn(api)
-        original = {child["metadata"]["uid"] for child in api.children("Deployment")}
+        original = {child["metadata"]["uid"] for child in api.children(kind)}
         root = api.objects[("ReplicaGroup", "test", "copies")]
         root["spec"]["replicas"] = 3
         root["metadata"]["generation"] += 1
         await turn(api)
-        assert original < {child["metadata"]["uid"] for child in api.children("Deployment")}
-        for child in api.children("Deployment"):
+        assert original < {child["metadata"]["uid"] for child in api.children(kind)}
+        for child in api.children(kind):
             assert child["spec"]["template"]["metadata"]["labels"][replica_selector(root["metadata"]["uid"])] == "true"
         root["spec"]["replicas"] = 0
         root["metadata"]["generation"] += 1
         await turn(api)
         assert root["status"]["replicas"] == 3
-        assert all(child["metadata"].get("deletionTimestamp") for child in api.children("Deployment"))
-        for child in api.children("Deployment"):
-            del api.objects[("Deployment", "test", child["metadata"]["name"])]
+        assert all(child["metadata"].get("deletionTimestamp") for child in api.children(kind))
+        for child in api.children(kind):
+            del api.objects[(kind, "test", child["metadata"]["name"])]
         await turn(api)
         assert root["status"]["replicas"] == 0
         assert root["status"]["ready"]
@@ -215,5 +220,249 @@ def test_new_unobserved_use_blocks_definition_metric():
         store.publish(snapshot([*api.objects.values(), unknown]))
         client = MetricsAPIBuilder().with_store(store).build().test_client()
         assert client.get("/v1/workloads/Daemon/worker/executions").status_code == 503
+
+    asyncio.run(scenario())
+
+
+def policy_family(*, bound=3, replicas=2, uses=("workers",), scope="Boundary", **constraints):
+    """
+    Put optional constraints on a PolyGraph containing independently scalable groups.
+    """
+    policy = resource(
+        "GraphRule", "budget", {"enforcement": "Referenced", "scope": scope, "limits": {"expandedNodes": bound}, **constraints}
+    )
+    parent = resource(
+        "PolyGraph",
+        "root",
+        {"mode": "persistent", "rules": ["budget"], "nodes": [{"name": name, "kind": "ReplicaGroup", "ref": "copies"} for name in uses]},
+    )
+    return FakeAPI(parent, policy, group(replicas, templateOnly=True), resource("Daemon", "worker", {"template": template(True)}))
+
+
+async def start_family(api):
+    """
+    Materialize the parent and each group's initial daemon copies.
+    """
+    await turn(api, "root", "PolyGraph")
+    instances = [item for item in api.children("ReplicaGroup") if not item["spec"].get("templateOnly")]
+    for instance in instances:
+        await turn(api, instance["metadata"]["name"])
+        await turn(api, instance["metadata"]["name"])
+    return instances
+
+
+@pytest.mark.parametrize("kind", ["Deployment", "StatefulSet"])
+def test_polygraph_boundary_rule_blocks_child_scale_out(kind):
+    """
+    A non-inherited parent budget still constrains independently scaled descendants.
+    """
+
+    async def scenario():
+        api = policy_family()
+        if kind == "StatefulSet":
+            from tests.test_statefulsets import stateful_spec
+
+            api.objects[("Daemon", "test", "worker")]["spec"].update(stateful_spec())
+        (instance,) = await start_family(api)
+        assert instance["spec"].get("rules", []) == []
+        instance["spec"].update(inheritReplicas=False, replicas=3)
+        instance["metadata"]["generation"] += 1
+        api.calls.clear()
+        with pytest.raises(ValueError, match="expandedNodes=4"):
+            await turn(api, instance["metadata"]["name"])
+        assert not any(method in {"POST", "DELETE"} for method, _, _ in api.calls)
+        assert not instance["status"]["scaleCurrent"]
+        assert len(api.children(kind)) == 2
+
+    asyncio.run(scenario())
+
+
+def test_shared_scale_request_reserves_all_uses_in_parent_budget():
+    """
+    Recompute all inheriting uses instead of checking a single enlarged child in isolation.
+    """
+
+    async def scenario():
+        api = policy_family(bound=7, uses=("left", "right"))
+        instances = await start_family(api)
+        source = api.objects[("ReplicaGroup", "test", "copies")]
+        source["spec"]["replicas"] = 3
+        source["metadata"]["generation"] += 1
+        for instance in instances:
+            with pytest.raises(ValueError, match="expandedNodes=8"):
+                await turn(api, instance["metadata"]["name"])
+        assert len(api.children("Deployment")) == 4
+        await turn(api)
+        assert not source["status"]["scaleCurrent"]
+
+    asyncio.run(scenario())
+
+
+def test_pending_sibling_removal_does_not_release_parent_budget():
+    """
+    Count terminating siblings until Kubernetes actually removes their execution resources.
+    """
+
+    async def scenario():
+        api = policy_family(bound=6, uses=("left", "right"))
+        left, right = await start_family(api)
+        for instance in (left, right):
+            instance["spec"]["inheritReplicas"] = False
+        left["spec"]["replicas"] = 0
+        left["metadata"]["generation"] += 1
+        await turn(api, left["metadata"]["name"])
+        right["spec"]["replicas"] = 3
+        right["metadata"]["generation"] += 1
+        with pytest.raises(ValueError, match="expandedNodes=7"):
+            await turn(api, right["metadata"]["name"])
+        assert len(api.children("Deployment")) == 4
+        for key, item in list(api.objects.items()):
+            if item["kind"] == "Deployment" and item["metadata"].get("deletionTimestamp"):
+                del api.objects[key]
+        await turn(api, right["metadata"]["name"])
+        assert len(api.children("Deployment")) == 3
+
+    asyncio.run(scenario())
+
+
+def test_refreshed_shapes_block_scale_in_before_deletion():
+    """
+    Reject a requested zero count when a newly selected subtree rule requires connectivity.
+    """
+
+    async def scenario():
+        api = policy_family(bound=2, replicas=1, scope="Subtree", shapes=["connected"])
+        (instance,) = await start_family(api)
+        source = api.objects[("ReplicaGroup", "test", "copies")]
+        source["spec"]["replicas"] = 0
+        source["metadata"]["generation"] += 1
+        api.calls.clear()
+        with pytest.raises(ValueError, match="required shape: connected"):
+            await turn(api, instance["metadata"]["name"])
+        assert not any(method == "DELETE" for method, _, _ in api.calls)
+        assert not instance["status"]["scaleCurrent"]
+
+    asyncio.run(scenario())
+
+
+def test_rule_update_between_replica_creations_stops_the_next_action():
+    """
+    Recompute constraints after each write instead of reusing a verdict for the whole batch.
+    """
+
+    class ChangingAPI(FakeAPI):
+        async def request(self, method, kind, namespace, name="", body=None, **kwargs):
+            result = await super().request(method, kind, namespace, name, body, **kwargs)
+            if method == "POST" and kind == "Deployment":
+                rule = self.objects[("GraphRule", "test", "limit")]
+                rule["spec"]["limits"]["nodes"] = 1
+                rule["metadata"]["generation"] += 1
+            return result
+
+    async def scenario():
+        api = ChangingAPI(
+            group(), resource("Daemon", "worker", {"template": template(True)}), resource("GraphRule", "limit", {"limits": {"nodes": 2}})
+        )
+        with pytest.raises(ValueError, match="nodes=2"):
+            await turn(api)
+        assert len(api.children("Deployment")) == 1
+
+    asyncio.run(scenario())
+
+
+def test_live_cheeger_change_blocks_nested_scaling():
+    """
+    Refresh an ancestor's Cheeger bound before a descendant scale action.
+    """
+
+    async def scenario():
+        api = policy_family(bound=10, uses=("left", "right"), relation="connections", cheeger={"minimum": 1})
+        root = api.objects[("PolyGraph", "test", "root")]
+        root["spec"]["connections"] = [{"source": "left", "target": "right"}]
+        instances = await start_family(api)
+        assert any(report["measurements"].get("cheeger") == 1 for report in root["status"]["structuralRules"])
+        root["spec"]["connections"] = []
+        root["metadata"]["generation"] += 1
+        source = api.objects[("ReplicaGroup", "test", "copies")]
+        source["spec"]["replicas"] = 3
+        source["metadata"]["generation"] += 1
+        api.calls.clear()
+        with pytest.raises(ValueError, match="cheeger=0"):
+            await turn(api, instances[0]["metadata"]["name"])
+        assert not any(method in {"POST", "DELETE"} for method, _, _ in api.calls)
+
+    asyncio.run(scenario())
+
+
+def test_rule_update_between_removals_stops_scale_in():
+    """
+    Recheck lower-bound shape constraints before every destructive scaling action.
+    """
+
+    class ChangingAPI(FakeAPI):
+        async def delete(self, obj):
+            await super().delete(obj)
+            self.objects[("GraphRule", "test", "limit")]["spec"]["shapes"] = ["connected"]
+
+    async def scenario():
+        api = ChangingAPI(group(), resource("Daemon", "worker", {"template": template(True)}), resource("GraphRule", "limit"))
+        await turn(api)
+        api.objects[("ReplicaGroup", "test", "copies")]["spec"]["replicas"] = 0
+        with pytest.raises(ValueError, match="required shape: connected"):
+            await turn(api)
+        assert sum(bool(child["metadata"].get("deletionTimestamp")) for child in api.children("Deployment")) == 1
+
+    asyncio.run(scenario())
+
+
+def test_changed_source_during_family_evaluation_defers_writes():
+    """
+    Detect a scale request changing while its family's expensive constraints are computed.
+    """
+
+    class ChangingAPI(FakeAPI):
+        change_source = False
+
+        async def request(self, method, kind, namespace, name="", body=None, **kwargs):
+            result = await super().request(method, kind, namespace, name, body, **kwargs)
+            if method == "GET" and kind == "GraphRule" and self.change_source:
+                self.change_source = False
+                source = self.objects[("ReplicaGroup", "test", "copies")]
+                source["spec"]["replicas"] = 3
+                source["metadata"]["generation"] += 1
+            return result
+
+    async def scenario():
+        original = policy_family(bound=8)
+        api = ChangingAPI(*original.objects.values())
+        (instance,) = await start_family(api)
+        api.change_source = True
+        api.calls.clear()
+        await turn(api, instance["metadata"]["name"])
+        assert not any(method in {"POST", "DELETE"} for method, _, _ in api.calls)
+        assert not instance["status"]["scaleCurrent"]
+        assert "changed during" in instance["status"]["message"]
+
+    asyncio.run(scenario())
+
+
+def test_refreshed_spectral_rule_blocks_descendant_scaling():
+    """
+    Reevaluate an ancestor spectrum instead of trusting its last successful status.
+    """
+
+    async def scenario():
+        api = policy_family(bound=10, uses=("left", "right"), relation="connections", spectrum={"maxRadius": 1})
+        root = api.objects[("PolyGraph", "test", "root")]
+        root["spec"]["connections"] = [{"source": "left", "target": "right"}]
+        instance, _ = await start_family(api)
+        rule = api.objects[("GraphRule", "test", "budget")]
+        rule["spec"]["spectrum"]["maxRadius"] = 0.5
+        rule["metadata"]["generation"] += 1
+        api.objects[("ReplicaGroup", "test", "copies")]["spec"]["replicas"] = 3
+        api.calls.clear()
+        with pytest.raises(ValueError, match="radius=1"):
+            await turn(api, instance["metadata"]["name"])
+        assert not any(method in {"POST", "DELETE"} for method, _, _ in api.calls)
 
     asyncio.run(scenario())

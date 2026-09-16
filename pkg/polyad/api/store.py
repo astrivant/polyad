@@ -101,7 +101,9 @@ class CompositionStore:
             return result
         resources = []
         truncated = False
-        for kind in sorted(COMPOSITION_KINDS | {"Job", "Deployment", "Pod", "Service", "ConfigMap", "PersistentVolumeClaim"}):
+        for kind in sorted(
+            COMPOSITION_KINDS | {"Job", "Deployment", "StatefulSet", "Pod", "Service", "ConfigMap", "PersistentVolumeClaim"}
+        ):
             response = await self.api.request(
                 "GET", kind, self.namespace, query=[("labelSelector", f"{asts.GROUP}/request={name[12:]}"), ("limit", "200")]
             )

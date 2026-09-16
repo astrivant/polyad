@@ -78,15 +78,13 @@ def measure_topology(graph: Topology, present: set[str] | None = None) -> Topolo
                     "Ephemeral",
                     "Resource",
                     "Graph",
-                    "EphemeralGraph",
-                    "Feedback",
                     "PolyGraph",
                     "ReplicaGroup",
                 )
             },
             NodeCounts,
         ),
-        subgraphCount=sum(counts[kind] for kind in ("Graph", "EphemeralGraph", "Feedback", "PolyGraph", "ReplicaGroup")),
+        subgraphCount=sum(counts[kind] for kind in ("Graph", "PolyGraph", "ReplicaGroup")),
         admission=AdmissionMetrics(
             edgeCount=admission.number_of_edges(),
             **to_document(_layers(admission)),

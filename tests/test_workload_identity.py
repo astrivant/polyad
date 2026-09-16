@@ -83,18 +83,18 @@ def test_every_workload_container_gets_trusted_identity(monkeypatch, kind):
     asyncio.run(scenario())
 
 
-def test_nested_feedback_and_replica_ancestry():
+def test_nested_graph_and_replica_ancestry():
     """
-    Traverse actual instances through feedback epochs and replica groups to the root.
+    Traverse actual instances through nested graphs and replica groups to the root.
     """
 
     async def scenario():
         api = FakeAPI(
-            resource("PolyGraph", "root", {"mode": "persistent", "nodes": [{"name": "loop", "kind": "Feedback", "ref": "cycle"}]}),
+            resource("PolyGraph", "root", {"mode": "persistent", "nodes": [{"name": "copies", "kind": "ReplicaGroup", "ref": "copies"}]}),
             resource(
-                "Feedback",
-                "cycle",
-                {"templateOnly": True, "graph": {"mode": "finite", "nodes": [{"name": "batch", "kind": "Graph", "ref": "batch"}]}},
+                "ReplicaGroup",
+                "copies",
+                {"templateOnly": True, "replicas": 1, "template": {"kind": "Graph", "ref": "batch"}},
             ),
             resource("Graph", "batch", {"templateOnly": True, "nodes": [{"name": "run", "kind": "Workload", "ref": "worker"}]}),
             resource("Workload", "worker", {"template": template()}),
@@ -103,7 +103,7 @@ def test_nested_feedback_and_replica_ancestry():
         job = api.children("Job")[0]
         env = environment(job["spec"]["template"])
         chain = json.loads(env["POLYAD_GRAPH_ANCESTRY"])
-        assert [item["kind"] for item in chain] == ["PolyGraph", "Feedback", "Graph", "Graph"]
+        assert [item["kind"] for item in chain] == ["PolyGraph", "ReplicaGroup", "Graph"]
         assert env["POLYAD_ROOT_GRAPH_UID"] == "uid-root"
         assert env["POLYAD_GRAPH_UID"] == job["metadata"]["ownerReferences"][0]["uid"]
         assert env["POLYAD_GRAPH_NAME"] != "batch"

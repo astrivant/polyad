@@ -49,7 +49,7 @@ def trace_child(child: asts.Resource, parent: dict[str, Any], node: Node, defini
     if f"{prefix}/request-id" in values:
         labels[f"{prefix}/request"] = request_name(values[f"{prefix}/request-id"])[12:]
     result = evolve(child, metadata=evolve(child.metadata, labels=labels, annotations={**(child.metadata.annotations or {}), **values}))
-    if isinstance(result, (asts.Job, asts.Deployment)):
+    if isinstance(result, (asts.Job, asts.Deployment, asts.StatefulSet)):
         pod = result.spec.template
         meta = pod.metadata or asts.ObjectMeta()
         pod_labels = dict(meta.labels or {})
@@ -57,6 +57,8 @@ def trace_child(child: asts.Resource, parent: dict[str, Any], node: Node, defini
             pod_labels[f"{prefix}/request"] = labels[f"{prefix}/request"]
         traced = evolve(pod, metadata=evolve(meta, labels=pod_labels, annotations={**(meta.annotations or {}), **values}))
         if isinstance(result, asts.Job):
+            result = evolve(result, spec=evolve(result.spec, template=traced))
+        elif isinstance(result, asts.StatefulSet):
             result = evolve(result, spec=evolve(result.spec, template=traced))
         else:
             result = evolve(result, spec=evolve(result.spec, template=traced))

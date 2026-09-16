@@ -44,8 +44,6 @@ from polyad.compiler.asts.resources import Deployment as Deployment
 from polyad.compiler.asts.resources import DeploymentSpec as DeploymentSpec
 from polyad.compiler.asts.resources import DeploymentStrategy as DeploymentStrategy
 from polyad.compiler.asts.resources import Ephemeral as Ephemeral
-from polyad.compiler.asts.resources import EphemeralGraph as EphemeralGraph
-from polyad.compiler.asts.resources import Feedback as Feedback
 from polyad.compiler.asts.resources import Gate as Gate
 from polyad.compiler.asts.resources import Graph as Graph
 from polyad.compiler.asts.resources import GraphRule as GraphRule
@@ -68,6 +66,8 @@ from polyad.compiler.asts.resources import ResourceDefinition as ResourceDefinit
 from polyad.compiler.asts.resources import Rewrite as Rewrite
 from polyad.compiler.asts.resources import Service as Service
 from polyad.compiler.asts.resources import ShutdownPolicy as ShutdownPolicy
+from polyad.compiler.asts.resources import StatefulSet as StatefulSet
+from polyad.compiler.asts.resources import StatefulSetSpec as StatefulSetSpec
 from polyad.compiler.asts.resources import Workload as Workload
 from polyad.compiler.asts.status import AdmissionMetrics as AdmissionMetrics
 from polyad.compiler.asts.status import ConnectionMetrics as ConnectionMetrics

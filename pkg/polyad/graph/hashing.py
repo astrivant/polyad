@@ -47,7 +47,7 @@ def shape_hash(owner: object, members: Sequence[tuple[Work, Workload]], routes: 
     """
     visited = _visiting.get()
     if id(owner) in visited:
-        raise ValueError("graph containment must be acyclic; use FeedbackGraph for recurrence")
+        raise ValueError("graph containment must be acyclic; repeat execution through application control flow")
     token = _visiting.set((*visited, id(owner)))
     try:
         nodes = [

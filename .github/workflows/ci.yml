@@ -191,10 +191,10 @@ jobs:
           helm dependency build charts/polyad
       - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set operator.image.repository=polyad --set operator.image.tag=test --set dragonfly.ha.enabled=${{ matrix.dragonfly-ha }} --wait --timeout=300s
       - run: bash scripts/test-operator.sh
-      - run: kubectl -n polyad delete graphs,polygraphs,ephemeralgraphs,feedbacks --all --wait=true --timeout=120s
+      - run: kubectl -n polyad delete graphs,polygraphs,replicagroups --all --wait=true --timeout=120s
       - run: bash scripts/test-replacement.sh
       - run: bash scripts/test-coordination.sh
       - if: failure()
         run: |
-          kubectl -n polyad get pods,leases,dragonflies,graphs,polygraphs,ephemeralgraphs,feedbacks -o yaml
+          kubectl -n polyad get pods,leases,dragonflies,graphs,polygraphs,replicagroups -o yaml
           kubectl -n polyad logs deployment/polyad-polyad --tail=200

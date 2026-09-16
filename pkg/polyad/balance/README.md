@@ -143,49 +143,19 @@ After a restart, supply `resolve(work)` to reconstruct dynamically added child i
 unit list. The resolver must return the recorded identity and resource contract. Functions and live processes are never serialized.
 Recreate the graph with matching fingerprints and pass its checkpoint through the parent scheduler's normal restoration mechanism.
 
-## Feedback graphs and daemon-like work
+## Repeated execution
 
-A **strongly connected component** is a set of nodes that can all reach one another through directed paths. Contracting those
-components produces an acyclic **condensation graph**. This explains how a larger scheduler can reason about a cyclic region as
-one unit. See [the condensation graph definition](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.components.condensation.html).
-
-`FeedbackGraph` gives recurrence an explicit execution meaning: run a graph body, reach a boundary, then activate the next round.
-A finite `rounds` limit is required. An optional `stop_when(completed_rounds)` condition can end the cycle earlier. The graph factory receives
-a zero-based round number and must reconstruct that round deterministically, with its own child journal directory. Graph bodies
-can contain other feedback graphs, so recurrence can exist at multiple scheduling levels.
-
-```python
-from polyad.balance import FeedbackGraph
-from polyad.graph import Estimate, Statistics, Work
-
-service = FeedbackGraph(
-    Work(
-        "service", "service-inputs-and-code-v1", slots=2, resumable=True,
-        statistics=Statistics(estimate=Estimate(checkpoint_seconds=1, resume_seconds=1)),
-    ),
-    factory=make_round_graph,  # Application function: round number -> Graph
-    directory=Path(".cache/pipeline/service-feedback"),
-    rounds=100,
-    stop_when=lambda completed: application_has_converged(),
-    diagrams=True,
-)
-```
-
-Checkpoints retain the round cursor and any partially completed graph, so resumption continues the current round or starts the
-next one without replaying completed rounds. Feedback transitions are logged in `feedback.jsonl`; optional `feedback.mmd` shows
-the back edge. A bounded interruptible interval prevents empty rounds from becoming a busy loop. Parent progress counts completed
-rounds, rather than resetting at each activation. The round limit survives pause/resume. The application must change the workload
-fingerprint when its termination logic changes. Policy aging can request a pause when checkpoint costs are known.
-
-Ordinary prerequisite edges still mean “must finish first” and must remain acyclic. We do not automatically cut dependency cycles
-or compute SCCs to invent iteration semantics. Use an explicit `FeedbackGraph` boundary instead. Applications own initial state,
-data passed between rounds, external side effects, and early termination conditions. Each nested feedback graph requires its own
-finite round bound. Ordinary completion unlocks dependent work; cancellation does not.
-
+Keep prerequisite edges acyclic. To run a finite graph repeatedly, use an
+application loop that constructs a Graph for each run and calls its existing
+execution API. Give independent runs distinct journal directories. The
+application owns its iteration cursor, stop conditions and durable state;
+propagate the same pause and cancellation signals into each active graph.
+A completed child run should only advance the application cursor after its
+result is recorded durably.
 
 ## Shutdown conditions and finalizers
 
-A round limit prevents unlimited recurrence; it cannot stop a round whose worker never returns. Use a scheduler
+An application loop limit cannot stop a worker that never returns. Use a scheduler
 `ShutdownContract(after_seconds=300, grace_seconds=30)` to bound admission and request termination of active work as well.
 `when(state)` can trigger shutdown from observed progress; `Scheduler.cancel()` requests the same shutdown lifecycle.
 
@@ -229,8 +199,7 @@ With several workers, these strategies determine admission priority, not complet
 while a preferred branch is busy. They do not interrupt active work merely to follow a traversal.
 
 Each composed graph has its own strategy and resource boundary. Configure child graphs explicitly; the parent's strategy
-does not flatten or override them. Feedback factories configure each round's graph in the same way. Cycles remain explicit
-feedback rounds with stop conditions, rather than cyclic prerequisite waits.
+does not flatten or override them. Repeated executions use application control flow; prerequisite waits remain acyclic.
 
 Priorities are recomputed from the current graph on each scheduling pass, including after insertion or dependency changes.
 Breadth-first and depth-first priority construction take O(V + E) time and O(V + E) auxiliary space for V units and E edges
@@ -314,7 +283,7 @@ Include routing logic and relevant observation configuration in your workload fi
 
 ## Transactional graph rewrites
 
-Each Scheduler, Graph and FeedbackGraph owns a separate rewrite registry. Names are local to that boundary; a parent and
+Each Scheduler and Graph owns a separate rewrite registry. Names are local to that boundary; a parent and
 child can both register an operation called "expand" without overriding one another. Registration does not execute a rewrite.
 
 ~~~python
@@ -351,8 +320,7 @@ The application supplies those semantics and each full replacement prerequisite 
 Polyad never guesses which prerequisite should be bypassed.
 
 Only unstarted units without checkpoints may be removed, replaced or rewired. Unaffected running work retains ownership and
-continues. Rewrites do not silently discard progress or cancel active workers. A feedback-local rewrite targets the active
-round; it does not change the factory or automatically repeat the rewrite in subsequent rounds.
+continues. Rewrites do not silently discard progress or cancel active workers.
 
 Registry definitions live in application code, rather than serialized callbacks. Graph checkpoints retain the resulting
 membership and removal records. Reconstruct registry definitions when restarting a process and provide a resolver for
@@ -383,9 +351,8 @@ Node names, edges and the syntax of routing expressions do. This is identity for
 test, semantic equivalence proof, cache key for results, or checkpoint-integrity replacement. Commutative Boolean expressions
 written in different operand orders can have different hashes.
 
-Feedback contributes its round limit and currently materialized body. A future factory-produced graph is unknown until
-constructed; the digest does not claim to describe all possible future rounds. Containment must remain acyclic; explicit
-feedback boundaries represent recurrence without recursively hashing a literal self-reference.
+Containment must remain acyclic. A shape hash describes the currently represented hierarchy;
+it does not describe future graphs that application control flow may construct.
 
 Hashes are recomputed, not cached, so child changes cannot leave an ancestor's cached value stale. Computation visits the
 currently represented hierarchy and sorts local node/edge descriptions. A large hierarchy can make frequent hash observation

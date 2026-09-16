@@ -94,8 +94,7 @@ def measure_subtree(
                 result["capacityRequestedPods"] += record.get("pods", 0)
                 result["capacityReadyPods"] += record.get("readyPods", 0)
     spec = obj.get("spec", {})
-    # Feedback's template describes the epoch child, not a second set of leaf work.
-    nodes = spec.get("nodes", []) if obj["kind"] != "Feedback" and valid else []
+    nodes = spec.get("nodes", []) if valid else []
     by_node = {
         child["metadata"].get("labels", {}).get(f"{GROUP}/runtime-node", child["metadata"].get("labels", {}).get(f"{GROUP}/node")): child
         for child in children

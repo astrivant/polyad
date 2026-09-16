@@ -219,7 +219,7 @@ def test_admission_and_deadline_fields_survive_crd_pruning():
         for obj in objects
         if obj["kind"] == "CustomResourceDefinition" and obj["spec"]["group"] == "polyad.astrivant.com"
     }
-    for kind in ("Graph", "PolyGraph", "EphemeralGraph", "Feedback"):
+    for kind in ("Graph", "PolyGraph"):
         deadline = schemas[kind]["properties"]["status"]["properties"]["delays"]["additionalProperties"]
         assert set(deadline["required"]) == {"token", "notBefore"}
         assert deadline["properties"]["token"]["x-kubernetes-preserve-unknown-fields"] is True
@@ -305,10 +305,8 @@ def test_composition_service_and_policy_rbac():
         if obj["kind"] == "CustomResourceDefinition"
     }
     assert schemas["Composition"]["properties"]["spec"]["x-kubernetes-validations"][0]["rule"] == "self == oldSelf"
-    for kind in ["Graph", "PolyGraph", "EphemeralGraph", "Feedback"]:
+    for kind in ["Graph", "PolyGraph"]:
         spec = schemas[kind]["properties"]["spec"]["properties"]
-        if kind == "Feedback":
-            spec = spec["graph"]["properties"]
         assert spec["rules"]["x-kubernetes-list-type"] == "set"
         assert spec["nodes"]["items"]["properties"]["id"]["maxLength"] == 63
 
@@ -376,18 +374,18 @@ def test_capacity_permissions_and_priority_are_opt_in():
 
 def test_capacity_schemas_come_from_public_models():
     """
-    Graphs, Feedback epochs and rewrites expose matching capacity policy schemas.
+    Graphs and rewrites expose matching capacity policy schemas.
     """
     from polyad.compiler.asts import CapacityStatus
     from polyad.compiler.passes.schema import structural_schema
     from polyad.graph import CapacityPlan
 
-    for kind in ("graphs", "polygraphs", "ephemeralgraphs", "feedbacks", "rewrites"):
+    for kind in ("graphs", "polygraphs", "rewrites"):
         crd = yaml.safe_load((CHART / "crds" / f"{kind}.yaml").read_text())
         props = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]
         spec = props["spec"]["properties"]
-        if kind in {"feedbacks", "rewrites"}:
-            spec = spec["graph" if kind == "feedbacks" else "topology"]["properties"]
+        if kind == "rewrites":
+            spec = spec["topology"]["properties"]
         assert spec["capacity"] == structural_schema(CapacityPlan)
         if kind != "rewrites":
             assert props["status"]["properties"]["capacity"] == structural_schema(CapacityStatus)

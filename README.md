@@ -44,15 +44,14 @@ reports progress to its parent, giving the root a combined view of the work.<sup
 flowchart BT
     job["Workload"] --> batch["Graph · batch"]
     daemon["Daemon"] --> service["Graph · service"]
-    spot["EphemeralGraph · spot work"] --> group["PolyGraph · processing"]
+    spot["Graph · spot work"] --> group["PolyGraph · processing"]
     batch --> group
     group --> root["PolyGraph · application"]
     service --> root
-    epochs["Feedback · recurring graphs"] --> root
     classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
     classDef constraint fill:#fff3d6,stroke:#926000,color:#513900
     class job,daemon,batch,service,group,root execution
-    class spot,epochs constraint
+    class spot constraint
 ```
 
 </details>
@@ -235,8 +234,8 @@ flowchart TB
 ### Finite pipelines
 
 Express a workflow from preparation to publication, with parallel tasks and
-gates that wait for a condition or delay. `EphemeralGraph` groups interruptible
-work for capacity such as spot instances.<sup>[\[11\]](docs/concepts.md#finite-pipelines)</sup><sup>[\[12\]](docs/operator.md#delay-gates)</sup>
+gates that wait for a condition or delay. Ordinary Graph placement can select
+spot capacity; applications choose how to handle interruption and storage.<sup>[\[11\]](docs/concepts.md#finite-pipelines)</sup><sup>[\[12\]](docs/operator.md#delay-gates)</sup>
 
 <details>
 <summary>Example: parallel spot workloads behind an admission gate</summary>
@@ -248,7 +247,7 @@ flowchart LR
         storage[("Resource · shared storage")]
         prepare["Workload · prepare"]
         gate{"Gate · admission condition"}
-        subgraph workers["EphemeralGraph · spot placement"]
+        subgraph workers["Graph · spot placement"]
             direction TB
             left["Ephemeral · partition A"]
             right["Ephemeral · partition B"]
@@ -280,16 +279,15 @@ flowchart LR
 
 ### Persistent services and recurrence
 
-Keep services running with `Daemon`, and repeat a finite workflow with
-`Feedback`. Each repetition is an **epoch**: for example, sample new measurements,
-then adjust a service. Polyad completes and cleans up one epoch before starting
-the next; the application supplies the decision logic and shared state.<sup>[\[13\]](docs/operator.md#feedback-epochs)</sup>
+Keep services running with `Daemon`, and repeat finite Graphs with activation
+requests. A producer or timer supplies each pulse; the application owns iteration
+limits, stop conditions and durable shared state.<sup>[\[13\]](docs/operator.md#repeated-execution)</sup>
 
 <details>
-<summary>Example: persistent services with recurring feedback epochs</summary>
+<summary>Example: persistent services with repeated graph activations</summary>
 
-Solid arrows show startup or epoch progression; dashed arrows show data flow
-or repetition.
+Solid arrows show startup or execution progression; dashed arrows show data flow
+or a new activation request.
 
 ```mermaid
 flowchart LR
@@ -303,18 +301,18 @@ flowchart LR
             ingest -.->|events| process
             process -.->|acknowledgements| ingest
         end
-        subgraph feedback["Feedback · recurring graph epochs"]
-            subgraph epoch["Graph · finite epoch"]
+        subgraph activations["Graph · activation target"]
+            subgraph run["Graph · finite run"]
                 sample["Workload · sample"]
                 adjust["Workload · adjust"]
                 sample -->|completed| adjust
             end
-            next["Next epoch"]
-            epoch -->|completed and drained| next
-            next -.->|repeat until stopped or limit reached| sample
+            next["Producer / timer pulse"]
+            run -->|completion observed by application| next
+            next -.->|activation request| sample
         end
         queue -->|ready| ingest
-        service -->|ready| feedback
+        service -->|ready| activations
     end
     classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
     classDef recurrence fill:#ffe3a3,stroke:#926000,color:#513900
@@ -324,8 +322,8 @@ flowchart LR
     class queue resource
     style system fill:#e2e6ec,stroke:#667085,stroke-width:2px,color:#344054
     style service fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
-    style feedback fill:#fff3d6,stroke:#926000,stroke-width:2px,color:#513900
-    style epoch fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
+    style activations fill:#fff3d6,stroke:#926000,stroke-width:2px,color:#513900
+    style run fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
     linkStyle default stroke:#475467,stroke-width:2px
 ```
 

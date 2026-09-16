@@ -40,8 +40,7 @@ application. A graph inside another graph is a **subgraph**; the outermost graph
 is the **root**.
 
 `PolyGraph` represents a graph whose nodes are themselves graphs. It can combine
-ordinary `Graph` workflows, `EphemeralGraph` workflows for interruptible capacity,
-recurring `Feedback` workflows, and other PolyGraphs. A reusable graph definition
+ordinary `Graph` workflows, scalable `ReplicaGroup` boundaries, and other PolyGraphs. A reusable graph definition
 acts as a blueprint; each reference creates a separate instance of it.<sup>[\[4\]](operator.md#composing-graph-types-with-polygraph)</sup>
 
 The [graphs-of-graphs diagram](../README.md#graphs-of-graphs) shows progress
@@ -100,9 +99,9 @@ remain binding. Tolerations are copied into pod templates; they permit matching
 taints and do not guarantee capacity or placement by themselves.<sup>[\[6\]](operator.md#scheduling-a-graph-onto-a-resource-slice)</sup>
 
 Workloads using `persistence.enabled: true` must specify `storageClass` and
-`claimName`. Schedule these on non-spot capacity. Persistent storage and
-StorageClass declarations are invalid under `Ephemeral` and `EphemeralGraph`,
-including nested graphs.<sup>[\[3\]](operator.md#workload-persistence)</sup><sup>[\[18\]](operator.md#ephemeral-execution)</sup>
+`claimName`. Users choose capacity compatible with storage and recovery needs.
+The explicit `Ephemeral` workload type rejects persistent storage; ordinary
+graphs leave storage policy to their users.<sup>[\[3\]](operator.md#workload-persistence)</sup><sup>[\[18\]](operator.md#ephemeral-execution)</sup>
 
 ## Finite pipelines
 
@@ -110,8 +109,8 @@ A **finite pipeline** is a workflow with an intended end. The
 [pipeline diagram](../README.md#finite-pipelines) prepares data, processes two partitions, then merges and reports the results. Dependencies
 express the order, while the two partition tasks can run in parallel.
 
-The partition tasks form an `EphemeralGraph`: a group of work designed to tolerate
-interruption and restart on capacity such as spot instances.<sup>[\[18\]](operator.md#ephemeral-execution)</sup>
+The partition tasks form a regular `Graph` with explicit spot placement.
+Their implementations must tolerate interruption and restart.<sup>[\[18\]](operator.md#ephemeral-execution)</sup>
 A separate subgraph
 groups the tasks that publish the results.
 
@@ -127,23 +126,17 @@ are long-running services: an ingestion service and a processing service might
 exchange events and acknowledgements continuously. Their readiness tells you
 whether the system can serve work; there need not be a completion point.<sup>[\[2\]](operator.md#daemons-change-the-graphs-contract)</sup>
 
-`Feedback` wraps a finite graph so the entire workflow can run repeatedly. Each
-execution is an **epoch**. For example, a `sample → adjust` workflow can use new
-measurements to update a service's settings on each pass. The application supplies
-the decision logic and any state shared between epochs.<sup>[\[19\]](operator.md#feedback-epochs)</sup>
-
-On Kubernetes, epochs run one at a time: the current graph must complete and its
-resources finish cleanup before the next starts. `rounds` limits the number of
-epochs; omitting it permits indefinite recurrence. `intervalSeconds` sets a
-minimum wait after completion, and `suspend: true` drains active work and prevents
-another epoch from starting.<sup>[\[19\]](operator.md#feedback-epochs)</sup>
+Activation pulses can instantiate a finite Graph repeatedly inside a persistent
+graph. Queue mode serializes requests; parallel mode allows bounded overlapping
+runs. A producer or timer supplies the pulses, and the application owns iteration
+limits, termination and shared state.<sup>[\[19\]](operator.md#repeated-execution)</sup>
 
 Data can circulate between running services. Startup dependencies must still
 allow something to start first, so they cannot form a cycle in which every node
 waits for another.<sup>[\[2\]](operator.md#daemons-change-the-graphs-contract)</sup>
 
 In the [services and recurrence diagram](../README.md#persistent-services-and-recurrence),
-solid arrows show admission or epoch progression; dashed arrows show data flow
-or recurrence. On Kubernetes, workloads run as Jobs and daemons as Deployments.<sup>[\[1\]](operator.md#api-and-python-abstractions)</sup>
+solid arrows show admission or execution progression; dashed arrows show data flow
+or recurrence. On Kubernetes, workloads run as Jobs and daemons as Deployments or StatefulSets.<sup>[\[1\]](operator.md#api-and-python-abstractions)</sup>
 Deletion waits for owned resources and their finalizers, which keep resources
 present while cleanup is pending.<sup>[\[8\]](operator.md#reconciliation-and-shutdown)</sup>

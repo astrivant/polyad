@@ -231,7 +231,7 @@ class Coordinator:
                 for owner in obj["metadata"].get("ownerReferences", [])
                 if owner.get("controller")
                 and owner.get("apiVersion", "").startswith(f"{GROUP}/")
-                and owner["kind"] in {"Graph", "EphemeralGraph", "Feedback", "PolyGraph", "ReplicaGroup", "Composition"}
+                and owner["kind"] in {"Graph", "PolyGraph", "ReplicaGroup", "Composition"}
             ]
             if not owners:
                 break

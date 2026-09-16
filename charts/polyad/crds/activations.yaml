@@ -49,7 +49,7 @@ spec:
                   description: Client idempotency identity, shared across API retries.
                 kind:
                   type: string
-                  enum: [Graph, EphemeralGraph, PolyGraph, ReplicaGroup]
+                  enum: [Graph, PolyGraph, ReplicaGroup]
                   description: Containing executable graph kind.
                 graph:
                   type: string

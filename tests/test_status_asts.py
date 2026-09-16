@@ -23,7 +23,7 @@ from tests.test_graph_metrics import diamond
 from tests.test_operator import resource
 
 ROOT = Path(__file__).resolve().parents[1]
-CRDS = ("graphs.yaml", "polygraphs.yaml", "ephemeralgraphs.yaml", "feedbacks.yaml", "replicagroups.yaml")
+CRDS = ("graphs.yaml", "polygraphs.yaml", "replicagroups.yaml")
 
 
 def metrics_schema(document):

@@ -36,8 +36,7 @@ scale-out.
 
 ## Describe a forecast
 
-Add this policy to a Graph, EphemeralGraph or PolyGraph's spec, or a Feedback
-spec's `graph` template:
+Add this policy to a Graph or PolyGraph's spec:
 
 ```yaml
 capacity:
@@ -67,8 +66,8 @@ the CRD properties, and the composition API exposes the same policy through
 Graph instances inherit their parent's policy unless their definition provides
 one. Each execution boundary owns its own forecasts. A PolyGraph propagates
 policy and combines descendant status; it does not reserve all uninstantiated
-descendants in advance. Feedback forecasts belong to the current epoch, so
-future epochs do not multiply demand.
+descendants in advance. Repeated activations have separate execution identities, so
+future unsubmitted requests do not multiply demand.
 
 Lookahead measures dependency layers, not estimated time to completion. Future
 branches can reserve capacity concurrently even if some eventually run
@@ -79,7 +78,7 @@ additional groups wait for budget to become available.
 
 ## Scheduling demand and placement
 
-Polyad compiles the future Job or Deployment, applies inherited placement and
+Polyad compiles the future Job, Deployment or StatefulSet, applies inherited placement and
 storage rules, and submits a **dry-run Pod admission**. This runs admission
 validation and defaulting without creating an application Pod. The forecast
 therefore includes admitted resource requests, sequential init-container peaks,
@@ -111,7 +110,7 @@ a freshly read `Provisioned=True` condition for the request's current generation
 `Failed`, `BookingExpired` and `CapacityRevoked` take precedence over a previous
 success. These outcomes never trigger an automatic switch to placeholders.
 
-Before creating the actual Job or Deployment, Polyad adds the autoscaler's
+Before creating the actual Job, Deployment or StatefulSet, Polyad adds the autoscaler's
 consumption and provisioning-class annotations to the resource and its Pod
 template. The request remains until the corresponding Pods are scheduled,
 execution completes, or the plan timeout is reached. Already admitted work
@@ -151,6 +150,12 @@ custom schedulers. Reproducing these with anonymous pause Pods could advertise
 incorrect placement or attach application storage. Use a supporting
 ProvisioningRequest backend for those workloads. Pods with `nodeName` or
 `schedulingGates` are rejected for both backends.
+
+StatefulSet execution with `volumeClaimTemplates` currently rejects advance
+capacity planning because each ordinal requires a distinct claim. Omit
+`spec.capacity` on that execution boundary to use ordinary Kubernetes scheduling.
+StatefulSets with explicit Pod volumes remain supported. See
+[workload storage](workload-storage.md#replication-rules-and-capacity).
 
 ## Ownership, cancellation and expiry
 

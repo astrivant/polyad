@@ -18,7 +18,7 @@ class ActivationPolicy:
         mode (Literal['Queue', 'Reject', 'Coalesce', 'Parallel']): Busy-target admission policy.
         maxConcurrent (int): Maximum selected or running executions for parallel mode.
         maxPending (int): Maximum retained pending requests admitted to the queue.
-        replicasPerActivation (int): Deployment replicas in each daemon activation.
+        replicasPerActivation (int): Deployment or StatefulSet replicas in each daemon activation.
         maxReplicas (int): Upper bound on the total daemon replicas reserved by concurrent pulses.
         minIntervalSeconds (int): Minimum time between execution admissions.
         maxIntervalSeconds (int | None): Maximum expected time between admissions.

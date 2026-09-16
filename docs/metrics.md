@@ -101,7 +101,7 @@ are refresh notifications: several can refer to the same object, and an
 unacknowledged entry can also be undergoing reconciliation. **Do not add inbound,
 local refresh and API write counts together as independent work.**
 
-The inventory includes Graph, PolyGraph, EphemeralGraph, Feedback, Rewrite,
+The inventory includes Graph, PolyGraph, ReplicaGroup, Rewrite,
 Composition, Activation, ReplicaGroup, Workload, Daemon, Ephemeral, Resource, Gate, ShutdownPolicy and
 GraphRule CRs. Reusable definitions count separately from instances. Definition
 references are not ownership links. Direct resources come from graph status,
@@ -121,7 +121,7 @@ For per-object Prometheus series, enable `metrics.graphLabels`. This adds
 and `polyad_graph_status_current`, labelled by kind/name, parent, root, role and
 shard. Shape dimensions are declared node count, admission edge count, breadth
 and depth. Object names increase time-series cardinality, particularly with
-short-lived Feedback epochs; leave this off when aggregate metrics suffice.
+short-lived activation runs; leave this off when aggregate metrics suffice.
 The JSON hierarchy remains available either way.
 
 ## Freshness and failures

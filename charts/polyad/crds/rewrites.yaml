@@ -42,7 +42,6 @@ spec:
                 enum:
                 - Graph
                 - PolyGraph
-                - EphemeralGraph
                 default: Graph
                 description: Kind of the graph targeted by this rewrite.
               expectedGeneration:
@@ -125,8 +124,6 @@ spec:
                                   enum:
                                   - Graph
                                   - PolyGraph
-                                  - EphemeralGraph
-                                  - Feedback
                                   - ReplicaGroup
                                   description: Kind of the referenced graph instance.
                                 node:
@@ -204,8 +201,6 @@ spec:
                                   enum:
                                   - Graph
                                   - PolyGraph
-                                  - EphemeralGraph
-                                  - Feedback
                                   - ReplicaGroup
                                   description: Kind of the referenced graph instance.
                                 node:
@@ -314,18 +309,15 @@ spec:
                           - Resource
                           - Graph
                           - PolyGraph
-                          - EphemeralGraph
-                          - Feedback
                           - ReplicaGroup
                           description: Kind of the definition referenced by this node; determines whether execution
-                            uses a Job, Deployment, resource or nested graph boundary.
+                            uses a Job, Deployment, StatefulSet, resource or nested graph boundary.
                         ref:
                           type: string
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           maxLength: 63
                           minLength: 1
-                          description: Name of the reusable definition in the same namespace. Nested Graph, PolyGraph, EphemeralGraph
-                            and Feedback definitions must set templateOnly to true.
+                          description: Name of the reusable definition in the same namespace. Nested Graph and PolyGraph definitions must set templateOnly to true.
                         requires:
                           type: array
                           items:

@@ -7,7 +7,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import Any, ClassVar
 
-from attrs import frozen
+from attrs import field, frozen
 
 from polyad.compiler.asts.common import AST, GROUP, VERSION, ObjectMeta, ResourceType
 
@@ -109,6 +109,38 @@ class DeploymentSpec(AST):
 
 
 @frozen(kw_only=True)
+class StatefulSetSpec(AST):
+    """
+    Describe persistent execution with stable Pod identities and per-replica claims.
+
+    Attributes:
+        template (PodTemplate): Application Pod template, including volume mounts.
+        selector (LabelSelector): Operator-managed Pod selector.
+        replicas (int): Desired number of Pods in this set.
+        serviceName (str): Governing headless Service name.
+        volumeClaimTemplates (tuple[dict[str, Any], ...]): Native PVC templates, preserving metadata and storage specifications.
+        podManagementPolicy (str): OrderedReady or Parallel Pod management.
+        updateStrategy (dict[str, Any]): Native RollingUpdate or OnDelete policy.
+        persistentVolumeClaimRetentionPolicy (dict[str, str]): Explicit retention on set deletion and native scale-in.
+        minReadySeconds (int): Minimum ready duration before a Pod is available.
+        revisionHistoryLimit (int): Number of retained controller revisions.
+        ordinals (dict[str, int] | None): Optional starting Pod ordinal.
+    """
+
+    template: PodTemplate
+    selector: LabelSelector
+    replicas: int
+    serviceName: str
+    volumeClaimTemplates: tuple[dict[str, Any], ...] = ()
+    podManagementPolicy: str = "OrderedReady"
+    updateStrategy: dict[str, Any] = field(factory=lambda: {"type": "RollingUpdate"})
+    persistentVolumeClaimRetentionPolicy: dict[str, str] = field(factory=lambda: {"whenDeleted": "Retain", "whenScaled": "Retain"})
+    minReadySeconds: int = 0
+    revisionHistoryLimit: int = 10
+    ordinals: dict[str, int] | None = None
+
+
+@frozen(kw_only=True)
 class Job(Resource):
     """
     A batch/v1 finite workload.
@@ -138,6 +170,22 @@ class Deployment(Resource):
         "Deployment", "apps/v1", "deployments", description="Persistent daemon execution.", graph_owned=True
     )
     spec: DeploymentSpec
+
+
+@frozen(kw_only=True)
+class StatefulSet(Resource):
+    """
+    An apps/v1 persistent workload with stable identity and storage.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
+        spec (StatefulSetSpec): Desired resource configuration.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "StatefulSet", "apps/v1", "statefulsets", description="Stateful daemon execution.", graph_owned=True
+    )
+    spec: StatefulSetSpec
 
 
 @frozen(kw_only=True)
@@ -272,48 +320,6 @@ class PolyGraph(SpecResource):
         "polygraphs",
         boundary=True,
         description="Scheduling boundary composed of nested graph types.",
-        graph_owned=True,
-        reconciled=True,
-        composable=True,
-    )
-
-
-@frozen(kw_only=True)
-class EphemeralGraph(SpecResource):
-    """
-    A graph boundary targeting interruptible capacity.
-
-    Attributes:
-        resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
-    """
-
-    resource_type: ClassVar[ResourceType] = ResourceType(
-        "EphemeralGraph",
-        f"{GROUP}/{VERSION}",
-        "ephemeralgraphs",
-        boundary=True,
-        description="Graph boundary for interruptible capacity.",
-        graph_owned=True,
-        reconciled=True,
-        composable=True,
-    )
-
-
-@frozen(kw_only=True)
-class Feedback(SpecResource):
-    """
-    A boundary that executes durable graph epochs.
-
-    Attributes:
-        resource_type (ClassVar[ResourceType]): Kind descriptor used for API routing and serialization.
-    """
-
-    resource_type: ClassVar[ResourceType] = ResourceType(
-        "Feedback",
-        f"{GROUP}/{VERSION}",
-        "feedbacks",
-        boundary=True,
-        description="Recurring finite graph epochs.",
         graph_owned=True,
         reconciled=True,
         composable=True,
@@ -644,14 +650,13 @@ RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     Pod,
     Job,
     Deployment,
+    StatefulSet,
     Lease,
     Service,
     ConfigMap,
     PersistentVolumeClaim,
     Graph,
     PolyGraph,
-    EphemeralGraph,
-    Feedback,
     Workload,
     Daemon,
     Ephemeral,

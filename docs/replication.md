@@ -1,8 +1,8 @@
 # Replication and KEDA
 
 A **ReplicaGroup** is a scalable family of copies. Its template can reference a
-`Workload`, `Daemon`, `Ephemeral`, `Resource`, `Graph`, `EphemeralGraph`,
-`PolyGraph`, `Feedback`, or another `ReplicaGroup`. Replicating a graph copies its
+`Workload`, `Daemon`, `Ephemeral`, `Resource`, `Graph`,
+`PolyGraph`, or another `ReplicaGroup`. Replicating a graph copies its
 whole service composition, including dependencies, gates and resource definitions.
 Each copy has a stable ordinal, separate owned resources and a status that rolls
 up to the group and its ancestors.
@@ -10,10 +10,11 @@ up to the group and its ancestors.
 ```mermaid
 flowchart LR
     signal["Workload metrics"] --> keda["KEDA"]
-    keda -->|"Kubernetes /scale"| group["ReplicaGroup"]
-    group --> first["Copy 0 · graph"]
-    group --> second["Copy 1 · graph"]
-    group --> third["Copy 2 · graph"]
+    keda -->|"Kubernetes /scale · desired count"| group["ReplicaGroup"]
+    group --> check{"Fresh rules at every boundary"}
+    check -->|"allowed"| first["Copy 0 · graph"]
+    check --> second["Copy 1 · graph"]
+    check --> third["Copy 2 · graph"]
     first --> a["Services and jobs"]
     second --> b["Services and jobs"]
     third --> c["Services and jobs"]
@@ -57,8 +58,8 @@ The group exposes the Kubernetes scale subresource:
 
 A group stays alive at zero copies. Completed finite copies remain completed;
 replica count is not a repeated-job trigger. Use [activation pulses](activation.md)
-or Feedback when work must repeat. Replicating a Daemon copies its Deployment;
-each copy retains that definition's own replica setting. Bounds count copies of
+when work must repeat. Replicating a Daemon copies its selected
+Deployment or StatefulSet controller; each copy retains that definition's own replica setting. Bounds count copies of
 the selected abstraction, not the total Pods in their descendant graphs.
 
 ## Independent instances and all uses of a definition
@@ -168,7 +169,7 @@ ReplicaGroup-specific signals are `replicas`, `desiredReplicas`, `readyReplicas`
 | `overdue` | Number of targets past their activation deadline |
 | `replicas`, `readyReplicas` | Native replica observations where supplied by Kubernetes |
 
-Graph boundaries, including Feedback, also expose current execution and recursive
+Graph boundaries also expose current execution and recursive
 rollup counters such as `pendingNodes`, `activeLeafNodes`, `readyLeafNodes`,
 `graphCount` and `resourceCount`. Incomplete descendant observations return 503.
 
@@ -181,6 +182,59 @@ expire after thirty seconds; missing demand is never synthesized as zero.
 `/openapi.json` describes the endpoint. `/v1/metrics` includes the same observations,
 and `metrics.graphLabels: true` enables `polyad_workload_signal` Prometheus series
 with `kind`, `name`, `node` and `signal` labels.
+
+## Constraints before scaling
+
+KEDA supplies a requested count through `/scale`; Polyad decides whether the
+resulting execution topology satisfies [GraphRules](graph-rules.md#polygraphs-and-autoscaling).
+The rule check runs again before each execution creation and scale-in deletion,
+using fresh graph specifications and owned children, rather than cached status
+measurements. PolyGraph rules participate in these checks, including a parent's
+recursive limits declared with `scope: Boundary`.
+
+```mermaid
+flowchart LR
+    demand["KEDA / HPA<br/>requested replicas"] --> inputs["Refresh owning family<br/>rules, sources, siblings, children"]
+    inputs --> compute["Recompute size, shape,<br/>spectrum and Cheeger bounds"]
+    compute --> valid{"All selected rules pass<br/>and input revisions still match?"}
+    valid -->|yes| action["Create or retire a replica"]
+    valid -->|no| blocked["Preserve existing execution<br/>retry after intent or policy changes"]
+    action -. "before the next mutation" .-> inputs
+```
+
+A shared source's count is resolved for every inheriting instance in the family;
+independent instance overrides are retained. Pending sibling removals do not
+release an ancestor's budget until those resources disappear. A rejected scale-in
+request does not begin deletion; lower bounds and required shapes can prevent
+scaling to zero. Rejections leave `spec.replicas` as requested so the desired and
+observed counts can differ. `scaleCurrent: false` marks a failed or deferred
+reconciliation; group scalar metrics return 503 while this observation is not
+current. Successful `structuralRules` reports include the boundary identity for
+each evaluated rule.
+
+ReplicaGroup vertices represent independent copies and have no edges between
+them: their Cheeger constant is zero. The enclosing PolyGraph's Cheeger value
+still describes its declared inter-graph connections, not a flattened Pod network.
+Place a Cheeger bound on the intended boundary with `scope: Boundary` when it
+should not propagate to the replica groups. Other subtree and namespace rules
+continue to apply.
+
+A `Daemon` selects a Deployment (default) or StatefulSet using
+`spec.controller`; it does not produce a Kubernetes DaemonSet. Use a ReplicaGroup
+of Daemons with `replicas: 1` when each KEDA replica should mean one desired Pod.
+Point KEDA at the group: native Deployment or StatefulSet scaling does not pass
+through graph admission checks. Rules count graph vertices and recursive
+occurrences, not internal native replica totals. StatefulSet group scale-in
+deletes whole sets, so `persistentVolumeClaimRetentionPolicy.whenDeleted` governs
+their PVCs. See [workload controllers and storage](workload-storage.md).
+
+The owning-family lease serializes operator actions, and inputs are refreshed and
+checked after computation. Kubernetes offers no atomic read across all these
+objects, so an external writer can still race the final dispatch. A shared source
+used by independent root families is checked separately in each family; it is not
+a cross-family transaction. Rule rejection can leave some families scaled and
+others waiting. Explicit suspension, shutdown and deletion remain available to
+drain workloads.
 
 ## Scheduling and cleanup
 

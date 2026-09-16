@@ -48,7 +48,7 @@ def graph(kind="Graph"):
     """
     Produce a real, generation-current status snapshot for an empty completed graph.
     """
-    obj = resource(kind, "root", {"graph": {"nodes": []}} if kind == "Feedback" else {"nodes": []})
+    obj = resource(kind, "root", {"nodes": []})
     if kind == "ReplicaGroup":
         obj["spec"] = {"replicas": 0, "template": {"kind": "Graph", "ref": "template"}}
     obj["status"] = {"observedGeneration": 1, "phase": "Completed", "completed": True, "ready": True}
@@ -88,7 +88,7 @@ def test_activation_receipt_health(tmp_path, argocd_config, phase, expected):
     assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected
 
 
-@pytest.mark.parametrize("kind", ["Graph", "EphemeralGraph", "PolyGraph", "Feedback", "ReplicaGroup"])
+@pytest.mark.parametrize("kind", ["Graph", "PolyGraph", "ReplicaGroup"])
 def test_graph_kinds_and_templates(tmp_path, argocd_config, kind):
     """
     All graph boundaries report completion, while unexecuted templates are healthy definitions.
@@ -158,13 +158,14 @@ def test_graph_status_precedence(tmp_path, argocd_config, case, expected):
 
 
 @pytest.mark.parametrize(
-    "phase,ready,expected", [("Running", False, "Progressing"), ("Running", True, "Healthy"), ("Waiting", False, "Healthy")]
+    "phase,ready,expected", [("Running", False, "Progressing"), ("Running", True, "Healthy"), ("Waiting", False, "Progressing")]
 )
-def test_feedback_lifecycle(tmp_path, argocd_config, phase, ready, expected):
+def test_persistent_graph_lifecycle(tmp_path, argocd_config, phase, ready, expected):
     """
-    Recurring work need not complete, and the intentional inter-epoch interval is healthy.
+    Persistent work need not complete, but waiting without ready execution is progressing.
     """
-    obj = graph("Feedback")
+    obj = graph("Graph")
+    obj["spec"]["mode"] = "persistent"
     obj["status"].update(phase=phase, ready=ready, completed=False)
     obj["status"]["metrics"] = instance_metrics(obj, [])
     assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected

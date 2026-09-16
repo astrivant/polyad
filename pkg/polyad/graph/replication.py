@@ -15,12 +15,12 @@ class ReplicaTemplate:
     Select the reusable definition instantiated at each stable replica ordinal.
 
     Attributes:
-        kind (Literal['Workload', 'Daemon', 'Ephemeral', 'Resource', 'Graph', 'EphemeralGraph', 'PolyGraph', 'Feedback', 'ReplicaGroup']):
+        kind (Literal['Workload', 'Daemon', 'Ephemeral', 'Resource', 'Graph', 'PolyGraph', 'ReplicaGroup']):
             Executable definition or resource abstraction.
         ref (str): Namespaced definition name.
     """
 
-    kind: Literal["Workload", "Daemon", "Ephemeral", "Resource", "Graph", "EphemeralGraph", "PolyGraph", "Feedback", "ReplicaGroup"]
+    kind: Literal["Workload", "Daemon", "Ephemeral", "Resource", "Graph", "PolyGraph", "ReplicaGroup"]
     ref: str = field(metadata={"schema": {"minLength": 1, "maxLength": 63, "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"}})
 
 

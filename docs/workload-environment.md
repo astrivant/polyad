@@ -1,9 +1,9 @@
 # Workload environment
 
-Every Job and Deployment compiled from a Workload, Ephemeral or Daemon definition
+Every Job, Deployment and StatefulSet compiled from a Workload, Ephemeral or Daemon definition
 receives graph context automatically. It is available in all declared application
 containers, init containers and native sidecars. This includes workloads inside
-nested graphs, Feedback epochs, ReplicaGroups and activation runs.
+nested graphs, ReplicaGroups and activation runs.
 
 ## Activate a downstream workload
 
@@ -50,7 +50,7 @@ All values are strings. Optional context is the empty string when absent.
 | `POLYAD_NODE_PATH` | Hierarchical audit path through the containing graphs to this node |
 | `POLYAD_RUNTIME_NODE_NAME` | Execution node key; distinct from the logical name for individual activation runs |
 | `POLYAD_DEFINITION_NAME`, `POLYAD_DEFINITION_KIND`, `POLYAD_DEFINITION_UID`, `POLYAD_DEFINITION_GENERATION` | Reusable Workload, Ephemeral or Daemon definition used to compile this execution |
-| `POLYAD_RESOURCE_NAME`, `POLYAD_RESOURCE_KIND` | Native Job or Deployment containing this Pod |
+| `POLYAD_RESOURCE_NAME`, `POLYAD_RESOURCE_KIND` | Native Job, Deployment or StatefulSet containing this Pod |
 | `POLYAD_REQUEST_ID`, `POLYAD_COMPOSITION_UID` | Original composition request and persisted receipt identity, when present |
 | `POLYAD_ACTIVATION_ID`, `POLYAD_ACTIVATION_UID` | Current activation receipt, or nearest enclosing graph activation |
 | `POLYAD_POD_NAME`, `POLYAD_POD_UID`, `POLYAD_POD_NAMESPACE` | This concrete Pod's identity |
@@ -59,7 +59,7 @@ All values are strings. Optional context is the empty string when absent.
 
 Kubernetes supplies Pod identity, node and service account fields through the
 [Downward API](https://kubernetes.io/docs/concepts/workloads/pods/downward-api/).
-Each Deployment replica therefore gets its own Pod UID while sharing its logical
+Each Deployment or StatefulSet replica therefore gets its own Pod UID while sharing its logical
 graph node. The compiler obtains graph ancestry from current owner references,
 verifies parent UIDs and stops admission if an owner is missing, replaced or
 terminating. Cycles and ancestry beyond 32 boundaries are rejected.

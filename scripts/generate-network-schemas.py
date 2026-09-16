@@ -68,10 +68,10 @@ def main() -> int:
     args = parser.parse_args()
     directory = Path(__file__).resolve().parents[1] / "charts/polyad/crds"
     changed = []
-    for kind in ("graphs", "polygraphs", "ephemeralgraphs", "feedbacks", "rewrites", "graphrules"):
+    for kind in ("graphs", "polygraphs", "rewrites", "graphrules"):
         path = directory / f"{kind}.yaml"
         source = path.read_text()
-        props = ROOT + (("graph", "properties") if kind == "feedbacks" else ("topology", "properties") if kind == "rewrites" else ())
+        props = ROOT + (("topology", "properties") if kind == "rewrites" else ())
         updated = refresh(source, props, "network", structural_schema(NetworkAccess))
         if kind == "graphrules":
             updated = refresh(
@@ -104,7 +104,7 @@ def main() -> int:
             changed.append(kind)
             if not args.check:
                 path.write_text(updated)
-    for kind in ("graphs", "polygraphs", "ephemeralgraphs", "feedbacks", "workloads", "ephemerals", "daemons"):
+    for kind in ("graphs", "polygraphs", "workloads", "ephemerals", "daemons"):
         path = directory / f"{kind}.yaml"
         source = path.read_text()
         updated = refresh(source, ROOT, "activation", structural_schema(ActivationPolicy))

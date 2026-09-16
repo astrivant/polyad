@@ -44,7 +44,11 @@ def configure_storage(spec: dict[str, Any], *, ephemeral: bool) -> Persistence:
     persistence = converter.structure(spec.get("persistence", {}), Persistence)
     pod = spec["template"]["spec"]
     if ephemeral and (
-        persistence.enabled or persistence.claimName is not None or storage_fields(spec.get("persistence", {})) or storage_fields(pod)
+        persistence.enabled
+        or persistence.claimName is not None
+        or storage_fields(spec.get("persistence", {}))
+        or storage_fields(pod)
+        or storage_fields(spec.get("statefulSet", {}))
     ):
         raise ValueError("persistent storage and storage classes are invalid under Ephemeral nodes or graphs")
     if not persistence.enabled:
