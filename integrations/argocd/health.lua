@@ -1,4 +1,4 @@
--- Polyad lifecycle: docs/operator.md#graph-instance-status.
+-- Polyad lifecycle: docs/deployment/operator.md#graph-instance-status.
 -- Uses only the observed resource; no API access or open Lua libraries.
 local meta = obj.metadata or {}
 local spec = obj.spec or {}

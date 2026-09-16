@@ -30,6 +30,9 @@ spec:
             properties: {}
           spec:
             type: object
+            x-kubernetes-validations:
+              - rule: "!has(self.controller) || self.controller != 'DaemonSet' || ((!has(self.replicas) || self.replicas == 1) && !has(self.statefulSet) && !has(self.activation))"
+                message: DaemonSet uses node eligibility; replicas must be one and statefulSet and activation are unsupported.
             properties:
               activation:
                 type: object
@@ -102,9 +105,9 @@ spec:
                   volumes and probes are application-defined; the operator sets restart policy and inherited placement.
               controller:
                 type: string
-                enum: [Deployment, StatefulSet]
+                enum: [Deployment, StatefulSet, DaemonSet]
                 default: Deployment
-                description: Native controller for this persistent workload.
+                description: Deployment or StatefulSet scales Pods by replicas; DaemonSet runs one Pod on every eligible node and requires replicas equal to one.
               reloadOnSecretChange:
                 type: boolean
                 default: false

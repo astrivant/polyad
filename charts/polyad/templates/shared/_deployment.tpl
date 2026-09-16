@@ -1,5 +1,10 @@
 {{/* Shared by the Dense operator, Distributed bootstrap and component Pod templates. */}}
 {{- define "polyad.operatorDeployment" -}}
+{{- $auth := or .Values.authentication.services .Values.authentication.operators -}}
+{{- $required := eq .Values.authentication.mode "Required" -}}
+{{- $apiToken := and $required .Values.api.enabled (not (hasKey .Values._authEndpoints "composition")) -}}
+{{- $eventToken := and $required .Values.events.enabled (not (hasKey .Values._authEndpoints "events")) -}}
+{{- $metricsToken := and .Values.metrics.enabled .Values.metrics.authentication.enabled (not (hasKey .Values._authEndpoints "metrics")) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,6 +33,9 @@ spec:
     metadata:
       annotations:
         checksum/credentials: {{ include (print $.Template.BasePath "/shared/credentials.yaml") . | sha256sum }}
+        {{- if $auth }}
+        checksum/authentication: {{ .Values.authentication | toJson | sha256sum }}
+        {{- end }}
         {{- if .Values.mesh.operator.enabled }}
         sidecar.istio.io/inject: "true"
         sidecar.istio.io/nativeSidecar: "true"
@@ -64,10 +72,26 @@ spec:
         - name: operator
           image: {{ printf "%s:%s" .Values.operator.image.repository .Values.operator.image.tag | quote }}
           imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+          command: [/usr/bin/tini, --, python, -m, polyad.operator.runtime]
           args:
             - --namespace={{ .Release.Namespace }}
             - --liveness=http://0.0.0.0:8080/healthz
           env:
+            {{- include "polyad.tracingEnv" . | nindent 12 }}
+            - name: POLYAD_AUTH_MODE
+              value: {{ .Values.authentication.mode | quote }}
+            - name: POLYAD_AUTH_BACKEND
+              value: {{ .Values.authentication.backend | quote }}
+            {{- if $auth }}
+            - name: POLYAD_AUTH_CONFIG_FILE
+              value: /var/run/polyad/authentication/config.json
+            - name: POLYAD_WORKLOAD_CREDENTIALS_FILE
+              value: /var/run/polyad/workload-credentials/config.json
+            {{- end }}
+            {{- if .Values.authentication.storage.enabled }}
+            - name: POLYAD_AUTH_DATABASE_DSN_FILE
+              value: /var/run/polyad/auth-database/uri
+            {{- end }}
             - name: POLYAD_COMPONENT
               value: {{ ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed") | quote }}
             {{- if eq .Values.architecture.mode "Distributed" }}
@@ -76,12 +100,20 @@ spec:
             {{- end }}
             - name: POLYAD_POSTGRES_ENABLED
               value: {{ .Values.postgresql.enabled | quote }}
+            - name: POLYAD_POSTGRES_EVENTS_ENABLED
+              value: {{ and .Values.postgresql.enabled .Values.postgresql.events.enabled | quote }}
+            - name: POLYAD_POSTGRES_EVENTS_RETENTION_DAYS
+              value: {{ .Values.postgresql.events.retentionDays | quote }}
+            {{- if and .Values.dragonfly.enabled .Values.dragonfly.ha.enabled .Values.dragonfly.autoscaling.enabled }}
+            - name: POLYAD_DRAGONFLY_POOL
+              value: {{ printf "%s-queue" .Release.Name | quote }}
+            {{- end }}
             {{- if .Values.postgresql.enabled }}
             - name: POLYAD_POSTGRES_DSN_FILE
               value: /var/run/polyad/postgresql/uri
+            {{- end }}
             - name: POLYAD_STATE_SCOPE
               value: {{ default (printf "%s/%s" .Release.Namespace .Release.Name) .Values.postgresql.scope | quote }}
-            {{- end }}
             - name: POLYAD_OPERATOR_IMAGE
               value: {{ printf "%s:%s" .Values.operator.image.repository .Values.operator.image.tag | quote }}
             - name: POLYAD_ROOT_ENABLED
@@ -106,6 +138,12 @@ spec:
               value: {{ .Values.operator.tuning.backlogIntervalSeconds | quote }}
             - name: POLYAD_METRICS_ENABLED
               value: {{ .Values.metrics.enabled | quote }}
+            - name: POLYAD_API_ENABLED
+              value: {{ .Values.api.enabled | quote }}
+            - name: POLYAD_EVENTS_ENABLED
+              value: {{ .Values.events.enabled | quote }}
+            - name: POLYAD_EVENT_PUBLICATION_ENABLED
+              value: {{ or .Values.events.enabled (and .Values.postgresql.enabled .Values.postgresql.events.enabled) | quote }}
             - name: POLYAD_WORKLOAD_API_URL
               value: {{ default (ternary (printf "http://%s-polyad-api.%s.svc:8090" .Release.Name .Release.Namespace) "" .Values.api.enabled) .Values.rootControlPlane.endpoints.api | quote }}
             - name: POLYAD_WORKLOAD_EVENTS_URL
@@ -190,22 +228,35 @@ spec:
               value: {{ .Values.api.rateLimit.requestsPerMinute | quote }}
             {{- end }}
             {{- if .Values.api.enabled }}
-            - name: POLYAD_API_ENABLED
-              value: "true"
+            {{- if $apiToken }}
             - name: POLYAD_API_TOKEN_FILE
               value: /var/run/polyad/api/token
             {{- end }}
+            {{- end }}
             {{- if .Values.events.enabled }}
-            - name: POLYAD_EVENTS_ENABLED
-              value: "true"
             - name: POLYAD_EVENTS_RETENTION
               value: {{ .Values.events.retention | quote }}
             - name: POLYAD_EVENTS_CONNECTIONS
               value: {{ .Values.events.maxConnections | quote }}
+            {{- if $eventToken }}
             - name: POLYAD_EVENTS_TOKEN_FILE
               value: /var/run/polyad/events/token
             {{- end }}
-          volumeMounts:{{ if not (or .Values.postgresql.enabled .Values.federation.enabled .Values.api.enabled .Values.events.enabled .Values.dragonfly.existingSecret (and .Values.metrics.enabled .Values.metrics.authentication.enabled)) }} []{{ end }}
+            {{- end }}
+          volumeMounts:{{ if not (or $auth .Values.postgresql.enabled .Values.federation.enabled $apiToken $eventToken .Values.dragonfly.existingSecret $metricsToken) }} []{{ end }}
+            {{- if $auth }}
+            - name: authentication
+              mountPath: /var/run/polyad/authentication
+              readOnly: true
+            - name: workload-credentials
+              mountPath: /var/run/polyad/workload-credentials
+              readOnly: true
+            {{- end }}
+            {{- if .Values.authentication.storage.enabled }}
+            - name: authentication-database
+              mountPath: /var/run/polyad/auth-database
+              readOnly: true
+            {{- end }}
             {{- if .Values.postgresql.enabled }}
             - name: postgres-credentials
               mountPath: /var/run/polyad/postgresql
@@ -225,17 +276,17 @@ spec:
               readOnly: true
             {{- end }}
             {{- end }}
-            {{- if .Values.api.enabled }}
+            {{- if $apiToken }}
             - name: api-credentials
               mountPath: /var/run/polyad/api
               readOnly: true
             {{- end }}
-            {{- if .Values.events.enabled }}
+            {{- if $eventToken }}
             - name: events-credentials
               mountPath: /var/run/polyad/events
               readOnly: true
             {{- end }}
-            {{- if and .Values.metrics.enabled .Values.metrics.authentication.enabled }}
+            {{- if $metricsToken }}
             - name: metrics-credentials
               mountPath: /var/run/polyad/metrics
               readOnly: true
@@ -293,7 +344,16 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
-      volumes:{{ if not (or .Values.postgresql.enabled .Values.federation.enabled .Values.api.enabled .Values.events.enabled .Values.dragonfly.existingSecret (and .Values.metrics.enabled .Values.metrics.authentication.enabled)) }} []{{ end }}
+      volumes:{{ if not (or $auth .Values.postgresql.enabled .Values.federation.enabled $apiToken $eventToken .Values.dragonfly.existingSecret $metricsToken) }} []{{ end }}
+        {{- if $auth }}
+        {{- include "polyad.authenticationVolume" . | nindent 8 }}
+        - name: workload-credentials
+          configMap:
+            name: {{ .Release.Name }}-polyad-authentication
+        {{- end }}
+        {{- if .Values.authentication.storage.enabled }}
+        {{- include "polyad.authenticationDatabaseVolume" . | nindent 8 }}
+        {{- end }}
         {{- if .Values.postgresql.enabled }}
         - name: postgres-credentials
           secret:
@@ -326,7 +386,7 @@ spec:
                 path: config
         {{- end }}
         {{- end }}
-        {{- if .Values.api.enabled }}
+        {{- if $apiToken }}
         - name: api-credentials
           secret:
             secretName: {{ default (printf "%s-polyad-api" .Release.Name) .Values.api.existingSecret | quote }}
@@ -334,7 +394,7 @@ spec:
               - key: token
                 path: token
         {{- end }}
-        {{- if .Values.events.enabled }}
+        {{- if $eventToken }}
         - name: events-credentials
           secret:
             secretName: {{ default (printf "%s-polyad-events" .Release.Name) .Values.events.existingSecret | quote }}
@@ -342,7 +402,7 @@ spec:
               - key: token
                 path: token
         {{- end }}
-        {{- if and .Values.metrics.enabled .Values.metrics.authentication.enabled }}
+        {{- if $metricsToken }}
         - name: metrics-credentials
           secret:
             secretName: {{ default (printf "%s-polyad-metrics" .Release.Name) .Values.metrics.authentication.existingSecret | quote }}

@@ -39,7 +39,7 @@ jobs:
         with:
           python-version-file: .python-version
       - name: Install Poetry
-        run: pip install "poetry==$(bash scripts/tool-version.sh poetry)"
+        run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
       - name: Check release version
         id: version
         env:

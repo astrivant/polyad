@@ -25,48 +25,60 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: helm-values-types
+        name: Helm values types and schema coverage
+        entry: bash scripts/tooling/project-python.sh scripts/validation/check-values.py
+        language: system
+        pass_filenames: false
+        files: '^(charts/polyad/values.*\.(yaml|json)|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|tests/data/.*values\.yaml|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
       - id: status-schemas
         name: Generated graph status schemas
-        entry: bash scripts/project-python.sh scripts/generate-status-schemas.py --check
+        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-status-schemas.py --check
         language: system
         pass_filenames: false
-        files: '^(pkg/polyad/compiler/|pkg/polyad-types/|charts/polyad/crds/|scripts/generate-status-schemas\.py$|\.pre-commit-config\.yaml$)'
+        files: '^(pkg/polyad/compiler/|pkg/polyad-types/|charts/polyad/crds/|scripts/schemas/generate-status-schemas\.py$|\.pre-commit-config\.yaml$)'
+      - id: reference-schema
+        name: Generated Helm overlay editor schema
+        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-reference-schema.py --check
+        language: system
+        pass_filenames: false
+        files: '^(charts/polyad/values.*\.json|scripts/schemas/generate-reference-schema\.py|\.pre-commit-config\.yaml)$'
       - id: network-schemas
         name: Generated graph network and capacity schemas
-        entry: bash scripts/project-python.sh scripts/generate-network-schemas.py --check
+        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-network-schemas.py --check
         language: system
         pass_filenames: false
-        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-types/|charts/polyad/crds/|scripts/generate-network-schemas\.py$|\.pre-commit-config\.yaml$)'
+        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-types/|charts/polyad/crds/|scripts/schemas/generate-network-schemas\.py$|\.pre-commit-config\.yaml$)'
       - id: docstring-layout
         name: Multiline docstring layout
-        entry: bash scripts/project-python.sh scripts/check-docstrings.py
+        entry: bash scripts/tooling/project-python.sh scripts/validation/check-docstrings.py
         language: system
         types: [python]
       - id: mermaid-check
         name: Validate Mermaid diagrams
-        entry: bash scripts/check-mermaid.sh
+        entry: bash scripts/validation/check-mermaid.sh
         language: system
         pass_filenames: false
         require_serial: true
-        files: '(?i)(\.(md|markdown|mmd|mermaid)$|^scripts/mermaid/|^scripts/check-mermaid\.sh$|^\.pre-commit-config\.yaml$)'
+        files: '(?i)(\.(md|markdown|mmd|mermaid)$|^scripts/validation/mermaid/|^scripts/validation/check-mermaid\.sh$|^\.pre-commit-config\.yaml$)'
       - id: shellcheck
         name: ShellCheck and shfmt
-        entry: bash scripts/check-shell.sh
+        entry: bash scripts/validation/check-shell.sh
         language: system
         types: [shell]
       - id: ruff-check
         name: Ruff lint
-        entry: bash scripts/project-python.sh -m ruff check
+        entry: bash scripts/tooling/project-python.sh -m ruff check
         language: system
         types: [python]
       - id: ruff-format
         name: Ruff format
-        entry: bash scripts/project-python.sh -m ruff format --check
+        entry: bash scripts/tooling/project-python.sh -m ruff format --check
         language: system
         types: [python]
       - id: mypy
         name: mypy
-        entry: bash scripts/project-python.sh -m mypy
+        entry: bash scripts/tooling/project-python.sh -m mypy
         language: system
         types: [python]
         pass_filenames: false

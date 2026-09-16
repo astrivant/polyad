@@ -11,7 +11,10 @@ from attrs import evolve, field, frozen
 
 from polyad.api.app import _build_app
 from polyad.api.limits import RateLimitPolicy
+from polyad.auth.http import Access
+from polyad.auth.policy import public_demo
 from polyad_types.requests import ActivationRequest, CompositionRequest
+from polyad_types.throughput import ThroughputSample
 
 if TYPE_CHECKING:
     from typing import Self
@@ -34,6 +37,8 @@ class APIBuilder:
         activate (Callable[[ActivationRequest], dict[str, Any]] | None): Durable pulse submission.
         activation_lookup (Callable[[str], dict[str, Any] | None] | None): Pulse observations.
         activation_stop (Callable[[str], dict[str, Any] | None] | None): Pulse stop signal.
+        access (Access | None): Named credentials and shared rate/concurrency lanes.
+        throughput (Callable[[ThroughputSample], dict[str, Any]] | None): Authorized aggregate throughput intake.
     """
 
     submit: Callable[[CompositionRequest], dict[str, Any]] | None = None
@@ -45,6 +50,8 @@ class APIBuilder:
     activate: Callable[[ActivationRequest], dict[str, Any]] | None = None
     activation_lookup: Callable[[str], dict[str, Any] | None] | None = None
     activation_stop: Callable[[str], dict[str, Any] | None] | None = None
+    access: Access | None = None
+    throughput: Callable[[ThroughputSample], dict[str, Any]] | None = None
 
     def with_activation_handlers(
         self,
@@ -117,16 +124,19 @@ class APIBuilder:
         """
         return evolve(self, title=title, version=version)
 
-    def build(self) -> Flask:
+    def build(self, application: Flask | None = None) -> Flask:
         """
-        Validate required collaborators and create a fresh Flask service instance.
+        Register composition routes on the process application.
+
+        Args:
+            application (Flask | None): Shared application, or None for standalone use.
 
         Returns:
             Flask: Authenticated composition application ready for WSGI hosting.
         """
         if self.submit is None or self.lookup is None:
             raise ValueError("the composition API requires submit and lookup handlers")
-        if not self.token:
+        if not self.token and not (self.access and self.access.supports("composition")) and not public_demo():
             raise ValueError("the composition API requires a bearer token")
         if not self.title.strip() or not self.version.strip():
             raise ValueError("OpenAPI title and version must be nonempty")
@@ -140,4 +150,7 @@ class APIBuilder:
             activate=self.activate,
             activation_lookup=self.activation_lookup,
             activation_stop=self.activation_stop,
+            access=self.access,
+            throughput=self.throughput,
+            application=application,
         )

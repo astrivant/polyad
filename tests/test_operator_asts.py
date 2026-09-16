@@ -10,6 +10,7 @@ import json
 from unittest.mock import Mock
 
 import pytest
+from deepdiff import DeepDiff
 
 from polyad.compiler.passes.children import owned_child
 from polyad.operator.api import API
@@ -40,6 +41,13 @@ def execution_spec(kind):
             "replicas": 0,
             "selector": {"matchLabels": {"app": "test"}},
             "strategy": {"type": "Recreate"},
+        }
+    if kind == "DaemonSet":
+        return {
+            "template": template,
+            "selector": {"matchLabels": {"app": "test"}},
+            "updateStrategy": {"type": "RollingUpdate"},
+            "minReadySeconds": 0,
         }
     if kind == "StatefulSet":
         return asts.to_document(
@@ -92,7 +100,7 @@ def test_resource_roundtrip(cls):
         document["spec"] = execution_spec(descriptor.kind)
     model = asts.from_document(document)
     assert isinstance(model, cls)
-    assert asts.to_document(model) == document
+    assert not DeepDiff(document, asts.to_document(model))
     output = asts.to_document(model)
     output["metadata"]["managedFields"].clear()
     document["metadata"]["managedFields"].clear()
@@ -138,7 +146,7 @@ def test_child_wire_compatibility(kind):
         expected.update(extra)
     else:
         expected["spec"] = spec
-    assert asts.to_document(child) == expected
+    assert not DeepDiff(expected, asts.to_document(child))
     if kind in {"Job", "Deployment", "StatefulSet"}:
         typed_spec = asts.converter.structure(
             spec, {"Job": asts.JobSpec, "Deployment": asts.DeploymentSpec, "StatefulSet": asts.StatefulSetSpec}[kind]

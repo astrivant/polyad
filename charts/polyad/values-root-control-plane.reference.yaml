@@ -1,73 +1,123 @@
+# yaml-language-server: $schema=values.reference.schema.json
 # One HA root manages execution replicas in registered workload clusters.
 # Install this release in the management cluster, namespace polyad.
-# Guide and access manifests: ../../docs/root-control-plane.md
+# Guide and access manifests: ../../docs/deployment/root-control-plane.md
 # Use alone, or add values-components.reference.yaml last to split the root.
 # These are reference overrides; values.yaml contains all defaults.
-tags:
-  singular: false
-  ha: true
+## @param ha [boolean] Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
+ha: true
 
+## @param operator [object] Settings for operator; configure the fields below.
 operator:
+  ## @param operator.logLevel [string] INFO keeps normal operational logs; DEBUG traces Polyad reconciliation and API timings, including observers. Choices: DEBUG, INFO, WARNING, ERROR, CRITICAL.
+  logLevel: INFO
+  ## @param operator.replicaCount [integer|null] Operator replicas; null selects 1 for singular or 2 for ha Minimum: 1. Maximum: 32.
   replicaCount: 2
 
+## @param global [object] Settings for global; configure the fields below.
 global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster; configure the fields below.
   multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad
     clusterName: management
 
+## @param federation [object] Settings for federation; configure the fields below.
 federation:
+  ## @param federation.enabled [boolean] Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
   enabled: true
+  ## @param federation.clusters [array] Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only
   clusters:
+    ## @param federation.clusters[].name [string] Stable identity within this configuration; choose a distinct name.
     - name: west
+      ## @param federation.clusters[].namespace [string] Kubernetes namespace; match the destination resource namespace. The root installs the execution pool here.
       namespace: workloads # The root installs the execution pool here.
+      ## @param federation.clusters[].kubeconfigSecret [string] Existing release-namespace Secret containing an embedded kubeconfig under config. Root-namespace Secret, key: config.
       kubeconfigSecret: west-access # Root-namespace Secret, key: config.
 
+## @param rootControlPlane [object] Settings for rootControlPlane; configure the fields below.
 rootControlPlane:
+  ## @param rootControlPlane.enabled [boolean] Manage registered clusters and remote execution replicas through one root scheduler; requires ha
   enabled: true
   # Root-namespace Secret with a verified, embedded kubeconfig under config.
   # Its root Kubernetes API address must be reachable from remote workers.
+  ## @param rootControlPlane.kubeconfigSecret [string] Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
   kubeconfigSecret: root-access
+  ## @param rootControlPlane.pools [array] Root-owned OperatorPools: unique name and registered cluster, replicas, and optional resources, nodeSelector and tolerations; requires rootControlPlane.enabled
   pools:
+    ## @param rootControlPlane.pools[].name [string] Stable identity within this configuration; choose a distinct name. Helm owns this OperatorPool in the ROOT namespace.
     - name: west-workers # Helm owns this OperatorPool in the ROOT namespace.
+      ## @param rootControlPlane.pools[].cluster [string] Registered cluster name; empty uses the local execution cluster. Must match one federation.clusters registration.
       cluster: west # Must match one federation.clusters registration.
-      replicas: 2 # Zero pauses remote capacity; the root keeps executing.
+      ## @param rootControlPlane.pools[].controller [string] Deployment supports root KEDA replica scaling; DaemonSet runs through an internal PolyGraph on every eligible node and requires replicas: 1. DaemonSet uses an internal PolyGraph -> Graph -> DaemonSet and requires replicas: 1. Choices: Deployment, DaemonSet.
+      controller: Deployment # DaemonSet uses an internal PolyGraph -> Graph -> DaemonSet and requires replicas: 1.
+      ## @param rootControlPlane.pools[].replicas [integer] Initial Deployment worker count, including zero to pause; DaemonSet requires one and follows eligible nodes. Deployment only: zero pauses remote capacity; the root keeps executing. Minimum: 0. Maximum: 32.
+      replicas: 2 # Deployment only: zero pauses remote capacity; the root keeps executing.
+      ## @param rootControlPlane.pools[].nodeSelector [object] Node labels that must match; empty allows any node compatible with other scheduling constraints. Placement of the execution Pods in the workload cluster.
       nodeSelector: {} # Placement of the execution Pods in the workload cluster.
+      ## @param rootControlPlane.pools[].tolerations [array] Native Kubernetes tolerations; empty does not tolerate extra taints.
       tolerations: []
+      ## @param rootControlPlane.pools[].resources [object] Settings for rootControlPlane.pools[].resources; configure the fields below.
       resources:
+        ## @param rootControlPlane.pools[].resources.requests [object] Settings for rootControlPlane.pools[].resources.requests; configure the fields below.
         requests:
+          ## @param rootControlPlane.pools[].resources.requests.cpu [string] Kubernetes CPU quantity; requests reserve scheduling capacity and limits cap usage.
           cpu: 250m
+          ## @param rootControlPlane.pools[].resources.requests.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
           memory: 256Mi
+        ## @param rootControlPlane.pools[].resources.limits [object] Settings for rootControlPlane.pools[].resources.limits; configure the fields below.
         limits:
+          ## @param rootControlPlane.pools[].resources.limits.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
           memory: 1Gi
   # Optional complete workload-cluster transport registry, using the peer shape
   # from values-multicluster.reference.yaml. Each executor excludes its own cluster.
+  ## @param rootControlPlane.meshPeers [array] Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster
   meshPeers: []
   # Replace with reachable routes. These values advertise URLs; configure ingress,
   # DNS and TLS separately. They do not publish the Services themselves.
+  ## @param rootControlPlane.endpoints [object] Settings for rootControlPlane.endpoints; configure the fields below.
   endpoints:
+    ## @param rootControlPlane.endpoints.api [string] Externally reachable root composition API URL advertised to workloads
     api: https://polyad.example.com/composition
+    ## @param rootControlPlane.endpoints.events [string] Externally reachable root events URL advertised to workloads
     events: https://polyad.example.com/events
+    ## @param rootControlPlane.endpoints.metrics [string] Externally reachable root metrics URL advertised to workloads
     metrics: https://polyad.example.com/metrics
 
 # Root-namespace Secret, key: url. All root and execution replicas must reach
 # this shared, credentialed Dragonfly endpoint; use TLS across untrusted networks.
+## @param dragonfly [object] Settings for dragonfly; configure the fields below.
 dragonfly:
+  ## @param dragonfly.enabled [boolean] Deploy Dragonfly through the upstream operator Helm dependency
   enabled: false
+  ## @param dragonfly.existingSecret [string] Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings
   existingSecret: root-cache
 
 # Create these dedicated token Secrets in the root namespace, or configure ESO.
+## @param api [object] Settings for api; configure the fields below.
 api:
+  ## @param api.enabled [boolean] Serve authenticated composition requests on port 8090 through a ClusterIP Service
   enabled: true
+  ## @param api.existingSecret [string] Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
   existingSecret: polyad-api
+## @param events [object] Settings for events; configure the fields below.
 events:
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
   enabled: true
+  ## @param events.existingSecret [string] Existing Secret containing a token key for read-only event subscriptions
   existingSecret: polyad-events
+## @param metrics [object] Settings for metrics; configure the fields below.
 metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: true
+  ## @param metrics.graphLabels [boolean] Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes
   graphLabels: true # Per-graph series increase metric cardinality.
+  ## @param metrics.authentication [object] Settings for metrics.authentication; configure the fields below.
   authentication:
+    ## @param metrics.authentication.enabled [boolean] Require a dedicated bearer token on all metrics endpoints
     enabled: true
+    ## @param metrics.authentication.existingSecret [string] Existing or ESO-managed Secret containing the metrics token
     existingSecret: polyad-metrics
 
 # Do not install an independent operator over the same root-managed families.
-# KEDA may scale the root OperatorPool /scale; see the guide's concrete manifests.
+# KEDA may scale Deployment-mode OperatorPool /scale; see the guide's concrete manifests.
 # PostgreSQL is optional; add values-postgresql.reference.yaml to persist state.

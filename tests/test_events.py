@@ -195,14 +195,17 @@ def test_live_event_server_streams_and_stops_cleanly(monkeypatch):
     """
     import urllib.request
 
-    from polyad.events.server import EventServer
+    from polyad.api.server import APIServer
+    from polyad.operator.api import API
 
     monkeypatch.setenv("POLYAD_CACHE_URL", os.environ["POLYAD_TEST_DRAGONFLY_URL"])
 
     async def run():
         namespace = f"server-{uuid4()}"
         store = EventStore(os.environ["POLYAD_TEST_DRAGONFLY_URL"], namespace, visible=lambda obj: public_observation(FakeAPI(), obj))
-        server = EventServer(store, namespace, "subscriber", port=0, connections=1)
+        server = APIServer(API())
+        server.events(store, namespace, "subscriber", connections=1)
+        server.start(host="127.0.0.1", ports={"events": 0})
         try:
             obj = resource("Graph", "sample")
             obj["metadata"]["namespace"] = namespace

@@ -1,13 +1,28 @@
+# yaml-language-server: $schema=values.schema.json
 ## @section Deployment profiles
-tags:
-  ## @param tags.singular Run one dense operator in the Helm release cluster; select at most one profile tag
-  singular: false
-  ## @param tags.ha Run replicated dense operators in the Helm release cluster; default when no profile tag is selected
-  ha: false
+## @param ha Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
+ha: false
+
+## @section OpenTelemetry tracing
+tracing:
+  ## @param tracing.enabled Export operator and observer traces over OTLP/HTTP; disabled creates no exporter
+  enabled: false
+  ## @param tracing.endpoint Full HTTP/protobuf trace URL, including /v1/traces; use a Collector reachable from every execution cluster
+  endpoint: http://otel-collector:4318/v1/traces
+  ## @param tracing.serviceName Service identity in the trace backend; resource attributes can identify cluster and environment
+  serviceName: polyad-operator
+  ## @param tracing.samplingRatio Fraction of new root traces to sample (number, 0-1); child spans honor their parent's sampling decision
+  samplingRatio: 1
+  ## @param tracing.timeoutSeconds Export request timeout in seconds; exports are batched off the reconciliation path
+  timeoutSeconds: 10
+  ## @param tracing.resourceAttributes Comma-separated OpenTelemetry resource attributes, for example deployment.environment.name=production
+  resourceAttributes: ''
+  ## @param tracing.headersSecret Existing Secret with a headers key containing OTLP exporter headers; empty for collectors without authentication
+  headersSecret: ''
 
 ## @section Operator and shared queue parameters
 operator:
-  ## @param operator.logLevel Polyad logging verbosity (DEBUG, INFO, WARNING, ERROR or CRITICAL)
+  ## @param operator.logLevel Operator and observer Python logging verbosity; INFO for normal operation, DEBUG for reconciliation diagnostics (DEBUG, INFO, WARNING, ERROR or CRITICAL)
   logLevel: INFO
   ## @param operator.replicaCount [nullable] Operator replicas; null selects 1 for singular or 2 for ha
   replicaCount: null
@@ -51,13 +66,13 @@ operator:
             value: 100
             periodSeconds: 15
   tuning:
-    ## @param operator.tuning.rescanIntervalSeconds Delay after namespace rescans; lower values increase Kubernetes reads (1-15)
+    ## @param operator.tuning.rescanIntervalSeconds Pause after local and root-managed remote inventory scans (1-15s); watch polyad_inventory_sample_age_seconds and polyad_cluster_inventory_sample_fresh; lower values add Kubernetes and optional state writes
     rescanIntervalSeconds: 5
-    ## @param operator.tuning.consumeIntervalSeconds Delay after each shared-queue consumption pass (0.1-5)
+    ## @param operator.tuning.consumeIntervalSeconds Pause after local and remote queue consumption passes (0.1-5s); watch polyad_inbound_updates and polyad_kubernetes_writes_queued before increasing dispatch pressure
     consumeIntervalSeconds: 1
-    ## @param operator.tuning.metricsIntervalSeconds Delay between cached metrics publications (1-5)
+    ## @param operator.tuning.metricsIntervalSeconds Pause after cached metrics publication and component/worker reporting (1-5s); also controls enabled PostgreSQL and Dragonfly connection sampling, not Prometheus scrape frequency or trace export
     metricsIntervalSeconds: 5
-    ## @param operator.tuning.backlogIntervalSeconds Delay between shared-queue backlog samples (1-5)
+    ## @param operator.tuning.backlogIntervalSeconds Pause after local shared-queue samples (1-5s); watch polyad_inbound_sample_age_seconds; root-managed remote backlog is sampled by rescanIntervalSeconds
     backlogIntervalSeconds: 5
   image:
     ## @param operator.image.repository Operator image repository
@@ -88,6 +103,15 @@ postgresql:
   existingSecret: ''
   ## @param postgresql.secretKey DSN key in the external database Secret
   secretKey: uri
+  ## @param postgresql.database String. Application database for graph state and optional event history; set only when bootstrapping a new managed cluster
+  database: polyad
+  ## @param postgresql.username String. Dedicated application owner; PUBLIC database access is revoked and superuser access stays disabled
+  username: polyad
+  events:
+    ## @param postgresql.events.enabled Boolean. Archive approved application events in PostgreSQL; bounded live replay still uses Dragonfly
+    enabled: true
+    ## @param postgresql.events.retentionDays Integer. Retain durable event history for this many days; graph snapshots retain current state independently
+    retentionDays: 30
   ## @param postgresql.scope State identity within the database; empty uses the release namespace and name
   scope: ''
   ## @param postgresql.image PostgreSQL image for the managed cluster
@@ -171,10 +195,19 @@ dragonfly:
   ha:
     ## @param dragonfly.ha.enabled Enable primary/replica replication and automatic failover
     enabled: false
-    ## @param dragonfly.ha.replicas Total Dragonfly instances in HA mode, including the primary
+    ## @param dragonfly.ha.replicas Initial Dragonfly instances in HA mode, including the primary; fixed when autoscaling is disabled
     replicas: 2
     ## @param dragonfly.ha.topologyKey Place HA instances on distinct values of this node label
     topologyKey: kubernetes.io/hostname
+  autoscaling:
+    ## @param dragonfly.autoscaling.enabled Use KEDA for bundled HA Dragonfly and enable Polyad metrics; inactive outside bundled HA
+    enabled: true
+    ## @param dragonfly.autoscaling.minReplicas Minimum total cache instances, including the primary; never below two
+    minReplicas: 2
+    ## @param dragonfly.autoscaling.maxReplicas Maximum total cache instances; requires sufficient eligible nodes and storage
+    maxReplicas: 5
+    ## @param dragonfly.autoscaling.connectionsPerReplica Primary connected clients per desired cache instance; scales failover copies, not write capacity
+    connectionsPerReplica: 50
   ## @param dragonfly.externalUrl External Redis-compatible URL when bundled Dragonfly is disabled
   externalUrl: redis://dragonfly:6379/0
   ## @param dragonfly.existingSecret Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings
@@ -262,9 +295,9 @@ events:
 
 ## @section Scheduler metrics
 metrics:
-  ## @param metrics.enabled Serve cached Prometheus and JSON metrics on an internal Service at port 8092
+  ## @param metrics.enabled Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: false
-  ## @param metrics.graphLabels Include per-object hierarchy and direct-resource Prometheus series; increases cardinality
+  ## @param metrics.graphLabels Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes
   graphLabels: false
 
   authentication:
@@ -276,6 +309,36 @@ metrics:
     secretKey: token
     ## @param metrics.authentication.key Inline metrics token; requires existingSecret to be empty
     key: ''
+
+## @section Named operator API credentials
+authentication:
+  ## @param authentication.mode String. Required enforces endpoint credentials; Disabled opts into an unauthenticated demo without HTTP request quotas
+  mode: Required
+  ## @param authentication.backend String. Builtin uses Polyad's Flask hooks; FlaskHTTPAuth loads the adapter included in official operator images
+  backend: Builtin
+  storage:
+    ## @param authentication.storage.enabled Boolean. Persist one-way key verifiers and policy records in PostgreSQL and enforce database revocation; raw tokens stay in Kubernetes Secrets
+    enabled: false
+    ## @param authentication.storage.separateDatabase Boolean. Use an isolated authentication database; false reuses the state database and its role, requiring postgresql.enabled
+    separateDatabase: true
+    ## @param authentication.storage.managed Boolean. Provision a separate CloudNativePG Cluster; false uses the DSN from existingSecret
+    managed: true
+    ## @param authentication.storage.existingSecret String. Externally managed authentication database connection Secret; used with separateDatabase=true and managed=false
+    existingSecret: ''
+    ## @param authentication.storage.secretKey String. DSN key in the external authentication database Secret
+    secretKey: uri
+    ## @param authentication.storage.database String. Database name for a new managed authentication cluster
+    database: polyad-authentication
+    ## @param authentication.storage.username String. Sole application login owning the managed authentication database; PostgreSQL administrators retain administrative access
+    username: polyad_authentication
+    ## @param authentication.storage.size String. Persistent storage per managed authentication database instance
+    size: 1Gi
+    ## @param authentication.storage.storageClass String. Authentication database storage class; empty uses the cluster default
+    storageClass: ''
+  ## @param authentication.services [array] Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits
+  services: []
+  ## @param authentication.operators [array] Peer operator API keys; Inbound, Outbound or Bidirectional, with HA-wide per-key lanes
+  operators: []
 
 ## @section KEDA credential integration
 keda:
@@ -336,7 +399,7 @@ mesh:
       portName: tls
       ## @param mesh.multicluster.eastWest.hosts [array] Service SNI suffixes exposed through AUTO_PASSTHROUGH
       hosts: ['*.local']
-    ## @param mesh.multicluster.peers [array] Remote transport registrations; see docs/multicluster.md for same-network and gateway configurations
+    ## @param mesh.multicluster.peers [array] Remote transport registrations; see docs/deployment/multicluster.md for same-network and gateway configurations
     peers: []
   operator:
     ## @param mesh.operator.enabled Inject the operator pods and authorize their API and event ports with Istio

@@ -34,6 +34,9 @@ dependencies = [
     "waitress>=3,<4",
     "flask-limiter[redis]>=4.1,<5",
     "prometheus-client>=0.22,<1",
+    "opentelemetry-api>=1.39,<2",
+    "opentelemetry-sdk>=1.39,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.39,<2",
     "polyad-types==0.0.1a3",
 ]
 
@@ -44,17 +47,22 @@ Repository = "https://github.com/astrivant/polyad"
 Issues = "https://github.com/astrivant/polyad/issues"
 Changelog = "https://github.com/astrivant/polyad/releases"
 
+[project.optional-dependencies]
+flask-auth = ["flask-httpauth>=4.8,<5"]
+
 [project.scripts]
 polyad-operator = "polyad.operator.runtime:main"
 
 [tool.poetry]
 packages = [{include = "polyad", from = "pkg"}]
+include = [{path = "pkg/polyad/sql/**/*.sql", format = ["sdist", "wheel"]}]
 
 [tool.poetry.dependencies]
 polyad-types = {path = "pkg/polyad-types"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=9.0.3,<10"
+deepdiff = ">=9.1,<10"
 ruff = "^0.15"
 mypy = "^1.15"
 matplotlib = ">=3.10,<4"
@@ -107,7 +115,7 @@ strict = true
 files = ["pkg", "examples"]
 
 [[tool.mypy.overrides]]
-module = ["kubernetes.*"]
+module = ["kubernetes.*", "flask_httpauth"]
 ignore_missing_imports = true
 
 [tool.pydocstyle]

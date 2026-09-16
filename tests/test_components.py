@@ -142,7 +142,7 @@ def test_rendered_service_graph_creates_component_deployments_and_enforces_its_b
     from tests.test_chart import render
     from tests.test_operator import FakeAPI, resource
 
-    objects = render("architecture.mode=Distributed", "api.enabled=true", "metrics.enabled=true", "architecture.expandedNodes=9")
+    objects = render("ha=true", "architecture.mode=Distributed", "api.enabled=true", "metrics.enabled=true", "architecture.expandedNodes=9")
     definitions = [
         resource(obj["kind"], obj["metadata"]["name"], obj["spec"])
         for obj in objects

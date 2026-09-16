@@ -1,0 +1,8 @@
+(has(spec.templateOnly) && spec.templateOnly) || (
+  has(status.scaleCurrent) && status.scaleCurrent &&
+  has(status.observedRemoteScaleIntent) &&
+  status.observedRemoteScaleIntent == (
+    has(metadata.annotations) && 'polyad.astrivant.com/remote-scale-intent' in metadata.annotations
+      ? metadata.annotations['polyad.astrivant.com/remote-scale-intent'] : ''
+  )
+)

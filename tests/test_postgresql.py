@@ -6,15 +6,18 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import hashlib
 import os
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from polyad.auth.store import CredentialStore
 from polyad.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
 from polyad.operator.state import StateStore, state_document
+from polyad_types.auth import APIKey
 from tests.test_metrics_api import snapshot
 from tests.test_operator import resource
 
@@ -62,6 +65,67 @@ def test_superseded_scan_cannot_replace_inventory():
         assert not await store.save("west", "apps", "older", [], {})
         assert connection.execute.await_count == 1
         assert "observed_at <= EXCLUDED.observed_at" in connection.execute.call_args.args[0]
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.skipif(not os.environ.get("POLYAD_TEST_POSTGRES_DSN"), reason="requires a PostgreSQL test database")
+def test_postgresql_authentication_artifacts_preserve_revocation_and_verifier_deduplication():
+    """
+    Execute the shipped authentication schema and queries with real bound parameters.
+    """
+    scope = "test-" + uuid.uuid4().hex
+    store = CredentialStore(os.environ["POLYAD_TEST_POSTGRES_DSN"], scope)
+    key = APIKey(name="client", direction="Inbound", existingSecret="key", endpoints=("events",))
+    token = "test-only-token-'-%s"
+    try:
+        assert store.permitted("services", key, token)
+        assert store.permitted("services", key, token)
+        with store.pool.connection() as connection:
+            rows = connection.execute("SELECT verifier FROM polyad_auth_keys WHERE scope = %s", (scope,)).fetchall()
+            assert rows == [(hashlib.sha256(token.encode()).hexdigest(),)]
+            connection.execute("UPDATE polyad_auth_lanes SET disabled = true WHERE scope = %s", (scope,))
+        assert not store.permitted("services", key, token)
+    finally:
+        with store.pool.connection() as connection:
+            connection.execute("DELETE FROM polyad_auth_keys WHERE scope = %s", (scope,))
+            connection.execute("DELETE FROM polyad_auth_lanes WHERE scope = %s", (scope,))
+        store.close()
+
+
+@pytest.mark.skipif(not os.environ.get("POLYAD_TEST_POSTGRES_DSN"), reason="requires a PostgreSQL test database")
+def test_postgresql_event_artifacts_deduplicate_and_prune_within_scope(monkeypatch):
+    """
+    Archive retries preserve one event and retention does not delete another control plane's history.
+    """
+    monkeypatch.setenv("POLYAD_POSTGRES_EVENTS_ENABLED", "true")
+    monkeypatch.setenv("POLYAD_POSTGRES_EVENTS_RETENTION_DAYS", "1")
+
+    async def scenario():
+        scope = "test-" + uuid.uuid4().hex
+        store = StateStore(os.environ["POLYAD_TEST_POSTGRES_DSN"], scope)
+        payload = {"event": "topology", "name": "batch-'-%s"}
+        try:
+            await store.record_event(payload)
+            await store.record_event(payload)
+            async with store.pool.connection() as connection:
+                cursor = await connection.execute("SELECT payload FROM polyad_event_history WHERE scope = %s", (scope,))
+                assert await cursor.fetchall() == [(payload,)]
+                await connection.execute(
+                    "INSERT INTO polyad_event_history (scope, identity, recorded_at, payload) "
+                    "VALUES (%s, 'expired', now() - interval '2 days', '{}'), (%s, 'expired', now() - interval '2 days', '{}')",
+                    (scope, scope + "-other"),
+                )
+            await store.record_event(payload)
+            async with store.pool.connection() as connection:
+                cursor = await connection.execute(
+                    "SELECT scope FROM polyad_event_history WHERE identity = 'expired' AND scope IN (%s, %s)", (scope, scope + "-other")
+                )
+                assert await cursor.fetchall() == [(scope + "-other",)]
+        finally:
+            async with store.pool.connection() as connection:
+                await connection.execute("DELETE FROM polyad_event_history WHERE scope IN (%s, %s)", (scope, scope + "-other"))
+            await store.close()
 
     asyncio.run(scenario())
 

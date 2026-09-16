@@ -12,48 +12,42 @@ import time
 from typing import TYPE_CHECKING
 
 import kopf
+from attrs import asdict
 from cattrs.errors import CattrsError
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.connections.store import ConnectionSettings
-from polyad.api.server import CompositionServer, ConnectionServer
 from polyad.cache import cache_url
 from polyad.compiler.registry import RECONCILED_KINDS, RESOURCE_TYPES
-from polyad.events.server import EventServer
-from polyad.events.store import EventStore
-from polyad.events.topology import topology_snapshot
-from polyad.events.visibility import public_observation
+from polyad.events.visibility import observation_ancestry, public_observation
 from polyad.metrics.inventory import inventory
-from polyad.metrics.server import MetricsServer
-from polyad.metrics.store import MetricsStore
 from polyad.operator.api import API, GROUP, VERSION
-from polyad.operator.controller import Controller, Pending
 from polyad.operator.coordination import SHARDS, Coordinator, NotOwner, active_shard
 from polyad.operator.health import credential_token, lifecycle, watch_credentials
 from polyad.operator.pressure import collect, report
 from polyad.operator.queue import RefreshQueue
 from polyad.operator.roles import executes, role, serves
-from polyad.operator.root import RootControlPlane
 from polyad.operator.shared_queue import SharedQueue
-from polyad.operator.state import StateStore
 from polyad.operator.tuning import OperatorTuning
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
     from typing import Any
 
+    from polyad.api.server import APIServer
+    from polyad.events.store import EventStore
+    from polyad.metrics.store import MetricsStore
+    from polyad.operator.controller import Controller
     from polyad.operator.queue import Key
+    from polyad.operator.root import RootControlPlane
+    from polyad.operator.state import StateStore
 
 queue: RefreshQueue | None = None
 controller: Controller | None = None
 coordinator: Coordinator | None = None
 shared: SharedQueue | None = None
-http: CompositionServer | None = None
+http: APIServer | None = None
 events: EventStore | None = None
-event_http: EventServer | None = None
-metrics_http: MetricsServer | None = None
-connections_http: ConnectionServer | None = None
-metrics_store = MetricsStore()
+metrics_store: MetricsStore | None = None
 inventory_sample: tuple[float, dict[str, Any]] | None = None
 inventory_sample_ok = False
 last_api_success = 0.0
@@ -78,8 +72,10 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     Returns:
         None: No return value.
     """
-    global queue, controller, coordinator, shared, initialized, http, events, event_http, metrics_http, connections_http, tuning, root_plane
-    global state
+    global queue, controller, coordinator, shared, initialized, http, events, tuning, root_plane
+    global state, metrics_store
+    if initialized or http is not None:
+        raise RuntimeError("operator HTTP lifecycle is already initialized")
     tuning = OperatorTuning.from_environment()
     settings.posting.enabled = False
     settings.scanning.disabled = True
@@ -94,31 +90,57 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     coordinator = Coordinator(
         API(), namespace, planner=role() in {"dense", "bootstrap"} and os.environ.get("POLYAD_ROOT_WORKER", "false").lower() != "true"
     )
-    state = StateStore.from_environment(namespace)
-    controller = Controller(API(before_write=coordinator.guard))
+    if os.environ.get("POLYAD_POSTGRES_ENABLED", "false").lower() == "true":
+        from polyad.operator.state import StateStore
+
+        state = StateStore.from_environment(namespace)
+    if executes() or os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true":
+        from polyad.operator.controller import Controller
+
+        controller = Controller(API(before_write=coordinator.guard))
     shared = SharedQueue(cache_url(), namespace, coordinator.identity)
+    if (pool := os.environ.get("POLYAD_DRAGONFLY_POOL")) and coordinator.planner:
+        from polyad.operator.dragonfly import run as dragonfly_loop
+
+        background.append(asyncio.create_task(dragonfly_loop(coordinator, shared, pool)))
     if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true":
+        from polyad.operator.root import RootControlPlane
+
+        assert controller is not None
         root_plane = RootControlPlane(coordinator, controller, shared, state=state)
         background.extend(root_plane.start(tuning))
     queue = RefreshQueue(reconcile)
     queue.start()
+    if any(serves(feature) for feature in ("API", "CONNECTIONS", "EVENTS", "METRICS")):
+        from polyad.api.server import APIServer
+
+        http = APIServer(API())
     if serves("CONNECTIONS"):
-        connections_http = ConnectionServer(API(), ConnectionSettings.from_environment(namespace))
+        from polyad.api.connections.store import ConnectionSettings
+
+        assert http is not None
+        http.connections(ConnectionSettings.from_environment(namespace))
         background.append(asyncio.create_task(connection_sweep_loop()))
     if serves("API"):
-        http = CompositionServer(API(), namespace, credential_token("API"))
-    if executes() or serves("EVENTS"):
-        event_api = controller.api
+        assert http is not None
+        http.composition(namespace, credential_token("API"))
+    publish_events = os.environ.get("POLYAD_EVENT_PUBLICATION_ENABLED", os.environ.get("POLYAD_EVENTS_ENABLED", "false")).lower() == "true"
+    if (executes() and publish_events) or serves("EVENTS"):
+        from polyad.events.store import EventStore
+
+        event_api = controller.api if controller else coordinator.api
         reserved = (namespace, coordinator.self_graph) if coordinator.self_graph else None
         events = EventStore(
             cache_url(),
             namespace,
             visible=lambda obj: public_observation(event_api, obj, reserved_graph=reserved),
+            ancestry=lambda obj: observation_ancestry(event_api, obj),
+            archive=state.record_event if state else None,
             retention=int(os.environ.get("POLYAD_EVENTS_RETENTION", "10000")),
         )
     if serves("EVENTS"):
-        assert events is not None
-        event_http = EventServer(
+        assert events is not None and http is not None
+        http.events(
             events,
             namespace,
             credential_token("EVENTS"),
@@ -126,17 +148,23 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
             clusters={name: worker.events for name, worker in root_plane.workers.items()} if root_plane else None,
         )
     if serves("METRICS"):
+        from polyad.metrics.store import MetricsStore
+
+        metrics_store = MetricsStore()
         token = credential_token("METRICS") if os.environ.get("POLYAD_METRICS_AUTH_ENABLED", "false").lower() == "true" else None
-        metrics_http = MetricsServer(metrics_store, token=token)
+        assert http is not None
+        http.metrics(metrics_store, token=token)
         background.append(asyncio.create_task(metrics_loop()))
+    if http is not None:
+        http.start()
     background.append(asyncio.create_task(watch_credentials()))
     logger.debug(
         "Operator workers started namespace=%s replica=%s metrics=%s events=%s composition=%s",
         namespace,
         coordinator.identity,
-        metrics_http is not None,
-        event_http is not None,
-        http is not None,
+        serves("METRICS"),
+        serves("EVENTS"),
+        serves("API"),
     )
     initialized = True
     background.extend([asyncio.create_task(coordination_loop()), asyncio.create_task(backlog_loop())])
@@ -256,9 +284,9 @@ async def rescan_loop() -> None:
                     logger.warning("PostgreSQL unavailable; continuing live observation without persistence")
             objects = []
             definitions: tuple[str, ...] = (
-                ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if metrics_http or state else ()
+                ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if serves("METRICS") or state else ()
             )
-            if root_plane and (metrics_http or state):
+            if root_plane and (serves("METRICS") or state):
                 definitions += ("OperatorPool", "RemoteScale")
             for kind in (*KINDS, *definitions):
                 result = await coordinator.api.request("GET", kind, coordinator.namespace)
@@ -292,7 +320,7 @@ async def metrics_loop() -> None:
     Returns:
         None: No return value.
     """
-    assert coordinator is not None and shared is not None and queue is not None
+    assert coordinator is not None and shared is not None and queue is not None and metrics_store is not None
     while True:
         age = time.monotonic() - inventory_sample[0] if inventory_sample else None
         tracked = dict(inventory_sample[1]) if inventory_sample else {"total": None, "byKind": [], "objects": []}
@@ -303,6 +331,7 @@ async def metrics_loop() -> None:
             "leader": coordinator.leader,
             "shards": sorted(coordinator.owned),
             "pending": queue.queue.qsize(),
+            "tuning": asdict(tuning),
             "writes": write_backlog(),
             "inbound": shared.backlog(tuple(coordinator.owned)),
             "shardBacklogs": shared.backlog_sample[1] if shared.backlog_sample else {},
@@ -313,6 +342,10 @@ async def metrics_loop() -> None:
             snapshot["clusters"] = await root_plane.observations()
         if state:
             snapshot["postgresql"] = await state.connections()
+        if os.environ.get("POLYAD_DRAGONFLY_POOL"):
+            from polyad.operator.dragonfly import connections as dragonfly_connections
+
+            snapshot["dragonfly"] = await dragonfly_connections(shared)
         snapshot["components"] = await collect(shared)
         await asyncio.to_thread(
             metrics_store.publish,
@@ -332,6 +365,8 @@ async def reconcile(key: Key) -> None:
     Returns:
         None: No return value.
     """
+    from polyad.operator.controller import Pending
+
     global last_api_success
     assert controller is not None and coordinator is not None
     async with coordinator.duty(key):
@@ -373,6 +408,8 @@ async def publish_observation(key: Key) -> None:
     assert controller is not None and coordinator is not None
     if events is None or key[0] not in KINDS:
         return
+    from polyad.events.topology import topology_snapshot
+
     obj = await controller.api.get(*key)
     if obj is not None:
         if key[0] == "TemporaryConnection":
@@ -405,6 +442,8 @@ async def consume_loop() -> None:
     Returns:
         None: No return value.
     """
+    from polyad.operator.controller import Pending
+
     assert coordinator is not None and shared is not None and queue is not None
     while True:
         try:
@@ -472,8 +511,8 @@ def write_backlog() -> dict[str, Any]:
     Returns:
         dict[str, Any]: Replica write gauges, including workload and coordination subtotals.
     """
-    assert controller is not None and coordinator is not None
-    workloads = controller.api.writes.snapshot()
+    assert coordinator is not None
+    workloads: dict[str, Any] = controller.api.writes.snapshot() if controller else {"queued": 0, "inFlight": 0, "total": 0}
     if root_plane:
         for _, api in root_plane.federation.clients.values():
             pressure = api.writes.snapshot()
@@ -483,14 +522,12 @@ def write_backlog() -> dict[str, Any]:
                 workloads[key] = max(workloads.get(key, 0), pressure.get(key, 0))
     coordination = coordinator.api.writes.snapshot()
     intake = http.api.writes.snapshot() if http else {"queued": 0, "inFlight": 0, "total": 0}
-    connections = connections_http.api.writes.snapshot() if connections_http else {"queued": 0, "inFlight": 0, "total": 0}
     return {
         "scope": "replica",
-        **{key: workloads[key] + coordination[key] + intake[key] + connections[key] for key in ("queued", "inFlight", "total")},
+        **{key: workloads[key] + coordination[key] + intake[key] for key in ("queued", "inFlight", "total")},
         "workloads": workloads,
         "coordination": coordination,
-        "compositionIntake": intake,
-        "connectionIntake": connections,
+        "apiIntake": intake,
     }
 
 
@@ -512,17 +549,11 @@ def health(**_: Any) -> dict[str, Any]:
     if not initialized or queue is None or queue.task is None or queue.task.done() or any(task.done() for task in background):
         raise RuntimeError("operator worker is unavailable")
     if http is not None and not http.thread.is_alive():
-        raise RuntimeError("composition API thread is unavailable")
-    if event_http is not None and not event_http.thread.is_alive():
-        raise RuntimeError("events API thread is unavailable")
-    if metrics_http is not None and not metrics_http.thread.is_alive():
-        raise RuntimeError("metrics API thread is unavailable")
-    if connections_http is not None and not connections_http.thread.is_alive():
-        raise RuntimeError("connections API thread is unavailable")
+        raise RuntimeError("shared API thread is unavailable")
     return {
-        "metricsEnabled": metrics_http is not None,
-        "eventsEnabled": event_http is not None,
-        "connectionsEnabled": connections_http is not None,
+        "metricsEnabled": serves("METRICS"),
+        "eventsEnabled": serves("EVENTS"),
+        "connectionsEnabled": serves("CONNECTIONS"),
         "initialized": initialized,
         "worker": True,
         "pending": queue.queue.qsize(),
@@ -549,17 +580,12 @@ async def cleanup(**_: Any) -> None:
     Returns:
         None: No return value.
     """
-    global initialized
+    global initialized, http
     logger.debug("Operator cleanup started; joining listeners, queued work and API transports")
     initialized = False
-    if connections_http:
-        await connections_http.close()
-    if metrics_http:
-        await metrics_http.close()
-    if event_http:
-        await event_http.close()
     if http:
         await http.close()
+        http = None
     if queue:
         await queue.stop()
     for task in background:

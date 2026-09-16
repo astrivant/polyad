@@ -43,7 +43,7 @@ jobs:
       - uses: ./.github/actions/prepare-release
         with:
           ref: ${{ inputs.release-tag }}
-      - run: bash scripts/ci/install-helm-tools.sh helm kubeconform
+      - run: bash scripts/tooling/install-helm-tools.sh helm kubeconform
       - name: Build chart dependencies
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
@@ -55,7 +55,7 @@ jobs:
           shard: ${{ matrix.shard }}/3
           jobs: '2'
           kubeconform: 'true'
-          kubeconform-binary: scripts/kubeconform.sh
+          kubeconform-binary: scripts/validation/kubeconform.sh
           schema-version: '1.35.0'
   package:
     needs: [source, chart]
@@ -70,7 +70,7 @@ jobs:
       - uses: ./.github/actions/prepare-release
         with:
           ref: ${{ inputs.release-tag }}
-      - run: bash scripts/ci/install-helm-tools.sh helm
+      - run: bash scripts/tooling/install-helm-tools.sh helm
       - name: Build chart dependencies
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update

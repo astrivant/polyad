@@ -40,9 +40,13 @@ from polyad_types.resources.resources import AuthorizationPolicy as Authorizatio
 from polyad_types.resources.resources import Composition as Composition
 from polyad_types.resources.resources import ConfigMap as ConfigMap
 from polyad_types.resources.resources import Daemon as Daemon
+from polyad_types.resources.resources import DaemonSet as DaemonSet
+from polyad_types.resources.resources import DaemonSetSpec as DaemonSetSpec
 from polyad_types.resources.resources import Deployment as Deployment
 from polyad_types.resources.resources import DeploymentSpec as DeploymentSpec
 from polyad_types.resources.resources import DeploymentStrategy as DeploymentStrategy
+from polyad_types.resources.resources import Dragonfly as Dragonfly
+from polyad_types.resources.resources import DragonflyPool as DragonflyPool
 from polyad_types.resources.resources import Gate as Gate
 from polyad_types.resources.resources import Graph as Graph
 from polyad_types.resources.resources import GraphRule as GraphRule

@@ -16,9 +16,11 @@ from typing import TYPE_CHECKING, cast
 
 import yaml  # type: ignore[import-untyped]
 
+from polyad.events.visibility import public_observation
 from polyad.metrics.workloads import current_observation
 from polyad.operator.controller import Pending
 from polyad.operator.coordination import NotOwner
+from polyad.operator.remote_scaling import INTENT, remote_revision
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
@@ -138,32 +140,50 @@ class PoolManager:
             None: Observed counts describe execution, independently of requested replicas.
         """
         spec = obj["spec"]
+        if spec["cluster"] == self.root.federation.name:
+            raise ValueError("RemoteScale cannot target the local operator cluster")
         remote, namespace = self.root.resolve(spec["cluster"])
         target = await remote.get("ReplicaGroup", namespace, spec["target"]["name"])
         if not target or target["metadata"]["uid"] != spec["target"]["uid"] or target["metadata"].get("deletionTimestamp"):
             raise ValueError("remote scale target is absent, replaced or terminating")
         if target["spec"].get("replicaSource") and target["spec"].get("inheritReplicas", True):
             raise ValueError("remote scale targets must have inheritReplicas: false")
+        owner = {
+            "root": self.root.federation.name,
+            "namespace": obj["metadata"]["namespace"],
+            "name": obj["metadata"]["name"],
+            "uid": obj["metadata"]["uid"],
+        }
+        if target["spec"].get("remoteScaling") != owner:
+            raise ValueError(f"destination has not approved RemoteScale {owner}")
+        if target["metadata"].get("generation", 1) != spec["target"].get("generation"):
+            raise ValueError("local ReplicaGroup edits superseded this request; new local approval is required")
+        if not await public_observation(remote, target):
+            raise ValueError("remote scaling cannot control reserved operator graphs or unresolved ancestry")
         replicas = spec["replicas"]
         if not target["spec"].get("minReplicas", 0) <= replicas <= target["spec"].get("maxReplicas", 32):
             raise ValueError("requested replicas violate the target ReplicaGroup bounds")
-        owners = await self.api.request("GET", "RemoteScale", self.namespace)
-        if any(
-            other["metadata"]["uid"] != obj["metadata"]["uid"]
-            and other["spec"]["cluster"] == spec["cluster"]
-            and other["spec"]["target"] == spec["target"]
-            for other in owners.get("items", [])
-        ):
-            raise ValueError("multiple RemoteScale resources target the same ReplicaGroup")
-        if target["spec"].get("replicas", 1) != replicas:
+        intent = json.dumps(
+            {
+                "owner": owner,
+                "targetUid": target["metadata"]["uid"],
+                "targetGeneration": spec["target"]["generation"],
+                "requestGeneration": obj["metadata"].get("generation", 1),
+                "replicas": replicas,
+            },
+            sort_keys=True,
+        )
+        if target["metadata"].get("annotations", {}).get(INTENT) != intent:
             await remote.request(
                 "PATCH",
                 "ReplicaGroup",
                 namespace,
                 target["metadata"]["name"],
                 {
-                    "metadata": {"resourceVersion": target["metadata"]["resourceVersion"]},
-                    "spec": {"replicas": replicas},
+                    "metadata": {
+                        "resourceVersion": target["metadata"]["resourceVersion"],
+                        "annotations": {INTENT: intent},
+                    },
                 },
             )
             observed = target.get("status", {})
@@ -178,6 +198,7 @@ class PoolManager:
         status = target.get("status", {})
         current = (
             status.get("observedGeneration") == target["metadata"].get("generation", 1)
+            and status.get("remoteScaleRevision") == remote_revision(target)
             and status.get("scaleCurrent", False)
             and current_observation(status.get("scaleObservedAt"))
         )
@@ -200,6 +221,11 @@ class PoolManager:
             None: Root ownership is recorded before any remote object is created.
         """
         meta, spec = obj["metadata"], obj["spec"]
+        controller = spec.get("controller", "Deployment")
+        if controller not in {"Deployment", "DaemonSet"} or (controller == "DaemonSet" and spec["replicas"] != 1):
+            raise ValueError(
+                "OperatorPool controller must be Deployment, or DaemonSet with replicas: 1; node eligibility controls DaemonSets"
+            )
         remote, namespace = self.root.resolve(spec["cluster"])
         recorded_namespace = meta.get("annotations", {}).get(f"{GROUP}/worker-namespace")
         if recorded_namespace is not None and recorded_namespace != namespace:
@@ -211,8 +237,15 @@ class PoolManager:
         labels = {f"{GROUP}/operator-pool": meta["uid"]}
         finalizers = meta.get("finalizers", [])
         if meta.get("deletionTimestamp"):
+            if controller == "DaemonSet":
+                boundary = await self.api.get("PolyGraph", self.namespace, name)
+                if boundary is not None:
+                    if boundary["metadata"].get("annotations", {}).get(OWNER) != owner:
+                        raise ValueError("reserved pool graph ownership changed")
+                    await self.api.delete(boundary)
+                    raise Pending("waiting for the reserved PolyGraph and remote workloads to drain")
             # Keep workloads, CRDs and storage. Only remove the pool's own execution machinery.
-            for kind in ("Deployment", "Secret"):
+            for kind in ("Deployment", "Graph", "Daemon", "ConfigMap", "Secret"):
                 listing = await remote.request("GET", kind, namespace, query=[("labelSelector", f"{GROUP}/operator-pool={meta['uid']}")])
                 for child in (listing or {}).get("items", []):
                     if child["metadata"].get("annotations", {}).get(OWNER) != owner:
@@ -287,6 +320,11 @@ class PoolManager:
         if "resources" in spec:
             container["resources"] = spec["resources"]
         env = {item["name"]: item for item in container.get("env", [])}
+        for variable in ("POLYAD_AUTH_CONFIG_FILE", "POLYAD_AUTH_DATABASE_DSN_FILE"):
+            env.pop(variable, None)
+        excluded = {"authentication", "authentication-database"}
+        pod["spec"]["volumes"] = [volume for volume in pod["spec"].get("volumes", []) if volume["name"] not in excluded]
+        container["volumeMounts"] = [mount for mount in container.get("volumeMounts", []) if mount["name"] not in excluded]
         for feature in ("API", "EVENTS", "CONNECTIONS", "OPERATOR_MESH"):
             env[f"POLYAD_{feature}_ENABLED"] = {"name": f"POLYAD_{feature}_ENABLED", "value": "false"}
         env["POLYAD_ROOT_WORKER"] = {"name": "POLYAD_ROOT_WORKER", "value": "true"}
@@ -295,9 +333,28 @@ class PoolManager:
         # Every Kubernetes request from the replica uses the root credentials or a registered remote adapter.
         revisions = []
         for volume in pod["spec"].get("volumes", []):
-            if "secret" not in volume:
-                continue
-            original = volume["secret"]["secretName"]
+            if "configMap" in volume:
+                original = volume["configMap"]["name"]
+                configuration = await self.api.get("ConfigMap", self.namespace, original)
+                if configuration is None:
+                    raise ValueError(f"root workload credential configuration is absent: {original}")
+                copied = name + "-" + hashlib.sha256(original.encode()).hexdigest()[:8]
+                await self.apply(
+                    remote,
+                    {
+                        "apiVersion": "v1",
+                        "kind": "ConfigMap",
+                        "metadata": {"name": copied, "namespace": namespace, "labels": labels},
+                        "data": configuration.get("data", {}),
+                    },
+                    owner,
+                )
+                volume["configMap"]["name"] = copied
+        secret_names = {volume["secret"]["secretName"] for volume in pod["spec"].get("volumes", []) if "secret" in volume}
+        secret_names.update(
+            item["valueFrom"]["secretKeyRef"]["name"] for item in env.values() if "secretKeyRef" in item.get("valueFrom", {})
+        )
+        for original in sorted(secret_names):
             credential = await self.api.get("Secret", self.namespace, original)
             if credential is None:
                 raise ValueError(f"root credential Secret is absent: {original}")
@@ -310,7 +367,9 @@ class PoolManager:
                 "data": credential.get("data", {}),
             }
             await self.apply(remote, secret, owner)
-            volume["secret"]["secretName"] = copied
+            for volume in pod["spec"].get("volumes", []):
+                if volume.get("secret", {}).get("secretName") == original:
+                    volume["secret"]["secretName"] = copied
             revisions.append(credential["metadata"]["resourceVersion"])
             for item in env.values():
                 reference = item.get("valueFrom", {}).get("secretKeyRef", {})
@@ -318,6 +377,9 @@ class PoolManager:
                     reference["name"] = copied
         container["env"] = list(env.values())
         pod["metadata"]["annotations"] = {f"{GROUP}/credential-revision": hashlib.sha256(json.dumps(revisions).encode()).hexdigest()}
+        if controller == "DaemonSet":
+            await self.graph_pool(obj, pod, owner)
+            return
         body = {
             "apiVersion": "apps/v1",
             "kind": "Deployment",
@@ -342,6 +404,75 @@ class PoolManager:
             )
             else "Pending",
             message="",
+        )
+
+    async def graph_pool(self, obj: dict[str, Any], pod: dict[str, Any], owner: str) -> None:
+        """
+        Place remote node workers in an internal PolyGraph and let graph controllers own execution.
+
+        Args:
+            obj (dict[str, Any]): Root pool with node-based worker scheduling.
+            pod (dict[str, Any]): Bootstrapped worker template with copied root credentials.
+            owner (str): Exact root pool incarnation for definition ownership.
+
+        Returns:
+            None: The root continues bootstrap reconciliation even before remote workers start.
+        """
+        meta, spec = obj["metadata"], obj["spec"]
+        remote, namespace = self.root.resolve(spec["cluster"])
+        name = f"polyad-worker-{meta['uid'][:12]}"
+        labels = {f"{GROUP}/operator-pool": meta["uid"], f"{GROUP}/internal": "true"}
+        await self.apply(
+            remote,
+            {
+                "apiVersion": f"{GROUP}/v1alpha1",
+                "kind": "Daemon",
+                "metadata": {"name": name + "-daemon", "namespace": namespace, "labels": labels},
+                "spec": {"controller": "DaemonSet", "replicas": 1, "template": pod},
+            },
+            owner,
+        )
+        await self.apply(
+            remote,
+            {
+                "apiVersion": f"{GROUP}/v1alpha1",
+                "kind": "Graph",
+                "metadata": {"name": name + "-graph", "namespace": namespace, "labels": labels},
+                "spec": {
+                    "templateOnly": True,
+                    "mode": "persistent",
+                    "nodes": [
+                        {"name": "workers", "kind": "Daemon", "ref": name + "-daemon"},
+                    ],
+                },
+            },
+            owner,
+        )
+        boundary = await self.apply(
+            self.api,
+            {
+                "apiVersion": f"{GROUP}/v1alpha1",
+                "kind": "PolyGraph",
+                "metadata": {"name": name, "namespace": self.namespace, "labels": labels},
+                "spec": {
+                    "mode": "persistent",
+                    "nodes": [
+                        {"name": "remote", "kind": "Graph", "ref": name + "-graph", "cluster": spec["cluster"]},
+                    ],
+                },
+            },
+            owner,
+        )
+        children = await self.root.federation.children(boundary)
+        counts: dict[str, Any] = next(
+            (child.get("status", {}).get("workloads", {}).get("workers", {}).get("values", {}) for child in children), {}
+        )
+        await self.status(
+            obj,
+            replicas=counts.get("replicas", 0),
+            readyReplicas=counts.get("readyReplicas", 0),
+            phase="Ready" if boundary.get("status", {}).get("ready") else "Pending",
+            message="DaemonSet capacity follows eligible nodes; KEDA must not target this pool's scale subresource",
         )
 
     async def run(self) -> None:

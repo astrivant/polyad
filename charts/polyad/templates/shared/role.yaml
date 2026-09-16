@@ -5,6 +5,20 @@ kind: Role
 metadata:
   name: {{ .Release.Name }}-polyad
 rules:
+  {{- if and .Values.dragonfly.enabled .Values.dragonfly.ha.enabled .Values.dragonfly.autoscaling.enabled }}
+  - apiGroups: [dragonflydb.io]
+    resources: [dragonflies]
+    resourceNames: [{{ .Release.Name }}-queue]
+    verbs: [get, patch]
+  - apiGroups: [polyad.astrivant.com]
+    resources: [dragonflypools]
+    resourceNames: [{{ .Release.Name }}-queue]
+    verbs: [get]
+  - apiGroups: [polyad.astrivant.com]
+    resources: [dragonflypools/status]
+    resourceNames: [{{ .Release.Name }}-queue]
+    verbs: [get, patch]
+  {{- end }}
   - apiGroups: [polyad.astrivant.com]
     resources: [graphs, polygraphs, workloads, daemons, resources, gates, shutdownpolicies, rewrites, compositions, activations, replicagroups, temporaryconnections]
     verbs: [get, list, watch, create, update, patch, delete]
@@ -21,7 +35,7 @@ rules:
     resources: [jobs]
     verbs: [get, list, create, delete]
   - apiGroups: [apps]
-    resources: [deployments, statefulsets]
+    resources: [deployments, statefulsets, daemonsets]
     verbs: [get, list, create, delete]
   - apiGroups: ['']
     resources: [services, configmaps, persistentvolumeclaims]

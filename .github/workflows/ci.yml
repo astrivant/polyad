@@ -39,8 +39,8 @@ jobs:
       - name: Read shared tool versions
         id: tools
         run: |
-          echo "nodejs=$(bash scripts/tool-version.sh nodejs)" >> "$GITHUB_OUTPUT"
-          echo "poetry=$(bash scripts/tool-version.sh poetry)" >> "$GITHUB_OUTPUT"
+          echo "nodejs=$(bash scripts/tooling/tool-version.sh nodejs)" >> "$GITHUB_OUTPUT"
+          echo "poetry=$(bash scripts/tooling/tool-version.sh poetry)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -52,7 +52,7 @@ jobs:
         with:
           node-version: ${{ steps.tools.outputs.nodejs }}
           cache: npm
-          cache-dependency-path: scripts/mermaid/package-lock.json
+          cache-dependency-path: scripts/validation/mermaid/package-lock.json
       - run: pip install "poetry==${{ steps.tools.outputs.poetry }}"
       - name: Validate distribution version
         id: version
@@ -64,8 +64,8 @@ jobs:
           else
             python .github/release-version.py --output "$GITHUB_OUTPUT"
           fi
-      - run: poetry lock && poetry install
-      - run: bash scripts/ci/install-helm-tools.sh helm shellcheck shfmt argocd
+      - run: poetry lock && poetry install --all-extras
+      - run: bash scripts/tooling/install-helm-tools.sh helm shellcheck shfmt argocd
       - name: Build chart dependencies
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
@@ -76,10 +76,10 @@ jobs:
         env:
           POLYAD_FLUX_CHECKS: ${{ runner.temp }}/polyad-flux-checks.json
         run: |
-          poetry run python scripts/flux-health.py --json > "$POLYAD_FLUX_CHECKS"
+          poetry run python scripts/gitops/flux-health.py --json > "$POLYAD_FLUX_CHECKS"
           test -z "$(gofmt -l tests/flux/*.go)"
           go -C tests/flux test -mod=readonly -parallel 8 ./...
-      - run: npm test --prefix scripts/mermaid
+      - run: npm test --prefix scripts/validation/mermaid
       - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0 --proactor_threads=1 --maxmemory=256mb
       - run: |
           for _attempt in $(seq 1 30); do
@@ -129,16 +129,19 @@ jobs:
         run: |
           python -m venv /tmp/polyad-client
           /tmp/polyad-client/bin/python -m pip install dist/polyad_types-*.whl
-          /tmp/polyad-client/bin/python -I scripts/check-types-package.py
+          /tmp/polyad-client/bin/python -I scripts/testing/check-types-package.py
           /tmp/polyad-client/bin/python -m pip install --find-links dist dist/polyad_client-*.whl
           /tmp/polyad-client/bin/python -I -c 'from polyad_client import Client; import importlib.util; assert importlib.util.find_spec("polyad") is None; assert Client("http://localhost:8090", "test")'
           /tmp/polyad-client/bin/python -m pip check
   container:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
       matrix:
         profile: [development, production]
+        platform:
+          - {runner: ubuntu-latest, name: linux/amd64, arch: amd64}
+          - {runner: ubuntu-24.04-arm, name: linux/arm64, arch: arm64}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -146,20 +149,38 @@ jobs:
       - uses: ./.github/actions/prepare-release
         with:
           ref: ${{ inputs.ref || github.ref }}
-      - name: Build container profile
+      - uses: docker/setup-buildx-action@v4
+      - name: Read image metadata
+        id: image
         run: |
-          docker build --target "${{ matrix.profile }}" \
-            --build-arg VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')" \
-            --build-arg VCS_REF="$(git rev-parse HEAD)" \
-            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            -t polyad:container-test .
+          {
+            echo "version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+            echo "revision=$(git rev-parse HEAD)"
+            echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_OUTPUT"
+      - name: Build and load container profile
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: ${{ matrix.profile }}
+          platforms: ${{ matrix.platform.name }}
+          load: true
+          push: false
+          tags: polyad:container-test
+          build-args: |
+            VERSION=${{ steps.image.outputs.version }}
+            VCS_REF=${{ steps.image.outputs.revision }}
+          labels: |
+            org.opencontainers.image.created=${{ steps.image.outputs.created }}
+          cache-from: type=gha,scope=container-${{ matrix.profile }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,mode=max,scope=container-${{ matrix.profile }}-${{ matrix.platform.arch }}
       - name: Check non-root container profile
         run: |
-          docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges --entrypoint python -i polyad:container-test - "${{ matrix.profile }}" < scripts/check-container.py
+          docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges --entrypoint /usr/bin/tini -i polyad:container-test -- python - "${{ matrix.profile }}" < scripts/testing/check-container.py
           docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges polyad:container-test --help
       - name: Check development tests
         if: matrix.profile == 'development'
-        run: docker run --rm --entrypoint python polyad:container-test -m pytest -n 2 tests/test_balance_gates.py
+        run: docker run --rm --entrypoint /usr/bin/tini polyad:container-test -- python -m pytest -n 2 tests/test_balance_gates.py
   compose:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -168,7 +189,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - run: bash scripts/ci/install-helm-tools.sh helm
+      - run: bash scripts/tooling/install-helm-tools.sh helm
       - name: Build chart dependencies
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
@@ -219,21 +240,44 @@ jobs:
           config: tests/kind.yaml
       - name: Read Helm version
         id: tools
-        run: echo "helm=v$(bash scripts/tool-version.sh helm)" >> "$GITHUB_OUTPUT"
+        run: echo "helm=v$(bash scripts/tooling/tool-version.sh helm)" >> "$GITHUB_OUTPUT"
       - uses: azure/setup-helm@v4.3.0
         with:
           version: ${{ steps.tools.outputs.helm }}
-      - run: docker build --target production -t polyad:test .
+      - uses: docker/setup-buildx-action@v4
+      - name: Build and load Kind image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: production
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: polyad:test
+          cache-from: |
+            type=gha,scope=operator-${{ matrix.dragonfly-ha }}-amd64
+            type=gha,scope=container-production-amd64
+          cache-to: type=gha,mode=max,scope=operator-${{ matrix.dragonfly-ha }}-amd64
       - run: kind load docker-image polyad:test --name polyad-test
       - name: Build chart dependencies
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
           helm dependency build charts/polyad
+      - name: Install KEDA for HA cache scaling
+        if: matrix.dragonfly-ha
+        run: |
+          helm repo add kedacore https://kedacore.github.io/charts --force-update
+          helm upgrade --install keda kedacore/keda --version 2.20.2 --namespace keda --create-namespace --wait --timeout=300s
       - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set operator.image.repository=polyad --set operator.image.tag=test --set dragonfly.ha.enabled=${{ matrix.dragonfly-ha }} --wait --timeout=300s
-      - run: bash scripts/test-operator.sh
+      - name: Verify HA cache scaling bridge
+        if: matrix.dragonfly-ha
+        run: |
+          kubectl -n polyad wait dragonflypool/polyad-queue --for=jsonpath='{.status.phase}'=Ready --timeout=300s
+          kubectl -n polyad wait scaledobject/polyad-queue --for=condition=Ready --timeout=300s
+      - run: bash scripts/testing/test-operator.sh
       - run: kubectl -n polyad delete graphs,polygraphs,replicagroups --all --wait=true --timeout=120s
-      - run: bash scripts/test-replacement.sh
-      - run: bash scripts/test-coordination.sh
+      - run: bash scripts/testing/test-replacement.sh
+      - run: bash scripts/testing/test-coordination.sh
       - if: failure()
         run: |
           kubectl -n polyad get pods,leases,dragonflies,graphs,polygraphs,replicagroups -o yaml

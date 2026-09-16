@@ -80,7 +80,11 @@ def workload_metric(snapshot: dict[str, Any], kind: str, name: str, metric: str,
         source = scale.get("source")
         if source:
             definition = next((obj for obj in records if obj["kind"] == "ReplicaGroup" and obj["uid"] == source["uid"]), None)
-            if definition is None or definition["generation"] != scale.get("sourceGeneration"):
+            if (
+                definition is None
+                or definition["generation"] != scale.get("sourceGeneration")
+                or (definition.get("scaling") or {}).get("remoteScaleRevision", "") != (scale.get("sourceRemoteScaleRevision") or "")
+            ):
                 raise ValueError("replica source observation is stale")
         if not scale.get("current") or not current_observation(scale.get("observedAt")):
             raise ValueError("replication observation is stale")
@@ -131,7 +135,10 @@ def workload_metric(snapshot: dict[str, Any], kind: str, name: str, metric: str,
             scale = obj.get("scaling") or {}
             source = scale.get("source")
             if source and not any(
-                record["uid"] == source["uid"] and record["generation"] == scale.get("sourceGeneration") for record in records
+                record["uid"] == source["uid"]
+                and record["generation"] == scale.get("sourceGeneration")
+                and (record.get("scaling") or {}).get("remoteScaleRevision", "") == (scale.get("sourceRemoteScaleRevision") or "")
+                for record in records
             ):
                 raise ValueError("replica source observation is stale")
             if metric not in entry["values"]:

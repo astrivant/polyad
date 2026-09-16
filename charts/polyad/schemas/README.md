@@ -1,7 +1,16 @@
 # Validation schemas
 
-These schemas support chart checks through `scripts/kubeconform.sh`; they do not
+These schemas support chart checks through `scripts/validation/kubeconform.sh`; they do not
 install APIs into a cluster.
+
+## Table of contents
+
+- [Gateway API and Dragonfly](#gateway-api-and-dragonfly)
+  - [Updating Gateway API schemas](#updating-gateway-api-schemas)
+- [Istio](#istio)
+- [KEDA and External Secrets](#keda-and-external-secrets)
+
+## Gateway API and Dragonfly
 
 - `gateway-gateway-v1.json` and `httproute-gateway-v1.json` contain the v1
   `openAPIV3Schema` from the corresponding standard CRDs in
@@ -10,15 +19,21 @@ install APIs into a cluster.
   The only added properties are `$schema` and a provenance `$comment`.
 - `dragonfly-dragonflydb-v1alpha1.json` validates the chart's pinned Dragonfly API.
 
+### Updating Gateway API schemas
+
 When updating Gateway API schemas, extract `spec.versions[name=v1].schema.openAPIV3Schema`
 from both upstream CRDs and preserve their constraints and descriptions. Run the
 chart tests and hypothesis-helm with kubeconform enabled.
+
+## Istio
 
 - `authorizationpolicy-security-v1.json`, `peerauthentication-security-v1.json`,
   `gateway-networking-v1.json` and `virtualservice-networking-v1.json` are extracted
   from the pinned Istio 1.30.4 base chart's `files/crd-all.gen.yaml`. The only additions
   are `$schema` and a provenance `$comment`. Istio uses
   [Apache-2.0](https://github.com/istio/istio/blob/1.30.4/LICENSE).
+
+## KEDA and External Secrets
 
 - `triggerauthentication-keda-v1alpha1.json` is the v1alpha1 schema from
   [KEDA v2.20.0](https://github.com/kedacore/keda/blob/v2.20.0/config/crd/bases/keda.sh_triggerauthentications.yaml).

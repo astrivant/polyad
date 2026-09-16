@@ -230,6 +230,36 @@ spec:
                         - target
                       description: Custom edges, active only when both endpoints exist.
                       maxItems: 4096
+                remoteScaling:
+                  type: object
+                  description: Authorize one root request to supply remote replica intent.
+                  properties:
+                    root:
+                      type: string
+                      description: Registered root cluster identity.
+                      minLength: 1
+                      maxLength: 63
+                    namespace:
+                      type: string
+                      description: Namespace of the approved RemoteScale.
+                      minLength: 1
+                      maxLength: 63
+                    name:
+                      type: string
+                      description: Name of the approved RemoteScale.
+                      minLength: 1
+                      maxLength: 63
+                    uid:
+                      type: string
+                      description: Exact request incarnation; recreating it requires local approval.
+                      minLength: 1
+                      maxLength: 128
+                  required:
+                  - root
+                  - namespace
+                  - name
+                  - uid
+                  nullable: true
               required:
               - template
               x-kubernetes-validations:
@@ -646,6 +676,10 @@ spec:
                             StatefulSet:
                               type: integer
                               description: Number of owned StatefulSet resources.
+                              minimum: 0
+                            DaemonSet:
+                              type: integer
+                              description: Number of owned DaemonSet resources.
                               minimum: 0
                             Service:
                               type: integer

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.app import Conflict
+from polyad.api.errors import Conflict
 from polyad.compiler.passes.composition import read_receipt, receipt_spec, request_name
 from polyad_types import resources as asts
 from polyad_types.requests import COMPOSITION_KINDS
@@ -103,7 +103,7 @@ class CompositionStore:
         resources = []
         truncated = False
         for kind in sorted(
-            COMPOSITION_KINDS | {"Job", "Deployment", "StatefulSet", "Pod", "Service", "ConfigMap", "PersistentVolumeClaim"}
+            COMPOSITION_KINDS | {"Job", "Deployment", "StatefulSet", "DaemonSet", "Pod", "Service", "ConfigMap", "PersistentVolumeClaim"}
         ):
             response = await self.api.request(
                 "GET", kind, self.namespace, query=[("labelSelector", f"{asts.GROUP}/request={name[12:]}"), ("limit", "200")]

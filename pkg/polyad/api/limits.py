@@ -10,12 +10,9 @@ from typing import TYPE_CHECKING
 
 from attrs import field, frozen
 from flask import g, jsonify, request
-from flask_limiter import Limiter
-from limits.errors import StorageError
-from redis.backoff import NoBackoff
-from redis.exceptions import RedisError
-from redis.retry import Retry
 
+from polyad.api.application import Routes
+from polyad.auth.policy import public_demo
 from polyad.cache import cache_url
 from polyad.compiler.passes.composition import request_name
 from polyad.operator.coordination import root_shard
@@ -24,7 +21,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from flask import Flask, Response
-    from flask_limiter import RequestLimit
+    from flask_limiter import Limiter, RequestLimit
 
 
 @frozen(kw_only=True)
@@ -76,25 +73,33 @@ class RateLimitPolicy:
             namespace=namespace,
             storage_uri=cache_url(),
             requests_per_minute=int(os.environ.get("POLYAD_API_REQUESTS_PER_MINUTE", "60")),
-            enabled=os.environ.get("POLYAD_API_RATE_LIMIT_ENABLED", "true").lower() == "true",
+            enabled=not public_demo() and os.environ.get("POLYAD_API_RATE_LIMIT_ENABLED", "true").lower() == "true",
         )
 
 
-def install_limits(app: Flask, policy: RateLimitPolicy) -> Limiter:
+def install_limits(app: Flask | Routes, policy: RateLimitPolicy) -> Limiter | None:
     """
     Install a fail-closed shared quota after authentication and before request handlers.
 
     Args:
-        app (Flask): Application whose authentication hook is already registered.
+        app (Flask | Routes): Application whose authentication hook is already registered.
         policy (RateLimitPolicy): Shared storage and shard budget configuration.
 
     Returns:
-        Limiter: Extension whose synchronous pool belongs to the API server.
+        Limiter | None: Owned quota extension, or no import or pool when disabled.
     """
+    if not policy.enabled or public_demo():
+        return None
+    from flask_limiter import Limiter
+    from limits.errors import StorageError
+    from redis.backoff import NoBackoff
+    from redis.exceptions import RedisError
+    from redis.retry import Retry
 
     def key() -> str:
-        if request.endpoint in {"compose", "status", "resources"}:
-            if request.endpoint == "compose":
+        endpoint = (request.endpoint or "").rsplit(".", 1)[-1]
+        if endpoint in {"compose", "status", "resources"}:
+            if endpoint == "compose":
                 value = request.get_json()
                 request_id = value.get("requestId") if isinstance(value, dict) else None
             else:
@@ -125,7 +130,7 @@ def install_limits(app: Flask, policy: RateLimitPolicy) -> Limiter:
 
     limiter = Limiter(
         key_func=key,
-        app=app,
+        app=app.application if isinstance(app, Routes) else app,
         application_limits=[f"{policy.requests_per_minute}/minute"],
         default_limits=[],
         storage_uri=policy.storage_uri,
@@ -136,13 +141,18 @@ def install_limits(app: Flask, policy: RateLimitPolicy) -> Limiter:
         on_breach=capture_headers,
         swallow_errors=False,
         in_memory_fallback_enabled=False,
-        enabled=policy.enabled,
+        enabled=policy.enabled and not public_demo(),
     )
 
-    @app.before_request
+    @limiter.request_filter
+    def named_credential() -> bool:
+        return (isinstance(app, Routes) and request.blueprint != app.name) or getattr(g, "polyad_credential", None) is not None
+
     def prepare_headers() -> None:
         if limiter.current_limit is not None:
             capture_headers(limiter.current_limit)
+
+    app.before_request(prepare_headers)
 
     @app.after_request
     def response_headers(response: Response) -> Response:

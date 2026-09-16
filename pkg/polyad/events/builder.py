@@ -1,10 +1,9 @@
 """
-Build an authenticated, separately hosted Server-Sent Events API.
+Register authenticated Server-Sent Events routes on the shared HTTP application.
 """
 
 from __future__ import annotations
 
-import hmac
 import json
 import re
 from collections.abc import Callable
@@ -12,21 +11,27 @@ from threading import BoundedSemaphore, Event
 from typing import TYPE_CHECKING, Any
 
 from attrs import evolve, field, frozen
-from flask import Flask, Response, jsonify, request, stream_with_context
+from flask import Response, g, jsonify, request, stream_with_context
 
+from polyad.api.application import Routes
 from polyad.api.limits import RateLimitPolicy, install_limits
+from polyad.auth.http import Access, install
+from polyad.auth.policy import public_demo
 from polyad.events.store import CursorExpired, TopologyReplaced
+from polyad.events.visibility import permitted_observation
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Self
 
+    from flask import Flask
+
 
 @frozen
 class EventAPIBuilder:
     """
-    Compose read-only event transport independently of composition intake.
+    Configure read-only event routes and bounded streaming admission.
 
     Attributes:
         resolve (Callable[[str | None], str] | None): Cursor validation callback.
@@ -36,6 +41,7 @@ class EventAPIBuilder:
         max_connections (int): Maximum simultaneous streams on this replica.
         limits (RateLimitPolicy | None): Shared connection-request rate limit.
         snapshot (Callable[[str, str, str | None, str | None], dict[str, Any]] | None): Current topology reader.
+        access (Access | None): Named subscriber credentials and shared lanes.
     """
 
     resolve: Callable[[str | None], str] | None = None
@@ -45,6 +51,7 @@ class EventAPIBuilder:
     max_connections: int = 16
     limits: RateLimitPolicy | None = None
     snapshot: Callable[[str, str, str | None, str | None], dict[str, Any]] | None = None
+    access: Access | None = None
 
     def with_handlers(self, resolve: Callable[[str | None], str], read: Callable[[str], list[tuple[str, str]]]) -> Self:
         """
@@ -83,24 +90,28 @@ class EventAPIBuilder:
         """
         return evolve(self, snapshot=snapshot)
 
-    def build(self) -> Flask:
+    def build(self, application: Flask | None = None) -> Flask:
         """
         Construct bounded streaming routes and their OpenAPI endpoint.
 
+        Args:
+            application (Flask | None): Shared application, or None for standalone use.
+
         Returns:
-            Flask: Standalone event application.
+            Flask: Application containing the event blueprint.
         """
-        if not self.token or self.resolve is None or self.read is None or not 1 <= self.max_connections <= 128:
+        if (
+            (not self.token and not (self.access and self.access.supports("events")) and not public_demo())
+            or self.resolve is None
+            or self.read is None
+            or not 1 <= self.max_connections <= 128
+        ):
             raise ValueError("event API requires a token, handlers and 1 through 128 connection slots")
         resolve, read = self.resolve, self.read
-        app = Flask(__name__)
+        app = Routes("events", application, max_body=1024)
         slots = BoundedSemaphore(self.max_connections)
 
-        @app.before_request
-        def authorize() -> tuple[Response, int] | None:
-            if not hmac.compare_digest(request.headers.get("Authorization", "").encode(), f"Bearer {self.token}".encode()):
-                return jsonify(error="unauthorized"), 401
-            return None
+        authenticated = install(app, "events", self.token, self.access)
 
         if self.limits:
             app.extensions["polyad.limiter"] = install_limits(app, self.limits)
@@ -112,7 +123,11 @@ class EventAPIBuilder:
             if self.snapshot is None or self.stopping.is_set():
                 return jsonify(error="topology reader unavailable"), 503
             try:
-                response = jsonify(self.snapshot(kind, name, request.args.get("uid"), request.args.get("node")))
+                snapshot = self.snapshot(kind, name, request.args.get("uid"), request.args.get("node"))
+                key = getattr(g, "polyad_key", None)
+                if key is not None and not permitted_observation(snapshot["graph"], snapshot.get("ancestry", []), key.graphs):
+                    return jsonify(error="graph snapshot or node not found"), 404
+                response = jsonify(snapshot)
                 if len(response.get_data()) > 4 * 1024 * 1024:
                     return jsonify(error="topology selection exceeds 4 MiB"), 503
                 response.headers["Cache-Control"] = "no-store"
@@ -126,6 +141,7 @@ class EventAPIBuilder:
 
         @app.get("/v1/events")
         def events() -> Response | tuple[Response, int]:
+            # Stream slots protect shared HTTP worker capacity even in demo mode.
             if self.stopping.is_set() or not slots.acquire(blocking=False):
                 return jsonify(error="event subscriber capacity exhausted"), 503
             try:
@@ -150,8 +166,14 @@ class EventAPIBuilder:
                             yield ": heartbeat\n\n"
                         for identity, data in batch:
                             cursor = identity
-                            event_type = "topology" if json.loads(data).get("type") == "topology" else "graph"
+                            payload = json.loads(data)
+                            key = getattr(g, "polyad_key", None)
+                            if key is not None and not permitted_observation(payload, payload.get("ancestry", []), key.graphs):
+                                continue
+                            event_type = "topology" if payload.get("type") == "topology" else "graph"
                             yield f"id: {identity}\nevent: {event_type}\ndata: {data}\n\n"
+                        if batch:
+                            yield ": heartbeat\n\n"
                     except CursorExpired:
                         yield 'event: reset\ndata: {"reason":"cursor expired; refresh graph status"}\n\n'
                         return
@@ -172,7 +194,7 @@ class EventAPIBuilder:
             schema: dict[str, Any] = {
                 "openapi": "3.0.3",
                 "info": {"title": "Polyad Events API", "version": "v1alpha1"},
-                "security": [{"bearerAuth": []}],
+                "security": [{"bearerAuth": []}] if authenticated else [],
                 "components": {"securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}}},
                 "paths": {
                     "/v1/events": {
@@ -196,6 +218,7 @@ class EventAPIBuilder:
                                     for code, description in (
                                         (400, "Invalid cursor"),
                                         (401, "Unauthorized"),
+                                        (403, "Credential does not authorize this API"),
                                         (410, "Replay window expired"),
                                         (429, "Connection request limit exceeded"),
                                         (503, "Cache unavailable or subscriber capacity full"),
@@ -238,6 +261,7 @@ class EventAPIBuilder:
                                     for code, description in (
                                         (400, "Invalid graph identity"),
                                         (401, "Unauthorized"),
+                                        (403, "Credential does not authorize this API"),
                                         (404, "Graph snapshot or node not found"),
                                         (409, "Graph UID changed"),
                                         (429, "Request limit exceeded"),
@@ -251,4 +275,4 @@ class EventAPIBuilder:
             }
             return Response(json.dumps(schema), mimetype="application/json")
 
-        return app
+        return app.finish()

@@ -13,6 +13,7 @@ from polyad_types.activation import ActivationPolicy
 from polyad_types.capacity import CapacityPlan
 from polyad_types.replication import ReplicaConnectivity
 from polyad_types.requests import COMPOSITION_KINDS
+from polyad_types.throughput import ThroughputSample
 
 if TYPE_CHECKING:
     from typing import Any
@@ -49,6 +50,7 @@ def schemas() -> dict[str, dict[str, Any]]:
     }
     return {
         "ID": identifier,
+        "ThroughputSample": structural_schema(ThroughputSample),
         "ActivationPolicy": structural_schema(ActivationPolicy),
         "ReplicaConnectivity": structural_schema(ReplicaConnectivity),
         "ActivationRequest": {
@@ -385,6 +387,22 @@ def openapi_document(title: str, version: str) -> dict[str, Any]:
                     "401": errors["401"],
                     "429": errors["429"],
                     "503": errors["503"],
+                },
+            }
+        },
+    )
+    spec.path(
+        path="/v1/throughput",
+        operations={
+            "post": {
+                "operationId": "reportThroughput",
+                "summary": "Report aggregate application demand and completed work for an assigned graph",
+                "requestBody": {"required": True, "content": {"application/json": {"schema": reference("ThroughputSample")}}},
+                "responses": {
+                    **errors,
+                    "202": {"description": "Fresh measurement accepted; feedback evaluation is asynchronous."},
+                    "403": response("Graph tree is not assigned to this credential.", "Error"),
+                    "409": response("Graph revision changed or the observation is out of order.", "Error"),
                 },
             }
         },

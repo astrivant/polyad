@@ -1,6 +1,12 @@
 {{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
 {{- with $ -}}
 {{- if .Values.dragonfly.enabled }}
+{{- if and .Values.dragonfly.ha.enabled .Values.dragonfly.autoscaling.enabled }}
+{{- if .Values.dragonfly.existingSecret }}{{ fail "bundled Dragonfly autoscaling requires its primary endpoint; disable autoscaling when using dragonfly.existingSecret" }}{{ end }}
+{{- if gt (int .Values.dragonfly.autoscaling.minReplicas) (int .Values.dragonfly.autoscaling.maxReplicas) }}{{ fail "Dragonfly minReplicas must not exceed maxReplicas" }}{{ end }}
+{{- if or (lt (int .Values.dragonfly.ha.replicas) (int .Values.dragonfly.autoscaling.minReplicas)) (gt (int .Values.dragonfly.ha.replicas) (int .Values.dragonfly.autoscaling.maxReplicas)) }}{{ fail "Dragonfly initial replicas must be within autoscaling bounds" }}{{ end }}
+{{- if and .Values.metrics.authentication.enabled (not .Values.keda.authentication.enabled) }}{{ fail "authenticated Dragonfly autoscaling requires keda.authentication.enabled" }}{{ end }}
+{{- end }}
 apiVersion: dragonflydb.io/v1alpha1
 kind: Dragonfly
 metadata:
@@ -46,6 +52,53 @@ spec:
       {{- if .Values.dragonfly.persistence.storageClass }}
       storageClassName: {{ .Values.dragonfly.persistence.storageClass | quote }}
       {{- end }}
-  {{- end }}
+{{- end }}
+{{- end }}
+{{- if and .Values.dragonfly.enabled .Values.dragonfly.ha.enabled .Values.dragonfly.autoscaling.enabled }}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: DragonflyPool
+metadata:
+  name: {{ .Release.Name }}-queue
+  labels:
+    polyad.astrivant.com/internal: "true"
+spec:
+  replicas: {{ .Values.dragonfly.ha.replicas }}
+  minReplicas: {{ .Values.dragonfly.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.dragonfly.autoscaling.maxReplicas }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}-queue
+spec:
+  scaleTargetRef:
+    apiVersion: polyad.astrivant.com/v1alpha1
+    kind: DragonflyPool
+    name: {{ .Release.Name }}-queue
+  pollingInterval: 15
+  minReplicaCount: {{ .Values.dragonfly.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.dragonfly.autoscaling.maxReplicas }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 60
+          policies: [{type: Pods, value: 1, periodSeconds: 120}]
+        scaleDown:
+          stabilizationWindowSeconds: 600
+          policies: [{type: Pods, value: 1, periodSeconds: 300}]
+  triggers:
+    - type: metrics-api
+      metricType: AverageValue
+      metadata:
+        url: {{ printf "http://%s-polyad-metrics.%s.svc:8092/v1/dragonfly/connections" .Release.Name .Release.Namespace | quote }}
+        valueLocation: value
+        targetValue: {{ .Values.dragonfly.autoscaling.connectionsPerReplica | quote }}
+        {{- if .Values.metrics.authentication.enabled }}
+        authMode: bearer
+      authenticationRef:
+        name: {{ default (printf "%s-polyad-metrics" .Release.Name) .Values.keda.authentication.name | quote }}
+        {{- end }}
 {{- end }}
 {{- end -}}

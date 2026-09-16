@@ -1,26 +1,49 @@
+# yaml-language-server: $schema=values.reference.schema.json
 # Add read-only Graph observers alongside this release's execution operator.
 # This is NOT an observer-only installation: the chart still installs its operator.
 # Use with an existing independent operator release or the root release; do not
 # install a second execution operator in a root-managed workload namespace.
-# Guide: ../../docs/multicluster.md#optional-shared-observers
+# Guide: ../../docs/deployment/multicluster.md#optional-shared-observers
 # These are reference overrides; values.yaml contains all defaults.
+## @param operator [object] Shared operator and observer process settings.
+operator:
+  ## @param operator.logLevel [string] INFO keeps normal operational logs; DEBUG traces Polyad reconciliation and API timings, including observers. Choices: DEBUG, INFO, WARNING, ERROR, CRITICAL.
+  logLevel: INFO
+
+## @param global [object] Settings for global; configure the fields below.
 global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster; configure the fields below.
   multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad Set to this release's identity; management for the root example.
     clusterName: east # Set to this release's identity; management for the root example.
 
+## @param observer [object] Settings for observer; configure the fields below.
 observer:
+  ## @param observer.enabled [boolean] Deploy shared read-only observers independently of execution operators
   enabled: true
+  ## @param observer.replicaCount [integer] Number of stateless read replicas in this cluster and namespace Stateless observation-serving copies, independent of execution. Minimum: 1. Maximum: 32.
   replicaCount: 2 # Stateless observation-serving copies, independent of execution.
+  ## @param observer.existingSecret [string] Existing Secret containing a dedicated read credential under token Release-namespace Secret with a token key.
   existingSecret: polyad-observer # Release-namespace Secret with a token key.
+  ## @param observer.resources [object] CPU and memory requests and limits for the read replicas
   resources:
+    ## @param observer.resources.requests [object] Settings for observer.resources.requests; configure the fields below.
     requests:
+      ## @param observer.resources.requests.cpu [string] Kubernetes CPU quantity; requests reserve scheduling capacity and limits cap usage.
       cpu: 100m
+      ## @param observer.resources.requests.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
       memory: 128Mi
+    ## @param observer.resources.limits [object] Settings for observer.resources.limits; configure the fields below.
     limits:
+      ## @param observer.resources.limits.cpu [string] Kubernetes CPU quantity; requests reserve scheduling capacity and limits cap usage.
       cpu: '1'
+      ## @param observer.resources.limits.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
       memory: 512Mi
+  ## @param observer.mesh [boolean] Enable native sidecar injection, strict mTLS and source-identity authorization for observer Pods Set true only with mesh.enabled, then supply allowed principals.
   mesh: false # Set true only with mesh.enabled, then supply allowed principals.
+  ## @param observer.principals [array] Exact source principals allowed to read the observer when observer.mesh is enabled Exact mTLS identities; enforced when observer.mesh=true.
   principals: [] # Exact mTLS identities; enforced when observer.mesh=true.
+  ## @param observer.peers [array] NetworkPolicy peers allowed to reach observer TCP 8094 when networkPolicy.enabled is set NetworkPolicy peers allowed on TCP 8094 when networkPolicy.enabled.
   peers: [] # NetworkPolicy peers allowed on TCP 8094 when networkPolicy.enabled.
 
 # Configure graph observation references and the observer's reachable URL in the

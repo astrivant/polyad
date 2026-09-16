@@ -7,10 +7,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cattrs.errors import CattrsError
-from flask import Flask, g, jsonify, request
+from flask import g, jsonify, request
 
+from polyad.api.application import Routes
 from polyad.api.errors import Conflict, Forbidden, Unauthorized, Unavailable
 from polyad.api.limits import install_limits
+from polyad.auth.policy import public_demo
 from polyad.compiler.passes.schema import structural_schema
 from polyad_types.codec import converter
 from polyad_types.requests import ConnectionRequest
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
-    from flask import Response
+    from flask import Flask, Response
 
     from polyad.api.connections.store import Caller
     from polyad.api.limits import RateLimitPolicy
@@ -32,6 +34,7 @@ def build_app(
     revoke: Callable[[str, str, Caller], dict[str, Any] | None],
     *,
     limits: RateLimitPolicy | None = None,
+    application: Flask | None = None,
 ) -> Flask:
     """
     Construct a service-account authenticated connection listener.
@@ -42,24 +45,27 @@ def build_app(
         lookup (Callable[[str, str, Caller], dict[str, Any] | None]): Authorized receipt lookup.
         revoke (Callable[[str, str, Caller], dict[str, Any] | None]): Authorized early revocation.
         limits (RateLimitPolicy | None): Optional shared HTTP request budget.
+        application (Flask | None): Existing process application for blueprint registration.
 
     Returns:
         Flask: Separate connection API with a 64 KiB request limit.
     """
-    app = Flask(__name__)
-    app.config["MAX_CONTENT_LENGTH"] = 65536
+    app = Routes("connections", application, max_body=65536)
     schema = structural_schema(ConnectionRequest)
     schema["additionalProperties"] = False
 
-    if limits:
-        app.extensions["polyad.limiter"] = install_limits(app, limits)
-
     @app.before_request
     def authorize() -> None:
+        if public_demo():
+            g.caller = authenticate("")
+            return
         header = request.headers.get("Authorization", "")
         if not header.startswith("Bearer "):
             raise Unauthorized("a projected service-account bearer token is required")
         g.caller = authenticate(header[7:])
+
+    if limits:
+        app.extensions["polyad.limiter"] = install_limits(app, limits)
 
     def failure(error: Exception) -> tuple[Response, int]:
         codes = {Unauthorized: 401, Forbidden: 403, Conflict: 409, Unavailable: 503}
@@ -119,7 +125,7 @@ def build_app(
             {
                 "openapi": "3.0.3",
                 "info": {"title": "Polyad Temporary Connections API", "version": "v1alpha1"},
-                "security": [{"serviceAccount": []}],
+                "security": [] if public_demo() else [{"serviceAccount": []}],
                 "components": {
                     "securitySchemes": {
                         "serviceAccount": {
@@ -162,4 +168,4 @@ def build_app(
             }
         )
 
-    return app
+    return app.finish()

@@ -214,6 +214,8 @@ class CapacityManager:
             raise ValueError("graph capacity requires capacity.enabled on the operator Helm chart")
         if any(isinstance(resource, asts.StatefulSet) and resource.spec.volumeClaimTemplates for resource in desired.values()):
             raise ValueError("advance capacity planning cannot model per-replica StatefulSet volumeClaimTemplates")
+        if any(isinstance(resource, asts.DaemonSet) for resource in desired.values()):
+            raise ValueError("advance capacity planning cannot reserve node-driven DaemonSet capacity")
         plan = graph.capacity
         generation = self.obj["metadata"]["generation"]
         policy = converter.unstructure(plan)

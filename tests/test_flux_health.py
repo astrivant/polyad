@@ -20,7 +20,7 @@ def test_flux_configuration_covers_registry():
     """
     Emit the same spec fragment in YAML and JSON for every supported Polyad kind.
     """
-    command = [sys.executable, str(ROOT / "scripts/flux-health.py")]
+    command = [sys.executable, str(ROOT / "scripts/gitops/flux-health.py")]
     yaml_document = yaml.safe_load(subprocess.check_output(command, text=True))
     json_document = json.loads(subprocess.check_output([*command, "--json"], text=True))
     assert yaml_document == json_document

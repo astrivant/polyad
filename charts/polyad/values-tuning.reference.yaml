@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Overlay for any architecture. Cadences pause AFTER a pass, not on a fixed clock.
+# Guide and full metric inventory: ../../docs/operations/performance.md and ../../docs/operations/metrics.md.
+operator:
+  tuning:
+    # Number, 1-15 seconds. Refreshes local/remote inventory and remote backlog.
+    # Lower values add Kubernetes reads and optional PostgreSQL persistence work.
+    # Watch polyad_inventory_sample_age_seconds and polyad_cluster_inventory_sample_fresh.
+    rescanIntervalSeconds: 5
+    # Number, 0.1-5 seconds. Deliver at most one notification per owned shard/pass.
+    # Watch inbound backlog AND API write pressure; faster dispatch can overload Kubernetes.
+    consumeIntervalSeconds: 1
+    # Number, 1-5 seconds. Publishes snapshots, samples enabled database/cache connections,
+    # and reports component/worker demand. This is not the Prometheus scrape interval.
+    metricsIntervalSeconds: 5
+    # Number, 1-5 seconds. Samples local stream sizes; remote queues follow rescan above.
+    # Watch polyad_inbound_sample_fresh and polyad_inbound_sample_age_seconds.
+    backlogIntervalSeconds: 5
+
+metrics:
+  # Boolean. Enables aggregate series, including polyad_operator_interval_seconds{loop=...}.
+  # PostgreSQL, HA Dragonfly and root/remote series require their features enabled separately.
+  enabled: true
+  # Boolean. Adds hierarchy/shape/resource/workload-signal labels, including object names.
+  # Keep false for aggregate monitoring; scalar KEDA routes and JSON remain available.
+  graphLabels: false
+  authentication:
+    # Boolean. Provision this Secret separately and configure scraper credentials.
+    enabled: true
+    existingSecret: polyad-metrics
+    secretKey: token
+
+# CPU/memory HPA targets use Metrics Server, not these Prometheus series.
+# Throughput/Cheeger decisions use graph policy and application reports, not loop cadence.
+# Traces have independent OTEL_BSP_* batching; see values-tracing.reference.yaml.

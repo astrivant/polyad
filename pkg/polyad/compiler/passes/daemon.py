@@ -27,7 +27,7 @@ STATEFUL_OPTIONS = frozenset(
 )
 
 
-def compile_daemon(spec: dict[str, Any], selector: dict[str, str]) -> asts.DeploymentSpec | asts.StatefulSetSpec:
+def compile_daemon(spec: dict[str, Any], selector: dict[str, str]) -> asts.DeploymentSpec | asts.StatefulSetSpec | asts.DaemonSetSpec:
     """
     Preserve application storage while reserving controller identity fields for Polyad.
 
@@ -36,7 +36,7 @@ def compile_daemon(spec: dict[str, Any], selector: dict[str, str]) -> asts.Deplo
         selector (dict[str, str]): Operator-assigned labels identifying this execution's Pods.
 
     Returns:
-        asts.DeploymentSpec | asts.StatefulSetSpec: Typed native controller specification.
+        asts.DeploymentSpec | asts.StatefulSetSpec | asts.DaemonSetSpec: Typed native controller specification.
     """
     kind = spec.get("controller", "Deployment")
     replicas = spec.get("replicas", 1)
@@ -45,12 +45,17 @@ def compile_daemon(spec: dict[str, Any], selector: dict[str, str]) -> asts.Deplo
     if type(spec.get("reloadOnSecretChange", False)) is not bool:
         raise ValueError("daemon reloadOnSecretChange must be a boolean")
     common = {"template": spec["template"], "selector": {"matchLabels": selector}, "replicas": replicas}
+    if kind == "DaemonSet":
+        if replicas != 1 or "statefulSet" in spec or spec.get("activation"):
+            raise ValueError("DaemonSet uses node eligibility, requires replicas: 1, and does not support statefulSet or activation")
+        common.pop("replicas")
+        return asts.converter.structure(common, asts.DaemonSetSpec)
     if kind == "Deployment":
         if "statefulSet" in spec:
             raise ValueError("statefulSet options require controller: StatefulSet")
         return asts.converter.structure({**common, "strategy": {"type": "Recreate"}}, asts.DeploymentSpec)
     if kind != "StatefulSet":
-        raise ValueError("daemon controller must be Deployment or StatefulSet")
+        raise ValueError("daemon controller must be Deployment, StatefulSet or DaemonSet")
     options = spec.get("statefulSet", {})
     if not isinstance(options, dict) or set(options) - STATEFUL_OPTIONS:
         raise ValueError("unknown StatefulSet options; replicas, selector and template are managed by Polyad")

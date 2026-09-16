@@ -14,9 +14,11 @@ from typing import TYPE_CHECKING, cast
 
 from kubernetes import client, config
 from kubernetes.client.exceptions import ApiException
+from opentelemetry import trace
 
 from polyad.compiler.registry import GRAPH_OWNED_KINDS, RESOURCE_TYPES
 from polyad.operator.metrics import WriteBacklog
+from polyad.operator.tracing import traced
 from polyad_types.resources import GROUP as GROUP
 from polyad_types.resources import VERSION as VERSION
 from polyad_types.resources import DeleteOptions, UIDPreconditions, encode_body
@@ -104,6 +106,7 @@ class API:
         finally:
             self.writes.finish(token)
 
+    @traced("polyad.kubernetes.request", kind=trace.SpanKind.CLIENT)
     async def request(
         self,
         method: str,
@@ -137,6 +140,9 @@ class API:
         prefix, plural = reviews.get(kind, BUILTINS.get(kind, (f"/apis/{GROUP}/{VERSION}", KINDS.get(kind, ""))))
         if not plural:
             raise ValueError(f"unsupported kind: {kind}")
+        active = trace.get_current_span()
+        active.set_attribute("k8s.resource.kind", kind)
+        active.set_attribute("http.request.method", method)
         if kind in reviews and (method != "POST" or name or status or namespace):
             raise ValueError("authentication reviews require a cluster-scoped POST")
         path = f"{prefix}/{plural}" if kind in {*reviews, "CustomResourceDefinition"} else f"{prefix}/namespaces/{namespace}/{plural}"

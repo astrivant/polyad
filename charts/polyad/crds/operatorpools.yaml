@@ -36,7 +36,17 @@ spec:
             required:
             - cluster
             - replicas
+            x-kubernetes-validations:
+            - rule: "!has(self.controller) || self.controller != 'DaemonSet' || self.replicas == 1"
+              message: DaemonSet pools use node eligibility and require replicas equal to one; do not attach a KEDA scaler.
+            - rule: "(has(self.controller) ? self.controller : 'Deployment') == (has(oldSelf.controller) ? oldSelf.controller : 'Deployment')"
+              message: Pool controller is immutable; create a new pool to change scheduling.
             properties:
+              controller:
+                type: string
+                enum: [Deployment, DaemonSet]
+                default: Deployment
+                description: Deployment scales by replicas; DaemonSet executes through a reserved PolyGraph and follows eligible nodes.
               cluster:
                 type: string
                 minLength: 1

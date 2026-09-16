@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, Literal
 
-    from polyad_types import CompositionRequest, ConnectionRequest
+    from polyad_types import CompositionRequest, ConnectionRequest, ThroughputSample
 
 
 class APIError(RuntimeError):
@@ -48,13 +48,13 @@ class Client:
     Call Polyad APIs with no implicit mutation retries.
     """
 
-    def __init__(self, url: str, token: str, *, timeout: float = 30) -> None:
+    def __init__(self, url: str, token: str | None, *, timeout: float = 30) -> None:
         """
         Configure an API base address and bearer credential.
 
         Args:
             url (str): Operator API Service or gateway URL.
-            token (str): Namespace-scoped bearer credential.
+            token (str | None): Namespace-scoped bearer credential; explicitly None for an unauthenticated demo.
             timeout (float): Finite socket timeout for requests and event reads.
         """
         parsed = urlsplit(url)
@@ -67,10 +67,24 @@ class Client:
             or parsed.fragment
         ):
             raise ValueError("use an HTTP(S) base URL without credentials, query or fragment")
-        if not token or any(char in token for char in "\r\n") or not math.isfinite(timeout) or timeout <= 0:
+        if (token is not None and (not token or any(char in token for char in "\r\n"))) or not math.isfinite(timeout) or timeout <= 0:
             raise ValueError("a bearer token and positive finite timeout are required")
         self.url, self._token, self.timeout = url.rstrip("/"), token, timeout
         self._opener = build_opener(_NoRedirect())
+
+    def report_throughput(self, sample: ThroughputSample) -> dict[str, Any]:
+        """
+        Report aggregate demand and completed work for the currently observed graph revision.
+
+        Args:
+            sample (ThroughputSample): Fresh measurement using the graph policy's work unit.
+
+        Returns:
+            dict[str, Any]: Operator acknowledgement; layout changes are asynchronous.
+        """
+        with self._open("POST", "/v1/throughput", to_dict(sample)) as response:
+            result: dict[str, Any] = json.loads(response.read())
+            return result
 
     def _open(self, method: str, path: str, body: dict[str, Any] | None = None, *, headers: dict[str, str] | None = None) -> Any:
         data = json.dumps(body, allow_nan=False).encode() if body is not None else None
@@ -79,7 +93,7 @@ class Client:
             data=data,
             method=method,
             headers={
-                "Authorization": f"Bearer {self._token}",
+                **({"Authorization": f"Bearer {self._token}"} if self._token is not None else {}),
                 "Accept": "application/json",
                 "Content-Type": "application/json",
                 **(headers or {}),

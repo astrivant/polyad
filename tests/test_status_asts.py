@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 import yaml
 from attrs import field, frozen
+from deepdiff import DeepDiff
 from jsonschema import ValidationError, validate
 
 from polyad.compiler.passes.schema import structural_schema
@@ -78,7 +79,7 @@ def test_chart_metrics_are_generated_from_models(name):
     All graph kinds publish the exact generated schema, including descriptions.
     """
     document = yaml.safe_load((ROOT / "charts/polyad/crds" / name).read_text())
-    assert metrics_schema(document) == structural_schema(GraphMetrics)
+    assert not DeepDiff(structural_schema(GraphMetrics), metrics_schema(document))
 
 
 def test_schema_constraints_and_required_fields():
@@ -120,14 +121,13 @@ def test_regeneration_repairs_drift_without_changing_other_fields(tmp_path):
         originals[name] = yaml.safe_load(source)
         # A valid YAML change within metrics must be noticed by the check hook.
         (tmp_path / name).write_text(source.replace("Metrics cover this scheduling boundary only.", "Stale description."))
-    command = [sys.executable, str(ROOT / "scripts/generate-status-schemas.py"), "--crd-dir", str(tmp_path)]
+    command = [sys.executable, str(ROOT / "scripts/schemas/generate-status-schemas.py"), "--crd-dir", str(tmp_path)]
     result = subprocess.run([*command, "--check"], capture_output=True, text=True, check=False)
     assert result.returncode == 1, result.stdout + result.stderr
     assert all(name in result.stdout for name in CRDS)
     subprocess.run(command, check=True, capture_output=True)
     regenerated = {name: (tmp_path / name).read_text() for name in CRDS}
-    for name, source in regenerated.items():
-        assert yaml.safe_load(source) == originals[name]
+    assert not DeepDiff(originals, {name: yaml.safe_load(source) for name, source in regenerated.items()})
     subprocess.run([*command, "--check"], check=True, capture_output=True)
     subprocess.run(command, check=True, capture_output=True)
     assert regenerated == {name: (tmp_path / name).read_text() for name in CRDS}

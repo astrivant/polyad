@@ -255,7 +255,7 @@ class Activations:
         # Network guards are compiled from logical names before this scheduling
         # projection. All executions retain those labels; runtime aliases must
         # never become new network identities or widen the original contract.
-        return evolve(graph, nodes=tuple(nodes), connections=connections, network=None), desired
+        return evolve(graph, nodes=tuple(nodes), connections=connections, network=None, throughput=None), desired
 
     def key(self, node: str, receipt: dict[str, Any]) -> str:
         """
@@ -285,6 +285,8 @@ class Activations:
         """
         document = asts.to_document(prototype)
         uid = receipt["metadata"]["uid"]
+        if document["kind"] == "DaemonSet":
+            raise ValueError("DaemonSet execution cannot be replicated by an activation")
         if document["kind"] in {"Deployment", "StatefulSet"}:
             instance = hashlib.sha256(uid.encode()).hexdigest()[:32]
             document["spec"]["replicas"] = self.policies[node].replicasPerActivation
@@ -300,7 +302,7 @@ class Activations:
         annotations[f"{asts.GROUP}/desired-hash"] = hashlib.sha256(
             f"{annotations[f'{asts.GROUP}/desired-hash']}/{uid}/{self.policies[node].replicasPerActivation}".encode()
         ).hexdigest()
-        if document["kind"] in {"Job", "Deployment", "StatefulSet"}:
+        if document["kind"] in {"Job", "Deployment", "StatefulSet", "DaemonSet"}:
             inject_environment(
                 document["spec"]["template"],
                 {

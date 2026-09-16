@@ -1,0 +1,48 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if .Values.authentication.storage.enabled }}
+{{- if eq .Values.authentication.mode "Disabled" }}{{ fail "authentication storage requires authentication.mode=Required" }}{{ end }}
+{{- if not (or .Values.authentication.services .Values.authentication.operators) }}{{ fail "authentication storage requires named API keys" }}{{ end }}
+{{- if and (not .Values.authentication.storage.separateDatabase) (not .Values.postgresql.enabled) }}{{ fail "shared authentication storage requires postgresql.enabled" }}{{ end }}
+{{- if and .Values.authentication.storage.separateDatabase .Values.authentication.storage.managed }}
+{{- if .Values.authentication.storage.existingSecret }}{{ fail "managed authentication storage cannot use an external DSN Secret" }}{{ end }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Release.Name }}-authentication
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  instances: {{ ternary .Values.postgresql.ha.instances 1 .Values.postgresql.ha.enabled }}
+  imageName: {{ .Values.postgresql.image | quote }}
+  enableSuperuserAccess: false
+  bootstrap:
+    initdb:
+      database: {{ .Values.authentication.storage.database | quote }}
+      owner: {{ .Values.authentication.storage.username | quote }}
+      postInitApplicationSQL:
+        - {{ tpl (.Files.Get "files/postgresql/restrict-database.sql.tpl") (dict "database" .Values.authentication.storage.database "Template" .Template) | trim | quote }}
+        - {{ .Files.Get "files/postgresql/restrict-schema.sql" | trim | quote }}
+  storage:
+    size: {{ .Values.authentication.storage.size | quote }}
+    {{- with .Values.authentication.storage.storageClass }}
+    storageClass: {{ . | quote }}
+    {{- end }}
+  resources:
+    {{- toYaml .Values.postgresql.resources | nindent 4 }}
+  postgresql:
+    parameters:
+      max_connections: {{ .Values.postgresql.maxConnections | quote }}
+    {{- if .Values.postgresql.ha.enabled }}
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+    {{- end }}
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: {{ .Values.postgresql.ha.topologyKey | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}

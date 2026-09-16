@@ -26,7 +26,9 @@ def argocd_config(tmp_path_factory):
     Render the same explicit customizations that administrators install.
     """
     path = tmp_path_factory.mktemp("argocd") / "argocd-cm.yaml"
-    path.write_text(subprocess.check_output([sys.executable, str(ROOT / "scripts/argocd-health.py"), "--format", "configmap"], text=True))
+    path.write_text(
+        subprocess.check_output([sys.executable, str(ROOT / "scripts/gitops/argocd-health.py"), "--format", "configmap"], text=True)
+    )
     return path
 
 
@@ -35,7 +37,7 @@ def assess(tmp_path, argocd_config, obj):
     Run the real Argo Lua interpreter without contacting a cluster or opening Lua libraries.
     """
     if shutil.which("argocd") is None:
-        pytest.skip("install argocd using scripts/install-asdf-tools.sh argocd")
+        pytest.skip("install argocd using scripts/tooling/install-asdf-tools.sh argocd")
     path = tmp_path / "resource.yaml"
     path.write_text(yaml.safe_dump(obj))
     output = subprocess.check_output(
@@ -69,7 +71,7 @@ def test_configuration_formats_cover_only_polyad_kinds(argocd_config):
     assert set(data) == expected
     for format_name, field in (("patch", "data"), ("helm", "configs")):
         output = yaml.safe_load(
-            subprocess.check_output([sys.executable, str(ROOT / "scripts/argocd-health.py"), "--format", format_name], text=True)
+            subprocess.check_output([sys.executable, str(ROOT / "scripts/gitops/argocd-health.py"), "--format", format_name], text=True)
         )
         assert set(output) == {field}
         assert (output[field]["cm"] if format_name == "helm" else output[field]) == data

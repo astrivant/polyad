@@ -1,23 +1,36 @@
+# yaml-language-server: $schema=values.reference.schema.json
 # Cross-cluster PolyGraph placement from this release's cluster, named east.
-# Use alone (default HA), or after a singular/HA profile reference.
-# Guide: ../../docs/multicluster.md#placement-and-ownership
+# Use alone (one operator by default), or after a singular/HA profile reference.
+# Guide: ../../docs/deployment/multicluster.md#placement-and-ownership
 # These are reference overrides; values.yaml contains all defaults.
+## @param global [object] Settings for global; configure the fields below.
 global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster; configure the fields below.
   multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad Stable, unique identity of the Helm release cluster.
     clusterName: east # Stable, unique identity of the Helm release cluster.
 
+## @param federation [object] Settings for federation; configure the fields below.
 federation:
+  ## @param federation.enabled [boolean] Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
   enabled: true
   # Replace these registrations with your workload clusters. Each kubeconfig
   # Secret lives in THIS release namespace and contains a config key with an
   # embedded kubeconfig for the corresponding remote namespace. See the guide
   # for access permissions and remote resource-definition prerequisites.
+  ## @param federation.clusters [array] Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only
   clusters:
+    ## @param federation.clusters[].name [string] Stable identity within this configuration; choose a distinct name.
     - name: west
+      ## @param federation.clusters[].namespace [string] Kubernetes namespace; match the destination resource namespace.
       namespace: workloads
+      ## @param federation.clusters[].kubeconfigSecret [string] Existing release-namespace Secret containing an embedded kubeconfig under config.
       kubeconfigSecret: west-access
+    ## @param federation.clusters[].name [string] Stable identity within this configuration; choose a distinct name.
     - name: north
+      ## @param federation.clusters[].namespace [string] Kubernetes namespace; match the destination resource namespace.
       namespace: workloads
+      ## @param federation.clusters[].kubeconfigSecret [string] Existing release-namespace Secret containing an embedded kubeconfig under config.
       kubeconfigSecret: north-access
 
 # Without rootControlPlane, install independent execution operators in the

@@ -4,13 +4,17 @@ Run optional shared read replicas without starting reconciliation, leases or int
 
 from __future__ import annotations
 
+import argparse
 import asyncio
+import logging
 import os
 import signal
-from pathlib import Path
 
 from polyad.api.observations import ObservationAPI, build_app, observe
 from polyad.api.server import APIServer
+from polyad.operator.health import credential_token
+from polyad.operator.logging import add_logging_options, configure_logging
+from polyad.operator.tracing import configure_tracing, shutdown_tracing
 
 
 async def run() -> None:
@@ -22,13 +26,19 @@ async def run() -> None:
     """
     cluster = os.environ["POLYAD_CLUSTER_NAME"]
     namespace = os.environ["POLYAD_NAMESPACE"]
-    token = Path(os.environ["POLYAD_OBSERVER_TOKEN_FILE"]).read_text().strip()
+    token = credential_token("OBSERVER").strip()
     if not cluster or not namespace:
         raise ValueError("observers require cluster and namespace identities")
+    logging.getLogger(__name__).debug("Starting observer cluster=%s namespace=%s", cluster, namespace)
     api = ObservationAPI()
     server = APIServer(api)
-    app = build_app(lambda kind, name: server.invoke(observe(api, cluster, namespace, kind, name)), token)
-    server.start(app, host="0.0.0.0", port=8094, name="observations")
+    build_app(
+        lambda kind, name: server.invoke(observe(api, cluster, namespace, kind, name)),
+        token,
+        access=server.access,
+        application=server.app,
+    )
+    server.start(ports={"observations": 8094})
     stopped = asyncio.Event()
     loop = asyncio.get_running_loop()
     for signum in (signal.SIGTERM, signal.SIGINT):
@@ -46,7 +56,15 @@ def main() -> None:
     Returns:
         None: Process exits after graceful HTTP shutdown.
     """
-    asyncio.run(run())
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_logging_options(parser)
+    args = parser.parse_args()
+    configure_logging(parser, args.log_level)
+    try:
+        configure_tracing()
+        asyncio.run(run())
+    finally:
+        shutdown_tracing()
 
 
 if __name__ == "__main__":

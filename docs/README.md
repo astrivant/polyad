@@ -2,46 +2,108 @@
 
 [Polyad overview and diagrams](../README.md)
 
-Start with [graph concepts](concepts.md), then [run your first workload](getting-started.md).
+Browse guides by category. Start with [graph concepts](introduction/concepts.md),
+then [run your first workload](introduction/getting-started.md).
+
+## Table of contents
+
+- [Introduction](#introduction)
+- [Graphs and scaling](#graphs-and-scaling)
+- [Workloads](#workloads)
+- [APIs](#apis)
+- [Deployment](#deployment)
+- [Operations](#operations)
+- [Development](#development)
+- [Proposals](#proposals)
+- [Package and chart references](#package-and-chart-references)
+
+## Introduction
 
 | Guide | Contents |
 | --- | --- |
-| [Graph boundaries](graph-boundaries.md) | Three boundary types, repeated execution, placement and storage |
-| [Graph concepts](concepts.md) | Nodes, dependencies, subgraphs, placement and recurrence |
-| [Container profiles](containers.md) | Development and production builds, runtime permissions and image checks |
-| [Getting started](getting-started.md) | Installation, execution models and runnable examples |
-| [Networking and events](networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
-| [Root control plane](root-control-plane.md) | Dedicated management clusters, root-managed execution replicas, centralized reports and KEDA targets |
-| [Helm deployment profiles](deployment-profiles.md) | Singular and HA tags, optional split components, replica floors and cluster placement |
-| [Component deployments](components.md) | Dense or split services, the operator's own Graph, bootstrap recovery and KEDA demand |
-| [Optional PostgreSQL](postgresql.md) | Durable graph state, HA database setup and connection-based KEDA scaling |
-| [Multicluster and observers](multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |
-| [Temporary connections](temporary-connections.md) | Optional TTL-bound edges, caller and target scope, service-account authentication and cleanup |
-| [Operator model](operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
-| [Flux health](fluxcd.md) | CEL checks for graph readiness and descendant failures |
-| [Argo CD health](argocd.md) | Graph and leaf health, descendant failures and GitOps configuration |
-| [Graph status](operator.md#graph-instance-status) | Breadth, depth, lifecycle counters and descendant summaries |
-| [Resource registry](resource-registry.md) | Supported kinds, AST models, API identities and scheduling capabilities |
-| [Compiler objects](operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
-| [Mutation plans](mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |
-| [Mutation diagrams](mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
-| [Workload controllers and storage](workload-storage.md) | Deployment or StatefulSet execution, native volumes, PVC templates and retention |
-| [Advance capacity](capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
-| [Replication and KEDA](replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
-| [Metrics API](metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |
-| [Performance tuning](performance.md) | Autoscaling stabilization, rate policies, queue polling and observation intervals |
-| [Authentication and ESO](authentication.md) | KEDA bearer credentials, ExternalSecrets, namespace boundaries and rotation |
-| [Graph rollouts and rotations (proposal)](rotations.md) | Root-coordinated waves, graph policy bindings, Secret revisions, traversal and KEDA coordination |
-| [Rollout sparsity and events (proposal)](rollout-sparsity.md) | Inherited frequency limits, bounded debounce, queued triggers and rollout lifecycle notifications |
-| [Health and backlog](operator.md#health) | Pod probes, inbound updates and API write pressure |
-| [Activation and client](activation.md) | Workload pulses, parallel daemons, frequency bounds and the standalone Python client |
-| [Workload environment](workload-environment.md) | Automatic graph identity, ancestry, activation receipts and operator endpoint discovery |
-| [Workload topology events](workload-events.md) | Neighbor discovery, structural notifications, scaling membership and replay recovery |
-| [Graph rules](graph-rules.md) | Every structural, spectral, Cheeger and network constraint, with Mermaid examples |
-| [Composition requests](composition-requests.md) | Request format, ID references, admission, retries and resource audit |
-| [Composition API service](composition-api.md) | Service setup, authentication, gateway routing, shared shard rate limits and OpenAPI |
+| [Graph concepts](introduction/concepts.md) | Nodes, dependencies, subgraphs, placement and recurrence |
+| [Getting started](introduction/getting-started.md) | Installation, execution models and runnable examples |
+
+## Graphs and scaling
+
+| Guide | Contents |
+| --- | --- |
+| [Graph boundaries](graphs/graph-boundaries.md) | Three boundary types, repeated execution, placement and storage |
+| [Graph rules](graphs/graph-rules.md) | Every structural, spectral, Cheeger and network constraint, with Mermaid examples |
+| [Comparing Cheeger policies](graphs/cheeger-orchestration.md) | Hard bounds versus throughput targets, with diagrams of Observe, Adapt, conflicts and replica scaling |
+| [Replication and KEDA](graphs/replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
+| [Throughput feedback](graphs/throughput-feedback.md) | Separate application Cheeger targets, Observe/Adapt modes and bounded connection restructuring |
+| [Advance capacity](graphs/capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
+
+## Workloads
+
+| Guide | Contents |
+| --- | --- |
+| [Activation and client](workloads/activation.md) | Workload pulses, parallel daemons, frequency bounds and the standalone Python client |
+| [Workload environment](workloads/workload-environment.md) | Automatic graph identity, ancestry, activation receipts and operator endpoint discovery |
+| [Workload topology events](workloads/workload-events.md) | Neighbor discovery, structural notifications, scaling membership and replay recovery |
+| [Workload controllers and storage](workloads/workload-storage.md) | Deployment or StatefulSet execution, native volumes, PVC templates and retention |
+
+## APIs
+
+| Guide | Contents |
+| --- | --- |
+| [Composition API service](apis/composition-api.md) | Service setup, authentication, gateway routing, shared shard rate limits and OpenAPI |
+| [Composition requests](apis/composition-requests.md) | Request format, ID references, admission, retries and resource audit |
+| [Temporary connections](apis/temporary-connections.md) | Optional TTL-bound edges, caller and target scope, service-account authentication and cleanup |
+
+## Deployment
+
+| Guide | Contents |
+| --- | --- |
+| [Helm deployment profiles](deployment/deployment-profiles.md) | Singular and HA tags, optional split components, replica floors and cluster placement |
+| [Container profiles](deployment/containers.md) | Development and production builds, runtime permissions and image checks |
+| [Process and thread hierarchy](deployment/process-hierarchy.md) | Tini, Python threads, async tasks, shared HTTP workers, observers and graceful shutdown |
+| [Operator model](deployment/operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
+| [Graph status](deployment/operator.md#graph-instance-status) | Breadth, depth, lifecycle counters and descendant summaries |
+| [Compiler objects](deployment/operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
+| [Health and backlog](deployment/operator.md#health) | Pod probes, inbound updates and API write pressure |
+| [Component deployments](deployment/components.md) | Dense or split services, the operator's own Graph, bootstrap recovery and KEDA demand |
+| [Root control plane](deployment/root-control-plane.md) | Dedicated management clusters, root-managed execution replicas, centralized reports and KEDA targets |
+| [Multicluster and observers](deployment/multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |
+| [Networking and events](deployment/networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
+| [Optional PostgreSQL](deployment/postgresql.md) | Durable graph state, HA database setup and connection-based KEDA scaling |
+| [Dragonfly HA and KEDA](deployment/dragonfly.md) | Bounded cache replica scaling, primary connection metrics and replication readiness |
+
+## Operations
+
+| Guide | Contents |
+| --- | --- |
+| [Metrics API](operations/metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |
+| [OpenTelemetry traces](operations/tracing.md) | Opt-in request and reconciliation spans, OTLP export, sampling and collector configuration |
+| [Performance tuning](operations/performance.md) | Autoscaling stabilization, rate policies, queue polling and observation intervals |
+| [Authentication and ESO](operations/authentication.md) | KEDA bearer credentials, ExternalSecrets, namespace boundaries and rotation |
+| [API keys and request lanes](operations/api-keys.md) | Service/operator groups, credential directions and HA-wide per-key rate/concurrency limits |
+| [Argo CD health](operations/argocd.md) | Graph and leaf health, descendant failures and GitOps configuration |
+| [Flux health](operations/fluxcd.md) | CEL checks for graph readiness and descendant failures |
+
+## Development
+
+| Guide | Contents |
+| --- | --- |
+| [Resource registry](development/resource-registry.md) | Supported kinds, AST models, API identities and scheduling capabilities |
+| [Mutation plans](development/mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |
+| [Mutation diagrams](development/mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
+| [Python types and serialization](development/toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |
+| [Development toolchain](development/toolchain.md) | Pinned tools, editor settings, formatting and generated documentation |
+
+## Proposals
+
+| Guide | Contents |
+| --- | --- |
+| [Graph rollouts and rotations (proposal)](proposals/rotations.md) | Root-coordinated waves, graph policy bindings, Secret revisions, traversal and KEDA coordination |
+| [Rollout sparsity and events (proposal)](proposals/rollout-sparsity.md) | Inherited frequency limits, bounded debounce, queued triggers and rollout lifecycle notifications |
+| [Transistor gates and decision programs (proposal)](proposals/decision-gates.md) | Conditional activation, durable choices, typed facts and a Python/CEL authoring direction |
+
+## Package and chart references
+
+| Reference | Contents |
+| --- | --- |
 | [Local scheduling](../pkg/polyad/balance/README.md) | Cooperative work, checkpoints, policies, rewrites and graph images |
-| [Python types and serialization](toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |
 | [Standalone types package](../pkg/polyad-types/README.md) | Resource, configuration and request models without operator dependencies |
 | [Helm parameters](../charts/polyad/README.md) | Operator, autoscaling and shared queue settings |
-| [Development toolchain](toolchain.md) | Pinned tools, editor settings, formatting and generated documentation |

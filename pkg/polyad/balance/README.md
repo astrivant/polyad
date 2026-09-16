@@ -13,13 +13,28 @@ slots, memory reservation, initial statistics, and whether it supports checkpoin
 by `None`. Existing `polyad.graph.Operation` commands expose statistics too, but remain non-preemptible in `OperationQueue`.
 Applications using OperationQueue retain their subprocess execution model.
 
+## Table of contents
+
+- [Scheduling and feedback](#scheduling-and-feedback)
+- [Cooperative execution](#cooperative-execution)
+- [Logs and diagrams](#logs-and-diagrams)
+- [Composing graphs](#composing-graphs)
+- [Repeated execution](#repeated-execution)
+- [Shutdown conditions and finalizers](#shutdown-conditions-and-finalizers)
+- [Graph traversal ordering](#graph-traversal-ordering)
+- [Try a live graph rewrite](#try-a-live-graph-rewrite)
+  - [What the rewrites produce](#what-the-rewrites-produce)
+- [Boolean routing rules](#boolean-routing-rules)
+- [Transactional graph rewrites](#transactional-graph-rewrites)
+- [Recursive shape hashes](#recursive-shape-hashes)
+
 ## Scheduling and feedback
 
 Use `routes={"next": DelayGate(30)}` with `polyad.graph.DelayGate` to wait after
 dependencies complete before admitting a workload. The timer uses a monotonic
 clock without occupying a worker; independent ready nodes can continue. Local
 delay timers restart with a new scheduler process. Kubernetes delay gates instead
-keep deadlines on graph status; see the [operator guide](../../../docs/operator.md#delay-gates).
+keep deadlines on graph status; see the [operator guide](../../../docs/deployment/operator.md#delay-gates).
 
 `Scheduler` starts dependency-ready work that fits its slot and optional memory budgets. Workloads report cumulative
 `Statistics(completed, total, estimate)` through `Control.report`. If remaining duration is unknown, observations update an

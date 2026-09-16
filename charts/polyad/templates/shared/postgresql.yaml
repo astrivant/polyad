@@ -16,8 +16,11 @@ spec:
   enableSuperuserAccess: false
   bootstrap:
     initdb:
-      database: polyad
-      owner: polyad
+      database: {{ .Values.postgresql.database | quote }}
+      owner: {{ .Values.postgresql.username | quote }}
+      postInitApplicationSQL:
+        - {{ tpl (.Files.Get "files/postgresql/restrict-database.sql.tpl") (dict "database" .Values.postgresql.database "Template" .Template) | trim | quote }}
+        - {{ .Files.Get "files/postgresql/restrict-schema.sql" | trim | quote }}
   storage:
     size: {{ .Values.postgresql.storage.size | quote }}
     {{- with .Values.postgresql.storage.storageClass }}

@@ -17,3 +17,12 @@ runs:
       env:
         RELEASE_REF: ${{ inputs.ref }}
       run: python .github/prepare-release.py --tag "$RELEASE_REF"
+    - name: Refresh lockfile after release version changes
+      if: startsWith(inputs.ref, 'refs/tags/') || startsWith(inputs.ref, 'v')
+      shell: bash
+      env:
+        POETRY_VIRTUALENVS_CREATE: 'false'
+      run: |
+        python -m pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+        poetry lock
+        poetry check --lock

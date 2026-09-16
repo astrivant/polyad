@@ -143,6 +143,24 @@ class ReplicaSource:
 
 
 @frozen
+class RemoteScaleOwner:
+    """
+    Authorize one root request to supply remote replica intent.
+
+    Attributes:
+        root (str): Registered root cluster identity.
+        namespace (str): Namespace of the approved RemoteScale.
+        name (str): Name of the approved RemoteScale.
+        uid (str): Exact request incarnation; recreating it requires local approval.
+    """
+
+    root: str = field(metadata={"schema": {"minLength": 1, "maxLength": 63}})
+    namespace: str = field(metadata={"schema": {"minLength": 1, "maxLength": 63}})
+    name: str = field(metadata={"schema": {"minLength": 1, "maxLength": 63}})
+    uid: str = field(metadata={"schema": {"minLength": 1, "maxLength": 128}})
+
+
+@frozen
 class Replication:
     """
     Bound copies and their connections while preserving stable ordinals and graph admission.
@@ -163,6 +181,7 @@ class Replication:
         shutdownPolicy (str | None): Graceful termination policy.
         activation (dict[str, Any] | None): Optional pulse policy when referenced by another graph.
         connectivity (ReplicaConnectivity): Data-flow pattern between the copies in this boundary.
+        remoteScaling (RemoteScaleOwner | None): Local opt-in for one remote request; omitted means local authority only.
     """
 
     template: ReplicaTemplate
@@ -180,6 +199,7 @@ class Replication:
     shutdownPolicy: str | None = None
     activation: dict[str, Any] | None = None
     connectivity: ReplicaConnectivity = field(factory=ReplicaConnectivity, kw_only=True)
+    remoteScaling: RemoteScaleOwner | None = field(default=None, kw_only=True)
 
     def __attrs_post_init__(self) -> None:
         """

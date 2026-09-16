@@ -1,0 +1,144 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Named service and peer-operator credentials; no fixed limit on entry count.
+# Guide: ../../docs/operations/api-keys.md
+# Create referenced Secrets first (directly or using External Secrets Operator).
+# Combine with singular/ha/components reference values as needed.
+## @param api [object] Settings for api; configure the fields below.
+api:
+  ## @param api.enabled [boolean] Serve authenticated composition requests on port 8090 through a ClusterIP Service
+  enabled: true
+## @param events [object] Settings for events; configure the fields below.
+events:
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
+  enabled: true
+## @param metrics [object] Settings for metrics; configure the fields below.
+metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
+  enabled: true
+  ## @param metrics.authentication [object] Settings for metrics.authentication; configure the fields below.
+  authentication:
+    ## @param metrics.authentication.enabled [boolean] Require a dedicated bearer token on all metrics endpoints
+    enabled: true
+    ## @param metrics.authentication.existingSecret [string] Existing or ESO-managed Secret containing the metrics token Must match the KEDA key below.
+    existingSecret: polyad-metrics # Must match the KEDA key below.
+    ## @param metrics.authentication.secretKey [string] Key containing the metrics bearer token
+    secretKey: token
+## @param keda [object] Settings for keda; configure the fields below.
+keda:
+  ## @param keda.authentication [object] Settings for keda.authentication; configure the fields below.
+  authentication:
+    ## @param keda.authentication.enabled [boolean] Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics
+    enabled: true
+
+## @param authentication [object] Settings for authentication; configure the fields below.
+authentication:
+  ## @param authentication.mode [string] Required enforces endpoint credentials; Disabled opts into an unauthenticated demo without HTTP request quotas Disabled bypasses all HTTP credential and quota checks for demos. Choices: Required, Disabled.
+  mode: Required # Disabled bypasses all HTTP credential and quota checks for demos.
+  ## @param authentication.backend [string] Builtin uses Polyad's Flask hooks; FlaskHTTPAuth loads the adapter included in official operator images Choices: Builtin, FlaskHTTPAuth.
+  backend: Builtin
+  ## @param authentication.storage [object] Kubernetes storage quantity for each persistent volume.
+  storage:
+    ## @param authentication.storage.enabled [boolean] Persist one-way key verifiers and policy records in PostgreSQL and enforce database revocation; raw tokens stay in Kubernetes Secrets Optional durable verification records and revocation; raw tokens stay in Secrets.
+    enabled: false # Optional durable verification records and revocation; raw tokens stay in Secrets.
+    ## @param authentication.storage.separateDatabase [boolean] Use an isolated authentication database; false reuses the state database and its role, requiring postgresql.enabled False shares PostgreSQL state storage and its application role.
+    separateDatabase: true # False shares PostgreSQL state storage and its application role.
+    ## @param authentication.storage.managed [boolean] Provision a separate CloudNativePG Cluster; false uses the DSN from existingSecret False uses existingSecret instead of provisioning a dedicated CNPG Cluster.
+    managed: true # False uses existingSecret instead of provisioning a dedicated CNPG Cluster.
+    ## @param authentication.storage.existingSecret [string] Externally managed authentication database connection Secret; used with separateDatabase=true and managed=false External DSN Secret in this namespace; ignored for shared state storage.
+    existingSecret: '' # External DSN Secret in this namespace; ignored for shared state storage.
+    ## @param authentication.storage.secretKey [string] DSN key in the external authentication database Secret
+    secretKey: uri
+    ## @param authentication.storage.database [string] Database name for a new managed authentication cluster
+    database: polyad-authentication
+    ## @param authentication.storage.username [string] Sole application login owning the managed authentication database; PostgreSQL administrators retain administrative access Dedicated application owner; PUBLIC database/schema access is revoked.
+    username: polyad_authentication # Dedicated application owner; PUBLIC database/schema access is revoked.
+    ## @param authentication.storage.size [string] Persistent storage per managed authentication database instance PVC size per authentication database instance.
+    size: 1Gi # PVC size per authentication database instance.
+    ## @param authentication.storage.storageClass [string] Authentication database storage class; empty uses the cluster default Empty selects the cluster's default storage class.
+    storageClass: '' # Empty selects the cluster's default storage class.
+  ## @param authentication.services [array] Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits
+  services:
+    ## @param authentication.services[].name [string] Stable identity within this configuration; choose a distinct name.
+    - name: pipeline
+      ## @param authentication.services[].direction [string] Inbound accepts calls, Outbound sends calls, Bidirectional shares one lane across both. Choices: Inbound, Outbound, Bidirectional.
+      direction: Inbound
+      ## @param authentication.services[].existingSecret [string] Existing release-namespace Secret; keep tokens outside Helm values and manage rotation externally.
+      existingSecret: pipeline-polyad-key
+      ## @param authentication.services[].secretKey [string] Key inside the referenced Secret; default token for API keys and uri for database DSNs.
+      secretKey: token
+      ## @param authentication.services[].endpoints [array] Entries for authentication.services[].endpoints; an empty list disables these entries.
+      endpoints: [composition, activations, throughput, events, topology]
+      ## @param authentication.services[].graphs [array] Entries for authentication.services[].graphs; an empty list disables these entries.
+      graphs:
+        ## @param authentication.services[].graphs[].name [string] Stable identity within this configuration; choose a distinct name.
+        - name: pipeline
+          ## @param authentication.services[].graphs[].namespace [string] Kubernetes namespace; match the destination resource namespace.
+          namespace: apps
+          ## @param authentication.services[].graphs[].kind [string] Resource kind selected by this entry. Choices: Graph, PolyGraph, ReplicaGroup.
+          kind: Graph
+          ## @param authentication.services[].graphs[].descendants [boolean] True includes verified descendants; false limits access to the named graph itself. Events and throughput access include verified descendants.
+          descendants: true # Events and throughput access include verified descendants.
+      ## @param authentication.services[].workloads [array] Entries for authentication.services[].workloads; an empty list disables these entries.
+      workloads:
+        ## @param authentication.services[].workloads[].name [string] Stable identity within this configuration; choose a distinct name.
+        - name: processor
+          ## @param authentication.services[].workloads[].namespace [string] Kubernetes namespace; match the destination resource namespace.
+          namespace: apps
+          ## @param authentication.services[].workloads[].kind [string] Resource kind selected by this entry. Choices: Workload, Daemon.
+          kind: Daemon
+          ## @param authentication.services[].workloads[].env [string] Environment variable populated from a namespace-local Secret reference. Injected with secretKeyRef; never a literal token.
+          env: POLYAD_API_KEY # Injected with secretKeyRef; never a literal token.
+          ## @param authentication.services[].workloads[].secret [string] Existing Secret in the workload namespace; empty reuses existingSecret. Must exist in the workload namespace.
+          secret: pipeline-polyad-key # Must exist in the workload namespace.
+          ## @param authentication.services[].workloads[].containers [array] Container names receiving this credential; empty selects every regular container.
+          containers: [main]
+      ## @param authentication.services[].requestsPerMinute [integer] Shared sixty-second request budget for this key across all HA replicas; size for peak caller traffic. Minimum: 1.
+      requestsPerMinute: 120
+      ## @param authentication.services[].maxConcurrentRequests [integer] Shared in-flight request budget for this key, including open event streams; independent of request rate. Minimum: 1.
+      maxConcurrentRequests: 8
+    ## @param authentication.services[].name [string] Stable identity within this configuration; choose a distinct name.
+    - name: archive
+      ## @param authentication.services[].direction [string] Inbound accepts calls, Outbound sends calls, Bidirectional shares one lane across both. Choices: Inbound, Outbound, Bidirectional.
+      direction: Outbound
+      ## @param authentication.services[].existingSecret [string] Existing release-namespace Secret; keep tokens outside Helm values and manage rotation externally.
+      existingSecret: archive-api-key
+      ## @param authentication.services[].secretKey [string] Key inside the referenced Secret; default token for API keys and uri for database DSNs.
+      secretKey: token
+      ## @param authentication.services[].baseUrl [string] Pinned outbound HTTP(S) origin and path prefix; redirects and destinations outside this prefix are rejected.
+      baseUrl: https://archive.example.com/api
+      ## @param authentication.services[].requestsPerMinute [integer] Shared sixty-second request budget for this key across all HA replicas; size for peak caller traffic. Minimum: 1.
+      requestsPerMinute: 60
+      ## @param authentication.services[].maxConcurrentRequests [integer] Shared in-flight request budget for this key, including open event streams; independent of request rate. Minimum: 1.
+      maxConcurrentRequests: 4
+  ## @param authentication.operators [array] Peer operator API keys; Inbound, Outbound or Bidirectional, with HA-wide per-key lanes
+  operators:
+    ## @param authentication.operators[].name [string] Stable identity within this configuration; choose a distinct name.
+    - name: west
+      ## @param authentication.operators[].direction [string] Inbound accepts calls, Outbound sends calls, Bidirectional shares one lane across both. Choices: Inbound, Outbound, Bidirectional.
+      direction: Bidirectional
+      ## @param authentication.operators[].existingSecret [string] Existing release-namespace Secret; keep tokens outside Helm values and manage rotation externally.
+      existingSecret: west-peer-key
+      ## @param authentication.operators[].secretKey [string] Key inside the referenced Secret; default token for API keys and uri for database DSNs.
+      secretKey: token
+      ## @param authentication.operators[].endpoints [array] Entries for authentication.operators[].endpoints; an empty list disables these entries.
+      endpoints: [composition, observations]
+      ## @param authentication.operators[].baseUrl [string] Pinned outbound HTTP(S) origin and path prefix; redirects and destinations outside this prefix are rejected.
+      baseUrl: https://west-polyad.example.com
+      ## @param authentication.operators[].requestsPerMinute [integer] Shared sixty-second request budget for this key across all HA replicas; size for peak caller traffic. Minimum: 1.
+      requestsPerMinute: 120
+      ## @param authentication.operators[].maxConcurrentRequests [integer] Shared in-flight request budget for this key, including open event streams; independent of request rate. Combined inbound + outbound, shared across HA. Minimum: 1.
+      maxConcurrentRequests: 8 # Combined inbound + outbound, shared across HA.
+    ## @param authentication.operators[].name [string] Stable identity within this configuration; choose a distinct name.
+    - name: keda
+      ## @param authentication.operators[].direction [string] Inbound accepts calls, Outbound sends calls, Bidirectional shares one lane across both. Choices: Inbound, Outbound, Bidirectional.
+      direction: Inbound
+      ## @param authentication.operators[].existingSecret [string] Existing release-namespace Secret; keep tokens outside Helm values and manage rotation externally.
+      existingSecret: polyad-metrics
+      ## @param authentication.operators[].secretKey [string] Key inside the referenced Secret; default token for API keys and uri for database DSNs.
+      secretKey: token
+      ## @param authentication.operators[].endpoints [array] Entries for authentication.operators[].endpoints; an empty list disables these entries.
+      endpoints: [metrics]
+      ## @param authentication.operators[].requestsPerMinute [integer] Shared sixty-second request budget for this key across all HA replicas; size for peak caller traffic. Minimum: 1.
+      requestsPerMinute: 600
+      ## @param authentication.operators[].maxConcurrentRequests [integer] Shared in-flight request budget for this key, including open event streams; independent of request rate. Minimum: 1.
+      maxConcurrentRequests: 16

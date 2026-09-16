@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Enable in singular, HA or split deployments. Root-managed workers inherit this
+# configuration; the Collector endpoint must be reachable from their clusters.
+tracing:
+  enabled: true
+  # Full trace endpoint, not just the Collector host or gRPC port.
+  endpoint: http://otel-collector.observability.svc:4318/v1/traces
+  serviceName: polyad-operator
+  # Sample 10% of new traces. Incoming sampled traceparent headers are honored.
+  samplingRatio: 0.1
+  timeoutSeconds: 10
+  resourceAttributes: deployment.environment.name=production
+  # Optional existing Secret: its 'headers' key uses key=value,key=value syntax.
+  # Values must be URL-encoded when required by the OpenTelemetry exporter.
+  headersSecret: ''

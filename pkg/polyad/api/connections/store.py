@@ -158,6 +158,11 @@ class ConnectionStore:
         Returns:
             Caller: Kubernetes-verified identity within the configured scope.
         """
+        from polyad.auth.policy import public_demo
+
+        if public_demo():
+            namespace = self.settings.namespace if self.settings.scope == "Namespace" else self.settings.operator_namespace
+            return Caller(f"system:serviceaccount:{namespace}:polyad-demo", "polyad-demo", namespace)
         if not token or len(token) > 16384:
             raise Unauthorized("a projected service-account token is required")
         review = await self.api.request(
@@ -191,6 +196,10 @@ class ConnectionStore:
         """
         if not self.settings.allows(caller.namespace) or not self.settings.allows(namespace):
             raise Forbidden("caller and target must be inside the configured connections scope")
+        from polyad.auth.policy import public_demo
+
+        if public_demo():
+            return
         review = await self.api.request(
             "POST",
             "SubjectAccessReview",

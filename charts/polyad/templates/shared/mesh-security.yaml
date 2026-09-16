@@ -42,7 +42,7 @@ spec:
         - operation:
             ports: ["8090"]
             methods: [GET, POST]
-            paths: [/v1/compositions, /v1/compositions/*, /v1/activations, /v1/activations/*, /openapi.json]
+            paths: [/v1/compositions, /v1/compositions/*, /v1/activations, /v1/activations/*, /v1/throughput, /openapi.json]
     {{- end }}
     {{- if .Values.metrics.enabled }}
     {{- with .Values.mesh.operator.metricsPrincipals }}
@@ -54,7 +54,7 @@ spec:
         - operation:
             ports: ["8092"]
             methods: [GET]
-            paths: [/metrics, /v1/metrics, /v1/workloads/*, /v1/components/*, /v1/postgresql/connections, /openapi.json]
+            paths: [/metrics, /v1/metrics, /v1/workloads/*, /v1/components/*, /v1/postgresql/connections, /v1/dragonfly/connections, /openapi.json]
     {{- end }}
     {{- end }}
     {{- with .Values.mesh.operator.eventPrincipals }}

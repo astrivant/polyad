@@ -70,6 +70,16 @@ def observed(obj: dict[str, Any]) -> dict[str, bool]:
             and status.get("readyReplicas", 0) >= spec.get("replicas", 1)
             and status.get("availableReplicas", 0) >= spec.get("replicas", 1)
         )
+    elif obj["kind"] == "DaemonSet":
+        desired = status.get("desiredNumberScheduled", 0)
+        ready = bool(
+            status.get("observedGeneration", 0) >= obj["metadata"].get("generation", 1)
+            and desired > 0
+            and status.get("updatedNumberScheduled", 0) == desired
+            and status.get("numberReady", 0) == desired
+            and status.get("numberAvailable", 0) == desired
+            and status.get("numberMisscheduled", 0) == 0
+        )
     elif obj["kind"] == "StatefulSet":
         current = status.get("observedGeneration", 0) >= obj["metadata"].get("generation", 1)
         replicas = spec.get("replicas", 1)
@@ -158,6 +168,10 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
             and metrics.get("observedGeneration") == meta.get("generation", 1)
             and status.get("observedGeneration") == meta.get("generation", 1)
         )
+        if child["kind"] == "ReplicaGroup":
+            from polyad.operator.remote_scaling import remote_revision
+
+            current = current and status.get("remoteScaleRevision", "") == remote_revision(child)
         result.subgraphs.append(
             SubgraphMetrics(
                 kind=child["kind"],

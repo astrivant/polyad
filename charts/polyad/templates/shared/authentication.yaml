@@ -1,0 +1,11 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if or .Values.authentication.services .Values.authentication.operators }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-polyad-authentication
+data:
+  config.json: {{ pick .Values.authentication "services" "operators" | toJson | quote }}
+{{- end }}
+{{- end -}}

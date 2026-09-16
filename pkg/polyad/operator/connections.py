@@ -86,7 +86,7 @@ async def refresh_network(controller: Controller, root: dict[str, Any], *, revok
         nodes = {
             child["metadata"].get("labels", {}).get(f"{asts.GROUP}/node")
             for child in children
-            if child["kind"] in {"Job", "Deployment", "StatefulSet"}
+            if child["kind"] in {"Job", "Deployment", "StatefulSet", "DaemonSet"}
         } - {None}
         plans = {}
         for node in sorted(nodes):

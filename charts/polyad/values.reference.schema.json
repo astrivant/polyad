@@ -1,0 +1,1229 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "services": {
+          "$ref": "values.schema.json#/properties/authentication/properties/services"
+        },
+        "operators": {
+          "$ref": "values.schema.json#/properties/authentication/properties/operators"
+        },
+        "mode": {
+          "$ref": "values.schema.json#/properties/authentication/properties/mode"
+        },
+        "backend": {
+          "$ref": "values.schema.json#/properties/authentication/properties/backend"
+        },
+        "storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/enabled"
+            },
+            "separateDatabase": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/separateDatabase"
+            },
+            "managed": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/managed"
+            },
+            "existingSecret": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/existingSecret"
+            },
+            "secretKey": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/secretKey"
+            },
+            "database": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/database"
+            },
+            "username": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/username"
+            },
+            "size": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/size"
+            },
+            "storageClass": {
+              "$ref": "values.schema.json#/properties/authentication/properties/storage/properties/storageClass"
+            }
+          }
+        }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicaCount": {
+          "$ref": "values.schema.json#/properties/operator/properties/replicaCount"
+        },
+        "nodeSelector": {
+          "$ref": "values.schema.json#/properties/operator/properties/nodeSelector"
+        },
+        "tolerations": {
+          "$ref": "values.schema.json#/properties/operator/properties/tolerations"
+        },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/enabled"
+            },
+            "minReplicas": {
+              "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/minReplicas"
+            },
+            "maxReplicas": {
+              "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/maxReplicas"
+            },
+            "targetCPUUtilizationPercentage": {
+              "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/targetCPUUtilizationPercentage"
+            },
+            "targetMemoryUtilizationPercentage": {
+              "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/targetMemoryUtilizationPercentage"
+            },
+            "behavior": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "scaleUp": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "stabilizationWindowSeconds": {
+                      "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/behavior/properties/scaleUp/properties/stabilizationWindowSeconds"
+                    },
+                    "selectPolicy": {
+                      "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/behavior/properties/scaleUp/properties/selectPolicy"
+                    },
+                    "policies": {
+                      "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/behavior/properties/scaleUp/properties/policies"
+                    }
+                  }
+                },
+                "scaleDown": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "stabilizationWindowSeconds": {
+                      "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/behavior/properties/scaleDown/properties/stabilizationWindowSeconds"
+                    },
+                    "selectPolicy": {
+                      "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/behavior/properties/scaleDown/properties/selectPolicy"
+                    },
+                    "policies": {
+                      "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/behavior/properties/scaleDown/properties/policies"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repository": {
+              "$ref": "values.schema.json#/properties/operator/properties/image/properties/repository"
+            },
+            "tag": {
+              "$ref": "values.schema.json#/properties/operator/properties/image/properties/tag"
+            },
+            "pullPolicy": {
+              "$ref": "values.schema.json#/properties/operator/properties/image/properties/pullPolicy"
+            }
+          }
+        },
+        "resources": {
+          "$ref": "values.schema.json#/properties/operator/properties/resources"
+        },
+        "terminationGracePeriodSeconds": {
+          "$ref": "values.schema.json#/properties/operator/properties/terminationGracePeriodSeconds"
+        },
+        "logLevel": {
+          "$ref": "values.schema.json#/properties/operator/properties/logLevel"
+        },
+        "tuning": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rescanIntervalSeconds": {
+              "$ref": "values.schema.json#/properties/operator/properties/tuning/properties/rescanIntervalSeconds"
+            },
+            "consumeIntervalSeconds": {
+              "$ref": "values.schema.json#/properties/operator/properties/tuning/properties/consumeIntervalSeconds"
+            },
+            "metricsIntervalSeconds": {
+              "$ref": "values.schema.json#/properties/operator/properties/tuning/properties/metricsIntervalSeconds"
+            },
+            "backlogIntervalSeconds": {
+              "$ref": "values.schema.json#/properties/operator/properties/tuning/properties/backlogIntervalSeconds"
+            }
+          }
+        }
+      }
+    },
+    "dragonfly": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/dragonfly/properties/enabled"
+        },
+        "image": {
+          "$ref": "values.schema.json#/properties/dragonfly/properties/image"
+        },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/autoscaling/properties/enabled"
+            },
+            "minReplicas": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/autoscaling/properties/minReplicas"
+            },
+            "maxReplicas": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/autoscaling/properties/maxReplicas"
+            },
+            "connectionsPerReplica": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/autoscaling/properties/connectionsPerReplica"
+            }
+          }
+        },
+        "externalUrl": {
+          "$ref": "values.schema.json#/properties/dragonfly/properties/externalUrl"
+        },
+        "existingSecret": {
+          "$ref": "values.schema.json#/properties/dragonfly/properties/existingSecret"
+        },
+        "persistence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/persistence/properties/enabled"
+            },
+            "size": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/persistence/properties/size"
+            },
+            "storageClass": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/persistence/properties/storageClass"
+            }
+          }
+        },
+        "ha": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/ha/properties/enabled"
+            },
+            "replicas": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/ha/properties/replicas"
+            },
+            "topologyKey": {
+              "$ref": "values.schema.json#/properties/dragonfly/properties/ha/properties/topologyKey"
+            }
+          }
+        }
+      }
+    },
+    "dragonflyOperator": {
+      "type": "object",
+      "properties": {
+        "nameOverride": {
+          "$ref": "values.schema.json#/properties/dragonflyOperator/properties/nameOverride"
+        },
+        "replicaCount": {
+          "$ref": "values.schema.json#/properties/dragonflyOperator/properties/replicaCount"
+        },
+        "crds": {
+          "type": "object",
+          "properties": {
+            "install": {
+              "$ref": "values.schema.json#/properties/dragonflyOperator/properties/crds/properties/install"
+            }
+          }
+        },
+        "manager": {
+          "type": "object",
+          "properties": {
+            "extraArgs": {
+              "$ref": "values.schema.json#/properties/dragonflyOperator/properties/manager/properties/extraArgs"
+            }
+          }
+        },
+        "rbacProxy": {
+          "type": "object",
+          "properties": {
+            "extraArgs": {
+              "$ref": "values.schema.json#/properties/dragonflyOperator/properties/rbacProxy/properties/extraArgs"
+            }
+          }
+        }
+      }
+    },
+    "global": {
+      "type": "object",
+      "properties": {
+        "istioNamespace": {
+          "$ref": "values.schema.json#/properties/global/properties/istioNamespace"
+        },
+        "meshID": {
+          "$ref": "values.schema.json#/properties/global/properties/meshID"
+        },
+        "network": {
+          "$ref": "values.schema.json#/properties/global/properties/network"
+        },
+        "multiCluster": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "clusterName": {
+              "$ref": "values.schema.json#/properties/global/properties/multiCluster/properties/clusterName"
+            }
+          }
+        }
+      }
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/api/properties/enabled"
+        },
+        "existingSecret": {
+          "$ref": "values.schema.json#/properties/api/properties/existingSecret"
+        },
+        "rateLimit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/api/properties/rateLimit/properties/enabled"
+            },
+            "requestsPerMinute": {
+              "$ref": "values.schema.json#/properties/api/properties/rateLimit/properties/requestsPerMinute"
+            }
+          }
+        },
+        "gateway": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/api/properties/gateway/properties/enabled"
+            },
+            "create": {
+              "$ref": "values.schema.json#/properties/api/properties/gateway/properties/create"
+            },
+            "name": {
+              "$ref": "values.schema.json#/properties/api/properties/gateway/properties/name"
+            },
+            "namespace": {
+              "$ref": "values.schema.json#/properties/api/properties/gateway/properties/namespace"
+            },
+            "className": {
+              "$ref": "values.schema.json#/properties/api/properties/gateway/properties/className"
+            },
+            "sectionName": {
+              "$ref": "values.schema.json#/properties/api/properties/gateway/properties/sectionName"
+            },
+            "hostnames": {
+              "$ref": "values.schema.json#/properties/api/properties/gateway/properties/hostnames"
+            },
+            "tlsSecret": {
+              "$ref": "values.schema.json#/properties/api/properties/gateway/properties/tlsSecret"
+            }
+          }
+        },
+        "key": {
+          "$ref": "values.schema.json#/properties/api/properties/key"
+        }
+      }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/events/properties/enabled"
+        },
+        "existingSecret": {
+          "$ref": "values.schema.json#/properties/events/properties/existingSecret"
+        },
+        "key": {
+          "$ref": "values.schema.json#/properties/events/properties/key"
+        },
+        "retention": {
+          "$ref": "values.schema.json#/properties/events/properties/retention"
+        },
+        "maxConnections": {
+          "$ref": "values.schema.json#/properties/events/properties/maxConnections"
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/networkPolicy/properties/enabled"
+        },
+        "apiServerCIDRs": {
+          "$ref": "values.schema.json#/properties/networkPolicy/properties/apiServerCIDRs"
+        },
+        "apiServerPort": {
+          "$ref": "values.schema.json#/properties/networkPolicy/properties/apiServerPort"
+        },
+        "compositionPeers": {
+          "$ref": "values.schema.json#/properties/networkPolicy/properties/compositionPeers"
+        },
+        "eventPeers": {
+          "$ref": "values.schema.json#/properties/networkPolicy/properties/eventPeers"
+        },
+        "healthPeers": {
+          "$ref": "values.schema.json#/properties/networkPolicy/properties/healthPeers"
+        },
+        "extraEgress": {
+          "$ref": "values.schema.json#/properties/networkPolicy/properties/extraEgress"
+        },
+        "metricsPeers": {
+          "$ref": "values.schema.json#/properties/networkPolicy/properties/metricsPeers"
+        }
+      }
+    },
+    "mesh": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/mesh/properties/enabled"
+        },
+        "install": {
+          "$ref": "values.schema.json#/properties/mesh/properties/install"
+        },
+        "operator": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/mesh/properties/operator/properties/enabled"
+            },
+            "compositionPrincipals": {
+              "$ref": "values.schema.json#/properties/mesh/properties/operator/properties/compositionPrincipals"
+            },
+            "eventPrincipals": {
+              "$ref": "values.schema.json#/properties/mesh/properties/operator/properties/eventPrincipals"
+            },
+            "metricsPrincipals": {
+              "$ref": "values.schema.json#/properties/mesh/properties/operator/properties/metricsPrincipals"
+            },
+            "connectionPrincipals": {
+              "$ref": "values.schema.json#/properties/mesh/properties/operator/properties/connectionPrincipals"
+            }
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/enabled"
+            },
+            "hosts": {
+              "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/hosts"
+            },
+            "tlsSecret": {
+              "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/tlsSecret"
+            }
+          }
+        },
+        "multicluster": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/enabled"
+            },
+            "eastWest": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/eastWest/properties/enabled"
+                },
+                "hosts": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/eastWest/properties/hosts"
+                },
+                "portName": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/eastWest/properties/portName"
+                }
+              }
+            },
+            "peers": {
+              "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/peers"
+            }
+          }
+        }
+      }
+    },
+    "istioBase": {
+      "$ref": "values.schema.json#/properties/istioBase"
+    },
+    "istiod": {
+      "type": "object",
+      "description": "Upstream Istio control-plane chart overrides",
+      "properties": {
+        "env": {
+          "$ref": "values.schema.json#/properties/istiod/properties/env"
+        },
+        "meshConfig": {
+          "type": "object",
+          "properties": {
+            "enableAutoMtls": {
+              "$ref": "values.schema.json#/properties/istiod/properties/meshConfig/properties/enableAutoMtls"
+            },
+            "defaultConfig": {
+              "type": "object",
+              "properties": {
+                "holdApplicationUntilProxyStarts": {
+                  "$ref": "values.schema.json#/properties/istiod/properties/meshConfig/properties/defaultConfig/properties/holdApplicationUntilProxyStarts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "istioIngress": {
+      "type": "object",
+      "description": "Upstream Istio gateway chart overrides",
+      "properties": {
+        "affinity": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/affinity"
+        },
+        "kind": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/kind"
+        },
+        "annotations": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/annotations"
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/autoscaling/properties/enabled"
+            },
+            "maxReplicas": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/autoscaling/properties/maxReplicas"
+            },
+            "minReplicas": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/autoscaling/properties/minReplicas"
+            },
+            "targetCPUUtilizationPercentage": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/autoscaling/properties/targetCPUUtilizationPercentage"
+            }
+          }
+        },
+        "envVarFrom": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/envVarFrom"
+        },
+        "strategy": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/strategy"
+        },
+        "nodeSelector": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/nodeSelector"
+        },
+        "podAnnotations": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/podAnnotations"
+        },
+        "resources": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/resources"
+        },
+        "revision": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/revision"
+        },
+        "compatibilityVersion": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/compatibilityVersion"
+        },
+        "profile": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/profile"
+        },
+        "platform": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/platform"
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/service/properties/annotations"
+            },
+            "selectorLabels": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/service/properties/selectorLabels"
+            },
+            "externalTrafficPolicy": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/service/properties/externalTrafficPolicy"
+            },
+            "loadBalancerIP": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/service/properties/loadBalancerIP"
+            },
+            "loadBalancerSourceRanges": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/service/properties/loadBalancerSourceRanges"
+            },
+            "ipFamilyPolicy": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/service/properties/ipFamilyPolicy"
+            },
+            "ports": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/service/properties/ports"
+            },
+            "type": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/service/properties/type"
+            }
+          }
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/serviceAccount/properties/annotations"
+            },
+            "create": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/serviceAccount/properties/create"
+            }
+          }
+        },
+        "rbac": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/istioIngress/properties/rbac/properties/enabled"
+            }
+          }
+        },
+        "tolerations": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/tolerations"
+        },
+        "topologySpreadConstraints": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/topologySpreadConstraints"
+        },
+        "networkGateway": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/networkGateway"
+        },
+        "networkGatewayPorts": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/networkGatewayPorts"
+        },
+        "imagePullPolicy": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/imagePullPolicy"
+        },
+        "imagePullSecrets": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/imagePullSecrets"
+        },
+        "podDisruptionBudget": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/podDisruptionBudget"
+        },
+        "terminationGracePeriodSeconds": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/terminationGracePeriodSeconds"
+        },
+        "volumes": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/volumes"
+        },
+        "volumeMounts": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/volumeMounts"
+        },
+        "initContainers": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/initContainers"
+        },
+        "additionalContainers": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/additionalContainers"
+        },
+        "priorityClassName": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/priorityClassName"
+        },
+        "lifecycle": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/lifecycle"
+        },
+        "name": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/name"
+        },
+        "labels": {
+          "$ref": "values.schema.json#/properties/istioIngress/properties/labels"
+        }
+      }
+    },
+    "capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/capacity/properties/enabled"
+        },
+        "provisioningClassName": {
+          "$ref": "values.schema.json#/properties/capacity/properties/provisioningClassName"
+        },
+        "maxPods": {
+          "$ref": "values.schema.json#/properties/capacity/properties/maxPods"
+        },
+        "placeholderImage": {
+          "$ref": "values.schema.json#/properties/capacity/properties/placeholderImage"
+        },
+        "priorityClass": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "create": {
+              "$ref": "values.schema.json#/properties/capacity/properties/priorityClass/properties/create"
+            },
+            "name": {
+              "$ref": "values.schema.json#/properties/capacity/properties/priorityClass/properties/name"
+            },
+            "value": {
+              "$ref": "values.schema.json#/properties/capacity/properties/priorityClass/properties/value"
+            }
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/metrics/properties/enabled"
+        },
+        "graphLabels": {
+          "$ref": "values.schema.json#/properties/metrics/properties/graphLabels"
+        },
+        "authentication": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/metrics/properties/authentication/properties/enabled"
+            },
+            "existingSecret": {
+              "$ref": "values.schema.json#/properties/metrics/properties/authentication/properties/existingSecret"
+            },
+            "secretKey": {
+              "$ref": "values.schema.json#/properties/metrics/properties/authentication/properties/secretKey"
+            },
+            "key": {
+              "$ref": "values.schema.json#/properties/metrics/properties/authentication/properties/key"
+            }
+          }
+        }
+      }
+    },
+    "keda": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authentication": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/keda/properties/authentication/properties/enabled"
+            },
+            "name": {
+              "$ref": "values.schema.json#/properties/keda/properties/authentication/properties/name"
+            }
+          }
+        }
+      }
+    },
+    "externalSecrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/externalSecrets/properties/enabled"
+        },
+        "refreshInterval": {
+          "$ref": "values.schema.json#/properties/externalSecrets/properties/refreshInterval"
+        },
+        "secretStoreRef": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "$ref": "values.schema.json#/properties/externalSecrets/properties/secretStoreRef/properties/name"
+            },
+            "kind": {
+              "$ref": "values.schema.json#/properties/externalSecrets/properties/secretStoreRef/properties/kind"
+            }
+          }
+        },
+        "secrets": {
+          "$ref": "values.schema.json#/properties/externalSecrets/properties/secrets"
+        },
+        "reloadOnChange": {
+          "$ref": "values.schema.json#/properties/externalSecrets/properties/reloadOnChange"
+        }
+      }
+    },
+    "connections": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/connections/properties/enabled"
+        },
+        "scope": {
+          "$ref": "values.schema.json#/properties/connections/properties/scope"
+        },
+        "namespace": {
+          "$ref": "values.schema.json#/properties/connections/properties/namespace"
+        },
+        "maxTtlSeconds": {
+          "$ref": "values.schema.json#/properties/connections/properties/maxTtlSeconds"
+        },
+        "retentionSeconds": {
+          "$ref": "values.schema.json#/properties/connections/properties/retentionSeconds"
+        }
+      }
+    },
+    "istioEastWest": {
+      "type": "object",
+      "description": "Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label",
+      "properties": {
+        "affinity": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/affinity"
+        },
+        "kind": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/kind"
+        },
+        "annotations": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/annotations"
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/autoscaling/properties/enabled"
+            },
+            "maxReplicas": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/autoscaling/properties/maxReplicas"
+            },
+            "minReplicas": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/autoscaling/properties/minReplicas"
+            },
+            "targetCPUUtilizationPercentage": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/autoscaling/properties/targetCPUUtilizationPercentage"
+            }
+          }
+        },
+        "envVarFrom": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/envVarFrom"
+        },
+        "strategy": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/strategy"
+        },
+        "nodeSelector": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/nodeSelector"
+        },
+        "podAnnotations": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/podAnnotations"
+        },
+        "resources": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/resources"
+        },
+        "revision": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/revision"
+        },
+        "compatibilityVersion": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/compatibilityVersion"
+        },
+        "profile": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/profile"
+        },
+        "platform": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/platform"
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/annotations"
+            },
+            "selectorLabels": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/selectorLabels"
+            },
+            "externalTrafficPolicy": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/externalTrafficPolicy"
+            },
+            "loadBalancerIP": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/loadBalancerIP"
+            },
+            "loadBalancerSourceRanges": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/loadBalancerSourceRanges"
+            },
+            "ipFamilyPolicy": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/ipFamilyPolicy"
+            },
+            "ports": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/ports"
+            },
+            "type": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/type"
+            }
+          }
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/serviceAccount/properties/annotations"
+            },
+            "create": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/serviceAccount/properties/create"
+            }
+          }
+        },
+        "rbac": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/istioEastWest/properties/rbac/properties/enabled"
+            }
+          }
+        },
+        "tolerations": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/tolerations"
+        },
+        "topologySpreadConstraints": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/topologySpreadConstraints"
+        },
+        "networkGateway": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/networkGateway"
+        },
+        "networkGatewayPorts": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/networkGatewayPorts"
+        },
+        "imagePullPolicy": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/imagePullPolicy"
+        },
+        "imagePullSecrets": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/imagePullSecrets"
+        },
+        "podDisruptionBudget": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/podDisruptionBudget"
+        },
+        "terminationGracePeriodSeconds": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/terminationGracePeriodSeconds"
+        },
+        "volumes": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/volumes"
+        },
+        "volumeMounts": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/volumeMounts"
+        },
+        "initContainers": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/initContainers"
+        },
+        "additionalContainers": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/additionalContainers"
+        },
+        "priorityClassName": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/priorityClassName"
+        },
+        "lifecycle": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/lifecycle"
+        },
+        "name": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/name"
+        },
+        "labels": {
+          "$ref": "values.schema.json#/properties/istioEastWest/properties/labels"
+        }
+      }
+    },
+    "federation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/federation/properties/enabled"
+        },
+        "clusters": {
+          "$ref": "values.schema.json#/properties/federation/properties/clusters"
+        }
+      }
+    },
+    "observer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/observer/properties/enabled"
+        },
+        "replicaCount": {
+          "$ref": "values.schema.json#/properties/observer/properties/replicaCount"
+        },
+        "existingSecret": {
+          "$ref": "values.schema.json#/properties/observer/properties/existingSecret"
+        },
+        "mesh": {
+          "$ref": "values.schema.json#/properties/observer/properties/mesh"
+        },
+        "principals": {
+          "$ref": "values.schema.json#/properties/observer/properties/principals"
+        },
+        "peers": {
+          "$ref": "values.schema.json#/properties/observer/properties/peers"
+        },
+        "resources": {
+          "$ref": "values.schema.json#/properties/observer/properties/resources"
+        }
+      }
+    },
+    "rootControlPlane": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kubeconfigSecret": {
+          "$ref": "values.schema.json#/properties/rootControlPlane/properties/kubeconfigSecret"
+        },
+        "meshPeers": {
+          "$ref": "values.schema.json#/properties/rootControlPlane/properties/meshPeers"
+        },
+        "endpoints": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "api": {
+              "$ref": "values.schema.json#/properties/rootControlPlane/properties/endpoints/properties/api"
+            },
+            "events": {
+              "$ref": "values.schema.json#/properties/rootControlPlane/properties/endpoints/properties/events"
+            },
+            "metrics": {
+              "$ref": "values.schema.json#/properties/rootControlPlane/properties/endpoints/properties/metrics"
+            }
+          }
+        },
+        "pools": {
+          "$ref": "values.schema.json#/properties/rootControlPlane/properties/pools"
+        },
+        "enabled": {
+          "$ref": "values.schema.json#/properties/rootControlPlane/properties/enabled"
+        }
+      }
+    },
+    "postgresql": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/enabled"
+        },
+        "managed": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/managed"
+        },
+        "existingSecret": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/existingSecret"
+        },
+        "secretKey": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/secretKey"
+        },
+        "scope": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/scope"
+        },
+        "image": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/image"
+        },
+        "maxConnections": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/maxConnections"
+        },
+        "storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "size": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/storage/properties/size"
+            },
+            "storageClass": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/storage/properties/storageClass"
+            }
+          }
+        },
+        "ha": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/ha/properties/enabled"
+            },
+            "instances": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/ha/properties/instances"
+            },
+            "topologyKey": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/ha/properties/topologyKey"
+            }
+          }
+        },
+        "resources": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/resources"
+        },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/autoscaling/properties/enabled"
+            },
+            "minInstances": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/autoscaling/properties/minInstances"
+            },
+            "maxInstances": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/autoscaling/properties/maxInstances"
+            },
+            "connectionsPerInstance": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/autoscaling/properties/connectionsPerInstance"
+            }
+          }
+        },
+        "database": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/database"
+        },
+        "username": {
+          "$ref": "values.schema.json#/properties/postgresql/properties/username"
+        },
+        "events": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/events/properties/enabled"
+            },
+            "retentionDays": {
+              "$ref": "values.schema.json#/properties/postgresql/properties/events/properties/retentionDays"
+            }
+          }
+        }
+      }
+    },
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cheegerMinimum": {
+          "$ref": "values.schema.json#/properties/architecture/properties/cheegerMinimum"
+        },
+        "expandedNodes": {
+          "$ref": "values.schema.json#/properties/architecture/properties/expandedNodes"
+        },
+        "autoscaling": {
+          "$ref": "values.schema.json#/properties/architecture/properties/autoscaling"
+        },
+        "components": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "gateway": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "replicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/gateway/properties/replicas"
+                },
+                "minReplicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/gateway/properties/minReplicas"
+                },
+                "maxReplicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/gateway/properties/maxReplicas"
+                },
+                "requestsPerSecond": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/gateway/properties/requestsPerSecond"
+                },
+                "concurrentRequests": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/gateway/properties/concurrentRequests"
+                }
+              }
+            },
+            "executor": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "replicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/executor/properties/replicas"
+                },
+                "minReplicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/executor/properties/minReplicas"
+                },
+                "maxReplicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/executor/properties/maxReplicas"
+                },
+                "backlog": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/executor/properties/backlog"
+                }
+              }
+            },
+            "telemetry": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "replicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/telemetry/properties/replicas"
+                },
+                "minReplicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/telemetry/properties/minReplicas"
+                },
+                "maxReplicas": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/telemetry/properties/maxReplicas"
+                },
+                "requestsPerSecond": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/telemetry/properties/requestsPerSecond"
+                },
+                "concurrentRequests": {
+                  "$ref": "values.schema.json#/properties/architecture/properties/components/properties/telemetry/properties/concurrentRequests"
+                }
+              }
+            }
+          }
+        },
+        "mode": {
+          "$ref": "values.schema.json#/properties/architecture/properties/mode"
+        }
+      }
+    },
+    "ha": {
+      "$ref": "values.schema.json#/properties/ha"
+    },
+    "tracing": {
+      "type": "object",
+      "description": "Opt-in OTLP/HTTP tracing for operator processes and observers.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/tracing/properties/enabled"
+        },
+        "endpoint": {
+          "$ref": "values.schema.json#/properties/tracing/properties/endpoint"
+        },
+        "serviceName": {
+          "$ref": "values.schema.json#/properties/tracing/properties/serviceName"
+        },
+        "samplingRatio": {
+          "$ref": "values.schema.json#/properties/tracing/properties/samplingRatio"
+        },
+        "timeoutSeconds": {
+          "$ref": "values.schema.json#/properties/tracing/properties/timeoutSeconds"
+        },
+        "resourceAttributes": {
+          "$ref": "values.schema.json#/properties/tracing/properties/resourceAttributes"
+        },
+        "headersSecret": {
+          "$ref": "values.schema.json#/properties/tracing/properties/headersSecret"
+        }
+      }
+    }
+  }
+}

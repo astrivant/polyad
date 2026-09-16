@@ -241,6 +241,7 @@ def test_remote_publication_uses_destination_ancestry_and_refreshed_api(monkeypa
         application = resource("Graph", "control-plane")
         api = FakeAPI(remote_root, nested, application)
         root = SimpleNamespace(
+            state=None,
             coordinator=SimpleNamespace(namespace="test", identity="root", self_graph="control-plane"),
             federation=SimpleNamespace(target=lambda cluster: (api, "test")),
             resolve=lambda cluster: (api, "test"),

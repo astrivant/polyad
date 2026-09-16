@@ -110,10 +110,13 @@ def test_every_release_build_prepares_metadata_before_consuming_it():
             assert steps[0]["uses"] == "actions/checkout@v4"
             assert steps[1]["uses"] == "./.github/actions/prepare-release"
     action = yaml.load((ROOT / ".github/actions/prepare-release/action.yml").read_text(), Loader=yaml.BaseLoader)
-    stamp = action["runs"]["steps"][-1]
+    stamp = next(step for step in action["runs"]["steps"] if step.get("name") == "Stamp release metadata")
     assert "refs/tags/" in stamp["if"]
     assert stamp["env"]["RELEASE_REF"] == "${{ inputs.ref }}"
     assert stamp["run"] == 'python .github/prepare-release.py --tag "$RELEASE_REF"'
+    refresh = action["runs"]["steps"][-1]
+    assert refresh["if"] == stamp["if"]
+    assert "poetry lock\n" in refresh["run"] and "poetry check --lock" in refresh["run"]
 
 
 @pytest.mark.parametrize(
@@ -138,7 +141,7 @@ def test_release_tag_preserves_package_version(tmp_path, version, tag):
     output = tmp_path / "output"
     output.write_text("previous=value\n")
     result = subprocess.run(
-        [sys.executable, str(ROOT / "scripts/release-tag.py"), "--project", str(project), "--output", str(output)],
+        [sys.executable, str(ROOT / "scripts/release/release-tag.py"), "--project", str(project), "--output", str(output)],
         capture_output=True,
         text=True,
         check=True,
@@ -156,7 +159,7 @@ def test_invalid_versions_cannot_emit_tag_outputs(tmp_path, version):
     project.write_text(f"[project]\nversion = {json.dumps(version)}\n")
     output = tmp_path / "output"
     result = subprocess.run(
-        [sys.executable, str(ROOT / "scripts/release-tag.py"), "--project", str(project), "--output", str(output)],
+        [sys.executable, str(ROOT / "scripts/release/release-tag.py"), "--project", str(project), "--output", str(output)],
         capture_output=True,
         text=True,
         check=False,

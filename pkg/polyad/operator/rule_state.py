@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from polyad.graph.temporary import ANNOTATION, active_entries, overlay
+from polyad.operator.remote_scaling import approved_intent
 from polyad.operator.rules import RuleViolation, check_rules
 from polyad_types.codec import converter
 from polyad_types.replication import Replication, replica_topology
@@ -35,6 +36,7 @@ def _revision(obj: dict[str, Any]) -> dict[str, Any]:
     return {
         "spec": obj.get("spec"),
         "temporaryConnections": meta.get("annotations", {}).get(ANNOTATION),
+        "remoteScaleIntent": meta.get("annotations", {}).get(f"{GROUP}/remote-scale-intent"),
         "membership": {key: value for key, value in meta.get("labels", {}).items() if key in {f"{GROUP}/node", f"{GROUP}/runtime-node"}},
         **{key: meta.get(key) for key in ("uid", "generation", "deletionTimestamp", "ownerReferences")},
     }
@@ -72,6 +74,7 @@ def _activation_topology(raw: dict[str, Any], children: list[dict[str, Any]]) ->
         # Traffic selectors retain logical node names; only the structural
         # projection expands runtime aliases, as in Activations.prepare.
         "network": None,
+        "throughput": None,
         "nodes": [
             {
                 **node,
@@ -90,7 +93,9 @@ def _activation_topology(raw: dict[str, Any], children: list[dict[str, Any]]) ->
     }
 
 
-async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+async def check_live_rules(
+    api: API, obj: dict[str, Any], *, candidate: dict[str, Any] | None = None, candidate_is_logical: bool = False
+) -> list[dict[str, Any]]:
     """
     Validate a proposed boundary against fresh ancestors, sibling instances and rules.
 
@@ -98,6 +103,7 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
         api (API): Read adapter under the existing root-family lease.
         obj (dict[str, Any]): Reconciled boundary, with effective topology for a ReplicaGroup.
         candidate (dict[str, Any] | None): Locally planned activation topology to evaluate before dispatch.
+        candidate_is_logical (bool): Expand current activation instances when the candidate replaces logical connections.
 
     Returns:
         list[dict[str, Any]]: Current-boundary verdicts after every family constraint passes.
@@ -155,6 +161,8 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
         raise Pending("graph changed before structural rule evaluation")
     if _revision(current)["temporaryConnections"] != _revision(obj)["temporaryConnections"]:
         raise Pending("temporary connections changed before structural rule evaluation")
+    if _revision(current)["remoteScaleIntent"] != _revision(obj)["remoteScaleIntent"]:
+        raise Pending("remote scale intent changed before structural rule evaluation")
     root = current
     ancestors = {target_uid}
     while True:
@@ -204,11 +212,15 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
         is_target = identity.get("uid") == target_uid
         if kind == "ReplicaGroup":
             policy = converter.structure(body, Replication)
+            intent = approved_intent(instance) if instance else None
+            if intent:
+                body["replicas"] = intent["replicas"]
             if policy.replicaSource and policy.inheritReplicas:
                 source = await read("ReplicaGroup", policy.replicaSource.name)
                 if source["metadata"]["uid"] != policy.replicaSource.uid or not source["spec"].get("templateOnly"):
                     raise Pending("replica source incarnation is unavailable")
-                count = converter.structure(source["spec"], Replication).replicas
+                source_intent = approved_intent(source)
+                count = source_intent["replicas"] if source_intent else converter.structure(source["spec"], Replication).replicas
                 if not policy.minReplicas <= count <= policy.maxReplicas:
                     raise RuleViolation("inherited replicas exceed this instance's bounds")
                 body["replicas"] = count
@@ -232,7 +244,7 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
             deadlines.extend(datetime.fromisoformat(grant["expiresAt"]) for grant in active_entries(instance).values())
             body = overlay(instance, body)
         topology(body, kind)
-        if not is_target or candidate is None:
+        if not is_target or candidate is None or candidate_is_logical:
             body = _activation_topology(body, live_children)
         graph = topology(body, kind)
         vertices += len(graph.nodes)

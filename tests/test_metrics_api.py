@@ -7,6 +7,8 @@ from __future__ import annotations
 import copy
 import json
 import time
+from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from openapi_spec_validator import validate
@@ -62,7 +64,7 @@ def snapshot(objects=()):
         "leader": True,
         "shards": [0],
         "pending": 2,
-        "writes": {writer: {"queued": 3, "inFlight": 1} for writer in ("workloads", "coordination", "compositionIntake")},
+        "writes": {writer: {"queued": 3, "inFlight": 1} for writer in ("workloads", "coordination", "apiIntake")},
         "inbound": {"fresh": True, "sampleAgeSeconds": 0},
         "shardBacklogs": {0: (8, 3), 1: (0, 0)},
         "inventory": {**inventory(list(objects)), "fresh": True, "sampleAgeSeconds": 0},
@@ -74,6 +76,55 @@ def samples(store):
     Decode actual Prometheus wire data for assertions.
     """
     return [sample for family in text_string_to_metric_families(store.read()[0].decode()) for sample in family.samples]
+
+
+def test_runtime_and_root_capacity_inventory_is_documented_and_freshness_gated():
+    """
+    Expose effective settings and fresh worker pressure without inventing zero demand on expiry.
+    """
+    source = snapshot([graph("root")])
+    source.update(
+        tuning={"rescan": 12, "consume": 0.25, "metrics": 2, "backlog": 3},
+        postgresql={"enabled": True, "fresh": True, "stateFresh": True, "connections": 9},
+        dragonfly={"enabled": True, "fresh": True, "connections": 10},
+        components={"fresh": True, "roles": {"gateway": {"replicas": 2, "requestsPerSecond": 3.5, "inFlight": 4}}},
+        workers={"worker-a": {"fresh": True, "pending": 5, "writes": {"queued": 6, "inFlight": 7}}},
+        clusters={"west": snapshot([graph("remote")])},
+    )
+    for sample in (source, source["clusters"]["west"]):
+        record = sample["inventory"]["objects"][0]
+        record["rollup"]["observationsComplete"] = True
+        record["metricsObservedAt"] = datetime.now(UTC).isoformat()
+    store = MetricsStore()
+    store.publish(source, graph_labels=True)
+    emitted = samples(store)
+    values = {sample.name: sample.value for sample in emitted}
+    assert {sample.labels["loop"]: sample.value for sample in emitted if sample.name == "polyad_operator_interval_seconds"} == source[
+        "tuning"
+    ]
+    assert values["polyad_component_reporting_replicas"] == 2
+    assert values["polyad_worker_writes_in_flight"] == 7
+    assert values["polyad_worker_refresh_queue_entries"] == 5
+    assert values["polyad_cluster_inbound_sample_fresh"] == 1
+    assert values["polyad_workload_signal"] == 99
+    assert values["polyad_cluster_workload_signal"] == 99
+    documentation = (Path(__file__).resolve().parents[1] / "docs/operations/metrics.md").read_text()
+    assert all(f"`{name}`" in documentation for name in values)
+    source["workers"]["worker-a"] = {"fresh": False}
+    source["components"]["fresh"] = False
+    source["clusters"]["west"]["inbound"]["fresh"] = False
+    store.publish(source)
+    values = {sample.name: sample.value for sample in samples(store)}
+    assert values["polyad_worker_sample_fresh"] == 0
+    assert values["polyad_cluster_inbound_sample_fresh"] == 0
+    assert not {
+        "polyad_worker_writes_queued",
+        "polyad_worker_writes_in_flight",
+        "polyad_worker_refresh_queue_entries",
+        "polyad_component_reporting_replicas",
+        "polyad_cluster_inbound_updates",
+        "polyad_hierarchy_info",
+    }.intersection(values)
 
 
 def test_inventory_uid_fences_hierarchies_and_separates_definitions():
@@ -194,7 +245,7 @@ def test_rescan_retains_complete_inventory_on_partial_failure(monkeypatch):
         request = AsyncMock(side_effect=[{"items": [graph("new")]}, RuntimeError("API timed out")])
         monkeypatch.setattr(handlers, "coordinator", SimpleNamespace(api=SimpleNamespace(request=request), namespace="test"))
         monkeypatch.setattr(handlers, "queue", object())
-        monkeypatch.setattr(handlers, "metrics_http", object())
+        monkeypatch.setenv("POLYAD_METRICS_ENABLED", "true")
         monkeypatch.setattr(handlers, "inventory_sample", original)
         monkeypatch.setattr(handlers, "inventory_sample_ok", True)
         monkeypatch.setattr(handlers, "publish", AsyncMock())

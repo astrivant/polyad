@@ -1,8 +1,10 @@
 {{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
 {{- with $ -}}
 {{- if .Values.observer.enabled }}
+{{- $required := eq .Values.authentication.mode "Required" -}}
+{{- $named := and $required (hasKey .Values._authEndpoints "observations") -}}
 {{- $_ := required "observer requires global.multiCluster.clusterName" .Values.global.multiCluster.clusterName }}
-{{- $_ := required "observer requires observer.existingSecret" .Values.observer.existingSecret }}
+{{- if and $required (not $named) }}{{- $_ := required "observer requires observer.existingSecret" .Values.observer.existingSecret }}{{ end }}
 {{- if and .Values.observer.mesh (not .Values.mesh.enabled) }}{{ fail "observer.mesh requires mesh.enabled" }}{{ end }}
 apiVersion: v1
 kind: ServiceAccount
@@ -21,7 +23,7 @@ rules:
     resources: [services, configmaps, persistentvolumeclaims, pods]
     verbs: [get, list]
   - apiGroups: [apps]
-    resources: [deployments, statefulsets]
+    resources: [deployments, statefulsets, daemonsets]
     verbs: [get, list]
   - apiGroups: [batch]
     resources: [jobs]
@@ -88,11 +90,16 @@ spec:
       labels:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/name: polyad-observer
-      {{- if .Values.observer.mesh }}
+      {{- if or .Values.observer.mesh $named }}
       annotations:
+        {{- if $named }}
+        checksum/authentication: {{ .Values.authentication | toJson | sha256sum }}
+        {{- end }}
+        {{- if .Values.observer.mesh }}
         sidecar.istio.io/inject: 'true'
         sidecar.istio.io/nativeSidecar: 'true'
         proxy.istio.io/config: '{"holdApplicationUntilProxyStarts":true}'
+        {{- end }}
       {{- end }}
     spec:
       serviceAccountName: {{ .Release.Name }}-polyad-observer
@@ -108,14 +115,42 @@ spec:
         - name: observer
           image: {{ printf "%s:%s" .Values.operator.image.repository .Values.operator.image.tag | quote }}
           imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
-          command: [python, -m, polyad.operator.observer]
+          command: [/usr/bin/tini, --, python, -m, polyad.operator.observer]
           env:
+            {{- include "polyad.tracingEnv" . | nindent 12 }}
+            - name: POLYAD_LOG_LEVEL
+              value: {{ .Values.operator.logLevel | quote }}
+            - name: POLYAD_AUTH_MODE
+              value: {{ .Values.authentication.mode | quote }}
+            - name: POLYAD_AUTH_BACKEND
+              value: {{ .Values.authentication.backend | quote }}
+            - name: POLYAD_STATE_SCOPE
+              value: {{ default (printf "%s/%s" .Release.Namespace .Release.Name) .Values.postgresql.scope | quote }}
+            {{- if .Values.authentication.storage.enabled }}
+            - name: POLYAD_AUTH_DATABASE_DSN_FILE
+              value: /var/run/polyad/auth-database/uri
+            {{- end }}
+            {{- if $named }}
+            - name: POLYAD_AUTH_CONFIG_FILE
+              value: /var/run/polyad/authentication/config.json
+            - name: POLYAD_CACHE_URL
+              {{- if .Values.dragonfly.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dragonfly.existingSecret | quote }}
+                  key: url
+              {{- else }}
+              value: {{ ternary (printf "redis://%s-queue:6379/0" .Release.Name) .Values.dragonfly.externalUrl .Values.dragonfly.enabled | quote }}
+              {{- end }}
+            {{- end }}
             - name: POLYAD_CLUSTER_NAME
               value: {{ .Values.global.multiCluster.clusterName | quote }}
             - name: POLYAD_NAMESPACE
               value: {{ .Release.Namespace | quote }}
+            {{- if and $required (not $named) }}
             - name: POLYAD_OBSERVER_TOKEN_FILE
               value: /var/run/polyad/observer/token
+            {{- end }}
             - name: POLYAD_MESH_ENABLED
               value: {{ .Values.mesh.enabled | quote }}
             - name: POLYAD_CAPACITY_ENABLED
@@ -131,9 +166,22 @@ spec:
           resources:
             {{- toYaml .Values.observer.resources | nindent 12 }}
           volumeMounts:
+            {{- if .Values.authentication.storage.enabled }}
+            - name: authentication-database
+              mountPath: /var/run/polyad/auth-database
+              readOnly: true
+            {{- end }}
+            {{- if not $required }} []
+            {{- end }}
+            {{- if $named }}
+            - name: authentication
+              mountPath: /var/run/polyad/authentication
+              readOnly: true
+            {{- else if $required }}
             - name: credential
               mountPath: /var/run/polyad/observer
               readOnly: true
+            {{- end }}
           readinessProbe:
             tcpSocket:
               port: observations
@@ -141,6 +189,14 @@ spec:
             tcpSocket:
               port: observations
       volumes:
+        {{- if .Values.authentication.storage.enabled }}
+        {{- include "polyad.authenticationDatabaseVolume" . | nindent 8 }}
+        {{- end }}
+        {{- if not $required }} []
+        {{- end }}
+        {{- if $named }}
+        {{- include "polyad.authenticationVolume" . | nindent 8 }}
+        {{- else if $required }}
         - name: credential
           secret:
             secretName: {{ .Values.observer.existingSecret | quote }}
@@ -148,6 +204,7 @@ spec:
             items:
               - key: token
                 path: token
+        {{- end }}
 {{- if .Values.observer.mesh }}
 ---
 apiVersion: security.istio.io/v1
@@ -203,6 +260,27 @@ spec:
     {{- else }} []
     {{- end }}
   egress:
+    {{- if and $named .Values.authentication.storage.enabled (or (and .Values.authentication.storage.separateDatabase .Values.authentication.storage.managed) (and (not .Values.authentication.storage.separateDatabase) .Values.postgresql.managed)) }}
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ printf "%s-%s" .Release.Name (ternary "authentication" "state" .Values.authentication.storage.separateDatabase) }}
+      ports:
+        - {protocol: TCP, port: 5432}
+    {{- end }}
+    {{- if and $named .Values.dragonfly.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-queue
+      ports:
+        - {protocol: TCP, port: 6379}
+    {{- end }}
+    {{- if $named }}
+    {{- with .Values.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- end }}
     - to:
         - namespaceSelector:
             matchLabels:

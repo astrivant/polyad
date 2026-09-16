@@ -5,6 +5,17 @@ package provides the same definitions used by the operator and Python client,
 including constructor validation, serialization and a `py.typed` marker.
 Its only dependencies are attrs, cattrs and typing-extensions.
 
+## Table of contents
+
+- [Installation](#installation)
+- [Example](#example)
+- [Public models](#public-models)
+- [Serialization](#serialization)
+- [Client integration](#client-integration)
+- [Publishing](#publishing)
+
+## Installation
+
 Install from a repository checkout:
 
 ```sh
@@ -14,6 +25,8 @@ pip install ./pkg/polyad-types
 Release CI builds and publishes this distribution separately. Once that release
 is available, install it with `pip install polyad-types` and import `polyad_types`.
 Installing it does not install `polyad` or `polyad-client`.
+
+## Example
 
 ```python
 from polyad_types import (
@@ -37,6 +50,8 @@ rule = from_dict(
 assert rule.cheeger == Cheeger(minimum=0.5)
 ```
 
+## Public models
+
 | Module | Public models |
 | --- | --- |
 | `polyad_types.resources` | Kubernetes resource envelopes, metadata, status metrics, capacity status and mutation plans |
@@ -54,12 +69,16 @@ describes a PolyGraph's specification. Resource `spec` dictionaries preserve
 native Kubernetes extensions and should be populated from the relevant
 configuration model when local validation is needed.
 
+## Serialization
+
 `to_dict(model)` and `from_dict(document, Model)` serialize and validate models.
 `to_document(resource)` and `from_document(manifest)` handle Kubernetes envelopes,
 preserving unmodeled native fields and checking kind and API version. Configuration
 and request decoding rejects unknown fields. These checks validate the supplied
 document; live graph admission, Cheeger computation and reconciliation run in the
 operator.
+
+## Client integration
 
 The [Python client](https://github.com/astrivant/polyad/blob/main/pkg/client/README.md) accepts shared request objects:
 
@@ -80,4 +99,6 @@ From the repository root, install both local packages with
 `pip install ./pkg/polyad-types ./pkg/client`. Release versions of the client
 and operator depend on the matching `polyad-types` version.
 
-See [manual PyPI publishing](https://github.com/astrivant/polyad/blob/main/docs/toolchain.md#manual-pypi-publishing) for Poetry release commands.
+## Publishing
+
+See [manual PyPI publishing](https://github.com/astrivant/polyad/blob/main/docs/development/toolchain.md#manual-pypi-publishing) for Poetry release commands.

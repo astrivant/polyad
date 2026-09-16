@@ -27,14 +27,16 @@ EAST_WEST_SETTINGS = (
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="requires Helm and helm dependency build charts/polyad")
 
 
-def render(*settings):
+def render(*settings, values_files=()):
     """
-    Render a release with its CRDs and selected values.
+    Render a release with values fixtures from tests/data followed by explicit overrides.
     """
     command = ["helm", "template", "test", str(CHART), "--namespace", "test", "--include-crds"]
+    for filename in values_files:
+        command.extend(["--values", str(Path(__file__).parent / "data" / filename)])
     for setting in settings:
         flag = "--set-string" if setting.startswith(("dragonfly.existingSecret=", "istioEastWest.labels.")) else "--set"
-        if setting.startswith("operator.tuning."):
+        if setting.startswith(("operator.tuning.", "tracing.samplingRatio=")):
             flag = "--set-json"
         command.extend([flag, setting])
     return list(filter(None, yaml.safe_load_all(subprocess.check_output(command, text=True))))
@@ -44,7 +46,7 @@ def test_operator_autoscaling_behavior_and_runtime_tuning():
     """
     Preserve scaling defaults while passing explicit zero and rate overrides through Helm.
     """
-    objects = render("operator.autoscaling.enabled=true")
+    objects = render("ha=true", "operator.autoscaling.enabled=true")
     hpa = next(obj for obj in objects if obj["kind"] == "HorizontalPodAutoscaler")
     assert hpa["spec"]["metrics"] == [
         {"type": "Resource", "resource": {"name": "cpu", "target": {"type": "Utilization", "averageUtilization": 70}}}
@@ -52,6 +54,7 @@ def test_operator_autoscaling_behavior_and_runtime_tuning():
     assert hpa["spec"]["behavior"]["scaleDown"]["stabilizationWindowSeconds"] == 300
     assert hpa["spec"]["behavior"]["scaleUp"]["stabilizationWindowSeconds"] == 0
     objects = render(
+        "ha=true",
         "operator.autoscaling.enabled=true",
         "operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds=45",
         "operator.autoscaling.behavior.scaleDown.stabilizationWindowSeconds=0",
@@ -84,6 +87,7 @@ def test_operator_hpa_scales_dense_or_bootstrap_with_cpu_and_memory(mode):
     Add memory demand to the same HPA without targeting graph-managed components.
     """
     objects = render(
+        "ha=true",
         "operator.autoscaling.enabled=true",
         "operator.autoscaling.targetCPUUtilizationPercentage=65",
         "operator.autoscaling.targetMemoryUtilizationPercentage=80",
@@ -115,6 +119,7 @@ def test_inactive_memory_autoscaling_does_not_require_memory_requests(enabled, m
     Allow memory requests to be omitted unless memory scaling is actually active.
     """
     objects = render(
+        f"ha={enabled}",
         f"operator.autoscaling.enabled={enabled}",
         f"operator.autoscaling.targetMemoryUtilizationPercentage={memory_target}",
         "operator.resources.requests.memory=null",
@@ -132,6 +137,7 @@ def test_memory_autoscaling_requires_memory_requests():
     """
     with pytest.raises(subprocess.CalledProcessError):
         render(
+            "ha=true",
             "operator.autoscaling.enabled=true",
             "operator.autoscaling.targetMemoryUtilizationPercentage=80",
             "operator.resources.requests.memory=null",
@@ -200,6 +206,75 @@ def cache_url(objects):
     return next(item for item in operator["spec"]["template"]["spec"]["containers"][0]["env"] if item["name"] == "POLYAD_CACHE_URL")
 
 
+@pytest.mark.parametrize("distributed", [False, True])
+def test_ha_dragonfly_keda_targets_a_scalable_pool(distributed):
+    """
+    Dense and split operators expose a real scale interface and the primary metric route.
+    """
+    settings = ("ha=true", "architecture.mode=Distributed", "api.enabled=true") if distributed else ()
+    objects = render("dragonfly.ha.enabled=true", "metrics.authentication.enabled=true", "keda.authentication.enabled=true", *settings)
+    pool = next(obj for obj in objects if obj["kind"] == "DragonflyPool")
+    crd = next(obj for obj in objects if obj["kind"] == "CustomResourceDefinition" and obj["spec"]["names"]["kind"] == "DragonflyPool")
+    version = crd["spec"]["versions"][0]
+    jsonschema.Draft7Validator(version["schema"]["openAPIV3Schema"]).validate(pool)
+    assert version["subresources"]["scale"] == {
+        "specReplicasPath": ".spec.replicas",
+        "statusReplicasPath": ".status.replicas",
+        "labelSelectorPath": ".status.labelSelector",
+    }
+    scaler = next(obj for obj in objects if obj["kind"] == "ScaledObject" and obj["metadata"]["name"] == "test-queue")["spec"]
+    assert scaler["scaleTargetRef"] == {"apiVersion": "polyad.astrivant.com/v1alpha1", "kind": "DragonflyPool", "name": "test-queue"}
+    assert (scaler["minReplicaCount"], scaler["maxReplicaCount"]) == (2, 5)
+    trigger = scaler["triggers"][0]
+    assert trigger["metricType"] == "AverageValue"
+    assert trigger["metadata"]["url"].endswith("/v1/dragonfly/connections")
+    assert trigger["metadata"]["targetValue"] == "50"
+    assert trigger["metadata"]["authMode"] == "bearer"
+    assert trigger["authenticationRef"]["name"] == "test-polyad-metrics"
+    operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    env = operator["spec"]["template"]["spec"]["containers"][0]["env"]
+    assert {"name": "POLYAD_DRAGONFLY_POOL", "value": "test-queue"} in env
+    assert {"name": "POLYAD_METRICS_ENABLED", "value": "true"} in env
+    metrics = next(obj for obj in objects if obj["kind"] == "Service" and obj["metadata"]["name"] == "test-polyad-metrics")
+    assert metrics["spec"]["selector"]["polyad.astrivant.com/component"] == ("telemetry" if distributed else "dense")
+    role = next(obj for obj in objects if obj["kind"] == "Role" and obj["metadata"]["name"] == "test-polyad")
+    rules = [rule for rule in role["rules"] if rule["apiGroups"] == ["dragonflydb.io"]]
+    assert rules == [
+        {"apiGroups": ["dragonflydb.io"], "resources": ["dragonflies"], "resourceNames": ["test-queue"], "verbs": ["get", "patch"]}
+    ]
+
+
+@pytest.mark.parametrize(
+    "settings", [(), ("dragonfly.enabled=false",), ("dragonfly.ha.enabled=true", "dragonfly.autoscaling.enabled=false")]
+)
+def test_fixed_or_external_dragonfly_has_no_scaler(settings):
+    """
+    Single instances, external caches and explicitly fixed HA do not require KEDA.
+    """
+    objects = render(*settings)
+    assert not any(obj["kind"] in {"DragonflyPool", "ScaledObject"} for obj in objects)
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "dragonfly.autoscaling.minReplicas=1",
+        "dragonfly.autoscaling.maxReplicas=10",
+        "dragonfly.autoscaling.connectionsPerReplica=0",
+        "dragonfly.autoscaling.minReplicas=6",
+        "dragonfly.ha.replicas=6",
+        "dragonfly.existingSecret=another-cache",
+        "metrics.authentication.enabled=true",
+    ],
+)
+def test_invalid_dragonfly_scaling_rejected(setting):
+    """
+    Reject unsafe floors, inconsistent bounds and metrics aimed at an unrelated cache.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render("dragonfly.ha.enabled=true", setting)
+
+
 @pytest.mark.parametrize("create,tls", [(False, False), (True, False), (True, True)])
 def test_optional_gateway_routes_only_to_composition_service(create, tls):
     """
@@ -223,6 +298,7 @@ def test_optional_gateway_routes_only_to_composition_service(create, tls):
     assert {match["path"]["value"] for match in route["spec"]["rules"][0]["matches"]} == {
         "/v1/compositions",
         "/v1/activations",
+        "/v1/throughput",
         "/openapi.json",
     }
     gateways = [obj for obj in objects if obj["kind"] == "Gateway"]
@@ -454,7 +530,13 @@ def test_multicluster_gateways_and_optional_observers():
     service = next(item for item in objects if item["kind"] == "Service" and item["metadata"]["name"] == "polyad-eastwest")
     assert {port["port"] for port in service["spec"]["ports"]} == {15012, 15017, 15021, 15443}
     observer = next(item for item in objects if item["kind"] == "Deployment" and item["metadata"]["name"] == "test-polyad-observer")
-    assert observer["spec"]["template"]["spec"]["containers"][0]["command"] == ["python", "-m", "polyad.operator.observer"]
+    assert observer["spec"]["template"]["spec"]["containers"][0]["command"] == [
+        "/usr/bin/tini",
+        "--",
+        "python",
+        "-m",
+        "polyad.operator.observer",
+    ]
     role = next(item for item in objects if item["kind"] == "Role" and item["metadata"]["name"] == "test-polyad-observer")
     assert all(set(rule["verbs"]) <= {"get", "list"} for rule in role["rules"])
     assert not any("secrets" in rule["resources"] for rule in role["rules"])
@@ -644,6 +726,7 @@ def test_optional_metrics_service_and_access_policies():
         "/v1/workloads/*",
         "/v1/components/*",
         "/v1/postgresql/connections",
+        "/v1/dragonfly/connections",
         "/openapi.json",
     ]
 
@@ -875,6 +958,7 @@ def test_root_control_plane_requires_reachable_credentials_and_exposes_scale_crd
     Root mode is explicit, passes worker bootstrap inputs and supplies KEDA scale endpoints.
     """
     settings = (
+        "ha=true",
         "rootControlPlane.enabled=true",
         "rootControlPlane.kubeconfigSecret=root-access",
         "federation.enabled=true",
@@ -897,7 +981,7 @@ def test_root_control_plane_requires_reachable_credentials_and_exposes_scale_crd
         assert version["subresources"]["scale"]["specReplicasPath"] == ".spec.replicas"
         spec = {"cluster": "west", "replicas": 2}
         if kind == "RemoteScale":
-            spec["target"] = {"name": "consumers", "uid": "exact-uid"}
+            spec["target"] = {"name": "consumers", "uid": "exact-uid", "generation": 2}
         jsonschema.Draft7Validator(version["schema"]["openAPIV3Schema"]).validate({"spec": spec})
     for invalid in ("rootControlPlane.kubeconfigSecret=", "federation.enabled=false", "dragonfly.existingSecret=", "metrics.enabled=false"):
         with pytest.raises(subprocess.CalledProcessError):
@@ -914,6 +998,10 @@ def test_optional_postgresql_persists_state_and_scales_from_operator_connections
     assert cluster["spec"]["instances"] == (3 if ha else 1)
     assert ("synchronous" in cluster["spec"]["postgresql"]) == ha
     assert cluster["spec"]["storage"]["size"] == "10Gi"
+    assert cluster["spec"]["bootstrap"]["initdb"]["postInitApplicationSQL"] == [
+        'REVOKE ALL ON DATABASE "polyad" FROM PUBLIC;',
+        "REVOKE ALL ON SCHEMA public FROM PUBLIC;",
+    ]
     deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     pod = deployment["spec"]["template"]["spec"]
     env = {entry["name"]: entry.get("value") for entry in pod["containers"][0]["env"]}
@@ -954,7 +1042,7 @@ def test_postgresql_default_off_and_external_connection_secret():
             "metrics.enabled=true",
         ],
         ["architecture.mode=Distributed"],
-        ["architecture.mode=Distributed", "metrics.enabled=true"],
+        ["ha=true", "architecture.mode=Distributed", "metrics.enabled=true"],
     ],
 )
 def test_invalid_state_and_component_configurations_fail_before_install(settings):
@@ -969,7 +1057,9 @@ def test_distributed_components_form_a_real_constrained_graph_without_postgresql
     """
     Compose executable Daemons, independently scaled groups and correctly routed stable Services.
     """
-    objects = render("architecture.mode=Distributed", "architecture.autoscaling=true", "api.enabled=true", "metrics.enabled=true")
+    objects = render(
+        "ha=true", "architecture.mode=Distributed", "architecture.autoscaling=true", "api.enabled=true", "metrics.enabled=true"
+    )
     assert not any(obj["kind"] == "Cluster" for obj in objects)
     graph = next(obj for obj in objects if obj["kind"] == "Graph")
     assert graph["spec"]["rules"] == ["test-control-plane"]

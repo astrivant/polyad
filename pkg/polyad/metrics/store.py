@@ -53,6 +53,15 @@ class MetricsStore:
                 metric.labels(*common.values(), *(extra[label] for label in labels)).set(value)
 
         gauge("snapshot_timestamp_seconds", "Unix time of this replica snapshot.", [({}, time.time())])
+        gauge(
+            "operator_interval_seconds",
+            "Configured pause after each operator loop pass, not measured execution duration.",
+            [
+                ({"loop": name}, snapshot["tuning"][name])
+                for name in ("rescan", "consume", "metrics", "backlog")
+                if name in snapshot.get("tuning", {})
+            ],
+        )
         gauge("leader", "Whether this replica currently reports planner leadership.", [({}, int(snapshot["leader"]))])
         gauge("owned_shards", "Number of shards assigned to this replica.", [({}, len(snapshot["shards"]))])
         postgres = snapshot.get("postgresql", {})
@@ -72,12 +81,22 @@ class MetricsStore:
                     [({}, postgres["connections"])],
                 )
         components = snapshot.get("components", {})
+        cache = snapshot.get("dragonfly", {})
+        if cache.get("enabled"):
+            gauge("dragonfly_sample_fresh", "Whether primary client sampling succeeded.", [({}, int(cache["fresh"]))])
+            if cache["fresh"]:
+                gauge("dragonfly_connections", "Primary connected clients; deduplicate scrape replicas.", [({}, cache["connections"])])
         gauge(
             "component_sample_fresh",
             "Whether all recent component processes reported fresh demand.",
             [({}, int(components.get("fresh", False)))],
         )
         if components.get("fresh"):
+            gauge(
+                "component_reporting_replicas",
+                "Fresh process reports per component; deduplicate scrape replicas.",
+                [({"component": name}, entry["replicas"]) for name, entry in components["roles"].items() if "replicas" in entry],
+            )
             for field, suffix in (("requestsPerSecond", "requests_per_second"), ("inFlight", "requests_in_flight")):
                 gauge(
                     "component_" + suffix,
@@ -92,13 +111,13 @@ class MetricsStore:
             gauge(
                 "kubernetes_writes_" + suffix,
                 "Replica-local concrete API mutations by writer.",
-                [({"writer": writer}, writes[writer][field]) for writer in ("workloads", "coordination", "compositionIntake")],
+                [({"writer": writer}, writes[writer][field]) for writer in ("workloads", "coordination", "apiIntake")],
             )
         for field, suffix in (("oldestQueuedSeconds", "queued"), ("oldestInFlightSeconds", "in_flight")):
             gauge(
                 "kubernetes_writes_oldest_" + suffix + "_seconds",
                 "Age of the oldest local API mutation by writer.",
-                [({"writer": writer}, writes[writer].get(field, 0)) for writer in ("workloads", "coordination", "compositionIntake")],
+                [({"writer": writer}, writes[writer].get(field, 0)) for writer in ("workloads", "coordination", "apiIntake")],
             )
         backlog = snapshot["inbound"]
         gauge("inbound_sample_fresh", "Whether shared queue sampling succeeded recently.", [({}, int(backlog["fresh"]))])
@@ -215,9 +234,24 @@ class MetricsStore:
             [({"worker": name}, report["writes"]["queued"]) for name, report in workers.items() if report.get("fresh", False)],
         )
         gauge(
+            "worker_writes_in_flight",
+            "Worker API writes awaiting completion, observed centrally; deduplicate root scrape replicas.",
+            [({"worker": name}, report["writes"]["inFlight"]) for name, report in workers.items() if report.get("fresh", False)],
+        )
+        gauge(
+            "worker_refresh_queue_entries",
+            "Worker-local waiting reconciliation keys observed centrally; excludes active attempts.",
+            [({"worker": name}, report["pending"]) for name, report in workers.items() if report.get("fresh", False)],
+        )
+        gauge(
             "cluster_inventory_sample_fresh",
             "Fresh root-held remote inventory.",
             [({"cluster": cluster}, int(sample["inventory"]["fresh"])) for cluster, sample in clusters.items()],
+        )
+        gauge(
+            "cluster_inbound_sample_fresh",
+            "Whether root-held remote stream backlog is fresh independently of inventory.",
+            [({"cluster": cluster}, int(sample.get("inbound", {}).get("fresh", False))) for cluster, sample in clusters.items()],
         )
         gauge(
             "cluster_inbound_updates",

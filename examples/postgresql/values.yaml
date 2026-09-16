@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # Install CloudNativePG and KEDA first. PostgreSQL is disabled in chart defaults.
 postgresql:
   enabled: true

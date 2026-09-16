@@ -276,6 +276,7 @@ class ResourceCounts(AST):
         Job (int): Number of owned Job resources.
         Deployment (int): Number of owned Deployment resources.
         StatefulSet (int): Number of owned StatefulSet resources.
+        DaemonSet (int): Number of owned DaemonSet resources.
         Service (int): Number of owned Service resources.
         ConfigMap (int): Number of owned ConfigMap resources.
         PersistentVolumeClaim (int): Number of owned PersistentVolumeClaim resources.
@@ -295,6 +296,7 @@ class ResourceCounts(AST):
     Job: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Job resources."}})
     Deployment: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Deployment resources."}})
     StatefulSet: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned StatefulSet resources."}})
+    DaemonSet: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned DaemonSet resources."}})
     Service: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Service resources."}})
     ConfigMap: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned ConfigMap resources."}})
     PersistentVolumeClaim: int = field(

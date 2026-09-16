@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from attrs import evolve
 from cattrs.errors import BaseValidationError
 
+from polyad.auth.policy import inject_credentials
 from polyad.compiler.passes.audit import trace_child
 from polyad.compiler.passes.children import child_name as compile_child_name
 from polyad.compiler.passes.children import owned_child
@@ -41,6 +42,7 @@ from polyad.operator.network import POLICY_KINDS, context, ensure_policies
 from polyad.operator.placement import merge_placement, place_pod
 from polyad.operator.rule_state import check_live_rules
 from polyad.operator.rules import check_rules
+from polyad.operator.tracing import traced
 from polyad_types import resources as asts
 from polyad_types.activation import ActivationPolicy
 from polyad_types.codec import converter
@@ -256,6 +258,7 @@ class Controller:
         if claim.get("spec", {}).get("storageClassName") != storage.storageClass:
             raise ValueError("persistent claim storageClassName does not match workload persistence.storageClass")
 
+    @traced("polyad.reconcile")
     async def reconcile(self, key: Key) -> None:
         """
         Read current intent, fence deletion, then execute a single idempotent pass.
@@ -325,6 +328,10 @@ class Controller:
                 observedGeneration=obj["metadata"]["generation"],
             )
         snapshot = {**obj, "status": {**obj.get("status", {}), **values}}
+        if obj["kind"] == "ReplicaGroup":
+            from polyad.operator.replication import effective_spec
+
+            snapshot["spec"], _ = await effective_spec(self.api, obj)
         values["metrics"] = instance_metrics(snapshot, children)
         values["metricsObservedAt"] = observation_time(obj.get("status", {}).get("metricsObservedAt"))
         await self.status(obj, values)
@@ -385,6 +392,15 @@ class Controller:
         elif kind == "Rewrite":
             await self.rewrite(obj)
         elif kind in {"Graph", "PolyGraph"}:
+            if obj["spec"].get("throughput"):
+                from polyad.operator.throughput import reconcile_throughput
+
+                if await reconcile_throughput(self, obj):
+                    raise Pending("throughput layout applied; refresh before workload admission")
+                refreshed = await self.api.get(kind, namespace, name)
+                if refreshed is None or refreshed["metadata"]["uid"] != obj["metadata"]["uid"]:
+                    raise Pending("throughput graph changed; refresh before admission")
+                obj = refreshed
             await self.graph(obj)
 
     async def finalizers(self, obj: dict[str, Any], *, remove: bool = False) -> None:
@@ -496,7 +512,7 @@ class Controller:
         parent: dict[str, Any],
         node_name: str,
         kind: str,
-        spec: dict[str, Any] | asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec,
+        spec: dict[str, Any] | asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec | asts.DaemonSetSpec,
         *,
         extra: dict[str, Any] | None = None,
         annotations: dict[str, str] | None = None,
@@ -508,7 +524,8 @@ class Controller:
             parent (dict[str, Any]): Persisted parent identity and ownership boundary.
             node_name (str): Node name used for child identity and ownership labels.
             kind (str): Kubernetes resource kind.
-            spec (dict[str, Any] | asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec): Desired resource configuration.
+            spec (dict[str, Any] | asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec | asts.DaemonSetSpec):
+                Desired resource configuration.
             extra (dict[str, Any] | None): Unmodeled native fields preserved during serialization.
             annotations (dict[str, str] | None): Compiler-supplied controller annotations included in the desired revision.
 
@@ -550,7 +567,7 @@ class Controller:
                 raise Pending("waiting for resource replacement", phase="Draining")
             return current
         document = asts.to_document(desired)
-        pod = execution_pod(document) if kind in {"Job", "Deployment", "StatefulSet"} else {}
+        pod = execution_pod(document) if kind in {"Job", "Deployment", "StatefulSet", "DaemonSet"} else {}
         if pod.get("metadata", {}).get("annotations", {}).get("sidecar.istio.io/inject") == "true":
             probe = copy.deepcopy(pod)
             probe.update(apiVersion="v1", kind="Pod")
@@ -681,6 +698,7 @@ class Controller:
                 if root_mode:
                     identity["POLYAD_CLUSTER_NAME"] = self.federation.name
                 inject_environment(pod, identity)
+                inject_credentials(pod, definition, self.federation.name)
                 if node.kind == "Daemon":
                     for container in pod_spec["containers"]:
                         if any(probe not in container for probe in ("startupProbe", "readinessProbe", "livenessProbe")):
@@ -688,7 +706,7 @@ class Controller:
                     pod_spec["restartPolicy"] = "Always"
                     label = {f"{GROUP}/instance": hashlib.sha256(f"{meta['uid']}/{node.name}".encode()).hexdigest()[:32]}
                     pod.setdefault("metadata", {}).setdefault("labels", {}).update(label)
-                    runtime: asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec = compile_daemon(spec, label)
+                    runtime: asts.JobSpec | asts.DeploymentSpec | asts.StatefulSetSpec | asts.DaemonSetSpec = compile_daemon(spec, label)
                     kind = spec.get("controller", "Deployment")
                 else:
                     pod_spec["restartPolicy"] = "Never"
@@ -912,9 +930,15 @@ class Controller:
                     "activeActivations": pulse.get("active", 0),
                     "overdue": int(pulse.get("overdue", False)),
                     "replicas": sum(
-                        child.get("status", {}).get("replicas", child.get("status", {}).get("active", 0)) for child in logical_executions
+                        child.get("status", {}).get(
+                            "replicas", child.get("status", {}).get("desiredNumberScheduled", child.get("status", {}).get("active", 0))
+                        )
+                        for child in logical_executions
                     ),
-                    "readyReplicas": sum(child.get("status", {}).get("readyReplicas", 0) for child in logical_executions),
+                    "readyReplicas": sum(
+                        child.get("status", {}).get("readyReplicas", child.get("status", {}).get("numberReady", 0))
+                        for child in logical_executions
+                    ),
                 },
             }
         await self.status(

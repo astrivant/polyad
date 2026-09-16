@@ -20,7 +20,7 @@ rules:
     resources: ['*']
     verbs: [get, list, watch, create, update, patch, delete]
   - apiGroups: [apps]
-    resources: [deployments, statefulsets]
+    resources: [deployments, statefulsets, daemonsets]
     verbs: [get, list, create, update, patch, delete]
   - apiGroups: [batch]
     resources: [jobs]

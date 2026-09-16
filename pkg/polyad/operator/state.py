@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import os
 import time
 from typing import TYPE_CHECKING
@@ -14,26 +15,10 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
 from polyad.operator.health import credential_token
+from polyad.sql import statement
 
 if TYPE_CHECKING:
     from typing import Any
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS polyad_state_version (version integer PRIMARY KEY);
-INSERT INTO polyad_state_version VALUES (1) ON CONFLICT DO NOTHING;
-CREATE TABLE IF NOT EXISTS polyad_graph_state (
-    scope text NOT NULL, cluster text NOT NULL, namespace text NOT NULL,
-    kind text NOT NULL, name text NOT NULL, uid text NOT NULL,
-    resource_version text NOT NULL, observed_at timestamptz NOT NULL,
-    document jsonb NOT NULL,
-    PRIMARY KEY (scope, cluster, namespace, kind, name)
-);
-CREATE TABLE IF NOT EXISTS polyad_namespace_state (
-    scope text NOT NULL, cluster text NOT NULL, namespace text NOT NULL,
-    observed_at timestamptz NOT NULL, snapshot jsonb NOT NULL,
-    PRIMARY KEY (scope, cluster, namespace)
-);
-"""
 
 
 def state_document(obj: dict[str, Any]) -> dict[str, Any]:
@@ -126,9 +111,9 @@ class StateStore:
                 return
             await self.pool.open()
             async with self.pool.connection() as connection:
-                await connection.execute("SELECT pg_advisory_xact_lock(782341, 1)")
-                await connection.execute(SCHEMA)
-                cursor = await connection.execute("SELECT version FROM polyad_state_version")
+                await connection.execute(statement("advisory-lock.sql"), (782341, 1))
+                await connection.execute(statement("state/schema.sql"))
+                cursor = await connection.execute(statement("state/schema-version.sql"))
                 if await cursor.fetchall() != [(1,)]:
                     raise RuntimeError("unsupported Polyad database schema version")
             self.initialized = True
@@ -142,7 +127,7 @@ class StateStore:
         """
         await self.start()
         async with self.pool.connection() as connection:
-            cursor = await connection.execute("SELECT clock_timestamp()")
+            cursor = await connection.execute(statement("state/begin-scan.sql"))
             row = await cursor.fetchone()
             assert row is not None
             return row[0]
@@ -164,20 +149,16 @@ class StateStore:
         identity = self.scope, cluster, namespace
         async with self.pool.connection() as connection:
             cursor = await connection.execute(
-                """INSERT INTO polyad_namespace_state VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (scope, cluster, namespace) DO UPDATE
-                SET observed_at = EXCLUDED.observed_at, snapshot = EXCLUDED.snapshot
-                WHERE polyad_namespace_state.observed_at <= EXCLUDED.observed_at
-                RETURNING observed_at""",
+                statement("state/save-namespace.sql"),
                 (*identity, started, Jsonb(snapshot)),
             )
             if await cursor.fetchone() is None:
                 return False
             # The row lock above serializes replacements, including a now-empty namespace.
-            await connection.execute("DELETE FROM polyad_graph_state WHERE scope = %s AND cluster = %s AND namespace = %s", identity)
+            await connection.execute(statement("state/delete-graphs.sql"), identity)
             async with connection.cursor() as cursor:
                 await cursor.executemany(
-                    "INSERT INTO polyad_graph_state VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    statement("state/insert-graph.sql"),
                     [
                         (
                             *identity,
@@ -194,6 +175,33 @@ class StateStore:
         self.last_success = time.monotonic()
         return True
 
+    async def record_event(self, payload: dict[str, Any]) -> None:
+        """
+        Archive approved observations with deduplication and bounded retention cleanup.
+
+        Args:
+            payload (dict[str, Any]): Public observation or topology event, excluding workload manifests and Secrets.
+
+        Returns:
+            None: Committed before live delivery; failed archive writes are retried during reconciliation.
+        """
+        if os.environ.get("POLYAD_POSTGRES_EVENTS_ENABLED", "true").lower() != "true":
+            return
+        days = int(os.environ.get("POLYAD_POSTGRES_EVENTS_RETENTION_DAYS", "30"))
+        if not 1 <= days <= 3650:
+            raise ValueError("PostgreSQL event retention must be between 1 and 3650 days")
+        await self.start()
+        identity = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        async with self.pool.connection() as connection:
+            await connection.execute(
+                statement("state/insert-event.sql"),
+                (self.scope, identity, Jsonb(payload)),
+            )
+            await connection.execute(
+                statement("state/prune-events.sql"),
+                (self.scope, self.scope, days),
+            )
+
     async def connections(self) -> dict[str, Any]:
         """
         Sample all root-operator sessions on the primary without scrape-time database access.
@@ -205,9 +213,7 @@ class StateStore:
             await self.start()
             async with self.pool.connection() as connection:
                 cursor = await connection.execute(
-                    """SELECT count(*) FROM pg_stat_activity
-                    WHERE datname = current_database() AND application_name = %s
-                    AND backend_type = 'client backend'""",
+                    statement("state/connections.sql"),
                     (self.application,),
                 )
                 row = await cursor.fetchone()

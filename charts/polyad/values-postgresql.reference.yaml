@@ -1,40 +1,84 @@
+# yaml-language-server: $schema=values.reference.schema.json
 # Optional durable graph state and tracked parameters for any operator layout.
 # Apply after the selected profile; install CloudNativePG and KEDA first.
-# Guide: ../../docs/postgresql.md
+# Guide: ../../docs/deployment/postgresql.md
 # These are reference overrides; PostgreSQL stays OFF in values.yaml defaults.
+## @param postgresql [object] Settings for postgresql; configure the fields below.
 postgresql:
+  ## @param postgresql.enabled [boolean] Persist graph state and tracked parameters in PostgreSQL
   enabled: true
+  ## @param postgresql.managed [boolean] Create a CloudNativePG Cluster; install its operator first Creates a CloudNativePG Cluster in the Helm release namespace.
   managed: true # Creates a CloudNativePG Cluster in the Helm release namespace.
+  ## @param postgresql.existingSecret [string] External database Secret containing the connection DSN when managed is false Managed databases use the generated <release>-state-app Secret.
   existingSecret: '' # Managed databases use the generated <release>-state-app Secret.
+  ## @param postgresql.secretKey [string] DSN key in the external database Secret
   secretKey: uri
+  ## @param postgresql.database [string] Application database for graph state and optional event history; set only when bootstrapping a new managed cluster
+  database: polyad
+  ## @param postgresql.username [string] Dedicated application owner; PUBLIC database access is revoked and superuser access stays disabled
+  username: polyad
+  ## @param postgresql.events [object] Settings for postgresql.events; configure the fields below.
+  events:
+    ## @param postgresql.events.enabled [boolean] Archive approved application events in PostgreSQL; bounded live replay still uses Dragonfly Archives approved public observations before live delivery.
+    enabled: true # Archives approved public observations before live delivery.
+    ## @param postgresql.events.retentionDays [integer] Retain durable event history for this many days; graph snapshots retain current state independently Opportunistic bounded pruning during writes; not a backup policy. Minimum: 1. Maximum: 3650.
+    retentionDays: 30 # Opportunistic bounded pruning during writes; not a backup policy.
+  ## @param postgresql.scope [string] State identity within the database; empty uses the release namespace and name Empty uses <release-namespace>/<release-name> as the state identity.
   scope: '' # Empty uses <release-namespace>/<release-name> as the state identity.
+  ## @param postgresql.maxConnections [integer] Maximum connections per managed database instance, including administration Per database instance, including administration. Minimum: 20. Maximum: 10000.
   maxConnections: 100 # Per database instance, including administration.
+  ## @param postgresql.storage [object] Kubernetes storage quantity for each persistent volume.
   storage:
+    ## @param postgresql.storage.size [string] Persistent storage per PostgreSQL instance Persistent volume size per instance.
     size: 20Gi # Persistent volume size per instance.
+    ## @param postgresql.storage.storageClass [string] Storage class; empty uses the cluster default Empty uses the cluster default.
     storageClass: '' # Empty uses the cluster default.
+  ## @param postgresql.ha [object] Settings for postgresql.ha; configure the fields below.
   ha:
+    ## @param postgresql.ha.enabled [boolean] Enable primary plus standby instances and synchronous replication Synchronous replication; independent of operator HA.
     enabled: true # Synchronous replication; independent of operator HA.
+    ## @param postgresql.ha.instances [integer] Total instances when HA is enabled and autoscaling is disabled Used when autoscaling is disabled; otherwise minInstances starts it. Minimum: 3. Maximum: 32.
     instances: 3 # Used when autoscaling is disabled; otherwise minInstances starts it.
+    ## @param postgresql.ha.topologyKey [string] Failure-domain label for required database pod anti-affinity Requires distinct nodes for database Pods.
     topologyKey: kubernetes.io/hostname # Requires distinct nodes for database Pods.
+  ## @param postgresql.resources [object] Resource requests and limits for each PostgreSQL instance
   resources:
+    ## @param postgresql.resources.requests [object] Settings for postgresql.resources.requests; configure the fields below.
     requests:
+      ## @param postgresql.resources.requests.cpu [string] Kubernetes CPU quantity; requests reserve scheduling capacity and limits cap usage.
       cpu: 250m
+      ## @param postgresql.resources.requests.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
       memory: 512Mi
+    ## @param postgresql.resources.limits [object] Settings for postgresql.resources.limits; configure the fields below.
     limits:
+      ## @param postgresql.resources.limits.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
       memory: 1Gi
+  ## @param postgresql.autoscaling [object] Settings for postgresql.autoscaling; configure the fields below.
   autoscaling:
+    ## @param postgresql.autoscaling.enabled [boolean] Create a KEDA ScaledObject for the managed Cluster using operator connection counts Optional; set false for a fixed database instance count.
     enabled: true # Optional; set false for a fixed database instance count.
+    ## @param postgresql.autoscaling.minInstances [integer] Minimum instances; at least 3 with HA, never zero HA requires at least three; provide nodes/storage for the maximum. Minimum: 1. Maximum: 32.
     minInstances: 3 # HA requires at least three; provide nodes/storage for the maximum.
+    ## @param postgresql.autoscaling.maxInstances [integer] Maximum database instances Minimum: 1. Maximum: 32.
     maxInstances: 6
+    ## @param postgresql.autoscaling.connectionsPerInstance [integer] Operator connections per desired database instance; does not add primary write capacity Operator connections, measured by the operator API. Minimum: 1.
     connectionsPerInstance: 20 # Operator connections, measured by the operator API.
 
+## @param metrics [object] Settings for metrics; configure the fields below.
 metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: true
+  ## @param metrics.authentication [object] Settings for metrics.authentication; configure the fields below.
   authentication:
+    ## @param metrics.authentication.enabled [boolean] Require a dedicated bearer token on all metrics endpoints
     enabled: true
+    ## @param metrics.authentication.existingSecret [string] Existing or ESO-managed Secret containing the metrics token Create this token Secret in the release namespace.
     existingSecret: polyad-metrics # Create this token Secret in the release namespace.
+## @param keda [object] Settings for keda; configure the fields below.
 keda:
+  ## @param keda.authentication [object] Settings for keda.authentication; configure the fields below.
   authentication:
+    ## @param keda.authentication.enabled [boolean] Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics KEDA scrapes operator metrics, never the database directly.
     enabled: true # KEDA scrapes operator metrics, never the database directly.
 
 # Added instances provide standby/read capacity, not more primary write capacity.

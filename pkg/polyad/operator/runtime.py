@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 import kopf
 
 from polyad.operator.health import lifecycle
+from polyad.operator.logging import add_logging_options, configure_logging
+from polyad.operator.tracing import configure_tracing, shutdown_tracing
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -99,13 +101,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--namespace", default=os.environ.get("POLYAD_NAMESPACE", "default"))
     parser.add_argument("--liveness", default="http://0.0.0.0:8080/healthz")
-    parser.add_argument(
-        "--log-level",
-        type=str.upper,
-        choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
-        default=os.environ.get("POLYAD_LOG_LEVEL", "INFO"),
-        help="Polyad log verbosity (default: POLYAD_LOG_LEVEL or INFO)",
-    )
+    add_logging_options(parser)
     args = parser.parse_args()
     if os.environ.get("POLYAD_ROOT_WORKER", "false").lower() == "true":
         if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() != "true" or not os.environ.get("KUBECONFIG"):
@@ -113,11 +109,8 @@ def main() -> None:
         # Never accidentally coordinate against the cluster hosting this worker Pod.
         os.environ.pop("KUBERNETES_SERVICE_HOST", None)
         os.environ.pop("KUBERNETES_SERVICE_PORT", None)
-    if args.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
-        parser.error("POLYAD_LOG_LEVEL must be DEBUG, INFO, WARNING, ERROR or CRITICAL")
+    configure_logging(parser, args.log_level)
     os.environ["POLYAD_NAMESPACE"] = args.namespace
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(threadName)s] %(name)s: %(message)s")
-    logging.getLogger("polyad").setLevel(args.log_level)
     logger = logging.getLogger(__name__)
     logger.debug("Starting operator namespace=%s log_level=%s", args.namespace, args.log_level)
     runtime = OperatorThread(standalone=True, namespaces=[args.namespace], liveness_endpoint=args.liveness)
@@ -142,14 +135,18 @@ def main() -> None:
 
     previous = {sig: signal.signal(sig, stop) for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
     try:
+        configure_tracing()
         runtime.start()
         runtime.join()
     finally:
-        runtime.stop()
-        if runtime.thread.is_alive():
-            runtime.join()
-        for sig, handler in previous.items():
-            signal.signal(sig, handler)
+        try:
+            runtime.stop()
+            if runtime.thread.is_alive():
+                runtime.join()
+        finally:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
+            shutdown_tracing()
 
 
 if __name__ == "__main__":

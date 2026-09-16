@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from polyad.metrics.workloads import current_observation, observation_time
 from polyad.operator.graph_status import observed
+from polyad.operator.remote_scaling import INTENT, approved_intent, remote_revision
 from polyad_types.codec import converter
 from polyad_types.replication import Replication, replica_topology
 from polyad_types.resources import AUXILIARY_KINDS, GROUP
@@ -50,13 +51,23 @@ async def effective_spec(api: API, obj: dict[str, Any]) -> tuple[dict[str, Any],
     spec = copy.deepcopy(obj["spec"])
     policy = converter.structure(spec, Replication)
     generation = None
+    intent = approved_intent(obj)
+    if intent:
+        from polyad.events.visibility import public_observation
+
+        if not await public_observation(api, obj):
+            raise ValueError("remote scaling cannot control reserved operator graphs or unresolved ancestry")
+        spec["replicas"] = intent["replicas"]
     if policy.replicaSource and policy.inheritReplicas:
         source = await api.get("ReplicaGroup", obj["metadata"]["namespace"], policy.replicaSource.name)
         if not source or source["metadata"]["uid"] != policy.replicaSource.uid or source["metadata"].get("deletionTimestamp"):
             raise Pending("replica source incarnation is unavailable")
         if not source["spec"].get("templateOnly"):
             raise ValueError("replicaSource must refer to a reusable group definition")
-        count = converter.structure(source["spec"], Replication).replicas
+        if source["spec"].get("replicaSource"):
+            raise ValueError("replica sources cannot themselves inherit another source")
+        source_spec, _ = await effective_spec(api, source)
+        count = converter.structure(source_spec, Replication).replicas
         if not policy.minReplicas <= count <= policy.maxReplicas:
             raise ValueError("inherited replicas exceed this instance's bounds")
         spec["replicas"] = count
@@ -77,6 +88,14 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
     """
     meta = obj["metadata"]
     policy = converter.structure(obj["spec"], Replication)
+    revision = remote_revision(obj)
+    # CEL health checks can compare the annotation directly without reproducing its hash.
+    observed_intent = meta.get("annotations", {}).get(INTENT, "")
+    source_revision = ""
+    if policy.replicaSource and policy.inheritReplicas:
+        source = await controller.api.get("ReplicaGroup", meta["namespace"], policy.replicaSource.name)
+        source_revision = remote_revision(source) if source else ""
+    resolved, source_generation = await effective_spec(controller.api, obj)
     if policy.templateOnly:
         instances = (await controller.api.request("GET", "ReplicaGroup", meta["namespace"])).get("items", [])
         instances = [
@@ -90,6 +109,7 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
         current = all(
             item.get("status", {}).get("scaleCurrent", False)
             and item.get("status", {}).get("sourceGeneration") == meta["generation"]
+            and item.get("status", {}).get("sourceRemoteScaleRevision", "") == revision
             and item.get("status", {}).get("observedGeneration") == item["metadata"]["generation"]
             and current_observation(item.get("status", {}).get("scaleObservedAt"))
             for item in instances
@@ -100,7 +120,9 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
             {
                 "observedGeneration": meta["generation"],
                 "replicas": max(counts, default=0),
-                "desiredReplicas": policy.replicas,
+                "desiredReplicas": resolved.get("replicas", policy.replicas),
+                "remoteScaleRevision": revision,
+                "observedRemoteScaleIntent": observed_intent,
                 "labelSelector": f"{replica_selector(meta['uid'])}=true",
                 "scaleObservedAt": observation_time(obj.get("status", {}).get("scaleObservedAt")),
                 "scaleCurrent": current,
@@ -111,7 +133,7 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
         )
         return
     effective = copy.deepcopy(obj)
-    effective["spec"], source_generation = await effective_spec(controller.api, obj)
+    effective["spec"] = resolved
     count = effective["spec"].get("replicas", policy.replicas)
     effective["spec"] = replica_topology(effective["spec"])
     reconciled = False
@@ -122,7 +144,21 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
         # A cached replica count is never a substitute for observing terminating children.
         children = [item for item in await controller.api.owned(meta["namespace"], meta["uid"]) if item["kind"] not in AUXILIARY_KINDS]
         latest = await controller.api.get("ReplicaGroup", meta["namespace"], meta["name"])
-        if latest and latest["metadata"]["uid"] == meta["uid"] and latest["metadata"]["generation"] == meta["generation"]:
+        source_current = True
+        if policy.replicaSource and policy.inheritReplicas:
+            latest_source = await controller.api.get("ReplicaGroup", meta["namespace"], policy.replicaSource.name)
+            source_current = bool(
+                latest_source
+                and latest_source["metadata"]["uid"] == policy.replicaSource.uid
+                and latest_source["metadata"]["generation"] == source_generation
+                and remote_revision(latest_source) == source_revision
+            )
+        if (
+            latest
+            and latest["metadata"]["uid"] == meta["uid"]
+            and latest["metadata"]["generation"] == meta["generation"]
+            and remote_revision(latest) == revision
+        ):
             await controller.status(
                 latest,
                 {
@@ -131,8 +167,11 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
                     "readyReplicas": sum(observed(item)["ready"] or observed(item)["completed"] for item in children),
                     "labelSelector": f"{replica_selector(meta['uid'])}=true",
                     "sourceGeneration": source_generation,
+                    "sourceRemoteScaleRevision": source_revision,
+                    "remoteScaleRevision": revision,
+                    "observedRemoteScaleIntent": observed_intent,
                     "scaleObservedAt": observation_time(obj.get("status", {}).get("scaleObservedAt")),
-                    "scaleCurrent": reconciled,
+                    "scaleCurrent": reconciled and source_current,
                     "instanceCount": 1,
                     "totalReplicas": len(children),
                 },

@@ -1,53 +1,94 @@
+# yaml-language-server: $schema=values.reference.schema.json
 # Split gateway, executor and telemetry components in the Helm release cluster.
 # Use alone, or after values-ha.reference.yaml / values-root-control-plane.reference.yaml.
-# Guide and prerequisites: ../../docs/components.md
+# Guide and prerequisites: ../../docs/deployment/components.md
 # Install KEDA and create the three token Secrets below before installation.
 # These are reference overrides; values.yaml contains all defaults.
-tags:
-  singular: false
-  ha: true
+## @param ha [boolean] Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
+ha: true
 
+## @param operator [object] Settings for operator; configure the fields below.
 operator:
+  ## @param operator.logLevel [string] INFO keeps normal operational logs; DEBUG traces Polyad reconciliation and API timings, including observers. Choices: DEBUG, INFO, WARNING, ERROR, CRITICAL.
+  logLevel: INFO
+  ## @param operator.replicaCount [integer|null] Operator replicas; null selects 1 for singular or 2 for ha Recovery/bootstrap replicas, separate from the component copies. Minimum: 1. Maximum: 32.
   replicaCount: 2 # Recovery/bootstrap replicas, separate from the component copies.
 
+## @param architecture [object] Settings for architecture; configure the fields below.
 architecture:
+  ## @param architecture.mode [string] Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha Choices: Dense, Distributed.
   mode: Distributed
+  ## @param architecture.autoscaling [boolean] Enable KEDA scaling of all component ReplicaGroup definitions KEDA requests counts; the operator admits them through GraphRules.
   autoscaling: true # KEDA requests counts; the operator admits them through GraphRules.
+  ## @param architecture.cheegerMinimum [number] Minimum edge expansion of the three-component Graph; the default chain has h=1 Structural edge-expansion bound, not measured throughput. Minimum: 0. Maximum: 1.
   cheegerMinimum: 1 # Structural edge-expansion bound, not measured throughput.
+  ## @param architecture.expandedNodes [integer] Maximum recursive vertices in the self-managed Graph Budget for recursive vertices in the component Graph. Minimum: 6. Maximum: 1000000.
   expandedNodes: 27 # Budget for recursive vertices in the component Graph.
+  ## @param architecture.components [object] Settings for architecture.components; configure the fields below.
   components:
+    ## @param architecture.components.gateway [object] Settings for architecture.components.gateway; configure the fields below.
     gateway:
+      ## @param architecture.components.gateway.replicas [integer] Initial gateway copies Minimum: 2. Maximum: 32.
       replicas: 2
+      ## @param architecture.components.gateway.minReplicas [integer] Minimum gateway copies Minimum: 2. Maximum: 32.
       minReplicas: 2
+      ## @param architecture.components.gateway.maxReplicas [integer] Maximum gateway copies Minimum: 2. Maximum: 32.
       maxReplicas: 8
+      ## @param architecture.components.gateway.requestsPerSecond [number] Target total HTTP requests per second per copy Demand per gateway copy.
       requestsPerSecond: 50 # Demand per gateway copy.
+      ## @param architecture.components.gateway.concurrentRequests [integer] Target open HTTP requests and event streams per copy Includes open event streams. Minimum: 1.
       concurrentRequests: 8 # Includes open event streams.
+    ## @param architecture.components.executor [object] Settings for architecture.components.executor; configure the fields below.
     executor:
+      ## @param architecture.components.executor.replicas [integer] Initial execution copies Minimum: 2. Maximum: 32.
       replicas: 2
+      ## @param architecture.components.executor.minReplicas [integer] Minimum execution copies Minimum: 2. Maximum: 32.
       minReplicas: 2
+      ## @param architecture.components.executor.maxReplicas [integer] Maximum execution copies Minimum: 2. Maximum: 32.
       maxReplicas: 8
+      ## @param architecture.components.executor.backlog [integer] Target outstanding graph hints per execution copy across all managed clusters Outstanding graph hints per copy across managed clusters. Minimum: 1.
       backlog: 8 # Outstanding graph hints per copy across managed clusters.
+    ## @param architecture.components.telemetry [object] Settings for architecture.components.telemetry; configure the fields below.
     telemetry:
+      ## @param architecture.components.telemetry.replicas [integer] Initial metrics-serving copies Minimum: 2. Maximum: 32.
       replicas: 2
+      ## @param architecture.components.telemetry.minReplicas [integer] Minimum metrics-serving copies Minimum: 2. Maximum: 32.
       minReplicas: 2
+      ## @param architecture.components.telemetry.maxReplicas [integer] Maximum metrics-serving copies Minimum: 2. Maximum: 32.
       maxReplicas: 8
+      ## @param architecture.components.telemetry.requestsPerSecond [number] Target total metrics requests per second per copy
       requestsPerSecond: 50
+      ## @param architecture.components.telemetry.concurrentRequests [integer] Target concurrent metrics requests per copy Minimum: 1.
       concurrentRequests: 2
 
 # Gateway serves enabled APIs; telemetry serves metrics. Secrets live in the
 # release namespace and each contain a token key. These names match the other
 # reference overlays, so adding components does not change their credentials.
+## @param api [object] Settings for api; configure the fields below.
 api:
+  ## @param api.enabled [boolean] Serve authenticated composition requests on port 8090 through a ClusterIP Service
   enabled: true
+  ## @param api.existingSecret [string] Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
   existingSecret: polyad-api
+## @param events [object] Settings for events; configure the fields below.
 events:
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
   enabled: true
+  ## @param events.existingSecret [string] Existing Secret containing a token key for read-only event subscriptions
   existingSecret: polyad-events
+## @param metrics [object] Settings for metrics; configure the fields below.
 metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: true
+  ## @param metrics.authentication [object] Settings for metrics.authentication; configure the fields below.
   authentication:
+    ## @param metrics.authentication.enabled [boolean] Require a dedicated bearer token on all metrics endpoints
     enabled: true
+    ## @param metrics.authentication.existingSecret [string] Existing or ESO-managed Secret containing the metrics token
     existingSecret: polyad-metrics
+## @param keda [object] Settings for keda; configure the fields below.
 keda:
+  ## @param keda.authentication [object] Settings for keda.authentication; configure the fields below.
   authentication:
+    ## @param keda.authentication.enabled [boolean] Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics KEDA reads the operator metrics API using its bearer token.
     enabled: true # KEDA reads the operator metrics API using its bearer token.

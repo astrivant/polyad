@@ -4,28 +4,33 @@ Expose immutable graph composition requests through a small authenticated Flask 
 
 from __future__ import annotations
 
-import hmac
 from typing import TYPE_CHECKING
 
 from cattrs.errors import CattrsError
-from flask import Flask, jsonify, request
+from flask import jsonify, request
 from werkzeug.exceptions import HTTPException
 
+from polyad.api.application import Routes
 from polyad.api.errors import Conflict as Conflict
+from polyad.api.errors import Forbidden
 from polyad.api.errors import Unavailable as Unavailable
 from polyad.api.limits import install_limits
 from polyad.api.openapi import openapi_document
+from polyad.auth.http import install
+from polyad.auth.policy import public_demo
 from polyad.compiler.passes.composition import compile_composition
 from polyad_types.codec import converter
 from polyad_types.requests import ActivationRequest, CompositionRequest, identity
+from polyad_types.throughput import ThroughputSample
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
-    from flask import Response
+    from flask import Flask, Response
 
     from polyad.api.limits import RateLimitPolicy
+    from polyad.auth.http import Access
 
 
 def _build_app(
@@ -39,6 +44,9 @@ def _build_app(
     activate: Callable[[ActivationRequest], dict[str, Any]] | None = None,
     activation_lookup: Callable[[str], dict[str, Any] | None] | None = None,
     activation_stop: Callable[[str], dict[str, Any] | None] | None = None,
+    access: Access | None = None,
+    throughput: Callable[[ThroughputSample], dict[str, Any]] | None = None,
+    application: Flask | None = None,
 ) -> Flask:
     """
     Create an injectable WSGI app for request compilation, submission and audit lookup.
@@ -53,21 +61,18 @@ def _build_app(
         activate (Callable[[ActivationRequest], dict[str, Any]] | None): Durable pulse submission handler.
         activation_lookup (Callable[[str], dict[str, Any] | None] | None): Pulse status handler.
         activation_stop (Callable[[str], dict[str, Any] | None] | None): Durable pulse stop handler.
+        access (Access | None): Named service/operator credentials and shared request lanes.
+        throughput (Callable[[ThroughputSample], dict[str, Any]] | None): Authorized aggregate throughput intake.
+        application (Flask | None): Existing process application for blueprint registration.
 
     Returns:
         Flask: Configured app suitable for a production WSGI server.
     """
-    if not token:
+    if not token and not (access and access.supports("composition")) and not public_demo():
         raise ValueError("the composition API requires a bearer token")
-    app = Flask(__name__)
-    app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
+    app = Routes("composition", application)
 
-    @app.before_request
-    def authorize() -> tuple[Response, int] | None:
-        supplied = request.headers.get("Authorization", "")
-        if not hmac.compare_digest(supplied.encode(), f"Bearer {token}".encode()):
-            return jsonify(error="unauthorized"), 401
-        return None
+    authenticated = install(app, "composition", token, access)
 
     if rate_limits is not None:
         app.extensions["polyad.limiter"] = install_limits(app, rate_limits)
@@ -75,6 +80,10 @@ def _build_app(
     @app.errorhandler(Conflict)
     def conflict(error: Conflict) -> tuple[Response, int]:
         return jsonify(error=str(error)), 409
+
+    @app.errorhandler(Forbidden)
+    def forbidden(error: Forbidden) -> tuple[Response, int]:
+        return jsonify(error=str(error)), 403
 
     @app.errorhandler(Unavailable)
     def unavailable(error: Unavailable) -> tuple[Response, int]:
@@ -129,14 +138,32 @@ def _build_app(
         value = activation_stop(identity(request_id))
         return (jsonify(value), 202) if value else (jsonify(error="activation not found"), 404)
 
+    @app.post("/v1/throughput")
+    def report() -> tuple[Response, int]:
+        if throughput is None:
+            raise Unavailable("throughput service is not configured")
+        body = request.get_json()
+        if not isinstance(body, dict) or type(body.get("generation")) is not int:
+            raise ValueError("throughput generation must be an integer")
+        if any(type(body.get(name)) not in (int, float) for name in ("offeredPerSecond", "completedPerSecond")):
+            raise ValueError("throughput rates must be numbers")
+        return jsonify(throughput(converter.structure(body, ThroughputSample))), 202
+
     schema = openapi_document(title, version)
+    if not authenticated:
+        schema["security"] = []
+    if access and access.supports("composition"):
+        for path in schema["paths"].values():
+            for operation in path.values():
+                if isinstance(operation, dict) and "responses" in operation:
+                    operation["responses"]["403"] = {"description": "Credential does not authorize this operation"}
     app.extensions["polyad.openapi"] = schema
 
     @app.get("/openapi.json")
     def openapi() -> Response:
         return jsonify(schema)
 
-    return app
+    return app.finish()
 
 
 def create_app(

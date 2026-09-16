@@ -70,6 +70,14 @@ spec:
         - {protocol: TCP, port: 8091}
     {{- end }}
   egress:
+    {{- if and .Values.authentication.storage.enabled .Values.authentication.storage.separateDatabase .Values.authentication.storage.managed }}
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ .Release.Name }}-authentication
+      ports:
+        - {protocol: TCP, port: 5432}
+    {{- end }}
     {{- if and .Values.postgresql.enabled .Values.postgresql.managed }}
     - to:
         - podSelector:
@@ -140,6 +148,12 @@ spec:
             matchLabels:
               app.kubernetes.io/instance: {{ .Release.Name }}
               app.kubernetes.io/name: {{ .Values.dragonflyOperator.nameOverride }}
+        {{- if and .Values.observer.enabled (hasKey .Values._authEndpoints "observations") }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/name: polyad-observer
+        {{- end }}
         - podSelector:
             matchLabels:
               app: {{ .Release.Name }}-queue

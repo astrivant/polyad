@@ -91,7 +91,9 @@ async def topology_snapshot(api: API, obj: dict[str, Any], children: list[dict[s
         }
         if cluster := child_meta.get("annotations", {}).get(f"{GROUP}/remote-cluster"):
             execution.update(cluster=cluster, namespace=child_meta["namespace"])
-        if child["kind"] in {"Deployment", "StatefulSet"}:
+        if child["kind"] == "DaemonSet":
+            execution["replicas"] = child.get("status", {}).get("desiredNumberScheduled", 0)
+        elif child["kind"] in {"Deployment", "StatefulSet"}:
             execution["replicas"] = child.get("spec", {}).get("replicas", 1)
         node["executions"].append(execution)
     for node in nodes.values():

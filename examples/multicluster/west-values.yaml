@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 global:
   istioNamespace: polyad
   meshID: application-mesh

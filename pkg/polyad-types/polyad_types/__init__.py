@@ -5,6 +5,11 @@ Public resource, configuration and request models shared by Polyad consumers.
 from __future__ import annotations
 
 from polyad_types.activation import ActivationPolicy as ActivationPolicy
+from polyad_types.auth import APIKey as APIKey
+from polyad_types.auth import Authentication as Authentication
+from polyad_types.auth import CredentialAssignment as CredentialAssignment
+from polyad_types.auth import GraphAccess as GraphAccess
+from polyad_types.auth import KeyDirection as KeyDirection
 from polyad_types.capacity import CapacityPlan as CapacityPlan
 from polyad_types.codec import from_dict as from_dict
 from polyad_types.codec import to_dict as to_dict
@@ -14,6 +19,7 @@ from polyad_types.network import NetworkAccess as NetworkAccess
 from polyad_types.network import NetworkPeer as NetworkPeer
 from polyad_types.network import NetworkPort as NetworkPort
 from polyad_types.network import TrafficRule as TrafficRule
+from polyad_types.replication import RemoteScaleOwner as RemoteScaleOwner
 from polyad_types.replication import ReplicaConnection as ReplicaConnection
 from polyad_types.replication import ReplicaConnectivity as ReplicaConnectivity
 from polyad_types.replication import ReplicaSource as ReplicaSource
@@ -59,6 +65,8 @@ from polyad_types.resources.resources import AuthorizationPolicy as Authorizatio
 from polyad_types.resources.resources import Composition as Composition
 from polyad_types.resources.resources import ConfigMap as ConfigMap
 from polyad_types.resources.resources import Daemon as Daemon
+from polyad_types.resources.resources import DaemonSet as DaemonSet
+from polyad_types.resources.resources import DaemonSetSpec as DaemonSetSpec
 from polyad_types.resources.resources import Deployment as Deployment
 from polyad_types.resources.resources import DeploymentSpec as DeploymentSpec
 from polyad_types.resources.resources import DeploymentStrategy as DeploymentStrategy
@@ -104,9 +112,13 @@ from polyad_types.rules import Cheeger as Cheeger
 from polyad_types.rules import Spectrum as Spectrum
 from polyad_types.rules import StructuralRule as StructuralRule
 from polyad_types.storage import Persistence as Persistence
+from polyad_types.throughput import ThroughputSample as ThroughputSample
 from polyad_types.topology import Connection as Connection
 from polyad_types.topology import Dependency as Dependency
 from polyad_types.topology import GraphNode as GraphNode
 from polyad_types.topology import Node as Node
 from polyad_types.topology import Placement as Placement
+from polyad_types.topology import ThroughputLayout as ThroughputLayout
+from polyad_types.topology import ThroughputPolicy as ThroughputPolicy
+from polyad_types.topology import ThroughputTier as ThroughputTier
 from polyad_types.topology import Topology as Topology

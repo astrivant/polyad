@@ -10,6 +10,9 @@ import os
 from pathlib import Path
 from threading import Event
 
+from polyad.auth.keys import Keyring
+from polyad.auth.policy import public_demo
+
 
 class Lifecycle:
     """
@@ -39,6 +42,13 @@ def credential_token(endpoint: str, *, setting: str = "TOKEN") -> str:
     Returns:
         str: Required token, retaining environment compatibility for local use.
     """
+    if setting == "TOKEN":
+        if public_demo():
+            return ""
+        keys = Keyring.from_environment()
+        scope = {"API": "composition", "EVENTS": "events", "METRICS": "metrics", "OBSERVER": "observations"}.get(endpoint)
+        if keys and scope and keys.inbound(scope):
+            return ""
     filename = os.environ.get(f"POLYAD_{endpoint}_{setting}_FILE")
     if not filename:
         return os.environ.get(f"POLYAD_{endpoint}_{setting}", "")

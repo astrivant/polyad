@@ -8,6 +8,7 @@ from collections import Counter
 from typing import TYPE_CHECKING
 
 from polyad.operator.coordination import root_shard
+from polyad.operator.remote_scaling import remote_revision
 from polyad.operator.rollup import PHASES
 from polyad_types.resources import GROUP
 
@@ -64,6 +65,8 @@ def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, 
         generation = meta.get("generation", 1)
         metrics = status.get("metrics") or {}
         observed = status.get("observedGeneration") == generation and metrics.get("observedGeneration") == generation
+        if obj["kind"] == "ReplicaGroup":
+            observed = observed and status.get("remoteScaleRevision", "") == remote_revision(obj)
         phase = status.get("phase", "Unknown") if status.get("observedGeneration") == generation else "Unknown"
         duty_root = root
         if obj["kind"] == "Rewrite":
@@ -135,10 +138,23 @@ def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, 
                 "scaling": {
                     **{
                         key: status.get(key)
-                        for key in ("replicas", "desiredReplicas", "readyReplicas", "totalReplicas", "instanceCount", "sourceGeneration")
+                        for key in (
+                            "replicas",
+                            "desiredReplicas",
+                            "readyReplicas",
+                            "totalReplicas",
+                            "instanceCount",
+                            "sourceGeneration",
+                            "sourceRemoteScaleRevision",
+                        )
                     },
                     "source": obj["spec"].get("replicaSource") if obj["spec"].get("inheritReplicas", True) else None,
-                    "current": status.get("scaleCurrent", False) and status.get("observedGeneration") == generation,
+                    "remoteScaleRevision": remote_revision(obj),
+                    "current": (
+                        status.get("scaleCurrent", False)
+                        and status.get("observedGeneration") == generation
+                        and status.get("remoteScaleRevision", "") == remote_revision(obj)
+                    ),
                     "observedAt": status.get("scaleObservedAt"),
                 }
                 if obj["kind"] == "ReplicaGroup"

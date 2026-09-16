@@ -5,12 +5,35 @@ Verify runtime polling controls retain freshness bounds and reach the worker loo
 from __future__ import annotations
 
 import asyncio
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import jsonschema
 import pytest
+import yaml
 
 from polyad.operator.tuning import OperatorTuning
+from tests.test_chart import CHART
+
+
+@pytest.mark.parametrize("name,low,high", [("rescan", 1, 15), ("consume", 0.1, 5), ("metrics", 1, 5), ("backlog", 1, 5)])
+def test_values_schema_and_runtime_tuning_agree(name, low, high):
+    """
+    Prevent default or accepted-bound drift between Helm and process configuration.
+    """
+    key = name + "IntervalSeconds"
+    values = yaml.safe_load((CHART / "values.yaml").read_text())
+    schema = json.loads((CHART / "values.schema.json").read_text())["properties"]["operator"]["properties"]["tuning"]["properties"][key]
+    assert values["operator"]["tuning"][key] == getattr(OperatorTuning(), name)
+    for value in (low, high, (low + high) / 2):
+        jsonschema.validate(value, schema)
+        OperatorTuning(**{name: value})
+    for value in (low - 0.01, high + 0.01, True):
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(value, schema)
+        with pytest.raises(ValueError):
+            OperatorTuning(**{name: value})
 
 
 def test_environment_settings_and_defaults(monkeypatch):
@@ -61,7 +84,7 @@ def test_worker_uses_configured_pause(monkeypatch, name, database_outage):
             ),
         )
         monkeypatch.setattr(handlers, "queue", SimpleNamespace(queue=asyncio.Queue()))
-        monkeypatch.setattr(handlers, "metrics_http", None)
+        monkeypatch.setenv("POLYAD_METRICS_ENABLED", "false")
         monkeypatch.setattr(handlers, "metrics_store", SimpleNamespace(publish=Mock()))
         monkeypatch.setattr(handlers, "inventory_sample", None)
         monkeypatch.setattr(
@@ -81,6 +104,13 @@ def test_worker_uses_configured_pause(monkeypatch, name, database_outage):
         with pytest.raises(asyncio.CancelledError):
             await getattr(handlers, f"{name}_loop")()
         sleep.assert_awaited_once_with(getattr(tuning, name))
+        if name == "metrics":
+            assert handlers.metrics_store.publish.call_args.args[0]["tuning"] == {
+                "rescan": 12,
+                "consume": 0.25,
+                "metrics": 2,
+                "backlog": 3,
+            }
         if name == "rescan":
             assert handlers.inventory_sample_ok
             assert handlers.inventory_sample[1]["total"] == 0

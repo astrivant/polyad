@@ -1,6 +1,5 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # Replicated dense operators; add component or root values for those extensions.
-tags:
-  singular: false
-  ha: true
+ha: true
 operator:
   replicaCount: 2

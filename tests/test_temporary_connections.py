@@ -517,7 +517,7 @@ def test_api_server_serves_real_http_and_closes_workers(monkeypatch, domain):
     """
     from types import SimpleNamespace
 
-    from polyad.api.server import CompositionServer, ConnectionServer
+    from polyad.api.server import APIServer
     from tests.test_composition_api import document
 
     monkeypatch.setenv("POLYAD_API_RATE_LIMIT_ENABLED", "false")
@@ -528,11 +528,12 @@ def test_api_server_serves_real_http_and_closes_workers(monkeypatch, domain):
         api = ConnectionAPI(graph, *definitions)
         closed = []
         api.client = SimpleNamespace(close=lambda: closed.append(True))
-        server = (
-            ConnectionServer(api, ConnectionSettings("test"), host="127.0.0.1", port=0)
-            if domain == "connections"
-            else CompositionServer(api, "test", "projected", host="127.0.0.1", port=0)
-        )
+        server = APIServer(api)
+        if domain == "connections":
+            server.connections(ConnectionSettings("test"))
+        else:
+            server.composition("test", "projected")
+        server.start(host="127.0.0.1", ports={domain: 0})
         client = Client(f"http://127.0.0.1:{server.server.effective_port}", "projected")
         try:
             if domain == "connections":

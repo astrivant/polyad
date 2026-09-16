@@ -1,21 +1,26 @@
 """
-Build a read-only telemetry API independent of composition and event workers.
+Register read-only telemetry routes on the shared HTTP application.
 """
 
 from __future__ import annotations
 
-import hmac
 import json
+from typing import TYPE_CHECKING
 
 from apispec import APISpec
 from attrs import evolve, frozen
-from flask import Flask, Response, request
+from flask import Response, request
 from prometheus_client import CONTENT_TYPE_LATEST
 
+from polyad.api.application import Routes
+from polyad.auth.http import Access, install
 from polyad.metrics.store import MetricsStore
 from polyad.metrics.workloads import workload_metric
 from polyad.operator.health import lifecycle
 from polyad.operator.pressure import demand
+
+if TYPE_CHECKING:
+    from flask import Flask
 
 
 @frozen
@@ -26,10 +31,12 @@ class MetricsAPIBuilder:
     Attributes:
         store (MetricsStore | None): Snapshot source populated by the operator loop.
         token (str | None): Optional dedicated read-only bearer credential.
+        access (Access | None): Named read credentials with shared lane limits.
     """
 
     store: MetricsStore | None = None
     token: str | None = None
+    access: Access | None = None
 
     def with_store(self, store: MetricsStore) -> MetricsAPIBuilder:
         """
@@ -57,33 +64,27 @@ class MetricsAPIBuilder:
             raise ValueError("metrics authentication requires a nonempty printable bearer token without whitespace")
         return evolve(self, token=token)
 
-    def build(self) -> Flask:
+    def build(self, application: Flask | None = None) -> Flask:
         """
         Expose Prometheus, JSON and OpenAPI endpoints on a dedicated service.
 
+        Args:
+            application (Flask | None): Shared application, or None for standalone use.
+
         Returns:
-            Flask: Read-only application with no scrape-time external I/O.
+            Flask: Cached telemetry application with optional shared credential admission.
         """
         if self.store is None:
             raise ValueError("metrics API requires a snapshot store")
         if self.token is not None:
             self.with_bearer_token(self.token)
         store = self.store
-        app = Flask(__name__)
+        app = Routes("metrics", application, max_body=1024)
         spec = APISpec(title="Polyad metrics API", version="v1alpha1", openapi_version="3.0.3")
-        if self.token is not None:
+        authenticated = install(app, "metrics", self.token, self.access)
+        if authenticated:
             spec.components.security_scheme("bearerAuth", {"type": "http", "scheme": "bearer"})
             spec.options["security"] = [{"bearerAuth": []}]
-
-        @app.before_request
-        def authenticate() -> Response | None:
-            if self.token is not None and not hmac.compare_digest(
-                request.headers.get("Authorization", "").encode(), f"Bearer {self.token}".encode()
-            ):
-                return Response(
-                    '{"error":"unauthorized"}', status=401, content_type="application/json", headers={"WWW-Authenticate": "Bearer"}
-                )
-            return None
 
         for path, media in (("/metrics", "text/plain"), ("/v1/metrics", "application/json")):
             spec.path(
@@ -148,7 +149,7 @@ class MetricsAPIBuilder:
                 )
             return Response(json.dumps(value), content_type="application/json")
 
-        for path in ("/v1/postgresql/connections", "/v1/components/{component}/{metric}"):
+        for path in ("/v1/postgresql/connections", "/v1/dragonfly/connections", "/v1/components/{component}/{metric}"):
             spec.path(
                 path=path,
                 operations={
@@ -168,6 +169,7 @@ class MetricsAPIBuilder:
             )
 
         @app.get("/v1/postgresql/connections")
+        @app.get("/v1/dragonfly/connections")
         @app.get("/v1/components/<component>/<metric>")
         def capacity(component: str | None = None, metric: str | None = None) -> Response:
             sample = store.read()
@@ -178,10 +180,11 @@ class MetricsAPIBuilder:
                 if component is not None and metric is not None:
                     value = demand(snapshot, component, metric)
                 else:
-                    postgres = snapshot.get("postgresql", {})
-                    if not postgres.get("enabled") or not postgres.get("fresh"):
-                        raise ValueError("PostgreSQL connection observation unavailable")
-                    value = postgres["connections"]
+                    backend = request.path.split("/")[2]
+                    observation = snapshot.get(backend, {})
+                    if not observation.get("enabled") or not observation.get("fresh"):
+                        raise ValueError(f"{backend} connection observation unavailable")
+                    value = observation["connections"]
             except (KeyError, ValueError) as error:
                 return Response(
                     json.dumps({"error": str(error)}), status=404 if isinstance(error, KeyError) else 503, content_type="application/json"
@@ -191,9 +194,11 @@ class MetricsAPIBuilder:
         @app.get("/openapi.json")
         def openapi() -> Response:
             document = spec.to_dict()
-            if self.token is not None:
+            if authenticated:
                 for item in document["paths"].values():
                     item["get"]["responses"]["401"] = {"description": "Missing or invalid metrics bearer credential"}
+                    item["get"]["responses"]["403"] = {"description": "Credential does not authorize metrics"}
+                    item["get"]["responses"]["429"] = {"description": "Credential rate or concurrency budget exhausted"}
             return Response(json.dumps(document), content_type="application/json")
 
         @app.get("/metrics")
@@ -210,4 +215,4 @@ class MetricsAPIBuilder:
             response.headers["Cache-Control"] = "no-store"
             return response
 
-        return app
+        return app.finish()

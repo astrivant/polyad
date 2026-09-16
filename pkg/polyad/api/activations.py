@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.app import Conflict, Unavailable
+from polyad.api.errors import Conflict, Unavailable
 from polyad.compiler.activation import activation_name
 from polyad_types import resources as asts
 from polyad_types.activation import ActivationPolicy

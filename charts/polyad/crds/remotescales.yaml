@@ -56,6 +56,7 @@ spec:
                 required:
                 - name
                 - uid
+                - generation
                 properties:
                   name:
                     type: string
@@ -64,9 +65,13 @@ spec:
                   uid:
                     type: string
                     minLength: 1
+                  generation:
+                    type: integer
+                    minimum: 1
+                    description: Locally approved target spec generation; local edits invalidate the request.
                 x-kubernetes-validations:
                 - rule: self == oldSelf
-                  message: target identity is immutable
+                  message: target identity and approved generation are immutable
           status:
             type: object
             properties:

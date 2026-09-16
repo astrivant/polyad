@@ -56,6 +56,141 @@ spec:
           spec:
             type: object
             properties:
+              throughput:
+                type: object
+                description: Observe or adapt topology using empirical throughput targets within hard structural rules.
+                properties:
+                  unit:
+                    type: string
+                    description: Application work unit shared by offered and completed rates, such as records.
+                    minLength: 1
+                    maxLength: 64
+                  tiers:
+                    type: array
+                    items:
+                      type: object
+                      description: Associate measured application demand with an independently calibrated expansion
+                        target.
+                      properties:
+                        offeredPerSecond:
+                          type: number
+                          description: Inclusive demand threshold in the application's declared unit.
+                          minimum: 0
+                        cheeger:
+                          type: object
+                          description: Bound exact edge expansion on the simple undirected projection. A cut's ratio
+                            is its crossing-edge count divided by its smaller side's vertex count. The constant is the
+                            minimum ratio over all cuts. Raising the minimum rejects severe structural bottlenecks;
+                            lowering the maximum requires a sparse cut. These bounds do not measure execution throughput.
+                          properties:
+                            minimum:
+                              type: number
+                              nullable: true
+                              description: Inclusive minimum Cheeger constant.
+                            maximum:
+                              type: number
+                              nullable: true
+                              description: Inclusive maximum Cheeger constant.
+                      required:
+                      - offeredPerSecond
+                      - cheeger
+                    description: Strictly increasing demand thresholds; highest matching tier wins.
+                    minItems: 1
+                    maxItems: 16
+                  layouts:
+                    type: array
+                    items:
+                      type: object
+                      description: Approve one complete set of boundary-local data-flow connections.
+                      properties:
+                        name:
+                          type: string
+                          description: Stable administrator-selected layout name.
+                          minLength: 1
+                          maxLength: 63
+                        connections:
+                          type: array
+                          items:
+                            type: object
+                            description: Declare a data-flow edge, which may cycle without blocking admission.
+                            properties:
+                              source:
+                                type: string
+                                description: Node emitting data on this connection.
+                              target:
+                                type: string
+                                description: Node receiving data on this connection.
+                              ports:
+                                type: array
+                                items:
+                                  type: object
+                                  description: Select a transport port on the destination workload.
+                                  properties:
+                                    port:
+                                      type: integer
+                                      description: Destination transport port.
+                                      minimum: 1
+                                      maximum: 65535
+                                    protocol:
+                                      type: string
+                                      enum:
+                                      - TCP
+                                      - UDP
+                                      - SCTP
+                                      description: Transport protocol.
+                                  required:
+                                  - port
+                                description: Optional transport grants when graph networking is enabled.
+                            required:
+                            - source
+                            - target
+                          description: Complete replacement connections; nodes and admission stay unchanged.
+                          maxItems: 380
+                      required:
+                      - name
+                      - connections
+                    description: Approved alternatives, tried in declaration order.
+                    maxItems: 8
+                  mode:
+                    type: string
+                    enum:
+                    - Observe
+                    - Adapt
+                    description: Observe reports recommendations; Adapt may replace connections.
+                  sampleMaxAgeSeconds:
+                    type: integer
+                    description: Maximum age and gap between usable samples.
+                    minimum: 1
+                    maximum: 3600
+                  sustainedSeconds:
+                    type: integer
+                    description: Continuous shortfall duration required before selecting a layout.
+                    minimum: 1
+                    maximum: 86400
+                  minSamples:
+                    type: integer
+                    description: Distinct reports required during the sustained shortfall.
+                    minimum: 2
+                    maximum: 1000
+                  shortfallRatio:
+                    type: number
+                    description: Completed/offered ratio below which demanded throughput is unmet.
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 1
+                  cooldownSeconds:
+                    type: integer
+                    description: Minimum time between successful topology changes.
+                    minimum: 1
+                    maximum: 86400
+                  maxChangesPerHour:
+                    type: integer
+                    description: Maximum successful changes in a rolling hour.
+                    minimum: 1
+                    maximum: 60
+                required:
+                - unit
+                - tiers
               activation:
                 type: object
                 description: Control how repeated requests start a downstream workload or graph.
@@ -746,6 +881,45 @@ spec:
             description: Operator-observed instance lifecycle and graph metrics. Inert templateOnly definitions do not
               publish execution status. Updates are fenced by resourceVersion.
             properties:
+              throughput:
+                type: object
+                properties:
+                  mode:
+                    type: string
+                    nullable: true
+                  phase:
+                    type: string
+                    nullable: true
+                  observedAt:
+                    type: string
+                    nullable: true
+                  recommendedLayout:
+                    type: string
+                    nullable: true
+                  currentCheeger:
+                    type: number
+                    nullable: true
+                  proposedCheeger:
+                    type: number
+                    nullable: true
+                  offeredPerSecond:
+                    type: number
+                    nullable: true
+                  completedPerSecond:
+                    type: number
+                    nullable: true
+                  target:
+                    type: object
+                    nullable: true
+                    properties:
+                      minimum:
+                        type: number
+                        nullable: true
+                        minimum: 0
+                      maximum:
+                        type: number
+                        nullable: true
+                        minimum: 0
               capacity:
                 type: object
                 description: Expose durable advance capacity plans independently of execution readiness.
@@ -855,7 +1029,7 @@ spec:
                       type: boolean
                       description: Whether the node is failed.
               # status.metrics is generated from polyad_types.GraphMetrics.
-              # Regenerate with scripts/generate-status-schemas.py; edit the attrs models.
+              # Regenerate with scripts/schemas/generate-status-schemas.py; edit the attrs models.
               metrics:
                 type: object
                 description: Graph instance metrics refreshed through the ordered, ownership-guarded API queue. Counts
@@ -1251,6 +1425,10 @@ spec:
                           StatefulSet:
                             type: integer
                             description: Number of owned StatefulSet resources.
+                            minimum: 0
+                          DaemonSet:
+                            type: integer
+                            description: Number of owned DaemonSet resources.
                             minimum: 0
                           Service:
                             type: integer

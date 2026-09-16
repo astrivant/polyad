@@ -4,6 +4,7 @@ Describe admission separately from persistent data-flow connections.
 
 from __future__ import annotations
 
+import math
 import re
 from typing import Generic, Literal
 
@@ -15,6 +16,7 @@ from polyad_types.activation import ActivationPolicy
 from polyad_types.capacity import CapacityPlan
 from polyad_types.codec import converter
 from polyad_types.network import NetworkAccess, NetworkPort
+from polyad_types.rules import Cheeger
 
 
 @frozen
@@ -73,6 +75,107 @@ class Connection:
 
 
 @frozen
+class ThroughputTier:
+    """
+    Associate measured application demand with an independently calibrated expansion target.
+
+    Attributes:
+        offeredPerSecond (float): Inclusive demand threshold in the application's declared unit.
+        cheeger (Cheeger): Target range on the connections relation; never overrides GraphRules.
+    """
+
+    offeredPerSecond: float = field(metadata={"schema": {"minimum": 0}})
+    cheeger: Cheeger
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Require a finite demand threshold and at least one target bound.
+
+        Returns:
+            None: No return value.
+        """
+        if isinstance(self.offeredPerSecond, bool) or not math.isfinite(self.offeredPerSecond) or self.offeredPerSecond < 0:
+            raise ValueError("throughput demand thresholds must be finite and nonnegative")
+        if self.cheeger.minimum is None and self.cheeger.maximum is None:
+            raise ValueError("throughput tiers require a Cheeger target")
+
+
+@frozen
+class ThroughputLayout:
+    """
+    Approve one complete set of boundary-local data-flow connections.
+
+    Attributes:
+        name (str): Stable administrator-selected layout name.
+        connections (tuple[Connection, ...]): Complete replacement connections; nodes and admission stay unchanged.
+    """
+
+    name: str = field(metadata={"schema": {"minLength": 1, "maxLength": 63}})
+    connections: tuple[Connection, ...] = field(metadata={"schema": {"maxItems": 380}})
+
+
+@frozen
+class ThroughputPolicy:
+    """
+    Observe or adapt topology using empirical throughput targets within hard structural rules.
+
+    Attributes:
+        unit (str): Application work unit shared by offered and completed rates, such as records.
+        tiers (tuple[ThroughputTier, ...]): Strictly increasing demand thresholds; highest matching tier wins.
+        layouts (tuple[ThroughputLayout, ...]): Approved alternatives, tried in declaration order.
+        mode (Literal['Observe', 'Adapt']): Observe reports recommendations; Adapt may replace connections.
+        sampleMaxAgeSeconds (int): Maximum age and gap between usable samples.
+        sustainedSeconds (int): Continuous shortfall duration required before selecting a layout.
+        minSamples (int): Distinct reports required during the sustained shortfall.
+        shortfallRatio (float): Completed/offered ratio below which demanded throughput is unmet.
+        cooldownSeconds (int): Minimum time between successful topology changes.
+        maxChangesPerHour (int): Maximum successful changes in a rolling hour.
+    """
+
+    unit: str = field(metadata={"schema": {"minLength": 1, "maxLength": 64}})
+    tiers: tuple[ThroughputTier, ...] = field(metadata={"schema": {"minItems": 1, "maxItems": 16}})
+    layouts: tuple[ThroughputLayout, ...] = field(default=(), metadata={"schema": {"maxItems": 8}})
+    mode: Literal["Observe", "Adapt"] = "Observe"
+    sampleMaxAgeSeconds: int = field(default=60, metadata={"schema": {"minimum": 1, "maximum": 3600}})
+    sustainedSeconds: int = field(default=60, metadata={"schema": {"minimum": 1, "maximum": 86400}})
+    minSamples: int = field(default=3, metadata={"schema": {"minimum": 2, "maximum": 1000}})
+    shortfallRatio: float = field(default=0.9, metadata={"schema": {"minimum": 0, "exclusiveMinimum": True, "maximum": 1}})
+    cooldownSeconds: int = field(default=300, metadata={"schema": {"minimum": 1, "maximum": 86400}})
+    maxChangesPerHour: int = field(default=2, metadata={"schema": {"minimum": 1, "maximum": 60}})
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Bound the feedback controller and reject ambiguous demand tiers.
+
+        Returns:
+            None: No return value.
+        """
+        if self.mode not in {"Observe", "Adapt"} or not self.unit.strip() or len(self.unit) > 64:
+            raise ValueError("throughput requires a unit and Observe or Adapt mode")
+        thresholds = [tier.offeredPerSecond for tier in self.tiers]
+        if not 1 <= len(thresholds) <= 16 or thresholds != sorted(set(thresholds)):
+            raise ValueError("throughput tiers require 1–16 strictly increasing demand thresholds")
+        names = [layout.name for layout in self.layouts]
+        if len(names) > 8 or len(set(names)) != len(names) or any(not name or len(name) > 63 for name in names):
+            raise ValueError("throughput layouts require unique names and at most eight alternatives")
+        if any(len(layout.connections) > 380 for layout in self.layouts):
+            raise ValueError("throughput layouts support at most 380 connections")
+        if self.mode == "Adapt" and not self.layouts:
+            raise ValueError("Adapt requires administrator-approved layouts")
+        for value, minimum, maximum in (
+            (self.sampleMaxAgeSeconds, 1, 3600),
+            (self.sustainedSeconds, 1, 86400),
+            (self.minSamples, 2, 1000),
+            (self.cooldownSeconds, 1, 86400),
+            (self.maxChangesPerHour, 1, 60),
+        ):
+            if type(value) is not int or not minimum <= value <= maximum:
+                raise ValueError("throughput timing and change budgets must be bounded positive integers")
+        if isinstance(self.shortfallRatio, bool) or not 0 < self.shortfallRatio <= 1:
+            raise ValueError("shortfallRatio must be greater than zero and at most one")
+
+
+@frozen
 class Placement:
     """
     Select a labeled resource slice and tolerate its taints for an entire graph.
@@ -118,6 +221,7 @@ class Topology:
         capacity (CapacityPlan | None): Optional advance capacity policy inherited by nested graph instances.
         network (NetworkAccess | None): Optional traffic restrictions inherited by descendant workloads.
         activation (ActivationPolicy | None): Optional pulse policy when this graph is referenced as a downstream node.
+        throughput (ThroughputPolicy | None): Optional application feedback with separate Cheeger targets and approved layouts.
     """
 
     nodes: tuple[Node, ...]
@@ -132,6 +236,7 @@ class Topology:
     capacity: CapacityPlan | None = field(default=None, kw_only=True)
     network: NetworkAccess | None = field(default=None, kw_only=True)
     activation: ActivationPolicy | None = field(default=None, kw_only=True)
+    throughput: ThroughputPolicy | None = field(default=None, kw_only=True)
 
     def __attrs_post_init__(self) -> None:
         """
@@ -141,6 +246,12 @@ class Topology:
             None: No return value.
         """
         names = {node.name for node in self.nodes}
+        if self.throughput is not None:
+            if len(names) > 20:
+                raise ValueError("throughput Cheeger feedback supports at most 20 vertices per boundary")
+            for layout in self.throughput.layouts:
+                if any(edge.source not in names or edge.target not in names for edge in layout.connections):
+                    raise ValueError("throughput layout connection endpoint is absent")
         if len(names) != len(self.nodes) or self.slots < 1:
             raise ValueError("nodes must be unique and capacity positive")
         if self.network:

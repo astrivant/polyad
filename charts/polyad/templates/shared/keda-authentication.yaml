@@ -2,6 +2,18 @@
 {{- with $ -}}
 {{- if .Values.keda.authentication.enabled }}
 {{- if not (and .Values.metrics.enabled .Values.metrics.authentication.enabled) }}{{ fail "KEDA authentication requires metrics.enabled and metrics.authentication.enabled" }}{{ end }}
+{{- if hasKey .Values._authEndpoints "metrics" }}
+{{- $secret := default (printf "%s-polyad-metrics" .Release.Name) .Values.metrics.authentication.existingSecret }}
+{{- $matched := false }}
+{{- range $group, $keys := pick .Values.authentication "services" "operators" }}
+{{- range $keys }}
+{{- if and (has "metrics" (default (list) .endpoints)) (eq .existingSecret $secret) (eq (default "token" .secretKey) $.Values.metrics.authentication.secretKey) }}
+{{- $matched = true }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if not $matched }}{{ fail "KEDA's metrics Secret must reference a configured inbound key with the metrics scope" }}{{ end }}
+{{- end }}
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
 metadata:

@@ -270,8 +270,8 @@ def test_storage_validation_and_admission_pod_preserve_definition():
     spec["controller"] = "Deployment"
     with pytest.raises(ValueError, match="require controller"):
         compile_daemon(spec, {})
-    spec["controller"] = "DaemonSet"
-    with pytest.raises(ValueError, match="Deployment or StatefulSet"):
+    spec["controller"] = "Invalid"
+    with pytest.raises(ValueError, match="Deployment, StatefulSet or DaemonSet"):
         compile_daemon(spec, {})
 
 

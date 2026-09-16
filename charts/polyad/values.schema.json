@@ -7,9 +7,106 @@
     "dragonfly",
     "dragonflyOperator",
     "api",
-    "tags"
+    "ha"
   ],
   "properties": {
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "services",
+        "operators"
+      ],
+      "properties": {
+        "services": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/apiKey"
+          },
+          "description": "Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits"
+        },
+        "operators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/apiKey"
+          },
+          "description": "Peer operator API keys; Inbound, Outbound or Bidirectional, with HA-wide per-key lanes"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "Required",
+            "Disabled"
+          ],
+          "description": "Required enforces endpoint credentials; Disabled opts into an unauthenticated demo without HTTP request quotas"
+        },
+        "backend": {
+          "type": "string",
+          "enum": [
+            "Builtin",
+            "FlaskHTTPAuth"
+          ],
+          "description": "Builtin uses Polyad's Flask hooks; FlaskHTTPAuth loads the adapter included in official operator images"
+        },
+        "storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "separateDatabase",
+            "managed",
+            "existingSecret",
+            "secretKey",
+            "database",
+            "username",
+            "size",
+            "storageClass"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Persist one-way key verifiers and policy records in PostgreSQL and enforce database revocation; raw tokens stay in Kubernetes Secrets"
+            },
+            "separateDatabase": {
+              "type": "boolean",
+              "description": "Use an isolated authentication database; false reuses the state database and its role, requiring postgresql.enabled"
+            },
+            "managed": {
+              "type": "boolean",
+              "description": "Provision a separate CloudNativePG Cluster; false uses the DSN from existingSecret"
+            },
+            "existingSecret": {
+              "type": "string",
+              "description": "Externally managed authentication database connection Secret; used with separateDatabase=true and managed=false"
+            },
+            "secretKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "DSN key in the external authentication database Secret"
+            },
+            "database": {
+              "type": "string",
+              "pattern": "^[a-zA-Z_][a-zA-Z0-9_-]{0,62}$",
+              "description": "Database name for a new managed authentication cluster"
+            },
+            "username": {
+              "type": "string",
+              "pattern": "^[a-zA-Z_][a-zA-Z0-9_-]{0,62}$",
+              "description": "Sole application login owning the managed authentication database; PostgreSQL administrators retain administrative access"
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Persistent storage per managed authentication database instance"
+            },
+            "storageClass": {
+              "type": "string",
+              "description": "Authentication database storage class; empty uses the cluster default"
+            }
+          }
+        }
+      }
+    },
     "operator": {
       "type": "object",
       "additionalProperties": false,
@@ -27,7 +124,8 @@
             "null"
           ],
           "minimum": 1,
-          "maximum": 32
+          "maximum": 32,
+          "description": "Operator replicas; null selects 1 for singular or 2 for ha"
         },
         "nodeSelector": {
           "type": "object",
@@ -40,43 +138,7 @@
         "tolerations": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "key": {
-                "type": "string",
-                "description": "Taint key to match. An empty key requires operator Exists and matches all keys."
-              },
-              "operator": {
-                "type": "string",
-                "enum": [
-                  "Exists",
-                  "Equal"
-                ],
-                "description": "Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal."
-              },
-              "value": {
-                "type": "string",
-                "description": "Taint value to match when operator is Equal. Omit or leave empty when operator is Exists."
-              },
-              "effect": {
-                "type": "string",
-                "enum": [
-                  "",
-                  "NoSchedule",
-                  "PreferNoSchedule",
-                  "NoExecute"
-                ],
-                "description": "Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute."
-              },
-              "tolerationSeconds": {
-                "type": "integer",
-                "format": "int64",
-                "minimum": 0,
-                "description": "Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction."
-              }
-            },
-            "description": "One entry in tolerations.",
-            "additionalProperties": false
+            "$ref": "#/definitions/toleration"
           },
           "description": "Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations allow placement on tainted nodes; they do not select or guarantee a node."
         },
@@ -92,22 +154,26 @@
           ],
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Enable operator HPA using CPU and optional memory utilization"
             },
             "minReplicas": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 32
+              "maximum": 32,
+              "description": "Minimum operator replicas"
             },
             "maxReplicas": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 32
+              "maximum": 32,
+              "description": "Maximum operator replicas, at least minReplicas and at most 32"
             },
             "targetCPUUtilizationPercentage": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 100
+              "maximum": 100,
+              "description": "Target operator CPU utilization relative to requested CPU"
             },
             "targetMemoryUtilizationPercentage": {
               "type": [
@@ -138,7 +204,8 @@
                     "stabilizationWindowSeconds": {
                       "type": "integer",
                       "minimum": 0,
-                      "maximum": 3600
+                      "maximum": 3600,
+                      "description": "Scale-up recommendation window in seconds (0-3600)"
                     },
                     "selectPolicy": {
                       "type": "string",
@@ -146,7 +213,8 @@
                         "Max",
                         "Min",
                         "Disabled"
-                      ]
+                      ],
+                      "description": "Choose the largest or smallest permitted change, or disable scale-up (Max, Min, Disabled)"
                     },
                     "policies": {
                       "type": "array",
@@ -179,7 +247,8 @@
                             "maximum": 1800
                           }
                         }
-                      }
+                      },
+                      "description": "Rate limits (Pods or Percent); defaults to 100 percent or 4 Pods per 15 seconds; periodSeconds accepts 1-1800"
                     }
                   }
                 },
@@ -195,7 +264,8 @@
                     "stabilizationWindowSeconds": {
                       "type": "integer",
                       "minimum": 0,
-                      "maximum": 3600
+                      "maximum": 3600,
+                      "description": "Scale-down recommendation window in seconds (0-3600)"
                     },
                     "selectPolicy": {
                       "type": "string",
@@ -203,7 +273,8 @@
                         "Max",
                         "Min",
                         "Disabled"
-                      ]
+                      ],
+                      "description": "Choose the largest or smallest permitted change, or disable scale-down (Max, Min, Disabled)"
                     },
                     "policies": {
                       "type": "array",
@@ -236,7 +307,8 @@
                             "maximum": 1800
                           }
                         }
-                      }
+                      },
+                      "description": "Rate limits (Pods or Percent); defaults to 100 percent per 15 seconds; periodSeconds accepts 1-1800"
                     }
                   }
                 }
@@ -591,12 +663,14 @@
             "repository": {
               "type": "string",
               "minLength": 1,
-              "pattern": "^[a-z0-9][a-z0-9./:_-]*$"
+              "pattern": "^[a-z0-9][a-z0-9./:_-]*$",
+              "description": "Operator image repository"
             },
             "tag": {
               "type": "string",
               "minLength": 1,
-              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$"
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+              "description": "Operator image tag"
             },
             "pullPolicy": {
               "type": "string",
@@ -604,26 +678,19 @@
                 "IfNotPresent",
                 "Always",
                 "Never"
-              ]
+              ],
+              "description": "Operator image pull policy"
             }
           }
         },
         "resources": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "requests": {
-              "$ref": "#/definitions/resourceList"
-            },
-            "limits": {
-              "$ref": "#/definitions/resourceList"
-            }
-          }
+          "$ref": "#/definitions/resourceRequirements"
         },
         "terminationGracePeriodSeconds": {
           "type": "integer",
           "minimum": 30,
-          "maximum": 300
+          "maximum": 300,
+          "description": "Time allowed for operator shutdown and outstanding API calls"
         },
         "logLevel": {
           "type": "string",
@@ -633,7 +700,8 @@
             "WARNING",
             "ERROR",
             "CRITICAL"
-          ]
+          ],
+          "description": "Operator and observer Python logging verbosity; INFO for normal operation, DEBUG for reconciliation diagnostics (DEBUG, INFO, WARNING, ERROR or CRITICAL)"
         },
         "tuning": {
           "type": "object",
@@ -648,22 +716,26 @@
             "rescanIntervalSeconds": {
               "type": "number",
               "minimum": 1,
-              "maximum": 15
+              "maximum": 15,
+              "description": "Pause after local and root-managed remote inventory scans (1-15s); watch polyad_inventory_sample_age_seconds and polyad_cluster_inventory_sample_fresh; lower values add Kubernetes and optional state writes"
             },
             "consumeIntervalSeconds": {
               "type": "number",
               "minimum": 0.1,
-              "maximum": 5
+              "maximum": 5,
+              "description": "Pause after local and remote queue consumption passes (0.1-5s); watch polyad_inbound_updates and polyad_kubernetes_writes_queued before increasing dispatch pressure"
             },
             "metricsIntervalSeconds": {
               "type": "number",
               "minimum": 1,
-              "maximum": 5
+              "maximum": 5,
+              "description": "Pause after cached metrics publication and component/worker reporting (1-5s); also controls enabled PostgreSQL and Dragonfly connection sampling, not Prometheus scrape frequency or trace export"
             },
             "backlogIntervalSeconds": {
               "type": "number",
               "minimum": 1,
-              "maximum": 5
+              "maximum": 5,
+              "description": "Pause after local shared-queue samples (1-5s); watch polyad_inbound_sample_age_seconds; root-managed remote backlog is sampled by rescanIntervalSeconds"
             }
           }
         }
@@ -744,25 +816,63 @@
         "externalUrl",
         "existingSecret",
         "persistence",
-        "ha"
+        "ha",
+        "autoscaling"
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Deploy Dragonfly through the upstream operator Helm dependency"
         },
         "image": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9./:_-]*$"
+          "pattern": "^[a-z0-9][a-z0-9./:_-]*$",
+          "description": "Bundled Dragonfly image"
+        },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "minReplicas",
+            "maxReplicas",
+            "connectionsPerReplica"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Use KEDA for bundled HA Dragonfly and enable Polyad metrics; inactive outside bundled HA"
+            },
+            "minReplicas": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 9,
+              "description": "Minimum total cache instances, including the primary; never below two"
+            },
+            "maxReplicas": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 9,
+              "description": "Maximum total cache instances; requires sufficient eligible nodes and storage"
+            },
+            "connectionsPerReplica": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Primary connected clients per desired cache instance; scales failover copies, not write capacity"
+            }
+          }
         },
         "externalUrl": {
           "type": "string",
-          "pattern": "^(rediss?://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+)?$"
+          "pattern": "^(rediss?://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+)?$",
+          "description": "External Redis-compatible URL when bundled Dragonfly is disabled"
         },
         "existingSecret": {
           "type": "string",
           "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$",
-          "maxLength": 253
+          "maxLength": 253,
+          "description": "Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings"
         },
         "persistence": {
           "type": "object",
@@ -774,16 +884,19 @@
           ],
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Persist bundled Dragonfly snapshots on a PVC"
             },
             "size": {
               "type": "string",
-              "pattern": "^[1-9][0-9]*Gi$"
+              "pattern": "^[1-9][0-9]*Gi$",
+              "description": "Snapshot volume capacity"
             },
             "storageClass": {
               "type": "string",
               "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$",
-              "maxLength": 253
+              "maxLength": 253,
+              "description": "Snapshot volume storage class; empty uses the cluster default"
             }
           }
         },
@@ -797,18 +910,21 @@
           ],
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Enable primary/replica replication and automatic failover"
             },
             "replicas": {
               "type": "integer",
               "minimum": 2,
-              "maximum": 9
+              "maximum": 9,
+              "description": "Initial Dragonfly instances in HA mode, including the primary; fixed when autoscaling is disabled"
             },
             "topologyKey": {
               "type": "string",
               "minLength": 1,
               "maxLength": 253,
-              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$",
+              "description": "Place HA instances on distinct values of this node label"
             }
           }
         }
@@ -844,12 +960,15 @@
       ],
       "properties": {
         "nameOverride": {
-          "const": "dragonfly-operator"
+          "const": "dragonfly-operator",
+          "description": "Upstream controller resource name",
+          "type": "string"
         },
         "replicaCount": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 5
+          "maximum": 5,
+          "description": "Leader-elected Dragonfly controller replicas"
         },
         "crds": {
           "type": "object",
@@ -858,7 +977,9 @@
           ],
           "properties": {
             "install": {
-              "const": false
+              "const": false,
+              "description": "Must remain false; Polyad installs the pinned upstream CRD from crds before rendering instances",
+              "type": "boolean"
             }
           }
         },
@@ -870,7 +991,8 @@
               "items": {
                 "type": "string",
                 "pattern": "^--[^\\r\\n]+$"
-              }
+              },
+              "description": "Additional Dragonfly controller command arguments"
             }
           }
         },
@@ -882,7 +1004,8 @@
               "items": {
                 "type": "string",
                 "pattern": "^--[^\\r\\n]+$"
-              }
+              },
+              "description": "Additional metrics proxy command arguments"
             }
           }
         }
@@ -895,16 +1018,19 @@
           "type": "string",
           "maxLength": 63,
           "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Istio control-plane namespace; must equal the release namespace when mesh.install is enabled"
         },
         "meshID": {
           "type": "string",
-          "maxLength": 253
+          "maxLength": 253,
+          "description": "Shared mesh identity across participating clusters"
         },
         "network": {
           "type": "string",
           "maxLength": 63,
-          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+          "description": "Network containing this cluster; different networks use east-west gateways"
         },
         "multiCluster": {
           "type": "object",
@@ -916,7 +1042,8 @@
             "clusterName": {
               "type": "string",
               "maxLength": 63,
-              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+              "description": "Unique, stable cluster identity used by Istio and Polyad"
             }
           }
         }
@@ -933,12 +1060,14 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Serve authenticated composition requests on port 8090 through a ClusterIP Service"
         },
         "existingSecret": {
           "type": "string",
           "maxLength": 63,
-          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+          "description": "Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads"
         },
         "rateLimit": {
           "type": "object",
@@ -949,12 +1078,14 @@
           ],
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Enforce shared Redis/Dragonfly composition request quotas on every logical shard"
             },
             "requestsPerMinute": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 1000000
+              "maximum": 1000000,
+              "description": "Combined submission and audit requests per minute per shard, shared by all replicas"
             }
           }
         },
@@ -973,31 +1104,37 @@
           ],
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Expose the composition Service through a Gateway API v1 HTTPRoute; requires api.enabled"
             },
             "create": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Create a Gateway in this release namespace instead of attaching to an existing Gateway"
             },
             "name": {
               "type": "string",
               "maxLength": 63,
-              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+              "description": "Existing Gateway name when create is false; created Gateways use the release API name"
             },
             "namespace": {
               "type": "string",
               "maxLength": 63,
-              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+              "description": "Existing Gateway namespace; empty uses the release namespace"
             },
             "className": {
               "type": "string",
               "maxLength": 63,
-              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+              "description": "Installed GatewayClass used when create is true"
             },
             "sectionName": {
               "type": "string",
               "maxLength": 63,
               "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Listener name to attach to or create"
             },
             "hostnames": {
               "type": "array",
@@ -1006,12 +1143,14 @@
                 "type": "string",
                 "maxLength": 253,
                 "pattern": "^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
-              }
+              },
+              "description": "DNS hostnames matched by the HTTPRoute; empty matches all listener hostnames"
             },
             "tlsSecret": {
               "type": "string",
               "maxLength": 63,
-              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+              "description": "Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80"
             }
           },
           "allOf": [
@@ -1069,7 +1208,8 @@
         },
         "key": {
           "type": "string",
-          "maxLength": 4096
+          "maxLength": 4096,
+          "description": "Inline composition token; creates a managed Secret and requires existingSecret to be empty"
         }
       },
       "allOf": [
@@ -1092,39 +1232,6 @@
               }
             }
           }
-        },
-        {
-          "if": {
-            "properties": {
-              "enabled": {
-                "const": true
-              }
-            }
-          },
-          "then": {
-            "oneOf": [
-              {
-                "properties": {
-                  "key": {
-                    "const": ""
-                  },
-                  "existingSecret": {
-                    "minLength": 1
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "key": {
-                    "minLength": 1
-                  },
-                  "existingSecret": {
-                    "const": ""
-                  }
-                }
-              }
-            ]
-          }
         }
       ]
     },
@@ -1140,63 +1247,33 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Serve namespace graph observations through a separate SSE Service on port 8091"
         },
         "existingSecret": {
           "type": "string",
           "maxLength": 63,
-          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+          "description": "Existing Secret containing a token key for read-only event subscriptions"
         },
         "key": {
           "type": "string",
-          "maxLength": 4096
+          "maxLength": 4096,
+          "description": "Inline subscriber token; creates a managed Secret and requires existingSecret to be empty"
         },
         "retention": {
           "type": "integer",
           "minimum": 100,
-          "maximum": 100000
+          "maximum": 100000,
+          "description": "Maximum observations retained in the shared replay stream"
         },
         "maxConnections": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 128
+          "maximum": 128,
+          "description": "Maximum simultaneous event subscribers per operator replica"
         }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "enabled": {
-                "const": true
-              }
-            }
-          },
-          "then": {
-            "oneOf": [
-              {
-                "properties": {
-                  "key": {
-                    "const": ""
-                  },
-                  "existingSecret": {
-                    "minLength": 1
-                  }
-                }
-              },
-              {
-                "properties": {
-                  "key": {
-                    "minLength": 1
-                  },
-                  "existingSecret": {
-                    "const": ""
-                  }
-                }
-              }
-            ]
-          }
-        }
-      ]
+      }
     },
     "networkPolicy": {
       "type": "object",
@@ -1212,7 +1289,8 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Isolate operator pods; requires explicit Kubernetes API and cache egress rules"
         },
         "apiServerCIDRs": {
           "type": "array",
@@ -1220,308 +1298,71 @@
           "items": {
             "type": "string",
             "minLength": 3
-          }
+          },
+          "description": "Kubernetes API endpoint CIDRs reachable through this cluster's CNI"
         },
         "apiServerPort": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 65535
+          "maximum": 65535,
+          "description": "Kubernetes API endpoint port after this cluster's service translation"
         },
         "compositionPeers": {
           "type": "array",
           "maxItems": 32,
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "minProperties": 1,
-            "properties": {
-              "namespaceSelector": {
-                "type": "object"
-              },
-              "podSelector": {
-                "type": "object"
-              },
-              "ipBlock": {
-                "type": "object",
-                "required": [
-                  "cidr"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "cidr": {
-                    "type": "string",
-                    "format": "cidr"
-                  },
-                  "except": {
-                    "type": "array",
-                    "maxItems": 32,
-                    "items": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 256
-                    }
-                  }
-                }
-              }
-            },
-            "not": {
-              "required": [
-                "ipBlock"
-              ],
-              "anyOf": [
-                {
-                  "required": [
-                    "namespaceSelector"
-                  ]
-                },
-                {
-                  "required": [
-                    "podSelector"
-                  ]
-                }
-              ]
-            }
-          }
+            "$ref": "#/definitions/networkPeer"
+          },
+          "description": "NetworkPolicy peers allowed to connect to the composition API"
         },
         "eventPeers": {
           "type": "array",
           "maxItems": 32,
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "minProperties": 1,
-            "properties": {
-              "namespaceSelector": {
-                "type": "object"
-              },
-              "podSelector": {
-                "type": "object"
-              },
-              "ipBlock": {
-                "type": "object",
-                "required": [
-                  "cidr"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "cidr": {
-                    "type": "string",
-                    "format": "cidr"
-                  },
-                  "except": {
-                    "type": "array",
-                    "maxItems": 32,
-                    "items": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 256
-                    }
-                  }
-                }
-              }
-            },
-            "not": {
-              "required": [
-                "ipBlock"
-              ],
-              "anyOf": [
-                {
-                  "required": [
-                    "namespaceSelector"
-                  ]
-                },
-                {
-                  "required": [
-                    "podSelector"
-                  ]
-                }
-              ]
-            }
-          }
+            "$ref": "#/definitions/networkPeer"
+          },
+          "description": "NetworkPolicy peers allowed to subscribe to events"
         },
         "healthPeers": {
           "type": "array",
           "maxItems": 32,
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "minProperties": 1,
-            "properties": {
-              "namespaceSelector": {
-                "type": "object"
-              },
-              "podSelector": {
-                "type": "object"
-              },
-              "ipBlock": {
-                "type": "object",
-                "required": [
-                  "cidr"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "cidr": {
-                    "type": "string",
-                    "format": "cidr"
-                  },
-                  "except": {
-                    "type": "array",
-                    "maxItems": 32,
-                    "items": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 256
-                    }
-                  }
-                }
-              }
-            },
-            "not": {
-              "required": [
-                "ipBlock"
-              ],
-              "anyOf": [
-                {
-                  "required": [
-                    "namespaceSelector"
-                  ]
-                },
-                {
-                  "required": [
-                    "podSelector"
-                  ]
-                }
-              ]
-            }
-          }
+            "$ref": "#/definitions/networkPeer"
+          },
+          "description": "Optional monitoring peers allowed to read port 8080 health metrics"
         },
         "extraEgress": {
           "type": "array",
           "maxItems": 32,
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "to": {
                 "type": "array",
                 "maxItems": 32,
                 "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "minProperties": 1,
-                  "properties": {
-                    "namespaceSelector": {
-                      "type": "object"
-                    },
-                    "podSelector": {
-                      "type": "object"
-                    },
-                    "ipBlock": {
-                      "type": "object",
-                      "required": [
-                        "cidr"
-                      ],
-                      "additionalProperties": false,
-                      "properties": {
-                        "cidr": {
-                          "type": "string",
-                          "format": "cidr"
-                        },
-                        "except": {
-                          "type": "array",
-                          "maxItems": 32,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 256
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "not": {
-                    "required": [
-                      "ipBlock"
-                    ],
-                    "anyOf": [
-                      {
-                        "required": [
-                          "namespaceSelector"
-                        ]
-                      },
-                      {
-                        "required": [
-                          "podSelector"
-                        ]
-                      }
-                    ]
-                  }
+                  "$ref": "#/definitions/networkPeer"
                 }
               },
               "ports": {
                 "type": "array",
                 "maxItems": 32,
                 "items": {
-                  "type": "object"
+                  "$ref": "#/definitions/networkPort"
                 }
               }
             }
-          }
+          },
+          "description": "Additional NetworkPolicy egress rules, including any external cache or DNS configuration"
         },
         "metricsPeers": {
           "type": "array",
           "maxItems": 32,
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "minProperties": 1,
-            "properties": {
-              "namespaceSelector": {
-                "type": "object"
-              },
-              "podSelector": {
-                "type": "object"
-              },
-              "ipBlock": {
-                "type": "object",
-                "required": [
-                  "cidr"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "cidr": {
-                    "type": "string",
-                    "format": "cidr"
-                  },
-                  "except": {
-                    "type": "array",
-                    "maxItems": 32,
-                    "items": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 256
-                    }
-                  }
-                }
-              }
-            },
-            "not": {
-              "required": [
-                "ipBlock"
-              ],
-              "anyOf": [
-                {
-                  "required": [
-                    "namespaceSelector"
-                  ]
-                },
-                {
-                  "required": [
-                    "podSelector"
-                  ]
-                }
-              ]
-            }
-          }
+            "$ref": "#/definitions/networkPeer"
+          },
+          "description": "Monitoring peers allowed to scrape the metrics API on port 8092"
         }
       },
       "allOf": [
@@ -1555,10 +1396,12 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Allow graph HTTP and service-identity authorization and generate Istio security resources"
         },
         "install": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled"
         },
         "operator": {
           "type": "object",
@@ -1570,7 +1413,8 @@
           ],
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Inject the operator pods and authorize their API and event ports with Istio"
             },
             "compositionPrincipals": {
               "type": "array",
@@ -1579,7 +1423,8 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256
-              }
+              },
+              "description": "Exact mTLS source identities allowed to use the composition endpoint"
             },
             "eventPrincipals": {
               "type": "array",
@@ -1588,7 +1433,8 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256
-              }
+              },
+              "description": "Exact mTLS source identities allowed to subscribe to events"
             },
             "metricsPrincipals": {
               "type": "array",
@@ -1597,14 +1443,16 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256
-              }
+              },
+              "description": "Exact mTLS source identities allowed to read scheduler metrics"
             },
             "connectionPrincipals": {
               "type": "array",
               "items": {
                 "type": "string",
                 "minLength": 1
-              }
+              },
+              "description": "Exact mTLS source identities allowed to request temporary connections"
             }
           }
         },
@@ -1618,7 +1466,8 @@
           ],
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Install the optional upstream Istio gateway dependency"
             },
             "hosts": {
               "type": "array",
@@ -1627,12 +1476,14 @@
                 "type": "string",
                 "maxLength": 253,
                 "pattern": "^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
-              }
+              },
+              "description": "Hosts served by the Istio Gateway and VirtualService"
             },
             "tlsSecret": {
               "type": "string",
               "maxLength": 63,
-              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+              "description": "TLS credential Secret in the gateway namespace, required when exposing the APIs"
             }
           }
         },
@@ -1646,7 +1497,8 @@
           ],
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Enable the existing or bundled sidecar mesh's multicluster configuration"
             },
             "eastWest": {
               "type": "object",
@@ -1658,7 +1510,8 @@
               ],
               "properties": {
                 "enabled": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "description": "Install a dedicated east-west gateway for separate networks"
                 },
                 "hosts": {
                   "type": "array",
@@ -1668,12 +1521,14 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 253
-                  }
+                  },
+                  "description": "Service SNI suffixes exposed through AUTO_PASSTHROUGH"
                 },
                 "portName": {
                   "type": "string",
                   "maxLength": 63,
-                  "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                  "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                  "description": "Istio Gateway listener name; protocol TLS and AUTO_PASSTHROUGH mode are required by this integration"
                 }
               }
             },
@@ -1698,7 +1553,8 @@
                     "enum": [
                       "Direct",
                       "Gateway"
-                    ]
+                    ],
+                    "type": "string"
                   },
                   "cidrs": {
                     "type": "array",
@@ -1731,7 +1587,8 @@
                     "description": "Remote gateway destination port for outbound tunnel grants; ignored in Direct mode."
                   }
                 }
-              }
+              },
+              "description": "Remote transport registrations; see docs/deployment/multicluster.md for same-network and gateway configurations"
             }
           },
           "allOf": [
@@ -1842,10 +1699,36 @@
       ]
     },
     "istioBase": {
-      "type": "object"
+      "type": "object",
+      "description": "Upstream Istio base chart overrides"
     },
     "istiod": {
-      "type": "object"
+      "type": "object",
+      "description": "Upstream Istio control-plane chart overrides",
+      "properties": {
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "meshConfig": {
+          "type": "object",
+          "properties": {
+            "enableAutoMtls": {
+              "type": "boolean"
+            },
+            "defaultConfig": {
+              "type": "object",
+              "properties": {
+                "holdApplicationUntilProxyStarts": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "istioIngress": {
       "type": "object",
@@ -1871,10 +1754,7 @@
         },
         "annotations": {
           "additionalProperties": {
-            "type": [
-              "string",
-              "integer"
-            ]
+            "type": "string"
           },
           "type": [
             "object",
@@ -1945,7 +1825,10 @@
             "object",
             "null"
           ],
-          "description": "Null retains the pinned upstream Istio profile default."
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Node labels for gateway placement; null retains the upstream default."
         },
         "podAnnotations": {
           "type": [
@@ -1966,7 +1849,10 @@
               "type": "string"
             }
           },
-          "description": "Null retains the pinned upstream Istio profile default."
+          "description": "Null retains the pinned upstream Istio profile default.",
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "resources": {
           "type": [
@@ -2053,7 +1939,10 @@
                 "object",
                 "null"
               ],
-              "description": "Null retains the pinned upstream Istio profile default."
+              "description": "Null retains the pinned upstream Istio profile default.",
+              "additionalProperties": {
+                "type": "string"
+              }
             },
             "selectorLabels": {
               "type": [
@@ -2084,7 +1973,10 @@
                 "array",
                 "null"
               ],
-              "description": "Null retains the pinned upstream Istio profile default."
+              "description": "Null retains the pinned upstream Istio profile default.",
+              "items": {
+                "type": "string"
+              }
             },
             "ipFamilyPolicy": {
               "type": [
@@ -2175,7 +2067,10 @@
             "array",
             "null"
           ],
-          "description": "Null retains the pinned upstream Istio profile default."
+          "items": {
+            "$ref": "#/definitions/toleration"
+          },
+          "description": "Gateway taint tolerations; null retains the upstream default."
         },
         "topologySpreadConstraints": {
           "type": [
@@ -2341,8 +2236,18 @@
             }
           },
           "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "name": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
-      }
+      },
+      "description": "Upstream Istio gateway chart overrides"
     },
     "capacity": {
       "type": "object",
@@ -2356,7 +2261,8 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Allow graph capacity plans to create autoscaler requests and inert placeholder Pods"
         },
         "provisioningClassName": {
           "type": "string",
@@ -2365,16 +2271,19 @@
           "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
           "not": {
             "const": "check-capacity.autoscaling.x-k8s.io"
-          }
+          },
+          "description": "Autoscaler class used when a graph does not select one"
         },
         "maxPods": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 1024
+          "maximum": 1024,
+          "description": "Maximum forecast Pods per graph boundary, also bounded by each graph's maxPods"
         },
         "placeholderImage": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Inert image used to expose advance scheduling demand"
         },
         "priorityClass": {
           "type": "object",
@@ -2386,17 +2295,20 @@
           ],
           "properties": {
             "create": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Install a release-scoped PriorityClass for placeholder Pods"
             },
             "name": {
               "type": "string",
               "maxLength": 253,
-              "pattern": "^$|^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+              "pattern": "^$|^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+              "description": "Existing PriorityClass name, or an override for the generated name"
             },
             "value": {
               "type": "integer",
               "minimum": -1000000000,
-              "maximum": -1
+              "maximum": -1,
+              "description": "Placeholder priority; must meet the autoscaler's cutoff and be below workload priorities"
             }
           }
         }
@@ -2412,33 +2324,39 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement"
         },
         "graphLabels": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes"
         },
         "authentication": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Require a dedicated bearer token on all metrics endpoints"
             },
             "existingSecret": {
               "type": "string",
               "maxLength": 253,
-              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$",
+              "description": "Existing or ESO-managed Secret containing the metrics token"
             },
             "secretKey": {
               "type": "string",
               "minLength": 1,
               "maxLength": 253,
-              "pattern": "^[A-Za-z0-9._-]+$"
+              "pattern": "^[A-Za-z0-9._-]+$",
+              "description": "Key containing the metrics bearer token"
             },
             "key": {
               "type": "string",
               "maxLength": 4096,
-              "pattern": "^[!-~]*$"
+              "pattern": "^[!-~]*$",
+              "description": "Inline metrics token; requires existingSecret to be empty"
             }
           },
           "required": [
@@ -2494,12 +2412,14 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics"
             },
             "name": {
               "type": "string",
               "maxLength": 253,
-              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$",
+              "description": "TriggerAuthentication name; empty uses the release metrics name"
             }
           },
           "required": [
@@ -2517,11 +2437,13 @@
       "additionalProperties": false,
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Generate ExternalSecret resources; requires an installed ESO operator and SecretStore"
         },
         "refreshInterval": {
           "type": "string",
-          "pattern": "^[1-9][0-9]*(s|m|h)$"
+          "pattern": "^[1-9][0-9]*(s|m|h)$",
+          "description": "ESO credential refresh interval"
         },
         "secretStoreRef": {
           "type": "object",
@@ -2530,13 +2452,16 @@
             "name": {
               "type": "string",
               "maxLength": 253,
-              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$"
+              "pattern": "^([a-z0-9]([-a-z0-9.]*[a-z0-9])?)?$",
+              "description": "Existing SecretStore or ClusterSecretStore name"
             },
             "kind": {
               "enum": [
                 "SecretStore",
                 "ClusterSecretStore"
-              ]
+              ],
+              "type": "string",
+              "description": "Secret store reference kind"
             }
           },
           "required": [
@@ -2606,10 +2531,12 @@
               "name",
               "data"
             ]
-          }
+          },
+          "description": "Secret mappings with name and data entries of secretKey and remoteRef; reference names via existingSecret settings"
         },
         "reloadOnChange": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Opt into Stakater Reloader annotations for ESO Secrets, operator and observer Deployments, and Daemons with spec.reloadOnSecretChange; requires externalSecrets.enabled and an installed Reloader"
         }
       },
       "required": [
@@ -2657,7 +2584,8 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Serve service-account authenticated temporary connections on port 8093"
         },
         "scope": {
           "type": "string",
@@ -2665,22 +2593,26 @@
             "Cluster",
             "OperatorNamespace",
             "Namespace"
-          ]
+          ],
+          "description": "Allowed caller and target namespaces: Cluster, OperatorNamespace or Namespace"
         },
         "namespace": {
           "type": "string",
           "maxLength": 63,
-          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "description": "Allowed namespace when scope is Namespace; otherwise empty"
         },
         "maxTtlSeconds": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 86400
+          "maximum": 86400,
+          "description": "Maximum connection lifetime from receipt creation, capped at 86400 seconds"
         },
         "retentionSeconds": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 604800
+          "maximum": 604800,
+          "description": "Retain terminal receipts for retry identity and audit before cleanup"
         }
       },
       "allOf": [
@@ -2733,10 +2665,7 @@
         },
         "annotations": {
           "additionalProperties": {
-            "type": [
-              "string",
-              "integer"
-            ]
+            "type": "string"
           },
           "type": [
             "object",
@@ -2807,7 +2736,10 @@
             "object",
             "null"
           ],
-          "description": "Null retains the pinned upstream Istio profile default."
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Node labels for gateway placement; null retains the upstream default."
         },
         "podAnnotations": {
           "type": [
@@ -2828,7 +2760,10 @@
               "type": "string"
             }
           },
-          "description": "Null retains the pinned upstream Istio profile default."
+          "description": "Null retains the pinned upstream Istio profile default.",
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "resources": {
           "type": [
@@ -2915,7 +2850,10 @@
                 "object",
                 "null"
               ],
-              "description": "Null retains the pinned upstream Istio profile default."
+              "description": "Null retains the pinned upstream Istio profile default.",
+              "additionalProperties": {
+                "type": "string"
+              }
             },
             "selectorLabels": {
               "type": [
@@ -2946,7 +2884,10 @@
                 "array",
                 "null"
               ],
-              "description": "Null retains the pinned upstream Istio profile default."
+              "description": "Null retains the pinned upstream Istio profile default.",
+              "items": {
+                "type": "string"
+              }
             },
             "ipFamilyPolicy": {
               "type": [
@@ -3037,7 +2978,10 @@
             "array",
             "null"
           ],
-          "description": "Null retains the pinned upstream Istio profile default."
+          "items": {
+            "$ref": "#/definitions/toleration"
+          },
+          "description": "Gateway taint tolerations; null retains the upstream default."
         },
         "topologySpreadConstraints": {
           "type": [
@@ -3094,7 +3038,8 @@
                   "maximum": 65535
                 },
                 "protocol": {
-                  "const": "TCP"
+                  "const": "TCP",
+                  "type": "string"
                 }
               }
             }
@@ -3226,8 +3171,18 @@
             }
           },
           "description": "Null retains the pinned upstream Istio profile default."
+        },
+        "name": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
-      }
+      },
+      "description": "Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label"
     },
     "federation": {
       "type": "object",
@@ -3238,7 +3193,8 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters"
         },
         "clusters": {
           "type": "array",
@@ -3268,7 +3224,8 @@
                 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
               }
             }
-          }
+          },
+          "description": "Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only"
         }
       },
       "allOf": [
@@ -3304,20 +3261,24 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Deploy shared read-only observers independently of execution operators"
         },
         "replicaCount": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 32
+          "maximum": 32,
+          "description": "Number of stateless read replicas in this cluster and namespace"
         },
         "existingSecret": {
           "type": "string",
           "maxLength": 63,
-          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$"
+          "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+          "description": "Existing Secret containing a dedicated read credential under token"
         },
         "mesh": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enable native sidecar injection, strict mTLS and source-identity authorization for observer Pods"
         },
         "principals": {
           "type": "array",
@@ -3327,36 +3288,23 @@
             "minLength": 1,
             "maxLength": 256,
             "pattern": "^[^*]+$"
-          }
+          },
+          "description": "Exact source principals allowed to read the observer when observer.mesh is enabled"
         },
         "peers": {
           "type": "array",
           "maxItems": 32,
           "items": {
-            "type": "object"
-          }
+            "$ref": "#/definitions/networkPeer"
+          },
+          "description": "NetworkPolicy peers allowed to reach observer TCP 8094 when networkPolicy.enabled is set"
         },
         "resources": {
-          "type": "object"
+          "$ref": "#/definitions/resourceRequirements",
+          "description": "CPU and memory requests and limits for the read replicas"
         }
       },
       "allOf": [
-        {
-          "if": {
-            "properties": {
-              "enabled": {
-                "const": true
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "existingSecret": {
-                "minLength": 1
-              }
-            }
-          }
-        },
         {
           "if": {
             "properties": {
@@ -3387,7 +3335,8 @@
         "kubeconfigSecret": {
           "type": "string",
           "maxLength": 63,
-          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "description": "Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters"
         },
         "meshPeers": {
           "type": "array",
@@ -3410,7 +3359,8 @@
                 "enum": [
                   "Direct",
                   "Gateway"
-                ]
+                ],
+                "type": "string"
               },
               "cidrs": {
                 "type": "array",
@@ -3443,7 +3393,8 @@
                 "description": "Remote gateway destination port for outbound tunnel grants; ignored in Direct mode."
               }
             }
-          }
+          },
+          "description": "Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster"
         },
         "endpoints": {
           "type": "object",
@@ -3451,15 +3402,18 @@
           "properties": {
             "api": {
               "type": "string",
-              "pattern": "^$|^https?://[^?#]+$"
+              "pattern": "^$|^https?://[^?#]+$",
+              "description": "Externally reachable root composition API URL advertised to workloads"
             },
             "events": {
               "type": "string",
-              "pattern": "^$|^https?://[^?#]+$"
+              "pattern": "^$|^https?://[^?#]+$",
+              "description": "Externally reachable root events URL advertised to workloads"
             },
             "metrics": {
               "type": "string",
-              "pattern": "^$|^https?://[^?#]+$"
+              "pattern": "^$|^https?://[^?#]+$",
+              "description": "Externally reachable root metrics URL advertised to workloads"
             }
           }
         },
@@ -3493,8 +3447,7 @@
                 "default": 1
               },
               "resources": {
-                "type": "object",
-                "x-kubernetes-preserve-unknown-fields": true
+                "$ref": "#/definitions/resourceRequirements"
               },
               "nodeSelector": {
                 "type": "object",
@@ -3505,20 +3458,51 @@
               "tolerations": {
                 "type": "array",
                 "items": {
-                  "type": "object",
-                  "x-kubernetes-preserve-unknown-fields": true
+                  "$ref": "#/definitions/toleration"
                 }
               },
               "name": {
                 "type": "string",
                 "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+              },
+              "controller": {
+                "type": "string",
+                "enum": [
+                  "Deployment",
+                  "DaemonSet"
+                ],
+                "default": "Deployment",
+                "description": "Deployment supports root KEDA replica scaling; DaemonSet runs through an internal PolyGraph on every eligible node and requires replicas: 1."
               }
             },
-            "additionalProperties": false
-          }
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "controller": {
+                      "const": "DaemonSet"
+                    }
+                  },
+                  "required": [
+                    "controller"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "replicas": {
+                      "const": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "description": "Root-owned OperatorPools: unique name and registered cluster, replicas, and optional resources, nodeSelector and tolerations; requires rootControlPlane.enabled"
         },
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Manage registered clusters and remote execution replicas through one root scheduler; requires ha"
         }
       }
     },
@@ -3527,29 +3511,36 @@
       "additionalProperties": false,
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Persist graph state and tracked parameters in PostgreSQL"
         },
         "managed": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Create a CloudNativePG Cluster; install its operator first"
         },
         "existingSecret": {
-          "type": "string"
+          "type": "string",
+          "description": "External database Secret containing the connection DSN when managed is false"
         },
         "secretKey": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "DSN key in the external database Secret"
         },
         "scope": {
-          "type": "string"
+          "type": "string",
+          "description": "State identity within the database; empty uses the release namespace and name"
         },
         "image": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "PostgreSQL image for the managed cluster"
         },
         "maxConnections": {
           "type": "integer",
           "minimum": 20,
-          "maximum": 10000
+          "maximum": 10000,
+          "description": "Maximum connections per managed database instance, including administration"
         },
         "storage": {
           "type": "object",
@@ -3557,10 +3548,12 @@
           "properties": {
             "size": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Persistent storage per PostgreSQL instance"
             },
             "storageClass": {
-              "type": "string"
+              "type": "string",
+              "description": "Storage class; empty uses the cluster default"
             }
           },
           "required": [
@@ -3573,16 +3566,19 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Enable primary plus standby instances and synchronous replication"
             },
             "instances": {
               "type": "integer",
               "minimum": 3,
-              "maximum": 32
+              "maximum": 32,
+              "description": "Total instances when HA is enabled and autoscaling is disabled"
             },
             "topologyKey": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Failure-domain label for required database pod anti-affinity"
             }
           },
           "required": [
@@ -3592,28 +3588,33 @@
           ]
         },
         "resources": {
-          "type": "object"
+          "$ref": "#/definitions/resourceRequirements",
+          "description": "Resource requests and limits for each PostgreSQL instance"
         },
         "autoscaling": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Create a KEDA ScaledObject for the managed Cluster using operator connection counts"
             },
             "minInstances": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 32
+              "maximum": 32,
+              "description": "Minimum instances; at least 3 with HA, never zero"
             },
             "maxInstances": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 32
+              "maximum": 32,
+              "description": "Maximum database instances"
             },
             "connectionsPerInstance": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Operator connections per desired database instance; does not add primary write capacity"
             }
           },
           "required": [
@@ -3622,6 +3623,36 @@
             "maxInstances",
             "connectionsPerInstance"
           ]
+        },
+        "database": {
+          "type": "string",
+          "pattern": "^[a-zA-Z_][a-zA-Z0-9_-]{0,62}$",
+          "description": "Application database for graph state and optional event history; set only when bootstrapping a new managed cluster"
+        },
+        "username": {
+          "type": "string",
+          "pattern": "^[a-zA-Z_][a-zA-Z0-9_-]{0,62}$",
+          "description": "Dedicated application owner; PUBLIC database access is revoked and superuser access stays disabled"
+        },
+        "events": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "retentionDays"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Archive approved application events in PostgreSQL; bounded live replay still uses Dragonfly"
+            },
+            "retentionDays": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3650,
+              "description": "Retain durable event history for this many days; graph snapshots retain current state independently"
+            }
+          }
         }
       },
       "required": [
@@ -3645,15 +3676,18 @@
         "cheegerMinimum": {
           "type": "number",
           "minimum": 0,
-          "maximum": 1
+          "maximum": 1,
+          "description": "Minimum edge expansion of the three-component Graph; the default chain has h=1"
         },
         "expandedNodes": {
           "type": "integer",
           "minimum": 6,
-          "maximum": 1000000
+          "maximum": 1000000,
+          "description": "Maximum recursive vertices in the self-managed Graph"
         },
         "autoscaling": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enable KEDA scaling of all component ReplicaGroup definitions"
         },
         "components": {
           "type": "object",
@@ -3666,25 +3700,30 @@
                 "replicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Initial gateway copies"
                 },
                 "minReplicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Minimum gateway copies"
                 },
                 "maxReplicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Maximum gateway copies"
                 },
                 "requestsPerSecond": {
                   "type": "number",
-                  "exclusiveMinimum": 0
+                  "exclusiveMinimum": 0,
+                  "description": "Target total HTTP requests per second per copy"
                 },
                 "concurrentRequests": {
                   "type": "integer",
-                  "minimum": 1
+                  "minimum": 1,
+                  "description": "Target open HTTP requests and event streams per copy"
                 }
               },
               "required": [
@@ -3702,21 +3741,25 @@
                 "replicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Initial execution copies"
                 },
                 "minReplicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Minimum execution copies"
                 },
                 "maxReplicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Maximum execution copies"
                 },
                 "backlog": {
                   "type": "integer",
-                  "minimum": 1
+                  "minimum": 1,
+                  "description": "Target outstanding graph hints per execution copy across all managed clusters"
                 }
               },
               "required": [
@@ -3733,25 +3776,30 @@
                 "replicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Initial metrics-serving copies"
                 },
                 "minReplicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Minimum metrics-serving copies"
                 },
                 "maxReplicas": {
                   "type": "integer",
                   "minimum": 2,
-                  "maximum": 32
+                  "maximum": 32,
+                  "description": "Maximum metrics-serving copies"
                 },
                 "requestsPerSecond": {
                   "type": "number",
-                  "exclusiveMinimum": 0
+                  "exclusiveMinimum": 0,
+                  "description": "Target total metrics requests per second per copy"
                 },
                 "concurrentRequests": {
                   "type": "integer",
-                  "minimum": 1
+                  "minimum": 1,
+                  "description": "Target concurrent metrics requests per copy"
                 }
               },
               "required": [
@@ -3773,7 +3821,9 @@
           "enum": [
             "Dense",
             "Distributed"
-          ]
+          ],
+          "type": "string",
+          "description": "Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha"
         }
       },
       "required": [
@@ -3784,72 +3834,577 @@
         "mode"
       ]
     },
-    "tags": {
+    "ha": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true."
+    },
+    "tracing": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Opt-in OTLP/HTTP tracing for operator processes and observers.",
       "properties": {
-        "singular": {
-          "type": "boolean"
+        "enabled": {
+          "type": "boolean",
+          "description": "Create a batched trace exporter only when enabled."
         },
-        "ha": {
-          "type": "boolean"
+        "endpoint": {
+          "type": "string",
+          "pattern": "^https?://[^/]+/.*",
+          "description": "Full HTTP/protobuf trace endpoint including its trace path, usually /v1/traces."
+        },
+        "serviceName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Service identity used to group operator traces."
+        },
+        "samplingRatio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of new root traces sampled; parent sampling decisions are honored."
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "description": "Bound the OTLP export request duration in seconds."
+        },
+        "resourceAttributes": {
+          "type": "string",
+          "description": "Comma-separated key=value resource attributes describing the deployment."
+        },
+        "headersSecret": {
+          "type": "string",
+          "description": "Optional existing Secret with exporter credentials in its headers key."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "observationKey": {
+      "required": [
+        "direction",
+        "endpoints"
+      ],
+      "properties": {
+        "direction": {
+          "enum": [
+            "Inbound",
+            "Bidirectional"
+          ],
+          "type": "string"
+        },
+        "endpoints": {
+          "contains": {
+            "const": "observations"
+          }
+        }
+      }
+    },
+    "apiKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "direction",
+        "existingSecret",
+        "requestsPerMinute",
+        "maxConcurrentRequests"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 63,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        },
+        "direction": {
+          "enum": [
+            "Inbound",
+            "Outbound",
+            "Bidirectional"
+          ],
+          "type": "string"
+        },
+        "existingSecret": {
+          "type": "string",
+          "maxLength": 253,
+          "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+          "description": "Existing release-namespace Secret; keep tokens outside Helm values and manage rotation externally."
+        },
+        "secretKey": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "description": "Key inside the referenced Secret; default token for API keys and uri for database DSNs."
+        },
+        "requestsPerMinute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Shared sixty-second request budget for this key across all HA replicas; size for peak caller traffic."
+        },
+        "maxConcurrentRequests": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Shared in-flight request budget for this key, including open event streams; independent of request rate."
+        },
+        "endpoints": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "composition",
+              "activations",
+              "throughput",
+              "events",
+              "topology",
+              "metrics",
+              "observations"
+            ]
+          }
+        },
+        "baseUrl": {
+          "type": "string",
+          "pattern": "^https?://[^/@?#\\s]+(/[^?#\\s]*)?$",
+          "description": "Pinned outbound HTTP(S) origin and path prefix; redirects and destinations outside this prefix are rejected."
+        },
+        "graphs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "namespace"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "namespace": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "Graph",
+                  "PolyGraph",
+                  "ReplicaGroup"
+                ]
+              },
+              "cluster": {
+                "type": "string"
+              },
+              "uid": {
+                "type": "string"
+              },
+              "descendants": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "workloads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "namespace",
+              "env"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "namespace": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "Workload",
+                  "Daemon"
+                ]
+              },
+              "cluster": {
+                "type": "string"
+              },
+              "secret": {
+                "type": "string"
+              },
+              "env": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+              },
+              "containers": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
         }
       },
-      "required": [
-        "singular",
-        "ha"
-      ],
-      "oneOf": [
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "direction": {
+                "const": "Outbound"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "endpoints": {
+                "maxItems": 0
+              }
+            }
+          },
+          "else": {
+            "required": [
+              "endpoints"
+            ],
+            "properties": {
+              "endpoints": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "direction": {
+                "const": "Inbound"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "baseUrl"
+              ]
+            }
+          },
+          "else": {
+            "required": [
+              "baseUrl"
+            ]
+          }
+        }
+      ]
+    },
+    "metricsEnabled": {
+      "anyOf": [
         {
           "properties": {
-            "singular": {
-              "const": false
-            },
-            "ha": {
-              "const": false
+            "metrics": {
+              "properties": {
+                "enabled": {
+                  "const": true
+                }
+              }
             }
           }
         },
         {
           "properties": {
-            "singular": {
-              "const": true
-            },
-            "ha": {
-              "const": false
-            }
-          }
-        },
-        {
-          "properties": {
-            "singular": {
-              "const": false
-            },
-            "ha": {
-              "const": true
+            "dragonfly": {
+              "properties": {
+                "enabled": {
+                  "const": true
+                },
+                "ha": {
+                  "properties": {
+                    "enabled": {
+                      "const": true
+                    }
+                  }
+                },
+                "autoscaling": {
+                  "properties": {
+                    "enabled": {
+                      "const": true
+                    }
+                  }
+                }
+              }
             }
           }
         }
       ]
-    }
-  },
-  "definitions": {
+    },
     "resourceList": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/resourceQuantity"
+      }
+    },
+    "resourceQuantity": {
+      "type": "string",
+      "pattern": "^\\+?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+|[numkMGTPE]|[KMGTPE]i)?$",
+      "description": "Non-negative Kubernetes resource quantity as a string; quote whole cores such as \"1\". Examples: 250m, 0.5, 128Mi, 1Gi."
+    },
+    "resourceRequirements": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "cpu": {
-          "type": "string",
-          "pattern": "^[1-9][0-9]*m$"
+        "requests": {
+          "$ref": "#/definitions/resourceList"
         },
-        "memory": {
+        "limits": {
+          "$ref": "#/definitions/resourceList"
+        }
+      }
+    },
+    "toleration": {
+      "type": "object",
+      "properties": {
+        "key": {
           "type": "string",
-          "pattern": "^[1-9][0-9]*(Mi|Gi)$"
+          "description": "Taint key to match. An empty key requires operator Exists and matches all keys."
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "Exists",
+            "Equal"
+          ],
+          "description": "Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal."
+        },
+        "value": {
+          "type": "string",
+          "description": "Taint value to match when operator is Equal. Omit or leave empty when operator is Exists."
+        },
+        "effect": {
+          "type": "string",
+          "enum": [
+            "",
+            "NoSchedule",
+            "PreferNoSchedule",
+            "NoExecute"
+          ],
+          "description": "Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute."
+        },
+        "tolerationSeconds": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 0,
+          "description": "Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction."
+        }
+      },
+      "description": "One entry in tolerations.",
+      "additionalProperties": false
+    },
+    "labelSelector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "matchLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "matchExpressions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "operator": {
+                "type": "string",
+                "enum": [
+                  "In",
+                  "NotIn",
+                  "Exists",
+                  "DoesNotExist"
+                ]
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "key",
+              "operator"
+            ]
+          }
+        }
+      }
+    },
+    "networkPeer": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "namespaceSelector": {
+          "$ref": "#/definitions/labelSelector"
+        },
+        "podSelector": {
+          "$ref": "#/definitions/labelSelector"
+        },
+        "ipBlock": {
+          "type": "object",
+          "required": [
+            "cidr"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "cidr": {
+              "type": "string",
+              "format": "cidr"
+            },
+            "except": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        }
+      },
+      "not": {
+        "required": [
+          "ipBlock"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "namespaceSelector"
+            ]
+          },
+          {
+            "required": [
+              "podSelector"
+            ]
+          }
+        ]
+      }
+    },
+    "networkPort": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "enum": [
+            "TCP",
+            "UDP",
+            "SCTP"
+          ]
+        },
+        "port": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 15
+            }
+          ]
+        },
+        "endPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
         }
       }
     }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": {
+          "observer": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "authentication": {
+            "properties": {
+              "mode": {
+                "const": "Required"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "observer": {
+                "properties": {
+                  "existingSecret": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "authentication"
+            ],
+            "properties": {
+              "authentication": {
+                "properties": {
+                  "services": {
+                    "contains": {
+                      "$ref": "#/definitions/observationKey"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "authentication"
+            ],
+            "properties": {
+              "authentication": {
+                "properties": {
+                  "operators": {
+                    "contains": {
+                      "$ref": "#/definitions/observationKey"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
     {
       "if": {
         "properties": {
@@ -3916,15 +4471,7 @@
         }
       },
       "then": {
-        "properties": {
-          "metrics": {
-            "properties": {
-              "enabled": {
-                "const": true
-              }
-            }
-          }
-        }
+        "$ref": "#/definitions/metricsEnabled"
       }
     },
     {
@@ -3947,12 +4494,14 @@
         }
       },
       "then": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/metricsEnabled"
+          }
+        ],
         "properties": {
           "metrics": {
             "properties": {
-              "enabled": {
-                "const": true
-              },
               "authentication": {
                 "properties": {
                   "enabled": {

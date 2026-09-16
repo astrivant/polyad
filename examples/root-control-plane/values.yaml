@@ -1,7 +1,6 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # Install only in the management cluster, in namespace polyad.
-tags:
-  singular: false
-  ha: true
+ha: true
 global:
   multiCluster:
     clusterName: management

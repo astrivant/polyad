@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Types for the CloudNativePG operator settings used by this separate infrastructure example, pinned to chart 0.29.0. This is not Polyad release configuration.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "replicaCount": {"type": "integer", "minimum": 1},
+    "crds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"create": {"type": "boolean"}}
+    }
+  }
+}

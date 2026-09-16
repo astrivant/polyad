@@ -59,7 +59,7 @@ def prepare(tag: str) -> None:
     for path in ("pyproject.toml", "pkg/client/pyproject.toml"):
         replace(path, r'^(\s*)"polyad-types==[^"\n]+",?$', rf'\g<1>"polyad-types=={package}",')
     # The local path dependency's version and the root dependency metadata change
-    # together. Refresh this entry; Poetry refreshes the content hash before install.
+    # together. Refresh this entry; the composite action refreshes the lock before builds.
     replace(
         "poetry.lock",
         r'(^name = "polyad-types"\nversion = )"[^"\n]+"',

@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+ha: true
+rootControlPlane:
+  enabled: true
+  kubeconfigSecret: root-access
+federation:
+  enabled: true
+  clusters:
+    - name: west
+      namespace: workloads
+      kubeconfigSecret: west-access
+global:
+  multiCluster:
+    clusterName: management
+dragonfly:
+  enabled: false
+  existingSecret: root-cache
+metrics:
+  enabled: true

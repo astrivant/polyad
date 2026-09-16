@@ -97,6 +97,8 @@ class EventStore:
         visible: Callable[[dict[str, Any]], Awaitable[bool]],
         retention: int = 10000,
         cluster: str | None = None,
+        ancestry: Callable[[dict[str, Any]], Awaitable[list[dict[str, str]]]] | None = None,
+        archive: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
     ) -> None:
         """
         Configure the namespace stream and maximum retained event count.
@@ -107,6 +109,8 @@ class EventStore:
             visible (Callable[[dict[str, Any]], Awaitable[bool]]): Required graph-family visibility check before publication.
             retention (int): Maximum retained observations and deduplication identities.
             cluster (str | None): Remote stream identity when reports are held at the root.
+            ancestry (Callable[[dict[str, Any]], Awaitable[list[dict[str, str]]]] | None): Verified graph ownership reader.
+            archive (Callable[[dict[str, Any]], Awaitable[None]] | None): Optional durable archive of approved event payloads.
         """
         if not 100 <= retention <= 100000:
             raise ValueError("event retention must be between 100 and 100000")
@@ -117,6 +121,8 @@ class EventStore:
         self.visible = visible
         self.retention = retention
         self.cluster = cluster
+        self.ancestry = ancestry
+        self.archive = archive
 
     async def publish(self, obj: dict[str, Any], *, topology: dict[str, Any] | None = None) -> None:
         """
@@ -132,6 +138,7 @@ class EventStore:
         if not await self.visible(obj):
             return
         meta, status = obj["metadata"], obj.get("status", {})
+        ancestry = await self.ancestry(obj) if self.ancestry else []
         metrics = status.get("metrics", {})
         payload = {
             **({"cluster": self.cluster} if self.cluster else {}),
@@ -144,16 +151,21 @@ class EventStore:
             "resourceVersion": meta["resourceVersion"],
             "generation": meta.get("generation", 1),
             "owners": [{key: owner[key] for key in ("kind", "name", "uid")} for owner in meta.get("ownerReferences", [])],
+            "ancestry": ancestry,
             "audit": {
                 key: value
                 for key, value in meta.get("labels", {}).items()
                 if key.startswith(f"{GROUP}/") and any(part in key for part in ("request", "composition", "node"))
             },
             "status": {
-                key: status[key] for key in ("phase", "ready", "completed", "failed", "observedGeneration", "activations") if key in status
+                key: status[key]
+                for key in ("phase", "ready", "completed", "failed", "observedGeneration", "activations", "throughput")
+                if key in status
             },
             "resources": metrics.get("resources", {}),
         }
+        if self.archive is not None:
+            await self.archive(payload)
         await cast(
             "Awaitable[Any]",
             self.cache.client.eval(
@@ -161,13 +173,14 @@ class EventStore:
             ),
         )
         if topology is not None:
-            snapshot = {**topology, "observedAt": time.time()}
+            snapshot = {**topology, "observedAt": time.time(), "ancestry": ancestry}
             if self.cluster:
                 snapshot["graph"] = {**snapshot["graph"], "cluster": self.cluster}
             event = {
                 **({"cluster": self.cluster} if self.cluster else {}),
                 **{key: payload[key] for key in ("apiVersion", "kind", "namespace", "name", "uid", "generation", "resourceVersion")},
                 "type": "topology",
+                "ancestry": ancestry,
                 "revision": topology["revision"],
                 "snapshot": f"/v1/graphs/{obj['kind']}/{meta['name']}/topology"
                 + ("?" + urlencode({"cluster": self.cluster}) if self.cluster else ""),
@@ -175,6 +188,8 @@ class EventStore:
                 "nodeCount": len(topology["nodes"]),
                 "connectionCount": len(topology["connections"]),
             }
+            if self.archive is not None:
+                await self.archive(event)
             await cast(
                 "Awaitable[Any]",
                 self.cache.client.eval(

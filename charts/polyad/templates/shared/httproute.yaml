@@ -32,6 +32,9 @@ spec:
             value: /v1/activations
         - path:
             type: Exact
+            value: /v1/throughput
+        - path:
+            type: Exact
             value: /openapi.json
       backendRefs:
         - name: {{ .Release.Name }}-polyad-api

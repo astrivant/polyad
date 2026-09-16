@@ -65,15 +65,21 @@ def scale_request(target, replicas):
     """
     Pin a remote ReplicaGroup incarnation in a root-local scale request.
     """
-    return resource(
+    intent = resource(
         "RemoteScale",
         "consumers",
         {
             "cluster": "west",
             "replicas": replicas,
-            "target": {"name": target["metadata"]["name"], "uid": target["metadata"]["uid"]},
+            "target": {
+                "name": target["metadata"]["name"],
+                "uid": target["metadata"]["uid"],
+                "generation": target["metadata"]["generation"],
+            },
         },
     )
+    target["spec"]["remoteScaling"] = {"root": "management", **{key: intent["metadata"][key] for key in ("namespace", "name", "uid")}}
+    return intent
 
 
 def test_remote_workers_never_elect_a_planner_and_stop_on_root_heartbeat_loss(monkeypatch):
@@ -173,10 +179,10 @@ def test_root_scale_reuses_live_graph_rules_and_retains_existing_execution():
 
     async def scenario():
         target = group(1)
+        intent = scale_request(target, 3)
         remote = ManagementAPI(target, resource("Daemon", "worker", {"template": template(True)}))
         await turn(remote)
         original = remote.children("Deployment")[0]["metadata"]["uid"]
-        intent = scale_request(target, 3)
         root_api = ManagementAPI(intent)
         pools = manager(root_api, remote)
         remote.objects[("GraphRule", "test", "limit")] = resource("GraphRule", "limit", {"limits": {"nodes": 2}})
@@ -184,7 +190,7 @@ def test_root_scale_reuses_live_graph_rules_and_retains_existing_execution():
         status = root_api.children("RemoteScale")[0]["status"]
         assert status["phase"] == "Pending" and status["replicas"] == 1
         assert status["labelSelector"] == "polyad.astrivant.com/root-scale=uid-consumers"
-        assert remote.objects[("ReplicaGroup", "test", "copies")]["spec"]["replicas"] == 3
+        assert remote.objects[("ReplicaGroup", "test", "copies")]["spec"]["replicas"] == 1
         with pytest.raises(ValueError):
             await Controller(remote).reconcile(("ReplicaGroup", "test", "copies"))
         assert [item["metadata"]["uid"] for item in remote.children("Deployment")] == [original]
@@ -196,7 +202,7 @@ def test_root_scale_reuses_live_graph_rules_and_retains_existing_execution():
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("failure", ["replaced", "bounds", "inherited", "duplicate"])
+@pytest.mark.parametrize("failure", ["replaced", "bounds", "inherited", "duplicate", "opt-out", "local-edit", "reserved", "local-cluster"])
 def test_remote_scale_rejects_ambiguous_or_invalid_targets(failure):
     """
     Root requests cannot accidentally scale a replacement, violate limits or compete for a target.
@@ -211,11 +217,20 @@ def test_remote_scale_rejects_ambiguous_or_invalid_targets(failure):
             target["spec"]["maxReplicas"] = 1
         elif failure == "inherited":
             target["spec"]["replicaSource"] = {"name": "source", "uid": "source-uid"}
+        elif failure == "opt-out":
+            del target["spec"]["remoteScaling"]
+        elif failure == "local-edit":
+            target["metadata"]["generation"] += 1
+        elif failure == "reserved":
+            target["metadata"]["labels"] = {"polyad.astrivant.com/internal": "true"}
+        elif failure == "local-cluster":
+            intent["spec"]["cluster"] = "management"
         root_api, remote = ManagementAPI(intent), ManagementAPI(target)
         if failure == "duplicate":
             other = copy.deepcopy(intent)
             other["metadata"].update(name="duplicate", uid="another")
             root_api.objects[("RemoteScale", "test", "duplicate")] = other
+            intent = other
         with pytest.raises(ValueError):
             await manager(root_api, remote).scale(intent)
         assert not remote.calls
@@ -255,20 +270,32 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
                             {
                                 "name": "operator",
                                 "image": "polyad:v1",
+                                "command": ["/usr/bin/tini", "--", "python", "-m", "polyad.operator.runtime"],
                                 "env": [
                                     {"name": "POLYAD_ROOT_ENABLED", "value": "true"},
                                     {"name": "POLYAD_CACHE_URL", "valueFrom": {"secretKeyRef": {"name": "access", "key": "url"}}},
+                                    {"name": "POLYAD_AUTH_CONFIG_FILE", "value": "/var/run/polyad/authentication/config.json"},
+                                    {"name": "POLYAD_TRACING_ENABLED", "value": "true"},
+                                    {
+                                        "name": "OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+                                        "valueFrom": {"secretKeyRef": {"name": "tracing", "key": "headers"}},
+                                    },
                                 ],
                             }
                         ],
-                        "volumes": [{"name": "root", "secret": {"secretName": "access"}}],
+                        "volumes": [
+                            {"name": "root", "secret": {"secretName": "access"}},
+                            {"name": "authentication", "projected": {"sources": []}},
+                        ],
                     },
                 }
             },
         )
         secret = resource("Secret", "access")
         secret["data"] = {"config": "e30=", "url": "cmVkaXM6Ly9jYWNoZQ=="}
-        root_api, remote = ManagementAPI(pool, root_deployment, secret), ManagementAPI()
+        tracing_secret = resource("Secret", "tracing")
+        tracing_secret["data"] = {"headers": "YXV0aG9yaXphdGlvbj10b2tlbg=="}
+        root_api, remote = ManagementAPI(pool, root_deployment, secret, tracing_secret), ManagementAPI()
         pools = manager(root_api, remote)
         with pytest.raises(Pending, match="ownership recorded"):
             await pools.pool(pool)
@@ -281,6 +308,7 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
         assert deployed["spec"]["replicas"] == 2
         pod = deployed["spec"]["template"]
         assert pod["spec"]["automountServiceAccountToken"] is False
+        assert pod["spec"]["containers"][0]["command"] == ["/usr/bin/tini", "--", "python", "-m", "polyad.operator.runtime"]
         assert "serviceAccountName" not in pod["spec"]
         assert pod["metadata"]["labels"] != root_deployment["spec"]["template"]["metadata"]["labels"]
         env = {item["name"]: item for item in pod["spec"]["containers"][0]["env"]}
@@ -288,8 +316,16 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
         assert env["KUBECONFIG"]["value"] == "/var/run/polyad/root/config"
         assert env["POLYAD_API_ENABLED"]["value"] == "false"
         assert env["POLYAD_CACHE_URL"]["valueFrom"]["secretKeyRef"]["name"] == remote.children("Secret")[0]["metadata"]["name"]
+        assert "POLYAD_AUTH_CONFIG_FILE" not in env
+        assert env["POLYAD_TRACING_ENABLED"]["value"] == "true"
+        trace_secret_name = env["OTEL_EXPORTER_OTLP_TRACES_HEADERS"]["valueFrom"]["secretKeyRef"]["name"]
+        assert trace_secret_name != "tracing"
+        assert (
+            next(obj for obj in remote.children("Secret") if obj["metadata"]["name"] == trace_secret_name)["data"] == tracing_secret["data"]
+        )
+        assert all(volume["name"] != "authentication" for volume in pod["spec"].get("volumes", []))
         old_revision = pod["metadata"]["annotations"].copy()
-        root_api.objects[("Secret", "test", "access")]["metadata"]["resourceVersion"] = "2"
+        root_api.objects[("Secret", "test", "tracing")]["metadata"]["resourceVersion"] = "2"
         root_api.objects[("Deployment", "test", "root")]["spec"]["template"]["spec"]["containers"][0]["image"] = "polyad:v2"
         pool = await root_api.get("OperatorPool", "test", "west")
         pool["spec"]["replicas"] = 0

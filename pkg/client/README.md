@@ -4,10 +4,23 @@ A typed Python 3.11–3.14 client for Polyad's composition, activation, event an
 
 `connect(document)`, `connection(namespace, request_id)` and
 `disconnect(namespace, request_id)` use the separate connections Service and a
-projected service-account token. See the [temporary connections guide](https://github.com/astrivant/polyad/blob/main/docs/temporary-connections.md)
+projected service-account token. See the [temporary connections guide](https://github.com/astrivant/polyad/blob/main/docs/apis/temporary-connections.md)
 for token rotation, namespace scope, TTL and cleanup semantics.
 It uses the shared [polyad-types](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/README.md) models and
 does not install the operator.
+
+## Table of contents
+
+- [Installation](#installation)
+- [Observations](#observations)
+- [Activation](#activation)
+- [Composition and request handling](#composition-and-request-handling)
+- [Events and topology](#events-and-topology)
+- [Remote clusters](#remote-clusters)
+- [Throughput feedback](#throughput-feedback)
+- [Publishing](#publishing)
+
+## Installation
 
 Install from a checkout:
 
@@ -18,11 +31,15 @@ pip install ./pkg/polyad-types ./pkg/client
 Release CI builds and publishes `polyad-client` separately from `polyad`.
 Once that release is available, install it with `pip install polyad-client`.
 
+## Observations
+
 Optional shared read replicas expose `observe(name, kind="Graph")` on a separate
 observer Service. Construct a client with that Service's URL and read credential
 to retrieve cluster identity, observation time, topology and execution metrics.
 Observers have no execution authority. See
-[observer configuration](https://github.com/astrivant/polyad/blob/main/docs/multicluster.md#optional-shared-observers).
+[observer configuration](https://github.com/astrivant/polyad/blob/main/docs/deployment/multicluster.md#optional-shared-observers).
+
+## Activation
 
 ```python
 import os
@@ -48,9 +65,11 @@ Inside a managed workload, Polyad injects the graph instance identity and enable
 operator endpoint URLs into every declared application and init container.
 `process-batch` is the downstream target in that graph; `POLYAD_NODE_NAME`
 identifies the calling workload's own node. Supply `POLYAD_API_TOKEN` explicitly
-from an authorized Secret. See [workload environment](https://github.com/astrivant/polyad/blob/main/docs/workload-environment.md)
+from an authorized Secret. See [workload environment](https://github.com/astrivant/polyad/blob/main/docs/workloads/workload-environment.md)
 for ancestry, Pod identity, activation IDs and the full variable contract.
 Outside managed Pods, supply the operator URL and graph instance identity yourself.
+
+## Composition and request handling
 
 `compose(document)` submits ID-addressed graph definitions and accepts either a
 `polyad_types.CompositionRequest` or a dictionary. `connect(document)` likewise
@@ -64,6 +83,8 @@ raise standard-library network exceptions. Requests have a finite configurable
 timeout and no automatic retries. Retry uncertain submissions with the **same
 request ID and content**. Redirects are rejected to keep bearer credentials at
 the configured endpoint. Use HTTPS when connecting through an external gateway.
+
+## Events and topology
 
 For events, use a separate client with the events Service URL and events token:
 
@@ -97,18 +118,28 @@ Topology notifications include ReplicaGroup scaling, connection edits and change
 to observed execution membership. Fetch the latest snapshot on a `topology`
 event for the relevant graph UID; compare its revision to the last snapshot applied
 by your application. Topology events can share a graph resource version. See
-[workload topology events](https://github.com/astrivant/polyad/blob/main/docs/workload-events.md) for startup and recovery.
+[workload topology events](https://github.com/astrivant/polyad/blob/main/docs/workloads/workload-events.md) for startup and recovery.
 
 Handle `reset` by refreshing the snapshot and cursor; reconnect explicitly
 after `unavailable`, disconnects or timeouts. HTTP 410 means the cursor expired.
 Closing the iterator closes its connection. API tokens remain namespace-scoped;
 cross-namespace callers also need the corresponding network and identity grants.
 
-See the repository's [activation guide](https://github.com/astrivant/polyad/blob/main/docs/activation.md) and
-[networking guide](https://github.com/astrivant/polyad/blob/main/docs/networking.md) for policies and deployment settings.
+See the repository's [activation guide](https://github.com/astrivant/polyad/blob/main/docs/workloads/activation.md) and
+[networking guide](https://github.com/astrivant/polyad/blob/main/docs/deployment/networking.md) for policies and deployment settings.
 
-See [manual PyPI publishing](https://github.com/astrivant/polyad/blob/main/docs/toolchain.md#manual-pypi-publishing) for Poetry release commands.
+## Remote clusters
 
-With a [root control plane](../../docs/root-control-plane.md), pass `cluster="west"`
+With a [root control plane](../../docs/deployment/root-control-plane.md), pass `cluster="west"`
 to `topology()` and `events()` when reading a registered remote cluster through the
 root event endpoint. Replay cursors belong to their selected cluster stream.
+
+## Throughput feedback
+
+The client also exposes `report_throughput(ThroughputSample(...))` for
+[application throughput feedback](../../docs/graphs/throughput-feedback.md). Its key needs
+the `throughput` capability and an explicit grant to the measured graph tree.
+
+## Publishing
+
+See [manual PyPI publishing](https://github.com/astrivant/polyad/blob/main/docs/development/toolchain.md#manual-pypi-publishing) for Poetry release commands.

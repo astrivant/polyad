@@ -109,6 +109,40 @@ class DeploymentSpec(AST):
 
 
 @frozen(kw_only=True)
+class DaemonSetSpec(AST):
+    """
+    Run one persistent Pod on each eligible node without a replica-count field.
+
+    Attributes:
+        template (PodTemplate): Application Pod template and node placement.
+        selector (LabelSelector): Operator-managed Pod selector.
+        updateStrategy (dict[str, Any]): Native RollingUpdate or OnDelete policy.
+        minReadySeconds (int): Minimum ready duration before a Pod is available.
+    """
+
+    template: PodTemplate
+    selector: LabelSelector
+    updateStrategy: dict[str, Any] = field(factory=lambda: {"type": "RollingUpdate"})
+    minReadySeconds: int = 0
+
+
+@frozen(kw_only=True)
+class DaemonSet(Resource):
+    """
+    An apps/v1 persistent workload scheduled by node eligibility.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): API identity and graph ownership descriptor.
+        spec (DaemonSetSpec): Desired controller configuration.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "DaemonSet", "apps/v1", "daemonsets", description="One daemon execution per eligible node.", graph_owned=True
+    )
+    spec: DaemonSetSpec
+
+
+@frozen(kw_only=True)
 class StatefulSetSpec(AST):
     """
     Describe persistent execution with stable Pod identities and per-replica claims.
@@ -639,6 +673,34 @@ class PodTemplateResource(Resource):
 
 
 @frozen(kw_only=True)
+class DragonflyPool(SpecResource):
+    """
+    Bounded scale intent for the operator's bundled HA cache.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Internal cache scaling API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "DragonflyPool", f"{GROUP}/{VERSION}", "dragonflypools", description="Bounded replica requests for bundled HA Dragonfly."
+    )
+
+
+@frozen(kw_only=True)
+class Dragonfly(SpecResource):
+    """
+    Upstream Dragonfly instance managed through its declared replica count.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Upstream cache API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Dragonfly", "dragonflydb.io/v1alpha1", "dragonflies", description="Upstream Dragonfly cache instance."
+    )
+
+
+@frozen(kw_only=True)
 class OperatorPool(SpecResource):
     """
     Root-managed remote operator execution capacity.
@@ -703,6 +765,8 @@ class CustomResourceDefinition(SpecResource):
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     Secret,
     CustomResourceDefinition,
+    Dragonfly,
+    DragonflyPool,
     OperatorPool,
     RemoteScale,
     Activation,
@@ -718,6 +782,7 @@ RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     Pod,
     Job,
     Deployment,
+    DaemonSet,
     StatefulSet,
     Lease,
     Service,

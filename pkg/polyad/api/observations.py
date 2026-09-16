@@ -4,14 +4,16 @@ Expose authenticated graph observations without granting execution authority.
 
 from __future__ import annotations
 
-import hmac
 import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from flask import Flask, jsonify, request
+from flask import jsonify
 
+from polyad.api.application import Routes
 from polyad.api.errors import Unavailable
+from polyad.auth.http import install
+from polyad.auth.policy import public_demo
 from polyad.events.topology import topology_snapshot
 from polyad.metrics.workloads import current_observation
 from polyad.operator.api import API
@@ -22,7 +24,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
-    from flask import Response
+    from flask import Flask, Response
+
+    from polyad.auth.http import Access
 
 
 class ObservationAPI(API):
@@ -93,27 +97,30 @@ async def observe(api: API, cluster: str, namespace: str, kind: str, name: str) 
     }
 
 
-def build_app(lookup: Callable[[str, str], dict[str, Any] | None], token: str) -> Flask:
+def build_app(
+    lookup: Callable[[str, str], dict[str, Any] | None], token: str, *, access: Access | None = None, application: Flask | None = None
+) -> Flask:
     """
     Build a dedicated observation API with no deployment, scaling or topology mutation routes.
 
     Args:
         lookup (Callable[[str, str], dict[str, Any] | None]): Fresh namespace-scoped observation callback.
         token (str): Nonempty Secret-backed read credential.
+        access (Access | None): Named operator/service read credentials with shared lanes.
+        application (Flask | None): Existing process application for blueprint registration.
 
     Returns:
         Flask: Authenticated, uncached, GET-only graph observation application.
     """
-    if not token or any(ord(char) < 33 or ord(char) > 126 for char in token):
+    if (
+        not public_demo()
+        and not (access and access.supports("observations"))
+        and (not token or any(ord(char) < 33 or ord(char) > 126 for char in token))
+    ):
         raise ValueError("observers require a nonempty printable bearer token without whitespace")
-    app = Flask(__name__)
-    app.config["MAX_CONTENT_LENGTH"] = 1024
+    app = Routes("observations", application, max_body=1024)
 
-    @app.before_request
-    def authenticate() -> tuple[Response, int] | None:
-        if not hmac.compare_digest(request.headers.get("Authorization", "").encode(), f"Bearer {token}".encode()):
-            return jsonify(error="unauthorized"), 401
-        return None
+    install(app, "observations", token, access)
 
     @app.get("/v1/observations/<kind>/<name>")
     def graph(kind: str, name: str) -> tuple[Response, int]:
@@ -136,7 +143,7 @@ def build_app(lookup: Callable[[str, str], dict[str, Any] | None], token: str) -
                 "openapi": "3.0.3",
                 "info": {"title": "Polyad graph observations", "version": "v1alpha1"},
                 "components": {"securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}}},
-                "security": [{"bearerAuth": []}],
+                "security": [] if public_demo() else [{"bearerAuth": []}],
                 "paths": {
                     "/v1/observations/{kind}/{name}": {
                         "get": {
@@ -148,8 +155,10 @@ def build_app(lookup: Callable[[str, str], dict[str, Any] | None], token: str) -
                                 for code, description in (
                                     (200, "Fresh cluster-local observation"),
                                     (401, "Invalid read credential"),
+                                    (403, "Credential does not authorize observations"),
                                     (404, "Graph absent"),
                                     (422, "Invalid graph reference"),
+                                    (429, "Credential rate or concurrency budget exhausted"),
                                     (503, "Fresh observation unavailable"),
                                 )
                             },
@@ -164,4 +173,4 @@ def build_app(lookup: Callable[[str, str], dict[str, Any] | None], token: str) -
         response.headers["Cache-Control"] = "no-store"
         return response
 
-    return app
+    return app.finish()
