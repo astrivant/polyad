@@ -50,6 +50,7 @@ class EventServer:
         app = (
             EventAPIBuilder(stopping=self.stopping, max_connections=connections, limits=policy)
             .with_handlers(lambda cursor: self.invoke(store.cursor(cursor)), lambda cursor: self.invoke(store.read(cursor)))
+            .with_topology_handler(lambda kind, name, uid, node: self.invoke(store.topology(kind, name, uid, node)))
             .with_bearer_token(token)
             .build()
         )

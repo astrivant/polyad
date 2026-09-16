@@ -5,6 +5,7 @@ Verify bounded event replay, authentication and replica replacement health.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from threading import Event
 from uuid import uuid4
@@ -14,8 +15,9 @@ from openapi_spec_validator import validate
 
 from polyad.events.builder import EventAPIBuilder
 from polyad.events.store import CursorExpired, EventStore
+from polyad.events.topology import topology_snapshot
 from polyad.operator import health as health_state
-from tests.test_operator import resource
+from tests.test_operator import FakeAPI, resource
 
 
 def test_events_are_authenticated_and_have_a_separate_openapi_schema():
@@ -112,8 +114,27 @@ def test_replicas_share_replay_deduplication_and_retention():
             with pytest.raises(ValueError):
                 await second.cursor("not-an-id")
             assert len(await second.read("0-0")) == 64
+            obj["spec"] = {"mode": "persistent", "nodes": [{"name": "one", "kind": "Daemon", "ref": "worker"}]}
+            snapshot = await topology_snapshot(FakeAPI(obj), obj)
+            assert snapshot["valid"]
+            await first.publish(obj, topology=snapshot)
+            initial = await second.topology("Graph", "graph", obj["metadata"]["uid"])
+            before = await second.cache.client.xlen(second.key)
+            await second.publish(obj, topology=snapshot)
+            assert await second.cache.client.xlen(second.key) == before
+            assert (await second.topology("Graph", "graph"))["cursor"] == initial["cursor"]
+            # A changed membership can arrive with the same graph resourceVersion.
+            obj["spec"]["nodes"].append({"name": "two", "kind": "Daemon", "ref": "worker"})
+            snapshot = await topology_snapshot(FakeAPI(obj), obj)
+            await first.publish(obj, topology=snapshot)
+            changes = await second.read(initial["cursor"])
+            assert len(changes) == 1 and json.loads(changes[0][1])["type"] == "topology"
+            current = await second.topology("Graph", "graph")
+            assert current["revision"] == snapshot["revision"]
+            assert current["cursor"] == changes[0][0]
+            assert len(current["nodes"]) == 2
         finally:
-            await first.cache.client.delete(first.key, first.key + ":versions")
+            await first.cache.client.delete(first.key, first.key + ":versions", first.key + ":topologies")
             await first.close()
             await second.close()
 
@@ -179,7 +200,8 @@ def test_live_event_server_streams_and_stops_cleanly(monkeypatch):
         server = EventServer(store, namespace, "subscriber", port=0, connections=1)
         try:
             obj = resource("Graph", "sample")
-            await store.publish(obj)
+            obj["metadata"]["namespace"] = namespace
+            await store.publish(obj, topology=await topology_snapshot(FakeAPI(obj), obj))
 
             def receive():
                 req = urllib.request.Request(
@@ -197,9 +219,20 @@ def test_live_event_server_streams_and_stops_cleanly(monkeypatch):
 
             result = await asyncio.to_thread(receive)
             assert '"name": "sample"' in result
+
+            def neighbors():
+                req = urllib.request.Request(
+                    f"http://127.0.0.1:{server.server.effective_port}/v1/graphs/Graph/sample/topology?uid=uid-sample",
+                    headers={"Authorization": "Bearer subscriber"},
+                )
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    return json.load(response)
+
+            view = await asyncio.to_thread(neighbors)
+            assert view["graph"]["namespace"] == namespace and view["cursor"] != "0-0"
         finally:
             await server.close()
-            await store.cache.client.delete(store.key, store.key + ":versions")
+            await store.cache.client.delete(store.key, store.key + ":versions", store.key + ":topologies")
             await store.close()
         assert not server.thread.is_alive()
 

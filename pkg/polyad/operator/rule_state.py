@@ -212,12 +212,8 @@ async def check_live_rules(api: API, obj: dict[str, Any], *, candidate: dict[str
             # Keep retiring ordinals in the sibling projection while reserving all
             # requested scale-out ordinals, including a shared source's other uses.
             if not is_target:
-                names = {node["name"] for node in projected["nodes"]}
-                for child in live_children:
-                    ordinal = child["metadata"].get("labels", {}).get(f"{GROUP}/node")
-                    if ordinal and ordinal not in names:
-                        projected["nodes"].append({"name": ordinal, **body["template"]})
-                        names.add(ordinal)
+                retained = {ordinal for child in live_children if (ordinal := child["metadata"].get("labels", {}).get(f"{GROUP}/node"))}
+                projected = replica_topology(body, retained=retained)
             body = projected
         elif is_target and body != obj["spec"]:
             raise Pending("graph intent changed before structural rule evaluation")

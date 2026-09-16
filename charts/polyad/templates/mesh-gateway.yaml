@@ -31,6 +31,8 @@ spec:
         - uri:
             exact: /v1/events
         - uri:
+            prefix: /v1/graphs/
+        - uri:
             exact: /events/openapi.json
       rewrite:
         uriRegexRewrite:

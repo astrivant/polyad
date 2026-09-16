@@ -16,6 +16,8 @@ from polyad.graph.network import TrafficRule as TrafficRule
 from polyad.graph.operations import Operation as Operation
 from polyad.graph.operations import OperationQueue as OperationQueue
 from polyad.graph.operations import ProcessOwner as ProcessOwner
+from polyad.graph.replication import ReplicaConnection as ReplicaConnection
+from polyad.graph.replication import ReplicaConnectivity as ReplicaConnectivity
 from polyad.graph.replication import ReplicaTemplate as ReplicaTemplate
 from polyad.graph.replication import Replication as Replication
 from polyad.graph.rewrites import Rewrite as Rewrite

@@ -7,12 +7,14 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 from typing import TYPE_CHECKING, cast
 
 from redis.exceptions import ResponseError
 
 from polyad.cache import Cache
 from polyad.compiler.asts import GROUP
+from polyad.events.topology import neighbors
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
@@ -46,6 +48,34 @@ end
 return redis.call('XRANGE', KEYS[1], '(' .. ARGV[1], '+', 'COUNT', 64)
 """
 
+PUBLISH_TOPOLOGY = """
+local previous = redis.call('HGET', KEYS[2], ARGV[1])
+local changed = not previous or cjson.decode(previous).revision ~= ARGV[3]
+if not previous and redis.call('HLEN', KEYS[2]) >= tonumber(ARGV[5]) then
+    redis.call('DEL', KEYS[2])
+end
+local id = false
+if changed then
+    id = redis.call('XADD', KEYS[1], 'MAXLEN', ARGV[5], '*', 'event', ARGV[4])
+end
+redis.call('HSET', KEYS[2], ARGV[1], ARGV[2])
+redis.call('EXPIRE', KEYS[2], 86400)
+return id
+"""
+
+SNAPSHOT = """
+local snapshot = redis.call('HGET', KEYS[2], ARGV[1])
+if not snapshot then return false end
+local last = redis.call('XREVRANGE', KEYS[1], '+', '-', 'COUNT', 1)
+return {snapshot, #last > 0 and last[1][1] or '0-0'}
+"""
+
+
+class TopologyReplaced(ValueError):
+    """
+    Reject a snapshot belonging to a replacement graph incarnation.
+    """
+
 
 class CursorExpired(ValueError):
     """
@@ -73,12 +103,13 @@ class EventStore:
         self.key = f"polyad:{{events:{namespace}}}:observations"
         self.retention = retention
 
-    async def publish(self, obj: dict[str, Any]) -> None:
+    async def publish(self, obj: dict[str, Any], *, topology: dict[str, Any] | None = None) -> None:
         """
         Atomically deduplicate an observed revision and append a small audit-linked event.
 
         Args:
             obj (dict[str, Any]): Fresh graph or composition observation from the owning shard.
+            topology (dict[str, Any] | None): Current neighbor and execution snapshot for a graph boundary.
 
         Returns:
             None: No return value.
@@ -111,6 +142,55 @@ class EventStore:
                 PUBLISH, 2, self.key, self.key + ":versions", meta["uid"], meta["resourceVersion"], json.dumps(payload), str(self.retention)
             ),
         )
+        if topology is not None:
+            snapshot = {**topology, "observedAt": time.time()}
+            event = {
+                **{key: payload[key] for key in ("apiVersion", "kind", "namespace", "name", "uid", "generation", "resourceVersion")},
+                "type": "topology",
+                "revision": topology["revision"],
+                "snapshot": f"/v1/graphs/{obj['kind']}/{meta['name']}/topology",
+                "valid": topology["valid"],
+                "nodeCount": len(topology["nodes"]),
+                "connectionCount": len(topology["connections"]),
+            }
+            await cast(
+                "Awaitable[Any]",
+                self.cache.client.eval(
+                    PUBLISH_TOPOLOGY,
+                    2,
+                    self.key,
+                    self.key + ":topologies",
+                    f"{obj['kind']}/{meta['name']}",
+                    json.dumps(snapshot, separators=(",", ":")),
+                    topology["revision"],
+                    json.dumps(event),
+                    str(self.retention),
+                ),
+            )
+
+    async def topology(self, kind: str, name: str, uid: str | None = None, node: str | None = None) -> dict[str, Any]:
+        """
+        Read fresh neighbors and an atomic stream cursor for race-free subscription startup.
+
+        Args:
+            kind (str): Graph boundary kind.
+            name (str): Graph name within this event store's namespace.
+            uid (str | None): Expected graph incarnation, when known.
+            node (str | None): Restrict the response to one node's neighbors.
+
+        Returns:
+            dict[str, Any]: Complete snapshot or node neighbors, with a resumable cursor.
+        """
+        result = await cast("Awaitable[Any]", self.cache.client.eval(SNAPSHOT, 2, self.key, self.key + ":topologies", f"{kind}/{name}"))
+        if not result:
+            raise KeyError(name)
+        snapshot = json.loads(result[0])
+        if uid is not None and snapshot["graph"]["uid"] != uid:
+            raise TopologyReplaced("graph UID changed; refresh graph identity")
+        if not 0 <= time.time() - snapshot["observedAt"] <= 30:
+            raise RuntimeError("topology observation is stale; retry after reconciliation")
+        snapshot["cursor"] = result[1]
+        return neighbors(snapshot, node) if node is not None else cast("dict[str, Any]", snapshot)
 
     async def cursor(self, supplied: str | None) -> str:
         """

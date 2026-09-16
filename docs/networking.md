@@ -257,7 +257,9 @@ application actions. Subscribers can react by submitting another composition.
 Enable `events.enabled` for a separate ClusterIP Service,
 `<release>-polyad-events:8091`. `GET /v1/events` serves Server-Sent Events, and
 `GET /openapi.json` serves its authenticated schema. This is a one-way observation
-feed; composition requests still use port 8090.
+feed; composition requests still use port 8090. The same events credential grants
+read access to `GET /v1/graphs/{kind}/{name}/topology`, optionally filtered by
+`uid` and `node`, for current neighbor and execution snapshots.
 
 ```bash
 curl --no-buffer \
@@ -275,9 +277,19 @@ Deletion may appear as a `deleting` observation; this is not a complete deletion
 ledger. Use the Kubernetes/API status and composition audit endpoints as the source
 of truth.
 
+The stream also emits `topology` events when a boundary's structure or execution
+membership changes, including ReplicaGroup scaling. These carry graph identity,
+a structural revision and a snapshot path. Read a neighbor snapshot first, then
+subscribe from its returned cursor to cover changes during startup. See
+[workload topology events](workload-events.md) for the payload, client example,
+nested graph behavior and recovery contract.
+
 Replicas share a bounded Dragonfly/Redis stream. The default retention is 10,000
 observations, configurable with `events.retention`. Delivery is at least once:
-deduplicate by resource UID and resource version. Cache failover can lose recent
+deduplicate lifecycle observations by resource UID and resource version. Topology
+events have separate structural revisions and can share a graph resource version;
+process them in stream order and compare the latest snapshot to the last applied
+revision. Cache failover can lose recent
 observations. A missing or expired reconnect cursor returns HTTP 410; a live
 subscriber falling behind receives a `reset` event and must refresh its snapshot.
 Cache failures return 503 before streaming, or an `unavailable` event followed by
@@ -285,8 +297,9 @@ closure during a stream. Reconnect to any healthy replica with the last received
 
 There are 16 concurrent subscriber slots per replica by default, configurable
 with `events.maxConnections`. A full replica returns 503. The shared event
-connection-request quota uses `api.rateLimit.requestsPerMinute` in a separate
-namespace budget; active streams do not consume a request per event. Proxies must
+request quota uses `api.rateLimit.requestsPerMinute` in a separate namespace
+budget. It covers stream connections and topology snapshot reads; active streams
+do not consume a request per event. Proxies must
 preserve streaming, avoid response buffering and support long-lived connections.
 See [Flask streaming](https://flask.palletsprojects.com/en/stable/patterns/streaming/).
 

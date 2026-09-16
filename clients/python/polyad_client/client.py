@@ -9,7 +9,7 @@ import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ class Event:
 
     Attributes:
         id (str): Stream cursor to persist after processing.
-        event (str): Event type, including graph, reset or unavailable.
+        event (str): Event type, including graph, topology, reset or unavailable.
         data (dict[str, Any]): Observation payload.
     """
 
@@ -201,6 +201,23 @@ class Client:
             dict[str, Any]: OpenAPI document.
         """
         return self._request("GET", "/openapi.json")
+
+    def topology(self, *, graph: str, kind: str = "Graph", graph_uid: str | None = None, node: str | None = None) -> dict[str, Any]:
+        """
+        Read neighbors and a starting cursor using the events Service and its credential.
+
+        Args:
+            graph (str): Persisted graph instance name.
+            kind (str): Graph, PolyGraph or ReplicaGroup.
+            graph_uid (str | None): Expected graph incarnation; replacements return HTTP 409.
+            node (str | None): Logical node to inspect; omitted returns the entire boundary.
+
+        Returns:
+            dict[str, Any]: Current topology or neighbors, including revision and replay cursor.
+        """
+        query = urlencode({key: value for key, value in {"uid": graph_uid, "node": node}.items() if value is not None})
+        path = f"/v1/graphs/{quote(kind, safe='')}/{quote(graph, safe='')}/topology"
+        return self._request("GET", path + (f"?{query}" if query else ""))
 
     def events(self, *, last_event_id: str | None = None) -> Iterator[Event]:
         """

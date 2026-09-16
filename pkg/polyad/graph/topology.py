@@ -185,11 +185,11 @@ def topology(spec: dict[str, object], kind: str = "Graph") -> Topology:
     """
     if kind not in {"Graph", "PolyGraph", "ReplicaGroup"}:
         raise ValueError(f"unsupported graph kind: {kind}")
-    if kind == "ReplicaGroup" and "template" in spec:
-        from polyad.graph.replication import replica_topology
-
-        spec = replica_topology(spec)
     try:
+        if kind == "ReplicaGroup" and "template" in spec:
+            from polyad.graph.replication import replica_topology
+
+            spec = replica_topology(spec)
         return converter.structure(spec, PolyGraph[GraphNode] if kind == "PolyGraph" else Topology)
     except CattrsError as error:
         raise ValueError(str(error)) from error

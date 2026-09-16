@@ -12,6 +12,8 @@ their work and tracks progress across the application and integrations.<sup>[\[2
   - [Table of contents](#table-of-contents)
   - [What Polyad abstracts](#what-polyad-abstracts)
     - [Graphs of graphs](#graphs-of-graphs)
+    - [Replica connections](#replica-connections)
+    - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
     - [Constrained compositions](#constrained-compositions)
     - [Network boundaries](#network-boundaries)
     - [Graphs across node groups](#graphs-across-node-groups)
@@ -55,6 +57,99 @@ flowchart BT
 ```
 
 </details>
+
+### Replica connections
+
+Each ReplicaGroup can choose its own [connection mode](docs/replication.md#connections-between-copies).
+Here, one subgraph connects whole graph replicas in a Ring; another combines
+daemon replicas in a bidirectional Star and a FullMesh. Edges between enclosing
+graphs and groups are declared separately at their respective boundaries.
+
+<details open>
+<summary>Example: three replica layouts and connections across subgraphs</summary>
+
+```mermaid
+flowchart LR
+    subgraph application["PolyGraph · application"]
+        subgraph processing["Graph · processing"]
+            subgraph pipelines["ReplicaGroup · pipelines<br/>mode: Ring · TCP 8080"]
+                p0["replica-0<br/>Graph instance"]
+                p1["replica-1<br/>Graph instance"]
+                p2["replica-2<br/>Graph instance"]
+                p0 --> p1 --> p2 --> p0
+            end
+        end
+
+        subgraph serving["Graph · serving"]
+            subgraph routers["ReplicaGroup · routers<br/>mode: Star · bidirectional: true · TCP 9000"]
+                s0["replica-0<br/>Daemon · hub"]
+                s1["replica-1<br/>Daemon"]
+                s2["replica-2<br/>Daemon"]
+                s3["replica-3<br/>Daemon"]
+                s0 <--> s1
+                s0 <--> s2
+                s0 <--> s3
+            end
+
+            subgraph caches["ReplicaGroup · caches<br/>mode: FullMesh · TCP 6379"]
+                m0["replica-0<br/>Daemon"]
+                m1["replica-1<br/>Daemon"]
+                m2["replica-2<br/>Daemon"]
+                m0 <--> m1
+                m1 <--> m2
+                m2 <--> m0
+            end
+
+            routers -->|"Serving graph connection · TCP 6379"| caches
+        end
+
+        processing -->|"Application connection · TCP 9000"| serving
+    end
+
+    classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
+    classDef boundary fill:#f2f4f7,stroke:#667085,color:#344054
+    classDef replicas fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
+    class p0,p1,p2,s0,s1,s2,s3,m0,m1,m2 execution
+    class processing,serving boundary
+    class pipelines,routers,caches replicas
+    style application fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
+    linkStyle default stroke:#475467,stroke-width:2px
+```
+
+Arrows show directed data-flow connections; double arrows declare both directions.
+The port in each group heading applies to its internal edges. These connections
+become transport grants when [graph networking](docs/networking.md) is enabled,
+subject to inherited restrictions. Copies without a configured mode remain
+Independent, with no inter-copy edges. Scaling rebuilds the selected pattern and
+notifies workloads through [topology events](docs/workload-events.md).
+
+</details>
+
+### Autoscaling the hierarchy
+
+[KEDA can autoscale different levels of the hierarchy](docs/replication.md#connect-keda)
+by targeting a ReplicaGroup's Kubernetes `/scale` subresource. The group's
+template determines what each additional replica creates:
+
+- **Daemon replicas:** another service instance, backed by its selected Deployment
+  or StatefulSet. Set the Daemon's own `replicas: 1` when each group copy should
+  represent one desired Pod.
+- **Graph replicas:** another complete workflow or service graph, including its
+  workloads, resources and internal connections.
+- **PolyGraph or nested ReplicaGroup replicas:** another composition of graphs or
+  replica groups, allowing scaling at multiple levels of the same application.
+
+For example, scale a worker pool inside a processing graph as its queue grows,
+and scale copies of the whole processing graph as demand for complete pipelines
+grows. Scale one group instance independently, or scale a shared definition to
+update every inheriting instance; see [instance and shared scaling](docs/replication.md#independent-instances-and-all-uses-of-a-definition).
+
+Before creating or retiring copies, Polyad refreshes the owning graph family's
+topology and checks replica bounds and applicable GraphRules, including structural
+limits and Cheeger constraints. KEDA supplies the requested count;
+constraints can block its application. Target the ReplicaGroup to use these
+checks: directly autoscaling a generated Deployment or StatefulSet bypasses graph
+admission. See [constraints before scaling](docs/replication.md#constraints-before-scaling).
 
 ### Constrained compositions
 

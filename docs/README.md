@@ -28,6 +28,7 @@ Start with [graph concepts](concepts.md), then [run your first workload](getting
 | [Health and backlog](operator.md#health) | Pod probes, inbound updates and API write pressure |
 | [Activation and client](activation.md) | Workload pulses, parallel daemons, frequency bounds and the standalone Python client |
 | [Workload environment](workload-environment.md) | Automatic graph identity, ancestry, activation receipts and operator endpoint discovery |
+| [Workload topology events](workload-events.md) | Neighbor discovery, structural notifications, scaling membership and replay recovery |
 | [Graph rules](graph-rules.md) | Every structural, spectral, Cheeger and network constraint, with Mermaid examples |
 | [Composition requests](composition-requests.md) | Request format, ID references, admission, retries and resource audit |
 | [Composition API service](composition-api.md) | Service setup, authentication, gateway routing, shared shard rate limits and OpenAPI |

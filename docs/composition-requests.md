@@ -64,6 +64,13 @@ and content**. Reordering the definitions does not change their canonical digest
 Different work requires a new request ID. Idempotency lasts for the receipt's
 lifetime; deleting and recreating it starts a new run with a new Kubernetes UID.
 
+ReplicaGroup objects accept the same `spec.connectivity` configuration as YAML
+resources: Independent (default), Chain, Ring, Star, FullMesh, or Custom. Custom
+edge endpoints use ordinal names such as `replica-0`, not request object IDs.
+Only `template.refId` is resolved to a reusable definition; connectivity and
+per-edge ports are preserved. See [replica connection modes](replication.md#connections-between-copies)
+for configuration examples and diagrams.
+
 Receipt writes use a serialized Kubernetes adapter. Concurrent replicas converge
 through deterministic names and Kubernetes create-if-absent semantics. Receipts,
 their definitions and executable descendants share one family shard. Shared

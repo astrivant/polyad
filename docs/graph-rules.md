@@ -890,13 +890,21 @@ is not applied, and failed or deferred reconciliation sets `scaleCurrent: false`
 Later reconciliations retry when intent or policy changes. Explicit deletion,
 suspension and shutdown retain their drain behavior.
 
-ReplicaGroup projects copies as **independent vertices with no edges between
-them**, so its Cheeger constant is zero at every count. A positive Cheeger minimum
-inherited onto such a group will reject it. Use `scope: Boundary` for a Cheeger
-rule intended only for a PolyGraph's connections, and separate subtree rules for
-recursive budgets or other applicable constraints. The parent's Cheeger constant
-does not change merely because a child has more copies; the graphs are not
-flattened, and internal Pod replicas do not become extra graph vertices.
+ReplicaGroup defaults to `connectivity.mode: Independent`, with no inter-copy
+edges and Cheeger constant zero. Users can select Chain, Ring, Star, FullMesh,
+or Custom connections, with optional reverse edges and transport ports; see
+[connection modes and diagrams](replication.md#connections-between-copies).
+Rules with `relation: connections` evaluate the chosen pattern, rebuilt using
+the effective count before scaling actions. A four-copy Ring has `h = 1`, while
+a six-copy Ring has `h = 2/3`: a minimum of 1 permits the former and blocks scaling
+to the latter. Custom edges only participate while both named ordinals exist.
+
+A positive Cheeger minimum inherited onto an Independent group rejects it. Use
+`scope: Boundary` for a rule intended only for a PolyGraph's connections, and
+separate subtree rules for recursive budgets or other applicable constraints.
+The parent's Cheeger constant does not change merely because a child has more
+copies; the graphs are not flattened, and internal Pod replicas do not become
+extra graph vertices.
 
 KEDA must target the `ReplicaGroup` scale subresource to use this admission path.
 For individual Pod scaling, replicate a `Daemon` definition with `replicas: 1`;

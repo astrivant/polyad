@@ -43,7 +43,7 @@ spec:
               type: object
             spec:
               type: object
-              description: Bound independent copies while preserving stable ordinals and graph admission.
+              description: Bound copies and their connections while preserving stable ordinals and graph admission.
               properties:
                 template:
                   type: object
@@ -149,6 +149,88 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                   nullable: true
                   description: Optional pulse policy when referenced by another graph.
+                connectivity:
+                  type: object
+                  description: Select data-flow edges between copies without introducing admission dependencies.
+                  properties:
+                    mode:
+                      type: string
+                      enum:
+                      - Independent
+                      - Chain
+                      - Ring
+                      - Star
+                      - FullMesh
+                      - Custom
+                      description: Connection pattern over active ordinals.
+                      default: Independent
+                    bidirectional:
+                      type: boolean
+                      description: Add a reverse connection with the same ports for each edge.
+                      default: false
+                    ports:
+                      type: array
+                      items:
+                        type: object
+                        description: Select a transport port on the destination workload.
+                        properties:
+                          port:
+                            type: integer
+                            description: Destination transport port.
+                            minimum: 1
+                            maximum: 65535
+                          protocol:
+                            type: string
+                            enum:
+                            - TCP
+                            - UDP
+                            - SCTP
+                            description: Transport protocol.
+                        required:
+                        - port
+                      description: Destination grants for built-in patterns; Custom uses each edge's ports.
+                    edges:
+                      type: array
+                      items:
+                        type: object
+                        description: Connect two stable ordinals when both are present in a custom replica topology.
+                        properties:
+                          source:
+                            type: string
+                            description: Sending ordinal, such as replica-0.
+                            pattern: ^replica-(0|[1-9][0-9]{0,2})$
+                            maxLength: 11
+                          target:
+                            type: string
+                            description: Receiving ordinal, such as replica-1.
+                            pattern: ^replica-(0|[1-9][0-9]{0,2})$
+                            maxLength: 11
+                          ports:
+                            type: array
+                            items:
+                              type: object
+                              description: Select a transport port on the destination workload.
+                              properties:
+                                port:
+                                  type: integer
+                                  description: Destination transport port.
+                                  minimum: 1
+                                  maximum: 65535
+                                protocol:
+                                  type: string
+                                  enum:
+                                  - TCP
+                                  - UDP
+                                  - SCTP
+                                  description: Transport protocol.
+                              required:
+                              - port
+                            description: Optional destination transport grants.
+                        required:
+                        - source
+                        - target
+                      description: Custom edges, active only when both endpoints exist.
+                      maxItems: 4096
               required:
               - template
               x-kubernetes-validations:

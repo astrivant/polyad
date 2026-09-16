@@ -79,7 +79,9 @@ such as `LOG_PREFIX: $(POLYAD_GRAPH_NAME)/$(POLYAD_NODE_NAME)`. Unrelated variab
 take precedence over values imported through `envFrom`.
 
 Context is a snapshot for that execution. It does not update inside a running
-container. Identity variables participate in workload revision hashes, so adding
+container. Use [workload topology events](workload-events.md) with these identity
+variables to discover neighbors and follow graph edits, scaling and execution
+membership changes while running. Identity variables participate in workload revision hashes, so adding
 this feature or changing endpoint URLs follows the usual workload replacement
 and drain rules. Activation runs retain the logical node and receive their own
 runtime resource name and receipt IDs. Containers added later by another admission

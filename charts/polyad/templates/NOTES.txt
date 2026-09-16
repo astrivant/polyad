@@ -45,6 +45,7 @@ Istio HTTPS ingress (each API requires its own bearer credential)
 {{- end }}
 {{- if $.Values.events.enabled }}
   GET  https://{{ . }}/v1/events                 (Server-Sent Events)
+  GET  https://{{ . }}/v1/graphs/{kind}/{name}/topology (neighbor snapshot)
   GET  https://{{ . }}/events/openapi.json       (event API schema)
 {{- end }}
 {{- end }}
@@ -65,6 +66,7 @@ Composition and activation API (bearer authentication required):
 {{- if .Values.events.enabled }}
 Event subscriptions (bearer authentication required):
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/events
+  GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/graphs/{kind}/{name}/topology
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/openapi.json
   Local access: kubectl -n {{ .Release.Namespace }} port-forward service/{{ .Release.Name }}-polyad-events 8091:8091
   Local base URL: http://127.0.0.1:8091

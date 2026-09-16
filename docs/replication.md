@@ -62,6 +62,164 @@ when work must repeat. Replicating a Daemon copies its selected
 Deployment or StatefulSet controller; each copy retains that definition's own replica setting. Bounds count copies of
 the selected abstraction, not the total Pods in their descendant graphs.
 
+## Connections between copies
+
+`spec.connectivity` selects the data-flow connections between replica vertices.
+Omitting it keeps the default `Independent` mode. Connections do not add
+`requires` dependencies: copies remain independently admissible, including when
+the data-flow pattern contains cycles.
+
+```yaml
+spec:
+  replicas: 4
+  maxReplicas: 20
+  template:
+    kind: Daemon
+    ref: processor
+  connectivity:
+    mode: Ring
+    bidirectional: true
+    ports:
+      - port: 8080
+        protocol: TCP
+  network:
+    allowWithin: false
+  rules: [replica-bottlenecks]
+```
+
+| Field | Default | Meaning and constraints |
+| --- | --- | --- |
+| `mode` | `Independent` | `Independent`, `Chain`, `Ring`, `Star`, `FullMesh`, or `Custom`; case sensitive |
+| `bidirectional` | `false` | Add the reverse of each edge, with the same port grants; invalid with `Independent` |
+| `ports` | `[]` | Destination ports for built-in connected modes; each port is 1–65535 with protocol `TCP` (default), `UDP`, or `SCTP`; invalid with `Independent` or `Custom` |
+| `edges` | `[]` | At most 4096 custom edges with unique directed source/target pairs; nonempty only with `Custom` |
+
+**Independent** creates no connections between copies.
+
+```mermaid
+flowchart LR
+    a["replica-0"]
+    b["replica-1"]
+    c["replica-2"]
+```
+
+**Chain** connects each ordinal to the next one, in ascending order.
+
+```mermaid
+flowchart LR
+    a["replica-0"] --> b["replica-1"] --> c["replica-2"]
+```
+
+**Ring** adds an edge from the last ordinal back to the first.
+
+```mermaid
+flowchart LR
+    a["replica-0"] --> b["replica-1"] --> c["replica-2"] --> a
+```
+
+**Star** sends from `replica-0` to every other copy.
+
+```mermaid
+flowchart LR
+    a["replica-0"] --> b["replica-1"]
+    a --> c["replica-2"]
+    a --> d["replica-3"]
+```
+
+**FullMesh** connects every distinct pair in both directions, even when
+`bidirectional` is false.
+
+```mermaid
+flowchart LR
+    a["replica-0"] <--> b["replica-1"]
+    b <--> c["replica-2"]
+    c <--> a
+```
+
+**Custom** uses explicit ordinal names and per-edge ports. Endpoints must be
+canonical names such as `replica-0`, with indices below `maxReplicas`; leading
+zeros and self connections are rejected. Edges whose endpoints are not both
+within the requested count remain dormant. This lets a declaration describe
+future scale-out connections without creating extra copies.
+
+```yaml
+connectivity:
+  mode: Custom
+  edges:
+    - source: replica-0
+      target: replica-2
+      ports:
+        - port: 8080
+    - source: replica-1
+      target: replica-2
+    - source: replica-2
+      target: replica-3
+```
+
+With `replicas: 3` and `maxReplicas: 4`:
+
+```mermaid
+flowchart LR
+    a["replica-0"] -->|"TCP 8080"| c["replica-2"]
+    b["replica-1"] --> c
+    c -. "dormant until replicas ≥ 4" .-> d["replica-3"]
+```
+
+Setting `bidirectional: true` on Chain, Ring, Star, or Custom adds reverse edges.
+Each reverse edge grants the same ports at its new destination. Identical
+connections are deduplicated; distinct port grants are retained.
+
+```mermaid
+flowchart LR
+    a["replica-0"] <-->|"TCP 8080 each way"| b["replica-1"]
+    b <-->|"TCP 8080 each way"| c["replica-2"]
+```
+
+All built-in modes have no edges at zero or one copy. A two-copy Ring has two
+opposing edges. On scaling, built-in patterns are rebuilt over the new ordinals;
+for example, a Ring's closing edge moves to its new last copy. Custom edges are
+activated or removed as endpoints enter or leave the count. Rules check this
+resulting topology before an execution is created or retired. When checking a
+sibling with pending removals, its still-live ordinals remain in the projection
+and its pattern is rebuilt over that set, in numeric order.
+
+Workloads can follow these changes through [topology events and neighbor snapshots](workload-events.md).
+Replica count changes notify subscribers even in Independent mode. Snapshots
+distinguish requested copies from executions that have actually been created,
+and show retiring copies until their resources disappear.
+
+These are declared data-flow connections, not application wiring or service
+discovery. Ports become transport grants only when a network policy is selected
+on the boundary, directly or through a GraphRule. Omitted ports grant no traffic.
+Use `network.allowWithin: false` to restrict traffic to explicit grants; ancestor
+policies can narrow them further. See [graph networking](networking.md).
+
+Select `relation: connections` on a GraphRule to measure these edges. For four
+copies, the exact Cheeger constants are 0 (Independent), 0.5 (Chain), 1 (Ring),
+1 (Star), and 2 (FullMesh). Directions and ports do not weight the Cheeger
+calculation. A minimum limits bottlenecks; a maximum limits how highly connected
+the weakest cut can be. For example, a Ring with four or five copies satisfies
+`cheeger.minimum: 1`, while six copies have `h = 2/3` and fail:
+
+```yaml
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: GraphRule
+metadata:
+  name: replica-bottlenecks
+spec:
+  enforcement: Referenced
+  scope: Boundary
+  relation: connections
+  cheeger:
+    minimum: 1
+```
+
+Exact Cheeger evaluation remains limited to 20 vertices per evaluated boundary.
+Other computation limits still apply: a FullMesh produces `n × (n − 1)` directed
+edges and exceeds the 16,384-edge expansion limit above 128 copies. Custom edges
+can leave replicas isolated; positive connectivity or Cheeger constraints can
+therefore block counts that fall within `minReplicas` and `maxReplicas`.
+
 ## Independent instances and all uses of a definition
 
 A standalone ReplicaGroup is independently scalable. To share a replication
@@ -69,6 +227,11 @@ policy, set `templateOnly: true` on a ReplicaGroup definition and reference it a
 a `ReplicaGroup` node in persistent graphs or PolyGraphs. Each generated instance
 inherits the reusable group's requested count. Scaling that definition scales
 **all inheriting uses**, without replacing their existing copies.
+
+Each instance retains its own connectivity configuration. Shared count changes
+regenerate that instance's edges using its effective count. Editing other fields
+of a reusable definition, including connectivity, follows the normal definition
+replacement lifecycle rather than the count-only scaling path.
 
 The generated `spec.replicaSource` pins the reusable group's name and UID. The
 operator rejects a missing or recreated source. On a generated instance, set
@@ -212,9 +375,11 @@ reconciliation; group scalar metrics return 503 while this observation is not
 current. Successful `structuralRules` reports include the boundary identity for
 each evaluated rule.
 
-ReplicaGroup vertices represent independent copies and have no edges between
-them: their Cheeger constant is zero. The enclosing PolyGraph's Cheeger value
-still describes its declared inter-graph connections, not a flattened Pod network.
+ReplicaGroup edges follow its [connectivity mode](#connections-between-copies).
+The default Independent mode has Cheeger constant zero; connected modes and
+Custom edges can satisfy positive bounds. Select `relation: connections` to
+evaluate them. The enclosing PolyGraph's Cheeger value still describes its
+declared inter-graph connections, not a flattened Pod network.
 Place a Cheeger bound on the intended boundary with `scope: Boundary` when it
 should not propagate to the replica groups. Other subtree and namespace rules
 continue to apply.

@@ -63,7 +63,27 @@ for event in events.events(last_event_id="0-0"):
 ```
 
 The event feed is at least once. Deduplicate graph observations by resource UID
-and resource version. Handle `reset` by refreshing status; reconnect explicitly
+and resource version. `topology()` reads current graph neighbors and returns a
+cursor for `events(last_event_id=...)`. Use the events Service and its token for
+both methods. For a managed workload:
+
+```python
+view = events.topology(
+    kind=os.environ["POLYAD_GRAPH_KIND"],
+    graph=os.environ["POLYAD_GRAPH_NAME"],
+    graph_uid=os.environ["POLYAD_GRAPH_UID"],
+    node=os.environ["POLYAD_NODE_NAME"],
+)
+print(view["incoming"], view["outgoing"])
+```
+
+Topology notifications include ReplicaGroup scaling, connection edits and changes
+to observed execution membership. Fetch the latest snapshot on a `topology`
+event for the relevant graph UID; compare its revision to the last snapshot applied
+by your application. Topology events can share a graph resource version. See
+[workload topology events](../../docs/workload-events.md) for startup and recovery.
+
+Handle `reset` by refreshing the snapshot and cursor; reconnect explicitly
 after `unavailable`, disconnects or timeouts. HTTP 410 means the cursor expired.
 Closing the iterator closes its connection. API tokens remain namespace-scoped;
 cross-namespace callers also need the corresponding network and identity grants.

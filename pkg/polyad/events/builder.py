@@ -6,19 +6,21 @@ from __future__ import annotations
 
 import hmac
 import json
+import re
 from collections.abc import Callable
 from threading import BoundedSemaphore, Event
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from attrs import evolve, field, frozen
 from flask import Flask, Response, jsonify, request
 
 from polyad.api.limits import RateLimitPolicy, install_limits
-from polyad.events.store import CursorExpired
+from polyad.compiler.asts import BOUNDARY_KINDS
+from polyad.events.store import CursorExpired, TopologyReplaced
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any, Self
+    from typing import Self
 
 
 @frozen
@@ -33,6 +35,7 @@ class EventAPIBuilder:
         stopping (Event): Server shutdown signal.
         max_connections (int): Maximum simultaneous streams on this replica.
         limits (RateLimitPolicy | None): Shared connection-request rate limit.
+        snapshot (Callable[[str, str, str | None, str | None], dict[str, Any]] | None): Current topology reader.
     """
 
     resolve: Callable[[str | None], str] | None = None
@@ -41,6 +44,7 @@ class EventAPIBuilder:
     stopping: Event = field(factory=Event)
     max_connections: int = 16
     limits: RateLimitPolicy | None = None
+    snapshot: Callable[[str, str, str | None, str | None], dict[str, Any]] | None = None
 
     def with_handlers(self, resolve: Callable[[str | None], str], read: Callable[[str], list[tuple[str, str]]]) -> Self:
         """
@@ -67,6 +71,18 @@ class EventAPIBuilder:
         """
         return evolve(self, token=token)
 
+    def with_topology_handler(self, snapshot: Callable[[str, str, str | None, str | None], dict[str, Any]]) -> Self:
+        """
+        Bind the current topology and neighbor snapshot reader.
+
+        Args:
+            snapshot (Callable[[str, str, str | None, str | None], dict[str, Any]]): Namespace-scoped snapshot callback.
+
+        Returns:
+            Self: Configured builder copy.
+        """
+        return evolve(self, snapshot=snapshot)
+
     def build(self) -> Flask:
         """
         Construct bounded streaming routes and their OpenAPI endpoint.
@@ -88,6 +104,25 @@ class EventAPIBuilder:
 
         if self.limits:
             app.extensions["polyad.limiter"] = install_limits(app, self.limits)
+
+        @app.get("/v1/graphs/<kind>/<name>/topology")
+        def topology(kind: str, name: str) -> tuple[Response, int] | Response:
+            if kind not in BOUNDARY_KINDS or not re.fullmatch(r"[a-z0-9](?:[-a-z0-9.]{0,251}[a-z0-9])?", name):
+                return jsonify(error="invalid graph identity"), 400
+            if self.snapshot is None or self.stopping.is_set():
+                return jsonify(error="topology reader unavailable"), 503
+            try:
+                response = jsonify(self.snapshot(kind, name, request.args.get("uid"), request.args.get("node")))
+                if len(response.get_data()) > 4 * 1024 * 1024:
+                    return jsonify(error="topology selection exceeds 4 MiB"), 503
+                response.headers["Cache-Control"] = "no-store"
+                return response
+            except TopologyReplaced as error:
+                return jsonify(error=str(error)), 409
+            except KeyError:
+                return jsonify(error="graph snapshot or node not found"), 404
+            except Exception:
+                return jsonify(error="topology observation unavailable or stale"), 503
 
         @app.get("/v1/events")
         def events() -> Response | tuple[Response, int]:
@@ -115,7 +150,8 @@ class EventAPIBuilder:
                             yield ": heartbeat\n\n"
                         for identity, data in batch:
                             cursor = identity
-                            yield f"id: {identity}\nevent: graph\ndata: {data}\n\n"
+                            event_type = "topology" if json.loads(data).get("type") == "topology" else "graph"
+                            yield f"id: {identity}\nevent: {event_type}\ndata: {data}\n\n"
                     except CursorExpired:
                         yield 'event: reset\ndata: {"reason":"cursor expired; refresh graph status"}\n\n'
                         return
@@ -137,7 +173,10 @@ class EventAPIBuilder:
                 "paths": {
                     "/v1/events": {
                         "get": {
-                            "description": "Namespace observations with bounded, at-least-once replay; reconnect with Last-Event-ID.",
+                            "description": (
+                                "Namespace graph observations and topology-change notifications with bounded, at-least-once replay. "
+                                "Read a topology snapshot first, then subscribe with its cursor as Last-Event-ID."
+                            ),
                             "parameters": [{"name": "Last-Event-ID", "in": "header", "schema": {"type": "string"}}],
                             "responses": {
                                 "200": {
@@ -156,7 +195,49 @@ class EventAPIBuilder:
                                 },
                             },
                         }
-                    }
+                    },
+                    "/v1/graphs/{kind}/{name}/topology": {
+                        "get": {
+                            "description": (
+                                "Current desired neighbors and observed executions. Optional node selects incoming/outgoing neighbors "
+                                "and dependencies. Snapshots include a structural revision and an atomic stream cursor; "
+                                "observations older than 30 seconds are unavailable. No workload templates or credentials are returned."
+                            ),
+                            "parameters": [
+                                {
+                                    "name": "kind",
+                                    "in": "path",
+                                    "required": True,
+                                    "schema": {"type": "string", "enum": sorted(BOUNDARY_KINDS)},
+                                },
+                                {"name": "name", "in": "path", "required": True, "schema": {"type": "string"}},
+                                {"name": "uid", "in": "query", "schema": {"type": "string"}, "description": "Expected graph UID."},
+                                {
+                                    "name": "node",
+                                    "in": "query",
+                                    "schema": {"type": "string"},
+                                    "description": "Logical node or replica ordinal.",
+                                },
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Graph topology or selected node's neighbors, with revision, observedAt and cursor.",
+                                    "content": {"application/json": {"schema": {"type": "object"}}},
+                                },
+                                **{
+                                    str(code): {"description": description}
+                                    for code, description in (
+                                        (400, "Invalid graph identity"),
+                                        (401, "Unauthorized"),
+                                        (404, "Graph snapshot or node not found"),
+                                        (409, "Graph UID changed"),
+                                        (429, "Request limit exceeded"),
+                                        (503, "Snapshot unavailable or stale"),
+                                    )
+                                },
+                            },
+                        }
+                    },
                 },
             }
             return Response(json.dumps(schema), mimetype="application/json")

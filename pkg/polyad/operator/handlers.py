@@ -17,9 +17,11 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.server import CompositionServer
 from polyad.cache import cache_url
+from polyad.compiler.asts import BOUNDARY_KINDS
 from polyad.compiler.registry import RECONCILED_KINDS, RESOURCE_TYPES
 from polyad.events.server import EventServer
 from polyad.events.store import EventStore
+from polyad.events.topology import topology_snapshot
 from polyad.metrics.inventory import inventory
 from polyad.metrics.server import MetricsServer
 from polyad.metrics.store import MetricsStore
@@ -226,11 +228,7 @@ async def reconcile(key: Key) -> None:
         try:
             await controller.reconcile(key)
         except Pending:
-            if events is not None:
-                obj = await controller.api.get(*key)
-                if obj is not None:
-                    await coordinator.guard()
-                    await events.publish(obj)
+            await publish_observation(key)
             raise
         except (ValueError, TypeError, KeyError, CattrsError, ApiException) as error:
             if isinstance(error, ApiException) and error.status not in {400, 422}:
@@ -249,11 +247,27 @@ async def reconcile(key: Key) -> None:
                 )
                 await controller.report_metrics(key)
         last_api_success = time.monotonic()
-        if events is not None:
-            obj = await controller.api.get(*key)
-            if obj is not None and key[0] in KINDS:
-                await coordinator.guard()
-                await events.publish(obj)
+        await publish_observation(key)
+
+
+async def publish_observation(key: Key) -> None:
+    """
+    Publish lifecycle and changed topology snapshots after refreshing owned executions.
+
+    Args:
+        key (Key): Reconciled resource identity.
+
+    Returns:
+        None: Observations are persisted only while the shard is still owned.
+    """
+    assert controller is not None and coordinator is not None
+    if events is None or key[0] not in KINDS:
+        return
+    obj = await controller.api.get(*key)
+    if obj is not None:
+        snapshot = await topology_snapshot(controller.api, obj) if key[0] in BOUNDARY_KINDS else None
+        await coordinator.guard()
+        await events.publish(obj, topology=snapshot)
 
 
 async def publish(key: Key) -> None:

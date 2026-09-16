@@ -12,6 +12,7 @@ from polyad.compiler import asts
 from polyad.compiler.passes.network import NetworkScope, policy_specs, scope_label
 from polyad.graph.rules import StructuralRule
 from polyad.graph.topology import converter, topology
+from polyad.operator.replication import effective_spec, replica_selector
 
 if TYPE_CHECKING:
     from typing import Any
@@ -49,16 +50,17 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
         if meta["uid"] in seen:
             raise ValueError("cyclic graph ownership")
         seen.add(meta["uid"])
+        graph_spec = current["spec"]
         if kind == "ReplicaGroup":
-            from polyad.operator.replication import replica_selector
-
+            if "template" in graph_spec:
+                graph_spec, _ = await effective_spec(api, current)
             labels[replica_selector(meta["uid"])] = "true"
-            source = current.get("spec", {}).get("replicaSource")
-            if source and current["spec"].get("inheritReplicas", True):
+            source = graph_spec.get("replicaSource")
+            if source and graph_spec.get("inheritReplicas", True):
                 labels[replica_selector(source["uid"])] = "true"
         labels[scope_label(namespace, kind, meta["name"])] = "true"
         labels[scope_label(namespace, kind, meta["name"], branch)] = "true"
-        graph = topology(current["spec"], kind)
+        graph = topology(graph_spec, kind)
         selected = {name for name, rule in rules.items() if rule.enforcement == "Namespace"} | set(graph.rules)
         if selected - rules.keys():
             raise ValueError("a referenced network GraphRule is unavailable")
@@ -98,7 +100,10 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
         branch = meta.get("labels", {}).get(f"{asts.GROUP}/node", "")
         if not branch:
             raise ValueError("nested graph lacks its compiler-assigned node identity")
-        if branch not in {item.name for item in topology(parent["spec"], parent["kind"]).nodes}:
+        parent_spec = parent["spec"]
+        if parent["kind"] == "ReplicaGroup":
+            parent_spec, _ = await effective_spec(api, parent)
+        if branch not in {item.name for item in topology(parent_spec, parent["kind"]).nodes}:
             raise Pending("ancestor is replacing this graph branch", phase="Draining")
         current = parent
     raise ValueError("network inheritance exceeds 32 graph boundaries")

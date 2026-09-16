@@ -17,6 +17,7 @@ from polyad.operator.graph_status import observed
 if TYPE_CHECKING:
     from typing import Any
 
+    from polyad.operator.api import API
     from polyad.operator.controller import Controller
 
 
@@ -33,6 +34,36 @@ def replica_selector(uid: str) -> str:
     return f"{GROUP}/replicas-{hashlib.sha256(uid.encode()).hexdigest()[:16]}"
 
 
+async def effective_spec(api: API, obj: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
+    """
+    Resolve the live inherited count for both structural and network projections.
+
+    Args:
+        api (API): Kubernetes read adapter.
+        obj (dict[str, Any]): Persisted ReplicaGroup instance.
+
+    Returns:
+        tuple[dict[str, Any], int | None]: Effective replication specification and source generation.
+    """
+    from polyad.operator.controller import Pending
+
+    spec = copy.deepcopy(obj["spec"])
+    policy = converter.structure(spec, Replication)
+    generation = None
+    if policy.replicaSource and policy.inheritReplicas:
+        source = await api.get("ReplicaGroup", obj["metadata"]["namespace"], policy.replicaSource.name)
+        if not source or source["metadata"]["uid"] != policy.replicaSource.uid or source["metadata"].get("deletionTimestamp"):
+            raise Pending("replica source incarnation is unavailable")
+        if not source["spec"].get("templateOnly"):
+            raise ValueError("replicaSource must refer to a reusable group definition")
+        count = converter.structure(source["spec"], Replication).replicas
+        if not policy.minReplicas <= count <= policy.maxReplicas:
+            raise ValueError("inherited replicas exceed this instance's bounds")
+        spec["replicas"] = count
+        generation = source["metadata"]["generation"]
+    return spec, generation
+
+
 async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
     """
     Resolve shared replica intent and publish scale observations after ordered reconciliation.
@@ -44,8 +75,6 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
     Returns:
         None: Child writes and status updates complete before the queue advances.
     """
-    from polyad.operator.controller import Pending
-
     meta = obj["metadata"]
     policy = converter.structure(obj["spec"], Replication)
     if policy.templateOnly:
@@ -82,18 +111,7 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
         )
         return
     effective = copy.deepcopy(obj)
-    source_generation = None
-    if policy.replicaSource and policy.inheritReplicas:
-        source = await controller.api.get("ReplicaGroup", meta["namespace"], policy.replicaSource.name)
-        if not source or source["metadata"]["uid"] != policy.replicaSource.uid or source["metadata"].get("deletionTimestamp"):
-            raise Pending("replica source incarnation is unavailable")
-        if not source["spec"].get("templateOnly"):
-            raise ValueError("replicaSource must refer to a reusable group definition")
-        count = converter.structure(source["spec"], Replication).replicas
-        if not policy.minReplicas <= count <= policy.maxReplicas:
-            raise ValueError("inherited replicas exceed this instance's bounds")
-        effective["spec"]["replicas"] = count
-        source_generation = source["metadata"]["generation"]
+    effective["spec"], source_generation = await effective_spec(controller.api, obj)
     count = effective["spec"].get("replicas", policy.replicas)
     effective["spec"] = replica_topology(effective["spec"])
     reconciled = False

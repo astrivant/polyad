@@ -64,6 +64,6 @@ spec:
         - operation:
             ports: ["8091"]
             methods: [GET]
-            paths: [/v1/events, /openapi.json]
+            paths: [/v1/events, /v1/graphs/*, /openapi.json]
     {{- end }}
 {{- end }}

@@ -12,6 +12,7 @@ from polyad.compiler.passes.composition import COMPOSITION_KINDS
 from polyad.compiler.passes.schema import structural_schema
 from polyad.graph.activation import ActivationPolicy
 from polyad.graph.capacity import CapacityPlan
+from polyad.graph.replication import ReplicaConnectivity
 
 if TYPE_CHECKING:
     from typing import Any
@@ -49,6 +50,7 @@ def schemas() -> dict[str, dict[str, Any]]:
     return {
         "ID": identifier,
         "ActivationPolicy": structural_schema(ActivationPolicy),
+        "ReplicaConnectivity": structural_schema(ReplicaConnectivity),
         "ActivationRequest": {
             "type": "object",
             "additionalProperties": False,
@@ -141,6 +143,7 @@ def schemas() -> dict[str, dict[str, Any]]:
                 "replicas": {"type": "integer", "minimum": 0, "maximum": 256, "default": 1},
                 "minReplicas": {"type": "integer", "minimum": 0, "default": 0},
                 "maxReplicas": {"type": "integer", "minimum": 1, "maximum": 256, "default": 32},
+                "connectivity": reference("ReplicaConnectivity"),
                 "placement": free_object,
                 "network": free_object,
                 "rules": {"type": "array", "items": reference("ID")},

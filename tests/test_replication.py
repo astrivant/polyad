@@ -197,13 +197,25 @@ def test_replica_group_composition_resolves_template_ids():
         requestId="replicate",
         rootId="copies",
         objects=(
-            CompositionItem(id="copies", kind="ReplicaGroup", spec={"replicas": 2, "template": {"refId": "worker"}}),
+            CompositionItem(
+                id="copies",
+                kind="ReplicaGroup",
+                spec={
+                    "replicas": 2,
+                    "template": {"refId": "worker"},
+                    "connectivity": {
+                        "mode": "Custom",
+                        "edges": [{"source": "replica-0", "target": "replica-1", "ports": [{"port": 8080}]}],
+                    },
+                },
+            ),
             CompositionItem(id="worker", kind="Daemon", spec={"template": template(True)}),
         ),
     )
     result = compile_composition(request, "test")
     assert result["copies"].spec["template"]["kind"] == "Daemon"
     assert result["copies"].spec["template"]["ref"] == result["worker"].metadata.name
+    assert result["copies"].spec["connectivity"] == request.objects[0].spec["connectivity"]
 
 
 def test_new_unobserved_use_blocks_definition_metric():

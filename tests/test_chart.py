@@ -324,6 +324,9 @@ def test_optional_network_policies_and_mesh_auth_are_separate_from_workloads():
         "mesh.enabled=true",
         "mesh.operator.enabled=true",
         "mesh.operator.eventPrincipals[0]=cluster.local/ns/consumers/sa/reader",
+        "mesh.ingress.enabled=true",
+        "mesh.ingress.hosts[0]=polyad.example.com",
+        "mesh.ingress.tlsSecret=ingress-cert",
     )
     policy = next(obj for obj in objects if obj["kind"] == "NetworkPolicy")
     assert policy["spec"]["podSelector"]["matchLabels"]["app.kubernetes.io/name"] == "polyad"
@@ -331,6 +334,11 @@ def test_optional_network_policies_and_mesh_auth_are_separate_from_workloads():
     auth = next(obj for obj in objects if obj["kind"] == "AuthorizationPolicy")
     assert auth["spec"]["rules"][1]["from"][0]["source"]["principals"] == ["cluster.local/ns/consumers/sa/reader"]
     assert auth["spec"]["rules"][1]["to"][0]["operation"]["methods"] == ["GET"]
+    assert "/v1/graphs/*" in auth["spec"]["rules"][1]["to"][0]["operation"]["paths"]
+    gateway = next(obj for obj in objects if obj["kind"] == "VirtualService")
+    event_route = gateway["spec"]["http"][0]
+    assert {"uri": {"prefix": "/v1/graphs/"}} in event_route["match"]
+    assert event_route["route"][0]["destination"]["port"]["number"] == 8091
     role = next(obj for obj in objects if obj["kind"] == "Role" and obj["metadata"]["name"] == "test-polyad")
     assert not any("secrets" in rule["resources"] for rule in role["rules"])
     assert not any("deployments" in rule["resources"] and "patch" in rule["verbs"] for rule in role["rules"])
