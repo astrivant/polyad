@@ -96,6 +96,9 @@ class Coordinator:
         self.planner = planner
         self.component = role()
         self.self_graph = os.environ.get("POLYAD_SELF_GRAPH", "")
+        self.self_graph_kind = os.environ.get("POLYAD_SELF_GRAPH_KIND", "Graph")
+        if self.self_graph_kind not in {"Graph", "PolyGraph"}:
+            raise ValueError("POLYAD_SELF_GRAPH_KIND must be Graph or PolyGraph")
         self.image = os.environ.get("POLYAD_OPERATOR_IMAGE", "") if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true" else ""
         self.observed: dict[str, tuple[str, float]] = {}
         self.deadlines: dict[str, float] = {}
@@ -173,7 +176,11 @@ class Coordinator:
         async with self.lock:
             await self.claim(
                 f"polyad-member-{self.identity}",
-                annotations={f"{GROUP}/operator-image": self.image, f"{GROUP}/component": self.component},
+                annotations={
+                    f"{GROUP}/operator-image": self.image,
+                    f"{GROUP}/component": self.component,
+                    f"{GROUP}/planner": str(self.planner).lower(),
+                },
             )
             listing = await self.api.request("GET", "Lease", self.namespace, query=[("labelSelector", f"{GROUP}/coordination=true")])
             for lease in listing.get("items", []):
@@ -187,6 +194,7 @@ class Coordinator:
             if self.leader:
                 members = []
                 bootstrap = []
+                planners = []
                 for lease in listing.get("items", []):
                     if lease["metadata"]["name"].startswith("polyad-member-"):
                         if self.expired(lease):
@@ -196,15 +204,17 @@ class Coordinator:
                                 if error.status != 409:
                                     raise
                         elif not self.image or lease["metadata"].get("annotations", {}).get(f"{GROUP}/operator-image") == self.image:
+                            if lease["metadata"].get("annotations", {}).get(f"{GROUP}/planner") == "true":
+                                planners.append(lease["spec"]["holderIdentity"])
                             component = lease["metadata"].get("annotations", {}).get(f"{GROUP}/component", "dense")
                             if component == "bootstrap":
                                 bootstrap.append(lease["spec"]["holderIdentity"])
                             elif component in {"dense", "executor"}:
                                 members.append(lease["spec"]["holderIdentity"])
                 planned = assignment(members or bootstrap)
-                if self.self_graph and bootstrap:
-                    reserved = str(root_shard("Graph", self.namespace, self.self_graph))
-                    planned[reserved] = assignment(bootstrap)[reserved]
+                if self.self_graph and planners:
+                    reserved = str(root_shard(self.self_graph_kind, self.namespace, self.self_graph))
+                    planned[reserved] = assignment(planners)[reserved]
                 await self.claim("polyad-leader", annotations={f"{GROUP}/assignments": json.dumps(planned, sort_keys=True)})
             leader = await self.api.get("Lease", self.namespace, "polyad-leader")
             if not leader or self.expired(leader):

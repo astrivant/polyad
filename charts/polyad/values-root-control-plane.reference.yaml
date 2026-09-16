@@ -48,8 +48,8 @@ rootControlPlane:
     - name: west-workers # Helm owns this OperatorPool in the ROOT namespace.
       ## @param rootControlPlane.pools[].cluster [string] Registered cluster name; empty uses the local execution cluster. Must match one federation.clusters registration.
       cluster: west # Must match one federation.clusters registration.
-      ## @param rootControlPlane.pools[].controller [string] Deployment supports root KEDA replica scaling; DaemonSet runs through an internal PolyGraph on every eligible node and requires replicas: 1. DaemonSet uses an internal PolyGraph -> Graph -> DaemonSet and requires replicas: 1. Choices: Deployment, DaemonSet.
-      controller: Deployment # DaemonSet uses an internal PolyGraph -> Graph -> DaemonSet and requires replicas: 1.
+      ## @param rootControlPlane.pools[].controller [string] Each pool joins the reserved root PolyGraph through its own Graph. Deployment supports root KEDA replica scaling; DaemonSet follows eligible nodes and requires replicas: 1. Choices: Deployment, DaemonSet.
+      controller: Deployment # Both modes join the root hierarchy; DaemonSet requires replicas: 1.
       ## @param rootControlPlane.pools[].replicas [integer] Initial Deployment worker count, including zero to pause; DaemonSet requires one and follows eligible nodes. Deployment only: zero pauses remote capacity; the root keeps executing. Minimum: 0. Maximum: 32.
       replicas: 2 # Deployment only: zero pauses remote capacity; the root keeps executing.
       ## @param rootControlPlane.pools[].nodeSelector [object] Node labels that must match; empty allows any node compatible with other scheduling constraints. Placement of the execution Pods in the workload cluster.

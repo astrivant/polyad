@@ -334,6 +334,12 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
             await pools.pool(pool)
         assert len(remote.calls) == before
         monkeypatch.setenv("POLYAD_OPERATOR_IMAGE", "polyad:v2")
+        rule = resource("GraphRule", "block-operators", {"enforcement": "Namespace", "limits": {"nodes": 0}})
+        remote.objects["GraphRule", "test", "block-operators"] = rule
+        with pytest.raises(ValueError, match="nodes"):
+            await pools.pool(pool)
+        assert remote.children("Deployment")[0]["spec"]["replicas"] == 2
+        del remote.objects["GraphRule", "test", "block-operators"]
         await pools.pool(pool)
         updated = remote.children("Deployment")[0]
         assert updated["spec"]["replicas"] == 0

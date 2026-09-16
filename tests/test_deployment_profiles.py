@@ -73,6 +73,14 @@ def test_ha_root_pools_belong_to_management_release(mode):
         values_files=("root-values.yaml", "pool-values.yaml"),
     )
     pool = next(obj for obj in objects if obj["kind"] == "OperatorPool")
+    root = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    env = {item["name"]: item.get("value") for item in root["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert env["POLYAD_SELF_GRAPH"] == "test-operators"
+    assert env["POLYAD_SELF_GRAPH_KIND"] == "PolyGraph"
+    assert root["metadata"]["labels"]["polyad.astrivant.com/internal"] == "true"
+    if mode == "Distributed":
+        assert env["POLYAD_COMPONENT_GRAPH"] == "test-control-plane"
+        assert next(obj for obj in objects if obj["kind"] == "Graph")["spec"]["templateOnly"]
     assert pool["metadata"]["namespace"] == "test"
     assert pool["metadata"]["name"] == "west-workers"
     assert pool["spec"] == {"cluster": "west", "replicas": 2, "nodeSelector": {"pool": "workers"}}

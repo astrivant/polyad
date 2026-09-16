@@ -11,6 +11,8 @@ layouts. Omitting `throughput` disables this feedback controller.
 
 For side-by-side graph examples and orchestration diagrams, see
 [comparing Cheeger bounds and throughput targets](cheeger-orchestration.md).
+For policies active in both a parent and child, see
+[nested Graphs and subgraph replication](cheeger-orchestration.md#nested-graphs-and-subgraph-replication).
 
 | Control | Responsibility | Changes |
 | --- | --- | --- |

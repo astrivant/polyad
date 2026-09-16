@@ -16,11 +16,13 @@ from typing import TYPE_CHECKING, cast
 
 import yaml  # type: ignore[import-untyped]
 
-from polyad.events.visibility import public_observation
+from polyad.events.visibility import INTERNAL, public_observation
 from polyad.metrics.workloads import current_observation
 from polyad.operator.controller import Pending
 from polyad.operator.coordination import NotOwner
 from polyad.operator.remote_scaling import INTENT, remote_revision
+from polyad.operator.reserved import DEPLOYMENT
+from polyad.operator.rule_state import check_live_rules
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 OWNER = f"{GROUP}/root-owner"
 FINALIZER = f"{GROUP}/remote-operator"
+REGISTERED = f"{GROUP}/operator-graph-registered"
 
 
 def contains(actual: Any, desired: Any) -> bool:
@@ -69,6 +72,93 @@ class PoolManager:
         self.root = root
         self.api = root.controller.api
         self.namespace = root.coordinator.namespace
+
+    @property
+    def topology_name(self) -> str:
+        """
+        Select the single root-local reserved PolyGraph shared by all operator groups.
+
+        Returns:
+            str: Release-scoped reserved topology name.
+        """
+        return os.environ.get("POLYAD_SELF_GRAPH") or f"{os.environ['POLYAD_ROOT_DEPLOYMENT']}-operators"
+
+    async def topology(self) -> dict[str, Any]:
+        """
+        Link the root and each provisioned operator group into one live PolyGraph.
+
+        Returns:
+            dict[str, Any]: Reserved PolyGraph after a version-fenced membership refresh.
+        """
+        source = await self.api.get("Deployment", self.namespace, os.environ["POLYAD_ROOT_DEPLOYMENT"])
+        if source is None:
+            raise Pending("waiting for the root operator Deployment")
+        name = self.topology_name
+        owner = json.dumps([self.root.federation.name, self.namespace, "Deployment", source["metadata"]["name"]])
+        labels = {INTERNAL: "true"}
+        await self.apply(
+            self.api,
+            {
+                "apiVersion": f"{GROUP}/v1alpha1",
+                "kind": "Daemon",
+                "metadata": {"name": name + "-root", "namespace": self.namespace, "labels": labels},
+                "spec": {"replicas": source["spec"].get("replicas", 1), "template": copy.deepcopy(source["spec"]["template"])},
+            },
+            owner,
+        )
+        await self.apply(
+            self.api,
+            {
+                "apiVersion": f"{GROUP}/v1alpha1",
+                "kind": "Graph",
+                "metadata": {
+                    "name": name + "-root",
+                    "namespace": self.namespace,
+                    "labels": labels,
+                    "annotations": {DEPLOYMENT: source["metadata"]["name"]},
+                },
+                "spec": {
+                    "templateOnly": True,
+                    "mode": "persistent",
+                    "nodes": [{"name": "operator", "kind": "Daemon", "ref": name + "-root"}],
+                },
+            },
+            owner,
+        )
+        nodes = [{"name": "root", "kind": "Graph", "ref": name + "-root"}]
+        if component_graph := os.environ.get("POLYAD_COMPONENT_GRAPH"):
+            nodes.append({"name": "components", "kind": "Graph", "ref": component_graph})
+        listing = await self.api.request("GET", "OperatorPool", self.namespace)
+        for pool in sorted((listing or {}).get("items", []), key=lambda item: item["metadata"]["name"]):
+            meta = pool["metadata"]
+            if meta.get("deletionTimestamp") or meta.get("annotations", {}).get(REGISTERED) != meta["uid"]:
+                continue
+            nodes.append(
+                {
+                    "name": f"pool-{meta['uid'][:12]}",
+                    "kind": "Graph",
+                    "ref": f"polyad-worker-{meta['uid'][:12]}-graph",
+                    "cluster": pool["spec"]["cluster"],
+                }
+            )
+        return await self.apply(
+            self.api,
+            {
+                "apiVersion": f"{GROUP}/v1alpha1",
+                "kind": "PolyGraph",
+                "metadata": {"name": name, "namespace": self.namespace, "labels": labels},
+                "spec": {
+                    "mode": "persistent",
+                    "nodes": nodes,
+                    "connections": [
+                        edge
+                        for node in nodes[1:]
+                        for edge in ({"source": "root", "target": node["name"]}, {"source": node["name"], "target": "root"})
+                    ],
+                },
+            },
+            owner,
+        )
 
     async def apply(self, api: API, body: dict[str, Any], owner: str) -> dict[str, Any]:
         """
@@ -234,16 +324,14 @@ class PoolManager:
             raise ValueError("OperatorPool must select a remote registered cluster")
         owner = json.dumps([self.root.federation.name, self.namespace, meta["uid"]], separators=(",", ":"))
         name = f"polyad-worker-{meta['uid'][:12]}"
-        labels = {f"{GROUP}/operator-pool": meta["uid"]}
+        labels = {f"{GROUP}/operator-pool": meta["uid"], INTERNAL: "true"}
         finalizers = meta.get("finalizers", [])
         if meta.get("deletionTimestamp"):
-            if controller == "DaemonSet":
-                boundary = await self.api.get("PolyGraph", self.namespace, name)
-                if boundary is not None:
-                    if boundary["metadata"].get("annotations", {}).get(OWNER) != owner:
-                        raise ValueError("reserved pool graph ownership changed")
-                    await self.api.delete(boundary)
-                    raise Pending("waiting for the reserved PolyGraph and remote workloads to drain")
+            if meta.get("annotations", {}).get(REGISTERED) == meta["uid"]:
+                boundary = await self.topology()
+                children = await self.root.federation.children(boundary)
+                if any(child["metadata"].get("labels", {}).get(f"{GROUP}/node") == f"pool-{meta['uid'][:12]}" for child in children):
+                    raise Pending("waiting for the unlinked operator Graph and remote workloads to drain")
             # Keep workloads, CRDs and storage. Only remove the pool's own execution machinery.
             for kind in ("Deployment", "Graph", "Daemon", "ConfigMap", "Secret"):
                 listing = await remote.request("GET", kind, namespace, query=[("labelSelector", f"{GROUP}/operator-pool={meta['uid']}")])
@@ -391,7 +479,14 @@ class PoolManager:
                 "strategy": {"type": "RollingUpdate", "rollingUpdate": {"maxUnavailable": 0, "maxSurge": 1}},
             },
         }
+        boundary = await self.graph_pool(obj, pod, owner)
+        await check_live_rules(self.api, boundary)
+        group = await remote.get("Graph", namespace, name + "-graph")
+        if group is None:
+            raise Pending("waiting for the operator group's graph definition")
+        await check_live_rules(remote, group)
         result = await self.apply(remote, body, owner)
+        obj = await self.api.get("OperatorPool", self.namespace, meta["name"]) or obj
         status = result.get("status", {})
         await self.status(
             obj,
@@ -406,29 +501,30 @@ class PoolManager:
             message="",
         )
 
-    async def graph_pool(self, obj: dict[str, Any], pod: dict[str, Any], owner: str) -> None:
+    async def graph_pool(self, obj: dict[str, Any], pod: dict[str, Any], owner: str) -> dict[str, Any]:
         """
-        Place remote node workers in an internal PolyGraph and let graph controllers own execution.
+        Register one remote group Graph beneath the shared reserved PolyGraph.
 
         Args:
-            obj (dict[str, Any]): Root pool with node-based worker scheduling.
+            obj (dict[str, Any]): Root pool with Deployment or DaemonSet scheduling.
             pod (dict[str, Any]): Bootstrapped worker template with copied root credentials.
             owner (str): Exact root pool incarnation for definition ownership.
 
         Returns:
-            None: The root continues bootstrap reconciliation even before remote workers start.
+            dict[str, Any]: Shared reserved topology for fresh structural admission checks.
         """
         meta, spec = obj["metadata"], obj["spec"]
         remote, namespace = self.root.resolve(spec["cluster"])
         name = f"polyad-worker-{meta['uid'][:12]}"
-        labels = {f"{GROUP}/operator-pool": meta["uid"], f"{GROUP}/internal": "true"}
+        labels = {f"{GROUP}/operator-pool": meta["uid"], INTERNAL: "true"}
+        controller = spec.get("controller", "Deployment")
         await self.apply(
             remote,
             {
                 "apiVersion": f"{GROUP}/v1alpha1",
                 "kind": "Daemon",
                 "metadata": {"name": name + "-daemon", "namespace": namespace, "labels": labels},
-                "spec": {"controller": "DaemonSet", "replicas": 1, "template": pod},
+                "spec": {"controller": controller, "replicas": spec["replicas"], "template": pod},
             },
             owner,
         )
@@ -437,7 +533,12 @@ class PoolManager:
             {
                 "apiVersion": f"{GROUP}/v1alpha1",
                 "kind": "Graph",
-                "metadata": {"name": name + "-graph", "namespace": namespace, "labels": labels},
+                "metadata": {
+                    "name": name + "-graph",
+                    "namespace": namespace,
+                    "labels": labels,
+                    "annotations": {DEPLOYMENT: name} if controller == "Deployment" else {},
+                },
                 "spec": {
                     "templateOnly": True,
                     "mode": "persistent",
@@ -448,22 +549,24 @@ class PoolManager:
             },
             owner,
         )
-        boundary = await self.apply(
-            self.api,
-            {
-                "apiVersion": f"{GROUP}/v1alpha1",
-                "kind": "PolyGraph",
-                "metadata": {"name": name, "namespace": self.namespace, "labels": labels},
-                "spec": {
-                    "mode": "persistent",
-                    "nodes": [
-                        {"name": "remote", "kind": "Graph", "ref": name + "-graph", "cluster": spec["cluster"]},
-                    ],
+        if meta.get("annotations", {}).get(REGISTERED) != meta["uid"]:
+            obj = await self.api.request(
+                "PATCH",
+                "OperatorPool",
+                self.namespace,
+                meta["name"],
+                {
+                    "metadata": {
+                        "resourceVersion": meta["resourceVersion"],
+                        "annotations": {**meta.get("annotations", {}), REGISTERED: meta["uid"]},
+                    }
                 },
-            },
-            owner,
-        )
+            )
+        boundary = await self.topology()
+        if controller != "DaemonSet":
+            return boundary
         children = await self.root.federation.children(boundary)
+        children = [child for child in children if child["metadata"].get("labels", {}).get(f"{GROUP}/node") == f"pool-{meta['uid'][:12]}"]
         counts: dict[str, Any] = next(
             (child.get("status", {}).get("workloads", {}).get("workers", {}).get("values", {}) for child in children), {}
         )
@@ -471,9 +574,10 @@ class PoolManager:
             obj,
             replicas=counts.get("replicas", 0),
             readyReplicas=counts.get("readyReplicas", 0),
-            phase="Ready" if boundary.get("status", {}).get("ready") else "Pending",
+            phase="Ready" if children and children[0].get("status", {}).get("ready") else "Pending",
             message="DaemonSet capacity follows eligible nodes; KEDA must not target this pool's scale subresource",
         )
+        return boundary
 
     async def run(self) -> None:
         """
@@ -483,13 +587,22 @@ class PoolManager:
             None: Runs until cancellation, leaving remote workloads intact on failure.
         """
         while True:
+            topology_key = ("PolyGraph", self.namespace, self.topology_name)
+            try:
+                async with self.root.coordinator.duty(topology_key):
+                    await self.topology()
+            except NotOwner:
+                pass
+            except Exception:
+                logger.exception("Reserved operator topology could not refresh; retaining its existing groups")
             for kind in ("OperatorPool", "RemoteScale"):
                 try:
                     listing = await self.api.request("GET", kind, self.namespace)
                     for obj in (listing or {}).get("items", []):
                         obj.setdefault("kind", kind)
                         try:
-                            async with self.root.coordinator.duty((kind, self.namespace, obj["metadata"]["name"])):
+                            key = topology_key if kind == "OperatorPool" else (kind, self.namespace, obj["metadata"]["name"])
+                            async with self.root.coordinator.duty(key):
                                 try:
                                     await (self.pool(obj) if kind == "OperatorPool" else self.scale(obj))
                                 except Pending as error:

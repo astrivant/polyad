@@ -312,6 +312,10 @@ class Controller:
             return
         try:
             children = await self.children(obj)
+            if f"{GROUP}/observed-operator-deployment" in obj["metadata"].get("annotations", {}):
+                from polyad.operator.reserved import members
+
+                children.extend(await members(self.api, obj))
         except Exception:
             # Failed remote reads cannot preserve the previous Ready report.
             await self.status(obj, {"phase": "Reconciling", "ready": False, "completed": False, "message": "remote inventory unavailable"})
@@ -392,6 +396,11 @@ class Controller:
         elif kind == "Rewrite":
             await self.rewrite(obj)
         elif kind in {"Graph", "PolyGraph"}:
+            if f"{GROUP}/observed-operator-deployment" in obj["metadata"].get("annotations", {}):
+                from polyad.operator.reserved import reconcile as reconcile_reserved
+
+                await reconcile_reserved(self, obj)
+                return
             if obj["spec"].get("throughput"):
                 from polyad.operator.throughput import reconcile_throughput
 
@@ -757,7 +766,16 @@ class Controller:
                 reference = f"{cluster or self.federation.name}/{node.kind}/{node.ref}"
                 if reference in lineage or len(lineage) >= 32:
                     raise ValueError("recursive boundary reference or nesting exceeds 32")
-                desired[node.name] = self.child(obj, node.name, kind, spec)
+                observation = definition["metadata"].get("annotations", {}).get(f"{GROUP}/observed-operator-deployment")
+                if observation and definition["metadata"].get("labels", {}).get(f"{GROUP}/internal") != "true":
+                    raise ValueError("operator observations require an internal definition")
+                desired[node.name] = self.child(
+                    obj,
+                    node.name,
+                    kind,
+                    spec,
+                    annotations={f"{GROUP}/observed-operator-deployment": observation} if observation else None,
+                )
                 compiled_child = desired[node.name]
                 desired[node.name] = evolve(
                     compiled_child,

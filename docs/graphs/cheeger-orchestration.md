@@ -13,6 +13,10 @@ computes a new Cheeger constant in records per second.
 - [The same graph, different decisions](#the-same-graph-different-decisions)
 - [Observe, Adapt and conflicting bounds](#observe-adapt-and-conflicting-bounds)
 - [Coordinating topology with replica scaling](#coordinating-topology-with-replica-scaling)
+- [Nested Graphs and subgraph replication](#nested-graphs-and-subgraph-replication)
+  - [What each boundary measures](#what-each-boundary-measures)
+  - [Replicating the whole child](#replicating-the-whole-child)
+  - [When both levels use Soul searching](#when-both-levels-use-soul-searching)
 - [Hierarchy and reserved operator graphs](#hierarchy-and-reserved-operator-graphs)
 - [Configuration and observations](#configuration-and-observations)
 
@@ -187,6 +191,112 @@ The controller resets stabilization when it observes changes in its local
 execution subtree, including native replica intent and DaemonSet node eligibility.
 Cooldowns and rolling change budgets also limit repeated connection changes.
 
+## Nested Graphs and subgraph replication
+
+A child Graph is **one vertex in its parent**, even when the child contains many
+workloads or replicas. The parent and child each have a Cheeger measurement of
+their own declared connections. Polyad does not flatten their vertices into one
+graph, add their Cheeger values, or use a good value at one level to compensate
+for a failing value at another.
+
+### What each boundary measures
+
+In this example, the parent sees four vertices: `ingest`, `processing`, `store`
+and `audit`. Opening the `processing` vertex reveals a separate four-stage Graph.
+Both boundaries happen to form rings with Cheeger `1`; their values are computed
+independently. The dashed arrow only expands the illustration, not the topology.
+
+```mermaid
+flowchart TB
+    subgraph parent["Parent Graph · four boundary vertices · h = 1"]
+        ingest["Ingest"] --> processing["Processing<br/>One child Graph vertex"]
+        processing --> store["Store"] --> audit["Audit"] --> ingest
+    end
+    subgraph child["Child Graph · processing · four stage vertices · h = 1"]
+        a["Stage A"] --> b["Stage B"] --> c["Stage C"] --> d["Stage D"] --> a
+    end
+    processing -. "Expand this child for inspection" .-> a
+```
+
+| Change | Parent Cheeger | Child Cheeger |
+| --- | --- | --- |
+| Increase the native Pod replicas of a Daemon inside the child | Unchanged | Unchanged: the Daemon is still one vertex |
+| Scale a ReplicaGroup contained inside the child | Unchanged | Unchanged if that group remains one child vertex; the group's own measurement may change |
+| Replace the child's four-stage ring with a chain | Still `1` | Falls from `1` to `0.5` |
+| Change the parent's ring to a chain | Falls from `1` to `0.5` | Still `1` |
+
+These examples use the `connections` relation and ordinary persistent nodes.
+[Pulse activations](../workloads/activation.md) are different: their live execution
+instances expand the structural projection at the containing boundary, so they
+can change its Cheeger measurement.
+
+An unchanged parent Cheeger does not mean a change is automatically allowed.
+The parent can also impose a recursive `expandedNodes` budget, and inherited or
+namespace GraphRules can constrain the child. Every applicable check must pass.
+`scope: Boundary` applies a referenced rule only at its selected boundary;
+`scope: Subtree` also applies it independently within local descendants. See
+[rule selection and measurement](graph-rules.md#selection-and-measurement).
+
+### Replicating the whole child
+
+A Graph reference does not have its own replica count. To replicate `processing`
+as a complete unit, reference a ReplicaGroup whose template is the processing
+Graph, as in the [Graph replica example](replication.md#example-graph-replicas).
+The parent now contains that group as one vertex. This introduces a **third
+boundary**, with a separate Cheeger measurement for connections between copies:
+
+```text
+Parent Graph                     sees one processing-group vertex
+└── Processing ReplicaGroup      sees Graph copies 0, 1, 2, ...
+    └── Each processing Graph    sees its own stages A, B, C, D
+```
+
+Suppose the group connects its copies in a Ring, and every copy contains the
+four-stage ring above. KEDA requests a change from four copies to six:
+
+| Measurement | Four copies | Six copies |
+| --- | --- | --- |
+| Parent Graph Cheeger | `1` | `1`: still the same four parent vertices |
+| ReplicaGroup Cheeger | `1` | `2/3`: a balanced split crosses two edges for three copies |
+| Cheeger inside each child Graph | `1` | `1`: each copy retains its own four stages |
+| Parent `expandedNodes` | `24` = 4 parent + 4 copy + 16 stage vertices | `34` = 4 parent + 6 copy + 24 stage vertices |
+
+A group bound of `cheeger.minimum: 0.75` blocks six copies, even though the parent
+and every child pass their own Cheeger bounds. Independently, a parent budget of
+`limits.expandedNodes: 30` also blocks that request. If the only Cheeger constraints
+are on the parent and child Graphs, they do not implicitly impose a minimum on
+the ReplicaGroup's copy connections; configure or inherit a rule for that boundary.
+
+Polyad refreshes the local family, including ancestors, sibling instances,
+replica sources and rules, before creating or retiring copies. A rejected request
+can remain recorded as desired replicas while the existing execution stays in
+place. It does not weaken another boundary's bound to make the count fit. See
+[constraints before scaling](replication.md#constraints-before-scaling).
+
+### When both levels use Soul searching
+
+Each Graph may also have its own application throughput policy. Reports identify
+one Graph instance by name, UID and generation; a parent report does not become
+a child report. Calibrate each policy against that boundary's actual workload.
+Passing every structural bound still does not guarantee application throughput.
+
+Parent `Adapt` can replace connections between the parent's vertices. Child
+`Adapt` can replace connections between the child's stages. Neither changes
+replica counts, the other Graph's connections, or a ReplicaGroup's connectivity
+mode. `Observe` only recommends changes at its own boundary.
+
+Local parent and child mutations share the root graph family's lease and execute
+in sequence. Before applying a proposal, Polyad refreshes the family and checks
+all applicable hard rules. An observed child topology or capacity change resets
+the parent's feedback stabilization, so it needs fresh, sustained measurements
+before another adaptation. Separate cooldowns and change budgets still apply
+at each Graph. The two application targets are not combined into one optimizer
+or one global throughput promise.
+
+For remote children placed through a PolyGraph, the destination enforces its
+local graph family independently; these checks are not one cross-cluster atomic
+transaction. See [cross-cluster rule scope](../deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling).
+
 ## Hierarchy and reserved operator graphs
 
 Each boundary has its own vertices. In a Graph they may represent services or
@@ -200,20 +310,28 @@ cross-cluster PolyGraph does not turn local measurements into one atomic,
 cluster-wide throughput guarantee. Exact Cheeger evaluation is capped at
 20 vertices per measured boundary.
 
-The reserved worker topology uses these composition mechanisms for ownership:
+One reserved PolyGraph contains a Graph for each operator group, including the root:
 
 ```mermaid
 flowchart TB
-    root["Root operator"]
-    poly["Reserved PolyGraph"]
-    remote["Managed Graph<br/>Remote cluster"]
-    daemon["DaemonSet workers<br/>One Pod per eligible node"]
+    subgraph poly["Reserved root PolyGraph"]
+        subgraph rootGroup["Graph · root group"]
+            root["Helm-owned root Deployment<br/>Observed membership"]
+        end
+        subgraph remote["Graph · node worker group"]
+            daemon["Graph-owned DaemonSet<br/>One Pod per eligible node"]
+        end
+        subgraph replicas["Graph · replica worker group"]
+            pool["Pool-managed Deployment<br/>Observed membership"]
+        end
+        rootGroup --> remote
+        remote --> rootGroup
+        rootGroup --> replicas
+        replicas --> rootGroup
+    end
     nodes["Eligible node membership"]
-    pool["Deployment worker pool<br/>Requested replica count"]
     keda["Root KEDA capacity request"]
-    root -->|"Manages"| poly -->|"Owns placement"| remote -->|"Owns"| daemon
     nodes -. "Determines Pod count" .-> daemon
-    root -->|"Manages"| pool
     keda -. "Requests pool replicas" .-> pool
 ```
 

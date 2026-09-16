@@ -41,6 +41,9 @@ central shard leases, cluster-qualified reports and root-local KEDA targets.
 The [root architecture diagram](root-control-plane.md#authority-and-execution)
 and [scaling sequence](root-control-plane.md#keda-from-the-root) describe that mode.
 Remote workers add capacity and pause mutations when root authority is unavailable.
+Each provisioned operator group joins the same
+[reserved PolyGraph as the root group](root-control-plane.md#reserved-operator-hierarchy).
+Adding a registered OperatorPool updates that model automatically.
 
 The independent-operator diagrams below describe federation without root mode.
 Do not combine independent destination operators with root-managed execution for

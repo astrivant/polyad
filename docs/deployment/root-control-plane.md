@@ -32,6 +32,7 @@ their graph policy bindings are proposed extensions, not current root behavior.
 - [Configuration](#configuration)
 - [KEDA from the root](#keda-from-the-root)
 - [Reports, disconnection and deletion](#reports-disconnection-and-deletion)
+- [Reserved operator hierarchy](#reserved-operator-hierarchy)
 - [Reserved graphs for node workers](#reserved-graphs-for-node-workers)
 
 ## Authority and execution
@@ -373,6 +374,61 @@ Secrets. The pool finalizer waits for remote deletion observations. Application
 workloads, namespaces, storage and shared CRDs remain. An unreachable cluster
 keeps cleanup pending rather than forgetting potentially live replicas.
 
+## Reserved operator hierarchy
+
+With root mode enabled, one reserved `PolyGraph/<release>-operators` models the
+whole operator deployment. Each operator group has its own Graph: the root group
+in the management cluster and one group for each provisioned remote OperatorPool.
+Distributed mode also links the local gateway/executor/telemetry component Graph.
+The root group exists even before the first remote pool is added.
+
+Register a downstream cluster under `federation.clusters`, then add its operator
+deployment under `rootControlPlane.pools` or create an OperatorPool directly.
+After provisioning that group's definitions, the root automatically adds its
+Graph reference to the existing PolyGraph. Registration alone supplies cluster
+access; it does not invent an operator group. Pool removal unlinks that branch
+and waits for its Graph to drain before removing its definitions and credentials.
+Other groups and the root retain their identities.
+
+```mermaid
+flowchart TB
+    subgraph hierarchy["Reserved root PolyGraph · all operator groups"]
+        subgraph management["Graph · root operator group · management cluster"]
+            root["Root Deployment replicas<br/>Authority, queues and metrics"]
+        end
+        subgraph west["Graph · west operator group"]
+            deployment["Deployment workers<br/>Root KEDA replica count"]
+        end
+        subgraph east["Graph · east operator group"]
+            daemonset["DaemonSet workers<br/>One Pod per eligible node"]
+        end
+        management -->|"Intent and coordination"| west
+        west -->|"Observations"| management
+        management -->|"Intent and coordination"| east
+        east -->|"Observations"| management
+    end
+    pool["New registered OperatorPool"] -. "Add its group Graph" .-> hierarchy
+```
+
+The declared connections form a bidirectional star between group boundaries.
+They describe control and observation relationships; Kubernetes and the shared
+queue provide the actual transport. Graph status rolls up fresh group readiness,
+native workload counts and descendant metrics into the PolyGraph.
+
+Membership and workload ownership are separate. The root group's Graph observes
+the existing Helm-owned Deployment. Deployment pool Graphs similarly observe
+their pool-managed Deployment; DaemonSet group Graphs own their native DaemonSet.
+Observation bindings never create a second operator Deployment, change its Pod
+count, or delete it when the observation Graph is suspended or removed. Helm/HPA
+continue to manage root replicas, and OperatorPool/KEDA manage remote Deployment
+replicas. Root planners retain the reserved PolyGraph's mutation shard so remote
+workers cannot become responsible for recovering the root hierarchy.
+
+The PolyGraph, group Graphs, definitions and operator workloads carry the internal
+marker. Application event streams exclude the entire operator tree regardless
+of a caller's graph grants. The existing per-cluster GraphRule boundaries and
+root-disconnection fencing still apply.
+
 ## Reserved graphs for node workers
 
 An OperatorPool may select `controller: DaemonSet` when remote execution capacity
@@ -392,38 +448,35 @@ rootControlPlane:
         polyad-worker: 'true'
 ```
 
-The root creates an internal PolyGraph in its namespace, a reusable Graph and
-Daemon definition in the remote namespace, and places a Graph instance there.
+The root adds this pool to the shared [reserved operator hierarchy](#reserved-operator-hierarchy),
+creates a reusable Graph and Daemon definition in the remote namespace, and
+places that group's Graph instance there.
 The ordinary graph controller owns the DaemonSet. The pool manager provisions
 credentials and definitions; it does not also write the graph-owned DaemonSet.
 Root replicas can execute this bootstrap before any remote workers exist.
 
 ```mermaid
 flowchart TB
-    subgraph management["Management cluster"]
-        root["Root operator Deployment<br/>Authority, queues and metrics"]
-        pool["OperatorPool<br/>DaemonSet mode"]
-        poly["Reserved PolyGraph<br/>Internal operator topology"]
-        local["Optional local control-plane Graph<br/>Gateway, executor and telemetry"]
-        root --> pool --> poly
-        root --> local
+    subgraph poly["Shared reserved PolyGraph"]
+        subgraph management["Graph · root operator group"]
+            root["Helm-owned root Deployment<br/>Observed membership"]
+        end
+        subgraph west["Graph · west operator group"]
+            daemon["Graph-owned DaemonSet<br/>One execution worker per eligible node"]
+        end
+        management -->|"Coordination"| west
+        west -->|"Observations"| management
     end
-    subgraph west["Registered workload cluster · west"]
-        remoteGraph["Managed Graph instance<br/>Internal"]
-        daemon["DaemonSet<br/>One execution worker per eligible node"]
-        work["Application graph duties<br/>Root-fenced execution"]
-        remoteGraph --> daemon --> work
-    end
-    poly -->|"Remote Graph placement"| remoteGraph
-    daemon -->|"Observations and coordination"| root
+    pool["OperatorPool · DaemonSet mode"] -. "Registers this group" .-> west
+    daemon --> work["Application graph duties<br/>Root-fenced execution"]
 ```
 
-This extends the reserved operator topology alongside the optional local component
+This adds a group to the same PolyGraph as the root and optional local component
 Graph. Internal labels propagate through the remote Graph and native workloads.
 Application event streams exclude the entire operator tree, regardless of the
 caller's graph grants. For application trees, grants to a PolyGraph can include
 verified descendants across registered clusters; unrelated trees remain hidden.
 
-Deleting the pool first drains its PolyGraph and graph-owned remote workers, then
+Deleting the pool first unlinks and drains its Graph and graph-owned remote workers, then
 removes copied credentials and template definitions. Existing application workloads
 remain running. Root disconnection continues to pause new execution mutations.

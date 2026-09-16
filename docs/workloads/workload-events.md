@@ -27,8 +27,9 @@ operator PolyGraphs and their descendants remain private.
 ## Application stream boundary
 
 The workload events Service exposes application observations within its namespace.
-The operator's reserved control-plane Graph, its component definitions and all
-owned descendants are excluded from both lifecycle and topology events. Rewrite,
+The operator's reserved root PolyGraph, its root and remote group Graphs,
+component definitions, operator Deployments and owned descendants are excluded
+from both lifecycle and topology events. Rewrite,
 activation and temporary-connection requests targeting that family are excluded
 as well. Internal topology snapshots are unavailable through this Service.
 

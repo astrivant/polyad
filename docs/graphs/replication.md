@@ -97,6 +97,11 @@ when work must repeat. Replicating a Daemon copies its selected
 Deployment or StatefulSet controller; each copy retains that definition's own replica setting. Bounds count copies of
 the selected abstraction, not the total Pods in their descendant graphs.
 
+For a Graph nested inside another Graph, see
+[nested Cheeger measurements and subgraph replication](cheeger-orchestration.md#nested-graphs-and-subgraph-replication).
+It explains why the parent can retain the same Cheeger value while the group's
+copy connections or an ancestor's recursive size budget block scaling.
+
 ## Examples at each scaling level
 
 These examples use namespace `polyad`, with Polyad's CRDs and operator already

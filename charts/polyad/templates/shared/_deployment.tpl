@@ -11,6 +11,9 @@ metadata:
   name: {{ .Release.Name }}-polyad
   labels:
     polyad.astrivant.com/deployment-profile: {{ .Values._profile }}
+    {{- if or .Values.rootControlPlane.enabled (eq .Values.architecture.mode "Distributed") }}
+    polyad.astrivant.com/internal: "true"
+    {{- end }}
   {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange }}
   annotations:
     reloader.stakater.com/search: "true"
@@ -47,6 +50,9 @@ spec:
         polyad.astrivant.com/deployment-profile: {{ .Values._profile }}
         polyad.astrivant.com/bootstrap: "true"
         polyad.astrivant.com/component: {{ ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed") }}
+        {{- if or .Values.rootControlPlane.enabled (eq .Values.architecture.mode "Distributed") }}
+        polyad.astrivant.com/internal: "true"
+        {{- end }}
         {{- if .Values.mesh.operator.enabled }}
         sidecar.istio.io/inject: "true"
         {{- end }}
@@ -94,7 +100,16 @@ spec:
             {{- end }}
             - name: POLYAD_COMPONENT
               value: {{ ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed") | quote }}
+            {{- if .Values.rootControlPlane.enabled }}
+            - name: POLYAD_SELF_GRAPH
+              value: {{ printf "%s-operators" .Release.Name | quote }}
+            - name: POLYAD_SELF_GRAPH_KIND
+              value: PolyGraph
             {{- if eq .Values.architecture.mode "Distributed" }}
+            - name: POLYAD_COMPONENT_GRAPH
+              value: {{ printf "%s-control-plane" .Release.Name | quote }}
+            {{- end }}
+            {{- else if eq .Values.architecture.mode "Distributed" }}
             - name: POLYAD_SELF_GRAPH
               value: {{ printf "%s-control-plane" .Release.Name | quote }}
             {{- end }}

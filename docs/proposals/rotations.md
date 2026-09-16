@@ -328,8 +328,10 @@ revocation and data migrations may not be reversible.
 Triggering an application rollout from the root does not implicitly roll the
 root Deployment. Operator rotation is a separate opt-in scope encompassing
 execution pools, component workloads and the Helm-owned bootstrap Deployment.
-That bootstrap is outside the [operator's own Graph](../deployment/components.md), so it needs
-an explicit coordination adapter and must not be mistaken for a graph child.
+That bootstrap appears as an observed member of its own Graph within the
+[reserved root PolyGraph](../deployment/root-control-plane.md#reserved-operator-hierarchy).
+Helm retains its lifecycle ownership, so rotation still needs an explicit
+coordination adapter rather than treating it as a graph-owned workload.
 
 A leaves-first operator upgrade can update remote execution replicas, then
 selected root components, then bootstrap replicas. Protocol compatibility can

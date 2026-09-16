@@ -3472,7 +3472,7 @@
                   "DaemonSet"
                 ],
                 "default": "Deployment",
-                "description": "Deployment supports root KEDA replica scaling; DaemonSet runs through an internal PolyGraph on every eligible node and requires replicas: 1."
+                "description": "Each pool joins the reserved root PolyGraph through its own Graph. Deployment supports root KEDA replica scaling; DaemonSet follows eligible nodes and requires replicas: 1."
               }
             },
             "additionalProperties": false,

@@ -58,6 +58,9 @@ file to opt into database storage after installing CloudNativePG.
 For release `polyad`, Helm declares `Graph/polyad-control-plane`, three reusable
 ReplicaGroups (`polyad-gateway`, `polyad-executor`, `polyad-telemetry`), their
 Daemon definitions and `GraphRule/polyad-control-plane`.
+With `rootControlPlane.enabled`, this Graph becomes a reusable definition whose
+instance is linked into the [reserved root PolyGraph](root-control-plane.md#reserved-operator-hierarchy),
+alongside the root group and each remote operator group.
 
 ```mermaid
 flowchart TB
@@ -102,8 +105,9 @@ Services keep their existing names and ports while selecting the matching role.
 NetworkPolicy, Istio authorization and Secret mounts apply to component Pods.
 With ESO reloads enabled, generated Daemons also opt into Secret-change restart
 annotations. Credential file checks continue to request process replacement.
-The managed database, Dragonfly and the bootstrap Deployment stay outside the
-Graph they support.
+The managed database and Dragonfly stay outside this component Graph. The
+bootstrap Deployment retains Helm ownership; in root mode its own group Graph
+observes it within the reserved PolyGraph.
 
 ## Scaling and structural bounds
 
@@ -160,6 +164,10 @@ only process capable of recreating itself. Other graph families hashing to that
 same shard are also handled by bootstrap replicas. If no executors remain, the
 bootstrap group temporarily receives ordinary shards as well; existing lease
 expiry rules still apply.
+
+In root mode, this reservation follows the enclosing PolyGraph instead, including
+its local root group and component Graph. Adding remote operator groups updates
+that existing hierarchy. Dense root planners receive the same protection.
 
 The HA chart requires at least two bootstrap replicas. Deleting or
 suspending the managed Graph stops its components; bootstrap survives and can

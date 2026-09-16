@@ -30,7 +30,7 @@ then [run your first workload](introduction/getting-started.md).
 | --- | --- |
 | [Graph boundaries](graphs/graph-boundaries.md) | Three boundary types, repeated execution, placement and storage |
 | [Graph rules](graphs/graph-rules.md) | Every structural, spectral, Cheeger and network constraint, with Mermaid examples |
-| [Comparing Cheeger policies](graphs/cheeger-orchestration.md) | Hard bounds versus throughput targets, with diagrams of Observe, Adapt, conflicts and replica scaling |
+| [Comparing Cheeger policies](graphs/cheeger-orchestration.md) | Hard bounds versus throughput targets, nested parent/child measurements, subgraph replication and Observe/Adapt diagrams |
 | [Replication and KEDA](graphs/replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
 | [Soul searching](graphs/throughput-feedback.md) | Topology optimization through application throughput feedback, separate Cheeger targets and bounded Observe/Adapt modes |
 | [Advance capacity](graphs/capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
@@ -64,7 +64,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Compiler objects](deployment/operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
 | [Health and backlog](deployment/operator.md#health) | Pod probes, inbound updates and API write pressure |
 | [Component deployments](deployment/components.md) | Dense or split services, the operator's own Graph, bootstrap recovery and KEDA demand |
-| [Root control plane](deployment/root-control-plane.md) | Dedicated management clusters, root-managed execution replicas, centralized reports and KEDA targets |
+| [Root control plane](deployment/root-control-plane.md) | One reserved PolyGraph containing the root and remote operator group Graphs, live membership, centralized reports and KEDA targets |
 | [Multicluster and observers](deployment/multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |
 | [Networking and events](deployment/networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
 | [Optional PostgreSQL](deployment/postgresql.md) | Durable graph state, HA database setup and connection-based KEDA scaling |

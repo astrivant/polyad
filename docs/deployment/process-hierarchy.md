@@ -174,8 +174,9 @@ Gateway intake can persist validated requests even though it does not execute
 graph reconciliation. All operator roles still use the Python main thread and
 Kopf thread; choosing a role enables responsibilities within that runtime.
 
-A root operator creates remote Deployments or a reserved PolyGraph → Graph →
-DaemonSet hierarchy through Kubernetes. Those remote Python processes are **not
+A root operator maintains one reserved PolyGraph containing its own group Graph
+and each remote operator group's Graph. Deployment groups observe their existing
+controllers; DaemonSet groups own their controller. Those remote Python processes are **not
 OS child processes of the root operator**. Kubernetes ownership and network
 coordination connect them. Deployment pools scale by replicas; DaemonSet pools
 follow eligible nodes. See [root control plane](root-control-plane.md) and

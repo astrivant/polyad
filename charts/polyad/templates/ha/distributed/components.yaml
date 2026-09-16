@@ -110,6 +110,9 @@ metadata:
   labels:
     polyad.astrivant.com/internal: "true"
 spec:
+  {{- if .Values.rootControlPlane.enabled }}
+  templateOnly: true
+  {{- end }}
   mode: persistent
   rules: [{{ .Release.Name }}-control-plane]
   nodes:

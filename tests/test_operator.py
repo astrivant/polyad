@@ -110,7 +110,8 @@ class FakeAPI:
         return [
             copy.deepcopy(o)
             for o in self.objects.values()
-            if o["metadata"]["namespace"] == namespace and any(owner["uid"] == uid for owner in o["metadata"].get("ownerReferences", []))
+            if o["metadata"].get("namespace") == namespace
+            and any(owner["uid"] == uid for owner in o["metadata"].get("ownerReferences", []))
         ]
 
     async def delete(self, obj):

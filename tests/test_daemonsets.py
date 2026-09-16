@@ -65,15 +65,18 @@ def test_daemonset_rejects_replica_scaling_and_stateful_options():
             compile_daemon({**spec, **additional}, {"app": "test"})
 
 
-def test_reserved_pool_polygraph_places_remote_graph_and_daemonset(monkeypatch):
+def test_reserved_root_polygraph_places_remote_graph_and_daemonset(monkeypatch):
     """
     Root bootstrap creates definitions; ordinary graph controllers exclusively create worker execution.
     """
     monkeypatch.setenv("POLYAD_CLUSTER_NAME", "management")
+    monkeypatch.setenv("POLYAD_ROOT_DEPLOYMENT", "root")
 
     async def run():
         pool = resource("OperatorPool", "node-workers", {"cluster": "west", "controller": "DaemonSet", "replicas": 1})
-        local, remote = ManagementAPI(pool), ManagementAPI()
+        root = resource("Deployment", "root", {"template": template(True)})
+        root["metadata"]["labels"] = {"polyad.astrivant.com/internal": "true"}
+        local, remote = ManagementAPI(pool, root), ManagementAPI()
         pools = manager(local, remote)
         pools.root.federation.children = AsyncMock(return_value=[])
         pod = template(True)
