@@ -57,14 +57,14 @@ incomplete.<sup>[\[4\]](operator.md#composing-graph-types-with-polygraph)</sup>
 **Composition** means assembling a larger graph from reusable definitions. In
 the [composition diagram](../README.md#constrained-compositions), two nodes use
 the same graph definition to create separate instances, each with its own workload. IDs identify both the definitions and
-their uses, so a request can be traced to the Kubernetes resources it creates.<sup>[\[9\]](composition-api.md#durability-ordering-and-audit)</sup>
+their uses, so a request can be traced to the Kubernetes resources it creates.<sup>[\[9\]](composition-requests.md#durability-ordering-and-audit)</sup>
 
 A **GraphRule** describes which graph structures an engineer will allow users to
 schedule. Rules can limit size, nesting, or branching, require a shape such as a
 tree, or constrain the graph's spectrum—the eigenvalues of a matrix representing
 its connections. Namespace-wide rules apply to every graph in that namespace;
 graphs can also reference additional rules. Recursive size limits count each
-subgraph instance, including repeated uses of the same definition.<sup>[\[10\]](composition-api.md#mathematical-constraints)</sup>
+subgraph instance, including repeated uses of the same definition.<sup>[\[10\]](graph-rules.md#structural-limits)</sup>
 
 The API's immutable `APIBuilder` configures authenticated composition services<sup>[\[11\]](composition-api.md#enable-the-service)</sup>
 and exposes their OpenAPI schema at `/openapi.json`.<sup>[\[12\]](composition-api.md#openapi-schema)</sup>

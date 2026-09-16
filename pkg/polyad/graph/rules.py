@@ -51,6 +51,40 @@ class Spectrum:
 
 
 @frozen
+class Cheeger:
+    """
+    Bound exact edge expansion on the simple undirected projection.
+
+    A cut's ratio is its crossing-edge count divided by its smaller side's
+    vertex count. The constant is the minimum ratio over all cuts. Raising
+    the minimum rejects severe structural bottlenecks; lowering the maximum
+    requires a sparse cut. These bounds do not measure execution throughput.
+
+    Attributes:
+        minimum (float | None): Inclusive minimum Cheeger constant.
+        maximum (float | None): Inclusive maximum Cheeger constant.
+    """
+
+    minimum: float | None = None
+    maximum: float | None = None
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject invalid or contradictory bounds.
+
+        Returns:
+            None: No return value.
+        """
+        for value in (self.minimum, self.maximum):
+            if value is not None and (
+                isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0
+            ):
+                raise ValueError("Cheeger bounds must be finite and nonnegative")
+        if self.minimum is not None and self.maximum is not None and self.minimum > self.maximum:
+            raise ValueError("Cheeger minimum must not exceed maximum")
+
+
+@frozen
 class StructuralRule:
     """
     Apply reusable mathematical constraints to each graph boundary and its subtree.
@@ -63,6 +97,7 @@ class StructuralRule:
         shapes (tuple[Literal['acyclic', 'connected', 'tree', 'planar'], ...]): Required graph properties.
         spectrum (Spectrum | None): Optional undirected spectral constraints, limited to 256 vertices.
         network (NetworkAccess | None): Mandatory or referenced traffic restrictions inherited by graph descendants.
+        cheeger (Cheeger | None): Optional exact edge-expansion bounds, limited to 20 vertices.
     """
 
     scope: Literal["Boundary", "Subtree"] = "Subtree"
@@ -72,6 +107,7 @@ class StructuralRule:
     shapes: tuple[Literal["acyclic", "connected", "tree", "planar"], ...] = ()
     spectrum: Spectrum | None = None
     network: NetworkAccess | None = None
+    cheeger: Cheeger | None = None
 
     def __attrs_post_init__(self) -> None:
         """
@@ -144,6 +180,43 @@ def graph_spectrum(graph: nx.DiGraph[str]) -> dict[str, Any]:
     }
 
 
+def graph_cheeger(graph: nx.Graph[str]) -> float:
+    """
+    Compute exact unnormalized edge expansion on at most 20 vertices.
+
+    Args:
+        graph (nx.Graph[str]): Relation; direction, weights, repeated edges and self-loops are ignored.
+
+    Returns:
+        float: Minimum cut size divided by the smaller side's vertex count; zero for fewer than two vertices.
+    """
+    if len(graph) > 20:
+        raise ValueError("Cheeger rules support at most 20 vertices per boundary")
+    simple: nx.Graph[str] = nx.Graph()
+    simple.add_nodes_from(graph)
+    simple.add_edges_from(graph.edges())
+    simple.remove_edges_from(nx.selfloop_edges(simple))
+    n = len(simple)
+    if n < 2 or not nx.is_connected(simple):
+        return 0.0
+    indices = {node: index for index, node in enumerate(simple)}
+    neighbors = [sum(1 << indices[neighbor] for neighbor in simple[node]) for node in simple]
+    best = float(min(dict(simple.degree()).values()))
+    subset = cut = 0
+    # Gray-code traversal changes one vertex at a time. Fix the last vertex
+    # outside the subset to visit each cut exactly once, without storing subsets.
+    for step in range(1, 1 << (n - 1)):
+        next_subset = step ^ (step >> 1)
+        changed = subset ^ next_subset
+        vertex = changed.bit_length() - 1
+        delta = neighbors[vertex].bit_count() - 2 * (neighbors[vertex] & subset).bit_count()
+        cut += delta if next_subset & changed else -delta
+        subset = next_subset
+        size = subset.bit_count()
+        best = min(best, cut / min(size, n - size))
+    return best
+
+
 def evaluate_rule(rule: StructuralRule, topology: Topology, *, expanded_nodes: int, nesting_depth: int) -> dict[str, Any]:
     """
     Evaluate inclusive bounds, required shapes and optional spectral constraints.
@@ -163,7 +236,7 @@ def evaluate_rule(rule: StructuralRule, topology: Topology, *, expanded_nodes: i
     condensed = nx.condensation(graph)
     layers = [len(layer) for layer in nx.topological_generations(condensed)]
     components = list(nx.strongly_connected_components(graph))
-    measured = {
+    measured: dict[str, int | float] = {
         "nodes": len(graph),
         "edges": graph.number_of_edges(),
         "depth": len(layers),
@@ -176,6 +249,14 @@ def evaluate_rule(rule: StructuralRule, topology: Topology, *, expanded_nodes: i
         "nestingDepth": nesting_depth,
     }
     violations = [f"{key}={measured[key]} exceeds {limit}" for key, limit in rule.limits.items() if measured[key] > limit]
+    if rule.cheeger is not None:
+        actual = graph_cheeger(graph)
+        measured["cheeger"] = actual
+        for threshold, lower in ((rule.cheeger.minimum, True), (rule.cheeger.maximum, False)):
+            if threshold is not None:
+                tolerance = 1e-9 * max(1.0, abs(actual), abs(threshold))
+                if (actual + tolerance < threshold) if lower else (actual - tolerance > threshold):
+                    violations.append(f"cheeger={actual:.12g} violates {'minimum' if lower else 'maximum'} {threshold}")
     shapes = {
         "acyclic": nx.is_directed_acyclic_graph(graph),
         "connected": bool(simple) and nx.is_connected(simple),

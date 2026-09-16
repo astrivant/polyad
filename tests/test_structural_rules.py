@@ -125,3 +125,89 @@ def test_invalid_spectral_bounds(value):
     """
     with pytest.raises(ValueError):
         Spectrum(maxRadius=value)
+
+
+@pytest.mark.parametrize(
+    ("graph", "expected"),
+    [
+        (nx.path_graph(4), 0.5),
+        (nx.cycle_graph(4), 1),
+        (nx.complete_graph(5), 3),
+        (nx.empty_graph(0), 0),
+        (nx.empty_graph(1), 0),
+        (nx.empty_graph(3), 0),
+    ],
+)
+def test_cheeger_known_graphs(graph, expected):
+    """
+    Compute exact edge expansion including degenerate and disconnected graphs.
+    """
+    from polyad.graph import graph_cheeger
+
+    assert graph_cheeger(graph) == pytest.approx(expected)
+
+
+def test_cheeger_projection_and_size_limit():
+    """
+    Ignore weights, directions, duplicate edges and loops and enforce the work cap.
+    """
+    from polyad.graph import graph_cheeger
+
+    graph = nx.MultiDiGraph()
+    graph.add_edges_from([("a", "b"), ("a", "b"), ("b", "a"), ("b", "c"), ("a", "a")], weight=99)
+    assert graph_cheeger(graph) == 1
+    assert graph_cheeger(nx.path_graph(20)) == pytest.approx(0.1)
+    with pytest.raises(ValueError, match="20 vertices"):
+        graph_cheeger(nx.path_graph(21))
+
+
+@pytest.mark.parametrize("value", [-1, float("nan"), float("inf"), True, "1"])
+def test_cheeger_invalid_bounds(value):
+    """
+    Reject invalid bounds for either comparison direction.
+    """
+    from polyad.graph import Cheeger
+
+    for key in ("minimum", "maximum"):
+        with pytest.raises(ValueError):
+            Cheeger(**{key: value})
+    with pytest.raises(ValueError, match="minimum"):
+        Cheeger(minimum=2, maximum=1)
+
+
+def test_cheeger_rule_admission_and_measurement():
+    """
+    Parse user bounds, persist measurements and reject admission after policy changes.
+    """
+
+    async def scenario():
+        spec = {
+            "nodes": [
+                {"name": "a", "kind": "Workload", "ref": "w"},
+                {"name": "b", "kind": "Workload", "ref": "w", "requires": [{"node": "a"}]},
+            ]
+        }
+        rule = resource("GraphRule", "expansion", {"cheeger": {"minimum": 1, "maximum": 1}})
+        api = FakeAPI(rule)
+        reports = await check_rules(api, "test", "Graph", spec)
+        assert reports[0]["measurements"]["cheeger"] == 1
+        for bounds in ({"maximum": 0.5}, {"minimum": 2}):
+            api.objects[("GraphRule", "test", "expansion")]["spec"]["cheeger"] = bounds
+            with pytest.raises(RuleViolation, match="cheeger=1"):
+                await check_rules(api, "test", "Graph", spec)
+
+    asyncio.run(scenario())
+
+
+def test_cheeger_matches_exhaustive_cuts():
+    """
+    Compare incremental cuts against an independent exhaustive oracle on small graphs.
+    """
+    from itertools import combinations
+
+    from polyad.graph import graph_cheeger
+
+    for seed in range(12):
+        graph = nx.gnp_random_graph(7, 0.5, seed=seed)
+        expected = min(nx.cut_size(graph, subset) / size for size in range(1, 4) for subset in combinations(graph, size))
+        assert graph_cheeger(graph) == pytest.approx(expected)

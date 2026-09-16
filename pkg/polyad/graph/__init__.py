@@ -20,9 +20,11 @@ from polyad.graph.replication import ReplicaTemplate as ReplicaTemplate
 from polyad.graph.replication import Replication as Replication
 from polyad.graph.rewrites import Rewrite as Rewrite
 from polyad.graph.rewrites import RewriteRegistry as RewriteRegistry
+from polyad.graph.rules import Cheeger as Cheeger
 from polyad.graph.rules import Spectrum as Spectrum
 from polyad.graph.rules import StructuralRule as StructuralRule
 from polyad.graph.rules import evaluate_rule as evaluate_rule
+from polyad.graph.rules import graph_cheeger as graph_cheeger
 from polyad.graph.rules import graph_spectrum as graph_spectrum
 from polyad.graph.shutdown import Finalizer as Finalizer
 from polyad.graph.shutdown import ShutdownContract as ShutdownContract

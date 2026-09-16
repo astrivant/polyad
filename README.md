@@ -61,7 +61,7 @@ flowchart BT
 
 Build workflows from reusable definitions and trace each instance to its
 Kubernetes resources. `GraphRule` lets engineers constrain what users can
-schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/composition-api.md#mathematical-constraints)</sup><sup>[\[6\]](docs/composition-api.md#durability-ordering-and-audit)</sup>
+schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/graph-rules.md#structural-limits)</sup><sup>[\[6\]](docs/composition-requests.md#durability-ordering-and-audit)</sup>
 
 <details>
 <summary>Example: reusable graph definitions with structural constraints</summary>
@@ -368,7 +368,8 @@ with the Helm chart, or try the [local Python scheduler](docs/getting-started.md
 The [examples](docs/getting-started.md#examples) cover pipelines, services,
 spot work, storage and nested graphs.
 
-Explore [graph concepts](docs/concepts.md), the [composition API](docs/composition-api.md),
+Explore [graph concepts](docs/concepts.md), [graph rules](docs/graph-rules.md),
+[composition requests](docs/composition-requests.md), the [composition API](docs/composition-api.md),
 [networking and event subscriptions](docs/networking.md), or the
 [development guide](docs/toolchain.md). See the [documentation index](docs/README.md)
 for lifecycle, status, health and configuration references.

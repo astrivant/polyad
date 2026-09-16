@@ -305,6 +305,23 @@ spec:
                   - connected
                   - tree
                   - planar
+              cheeger:
+                type: object
+                description: Exact unnormalized edge expansion on the simple undirected projection; at most 20 vertices.
+                x-kubernetes-validations:
+                - rule: '!has(self.minimum) || !has(self.maximum) || self.minimum <= self.maximum'
+                  message: Cheeger minimum must not exceed maximum.
+                properties:
+                  minimum:
+                    type: number
+                    minimum: 0
+                    description: Inclusive lower bound on the sparsest cut ratio. Every cut must have at least this many
+                      crossing edges per vertex on its smaller side; raising the bound rejects more severe bottlenecks.
+                  maximum:
+                    type: number
+                    minimum: 0
+                    description: Inclusive upper bound on the sparsest cut ratio. Requires some cut with at most this many
+                      crossing edges per vertex on its smaller side; does not protect against bottlenecks.
               spectrum:
                 type: object
                 description: Spectral bounds on the simple undirected, unweighted projection with self-loops removed. At most

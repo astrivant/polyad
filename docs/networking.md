@@ -10,6 +10,10 @@ workloads inside nested graphs receive the same membership labels. Connections
 can therefore join a task to a service, two subgraphs, or explicitly selected
 workloads in different namespaces.
 
+For every `GraphRule` field, default, validation constraint and configuration
+diagram, see the [graph rules guide](graph-rules.md#network-contracts). This guide
+covers how traffic contracts are compiled, enforced and operated.
+
 ## Selection, scope and inheritance
 
 Selection and propagation answer different questions:

@@ -769,4 +769,6 @@ structure, recursive size and spectra before admission. `Composition` records an
 immutable ID-addressed request, materializes reusable definitions and a root through
 the leased queues, and records generated manifest identities. The optional Flask
 service uses `APIBuilder` and a dedicated Waitress thread inside the Python operator.
-See [policy mathematics, service setup, request format and audit semantics](composition-api.md).
+See [graph rules and constraint diagrams](graph-rules.md),
+[composition request format and audit semantics](composition-requests.md), and
+[composition service setup](composition-api.md).
