@@ -1,0 +1,6 @@
+# Replicated dense operators; add component or root values for those extensions.
+tags:
+  singular: false
+  ha: true
+operator:
+  replicaCount: 2

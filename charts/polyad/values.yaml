@@ -1,15 +1,22 @@
+## @section Deployment profiles
+tags:
+  ## @param tags.singular Run one dense operator in the Helm release cluster; select at most one profile tag
+  singular: false
+  ## @param tags.ha Run replicated dense operators in the Helm release cluster; default when no profile tag is selected
+  ha: false
+
 ## @section Operator and shared queue parameters
 operator:
   ## @param operator.logLevel Polyad logging verbosity (DEBUG, INFO, WARNING, ERROR or CRITICAL)
   logLevel: INFO
-  ## @param operator.replicaCount Operator replicas when autoscaling is disabled
-  replicaCount: 2
+  ## @param operator.replicaCount [nullable] Operator replicas; null selects 1 for singular or 2 for ha
+  replicaCount: null
   ## @param operator.nodeSelector Node labels selecting the operator node group, independent of workload graph placement
   nodeSelector: {}
   ## @param operator.tolerations [array] Taints tolerated by the operator replicas
   tolerations: []
   autoscaling:
-    ## @param operator.autoscaling.enabled Enable CPU-based operator autoscaling
+    ## @param operator.autoscaling.enabled Enable operator HPA using CPU and optional memory utilization
     enabled: false
     ## @param operator.autoscaling.minReplicas Minimum operator replicas
     minReplicas: 2
@@ -17,6 +24,8 @@ operator:
     maxReplicas: 8
     ## @param operator.autoscaling.targetCPUUtilizationPercentage Target operator CPU utilization relative to requested CPU
     targetCPUUtilizationPercentage: 70
+    ## @param operator.autoscaling.targetMemoryUtilizationPercentage [nullable] Optional target memory utilization relative to requested memory (1-100); null disables the memory metric
+    targetMemoryUtilizationPercentage: null
     behavior:
       scaleUp:
         ## @param operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds Scale-up recommendation window in seconds (0-3600)
@@ -61,7 +70,7 @@ operator:
     requests:
       ## @param operator.resources.requests.cpu Requested operator CPU, required for CPU autoscaling
       cpu: 100m
-      ## @param operator.resources.requests.memory Requested operator memory
+      ## @param operator.resources.requests.memory Requested operator memory, required when the HPA memory metric is enabled
       memory: 128Mi
     limits:
       ## @param operator.resources.limits.memory Operator memory limit
@@ -111,9 +120,9 @@ postgresql:
     ## @param postgresql.autoscaling.connectionsPerInstance Operator connections per desired database instance; does not add primary write capacity
     connectionsPerInstance: 20
 
-## @section Optional component deployment architecture
+## @section Optional HA component deployment architecture
 architecture:
-  ## @param architecture.mode Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph
+  ## @param architecture.mode Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha
   mode: Dense
   ## @param architecture.cheegerMinimum Minimum edge expansion of the three-component Graph; the default chain has h=1
   cheegerMinimum: 1
@@ -126,7 +135,7 @@ architecture:
       ## @param architecture.components.gateway.replicas Initial gateway copies
       replicas: 2
       ## @param architecture.components.gateway.minReplicas Minimum gateway copies
-      minReplicas: 1
+      minReplicas: 2
       ## @param architecture.components.gateway.maxReplicas Maximum gateway copies
       maxReplicas: 8
       ## @param architecture.components.gateway.requestsPerSecond Target total HTTP requests per second per copy
@@ -137,7 +146,7 @@ architecture:
       ## @param architecture.components.executor.replicas Initial execution copies
       replicas: 2
       ## @param architecture.components.executor.minReplicas Minimum execution copies
-      minReplicas: 1
+      minReplicas: 2
       ## @param architecture.components.executor.maxReplicas Maximum execution copies
       maxReplicas: 8
       ## @param architecture.components.executor.backlog Target outstanding graph hints per execution copy across all managed clusters
@@ -146,7 +155,7 @@ architecture:
       ## @param architecture.components.telemetry.replicas Initial metrics-serving copies
       replicas: 2
       ## @param architecture.components.telemetry.minReplicas Minimum metrics-serving copies
-      minReplicas: 1
+      minReplicas: 2
       ## @param architecture.components.telemetry.maxReplicas Maximum metrics-serving copies
       maxReplicas: 8
       ## @param architecture.components.telemetry.requestsPerSecond Target total metrics requests per second per copy
@@ -440,8 +449,10 @@ capacity:
 
 ## @section Root control plane
 rootControlPlane:
-  ## @param rootControlPlane.enabled Manage registered clusters and remote execution replicas through one root scheduler
+  ## @param rootControlPlane.enabled Manage registered clusters and remote execution replicas through one root scheduler; requires ha
   enabled: false
+  ## @param rootControlPlane.pools [array] Root-owned OperatorPools: unique name and registered cluster, replicas, and optional resources, nodeSelector and tolerations; requires rootControlPlane.enabled
+  pools: []
   ## @param rootControlPlane.kubeconfigSecret Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
   kubeconfigSecret: ''
   ## @param rootControlPlane.meshPeers [array] Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster

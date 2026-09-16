@@ -1,0 +1,73 @@
+# One HA root manages execution replicas in registered workload clusters.
+# Install this release in the management cluster, namespace polyad.
+# Guide and access manifests: ../../docs/root-control-plane.md
+# Use alone, or add values-components.reference.yaml last to split the root.
+# These are reference overrides; values.yaml contains all defaults.
+tags:
+  singular: false
+  ha: true
+
+operator:
+  replicaCount: 2
+
+global:
+  multiCluster:
+    clusterName: management
+
+federation:
+  enabled: true
+  clusters:
+    - name: west
+      namespace: workloads # The root installs the execution pool here.
+      kubeconfigSecret: west-access # Root-namespace Secret, key: config.
+
+rootControlPlane:
+  enabled: true
+  # Root-namespace Secret with a verified, embedded kubeconfig under config.
+  # Its root Kubernetes API address must be reachable from remote workers.
+  kubeconfigSecret: root-access
+  pools:
+    - name: west-workers # Helm owns this OperatorPool in the ROOT namespace.
+      cluster: west # Must match one federation.clusters registration.
+      replicas: 2 # Zero pauses remote capacity; the root keeps executing.
+      nodeSelector: {} # Placement of the execution Pods in the workload cluster.
+      tolerations: []
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
+  # Optional complete workload-cluster transport registry, using the peer shape
+  # from values-multicluster.reference.yaml. Each executor excludes its own cluster.
+  meshPeers: []
+  # Replace with reachable routes. These values advertise URLs; configure ingress,
+  # DNS and TLS separately. They do not publish the Services themselves.
+  endpoints:
+    api: https://polyad.example.com/composition
+    events: https://polyad.example.com/events
+    metrics: https://polyad.example.com/metrics
+
+# Root-namespace Secret, key: url. All root and execution replicas must reach
+# this shared, credentialed Dragonfly endpoint; use TLS across untrusted networks.
+dragonfly:
+  enabled: false
+  existingSecret: root-cache
+
+# Create these dedicated token Secrets in the root namespace, or configure ESO.
+api:
+  enabled: true
+  existingSecret: polyad-api
+events:
+  enabled: true
+  existingSecret: polyad-events
+metrics:
+  enabled: true
+  graphLabels: true # Per-graph series increase metric cardinality.
+  authentication:
+    enabled: true
+    existingSecret: polyad-metrics
+
+# Do not install an independent operator over the same root-managed families.
+# KEDA may scale the root OperatorPool /scale; see the guide's concrete manifests.
+# PostgreSQL is optional; add values-postgresql.reference.yaml to persist state.

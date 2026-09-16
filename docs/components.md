@@ -1,17 +1,24 @@
 # Dense and distributed operator deployments
 
-The default `architecture.mode: Dense` runs coordination, reconciliation and
+The [HA deployment profile](deployment-profiles.md) defaults to
+`architecture.mode: Dense`, running coordination, reconciliation and
 enabled HTTP services together in each operator Pod. Multiple replicas share
 Dragonfly queues and Kubernetes Leases. This remains useful for a compact
 installation, including HA on a single cluster.
 
-`architecture.mode: Distributed` keeps the root bootstrap Deployment and
+Within HA, `architecture.mode: Distributed` keeps the bootstrap Deployment and
 packages the remaining responsibilities as independent workloads in a persistent
 Graph. PostgreSQL is optional in either architecture.
 
+The operator's own Graph and component definitions are internal. Their lifecycle,
+replica changes and topology snapshots are excluded from downstream workload event
+streams, including replay. Descendant resources inherit the internal marker;
+fresh ancestry checks also cover their graph-targeted requests. Component metrics
+continue to feed KEDA. See [application stream boundaries](workload-events.md#application-stream-boundary).
+
 | Component | Responsibility | Scaling demand |
 | --- | --- | --- |
-| Bootstrap | Root planner, family leases, recovery and the control-plane Graph's reconciliation | Fixed `operator.replicaCount` or the existing operator CPU HPA |
+| Bootstrap | Root planner, family leases, recovery and the control-plane Graph's reconciliation | Fixed `operator.replicaCount` or the [operator CPU/memory HPA](performance.md#autoscaling-response) |
 | Gateway | Enabled composition, temporary-connection and event APIs | HTTP arrival rate and concurrent responses, including open event streams |
 | Executor | Fresh graph admission, reconciliation and workload mutations | Outstanding reconciliation hints across the local namespace and every root-managed cluster |
 | Telemetry | Namespace observations, optional PostgreSQL persistence, global demand aggregation and metrics APIs | HTTP arrival rate and concurrent metrics responses |
@@ -33,7 +40,7 @@ helm upgrade --install polyad charts/polyad --namespace polyad --create-namespac
 ```
 
 The [example values](../examples/components/values.yaml) enable component
-autoscaling, use two initial copies of each role and permit one through eight.
+autoscaling, use two initial copies of each role and permit two through eight.
 Set `architecture.autoscaling: false` to manage group counts without KEDA.
 At least one gateway API and metrics must be enabled for Distributed mode.
 Add the [PostgreSQL values](../examples/postgresql/values.yaml) as another values
@@ -147,7 +154,7 @@ same shard are also handled by bootstrap replicas. If no executors remain, the
 bootstrap group temporarily receives ordinary shards as well; existing lease
 expiry rules still apply.
 
-Keep at least one bootstrap replica available, normally two for HA. Deleting or
+The HA chart requires at least two bootstrap replicas. Deleting or
 suspending the managed Graph stops its components; bootstrap survives and can
 reconcile a restored Graph. It does not override intentional deletion or invalid
 GraphRules. Root-managed remote OperatorPools always run the executor role and

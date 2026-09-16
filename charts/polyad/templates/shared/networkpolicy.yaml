@@ -1,3 +1,5 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 {{- if .Values.networkPolicy.enabled }}
 {{- if not .Values.networkPolicy.apiServerCIDRs }}{{ fail "networkPolicy.apiServerCIDRs must identify the cluster API endpoint" }}{{ end }}
 {{- if and (or (not .Values.dragonfly.enabled) .Values.dragonfly.existingSecret) (not .Values.networkPolicy.extraEgress) }}
@@ -161,3 +163,4 @@ spec:
         - {protocol: TCP, port: 53}
         - {protocol: UDP, port: 53}
 {{- end }}
+{{- end -}}

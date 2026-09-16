@@ -18,7 +18,7 @@ from polyad.events.topology import neighbors
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
     from typing import Any
 
 PUBLISH = """
@@ -89,20 +89,32 @@ class EventStore:
     Share at-least-once observation delivery without retaining workload payloads or credentials.
     """
 
-    def __init__(self, url: str, namespace: str, *, retention: int = 10000, cluster: str | None = None) -> None:
+    def __init__(
+        self,
+        url: str,
+        namespace: str,
+        *,
+        visible: Callable[[dict[str, Any]], Awaitable[bool]],
+        retention: int = 10000,
+        cluster: str | None = None,
+    ) -> None:
         """
         Configure the namespace stream and maximum retained event count.
 
         Args:
             url (str): Shared Redis or Dragonfly URL.
             namespace (str): Namespace visible to subscribers.
+            visible (Callable[[dict[str, Any]], Awaitable[bool]]): Required graph-family visibility check before publication.
             retention (int): Maximum retained observations and deduplication identities.
             cluster (str | None): Remote stream identity when reports are held at the root.
         """
         if not 100 <= retention <= 100000:
             raise ValueError("event retention must be between 100 and 100000")
         self.cache = Cache(url, namespace)
-        self.key = f"polyad:{{events:{namespace}}}:observations"
+        # Separate approved public observations from older, unfiltered replay and
+        # topology caches. Readers never fall back to the previous namespace stream.
+        self.key = f"polyad:{{events:{namespace}}}:public-v1:observations"
+        self.visible = visible
         self.retention = retention
         self.cluster = cluster
 
@@ -117,6 +129,8 @@ class EventStore:
         Returns:
             None: No return value.
         """
+        if not await self.visible(obj):
+            return
         meta, status = obj["metadata"], obj.get("status", {})
         metrics = status.get("metrics", {})
         payload = {

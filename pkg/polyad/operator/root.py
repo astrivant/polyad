@@ -17,6 +17,7 @@ from polyad.cache import cache_url
 from polyad.compiler.registry import RECONCILED_KINDS
 from polyad.events.store import EventStore
 from polyad.events.topology import topology_snapshot
+from polyad.events.visibility import public_observation
 from polyad.metrics.inventory import inventory
 from polyad.operator.controller import Controller, Pending
 from polyad.operator.coordination import SHARDS, NotOwner, active_shard
@@ -57,8 +58,8 @@ class ClusterWorker:
         self.root, self.cluster, self.namespace = root, cluster, namespace
         prefix = f"{root.coordinator.namespace}:clusters:{cluster}:{namespace}"
         self.shared = SharedQueue(cache_url(), prefix, root.coordinator.identity)
-        self.events = EventStore(cache_url(), prefix, cluster=cluster)
         self.controller = Controller(root.federation.target(cluster)[0])
+        self.events = EventStore(cache_url(), prefix, cluster=cluster, visible=lambda obj: public_observation(self.controller.api, obj))
         federation = Federation(self.controller.api)
         federation.name = cluster
         federation.resolver = root.resolve

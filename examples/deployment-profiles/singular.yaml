@@ -1,0 +1,8 @@
+# One dense operator in this release's cluster; dependencies remain configurable.
+tags:
+  singular: true
+  ha: false
+operator:
+  replicaCount: 1
+  autoscaling:
+    enabled: false

@@ -7,7 +7,17 @@
   POST {{ . }}/v1/activations/{requestId}/stop
   GET  {{ . }}/openapi.json
 {{- end -}}
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 Polyad release {{ .Release.Name }} is installed in namespace {{ .Release.Namespace }}.
+Deployment profile: {{ .Values._profile }}.
+{{- if .Values.rootControlPlane.enabled }}
+This is the management release. Root components and their Services run here.
+OperatorPools request execution replicas in registered workload clusters; do not
+install a second root release there for the same graph families.
+{{- else }}
+The dense operator and enabled Services run in this release's cluster and namespace.
+{{- end }}
 
 PUBLIC ROUTES
 {{- if not (or .Values.api.gateway.enabled .Values.mesh.ingress.enabled) }}
@@ -103,3 +113,4 @@ Bearer credentials are supplied through Authorization: Bearer <token>.
 Configured NetworkPolicy and Istio authorization rules also apply to API access.
 {{- end }}
 View these notes again: helm get notes {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- end -}}

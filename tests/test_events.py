@@ -16,6 +16,7 @@ from openapi_spec_validator import validate
 from polyad.events.builder import EventAPIBuilder
 from polyad.events.store import CursorExpired, EventStore
 from polyad.events.topology import topology_snapshot
+from polyad.events.visibility import public_observation
 from polyad.operator import health as health_state
 from tests.test_operator import FakeAPI, resource
 
@@ -93,8 +94,12 @@ def test_replicas_share_replay_deduplication_and_retention():
 
     async def run():
         namespace = f"events-{uuid4()}"
-        first = EventStore(os.environ["POLYAD_TEST_DRAGONFLY_URL"], namespace, retention=100)
-        second = EventStore(os.environ["POLYAD_TEST_DRAGONFLY_URL"], namespace, retention=100)
+        first = EventStore(
+            os.environ["POLYAD_TEST_DRAGONFLY_URL"], namespace, retention=100, visible=lambda obj: public_observation(FakeAPI(), obj)
+        )
+        second = EventStore(
+            os.environ["POLYAD_TEST_DRAGONFLY_URL"], namespace, retention=100, visible=lambda obj: public_observation(FakeAPI(), obj)
+        )
         try:
             obj = resource("Graph", "graph", {"token": "never-publish-me"})
             obj["metadata"]["namespace"] = namespace
@@ -196,7 +201,7 @@ def test_live_event_server_streams_and_stops_cleanly(monkeypatch):
 
     async def run():
         namespace = f"server-{uuid4()}"
-        store = EventStore(os.environ["POLYAD_TEST_DRAGONFLY_URL"], namespace)
+        store = EventStore(os.environ["POLYAD_TEST_DRAGONFLY_URL"], namespace, visible=lambda obj: public_observation(FakeAPI(), obj))
         server = EventServer(store, namespace, "subscriber", port=0, connections=1)
         try:
             obj = resource("Graph", "sample")

@@ -1,0 +1,30 @@
+# Cross-cluster PolyGraph placement from this release's cluster, named east.
+# Use alone (default HA), or after a singular/HA profile reference.
+# Guide: ../../docs/multicluster.md#placement-and-ownership
+# These are reference overrides; values.yaml contains all defaults.
+global:
+  multiCluster:
+    clusterName: east # Stable, unique identity of the Helm release cluster.
+
+federation:
+  enabled: true
+  # Replace these registrations with your workload clusters. Each kubeconfig
+  # Secret lives in THIS release namespace and contains a config key with an
+  # embedded kubeconfig for the corresponding remote namespace. See the guide
+  # for access permissions and remote resource-definition prerequisites.
+  clusters:
+    - name: west
+      namespace: workloads
+      kubeconfigSecret: west-access
+    - name: north
+      namespace: workloads
+      kubeconfigSecret: north-access
+
+# Without rootControlPlane, install independent execution operators in the
+# registered destination namespaces. Federation creates remote graph intent;
+# those operators execute it. For root-owned execution replicas instead, use
+# values-root-control-plane.reference.yaml (which includes its own registry).
+#
+# GraphRules stay cluster-local. Placement does not establish cross-cluster
+# workload transport; values-multicluster.reference.yaml covers Istio transport.
+# Helm renders native resources only into the release cluster, never the peers.

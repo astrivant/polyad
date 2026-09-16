@@ -1,9 +1,22 @@
 # Install only in the management cluster, in namespace polyad.
+tags:
+  singular: false
+  ha: true
 global:
   multiCluster:
     clusterName: management
 rootControlPlane:
   enabled: true
+  pools:
+    - name: west-workers
+      cluster: west
+      replicas: 2
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
   kubeconfigSecret: root-access
   endpoints:
     api: https://polyad.example.com/composition

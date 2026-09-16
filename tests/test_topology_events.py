@@ -259,7 +259,7 @@ def test_snapshot_store_rejects_stale_or_replaced_graphs_and_selects_neighbors()
     async def scenario():
         snapshot = await topology_snapshot(FakeAPI(), group(connectivity={"mode": "Ring"}))
         snapshot["observedAt"] = time.time()
-        store = EventStore("redis://localhost", "test")
+        store = EventStore("redis://localhost", "test", visible=AsyncMock(return_value=True))
         client = AsyncMock()
         client.eval.return_value = [json.dumps(snapshot), "15-0"]
         store.cache.client = client
@@ -287,7 +287,7 @@ def test_topology_publication_does_not_depend_on_resource_version_changes():
     async def scenario():
         obj = group(connectivity={"mode": "Ring"})
         api = FakeAPI(obj)
-        store = EventStore("redis://localhost", "test")
+        store = EventStore("redis://localhost", "test", visible=AsyncMock(return_value=True))
         client = AsyncMock()
         client.eval.return_value = False
         store.cache.client = client

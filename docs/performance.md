@@ -7,15 +7,21 @@ load placed on Kubernetes and the shared cache.
 
 ## Autoscaling response
 
-Configure both directions of the CPU HPA independently:
+Configure CPU and optional memory targets, and tune both HPA scaling directions
+independently:
 
 ```yaml
 operator:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
   autoscaling:
     enabled: true
     minReplicas: 2
     maxReplicas: 8
     targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
     behavior:
       scaleUp:
         stabilizationWindowSeconds: 0
@@ -33,6 +39,25 @@ operator:
             periodSeconds: 60
 ```
 
+`targetMemoryUtilizationPercentage` accepts an integer from 1 to 100. Its default
+is `null`, which omits memory from the HPA. Enabling this metric requires
+`operator.resources.requests.memory`; Helm rejects an enabled memory target
+without that request. The example targets 80% of the requested `256Mi`, or
+`204.8Mi` per Pod. Memory limits do not determine this percentage. Resource
+metrics cover the Pod, so injected sidecars also need appropriate resource
+requests. See [Kubernetes resource metrics](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/#support-for-resource-metrics).
+
+With both metrics enabled, Kubernetes uses the larger CPU or memory replica
+recommendation, subject to replica bounds and scaling behavior. Memory pressure
+can therefore request more replicas even when CPU utilization is low. The HPA
+requires the cluster resource metrics API, usually provided by Metrics Server;
+it does not scrape Polyad's application metrics endpoint. See
+[multiple HPA metrics](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/#scaling-on-multiple-metrics).
+
+The HPA scales the dense operator or, in Distributed mode, its bootstrap
+Deployment. Gateway, executor and telemetry groups retain their separate
+[KEDA scaling configuration](components.md#scaling-and-structural-bounds).
+
 The chart passes `behavior` directly into the HPA. Stabilization windows accept
 0–3600 seconds, including an explicit zero. The window considers recent scaling
 recommendations to reduce oscillation; it is not a fixed sleep before every
@@ -46,8 +71,8 @@ window, with Kubernetes' standard rate policies. The example above instead
 limits each scale-up to two Pods per 30 seconds and each scale-down to one Pod
 per minute. Helm replaces policy arrays when overridden.
 
-The cluster controls the HPA synchronization interval and availability of CPU
-metrics. CPU requests, replica bounds, memory limits and termination grace are
+The cluster controls the HPA synchronization interval and availability of resource
+metrics. Resource requests, replica bounds, memory limits and termination grace are
 also available under `operator`; see the [Helm parameters](../charts/polyad/README.md).
 
 ## Worker cadence
@@ -97,7 +122,7 @@ API writes before changing these controls.
 
 When KEDA owns a Deployment or ReplicaGroup, put the equivalent behavior in its
 ScaledObject under `spec.advanced.horizontalPodAutoscalerConfig.behavior`.
-The chart's CPU HPA settings do not modify separately managed ScaledObjects.
+The chart's operator HPA settings do not modify separately managed ScaledObjects.
 Disable `operator.autoscaling.enabled` before letting KEDA own the operator
 Deployment, and keep at least one operator replica running.
 

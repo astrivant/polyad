@@ -178,7 +178,8 @@ class EventAPIBuilder:
                     "/v1/events": {
                         "get": {
                             "description": (
-                                "Namespace graph observations and topology-change notifications with bounded, at-least-once replay. "
+                                "Application graph observations and topology-change notifications with bounded, at-least-once replay. "
+                                "The reserved operator graph, internal definitions and their descendants are excluded. "
                                 "Read a topology snapshot first, then subscribe with its cursor as Last-Event-ID."
                             ),
                             "parameters": [

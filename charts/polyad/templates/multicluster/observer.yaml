@@ -1,3 +1,5 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 {{- if .Values.observer.enabled }}
 {{- $_ := required "observer requires global.multiCluster.clusterName" .Values.global.multiCluster.clusterName }}
 {{- $_ := required "observer requires observer.existingSecret" .Values.observer.existingSecret }}
@@ -237,3 +239,4 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- end -}}

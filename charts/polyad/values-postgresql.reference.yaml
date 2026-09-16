@@ -1,0 +1,46 @@
+# Optional durable graph state and tracked parameters for any operator layout.
+# Apply after the selected profile; install CloudNativePG and KEDA first.
+# Guide: ../../docs/postgresql.md
+# These are reference overrides; PostgreSQL stays OFF in values.yaml defaults.
+postgresql:
+  enabled: true
+  managed: true # Creates a CloudNativePG Cluster in the Helm release namespace.
+  existingSecret: '' # Managed databases use the generated <release>-state-app Secret.
+  secretKey: uri
+  scope: '' # Empty uses <release-namespace>/<release-name> as the state identity.
+  maxConnections: 100 # Per database instance, including administration.
+  storage:
+    size: 20Gi # Persistent volume size per instance.
+    storageClass: '' # Empty uses the cluster default.
+  ha:
+    enabled: true # Synchronous replication; independent of operator HA.
+    instances: 3 # Used when autoscaling is disabled; otherwise minInstances starts it.
+    topologyKey: kubernetes.io/hostname # Requires distinct nodes for database Pods.
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: true # Optional; set false for a fixed database instance count.
+    minInstances: 3 # HA requires at least three; provide nodes/storage for the maximum.
+    maxInstances: 6
+    connectionsPerInstance: 20 # Operator connections, measured by the operator API.
+
+metrics:
+  enabled: true
+  authentication:
+    enabled: true
+    existingSecret: polyad-metrics # Create this token Secret in the release namespace.
+keda:
+  authentication:
+    enabled: true # KEDA scrapes operator metrics, never the database directly.
+
+# Added instances provide standby/read capacity, not more primary write capacity.
+# For one database instance, disable both postgresql.ha and postgresql.autoscaling.
+# For an external database, set managed=false, existingSecret=polyad-state-access
+# (key: uri), and autoscaling.enabled=false; no database Cluster is then created.
+# A root release records observations from all registered clusters here. Remote
+# processes needing database access require a DSN reachable from their clusters.
+# Kubernetes remains authoritative; this store persists current observations.

@@ -22,6 +22,7 @@ from polyad.compiler.registry import RECONCILED_KINDS, RESOURCE_TYPES
 from polyad.events.server import EventServer
 from polyad.events.store import EventStore
 from polyad.events.topology import topology_snapshot
+from polyad.events.visibility import public_observation
 from polyad.metrics.inventory import inventory
 from polyad.metrics.server import MetricsServer
 from polyad.metrics.store import MetricsStore
@@ -107,7 +108,14 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     if serves("API"):
         http = CompositionServer(API(), namespace, credential_token("API"))
     if executes() or serves("EVENTS"):
-        events = EventStore(cache_url(), namespace, retention=int(os.environ.get("POLYAD_EVENTS_RETENTION", "10000")))
+        event_api = controller.api
+        reserved = (namespace, coordinator.self_graph) if coordinator.self_graph else None
+        events = EventStore(
+            cache_url(),
+            namespace,
+            visible=lambda obj: public_observation(event_api, obj, reserved_graph=reserved),
+            retention=int(os.environ.get("POLYAD_EVENTS_RETENTION", "10000")),
+        )
     if serves("EVENTS"):
         assert events is not None
         event_http = EventServer(

@@ -1,0 +1,6 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if and (eq .Values._profile "ha") (eq .Values.architecture.mode "Dense") }}
+{{ include "polyad.operatorDeployment" . }}
+{{- end }}
+{{- end -}}

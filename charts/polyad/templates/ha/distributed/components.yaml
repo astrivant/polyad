@@ -1,3 +1,5 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 {{- if eq .Values.architecture.mode "Distributed" }}
 {{- if not .Values.metrics.enabled }}{{ fail "Distributed architecture requires metrics.enabled" }}{{ end }}
 {{- if not (or .Values.api.enabled .Values.events.enabled .Values.connections.enabled) }}{{ fail "Distributed architecture requires at least one gateway API" }}{{ end }}
@@ -23,6 +25,8 @@ apiVersion: polyad.astrivant.com/v1alpha1
 kind: Daemon
 metadata:
   name: {{ $.Release.Name }}-{{ $component }}
+  labels:
+    polyad.astrivant.com/internal: "true"
 spec:
   replicas: 1
   reloadOnSecretChange: {{ and $.Values.externalSecrets.enabled $.Values.externalSecrets.reloadOnChange }}
@@ -33,6 +37,8 @@ apiVersion: polyad.astrivant.com/v1alpha1
 kind: ReplicaGroup
 metadata:
   name: {{ $.Release.Name }}-{{ $component }}
+  labels:
+    polyad.astrivant.com/internal: "true"
 spec:
   templateOnly: true
   replicas: {{ $settings.replicas }}
@@ -84,6 +90,8 @@ apiVersion: polyad.astrivant.com/v1alpha1
 kind: GraphRule
 metadata:
   name: {{ .Release.Name }}-control-plane
+  labels:
+    polyad.astrivant.com/internal: "true"
 spec:
   enforcement: Referenced
   scope: Boundary
@@ -99,6 +107,8 @@ apiVersion: polyad.astrivant.com/v1alpha1
 kind: Graph
 metadata:
   name: {{ .Release.Name }}-control-plane
+  labels:
+    polyad.astrivant.com/internal: "true"
 spec:
   mode: persistent
   rules: [{{ .Release.Name }}-control-plane]
@@ -110,3 +120,4 @@ spec:
     - {source: gateway, target: executor}
     - {source: executor, target: telemetry}
 {{- end }}
+{{- end -}}

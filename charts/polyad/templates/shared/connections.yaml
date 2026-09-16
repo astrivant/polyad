@@ -1,3 +1,5 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 {{- if .Values.connections.enabled }}
 apiVersion: v1
 kind: Service
@@ -73,3 +75,4 @@ subjects:
     namespace: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}
+{{- end -}}

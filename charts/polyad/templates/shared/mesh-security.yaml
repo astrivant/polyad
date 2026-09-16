@@ -1,3 +1,5 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 {{- if .Values.mesh.install }}
 {{- if ne .Values.global.istioNamespace .Release.Namespace }}{{ fail "mesh.install requires global.istioNamespace to equal the release namespace" }}{{ end }}
 {{- end }}
@@ -80,3 +82,4 @@ spec:
     {{- end }}
     {{- end }}
 {{- end }}
+{{- end -}}

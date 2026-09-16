@@ -4,6 +4,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-polyad
+  labels:
+    polyad.astrivant.com/deployment-profile: {{ .Values._profile }}
   {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange }}
   annotations:
     reloader.stakater.com/search: "true"
@@ -34,6 +36,7 @@ spec:
       labels:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/name: polyad
+        polyad.astrivant.com/deployment-profile: {{ .Values._profile }}
         polyad.astrivant.com/bootstrap: "true"
         polyad.astrivant.com/component: {{ ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed") }}
         {{- if .Values.mesh.operator.enabled }}

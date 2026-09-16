@@ -182,7 +182,7 @@ KEDA's Prometheus scaler expects a query returning one scalar/vector element.
 When configuring it later, use the first query as a starting point, choose a
 measured backlog threshold and set `ignoreNullValues: "false"` so missing samples
 do not silently become zero demand. Keep at least one operator replica to
-consume notifications and emit telemetry. Disable the chart's CPU HPA before
+consume notifications and emit telemetry. Disable the chart's operator HPA before
 letting a KEDA ScaledObject manage the same Deployment. The scheduler currently
 has 32 logical shards; one graph family remains serialized, so adding replicas
 cannot speed up a single busy family. Kubernetes API saturation can also worsen

@@ -1,0 +1,53 @@
+# Split gateway, executor and telemetry components in the Helm release cluster.
+# Use alone, or after values-ha.reference.yaml / values-root-control-plane.reference.yaml.
+# Guide and prerequisites: ../../docs/components.md
+# Install KEDA and create the three token Secrets below before installation.
+# These are reference overrides; values.yaml contains all defaults.
+tags:
+  singular: false
+  ha: true
+
+operator:
+  replicaCount: 2 # Recovery/bootstrap replicas, separate from the component copies.
+
+architecture:
+  mode: Distributed
+  autoscaling: true # KEDA requests counts; the operator admits them through GraphRules.
+  cheegerMinimum: 1 # Structural edge-expansion bound, not measured throughput.
+  expandedNodes: 27 # Budget for recursive vertices in the component Graph.
+  components:
+    gateway:
+      replicas: 2
+      minReplicas: 2
+      maxReplicas: 8
+      requestsPerSecond: 50 # Demand per gateway copy.
+      concurrentRequests: 8 # Includes open event streams.
+    executor:
+      replicas: 2
+      minReplicas: 2
+      maxReplicas: 8
+      backlog: 8 # Outstanding graph hints per copy across managed clusters.
+    telemetry:
+      replicas: 2
+      minReplicas: 2
+      maxReplicas: 8
+      requestsPerSecond: 50
+      concurrentRequests: 2
+
+# Gateway serves enabled APIs; telemetry serves metrics. Secrets live in the
+# release namespace and each contain a token key. These names match the other
+# reference overlays, so adding components does not change their credentials.
+api:
+  enabled: true
+  existingSecret: polyad-api
+events:
+  enabled: true
+  existingSecret: polyad-events
+metrics:
+  enabled: true
+  authentication:
+    enabled: true
+    existingSecret: polyad-metrics
+keda:
+  authentication:
+    enabled: true # KEDA reads the operator metrics API using its bearer token.

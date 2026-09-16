@@ -1,0 +1,40 @@
+# One dense operator in the Helm release cluster and namespace.
+# Usage: helm upgrade --install polyad charts/polyad -n polyad --create-namespace \
+#          -f charts/polyad/values-singular.reference.yaml
+# Guide: ../../docs/deployment-profiles.md#one-dense-operator
+# These are reference overrides; values.yaml contains all defaults.
+tags:
+  singular: true
+  ha: false
+
+operator:
+  replicaCount: 1
+  autoscaling:
+    enabled: false # Singular requires exactly one operator replica.
+  nodeSelector: {} # Operator placement; graph workloads have their own placement.
+  tolerations: []
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+architecture:
+  mode: Dense
+  autoscaling: false
+
+rootControlPlane:
+  enabled: false # Root-managed execution requires HA.
+  pools: []
+
+# Cache replication is independent of operator replication. This example uses
+# one managed cache with persistent snapshots; a storage provisioner is required.
+dragonfly:
+  enabled: true
+  ha:
+    enabled: false
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: '' # Empty uses the cluster default.

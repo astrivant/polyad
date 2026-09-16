@@ -1,0 +1,42 @@
+# Replicated dense operators in one Helm release cluster and namespace.
+# Usage: helm upgrade --install polyad charts/polyad -n polyad --create-namespace \
+#          -f charts/polyad/values-ha.reference.yaml
+# Guide: ../../docs/deployment-profiles.md#ha-in-one-cluster
+# These are reference overrides; values.yaml contains all defaults.
+tags:
+  singular: false
+  ha: true
+
+operator:
+  replicaCount: 2 # At least two; replicas share queues and mutation leases.
+  nodeSelector: {}
+  tolerations: []
+  autoscaling:
+    enabled: false # CPU/memory HPA; requires a working resource metrics API.
+    minReplicas: 2 # HA may not scale below two operator replicas.
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80 # Percent of requested memory; null disables.
+  resources:
+    requests:
+      cpu: 100m # CPU requests are needed when enabling the CPU HPA.
+      memory: 128Mi # Required for the memory metric; its target is not based on limits.
+    limits:
+      memory: 512Mi
+
+architecture:
+  mode: Dense # Add values-components.reference.yaml last for split components.
+  autoscaling: false
+
+# Cache HA is a separate opt-in. Unlike chart defaults, this reference enables
+# a primary plus replica; provide two eligible nodes and persistent storage.
+dragonfly:
+  enabled: true
+  ha:
+    enabled: true
+    replicas: 2
+    topologyKey: kubernetes.io/hostname
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ''

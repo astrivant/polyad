@@ -25,7 +25,8 @@ in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/opera
 - **Coordinate across clusters.** A [root operator](docs/root-control-plane.md) can
   run in a dedicated management cluster, deploy graphs and execution replicas into
   registered workload clusters, and collect their observations centrally.
-- **Choose the control-plane layout.** Run a compact HA deployment or
+- **Choose the control-plane layout.** Select a [singular or HA Helm profile](docs/deployment-profiles.md).
+  HA can run dense operators or
   [separate gateway, executor and telemetry components](docs/components.md)
   managed through the operator's own Graph. Optionally persist graph state and
   tracked measurements in [PostgreSQL](docs/postgresql.md).
@@ -54,6 +55,7 @@ describe planned extensions; these APIs are not implemented yet.
   - [What Polyad is not](#what-polyad-is-not)
   - [Get started](#get-started)
   - [License](#license)
+  - [References](#references)
 
 ## What Polyad abstracts
 
@@ -835,3 +837,67 @@ for lifecycle, status, health and configuration references.
 ## License
 
 [GNU General Public License v3.0 only](LICENSE).
+
+## References
+
+Background reading and upstream documentation for Polyad's architecture and
+implementation. The feature guides link these sources alongside the details
+they support.
+
+- **Infrastructure at scale:** Eduardo Barth, Medium Engineering,
+  [Kubernetes Infrastructure At Medium](https://medium.engineering/kubernetes-infrastructure-at-medium-d9e2444932ef)
+  (February 14, 2023). A case study covering separate clusters, gradual
+  infrastructure rollouts, resource sizing and spare capacity for traffic bursts.
+- **Structural bottlenecks:** Jacob Fox,
+  [Lecture 22: Eigenvalues and expanders](https://math.mit.edu/~fox/MAT307-lecture22.pdf)
+  (MAT 307 lecture notes). The edge-expansion definition used by Polyad's Cheeger
+  bounds, which measure graph structure rather than application throughput.
+- **Rewriting and composition:** Dimitri Ara et al.,
+  [Polygraphs: From Rewriting to Higher Categories](https://arxiv.org/abs/2312.00429).
+  Background for the rewriting, confluence and higher-dimensional diagrams in
+  the [mutation documentation](docs/mutation-diagrams.md).
+- **Graph measurements:** [NetworkX linear algebra](https://networkx.org/documentation/stable/reference/linalg.html),
+  [condensation graphs](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.components.condensation.html)
+  and [NumPy `eigvalsh`](https://numpy.org/doc/stable/reference/generated/numpy.linalg.eigvalsh.html).
+  Matrix definitions, component summaries and spectral calculations.
+- **CPU and memory autoscaling:** [Kubernetes Horizontal Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/).
+  Resource requests, multiple metric targets, stabilization and scaling policies.
+- **Event-driven autoscaling:** KEDA's [Metrics API scaler](https://keda.sh/docs/2.20/scalers/metrics-api/),
+  [ScaledObject specification](https://keda.sh/docs/2.20/reference/scaledobject-spec/)
+  and [TriggerAuthentication](https://keda.sh/docs/2.20/concepts/authentication/#re-use-credentials-and-delegate-auth-with-triggerauthentication).
+  Operator-served demand metrics, bounded replica requests and scraper credentials.
+- **Advance capacity:** [Kubernetes node overprovisioning](https://kubernetes.io/docs/tasks/administer-cluster/node-overprovisioning/)
+  and the [Cluster Autoscaler ProvisioningRequest FAQ](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-use-provisioningrequest-to-run-batch-workloads).
+  Spare capacity, Pod priority and preparation for upcoming workload stages.
+- **Controller coordination and cleanup:** [Kubernetes Leases](https://kubernetes.io/docs/concepts/architecture/leases/)
+  and [finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/).
+  Shared ownership, coordination and ordered resource deletion.
+- **Workload storage:** [Kubernetes StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
+  and [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+  Stable workload identity, storage claims and retention behavior.
+- **Network enforcement:** [Kubernetes NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/),
+  [Istio authentication](https://istio.io/latest/docs/tasks/security/authentication/authn-policy/)
+  and [authorization policies](https://istio.io/latest/docs/reference/config/security/authorization-policy/).
+  The enforcement mechanisms behind declared graph connections and identities.
+- **Cross-cluster transport:** Istio's [multicluster prerequisites](https://istio.io/latest/docs/setup/install/multicluster/before-you-begin/),
+  [multi-primary deployment across networks](https://istio.io/latest/docs/setup/install/multicluster/multi-primary_multi-network/)
+  and [gateway TLS modes](https://istio.io/latest/docs/reference/config/networking/gateway/#ServerTLSSettings-TLSmode).
+  Mesh trust, endpoint discovery and east-west gateway transport.
+- **Shared queues and replay:** The [Dragonfly Kubernetes operator](https://www.dragonflydb.io/docs/managing-dragonfly/operator/installation)
+  and [`XAUTOCLAIM`](https://www.dragonflydb.io/docs/command-reference/stream/xautoclaim).
+  Cache availability and recovery of pending stream deliveries.
+- **Optional durable state:** CloudNativePG's [replication](https://cloudnative-pg.io/docs/current/replication/)
+  and [resource management](https://cloudnative-pg.io/docs/1.28/resource_management/).
+  PostgreSQL availability, instance sizing and standby scaling.
+- **Secret refresh and workload restarts:** [ExternalSecret refresh behavior](https://external-secrets.io/latest/api/externalsecret/)
+  and [Stakater Reloader's targeted annotations](https://github.com/stakater/Reloader#3--targeted-reload-match--search-annotations).
+  Secret synchronization and opt-in consumer restarts.
+- **Operator hosting:** Kopf's [embedding](https://docs.kopf.dev/en/stable/embedding/)
+  and [health probes](https://docs.kopf.dev/en/stable/probing/).
+  Runtime integration and operator health reporting.
+- **GitOps health:** [Argo CD custom health checks](https://argo-cd.readthedocs.io/en/stable/operator-manual/health/#custom-health-checks)
+  and [Flux health expressions](https://fluxcd.io/flux/components/kustomize/kustomizations/#health-check-expressions).
+  Reporting graph and descendant health to deployment controllers.
+- **Packaging and deployment:** [Helm dependency tags](https://docs.helm.sh/docs/v3/chart_best_practices/dependencies/)
+  and [Poetry publishing](https://python-poetry.org/docs/cli/#publish).
+  Upstream chart dependency controls and Python package release tooling.

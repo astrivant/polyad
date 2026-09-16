@@ -704,17 +704,20 @@ account in-cluster and fall back to the active kubeconfig outside the cluster.
 All replicas serving a namespace must use the same Redis-compatible database. Install
 one Polyad release per namespace; its replicas share the fixed coordination names.
 
-Enable CPU-based HPA with:
+Enable HPA with CPU and memory utilization targets:
 
 ```sh
 helm upgrade --install polyad charts/polyad --namespace polyad \
   --set operator.autoscaling.enabled=true --set operator.autoscaling.minReplicas=2 \
-  --set operator.autoscaling.maxReplicas=8
+  --set operator.autoscaling.maxReplicas=8 \
+  --set operator.autoscaling.targetMemoryUtilizationPercentage=80
 ```
 
-HPA requires the cluster metrics API and operator CPU requests. Without HPA,
+HPA requires the cluster resource metrics API and requests for CPU and, when its
+metric is enabled, memory. The memory target is a percentage of requested memory;
+set it to `null` to retain CPU-only scaling. Without HPA,
 `operator.replicaCount` controls scale. New replicas receive shards automatically; scale-down
-allows their leases to expire. At most 32 replicas can own useful shards. CPU HPA
+allows their leases to expire. At most 32 replicas can own useful shards. Resource HPA
 does not directly measure queue backlog. The default cache is a single availability
 dependency; enable Dragonfly HA to recover automatically from a primary failure.
 

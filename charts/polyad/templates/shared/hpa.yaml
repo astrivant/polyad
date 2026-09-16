@@ -1,8 +1,13 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 {{- if and .Values.operator.autoscaling.enabled (gt (int .Values.operator.autoscaling.minReplicas) (int .Values.operator.autoscaling.maxReplicas)) }}
 {{- fail "operator.autoscaling.minReplicas must not exceed operator.autoscaling.maxReplicas" }}
 {{- end }}
 {{- if and .Values.operator.autoscaling.enabled (not (dig "requests" "cpu" "" .Values.operator.resources)) }}
 {{- fail "CPU autoscaling requires operator.resources.requests.cpu" }}
+{{- end }}
+{{- if and .Values.operator.autoscaling.enabled .Values.operator.autoscaling.targetMemoryUtilizationPercentage (not (dig "requests" "memory" "" .Values.operator.resources)) }}
+{{- fail "Memory autoscaling requires operator.resources.requests.memory" }}
 {{- end }}
 {{- if .Values.operator.autoscaling.enabled }}
 apiVersion: autoscaling/v2
@@ -25,4 +30,13 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.operator.autoscaling.targetCPUUtilizationPercentage }}
+    {{- if .Values.operator.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.operator.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
 {{- end }}
+{{- end -}}

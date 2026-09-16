@@ -1,4 +1,7 @@
 # Optional component architecture; works without PostgreSQL or remote clusters.
+tags:
+  singular: false
+  ha: true
 architecture:
   mode: Distributed
   autoscaling: true

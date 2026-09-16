@@ -105,6 +105,7 @@ def owned_child(
         labels={
             f"{GROUP}/owner": meta.uid,
             f"{GROUP}/node": node_name,
+            **({f"{GROUP}/internal": "true"} if (meta.labels or {}).get(f"{GROUP}/internal") == "true" else {}),
             **({f"{GROUP}/request": (meta.labels or {})[f"{GROUP}/request"]} if f"{GROUP}/request" in (meta.labels or {}) else {}),
         },
         ownerReferences=(

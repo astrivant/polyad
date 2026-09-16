@@ -46,6 +46,9 @@ def test_operator_autoscaling_behavior_and_runtime_tuning():
     """
     objects = render("operator.autoscaling.enabled=true")
     hpa = next(obj for obj in objects if obj["kind"] == "HorizontalPodAutoscaler")
+    assert hpa["spec"]["metrics"] == [
+        {"type": "Resource", "resource": {"name": "cpu", "target": {"type": "Utilization", "averageUtilization": 70}}}
+    ]
     assert hpa["spec"]["behavior"]["scaleDown"]["stabilizationWindowSeconds"] == 300
     assert hpa["spec"]["behavior"]["scaleUp"]["stabilizationWindowSeconds"] == 0
     objects = render(
@@ -75,6 +78,66 @@ def test_operator_autoscaling_behavior_and_runtime_tuning():
         assert env[f"POLYAD_{name}_INTERVAL_SECONDS"] == value
 
 
+@pytest.mark.parametrize("mode", ["Dense", "Distributed"])
+def test_operator_hpa_scales_dense_or_bootstrap_with_cpu_and_memory(mode):
+    """
+    Add memory demand to the same HPA without targeting graph-managed components.
+    """
+    objects = render(
+        "operator.autoscaling.enabled=true",
+        "operator.autoscaling.targetCPUUtilizationPercentage=65",
+        "operator.autoscaling.targetMemoryUtilizationPercentage=80",
+        "operator.resources.requests.memory=256Mi",
+        f"architecture.mode={mode}",
+        "api.enabled=true",
+        "metrics.enabled=true",
+    )
+    hpas = [obj for obj in objects if obj["kind"] == "HorizontalPodAutoscaler"]
+    assert len(hpas) == 1
+    spec = hpas[0]["spec"]
+    assert spec["scaleTargetRef"] == {"apiVersion": "apps/v1", "kind": "Deployment", "name": "test-polyad"}
+    assert spec["minReplicas"] == 2
+    assert spec["maxReplicas"] == 8
+    assert spec["metrics"] == [
+        {"type": "Resource", "resource": {"name": name, "target": {"type": "Utilization", "averageUtilization": target}}}
+        for name, target in [("cpu", 65), ("memory", 80)]
+    ]
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    assert "replicas" not in deployment["spec"]
+    pod = deployment["spec"]["template"]
+    assert pod["metadata"]["labels"]["polyad.astrivant.com/component"] == ("dense" if mode == "Dense" else "bootstrap")
+    assert pod["spec"]["containers"][0]["resources"]["requests"]["memory"] == "256Mi"
+
+
+@pytest.mark.parametrize(("enabled", "memory_target"), [("false", "80"), ("true", "null")])
+def test_inactive_memory_autoscaling_does_not_require_memory_requests(enabled, memory_target):
+    """
+    Allow memory requests to be omitted unless memory scaling is actually active.
+    """
+    objects = render(
+        f"operator.autoscaling.enabled={enabled}",
+        f"operator.autoscaling.targetMemoryUtilizationPercentage={memory_target}",
+        "operator.resources.requests.memory=null",
+    )
+    hpas = [obj for obj in objects if obj["kind"] == "HorizontalPodAutoscaler"]
+    if enabled == "false":
+        assert not hpas
+    else:
+        assert [metric["resource"]["name"] for metric in hpas[0]["spec"]["metrics"]] == ["cpu"]
+
+
+def test_memory_autoscaling_requires_memory_requests():
+    """
+    Reject a memory-utilization HPA without the request needed for its denominator.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(
+            "operator.autoscaling.enabled=true",
+            "operator.autoscaling.targetMemoryUtilizationPercentage=80",
+            "operator.resources.requests.memory=null",
+        )
+
+
 @pytest.mark.parametrize(
     "setting",
     [
@@ -83,6 +146,10 @@ def test_operator_autoscaling_behavior_and_runtime_tuning():
         "operator.autoscaling.behavior.scaleUp.selectPolicy=Fast",
         "operator.autoscaling.behavior.scaleDown.policies[0].periodSeconds=1801",
         "operator.autoscaling.behavior.scaleDown.policies[0].value=0",
+        "operator.autoscaling.targetMemoryUtilizationPercentage=0",
+        "operator.autoscaling.targetMemoryUtilizationPercentage=101",
+        "operator.autoscaling.targetMemoryUtilizationPercentage=true",
+        "operator.autoscaling.targetMemoryUtilizationPercentage=80Mi",
         "operator.tuning.consumeIntervalSeconds=0",
         "operator.tuning.rescanIntervalSeconds=16",
     ],
@@ -934,4 +1001,5 @@ def test_distributed_components_form_a_real_constrained_graph_without_postgresql
     }
     for obj in objects:
         if obj["kind"] in {"Daemon", "GraphRule", "Graph", "ReplicaGroup"}:
+            assert obj["metadata"]["labels"]["polyad.astrivant.com/internal"] == "true"
             jsonschema.Draft7Validator(schemas[obj["kind"]]).validate(obj)

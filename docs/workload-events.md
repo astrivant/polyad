@@ -10,6 +10,31 @@ own Secret, and permit traffic with the applicable NetworkPolicy and mesh rules.
 `POLYAD_EVENTS_URL` is injected when the listener is enabled. Subscribers do not
 need Kubernetes API credentials. See [event service setup](networking.md#event-subscriptions).
 
+## Application stream boundary
+
+The workload events Service exposes application observations within its namespace.
+The operator's reserved control-plane Graph, its component definitions and all
+owned descendants are excluded from both lifecycle and topology events. Rewrite,
+activation and temporary-connection requests targeting that family are excluded
+as well. Internal topology snapshots are unavailable through this Service.
+
+The chart marks control-plane definitions as internal, and generated children
+inherit that marker. Publication also checks current, UID-matched graph ancestry
+and the configured reserved Graph identity. Unresolved or replaced ancestry
+withholds publication until it can be verified. Deletion does not remove this
+boundary. Application families sharing the operator's namespace or scheduling
+shard continue to receive their events.
+
+Root-held remote streams apply the same internal-resource and ancestry checks
+in their destination cluster. An application Graph with the same name as the
+root's reserved Graph in another cluster remains an application graph. Operator
+metrics and KEDA demand retain their existing control-plane observations.
+
+Public observations and topology snapshots use a separate cache namespace from
+the former unfiltered stream. Retained internal events are therefore unavailable
+to replay after upgrading. Reconnect using a fresh application topology snapshot
+and its cursor; an expired old cursor requires the usual snapshot refresh.
+
 ## Changes that notify workloads
 
 An SSE `topology` event is published when the boundary's structural revision

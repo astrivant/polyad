@@ -6,7 +6,8 @@ management cluster. [Optional PostgreSQL](postgresql.md) persists observations
 from every registered cluster; metrics and KEDA continue to use the root operator
 endpoints. Remote OperatorPools run the executor role in either deployment layout.
 
-Enable `rootControlPlane.enabled` to run one logical operator across registered
+Select the [HA profile](deployment-profiles.md) and enable
+`rootControlPlane.enabled` to run one logical operator across registered
 clusters. Its Deployment can live in a dedicated management cluster containing
 no application Pods. Remote `OperatorPool` Deployments add execution capacity;
 they share the root's queues and leases and cannot elect their own planner.
@@ -111,14 +112,14 @@ The runnable configuration lives in
    existing [ESO configuration](authentication.md). Replace `polyad.example.com`
    with reachable root API routes. Configure firewalls and NetworkPolicies for
    the root cache and every registered Kubernetes API.
-5. Install the chart in the root cluster, then apply
-   [`pool.yaml`](../examples/root-control-plane/pool.yaml) **in the root namespace**:
+5. Install the chart in the root cluster. The example's `rootControlPlane.pools`
+   declares `west-workers` **in the root namespace**; the root installs its
+   execution replicas in the registered workload cluster:
 
 ```bash
 helm upgrade --install polyad charts/polyad \
   --kube-context management --namespace polyad --create-namespace \
   --values examples/root-control-plane/values.yaml
-kubectl --context management apply -f examples/root-control-plane/pool.yaml
 ```
 
 Once the pool has installed the remote CRDs, apply the reusable definitions and
@@ -161,7 +162,8 @@ this same root registry, so every additional destination is registered at the ro
 
 | Field | Meaning |
 | --- | --- |
-| `rootControlPlane.enabled` | Opt in to central reconciliation, reports and worker management; default `false`. Requires federation and metrics. |
+| `rootControlPlane.enabled` | Opt in to central reconciliation, reports and worker management; default `false`. Requires the HA profile, federation and metrics. |
+| `rootControlPlane.pools` | Optional Helm-owned OperatorPool declarations with name, cluster, replicas and placement/resource overrides. Empty when pools are managed separately. Requires the HA profile and root mode. |
 | `rootControlPlane.kubeconfigSecret` | Root namespace Secret holding root credentials under `config`; required in root mode. |
 | `rootControlPlane.endpoints.api` | Reachable root composition URL advertised to workloads. |
 | `rootControlPlane.endpoints.events` | Reachable root events URL advertised to workloads. |
@@ -190,7 +192,7 @@ KEDA can target custom resources that expose Kubernetes `/scale`.
 
 | What changes | KEDA target in the root cluster | What the root changes |
 | --- | --- | --- |
-| Root operator capacity | Root Deployment | Native Deployment replicas; keep at least one and disable the chart CPU HPA when KEDA owns this target. |
+| Root operator capacity | Root Deployment | Native Deployment replicas; preserve the HA minimum of two and disable the chart operator HPA when KEDA owns this target. |
 | Remote execution capacity | `OperatorPool` | The pool's remote Deployment, preserving root coordination and draining leases. |
 | Remote application topology | `RemoteScale` | The pinned remote ReplicaGroup's desired count; its normal rule admission then creates or retires copies. |
 | Root-local graph topology | `ReplicaGroup` | Existing graph-family admission and reconciliation. |

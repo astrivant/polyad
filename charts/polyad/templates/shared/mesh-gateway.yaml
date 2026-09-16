@@ -1,3 +1,5 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 {{- if .Values.mesh.ingress.enabled }}
 apiVersion: networking.istio.io/v1
 kind: Gateway
@@ -55,3 +57,4 @@ spec:
               number: 8090
     {{- end }}
 {{- end }}
+{{- end -}}

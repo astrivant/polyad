@@ -1,0 +1,46 @@
+# Istio sidecar transport: east and west reside on separate networks.
+# Apply an adapted copy in each participating cluster, alongside its profile.
+# Guide and mesh prerequisites: ../../docs/multicluster.md
+# These are reference overrides; values.yaml contains all defaults.
+global:
+  istioNamespace: istio-system
+  meshID: application-mesh # Shared across participating clusters.
+  network: east-network # The local cluster's network.
+  multiCluster:
+    clusterName: east # Must agree with this operator's federation identity.
+
+mesh:
+  enabled: true
+  # Uses an existing Istio installation. To install the bundled control plane,
+  # set true AND set global.istioNamespace to the Helm release namespace.
+  install: false
+  multicluster:
+    enabled: true
+    eastWest:
+      enabled: true # Installs the bundled gateway, even with mesh.install=false.
+      portName: tls
+      hosts: ['*.local'] # Service SNI suffixes exposed through the gateway.
+    peers:
+      - name: west
+        mode: Gateway
+        cidrs: [192.0.2.20/32] # Replace with the remote gateway's reachable CIDRs.
+        gatewayNamespace: polyad # Namespace of the REMOTE east-west gateway.
+
+istioEastWest:
+  name: polyad-eastwest
+  networkGateway: east-network # Must match global.network.
+  labels:
+    istio: polyad-eastwest # Required selector for the generated Istio Gateway.
+    networking.istio.io/gatewayPort: '15443' # Must match the tls Service port.
+  networkGatewayPorts:
+    status-port:
+      port: 15021
+      targetPort: 15021
+    tls:
+      port: 15443 # Configurable; update the gatewayPort label at the same time.
+      targetPort: 15443 # Pod listener port; may differ from the Service port.
+
+# TLS and AUTO_PASSTHROUGH are required by this integration. Configure shared
+# mesh trust, remote endpoint discovery and gateway reachability as in the guide.
+# For same-network peers, disable eastWest and use the guide's Direct peer shape.
+# This file enables transport, not cross-cluster graph placement or root execution.

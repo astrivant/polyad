@@ -1,3 +1,5 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
 {{- if .Values.dragonfly.enabled }}
 apiVersion: dragonflydb.io/v1alpha1
 kind: Dragonfly
@@ -46,3 +48,4 @@ spec:
       {{- end }}
   {{- end }}
 {{- end }}
+{{- end -}}

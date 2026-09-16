@@ -80,24 +80,79 @@ Operator deployment settings are grouped under `operator`. When upgrading existi
 values files, nest replicas, placement, autoscaling, image, resources and shutdown
 grace settings under that key (for example, `image.tag` becomes `operator.image.tag`).
 
+## Reference values
+
+The commented `values-*.reference.yaml` files highlight settings for each profile
+and optional extension. Copy and adapt the files you need, then pass them with
+`--values`; Helm does not load them automatically. [`values.yaml`](values.yaml)
+remains the complete default configuration, and `singular` and `ha` remain the
+only deployment tags.
+
+| Reference file | Configuration and placement | Guide |
+| --- | --- | --- |
+| [`values-singular.reference.yaml`](values-singular.reference.yaml) | One dense operator and a persistent cache in the release cluster | [Singular](../../docs/deployment-profiles.md#one-dense-operator) |
+| [`values-ha.reference.yaml`](values-ha.reference.yaml) | Replicated dense operators; also opts into cache HA | [HA](../../docs/deployment-profiles.md#ha-in-one-cluster) |
+| [`values-components.reference.yaml`](values-components.reference.yaml) | HA bootstrap plus a self-managed gateway/executor/telemetry Graph and KEDA scaling in the release cluster | [Components](../../docs/components.md) |
+| [`values-federation.reference.yaml`](values-federation.reference.yaml) | Remote cluster registrations for PolyGraph placement; destinations have independent execution operators | [Federation](../../docs/multicluster.md#placement-and-ownership) |
+| [`values-root-control-plane.reference.yaml`](values-root-control-plane.reference.yaml) | HA management release that installs and controls remote execution pools | [Root control plane](../../docs/root-control-plane.md) |
+| [`values-multicluster.reference.yaml`](values-multicluster.reference.yaml) | Istio transport, peer gateways and local network identity; adapt separately per cluster | [Multicluster networking](../../docs/multicluster.md#istio-across-different-networks) |
+| [`values-observer.reference.yaml`](values-observer.reference.yaml) | Read-only observers alongside this release's operator | [Observers](../../docs/multicluster.md#optional-shared-observers) |
+| [`values-postgresql.reference.yaml`](values-postgresql.reference.yaml) | Optional persistent state, database HA and connection-driven KEDA scaling in the release cluster | [PostgreSQL](../../docs/postgresql.md) |
+
+Each file can render with chart defaults. Installation also requires the
+infrastructure and Secrets called out in its comments. Replace example cluster
+names, addresses, CIDRs and Secret references with your environment's values.
+Observer values add observers to an operator release; they do not create an
+observer-only release.
+
+For example, combine HA, split components and optional PostgreSQL:
+
+```sh
+helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+  --values charts/polyad/values-ha.reference.yaml \
+  --values charts/polyad/values-components.reference.yaml \
+  --values charts/polyad/values-postgresql.reference.yaml
+```
+
+Later files override earlier values; lists such as `federation.clusters`,
+`rootControlPlane.pools` and mesh peers are replaced, not appended. Use one base
+profile, then extensions, then your environment overrides. Keep
+`global.multiCluster.clusterName` consistent across the selected files. See
+[combination examples](../../docs/deployment-profiles.md#combine-reference-values)
+for federation and a split root installation.
+
 ## Template layout
+
+Choose the `singular` or `ha` deployment tag. With neither selected, HA is the
+default. `operator.replicaCount: null` resolves to one or two respectively.
+See [deployment profiles](../../docs/deployment-profiles.md) for install commands,
+replica floors and the management/workload cluster placement table.
 
 Templates are grouped by the deployment architecture they support:
 
 | Directory | Purpose | Enabled by |
 | --- | --- | --- |
-| [`templates/dense/`](templates/dense/) | Combined operator Deployment | `architecture.mode: Dense` (default) |
-| [`templates/distributed/`](templates/distributed/) | Bootstrap Deployment and the gateway, executor and telemetry Graph, including component scaling | `architecture.mode: Distributed` |
+| [`templates/singular/`](templates/singular/) | One combined operator replica | `tags.singular: true` |
+| [`templates/ha/`](templates/ha/) | Replicated dense operator and optional root-owned execution pool declarations | `tags.ha: true`, or neither tag selected |
+| [`templates/ha/distributed/`](templates/ha/distributed/) | Bootstrap Deployment and the gateway, executor and telemetry Graph, including component scaling | HA with `architecture.mode: Distributed` |
 | [`templates/multicluster/`](templates/multicluster/) | Federation and root-control-plane validation, east-west mesh resources and optional read-only observers | `federation.enabled`, `rootControlPlane.enabled`, `mesh.multicluster.enabled` and `observer.enabled`, independently of deployment mode |
 | [`templates/shared/`](templates/shared/) | Shared Deployment definition, Services, access controls, credentials, storage, ingress and autoscaling support | Both modes, with each optional feature controlled by its existing values |
 
 Dense and Distributed use the same `polyad.operatorDeployment` named template in
 [`shared/_deployment.tpl`](templates/shared/_deployment.tpl). Distributed components
 also reuse its Pod template so image, credentials, placement and security settings
-stay consistent. The shared CPU HPA targets the dense operator or the distributed
+stay consistent. The shared CPU/memory HPA targets the dense operator or the distributed
 bootstrap; component KEDA resources live with the distributed Graph.
 
-Multicluster features can extend either architecture. Remote execution Deployments
+Set `operator.autoscaling.enabled=true` to enable the HPA. CPU utilization is
+always included; set `operator.autoscaling.targetMemoryUtilizationPercentage=80`
+to add memory utilization at 80% of requested memory. The memory target defaults
+to `null` (disabled), and enabling it requires `operator.resources.requests.memory`.
+See [autoscaling configuration](../../docs/performance.md#autoscaling-response)
+for metric behavior, prerequisites and an example with both targets.
+
+Federation, mesh and observers remain optional. Root-managed execution requires
+HA, using either Dense or Distributed mode. Remote execution Deployments
 are created by the root operator from OperatorPools, rather than rendered separately
 by Helm. `NOTES.txt` remains at the template root, and install-time CRDs remain in
 `crds/`. Directory placement organizes the source; values select the rendered
@@ -108,18 +163,26 @@ See [Dense and Distributed deployments](../../docs/components.md) and
 
 ## Parameters
 
+### Deployment profiles
+
+| Name            | Description                                                                                         | Value   |
+| --------------- | --------------------------------------------------------------------------------------------------- | ------- |
+| `tags.singular` | Run one dense operator in the Helm release cluster; select at most one profile tag                  | `false` |
+| `tags.ha`       | Run replicated dense operators in the Helm release cluster; default when no profile tag is selected | `false` |
+
 ### Operator and shared queue parameters
 
 | Name                                                                 | Description                                                                                                   | Value                      |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `operator.logLevel`                                                  | Polyad logging verbosity (DEBUG, INFO, WARNING, ERROR or CRITICAL)                                            | `INFO`                     |
-| `operator.replicaCount`                                              | Operator replicas when autoscaling is disabled                                                                | `2`                        |
+| `operator.replicaCount`                                              | Operator replicas; null selects 1 for singular or 2 for ha                                                    | `nil`                      |
 | `operator.nodeSelector`                                              | Node labels selecting the operator node group, independent of workload graph placement                        | `{}`                       |
 | `operator.tolerations`                                               | Taints tolerated by the operator replicas                                                                     | `[]`                       |
-| `operator.autoscaling.enabled`                                       | Enable CPU-based operator autoscaling                                                                         | `false`                    |
+| `operator.autoscaling.enabled`                                       | Enable operator HPA using CPU and optional memory utilization                                                 | `false`                    |
 | `operator.autoscaling.minReplicas`                                   | Minimum operator replicas                                                                                     | `2`                        |
 | `operator.autoscaling.maxReplicas`                                   | Maximum operator replicas, at least minReplicas and at most 32                                                | `8`                        |
 | `operator.autoscaling.targetCPUUtilizationPercentage`                | Target operator CPU utilization relative to requested CPU                                                     | `70`                       |
+| `operator.autoscaling.targetMemoryUtilizationPercentage`             | Optional target memory utilization relative to requested memory (1-100); null disables the memory metric      | `nil`                      |
 | `operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds`   | Scale-up recommendation window in seconds (0-3600)                                                            | `0`                        |
 | `operator.autoscaling.behavior.scaleUp.selectPolicy`                 | Choose the largest or smallest permitted change, or disable scale-up (Max, Min, Disabled)                     | `Max`                      |
 | `operator.autoscaling.behavior.scaleUp.policies`                     | Rate limits (Pods or Percent); defaults to 100 percent or 4 Pods per 15 seconds; periodSeconds accepts 1-1800 | `[]`                       |
@@ -134,7 +197,7 @@ See [Dense and Distributed deployments](../../docs/components.md) and
 | `operator.image.tag`                                                 | Operator image tag                                                                                            | `0.0.1-alpha3`             |
 | `operator.image.pullPolicy`                                          | Operator image pull policy                                                                                    | `IfNotPresent`             |
 | `operator.resources.requests.cpu`                                    | Requested operator CPU, required for CPU autoscaling                                                          | `100m`                     |
-| `operator.resources.requests.memory`                                 | Requested operator memory                                                                                     | `128Mi`                    |
+| `operator.resources.requests.memory`                                 | Requested operator memory, required when the HPA memory metric is enabled                                     | `128Mi`                    |
 | `operator.resources.limits.memory`                                   | Operator memory limit                                                                                         | `512Mi`                    |
 | `operator.terminationGracePeriodSeconds`                             | Time allowed for operator shutdown and outstanding API calls                                                  | `60`                       |
 
@@ -160,38 +223,38 @@ See [Dense and Distributed deployments](../../docs/components.md) and
 | `postgresql.autoscaling.maxInstances`           | Maximum database instances                                                              | `6`                                                      |
 | `postgresql.autoscaling.connectionsPerInstance` | Operator connections per desired database instance; does not add primary write capacity | `20`                                                     |
 
-### Optional component deployment architecture
+### Optional HA component deployment architecture
 
-| Name                                                   | Description                                                                                                       | Value                                                 |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `architecture.mode`                                    | Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph | `Dense`                                               |
-| `architecture.cheegerMinimum`                          | Minimum edge expansion of the three-component Graph; the default chain has h=1                                    | `1`                                                   |
-| `architecture.expandedNodes`                           | Maximum recursive vertices in the self-managed Graph                                                              | `27`                                                  |
-| `architecture.autoscaling`                             | Enable KEDA scaling of all component ReplicaGroup definitions                                                     | `false`                                               |
-| `architecture.components.gateway.replicas`             | Initial gateway copies                                                                                            | `2`                                                   |
-| `architecture.components.gateway.minReplicas`          | Minimum gateway copies                                                                                            | `1`                                                   |
-| `architecture.components.gateway.maxReplicas`          | Maximum gateway copies                                                                                            | `8`                                                   |
-| `architecture.components.gateway.requestsPerSecond`    | Target total HTTP requests per second per copy                                                                    | `50`                                                  |
-| `architecture.components.gateway.concurrentRequests`   | Target open HTTP requests and event streams per copy                                                              | `8`                                                   |
-| `architecture.components.executor.replicas`            | Initial execution copies                                                                                          | `2`                                                   |
-| `architecture.components.executor.minReplicas`         | Minimum execution copies                                                                                          | `1`                                                   |
-| `architecture.components.executor.maxReplicas`         | Maximum execution copies                                                                                          | `8`                                                   |
-| `architecture.components.executor.backlog`             | Target outstanding graph hints per execution copy across all managed clusters                                     | `8`                                                   |
-| `architecture.components.telemetry.replicas`           | Initial metrics-serving copies                                                                                    | `2`                                                   |
-| `architecture.components.telemetry.minReplicas`        | Minimum metrics-serving copies                                                                                    | `1`                                                   |
-| `architecture.components.telemetry.maxReplicas`        | Maximum metrics-serving copies                                                                                    | `8`                                                   |
-| `architecture.components.telemetry.requestsPerSecond`  | Target total metrics requests per second per copy                                                                 | `50`                                                  |
-| `architecture.components.telemetry.concurrentRequests` | Target concurrent metrics requests per copy                                                                       | `2`                                                   |
-| `dragonfly.enabled`                                    | Deploy Dragonfly through the upstream operator Helm dependency                                                    | `true`                                                |
-| `dragonfly.image`                                      | Bundled Dragonfly image                                                                                           | `docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0` |
-| `dragonfly.ha.enabled`                                 | Enable primary/replica replication and automatic failover                                                         | `false`                                               |
-| `dragonfly.ha.replicas`                                | Total Dragonfly instances in HA mode, including the primary                                                       | `2`                                                   |
-| `dragonfly.ha.topologyKey`                             | Place HA instances on distinct values of this node label                                                          | `kubernetes.io/hostname`                              |
-| `dragonfly.externalUrl`                                | External Redis-compatible URL when bundled Dragonfly is disabled                                                  | `redis://dragonfly:6379/0`                            |
-| `dragonfly.existingSecret`                             | Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings              | `""`                                                  |
-| `dragonfly.persistence.enabled`                        | Persist bundled Dragonfly snapshots on a PVC                                                                      | `true`                                                |
-| `dragonfly.persistence.size`                           | Snapshot volume capacity                                                                                          | `1Gi`                                                 |
-| `dragonfly.persistence.storageClass`                   | Snapshot volume storage class; empty uses the cluster default                                                     | `""`                                                  |
+| Name                                                   | Description                                                                                                                    | Value                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `architecture.mode`                                    | Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha | `Dense`                                               |
+| `architecture.cheegerMinimum`                          | Minimum edge expansion of the three-component Graph; the default chain has h=1                                                 | `1`                                                   |
+| `architecture.expandedNodes`                           | Maximum recursive vertices in the self-managed Graph                                                                           | `27`                                                  |
+| `architecture.autoscaling`                             | Enable KEDA scaling of all component ReplicaGroup definitions                                                                  | `false`                                               |
+| `architecture.components.gateway.replicas`             | Initial gateway copies                                                                                                         | `2`                                                   |
+| `architecture.components.gateway.minReplicas`          | Minimum gateway copies                                                                                                         | `2`                                                   |
+| `architecture.components.gateway.maxReplicas`          | Maximum gateway copies                                                                                                         | `8`                                                   |
+| `architecture.components.gateway.requestsPerSecond`    | Target total HTTP requests per second per copy                                                                                 | `50`                                                  |
+| `architecture.components.gateway.concurrentRequests`   | Target open HTTP requests and event streams per copy                                                                           | `8`                                                   |
+| `architecture.components.executor.replicas`            | Initial execution copies                                                                                                       | `2`                                                   |
+| `architecture.components.executor.minReplicas`         | Minimum execution copies                                                                                                       | `2`                                                   |
+| `architecture.components.executor.maxReplicas`         | Maximum execution copies                                                                                                       | `8`                                                   |
+| `architecture.components.executor.backlog`             | Target outstanding graph hints per execution copy across all managed clusters                                                  | `8`                                                   |
+| `architecture.components.telemetry.replicas`           | Initial metrics-serving copies                                                                                                 | `2`                                                   |
+| `architecture.components.telemetry.minReplicas`        | Minimum metrics-serving copies                                                                                                 | `2`                                                   |
+| `architecture.components.telemetry.maxReplicas`        | Maximum metrics-serving copies                                                                                                 | `8`                                                   |
+| `architecture.components.telemetry.requestsPerSecond`  | Target total metrics requests per second per copy                                                                              | `50`                                                  |
+| `architecture.components.telemetry.concurrentRequests` | Target concurrent metrics requests per copy                                                                                    | `2`                                                   |
+| `dragonfly.enabled`                                    | Deploy Dragonfly through the upstream operator Helm dependency                                                                 | `true`                                                |
+| `dragonfly.image`                                      | Bundled Dragonfly image                                                                                                        | `docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0` |
+| `dragonfly.ha.enabled`                                 | Enable primary/replica replication and automatic failover                                                                      | `false`                                               |
+| `dragonfly.ha.replicas`                                | Total Dragonfly instances in HA mode, including the primary                                                                    | `2`                                                   |
+| `dragonfly.ha.topologyKey`                             | Place HA instances on distinct values of this node label                                                                       | `kubernetes.io/hostname`                              |
+| `dragonfly.externalUrl`                                | External Redis-compatible URL when bundled Dragonfly is disabled                                                               | `redis://dragonfly:6379/0`                            |
+| `dragonfly.existingSecret`                             | Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings                           | `""`                                                  |
+| `dragonfly.persistence.enabled`                        | Persist bundled Dragonfly snapshots on a PVC                                                                                   | `true`                                                |
+| `dragonfly.persistence.size`                           | Snapshot volume capacity                                                                                                       | `1Gi`                                                 |
+| `dragonfly.persistence.storageClass`                   | Snapshot volume storage class; empty uses the cluster default                                                                  | `""`                                                  |
 
 ### Upstream Dragonfly operator dependency
 
@@ -349,13 +412,14 @@ See [Dense and Distributed deployments](../../docs/components.md) and
 
 ### Root control plane
 
-| Name                                 | Description                                                                                                         | Value   |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ------- |
-| `rootControlPlane.enabled`           | Manage registered clusters and remote execution replicas through one root scheduler                                 | `false` |
-| `rootControlPlane.kubeconfigSecret`  | Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters | `""`    |
-| `rootControlPlane.meshPeers`         | Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster                 | `[]`    |
-| `rootControlPlane.endpoints.api`     | Externally reachable root composition API URL advertised to workloads                                               | `""`    |
-| `rootControlPlane.endpoints.events`  | Externally reachable root events URL advertised to workloads                                                        | `""`    |
-| `rootControlPlane.endpoints.metrics` | Externally reachable root metrics URL advertised to workloads                                                       | `""`    |
+| Name                                 | Description                                                                                                                                                     | Value   |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `rootControlPlane.enabled`           | Manage registered clusters and remote execution replicas through one root scheduler; requires ha                                                                | `false` |
+| `rootControlPlane.pools`             | Root-owned OperatorPools: unique name and registered cluster, replicas, and optional resources, nodeSelector and tolerations; requires rootControlPlane.enabled | `[]`    |
+| `rootControlPlane.kubeconfigSecret`  | Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters                                             | `""`    |
+| `rootControlPlane.meshPeers`         | Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster                                                             | `[]`    |
+| `rootControlPlane.endpoints.api`     | Externally reachable root composition API URL advertised to workloads                                                                                           | `""`    |
+| `rootControlPlane.endpoints.events`  | Externally reachable root events URL advertised to workloads                                                                                                    | `""`    |
+| `rootControlPlane.endpoints.metrics` | Externally reachable root metrics URL advertised to workloads                                                                                                   | `""`    |
 
 <!-- The parameters table is maintained by the helm-readme-generator pre-commit hook. -->

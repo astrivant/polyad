@@ -6,7 +6,8 @@
     "operator",
     "dragonfly",
     "dragonflyOperator",
-    "api"
+    "api",
+    "tags"
   ],
   "properties": {
     "operator": {
@@ -16,13 +17,15 @@
         "image",
         "resources",
         "terminationGracePeriodSeconds",
-        "replicaCount",
         "autoscaling",
         "tuning"
       ],
       "properties": {
         "replicaCount": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 1,
           "maximum": 32
         },
@@ -105,6 +108,15 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 100
+            },
+            "targetMemoryUtilizationPercentage": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Optional memory utilization percentage relative to requests; null disables the memory metric."
             },
             "behavior": {
               "type": "object",
@@ -657,6 +669,41 @@
         }
       },
       "allOf": [
+        {
+          "if": {
+            "properties": {
+              "autoscaling": {
+                "required": [
+                  "targetMemoryUtilizationPercentage"
+                ],
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  },
+                  "targetMemoryUtilizationPercentage": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resources": {
+                "required": [
+                  "requests"
+                ],
+                "properties": {
+                  "requests": {
+                    "required": [
+                      "memory"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
         {
           "if": {
             "properties": {
@@ -3332,13 +3379,11 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "enabled",
-        "kubeconfigSecret"
+        "kubeconfigSecret",
+        "pools",
+        "enabled"
       ],
       "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
         "kubeconfigSecret": {
           "type": "string",
           "maxLength": 63,
@@ -3417,6 +3462,63 @@
               "pattern": "^$|^https?://[^?#]+$"
             }
           }
+        },
+        "pools": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "cluster",
+              "replicas"
+            ],
+            "properties": {
+              "cluster": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 63,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "x-kubernetes-validations": [
+                  {
+                    "rule": "self == oldSelf",
+                    "message": "cluster is immutable"
+                  }
+                ]
+              },
+              "replicas": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 32,
+                "default": 1
+              },
+              "resources": {
+                "type": "object",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "nodeSelector": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "tolerations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "x-kubernetes-preserve-unknown-fields": true
+                }
+              },
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "enabled": {
+          "type": "boolean"
         }
       }
     },
@@ -3540,12 +3642,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "mode": {
-          "enum": [
-            "Dense",
-            "Distributed"
-          ]
-        },
         "cheegerMinimum": {
           "type": "number",
           "minimum": 0,
@@ -3569,17 +3665,17 @@
               "properties": {
                 "replicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "minReplicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "maxReplicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "requestsPerSecond": {
@@ -3605,17 +3701,17 @@
               "properties": {
                 "replicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "minReplicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "maxReplicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "backlog": {
@@ -3636,17 +3732,17 @@
               "properties": {
                 "replicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "minReplicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "maxReplicas": {
                   "type": "integer",
-                  "minimum": 1,
+                  "minimum": 2,
                   "maximum": 32
                 },
                 "requestsPerSecond": {
@@ -3672,14 +3768,68 @@
             "executor",
             "telemetry"
           ]
+        },
+        "mode": {
+          "enum": [
+            "Dense",
+            "Distributed"
+          ]
         }
       },
       "required": [
-        "mode",
         "cheegerMinimum",
         "expandedNodes",
         "autoscaling",
-        "components"
+        "components",
+        "mode"
+      ]
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "singular": {
+          "type": "boolean"
+        },
+        "ha": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "singular",
+        "ha"
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "singular": {
+              "const": false
+            },
+            "ha": {
+              "const": false
+            }
+          }
+        },
+        {
+          "properties": {
+            "singular": {
+              "const": true
+            },
+            "ha": {
+              "const": false
+            }
+          }
+        },
+        {
+          "properties": {
+            "singular": {
+              "const": false
+            },
+            "ha": {
+              "const": true
+            }
+          }
+        }
       ]
     }
   },

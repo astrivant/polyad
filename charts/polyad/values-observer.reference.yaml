@@ -1,0 +1,28 @@
+# Add read-only Graph observers alongside this release's execution operator.
+# This is NOT an observer-only installation: the chart still installs its operator.
+# Use with an existing independent operator release or the root release; do not
+# install a second execution operator in a root-managed workload namespace.
+# Guide: ../../docs/multicluster.md#optional-shared-observers
+# These are reference overrides; values.yaml contains all defaults.
+global:
+  multiCluster:
+    clusterName: east # Set to this release's identity; management for the root example.
+
+observer:
+  enabled: true
+  replicaCount: 2 # Stateless observation-serving copies, independent of execution.
+  existingSecret: polyad-observer # Release-namespace Secret with a token key.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: '1'
+      memory: 512Mi
+  mesh: false # Set true only with mesh.enabled, then supply allowed principals.
+  principals: [] # Exact mTLS identities; enforced when observer.mesh=true.
+  peers: [] # NetworkPolicy peers allowed on TCP 8094 when networkPolicy.enabled.
+
+# Configure graph observation references and the observer's reachable URL in the
+# graph resources as described in the guide. An empty peers/principals allowlist
+# admits no callers when the corresponding NetworkPolicy/Istio control is enabled.

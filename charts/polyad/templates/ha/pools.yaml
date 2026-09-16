@@ -1,0 +1,26 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if .Values.rootControlPlane.enabled -}}
+{{- $registered := dict -}}
+{{- range .Values.federation.clusters }}{{ $_ := set $registered .name true }}{{ end -}}
+{{- $names := dict -}}
+{{- $clusters := dict -}}
+{{- range .Values.rootControlPlane.pools -}}
+{{- if not (hasKey $registered .cluster) }}{{ fail "every rootControlPlane pool must target a registered remote federation cluster" }}{{ end -}}
+{{- if or (hasKey $names .name) (hasKey $clusters .cluster) }}{{ fail "rootControlPlane pool names and destination clusters must be unique" }}{{ end -}}
+{{- $_ := set $names .name true -}}
+{{- $_ := set $clusters .cluster true -}}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: OperatorPool
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    polyad.astrivant.com/deployment-profile: ha
+spec:
+  {{- toYaml (omit . "name") | nindent 2 }}
+{{ end -}}
+{{- end -}}
+{{- end -}}
