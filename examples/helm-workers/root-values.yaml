@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# Overlay examples/root-control-plane/values.yaml in the management cluster.
+rootControlPlane:
+  ## @param rootControlPlane.pools [array] Attach the west Helm release; Root delegates replica count to the pool/KEDA, Local leaves scaling downstream.
+  pools:
+    - name: west-workers
+      cluster: west
+      existingDeployment: west-polyad
+      scalingAuthority: Root
+      replicas: 2

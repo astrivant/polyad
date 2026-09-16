@@ -1,7 +1,7 @@
 {{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
 {{- with $ -}}
 {{- if .Values.federation.enabled }}
-{{- $local := required "federation requires global.multiCluster.clusterName" .Values.global.multiCluster.clusterName }}
+{{- $local := required "federation requires a root or local cluster identity" (ternary .Values.worker.rootClusterName .Values.global.multiCluster.clusterName .Values.worker.enabled) }}
 {{- $names := dict }}
 {{- range .Values.federation.clusters }}
 {{- if or (hasKey $names .name) (eq .name $local) }}{{ fail "federation cluster names must be unique and distinct from the local cluster" }}{{ end }}

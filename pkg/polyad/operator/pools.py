@@ -37,6 +37,8 @@ logger = logging.getLogger(__name__)
 OWNER = f"{GROUP}/root-owner"
 FINALIZER = f"{GROUP}/remote-operator"
 REGISTERED = f"{GROUP}/operator-graph-registered"
+ATTACHMENT = f"{GROUP}/worker-attachment"
+SCALING = f"{GROUP}/worker-scaling"
 
 
 def contains(actual: Any, desired: Any) -> bool:
@@ -401,7 +403,7 @@ class PoolManager:
     @traced("polyad.operator_pool.reconcile")
     async def pool(self, obj: dict[str, Any]) -> None:
         """
-        Install or upgrade a remote worker from the root Deployment and projected credentials.
+        Provision a remote worker or attach an administrator-installed Deployment.
 
         Args:
             obj (dict[str, Any]): Root OperatorPool capacity intent.
@@ -411,6 +413,12 @@ class PoolManager:
         """
         meta, spec = obj["metadata"], obj["spec"]
         controller = spec.get("controller", "Deployment")
+        existing = spec.get("existingDeployment")
+        authority = spec.get("scalingAuthority", "Root")
+        if authority not in {"Root", "Local"} or (authority == "Local" and not existing):
+            raise ValueError("Local scaling requires an existingDeployment attachment")
+        if existing and (controller != "Deployment" or any(field in spec for field in ("resources", "nodeSelector", "tolerations"))):
+            raise ValueError("existingDeployment requires Deployment scheduling and keeps its administrator's Pod configuration")
         if controller not in {"Deployment", "DaemonSet"} or (controller == "DaemonSet" and spec["replicas"] != 1):
             raise ValueError(
                 "OperatorPool controller must be Deployment, or DaemonSet with replicas: 1; node eligibility controls DaemonSets"
@@ -432,7 +440,8 @@ class PoolManager:
                 if any(child["metadata"].get("labels", {}).get(f"{GROUP}/node") == f"pool-{meta['uid'][:12]}" for child in children):
                     raise Pending("waiting for the unlinked operator Graph and remote workloads to drain")
             # Keep workloads, CRDs and storage. Only remove the pool's own execution machinery.
-            for kind in ("Deployment", "Graph", "Daemon", "ConfigMap", "Secret"):
+            cleanup_kinds = ("Graph", "Daemon") if existing else ("Deployment", "Graph", "Daemon", "ConfigMap", "Secret")
+            for kind in cleanup_kinds:
                 listing = await remote.request("GET", kind, namespace, query=[("labelSelector", f"{GROUP}/operator-pool={meta['uid']}")])
                 for child in (listing or {}).get("items", []):
                     if child["metadata"].get("annotations", {}).get(OWNER) != owner:
@@ -486,6 +495,9 @@ class PoolManager:
                 },
             )
             raise Pending("root pool ownership recorded")
+        if existing:
+            await self.attached_pool(obj, owner)
+            return
         source = await self.api.get("Deployment", self.namespace, os.environ["POLYAD_ROOT_DEPLOYMENT"])
         if source is None:
             raise ValueError("root Deployment is unavailable")
@@ -617,6 +629,94 @@ class PoolManager:
             message="",
         )
 
+    async def attached_pool(self, obj: dict[str, Any], owner: str) -> None:
+        """
+        Observe a Helm-installed worker and scale only under a matching local grant.
+
+        Args:
+            obj (dict[str, Any]): Root OperatorPool referring to an existing Deployment.
+            owner (str): Root pool incarnation owning observation definitions, never the Deployment.
+
+        Returns:
+            None: Helm retains Pod configuration, credentials, upgrades and deletion ownership.
+        """
+        meta, spec = obj["metadata"], obj["spec"]
+        remote, namespace = self.root.resolve(spec["cluster"])
+        deployment = await remote.get("Deployment", namespace, spec["existingDeployment"])
+        if deployment is None or deployment["metadata"].get("deletionTimestamp"):
+            raise Pending("waiting for the administrator-installed worker Deployment")
+        native = deployment["metadata"]
+        expected = [self.root.federation.name, self.namespace, os.environ["POLYAD_ROOT_DEPLOYMENT"], self.topology_name, meta["name"]]
+        annotations = native.get("annotations", {})
+        try:
+            attachment = json.loads(annotations.get(ATTACHMENT, "null"))
+        except (TypeError, ValueError):
+            attachment = None
+        authority = spec.get("scalingAuthority", "Root")
+        if (
+            attachment != expected
+            or annotations.get(SCALING) != authority
+            or native.get("labels", {}).get(INTERNAL) != "true"
+            or any(item.get("controller") for item in native.get("ownerReferences", []))
+        ):
+            decision(
+                "polyad.operator_pool.conflict",
+                "The installed worker has not granted this root pool the requested attachment and scaling authority.",
+                obj=obj,
+                outcome="blocked",
+                reason="attachment_grant_mismatch",
+                level=logging.WARNING,
+                attributes={"polyad.target.name": native["name"], "polyad.scaling.authority": authority},
+            )
+            raise ValueError("worker attachment or scaling authority does not match the root OperatorPool")
+        desired = spec["replicas"] if authority == "Root" else deployment["spec"].get("replicas", 1)
+        effective = copy.deepcopy(obj)
+        effective["spec"]["replicas"] = desired
+        boundary = await self.graph_pool(effective, copy.deepcopy(deployment["spec"]["template"]), owner)
+        await check_live_rules(self.api, boundary)
+        group = await remote.get("Graph", namespace, f"polyad-worker-{meta['uid'][:12]}-graph")
+        if group is None:
+            raise Pending("waiting for the attached operator's graph definition")
+        await check_live_rules(remote, group)
+        if authority == "Root" and deployment["spec"].get("replicas", 1) != desired:
+            current = await self.api.get("OperatorPool", self.namespace, meta["name"])
+            if (
+                current is None
+                or current["metadata"].get("deletionTimestamp")
+                or any(current["metadata"].get(field) != meta.get(field) for field in ("uid", "generation"))
+            ):
+                raise Pending("root scaling intent changed before dispatch")
+            # The local grant and Pod configuration share the same resourceVersion.
+            # A concurrent Helm edit or revocation therefore rejects this write.
+            deployment = await remote.request(
+                "PATCH",
+                "Deployment",
+                namespace,
+                native["name"],
+                {"metadata": {"uid": native["uid"], "resourceVersion": native["resourceVersion"]}, "spec": {"replicas": desired}},
+            )
+            decision(
+                "polyad.operator_pool.scaled",
+                "Scaled the attached worker after fresh rules and its local root-scaling grant passed.",
+                obj=obj,
+                outcome="applied",
+                reason="attachment_scale_admitted",
+                attributes={"polyad.target.name": native["name"], "polyad.replicas.requested": desired},
+            )
+        status = deployment.get("status", {})
+        await self.status(
+            obj,
+            replicas=status.get("replicas", 0),
+            readyReplicas=status.get("readyReplicas", 0),
+            phase="Ready"
+            if (
+                status.get("observedGeneration") == deployment["metadata"].get("generation", 1)
+                and status.get("replicas", 0) == status.get("readyReplicas", 0) == desired
+            )
+            else "Pending",
+            message="scaling is controlled by the downstream administrator" if authority == "Local" else "",
+        )
+
     async def graph_pool(self, obj: dict[str, Any], pod: dict[str, Any], owner: str) -> dict[str, Any]:
         """
         Register one remote group Graph beneath the shared reserved PolyGraph.
@@ -653,7 +753,7 @@ class PoolManager:
                     "name": name + "-graph",
                     "namespace": namespace,
                     "labels": labels,
-                    "annotations": {DEPLOYMENT: name} if controller == "Deployment" else {},
+                    "annotations": {DEPLOYMENT: spec.get("existingDeployment", name)} if controller == "Deployment" else {},
                 },
                 "spec": {
                     "templateOnly": True,

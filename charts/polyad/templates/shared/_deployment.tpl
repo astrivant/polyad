@@ -11,15 +11,21 @@ metadata:
   name: {{ .Release.Name }}-polyad
   labels:
     polyad.astrivant.com/deployment-profile: {{ .Values._profile }}
-    {{- if or .Values.rootControlPlane.enabled (eq .Values.architecture.mode "Distributed") }}
+    {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled (eq .Values.architecture.mode "Distributed") }}
     polyad.astrivant.com/internal: "true"
     {{- end }}
-  {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange }}
+  {{- if or .Values.worker.enabled (and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange) }}
   annotations:
+    {{- if .Values.worker.enabled }}
+    polyad.astrivant.com/worker-attachment: {{ list .Values.worker.rootClusterName .Values.worker.rootNamespace .Values.worker.rootDeployment .Values.worker.rootGraph .Values.worker.poolName | toJson | quote }}
+    polyad.astrivant.com/worker-scaling: {{ .Values.worker.scalingAuthority | quote }}
+    {{- end }}
+    {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange }}
     reloader.stakater.com/search: "true"
+    {{- end }}
   {{- end }}
 spec:
-  {{- if not .Values.operator.autoscaling.enabled }}
+  {{- if and (not .Values.operator.autoscaling.enabled) (not (and .Values.worker.enabled (eq .Values.worker.scalingAuthority "Root"))) }}
   replicas: {{ .Values.operator.replicaCount }}
   {{- end }}
   strategy:
@@ -31,7 +37,7 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/name: polyad
-      polyad.astrivant.com/bootstrap: "true"
+      polyad.astrivant.com/bootstrap: {{ not .Values.worker.enabled | quote }}
   template:
     metadata:
       annotations:
@@ -48,9 +54,9 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/name: polyad
         polyad.astrivant.com/deployment-profile: {{ .Values._profile }}
-        polyad.astrivant.com/bootstrap: "true"
-        polyad.astrivant.com/component: {{ ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed") }}
-        {{- if or .Values.rootControlPlane.enabled (eq .Values.architecture.mode "Distributed") }}
+        polyad.astrivant.com/bootstrap: {{ not .Values.worker.enabled | quote }}
+        polyad.astrivant.com/component: {{ ternary "executor" (ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed")) .Values.worker.enabled }}
+        {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled (eq .Values.architecture.mode "Distributed") }}
         polyad.astrivant.com/internal: "true"
         {{- end }}
         {{- if .Values.mesh.operator.enabled }}
@@ -66,6 +72,9 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ .Release.Name }}-polyad
+      {{- if .Values.worker.enabled }}
+      automountServiceAccountToken: false
+      {{- end }}
       terminationGracePeriodSeconds: {{ .Values.operator.terminationGracePeriodSeconds }}
       securityContext:
         runAsNonRoot: true
@@ -80,7 +89,7 @@ spec:
           imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
           command: [/usr/bin/tini, --, python, -m, polyad.operator.runtime]
           args:
-            - --namespace={{ .Release.Namespace }}
+            - --namespace={{ ternary .Values.worker.rootNamespace .Release.Namespace .Values.worker.enabled }}
             - --liveness=http://0.0.0.0:8080/healthz
           env:
             {{- include "polyad.tracingEnv" . | nindent 12 }}
@@ -99,10 +108,22 @@ spec:
               value: /var/run/polyad/auth-database/uri
             {{- end }}
             - name: POLYAD_COMPONENT
-              value: {{ ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed") | quote }}
-            {{- if .Values.rootControlPlane.enabled }}
+              value: {{ ternary "executor" (ternary "bootstrap" "dense" (eq .Values.architecture.mode "Distributed")) .Values.worker.enabled | quote }}
+            {{- if .Values.worker.enabled }}
+            - name: POLYAD_ROOT_WORKER
+              value: "true"
+            - name: POLYAD_WORKER_POOL
+              value: {{ .Values.worker.poolName | quote }}
+            - name: POLYAD_WORKER_DEPLOYMENT
+              value: {{ printf "%s-polyad" .Release.Name | quote }}
+            - name: POLYAD_WORKER_CLUSTER
+              value: {{ .Values.global.multiCluster.clusterName | quote }}
+            - name: KUBECONFIG
+              value: /var/run/polyad/root/config
+            {{- end }}
+            {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled }}
             - name: POLYAD_SELF_GRAPH
-              value: {{ printf "%s-operators" .Release.Name | quote }}
+              value: {{ ternary .Values.worker.rootGraph (printf "%s-operators" .Release.Name) .Values.worker.enabled | quote }}
             - name: POLYAD_SELF_GRAPH_KIND
               value: PolyGraph
             {{- if eq .Values.architecture.mode "Distributed" }}
@@ -132,12 +153,12 @@ spec:
             - name: POLYAD_OPERATOR_IMAGE
               value: {{ printf "%s:%s" .Values.operator.image.repository .Values.operator.image.tag | quote }}
             - name: POLYAD_ROOT_ENABLED
-              value: {{ .Values.rootControlPlane.enabled | quote }}
-            {{- if .Values.rootControlPlane.enabled }}
+              value: {{ or .Values.worker.enabled .Values.rootControlPlane.enabled | quote }}
+            {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled }}
             - name: POLYAD_ROOT_MESH_PEERS
               value: {{ .Values.rootControlPlane.meshPeers | toJson | quote }}
             - name: POLYAD_ROOT_DEPLOYMENT
-              value: {{ printf "%s-polyad" .Release.Name | quote }}
+              value: {{ ternary .Values.worker.rootDeployment (printf "%s-polyad" .Release.Name) .Values.worker.enabled | quote }}
             {{- end }}
             - name: POLYAD_ESO_RELOAD_ENABLED
               value: {{ and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange | quote }}
@@ -212,7 +233,7 @@ spec:
             - name: POLYAD_ISTIO_NAMESPACE
               value: {{ .Values.global.istioNamespace | quote }}
             - name: POLYAD_CLUSTER_NAME
-              value: {{ .Values.global.multiCluster.clusterName | quote }}
+              value: {{ ternary .Values.worker.rootClusterName .Values.global.multiCluster.clusterName .Values.worker.enabled | quote }}
             {{- if .Values.mesh.multicluster.enabled }}
             - name: POLYAD_MESH_PEERS
               value: {{ .Values.mesh.multicluster.peers | toJson | quote }}
@@ -277,7 +298,7 @@ spec:
               mountPath: /var/run/polyad/postgresql
               readOnly: true
             {{- end }}
-            {{- if .Values.rootControlPlane.enabled }}
+            {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled }}
             - name: root-credentials
               mountPath: /var/run/polyad/root
               readOnly: true
@@ -355,7 +376,7 @@ spec:
               command:
                 - python
                 - -c
-                - "import json,urllib.request; s=json.load(urllib.request.urlopen('http://localhost:8080/healthz',timeout=2))['scheduler']; assert s['initialized'] and s['worker'] and s['apiFresh'] and s['cacheFresh']"
+                - "import json,urllib.request; s=json.load(urllib.request.urlopen('http://localhost:8080/healthz',timeout=2))['scheduler']; assert s['initialized'] and s['worker'] and s['apiFresh'] and s['cacheFresh'] and s.get('attached',True)"
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
@@ -377,7 +398,7 @@ spec:
               - key: {{ ternary "uri" .Values.postgresql.secretKey .Values.postgresql.managed | quote }}
                 path: uri
         {{- end }}
-        {{- if .Values.rootControlPlane.enabled }}
+        {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled }}
         - name: root-credentials
           secret:
             secretName: {{ .Values.rootControlPlane.kubeconfigSecret | quote }}

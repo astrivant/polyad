@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# Overlay values-worker.reference.yaml in the downstream cluster.
+## @param ha [boolean] Local ownership uses the normal profile: HA permits two or more replicas and optional HPA.
+ha: true
+worker:
+  ## @param worker.scalingAuthority [string] Local retains replica ownership here; also set Local on the root OperatorPool and disable its KEDA scaler.
+  scalingAuthority: Local
+operator:
+  ## @param operator.replicaCount [nullable] Local initial replica count; ignored when the optional local HPA owns replicas.
+  replicaCount: 2
+  autoscaling:
+    ## @param operator.autoscaling.enabled [boolean] Enable for downstream CPU/memory HPA; never combine it with Root scaling authority.
+    enabled: false

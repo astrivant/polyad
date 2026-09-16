@@ -1,6 +1,6 @@
 {{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
 {{- with $ -}}
-{{- if and (eq .Values._profile "ha") (eq .Values.architecture.mode "Dense") }}
+{{- if and (eq .Values._profile "ha") (eq .Values.architecture.mode "Dense") (not .Values.worker.enabled) }}
 {{ include "polyad.operatorDeployment" . }}
 {{- end }}
 {{- end -}}

@@ -3473,6 +3473,22 @@
                 ],
                 "default": "Deployment",
                 "description": "Each pool joins the reserved root PolyGraph through its own Graph. Deployment supports root KEDA replica scaling; DaemonSet follows eligible nodes and requires replicas: 1."
+              },
+              "existingDeployment": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253,
+                "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+                "description": "Existing Helm-owned Deployment in the registered namespace. The root observes it and only scales it when both sides grant Root authority."
+              },
+              "scalingAuthority": {
+                "type": "string",
+                "enum": [
+                  "Root",
+                  "Local"
+                ],
+                "default": "Root",
+                "description": "Root applies requested replicas; Local only observes an existingDeployment and leaves scaling to its administrator."
               }
             },
             "additionalProperties": false,
@@ -3495,10 +3511,60 @@
                     }
                   }
                 }
+              },
+              {
+                "if": {
+                  "required": [
+                    "existingDeployment"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "controller": {
+                      "const": "Deployment"
+                    }
+                  },
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "resources"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "nodeSelector"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "tolerations"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "scalingAuthority": {
+                      "const": "Local"
+                    }
+                  },
+                  "required": [
+                    "scalingAuthority"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "existingDeployment"
+                  ]
+                }
               }
             ]
           },
-          "description": "Root-owned OperatorPools: unique name and registered cluster, replicas, and optional resources, nodeSelector and tolerations; requires rootControlPlane.enabled"
+          "description": "Root-owned OperatorPools; existingDeployment attaches a Helm-owned worker with explicit Root or Local scaling authority."
         },
         "enabled": {
           "type": "boolean",
@@ -3892,6 +3958,49 @@
               "description": "Full HTTP/protobuf log URL, usually /v1/logs. Shares trace service identity, timeout, resource attributes and exporter Secret."
             }
           }
+        }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rootNamespace": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+          "description": "Root namespace for queues, leases and pool registration; not the worker release namespace."
+        },
+        "rootClusterName": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+          "description": "Root federation identity, distinct from this worker hosting cluster."
+        },
+        "rootDeployment": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+          "description": "Root Deployment allowed to manage this attachment."
+        },
+        "rootGraph": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+          "description": "Reserved PolyGraph name at the root, normally ROOT_RELEASE-operators."
+        },
+        "poolName": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+          "description": "Root-namespace OperatorPool authorized to attach this Deployment."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Install a Helm-owned execution worker connected to an existing root."
+        },
+        "scalingAuthority": {
+          "type": "string",
+          "enum": [
+            "Root",
+            "Local"
+          ],
+          "description": "Root permits the approved OperatorPool to change replicas; Local keeps replica intent and optional HPA with the downstream administrator."
         }
       }
     }

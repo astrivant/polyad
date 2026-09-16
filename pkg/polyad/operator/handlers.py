@@ -563,6 +563,7 @@ def health(**_: Any) -> dict[str, Any]:
         },
         "apiFresh": coordinator is not None and time.monotonic() - coordinator.last_success < 60,
         "cacheFresh": shared is not None and time.monotonic() - shared.last_success < 30,
+        "attached": coordinator is not None and coordinator.attachment_ready,
         "identity": coordinator.identity if coordinator else None,
         "leader": coordinator.leader if coordinator else False,
         "shards": sorted(coordinator.owned) if coordinator else [],

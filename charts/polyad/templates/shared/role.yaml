@@ -1,5 +1,6 @@
 {{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
 {{- with $ -}}
+{{- if not .Values.worker.enabled -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -78,4 +79,5 @@ rules:
     resources: [secrets]
     verbs: [get]
   {{- end }}
+{{- end -}}
 {{- end -}}

@@ -11,7 +11,13 @@
 {{- with $ -}}
 Polyad release {{ .Release.Name }} is installed in namespace {{ .Release.Namespace }}.
 Deployment profile: {{ .Values._profile }}.
-{{- if .Values.rootControlPlane.enabled }}
+{{- if .Values.worker.enabled }}
+This is a Helm-owned execution worker for root {{ .Values.worker.rootClusterName }}/{{ .Values.worker.rootNamespace }}.
+It does not elect a root or start application API listeners. Configure OperatorPool
+{{ .Values.worker.poolName }} in the root namespace with existingDeployment: {{ .Release.Name }}-polyad
+and scalingAuthority: {{ .Values.worker.scalingAuthority }} to attach its Graph to {{ .Values.worker.rootGraph }}.
+Install/upgrade through this release. Replica scaling authority: {{ .Values.worker.scalingAuthority }}.
+{{- else if .Values.rootControlPlane.enabled }}
 This is the management release. Root components and their Services run here.
 OperatorPools request execution replicas in registered workload clusters; do not
 install a second root release there for the same graph families.

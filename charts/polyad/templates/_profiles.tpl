@@ -3,6 +3,24 @@
 {{- $values := deepCopy .Values -}}
 {{- $profile := ternary "ha" "singular" $values.ha -}}
 {{- $_ := set $values "_profile" $profile -}}
+{{- if $values.worker.enabled -}}
+{{- range $field := list "rootNamespace" "rootClusterName" "rootDeployment" "rootGraph" "poolName" -}}
+{{- if not (index $values.worker $field) }}{{ fail (printf "worker.enabled requires worker.%s" $field) }}{{ end -}}
+{{- end -}}
+{{- if or (not $values.global.multiCluster.clusterName) (eq $values.global.multiCluster.clusterName $values.worker.rootClusterName) }}{{ fail "worker hosting cluster must be set and distinct from worker.rootClusterName" }}{{ end -}}
+{{- if or $values.rootControlPlane.enabled (ne $values.architecture.mode "Dense") }}{{ fail "worker mode requires rootControlPlane.enabled=false and architecture.mode=Dense" }}{{ end -}}
+{{- if or $values.api.enabled $values.events.enabled $values.metrics.enabled $values.connections.enabled $values.observer.enabled }}{{ fail "worker mode exposes only health; disable api, events, metrics, connections and observer listeners" }}{{ end -}}
+{{- if or $values.dragonfly.enabled (not $values.dragonfly.existingSecret) (not $values.rootControlPlane.kubeconfigSecret) (not $values.federation.enabled) }}{{ fail "worker mode requires external root/cache Secrets, federation.enabled=true and dragonfly.enabled=false" }}{{ end -}}
+{{- if or (and $values.postgresql.enabled $values.postgresql.managed) (and $values.authentication.storage.enabled $values.authentication.storage.managed) }}{{ fail "workers may connect to existing root databases but must not provision their own databases" }}{{ end -}}
+{{- if or $values.mesh.install $values.mesh.operator.enabled $values.mesh.ingress.enabled $values.mesh.multicluster.eastWest.enabled }}{{ fail "install mesh infrastructure separately; worker Pods use root HTTPS and cache connections" }}{{ end -}}
+{{- $host := dict -}}
+{{- range $values.federation.clusters -}}
+{{- if eq .name $values.global.multiCluster.clusterName }}{{ $_ := set $host "namespace" .namespace }}{{ end -}}
+{{- end -}}
+{{- if ne (get $host "namespace") .Release.Namespace }}{{ fail "worker federation registry must include its hosting cluster with this release namespace" }}{{ end -}}
+{{- if and (eq $values.worker.scalingAuthority "Root") (or $values.operator.autoscaling.enabled (ne $values.operator.replicaCount nil)) }}{{ fail "Root scaling omits Helm replicas and HPA; set counts on the root OperatorPool" }}{{ end -}}
+{{- if and $values.postgresql.enabled (not $values.postgresql.scope) }}{{ fail "workers using PostgreSQL must set the same postgresql.scope as the root" }}{{ end -}}
+{{- end -}}
 {{- $authEndpoints := dict -}}
 {{- range $group, $keys := pick $values.authentication "services" "operators" -}}
 {{- $names := dict -}}
@@ -31,10 +49,12 @@
 {{- if and $values.dragonfly.enabled $values.dragonfly.ha.enabled $values.dragonfly.autoscaling.enabled -}}
 {{- $_ := set $values.metrics "enabled" true -}}
 {{- end -}}
-{{- if eq $values.operator.replicaCount nil -}}
+{{- if and (eq $values.operator.replicaCount nil) (not (and $values.worker.enabled (eq $values.worker.scalingAuthority "Root"))) -}}
 {{- $_ := set $values.operator "replicaCount" (ternary 1 2 (eq $profile "singular")) -}}
 {{- end -}}
-{{- if eq $profile "singular" -}}
+{{- if and $values.worker.enabled (eq $values.worker.scalingAuthority "Root") -}}
+{{/* Replica intent belongs to the root; ha selects no local replica floor here. */}}
+{{- else if eq $profile "singular" -}}
 {{- if or (ne (int $values.operator.replicaCount) 1) $values.operator.autoscaling.enabled }}{{ fail "singular requires one operator replica and operator.autoscaling.enabled=false" }}{{ end -}}
 {{- if or (eq $values.architecture.mode "Distributed") $values.rootControlPlane.enabled }}{{ fail "split components and remote execution management require the ha profile" }}{{ end -}}
 {{- else -}}

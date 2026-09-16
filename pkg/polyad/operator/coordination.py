@@ -95,6 +95,12 @@ class Coordinator:
         self.api, self.namespace = api, namespace
         self.identity = identity or str(uuid.uuid4())
         self.planner = planner
+        self.worker_pool = os.environ.get("POLYAD_WORKER_POOL", "")
+        self.worker_deployment = os.environ.get("POLYAD_WORKER_DEPLOYMENT", "")
+        self.worker_cluster = os.environ.get("POLYAD_WORKER_CLUSTER", "")
+        if self.worker_pool and (planner or not self.worker_deployment or not self.worker_cluster):
+            raise ValueError("Helm worker registration requires a non-planner, Deployment name and hosting cluster")
+        self.attachment_ready = not bool(self.worker_pool)
         self.component = role()
         root_mode = os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true"
         root_deployment = os.environ.get("POLYAD_ROOT_DEPLOYMENT", "")
@@ -112,6 +118,38 @@ class Coordinator:
         self.members: list[str] = []
         self.lock = asyncio.Lock()
         self.duties = [asyncio.Lock() for _ in range(SHARDS)]
+
+    async def registered(self) -> bool:
+        """
+        Require the root to register a Helm-installed worker before it may execute.
+
+        Returns:
+            bool: Whether the attachment still matches a live, provisioned root pool.
+        """
+        if not self.worker_pool:
+            return True
+        pool = await self.api.get("OperatorPool", self.namespace, self.worker_pool)
+        ready = bool(
+            pool
+            and not pool["metadata"].get("deletionTimestamp")
+            and pool["spec"].get("existingDeployment") == self.worker_deployment
+            and pool["spec"].get("cluster") == self.worker_cluster
+            and pool["metadata"].get("annotations", {}).get(f"{GROUP}/operator-graph-registered") == pool["metadata"]["uid"]
+        )
+        if ready != self.attachment_ready:
+            decision(
+                "polyad.worker.attachment",
+                "Root attachment is active; the worker may acquire assigned shards."
+                if ready
+                else "Root attachment was removed or changed; the worker pauses mutations and retains existing workloads.",
+                key=("OperatorPool", self.namespace, self.worker_pool),
+                outcome="allowed" if ready else "blocked",
+                reason="attachment_active" if ready else "attachment_unavailable",
+                level=logging.INFO if ready else logging.WARNING,
+                attributes={"polyad.replica.id": self.identity, "polyad.target.cluster": self.worker_cluster},
+            )
+        self.attachment_ready = ready
+        return ready
 
     def expired(self, lease: dict[str, Any]) -> bool:
         """
@@ -178,6 +216,10 @@ class Coordinator:
         """
         async with self.lock:
             previous = self.leader, frozenset(self.owned)
+            if not await self.registered():
+                self.owned.clear()
+                self.leader = False
+                return
             await self.claim(
                 f"polyad-member-{self.identity}",
                 annotations={
@@ -310,6 +352,8 @@ class Coordinator:
             None: No return value.
         """
         shard = active_shard.get()
+        if not await self.registered():
+            raise NotOwner("Helm worker attachment is unavailable")
         if shard is None or shard not in self.owned:
             decision(
                 "polyad.coordination.fenced",

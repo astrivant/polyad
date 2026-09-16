@@ -1236,6 +1236,33 @@
           }
         }
       }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rootNamespace": {
+          "$ref": "values.schema.json#/properties/worker/properties/rootNamespace"
+        },
+        "rootClusterName": {
+          "$ref": "values.schema.json#/properties/worker/properties/rootClusterName"
+        },
+        "rootDeployment": {
+          "$ref": "values.schema.json#/properties/worker/properties/rootDeployment"
+        },
+        "rootGraph": {
+          "$ref": "values.schema.json#/properties/worker/properties/rootGraph"
+        },
+        "poolName": {
+          "$ref": "values.schema.json#/properties/worker/properties/poolName"
+        },
+        "enabled": {
+          "$ref": "values.schema.json#/properties/worker/properties/enabled"
+        },
+        "scalingAuthority": {
+          "$ref": "values.schema.json#/properties/worker/properties/scalingAuthority"
+        }
+      }
     }
   }
 }

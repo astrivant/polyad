@@ -3,6 +3,23 @@
 ## @param ha Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
 ha: false
 
+## @section Helm-installed downstream workers
+worker:
+  ## @param worker.enabled Install an execution replica connected to an existing root; disables root election and requires external root/cache credentials
+  enabled: false
+  ## @param worker.rootNamespace Namespace of the root's queues, leases and OperatorPool; independent of this Helm release namespace
+  rootNamespace: ''
+  ## @param worker.rootClusterName Root federation identity; global.multiCluster.clusterName identifies this worker's hosting cluster instead
+  rootClusterName: ''
+  ## @param worker.rootDeployment Name of the existing root Deployment, used to identify the attachment authority
+  rootDeployment: ''
+  ## @param worker.rootGraph Name of the root's reserved PolyGraph; normally ROOT_RELEASE-operators
+  rootGraph: ''
+  ## @param worker.poolName Name of the root-namespace OperatorPool that may attach this Deployment
+  poolName: ''
+  ## @param worker.scalingAuthority Root lets the matching OperatorPool/KEDA control replicas; Local keeps replicas and optional HPA under this Helm release
+  scalingAuthority: Root
+
 ## @section OpenTelemetry traces and logs
 tracing:
   ## @param tracing.enabled Export operator and observer traces over OTLP/HTTP; disabled creates no exporter
@@ -519,7 +536,7 @@ capacity:
 rootControlPlane:
   ## @param rootControlPlane.enabled Manage registered clusters and remote execution replicas through one root scheduler; requires ha
   enabled: false
-  ## @param rootControlPlane.pools [array] Root-owned OperatorPools: unique name and registered cluster, replicas, and optional resources, nodeSelector and tolerations; requires rootControlPlane.enabled
+  ## @param rootControlPlane.pools [array] Root-owned OperatorPools; set existingDeployment to attach a Helm-installed worker and scalingAuthority to Root or Local instead of provisioning it
   pools: []
   ## @param rootControlPlane.kubeconfigSecret Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
   kubeconfigSecret: ''

@@ -216,6 +216,18 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | ---- | ------------------------------------------------------------------------------------------------------------------------ | ------- |
 | `ha` | Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator | `false` |
 
+### Helm-installed downstream workers
+
+| Name                      | Description                                                                                                                     | Value   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `worker.enabled`          | Install an execution replica connected to an existing root; disables root election and requires external root/cache credentials | `false` |
+| `worker.rootNamespace`    | Namespace of the root's queues, leases and OperatorPool; independent of this Helm release namespace                             | `""`    |
+| `worker.rootClusterName`  | Root federation identity; global.multiCluster.clusterName identifies this worker's hosting cluster instead                      | `""`    |
+| `worker.rootDeployment`   | Name of the existing root Deployment, used to identify the attachment authority                                                 | `""`    |
+| `worker.rootGraph`        | Name of the root's reserved PolyGraph; normally ROOT_RELEASE-operators                                                          | `""`    |
+| `worker.poolName`         | Name of the root-namespace OperatorPool that may attach this Deployment                                                         | `""`    |
+| `worker.scalingAuthority` | Root lets the matching OperatorPool/KEDA control replicas; Local keeps replicas and optional HPA under this Helm release        | `Root`  |
+
 ### OpenTelemetry traces and logs
 
 | Name                         | Description                                                                                                                         | Value                                  |
@@ -498,14 +510,14 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### Root control plane
 
-| Name                                 | Description                                                                                                                                                     | Value   |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `rootControlPlane.enabled`           | Manage registered clusters and remote execution replicas through one root scheduler; requires ha                                                                | `false` |
-| `rootControlPlane.pools`             | Root-owned OperatorPools: unique name and registered cluster, replicas, and optional resources, nodeSelector and tolerations; requires rootControlPlane.enabled | `[]`    |
-| `rootControlPlane.kubeconfigSecret`  | Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters                                             | `""`    |
-| `rootControlPlane.meshPeers`         | Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster                                                             | `[]`    |
-| `rootControlPlane.endpoints.api`     | Externally reachable root composition API URL advertised to workloads                                                                                           | `""`    |
-| `rootControlPlane.endpoints.events`  | Externally reachable root events URL advertised to workloads                                                                                                    | `""`    |
-| `rootControlPlane.endpoints.metrics` | Externally reachable root metrics URL advertised to workloads                                                                                                   | `""`    |
+| Name                                 | Description                                                                                                                                         | Value   |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `rootControlPlane.enabled`           | Manage registered clusters and remote execution replicas through one root scheduler; requires ha                                                    | `false` |
+| `rootControlPlane.pools`             | Root-owned OperatorPools; set existingDeployment to attach a Helm-installed worker and scalingAuthority to Root or Local instead of provisioning it | `[]`    |
+| `rootControlPlane.kubeconfigSecret`  | Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters                                 | `""`    |
+| `rootControlPlane.meshPeers`         | Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster                                                 | `[]`    |
+| `rootControlPlane.endpoints.api`     | Externally reachable root composition API URL advertised to workloads                                                                               | `""`    |
+| `rootControlPlane.endpoints.events`  | Externally reachable root events URL advertised to workloads                                                                                        | `""`    |
+| `rootControlPlane.endpoints.metrics` | Externally reachable root metrics URL advertised to workloads                                                                                       | `""`    |
 
 <!-- The parameters table is maintained by the helm-readme-generator pre-commit hook. -->
