@@ -109,7 +109,7 @@ a service graph might keep consumers and their supporting resources running.<sup
 
 ### Motivation and inspiration
 
-While at Klaviyo, I briefly worked alongside engineers who had come from Medium.
+While at Klaviyo, I briefly worked alongside engineers from Medium.
 They were working on converting the company's cloud architecture to a setup where clusters managed other clusters, a concept they'd designed at Medium. That idea helped
 motivate Polyad's [root control plane](docs/deployment/root-control-plane.md) and
 nested PolyGraphs. Medium's
