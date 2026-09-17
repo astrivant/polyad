@@ -20,6 +20,30 @@ COMPOSITION_KINDS = COMPOSABLE_KINDS
 MAX_TTL = 86400
 
 
+@frozen
+class ConnectionResponse:
+    """
+    Respond to an immutable connection proposal as an authenticated endpoint.
+
+    Attributes:
+        uid (str): Receipt incarnation obtained from the connection event.
+        decision (Literal['Approve', 'Reject']): Explicit service consent or refusal.
+    """
+
+    uid: str = field(metadata={"schema": {"minLength": 1, "maxLength": 128}})
+    decision: Literal["Approve", "Reject"]
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject missing receipt fences and unrecognized decisions.
+
+        Returns:
+            None: The service identity comes exclusively from verified authentication.
+        """
+        if not isinstance(self.uid, str) or not 1 <= len(self.uid) <= 128 or self.decision not in {"Approve", "Reject"}:
+            raise ValueError("connection responses require a receipt UID and Approve or Reject decision")
+
+
 def identity(value: str) -> str:
     """
     Validate a portable ID usable in node references and audit paths.

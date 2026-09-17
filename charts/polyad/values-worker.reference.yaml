@@ -2,6 +2,7 @@
 # Install this release in the downstream cluster, namespace workloads.
 # Register its existing Deployment through an OperatorPool in the root namespace.
 # Guide: ../../docs/deployment/helm-workers.md
+## @param worker [object] Settings for worker.
 worker:
   ## @param worker.enabled [boolean] Run as a root-connected executor; never elect a root or expose application APIs here.
   enabled: true
@@ -18,16 +19,20 @@ worker:
   ## @param worker.scalingAuthority [string] Root delegates replicas to the matching pool/KEDA. Local keeps replicaCount and optional HPA here; match the pool's setting.
   scalingAuthority: Root
 
+## @param global [object] Settings for global.
 global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
   multiCluster:
     ## @param global.multiCluster.clusterName [string] Hosting cluster identity; keep distinct from the root identity.
     clusterName: west
 
+## @param rootControlPlane [object] Settings for rootControlPlane.
 rootControlPlane:
   ## @param rootControlPlane.enabled [boolean] This release is a worker, so it does not provision pools or become a root.
   enabled: false
   ## @param rootControlPlane.kubeconfigSecret [string] Existing DOWNSTREAM namespace Secret, key config, granting access to the root API and namespace.
   kubeconfigSecret: root-access
+  ## @param rootControlPlane.endpoints [object] Settings for rootControlPlane.endpoints.
   endpoints:
     ## @param rootControlPlane.endpoints.api [string] Reachable root composition route advertised to workloads; match root configuration.
     api: https://polyad.example.com/composition
@@ -36,15 +41,20 @@ rootControlPlane:
     ## @param rootControlPlane.endpoints.metrics [string] Reachable root metrics route advertised to workloads and KEDA.
     metrics: https://polyad.example.com/metrics
 
+## @param federation [object] Settings for federation.
 federation:
   ## @param federation.enabled [boolean] Use the same complete cluster registry as the root; replicas can execute any assigned graph family.
   enabled: true
   ## @param federation.clusters [array] Secret names are local to this downstream release; contents must identify the root's registered destinations.
   clusters:
+    ## @param federation.clusters[].name [string] Settings for federation.clusters[].name.
     - name: west
+      ## @param federation.clusters[].namespace [string] Settings for federation.clusters[].namespace.
       namespace: workloads
+      ## @param federation.clusters[].kubeconfigSecret [string] Settings for federation.clusters[].kubeconfigSecret.
       kubeconfigSecret: west-access
 
+## @param dragonfly [object] Settings for dragonfly.
 dragonfly:
   ## @param dragonfly.enabled [boolean] Reuse root queues and observations; never install an independent worker cache.
   enabled: false

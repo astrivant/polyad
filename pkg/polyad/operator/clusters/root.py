@@ -22,6 +22,7 @@ from polyad.metrics.inventory import inventory
 from polyad.operator.clusters.federation import Federation
 from polyad.operator.clusters.pools import PoolManager
 from polyad.operator.coordination.leases import SHARDS, NotOwner, active_shard
+from polyad.operator.coordination.pulses import PulseDeferred
 from polyad.operator.coordination.queue import batches, reconciliation_workers
 from polyad.operator.coordination.shared_queue import SharedQueue
 from polyad.operator.coordination.validation import invalidate
@@ -176,6 +177,10 @@ class ClusterWorker:
                 if routed != shard:
                     await self.shared.publish(routed, key)
                 else:
+                    from polyad.operator.coordination.settings import WorkGraphSettings
+
+                    if WorkGraphSettings.from_environment().reconciliation_cooldown:
+                        await self.shared.pulse(key, cluster=self.cluster)
                     async with self.root.coordinator.duty(key, api=self.controller.api, cluster=self.cluster):
                         try:
                             await self.controller.reconcile(key)
@@ -198,6 +203,10 @@ class ClusterWorker:
                             await self.events.publish(obj, topology=snapshot)
                 await self.root.coordinator.guard()
                 await self.shared.acknowledge(shard, message_id)
+            except PulseDeferred as error:
+                logger.info(
+                    "Remote reconciliation pulse deferred cluster=%s shard=%s retryAfter=%s", self.cluster, shard, error.retry_after
+                )
             except NotOwner:
                 pass
             except Exception:
@@ -332,6 +341,7 @@ class RootControlPlane:
         """
         prefix = f"polyad:{self.coordinator.namespace}:worker-observation:"
         report = {key: snapshot[key] for key in ("replica", "shards", "pending", "writes")}
+        report["workGraph"] = snapshot.get("workGraph", {})
         report["root"] = self.coordinator.planner
         report["fresh"] = True
         try:

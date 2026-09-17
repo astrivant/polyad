@@ -14,7 +14,7 @@ these paths directly.
 | --- | --- |
 | [tooling](tooling/) | Select the checkout's Python, read tool version pins, and install local or CI tools. |
 | [validation](validation/) | Check docstrings, shell scripts, Helm values, Kubernetes manifests and Mermaid diagrams. The Mermaid Node package lives in `validation/mermaid/`. |
-| [schemas](schemas/) | Generate resource status, network and Helm reference schemas, or check for drift. |
+| [schemas](schemas/) | Generate resource status, network and Helm reference schemas, render typed Helm parameter documentation, or check for drift. |
 | [gitops](gitops/) | Generate Argo CD and Flux health configurations from the resource registry. |
 | [testing](testing/) | Check built containers and the installed types package; exercise an operator in a test cluster. |
 | [release](release/) | Derive a release tag from package metadata. |
@@ -30,6 +30,11 @@ bash scripts/validation/check-shell.sh
 bash scripts/validation/check-mermaid.sh
 npm test --prefix scripts/validation/mermaid
 ```
+
+Use `scripts/validation/check-values.py --fix-annotations` through the same
+Python wrapper to synchronize `@param ... [type]` comments with their schemas.
+Then run `poetry run pre-commit run helm-readme-generator --all-files` to update
+the chart's documented types and defaults.
 
 The cluster tests in `testing/test-*.sh` require an installed operator and mutate
 their test cluster. CI provisions an isolated Kind cluster before running them.

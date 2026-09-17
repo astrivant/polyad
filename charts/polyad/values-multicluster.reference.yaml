@@ -51,7 +51,7 @@ mesh:
 istioEastWest:
   ## @param istioEastWest.name [string] Stable identity within this configuration; choose a distinct name.
   name: polyad-eastwest
-  ## @param istioEastWest.networkGateway [string|null] Null retains the pinned upstream Istio profile default. Must match global.network.
+  ## @param istioEastWest.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default. Must match global.network.
   networkGateway: east-network # Must match global.network.
   ## @param istioEastWest.labels [object] Settings for istioEastWest.labels; configure the fields below.
   labels:
@@ -59,7 +59,7 @@ istioEastWest:
     istio: polyad-eastwest # Required selector for the generated Istio Gateway.
     ## @param istioEastWest.labels.networking.istio.io/gatewayPort [string] Advertised gateway TLS Service port; update it together with the Service port. Must match the tls Service port.
     networking.istio.io/gatewayPort: '15443' # Must match the tls Service port.
-  ## @param istioEastWest.networkGatewayPorts [object|null] Null retains the pinned upstream Istio profile default.
+  ## @param istioEastWest.networkGatewayPorts [object, nullable] Null retains the pinned upstream Istio profile default.
   networkGatewayPorts:
     ## @param istioEastWest.networkGatewayPorts.status-port [object] Settings for istioEastWest.networkGatewayPorts.status-port; configure the fields below.
     status-port:

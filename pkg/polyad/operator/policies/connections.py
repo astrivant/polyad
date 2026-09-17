@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from cattrs.errors import CattrsError
 
+from polyad.api.connections.consent import confirmed, decisions
 from polyad.api.connections.store import FINALIZER, ConnectionSettings
 from polyad.compiler.passes.network import NetworkScope
 from polyad.graph.temporary import ANNOTATION, CLEANUP, MAX_CONNECTIONS, active_entries, deadline, entries, overlay
@@ -306,6 +307,10 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         return
     grants = entries(graph)
     base = copy.deepcopy(graph)
+    consent = decisions(receipt)
+    if any(value["decision"] == "Reject" for value in consent.values()):
+        await finish(controller, receipt, graph, "Rejected", "a participating service rejected the connection")
+        return
     if graph["kind"] == "ReplicaGroup":
         base["spec"], _ = await effective_spec(controller.api, graph)
         base["spec"] = replica_topology(base["spec"])
@@ -342,6 +347,30 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
             reason="connection_endpoint_removed" if missing else "connection_grant_absent",
         )
         await finish(controller, receipt, graph, "Revoked", message)
+        return
+    if terminal != "Active":
+        if meta["uid"] not in grants and os.environ.get("POLYAD_CONNECTIONS_ENABLED", "false").lower() != "true":
+            await finish(controller, receipt, graph, "Rejected", "temporary connection admission is disabled in this namespace")
+            return
+        approved = await confirmed(controller.api, receipt, settings)
+        awaiting = sorted({request.source, request.target} - approved)
+        if awaiting:
+            if meta["uid"] in grants:
+                await finish(controller, receipt, graph, "Revoked", "service consent became unavailable before activation")
+                return
+            await controller.status(
+                receipt,
+                {
+                    "phase": "Pending",
+                    "expiresAt": expires.isoformat(),
+                    "awaitingApproval": awaiting,
+                    "message": "waiting for authenticated service consent",
+                    "observedGeneration": meta["generation"],
+                },
+            )
+            return
+    elif set(consent) != {request.source, request.target}:
+        await finish(controller, receipt, graph, "Revoked", "connection lacks the required service consent")
         return
     if meta["uid"] not in grants:
         if os.environ.get("POLYAD_CONNECTIONS_ENABLED", "false").lower() != "true":
@@ -391,6 +420,7 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
             latest,
             {
                 "phase": "Active",
+                "awaitingApproval": [],
                 "expiresAt": expires.isoformat(),
                 "observedAt": datetime.now(UTC).isoformat(),
                 "observedGeneration": latest["metadata"]["generation"],

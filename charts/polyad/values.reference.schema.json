@@ -187,6 +187,9 @@
           "description": "Bound concrete Kubernetes writes separately from coalesced reconciliation hints.",
           "additionalProperties": false,
           "properties": {
+            "plannerParallelism": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/plannerParallelism"
+            },
             "maxPending": {
               "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/maxPending"
             },
@@ -207,6 +210,12 @@
             },
             "reconciliationWorkers": {
               "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/reconciliationWorkers"
+            },
+            "reconciliationCooldownSeconds": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/reconciliationCooldownSeconds"
+            },
+            "reconciliationBurst": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/reconciliationBurst"
             }
           }
         }
@@ -852,6 +861,18 @@
         },
         "retentionSeconds": {
           "$ref": "values.schema.json#/properties/connections/properties/retentionSeconds"
+        },
+        "pulses": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cooldownSeconds": {
+              "$ref": "values.schema.json#/properties/connections/properties/pulses/properties/cooldownSeconds"
+            },
+            "burst": {
+              "$ref": "values.schema.json#/properties/connections/properties/pulses/properties/burst"
+            }
+          }
         }
       }
     },

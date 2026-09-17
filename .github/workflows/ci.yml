@@ -46,8 +46,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - uses: actions/setup-go@v6
         with:
-          go-version-file: tests/flux/go.mod
-          cache-dependency-path: tests/flux/go.sum
+          go-version-file: pkg/tests/flux/go.mod
+          cache-dependency-path: pkg/tests/flux/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ steps.tools.outputs.nodejs }}
@@ -77,8 +77,8 @@ jobs:
           POLYAD_FLUX_CHECKS: ${{ runner.temp }}/polyad-flux-checks.json
         run: |
           poetry run python scripts/gitops/flux-health.py --json > "$POLYAD_FLUX_CHECKS"
-          test -z "$(gofmt -l tests/flux/*.go)"
-          go -C tests/flux test -mod=readonly -parallel 8 ./...
+          test -z "$(gofmt -l pkg/tests/flux/*.go)"
+          go -C pkg/tests/flux test -mod=readonly -parallel 8 ./...
       - run: npm test --prefix scripts/validation/mermaid
       - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0 --proactor_threads=1 --maxmemory=256mb
       - run: |
@@ -99,7 +99,7 @@ jobs:
           poetry -C pkg/client build --output ../../dist
           poetry run python -m venv /tmp/polyad-typing
           /tmp/polyad-typing/bin/python -m pip install dist/*.whl
-          POLYAD_TYPING_PYTHON=/tmp/polyad-typing/bin/python poetry run pytest tests/test_typing.py
+          POLYAD_TYPING_PYTHON=/tmp/polyad-typing/bin/python poetry run pytest pkg/tests/test_typing.py
       - name: Upload verified distributions
         if: matrix.python == '3.13'
         uses: actions/upload-artifact@v4
@@ -180,7 +180,7 @@ jobs:
           docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges polyad:container-test --help
       - name: Check development tests
         if: matrix.profile == 'development'
-        run: docker run --rm --entrypoint /usr/bin/tini polyad:container-test -- python -m pytest -n 2 tests/test_balance_gates.py
+        run: docker run --rm --entrypoint /usr/bin/tini polyad:container-test -- python -m pytest -n 2 pkg/tests/test_balance_gates.py
   compose:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -237,7 +237,7 @@ jobs:
       - uses: helm/kind-action@v1
         with:
           cluster_name: polyad-test
-          config: tests/kind.yaml
+          config: pkg/tests/kind.yaml
       - name: Read Helm version
         id: tools
         run: echo "helm=v$(bash scripts/tooling/tool-version.sh helm)" >> "$GITHUB_OUTPUT"

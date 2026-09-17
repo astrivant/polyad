@@ -168,9 +168,10 @@ class EventAPIBuilder:
                             cursor = identity
                             payload = json.loads(data)
                             key = getattr(g, "polyad_key", None)
-                            if key is not None and not permitted_observation(payload, payload.get("ancestry", []), key.graphs):
+                            identity_scope = payload.get("graph", payload) if payload.get("type") == "connection" else payload
+                            if key is not None and not permitted_observation(identity_scope, payload.get("ancestry", []), key.graphs):
                                 continue
-                            event_type = "topology" if payload.get("type") == "topology" else "graph"
+                            event_type = payload["type"] if payload.get("type") in {"topology", "connection"} else "graph"
                             yield f"id: {identity}\nevent: {event_type}\ndata: {data}\n\n"
                         if batch:
                             yield ": heartbeat\n\n"
@@ -200,7 +201,7 @@ class EventAPIBuilder:
                     "/v1/events": {
                         "get": {
                             "description": (
-                                "Application graph observations and topology-change notifications with bounded, at-least-once replay. "
+                                "Application graph observations, topology changes and connection-consent proposals with bounded replay. "
                                 "The reserved operator graph, internal definitions and their descendants are excluded. "
                                 "Read a topology snapshot first, then subscribe with its cursor as Last-Event-ID."
                             ),

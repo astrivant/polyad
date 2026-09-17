@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../../charts/polyad/values.reference.schema.json
+## @param operator [object] Settings for operator.
+operator:
+  ## @param operator.writeQueue [object] Bound concrete Kubernetes writes separately from coalesced reconciliation hints.
+  writeQueue:
+    ## @param operator.writeQueue.reconciliationCooldownSeconds [number] Shared cooldown window in seconds; zero disables additional pulse pacing. Refused work retries from fresh state.
+    reconciliationCooldownSeconds: 0.5
+    ## @param operator.writeQueue.reconciliationBurst [integer] Maximum new pulses admitted in one cooldown window; duplicate retries do not extend the window.
+    reconciliationBurst: 2
+    ## @param operator.writeQueue.plannerParallelism [integer] Maximum mutation callbacks per approved planner batch. One keeps batches serial; callers may lower this ceiling only. Parallel transport also needs maxInFlight slots and sufficient maxInFlight + maxPending admission capacity per adapter. Dependency and shared-budget checks still apply.
+    plannerParallelism: 2
+    ## @param operator.writeQueue.maxInFlight [integer] Concurrent writer slots per API adapter. One preserves serial transport; higher values admit only independent writes approved by the same refreshed mutation batch. Unknown effects remain ordered.
+    maxInFlight: 2
+    ## @param operator.writeQueue.maxPending [integer] Extra admitted writes beyond maxInFlight per adapter. One favors fresh decisions; zero removes extra capacity. Unproven independence can still cause admitted items to wait. Overflow requires fresh reconciliation.
+    maxPending: 4
+    ## @param operator.writeQueue.reconciliationWorkers [integer] Concurrent local reconciliation attempts and remote deliveries per cluster. Same-key follow-ups and graph-family leases remain serialized; separate families can prepare decisions together.
+    reconciliationWorkers: 4
+    ## @param operator.writeQueue.validationWorkers [integer] Concurrent candidate validations per API adapter, shared by the background producer and dispatchers. Increasing this consumes Kubernetes read capacity.
+    validationWorkers: 3
+    ## @param operator.writeQueue.validationIntervalSeconds [number] Maximum pause between validation passes; watch notifications wake the producer sooner. Must not exceed validationWindowSeconds.
+    validationIntervalSeconds: 0.25
+    ## @param operator.writeQueue.validationWindowSeconds [number] Maximum reusable validation age measured from its start. Shorter windows add reads; longer windows tolerate more unobserved external drift. Events and relevant writes invalidate receipts immediately.
+    validationWindowSeconds: 2
+    ## @param operator.writeQueue.validationBurst [integer] Maximum candidates validated per background pass; spare window time advances through later queued items without adding mutation concurrency.
+    validationBurst: 6

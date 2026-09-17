@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../../../charts/polyad/values.reference.schema.json
+## @param rootControlPlane [object] Settings for rootControlPlane.
+rootControlPlane:
+  ## @param rootControlPlane.pools [array] Root-owned OperatorPools; existingDeployment attaches a Helm-owned worker with explicit Root or Local scaling authority.
+  pools:
+    ## @param rootControlPlane.pools[].name [string] Settings for rootControlPlane.pools[].name.
+    - name: west-workers
+      ## @param rootControlPlane.pools[].cluster [string] Settings for rootControlPlane.pools[].cluster.
+      cluster: west
+      ## @param rootControlPlane.pools[].replicas [integer] Settings for rootControlPlane.pools[].replicas.
+      replicas: 2

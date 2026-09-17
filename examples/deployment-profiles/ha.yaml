@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # Replicated dense operators; add component or root values for those extensions.
+## @param ha [boolean] Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true.
 ha: true
+## @param operator [object] Settings for operator.
 operator:
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha
   replicaCount: 2

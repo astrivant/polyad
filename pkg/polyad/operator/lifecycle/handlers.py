@@ -22,7 +22,9 @@ from polyad.events.visibility import observation_ancestry, public_observation
 from polyad.metrics.inventory import inventory
 from polyad.operator.adapters.kubernetes import API, GROUP, VERSION
 from polyad.operator.coordination.leases import SHARDS, Coordinator, NotOwner, active_shard
+from polyad.operator.coordination.pulses import PulseDeferred
 from polyad.operator.coordination.queue import RefreshQueue, batches
+from polyad.operator.coordination.settings import WorkGraphSettings
 from polyad.operator.coordination.shared_queue import SharedQueue
 from polyad.operator.coordination.validation import invalidate
 from polyad.operator.lifecycle.health import credential_token, lifecycle, watch_credentials
@@ -54,6 +56,7 @@ inventory_sample_ok = False
 last_api_success = 0.0
 initialized = False
 tuning = OperatorTuning()
+work_graph = WorkGraphSettings()
 background: list[asyncio.Task[None]] = []
 root_plane: RootControlPlane | None = None
 state: StateStore | None = None
@@ -74,10 +77,11 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
         None: No return value.
     """
     global queue, controller, coordinator, shared, initialized, http, events, tuning, root_plane
-    global state, metrics_store
+    global state, metrics_store, work_graph
     if initialized or http is not None:
         raise RuntimeError("operator HTTP lifecycle is already initialized")
     tuning = OperatorTuning.from_environment()
+    work_graph = WorkGraphSettings.from_environment()
     settings.posting.enabled = False
     settings.scanning.disabled = True
     settings.networking.request_timeout = 30
@@ -224,6 +228,7 @@ async def component_loop() -> None:
                         "replica": coordinator.identity,
                         "shards": sorted(coordinator.owned),
                         "pending": queue.queue.qsize(),
+                        "workGraph": work_graph.document(),
                         "writes": write_backlog(),
                     }
                 )
@@ -334,6 +339,7 @@ async def metrics_loop() -> None:
             "shards": sorted(coordinator.owned),
             "pending": queue.queue.qsize(),
             "tuning": asdict(tuning),
+            "workGraph": work_graph.document(),
             "writes": write_backlog(),
             "inbound": shared.backlog(tuple(coordinator.owned)),
             "shardBacklogs": shared.backlog_sample[1] if shared.backlog_sample else {},
@@ -371,6 +377,9 @@ async def reconcile(key: Key) -> None:
 
     global last_api_success
     assert controller is not None and coordinator is not None
+    if work_graph.reconciliation_cooldown:
+        assert shared is not None
+        await shared.pulse(key, cluster=os.environ.get("POLYAD_CLUSTER_NAME", ""))
     async with coordinator.duty(key):
         try:
             await controller.reconcile(key)
@@ -414,13 +423,13 @@ async def publish_observation(key: Key) -> None:
 
     obj = await controller.api.get(*key)
     if obj is not None:
+        snapshot = await topology_snapshot(controller.api, obj, await controller.children(obj)) if key[0] in BOUNDARY_KINDS else None
+        await coordinator.guard()
+        await events.publish(obj, topology=snapshot)
         if key[0] == "TemporaryConnection":
             target = await controller.api.get(obj["spec"]["kind"], key[1], obj["spec"]["graph"])
             if target is not None and target["metadata"]["uid"] == obj["spec"]["graphUid"]:
                 await publish_observation((target["kind"], key[1], target["metadata"]["name"]))
-        snapshot = await topology_snapshot(controller.api, obj, await controller.children(obj)) if key[0] in BOUNDARY_KINDS else None
-        await coordinator.guard()
-        await events.publish(obj, topology=snapshot)
 
 
 async def publish(key: Key) -> None:
@@ -477,6 +486,8 @@ async def consume_loop() -> None:
                     pass  # Rescan will retry the intent after refreshed observations.
             await coordinator.guard()
             await shared.acknowledge(shard, message_id)
+        except PulseDeferred as error:
+            logger.info("Reconciliation pulse deferred for shard %s; retry after %s seconds", shard, error.retry_after)
         except NotOwner:
             pass  # Keep pending messages for the next lease holder.
         except Exception:
@@ -578,6 +589,7 @@ def health(**_: Any) -> dict[str, Any]:
         "initialized": initialized,
         "worker": True,
         "pending": queue.queue.qsize(),
+        "workGraph": work_graph.document(),
         "backlog": {
             "inboundUpdates": shared.backlog(tuple(coordinator.owned)) if shared and coordinator else None,
             "kubernetesWrites": write_backlog(),

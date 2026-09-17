@@ -115,10 +115,15 @@ serialized. Increasing replicas distributes eligible duties; it does not split a
 single graph family into independent ownership boundaries.
 
 Each API adapter has a bounded dependency graph and `maxInFlight` writer slots.
+`operator.writeQueue.plannerParallelism` caps callbacks in each mutation batch;
+callers may request a smaller batch, and dependency checks can reduce it further.
 Only independent operations approved in the same mutation-planner batch can use
 multiple slots; unknown effects retain ordering. `validationWorkers` separately
 bounds candidate checks, including checks requested directly by dispatchers.
 These are Python runtime controls projected by Helm into environment variables.
+See [work-graph configuration](../development/write-pipeline.md#configuration)
+for all limits, their scope, and how root-managed and Helm-installed workers
+receive them. They bound async work rather than allocating dedicated thread pools.
 
 Before dispatch, each adapter also compares
 [pending changes to the same object](../development/mutations.md#queued-kubernetes-write-conflicts).

@@ -11,7 +11,7 @@ ha: true
 operator:
   ## @param operator.logLevel [string] INFO keeps normal operational logs; DEBUG traces Polyad reconciliation and API timings, including observers. Choices: DEBUG, INFO, WARNING, ERROR, CRITICAL.
   logLevel: INFO
-  ## @param operator.replicaCount [integer|null] Operator replicas; null selects 1 for singular or 2 for ha Recovery/bootstrap replicas, separate from the component copies. Minimum: 1. Maximum: 32.
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha Recovery/bootstrap replicas, separate from the component copies. Minimum: 1. Maximum: 32.
   replicaCount: 2 # Recovery/bootstrap replicas, separate from the component copies.
 
 ## @param architecture [object] Settings for architecture; configure the fields below.
@@ -22,7 +22,7 @@ architecture:
   autoscaling: true # KEDA requests counts; the operator admits them through GraphRules.
   ## @param architecture.cheegerMinimum [number] Minimum edge expansion of the three-component Graph; the default chain has h=1 Structural edge-expansion bound, not measured throughput. Minimum: 0. Maximum: 1.
   cheegerMinimum: 1 # Structural edge-expansion bound, not measured throughput.
-  ## @param architecture.cheegerMaximum [number|null] Optional upper structural bound; null leaves it unbounded. Use 1 to permit the initial chain while excluding a fully connected triangle; values below 1 cannot admit this chart's topology.
+  ## @param architecture.cheegerMaximum [number, nullable] Optional upper structural bound; null leaves it unbounded. Use 1 to permit the initial chain while excluding a fully connected triangle; values below 1 cannot admit this chart's topology.
   cheegerMaximum: null
   ## @param architecture.expandedNodes [integer] Maximum recursive vertices in the self-managed Graph Budget for recursive vertices in the component Graph. Minimum: 6. Maximum: 1000000.
   expandedNodes: 27 # Budget for recursive vertices in the component Graph.

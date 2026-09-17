@@ -124,6 +124,18 @@ class EventStore:
             },
             "resources": metrics.get("resources", {}),
         }
+        if obj["kind"] == "TemporaryConnection":
+            from polyad.api.connections.store import ConnectionStore
+
+            payload["type"] = "connection"
+            payload["connection"] = ConnectionStore.receipt(obj)
+            payload["graph"] = {
+                **({"cluster": self.cluster} if self.cluster else {}),
+                "kind": obj["spec"]["kind"],
+                "namespace": meta["namespace"],
+                "name": obj["spec"]["graph"],
+                "uid": obj["spec"]["graphUid"],
+            }
         if self.archive is not None:
             await self.archive(payload)
         await cast(

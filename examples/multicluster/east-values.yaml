@@ -1,30 +1,59 @@
 # yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+## @param global [object] Settings for global.
 global:
+  ## @param global.istioNamespace [string] Istio control-plane namespace; must equal the release namespace when mesh.install is enabled
   istioNamespace: polyad
+  ## @param global.meshID [string] Shared mesh identity across participating clusters
   meshID: application-mesh
+  ## @param global.network [string] Network containing this cluster; different networks use east-west gateways
   network: east-network
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
   multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad
     clusterName: east
+## @param mesh [object] Settings for mesh.
 mesh:
+  ## @param mesh.enabled [boolean] Allow graph HTTP and service-identity authorization and generate Istio security resources
   enabled: true
+  ## @param mesh.install [boolean] Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled
   install: true
+  ## @param mesh.multicluster [object] Settings for mesh.multicluster.
   multicluster:
+    ## @param mesh.multicluster.enabled [boolean] Enable the existing or bundled sidecar mesh's multicluster configuration
     enabled: true
+    ## @param mesh.multicluster.eastWest [object] Settings for mesh.multicluster.eastWest.
     eastWest:
+      ## @param mesh.multicluster.eastWest.enabled [boolean] Install a dedicated east-west gateway for separate networks
       enabled: true
+    ## @param mesh.multicluster.peers [array] Remote transport registrations; see docs/deployment/multicluster.md for same-network and gateway configurations
     peers:
+      ## @param mesh.multicluster.peers[].name [string] Settings for mesh.multicluster.peers[].name.
       - name: west
+        ## @param mesh.multicluster.peers[].mode [string] Settings for mesh.multicluster.peers[].mode.
         mode: Gateway
+        ## @param mesh.multicluster.peers[].cidrs [array] Settings for mesh.multicluster.peers[].cidrs.
         cidrs: [192.0.2.20/32] # Replace with the reachable west gateway address.
+        ## @param mesh.multicluster.peers[].gatewayNamespace [string] Settings for mesh.multicluster.peers[].gatewayNamespace.
         gatewayNamespace: polyad
+## @param istioEastWest [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
 istioEastWest:
+  ## @param istioEastWest.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
   networkGateway: east-network
+## @param federation [object] Settings for federation.
 federation:
+  ## @param federation.enabled [boolean] Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
   enabled: true
+  ## @param federation.clusters [array] Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only
   clusters:
+    ## @param federation.clusters[].name [string] Settings for federation.clusters[].name.
     - name: west
+      ## @param federation.clusters[].namespace [string] Settings for federation.clusters[].namespace.
       namespace: polyad
+      ## @param federation.clusters[].kubeconfigSecret [string] Settings for federation.clusters[].kubeconfigSecret.
       kubeconfigSecret: west-graph-access
+## @param observer [object] Settings for observer.
 observer:
+  ## @param observer.enabled [boolean] Deploy shared read-only observers independently of execution operators
   enabled: true
+  ## @param observer.existingSecret [string] Existing Secret containing a dedicated read credential under token
   existingSecret: graph-observer-token

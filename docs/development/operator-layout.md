@@ -67,7 +67,7 @@ Feature-specific imports stay at their existing enablement points. Importing
 OpenTelemetry exporters. The observer entrypoint remains independent of Kopf
 handler registration and reconciliation. See
 [runtime capability selection](../deployment/containers.md) and the isolated
-startup probes in [`tests/test_runtime_capabilities.py`](../../tests/test_runtime_capabilities.py).
+startup probes in [`pkg/tests/test_runtime_capabilities.py`](../../pkg/tests/test_runtime_capabilities.py).
 
 Redis/Dragonfly Lua programs live in [`polyad/lua`](../../pkg/polyad/lua), grouped
 into coordination, events and authentication scripts. PostgreSQL statements live

@@ -1,8 +1,0 @@
-# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
-rootControlPlane:
-  pools:
-    - name: west-workers
-      cluster: west
-      replicas: 2
-      existingDeployment: west-polyad
-      scalingAuthority: Root

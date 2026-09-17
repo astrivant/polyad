@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=../../../charts/polyad/values.reference.schema.json
+# Combine with root-values.yaml to inventory every optional local service.
+## @param keda [object] Settings for keda.
+keda:
+  ## @param keda.install [boolean] Install the pinned upstream KEDA dependency in the release namespace; false uses an existing installation.
+  install: true
+## @param dragonfly [object] Settings for dragonfly.
+dragonfly:
+  ## @param dragonfly.enabled [boolean] Deploy Dragonfly through the upstream operator Helm dependency
+  enabled: true
+## @param postgresql [object] Settings for postgresql.
+postgresql:
+  ## @param postgresql.enabled [boolean] Persist graph state and tracked parameters in PostgreSQL
+  enabled: true
+## @param observer [object] Settings for observer.
+observer:
+  ## @param observer.enabled [boolean] Deploy shared read-only observers independently of execution operators
+  enabled: true
+  ## @param observer.existingSecret [string] Existing Secret containing a dedicated read credential under token
+  existingSecret: observer-access
+## @param api [object] Settings for api.
+api:
+  ## @param api.enabled [boolean] Serve authenticated composition requests on port 8090 through a ClusterIP Service
+  enabled: true
+## @param events [object] Settings for events.
+events:
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
+  enabled: true
+## @param connections [object] Settings for connections.
+connections:
+  ## @param connections.enabled [boolean] Serve service-account authenticated temporary connections on port 8093
+  enabled: true
+## @param mesh [object] Settings for mesh.
+mesh:
+  ## @param mesh.enabled [boolean] Allow graph HTTP and service-identity authorization and generate Istio security resources
+  enabled: true
+  ## @param mesh.install [boolean] Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled
+  install: true
+  ## @param mesh.ingress [object] Settings for mesh.ingress.
+  ingress:
+    ## @param mesh.ingress.enabled [boolean] Install the optional upstream Istio gateway dependency
+    enabled: true
+    ## @param mesh.ingress.hosts [array] Hosts served by the Istio Gateway and VirtualService
+    hosts: [polyad.example.test]
+    ## @param mesh.ingress.tlsSecret [string] TLS credential Secret in the gateway namespace, required when exposing the APIs
+    tlsSecret: polyad-tls
+  ## @param mesh.multicluster [object] Settings for mesh.multicluster.
+  multicluster:
+    ## @param mesh.multicluster.enabled [boolean] Enable the existing or bundled sidecar mesh's multicluster configuration
+    enabled: true
+    ## @param mesh.multicluster.eastWest [object] Settings for mesh.multicluster.eastWest.
+    eastWest:
+      ## @param mesh.multicluster.eastWest.enabled [boolean] Install a dedicated east-west gateway for separate networks
+      enabled: true
+## @param global [object] Settings for global.
+global:
+  ## @param global.istioNamespace [string] Istio control-plane namespace; must equal the release namespace when mesh.install is enabled
+  istioNamespace: test
+  ## @param global.meshID [string] Shared mesh identity across participating clusters
+  meshID: shared
+  ## @param global.network [string] Network containing this cluster; different networks use east-west gateways
+  network: management-network
+## @param istioEastWest [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
+istioEastWest:
+  ## @param istioEastWest.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
+  networkGateway: management-network

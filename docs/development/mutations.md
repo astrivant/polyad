@@ -107,7 +107,12 @@ The adapter supplies:
 All preconditions in a batch are checked before any of its operations dispatch.
 Counters are refreshed before each batch and must match the projected usage from
 previous successful batches. Drift stops execution and requires replanning.
-Concurrency defaults to one and never exceeds `max_parallelism`.
+Concurrency uses `operator.writeQueue.plannerParallelism` (default `1`), projected
+as `POLYAD_MUTATION_PLANNER_PARALLELISM`. An explicit `max_parallelism` can lower
+that administrator ceiling but cannot raise it. The pure `compile_mutations`
+function remains independent of deployment configuration; the runtime executor
+applies the ceiling when compiling its plan. See [work-graph tuning](write-pipeline.md#choosing-concurrency)
+for the separate writer, admission, reconciliation and validation limits.
 
 If a callback fails, other in-flight operations settle before the error is raised;
 later batches do not start. Multiple failures are reported as an exception group.

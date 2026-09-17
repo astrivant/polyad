@@ -164,11 +164,13 @@ trace sampling ratio into a workload or autoscaler metric.
 
 ## Write admission and validation
 
-`operator.writeQueue` tunes concrete API work separately from reconciliation
-delivery and metrics publication:
+`operator.writeQueue` tunes the internal work graph, from reconciliation and
+mutation planning through validation and API writes. Polling cadence and metrics
+publication have separate settings:
 
 | Setting | Default | Tradeoff |
 | --- | --- | --- |
+| `plannerParallelism` | 1 | Callbacks per approved mutation batch; callers may lower the ceiling, and parallel transport also needs writer/admission capacity |
 | `maxInFlight` | 1 | Concurrent writer slots per adapter; only independent approved planner siblings overlap |
 | `maxPending` | 1 | Extra admissions beyond writer slots; larger values retain more potentially stale decisions |
 | `validationIntervalSeconds` | 1 | Maximum pause between look-ahead passes; watch notifications wake validation sooner |
@@ -176,6 +178,8 @@ delivery and metrics publication:
 | `validationBurst` | 8 | Candidates examined per producer pass; lets spare time reach third, fourth and later entries without adding concurrent mutations |
 | `validationWorkers` | 1 | Concurrent candidate checks shared by producer and dispatchers; higher values add Kubernetes read pressure |
 | `reconciliationWorkers` | 1 | Concurrent local refresh attempts and remote deliveries per cluster; same-family ownership remains ordered |
+| `reconciliationCooldownSeconds` | 0 | Optional per-resource/cluster fixed window shared across HA replicas; zero disables, maximum 300 seconds |
+| `reconciliationBurst` | 1 | Starts per resource per cooldown window, from 1–128; caps churn independently of worker counts |
 
 The interval cannot exceed the window. Admission allows 0–128 waiters, validation
 allows 0.01–60 second intervals/windows and a burst of 1–128. Overflow returns a
@@ -185,6 +189,15 @@ immediately; a fresh receipt never bypasses the ownership check or Kubernetes
 resource-version fence. See the [write pipeline](../development/write-pipeline.md)
 for contracts, failure recovery and ordering limits, and the typed
 [values reference](../../charts/polyad/values-tuning.reference.yaml) for the overlay.
+
+The [parallel example and deployment flow](../development/write-pipeline.md#choosing-concurrency)
+explain how to size the stages together and propagate changes to downstream
+operators. Effective limits appear as `workGraph` in health and metrics JSON,
+and in fresh worker reports collected at the root. They apply to each process's
+plans, adapters and cluster deliveries; additional replicas add capacity.
+Reconciliation pulse budgets are the exception: replicas share their counters.
+Connection negotiation has [separate cooldown and burst controls](../apis/temporary-connections.md#administrator-pulse-limits),
+so application proposal traffic can be tuned independently of queued reconciliation.
 
 ## KEDA-managed targets
 

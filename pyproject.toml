@@ -83,8 +83,8 @@ requires = ["poetry-core>=2.2,<3.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["pkg/client", "pkg/polyad-types"]
+testpaths = ["pkg/tests"]
+pythonpath = ["pkg", "pkg/client", "pkg/polyad-types"]
 addopts = "-n auto --maxprocesses=8 --dist=worksteal"
 
 [tool.ruff]
@@ -116,6 +116,7 @@ convention = "google"
 python_version = "3.13"
 strict = true
 files = ["pkg", "examples"]
+exclude = ["^pkg/tests/"]
 
 [[tool.mypy.overrides]]
 module = ["kubernetes.*", "flask_httpauth"]

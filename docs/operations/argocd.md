@@ -99,7 +99,7 @@ CI installs the pinned CLI and runs these tests with the parallel Python suite.
 
 ```sh
 bash scripts/tooling/install-asdf-tools.sh argocd
-poetry run pytest tests/test_argocd_health.py
+poetry run pytest pkg/tests/test_argocd_health.py
 poetry run python scripts/gitops/argocd-health.py --format configmap > /tmp/polyad-argocd-cm.yaml
 kubectl -n workloads get polygraph application -o yaml > /tmp/polyad-graph.yaml
 argocd admin settings resource-overrides health /tmp/polyad-graph.yaml \

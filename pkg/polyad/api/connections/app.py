@@ -14,8 +14,9 @@ from polyad.api.errors import Conflict, Forbidden, Unauthorized, Unavailable
 from polyad.api.limits import install_limits
 from polyad.auth.policy import public_demo
 from polyad.compiler.passes.schema import structural_schema
+from polyad.operator.coordination.pulses import PulseDeferred
 from polyad_types.codec import converter
-from polyad_types.requests import ConnectionRequest
+from polyad_types.requests import ConnectionRequest, ConnectionResponse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -33,6 +34,7 @@ def build_app(
     lookup: Callable[[str, str, Caller], dict[str, Any] | None],
     revoke: Callable[[str, str, Caller], dict[str, Any] | None],
     *,
+    respond: Callable[[str, str, ConnectionResponse, Caller], dict[str, Any] | None] | None = None,
     limits: RateLimitPolicy | None = None,
     application: Flask | None = None,
 ) -> Flask:
@@ -44,6 +46,7 @@ def build_app(
         submit (Callable[[ConnectionRequest, Caller], dict[str, Any]]): Durable intake callback.
         lookup (Callable[[str, str, Caller], dict[str, Any] | None]): Authorized receipt lookup.
         revoke (Callable[[str, str, Caller], dict[str, Any] | None]): Authorized early revocation.
+        respond (Callable[[str, str, ConnectionResponse, Caller], dict[str, Any] | None] | None): Endpoint consent callback.
         limits (RateLimitPolicy | None): Optional shared HTTP request budget.
         application (Flask | None): Existing process application for blueprint registration.
 
@@ -74,6 +77,10 @@ def build_app(
     for error_type in (Unauthorized, Forbidden, Conflict, Unavailable, ValueError, TypeError, CattrsError):
         app.register_error_handler(error_type, failure)
 
+    @app.errorhandler(PulseDeferred)
+    def deferred(error: PulseDeferred) -> tuple[Response, int, dict[str, str]]:
+        return jsonify(error=str(error)), 429, {"Retry-After": str(error.retry_after)}
+
     @app.post("/v1/connections")
     def create() -> tuple[Response, int]:
         value = request.get_json()
@@ -98,6 +105,16 @@ def build_app(
     def remove(namespace: str, request_id: str) -> tuple[Response, int]:
         value = revoke(namespace, request_id, g.caller)
         return (jsonify(value), 202) if value is not None else (jsonify(error="connection not found"), 404)
+
+    @app.post("/v1/connections/<namespace>/<name>/response")
+    def response(namespace: str, name: str) -> tuple[Response, int]:
+        if respond is None:
+            raise Unavailable("connection response handler is unavailable")
+        value = request.get_json()
+        if not isinstance(value, dict) or set(value) != {"uid", "decision"} or not all(isinstance(item, str) for item in value.values()):
+            raise ValueError("response requires only string uid and decision fields")
+        result = respond(namespace, name, converter.structure(value, ConnectionResponse), g.caller)
+        return (jsonify(result), 202) if result is not None else (jsonify(error="connection not found"), 404)
 
     @app.after_request
     def prevent_caching(response: Response) -> Response:
@@ -134,9 +151,22 @@ def build_app(
                             "bearerFormat": "Kubernetes projected service-account JWT; audience polyad-connections",
                         }
                     },
-                    "schemas": {"ConnectionRequest": schema},
+                    "schemas": {"ConnectionRequest": schema, "ConnectionResponse": structural_schema(ConnectionResponse)},
                 },
                 "paths": {
+                    "/v1/connections/{namespace}/{name}/response": {
+                        "post": {
+                            "parameters": [
+                                {"name": key, "in": "path", "required": True, "schema": {"type": "string"}} for key in ("namespace", "name")
+                            ],
+                            "description": "Approve or reject as a Pod belonging to one endpoint, with approve permission on the graph.",
+                            "requestBody": {
+                                "required": True,
+                                "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConnectionResponse"}}},
+                            },
+                            "responses": responses,
+                        }
+                    },
                     "/v1/connections": {
                         "post": {
                             "description": (

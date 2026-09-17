@@ -68,11 +68,13 @@ from polyad_types.resources.resources import PostgreSQLCluster as PostgreSQLClus
 from polyad_types.resources.resources import ProvisioningRequest as ProvisioningRequest
 from polyad_types.resources.resources import RemoteScale as RemoteScale
 from polyad_types.resources.resources import ReplicaGroup as ReplicaGroup
+from polyad_types.resources.resources import ReplicaSet as ReplicaSet
 from polyad_types.resources.resources import Resource as Resource
 from polyad_types.resources.resources import ResourceDefinition as ResourceDefinition
 from polyad_types.resources.resources import Rewrite as Rewrite
 from polyad_types.resources.resources import Secret as Secret
 from polyad_types.resources.resources import Service as Service
+from polyad_types.resources.resources import ServiceAccount as ServiceAccount
 from polyad_types.resources.resources import ShutdownPolicy as ShutdownPolicy
 from polyad_types.resources.resources import StatefulSet as StatefulSet
 from polyad_types.resources.resources import StatefulSetSpec as StatefulSetSpec

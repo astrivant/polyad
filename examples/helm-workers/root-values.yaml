@@ -1,10 +1,16 @@
 # yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # Overlay examples/root-control-plane/values.yaml in the management cluster.
+## @param rootControlPlane [object] Settings for rootControlPlane.
 rootControlPlane:
   ## @param rootControlPlane.pools [array] Attach the west Helm release; Root delegates replica count to the pool/KEDA, Local leaves scaling downstream.
   pools:
+    ## @param rootControlPlane.pools[].name [string] Settings for rootControlPlane.pools[].name.
     - name: west-workers
+      ## @param rootControlPlane.pools[].cluster [string] Settings for rootControlPlane.pools[].cluster.
       cluster: west
+      ## @param rootControlPlane.pools[].existingDeployment [string] Existing Helm-owned Deployment in the registered namespace. The root observes it and only scales it when both sides grant Root authority.
       existingDeployment: west-polyad
+      ## @param rootControlPlane.pools[].scalingAuthority [string] Root applies requested replicas; Local only observes an existingDeployment and leaves scaling to its administrator.
       scalingAuthority: Root
+      ## @param rootControlPlane.pools[].replicas [integer] Settings for rootControlPlane.pools[].replicas.
       replicas: 2

@@ -572,6 +572,32 @@ class Pod(SpecResource):
 
 
 @frozen(kw_only=True)
+class ReplicaSet(SpecResource):
+    """
+    Observe a Deployment's Pod ownership chain without managing its ReplicaSets.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Read-only native ownership identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType("ReplicaSet", "apps/v1", "replicasets", description="Observed Pod ownership.")
+
+
+@frozen(kw_only=True)
+class ServiceAccount(SpecResource):
+    """
+    Observe the current incarnation of a connection participant's identity.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Native service-account identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "ServiceAccount", "v1", "serviceaccounts", description="Observed workload identity."
+    )
+
+
+@frozen(kw_only=True)
 class NetworkPolicy(SpecResource):
     """
     A managed NetworkPolicy network resource.
@@ -837,6 +863,8 @@ RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     GraphRule,
     Composition,
     Pod,
+    ReplicaSet,
+    ServiceAccount,
     Job,
     Deployment,
     DaemonSet,

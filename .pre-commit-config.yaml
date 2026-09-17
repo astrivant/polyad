@@ -7,17 +7,20 @@ repos:
       - id: pydocstyle
         args: [--config=pyproject.toml]
         files: ^(pkg|scripts|examples)/.*\.py$
+        exclude: ^pkg/tests/
   - repo: https://github.com/jsh9/pydoclint
     rev: 0.6.6
     hooks:
       - id: pydoclint
         args: [--config=pyproject.toml]
         files: ^(pkg|scripts|examples)/.*\.py$
+        exclude: ^pkg/tests/
   - repo: https://github.com/bitnami/readme-generator-for-helm
     rev: 4d29f59abac6aeed6fbc2467e24fc17560057bcb # 3.0.1
     hooks:
       - id: helm-readme-generator
-        files: ^(charts/polyad/|\.pre-commit-config\.yaml$)
+        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-helm-readme.py
+        files: ^(charts/polyad/|scripts/schemas/generate-helm-readme\.py$|\.pre-commit-config\.yaml$)
         language_version: 24.14.0
         args:
           - --readme=charts/polyad/README.md
@@ -30,7 +33,7 @@ repos:
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-values.py
         language: system
         pass_filenames: false
-        files: '^(charts/polyad/values.*\.(yaml|json)|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|tests/data/.*values\.yaml|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
+        files: '^(charts/polyad/values.*\.(yaml|json)|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|pkg/tests/data/.*values\.yaml|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
       - id: status-schemas
         name: Generated graph status schemas
         entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-status-schemas.py --check

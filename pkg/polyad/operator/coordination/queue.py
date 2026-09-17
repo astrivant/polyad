@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import time
 from typing import TYPE_CHECKING, TypeVar
+
+from polyad.operator.coordination.settings import WorkGraphSettings
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +27,7 @@ def reconciliation_workers() -> int:
     Returns:
         int: Concurrent attempts; graph-family ownership still serializes related work.
     """
-    value = int(os.environ.get("POLYAD_RECONCILIATION_WORKERS", "1"))
-    if not 1 <= value <= 32:
-        raise ValueError("POLYAD_RECONCILIATION_WORKERS must be an integer between 1 and 32")
-    return value
+    return WorkGraphSettings.from_environment().reconciliation_workers
 
 
 async def batches(items: Sequence[T], apply: Callable[[T], Awaitable[None]], limit: int) -> None:  # noqa: UP047 - pydocstyle 6.3 parser

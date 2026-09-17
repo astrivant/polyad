@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, Literal
 
-    from polyad_types import CompositionRequest, ConnectionRequest, ThroughputSample
+    from polyad_types import CompositionRequest, ConnectionRequest, ConnectionResponse, ThroughputSample
 
 
 class APIError(RuntimeError):
@@ -85,6 +85,20 @@ class Client:
         with self._open("POST", "/v1/throughput", to_dict(sample)) as response:
             result: dict[str, Any] = json.loads(response.read())
             return result
+
+    def respond_connection(self, namespace: str, name: str, response: ConnectionResponse) -> dict[str, Any]:
+        """
+        Approve or reject an event's proposal using this endpoint's projected Pod token.
+
+        Args:
+            namespace (str): Receipt namespace from the connection event.
+            name (str): Server-assigned receipt name from the event.
+            response (ConnectionResponse): Receipt UID and explicit approval or rejection.
+
+        Returns:
+            dict[str, Any]: Durable consent receipt; activation remains asynchronous.
+        """
+        return self._request("POST", f"/v1/connections/{quote(namespace, safe='')}/{quote(name, safe='')}/response", to_dict(response))
 
     def _open(self, method: str, path: str, body: dict[str, Any] | None = None, *, headers: dict[str, str] | None = None) -> Any:
         data = json.dumps(body, allow_nan=False).encode() if body is not None else None

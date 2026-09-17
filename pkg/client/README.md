@@ -16,6 +16,7 @@ does not install the operator.
 - [Activation](#activation)
 - [Composition and request handling](#composition-and-request-handling)
 - [Events and topology](#events-and-topology)
+- [Temporary connection consent](#temporary-connection-consent)
 - [Remote clusters](#remote-clusters)
 - [Report throughput to Soul searching](#report-throughput-to-soul-searching)
 - [Publishing](#publishing)
@@ -127,6 +128,38 @@ cross-namespace callers also need the corresponding network and identity grants.
 
 See the repository's [activation guide](https://github.com/astrivant/polyad/blob/main/docs/workloads/activation.md) and
 [networking guide](https://github.com/astrivant/polyad/blob/main/docs/deployment/networking.md) for policies and deployment settings.
+
+## Temporary connection consent
+
+Subscribe to the relevant graph's events before proposing a connection. A
+`connection` event includes `event.data["connection"]`, a public receipt with
+its server-assigned name, UID, endpoints, deadline and consent summary. The
+requester's verified proposal counts as its own consent. The other endpoint
+must decide whether it can accept the connection and explicitly respond:
+
+```python
+from pathlib import Path
+from polyad_types import ConnectionResponse
+
+proposal = event.data["connection"]
+# Refresh the responding workload's projected token before the operation.
+connections = Client(
+    os.environ["POLYAD_CONNECTIONS_URL"],
+    Path("/var/run/polyad-connections/token").read_text().strip(),
+)
+connections.respond_connection(
+    proposal["namespace"], proposal["name"],
+    ConnectionResponse(uid=proposal["uid"], decision="Approve"),
+)
+```
+
+Use `Reject` to refuse. The application chooses the decision; the client does
+not automatically approve events. The responder needs graph-specific `approve`
+permission and a live Pod belonging to the proposed endpoint. An events API key
+cannot stand in for this identity. Both services must respond if a third party
+made the request. Missing consent expires at the proposal's original deadline.
+See [service consent and administrator limits](https://github.com/astrivant/polyad/blob/main/docs/apis/temporary-connections.md#service-consent)
+for RBAC, retries, HTTP 429 cooldowns and graph-layer semantics.
 
 ## Remote clusters
 

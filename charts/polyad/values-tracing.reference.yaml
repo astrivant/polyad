@@ -1,22 +1,33 @@
 # yaml-language-server: $schema=values.reference.schema.json
 # Enable in singular, HA or split deployments. Root-managed workers inherit this
 # configuration; the Collector endpoint must be reachable from their clusters.
+## @param tracing [object] Opt-in OTLP/HTTP traces and independently enabled logs for operators and observers.
 tracing:
+  ## @param tracing.enabled [boolean] Create a batched trace exporter only when enabled.
   enabled: true
   # Full trace endpoint, not just the Collector host or gRPC port.
+  ## @param tracing.endpoint [string] Full HTTP/protobuf trace endpoint including its trace path, usually /v1/traces.
   endpoint: http://otel-collector.observability.svc:4318/v1/traces
+  ## @param tracing.serviceName [string] Service identity used to group operator traces.
   serviceName: polyad-operator
   # Sample 10% of new traces. Incoming sampled traceparent headers are honored.
+  ## @param tracing.samplingRatio [number] Fraction of new root traces sampled; parent sampling decisions are honored.
   samplingRatio: 0.1
+  ## @param tracing.timeoutSeconds [integer] Bound the OTLP export request duration in seconds.
   timeoutSeconds: 10
+  ## @param tracing.resourceAttributes [string] Comma-separated key=value resource attributes describing the deployment.
   resourceAttributes: deployment.environment.name=production
   # Optional existing Secret: its 'headers' key uses key=value,key=value syntax.
   # Values must be URL-encoded when required by the OpenTelemetry exporter.
+  ## @param tracing.headersSecret [string] Optional existing Secret with exporter credentials in its headers key.
   headersSecret: ''
+  ## @param tracing.logs [object] Settings for tracing.logs.
   logs:
     # Independent of tracing.enabled and samplingRatio: use this for decision
     # records even when traces are disabled or sampled out. Console logs remain.
+    ## @param tracing.logs.enabled [boolean] Export decision logs independently of trace sampling; disabled keeps console logs without a log exporter.
     enabled: true
     # Full OTLP/HTTP logs URL. Shares serviceName, resourceAttributes,
     # timeoutSeconds and the optional headersSecret above.
+    ## @param tracing.logs.endpoint [string] Full HTTP/protobuf log URL, usually /v1/logs. Shares trace service identity, timeout, resource attributes and exporter Secret.
     endpoint: http://otel-collector.observability.svc:4318/v1/logs

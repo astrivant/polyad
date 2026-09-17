@@ -11,7 +11,7 @@ ha: true
 operator:
   ## @param operator.logLevel [string] INFO keeps normal operational logs; DEBUG traces Polyad reconciliation and API timings, including observers. Choices: DEBUG, INFO, WARNING, ERROR, CRITICAL.
   logLevel: INFO
-  ## @param operator.replicaCount [integer|null] Operator replicas; null selects 1 for singular or 2 for ha At least two; replicas share queues and mutation leases. Minimum: 1. Maximum: 32.
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha At least two; replicas share queues and mutation leases. Minimum: 1. Maximum: 32.
   replicaCount: 2 # At least two; replicas share queues and mutation leases.
   ## @param operator.nodeSelector [object] Node labels selecting the operator node group, independent of workload graph placement
   nodeSelector: {}
@@ -27,7 +27,7 @@ operator:
     maxReplicas: 8
     ## @param operator.autoscaling.targetCPUUtilizationPercentage [integer] Target operator CPU utilization relative to requested CPU Minimum: 1. Maximum: 100.
     targetCPUUtilizationPercentage: 70
-    ## @param operator.autoscaling.targetMemoryUtilizationPercentage [integer|null] Optional target memory utilization relative to requested memory (1-100); null disables the memory metric Percent of requested memory; null disables. Minimum: 1. Maximum: 100.
+    ## @param operator.autoscaling.targetMemoryUtilizationPercentage [integer, nullable] Optional target memory utilization relative to requested memory (1-100); null disables the memory metric Percent of requested memory; null disables. Minimum: 1. Maximum: 100.
     targetMemoryUtilizationPercentage: 80 # Percent of requested memory; null disables.
   ## @param operator.resources [object] Settings for operator.resources; configure the fields below.
   resources:

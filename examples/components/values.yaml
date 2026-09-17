@@ -1,24 +1,46 @@
 # yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # Optional component architecture; works without PostgreSQL or remote clusters.
+## @param ha [boolean] Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true.
 ha: true
+## @param architecture [object] Settings for architecture.
 architecture:
+  ## @param architecture.mode [string] Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha
   mode: Distributed
+  ## @param architecture.autoscaling [boolean] Enable KEDA scaling of all component ReplicaGroup definitions
   autoscaling: true
+  ## @param architecture.cheegerMinimum [number] Minimum edge expansion of the three-component Graph; the default chain has h=1
   cheegerMinimum: 1
+  ## @param architecture.expandedNodes [integer] Maximum recursive vertices in the self-managed Graph
   expandedNodes: 27
+## @param operator [object] Settings for operator.
 operator:
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha
   replicaCount: 2
+## @param api [object] Settings for api.
 api:
+  ## @param api.enabled [boolean] Serve authenticated composition requests on port 8090 through a ClusterIP Service
   enabled: true
+  ## @param api.existingSecret [string] Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
   existingSecret: polyad-api
+## @param events [object] Settings for events.
 events:
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
   enabled: true
+  ## @param events.existingSecret [string] Existing Secret containing a token key for read-only event subscriptions
   existingSecret: polyad-events
+## @param metrics [object] Settings for metrics.
 metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: true
+  ## @param metrics.authentication [object] Settings for metrics.authentication.
   authentication:
+    ## @param metrics.authentication.enabled [boolean] Require a dedicated bearer token on all metrics endpoints
     enabled: true
+    ## @param metrics.authentication.existingSecret [string] Existing or ESO-managed Secret containing the metrics token
     existingSecret: polyad-metrics
+## @param keda [object] Settings for keda.
 keda:
+  ## @param keda.authentication [object] Settings for keda.authentication.
   authentication:
+    ## @param keda.authentication.enabled [boolean] Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics
     enabled: true

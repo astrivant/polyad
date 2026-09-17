@@ -5,8 +5,10 @@ Authenticate service accounts and persist immutable connection receipts.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
 from attrs import field, frozen
@@ -14,6 +16,7 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.errors import Conflict, Forbidden, Unauthorized, Unavailable
 from polyad.graph.temporary import deadline
+from polyad.operator.coordination.pulses import PulsePolicy
 from polyad_types import resources as asts
 from polyad_types.codec import converter
 from polyad_types.requests import MAX_TTL
@@ -21,7 +24,7 @@ from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
-    from polyad_types.requests import ConnectionRequest
+    from polyad_types.requests import ConnectionRequest, ConnectionResponse
 
 FINALIZER = f"{asts.GROUP}/temporary-connection"
 AUDIENCE = "polyad-connections"
@@ -38,6 +41,8 @@ class ConnectionSettings:
         namespace (str): Explicit namespace when scope is Namespace.
         max_ttl (int): Maximum request lifetime in seconds.
         retention (int): Terminal receipt retention in seconds.
+        pulse_cooldown (float): Shared cooldown window for new proposals and positive responses; zero disables it.
+        pulse_burst (int): New pulses admitted per graph or responding endpoint during one window.
     """
 
     operator_namespace: str
@@ -45,6 +50,8 @@ class ConnectionSettings:
     namespace: str = ""
     max_ttl: int = 3600
     retention: int = 3600
+    pulse_cooldown: float = 0
+    pulse_burst: int = 1
 
     def __attrs_post_init__(self) -> None:
         """
@@ -64,6 +71,7 @@ class ConnectionSettings:
             raise ValueError("connections max TTL must be from 1 through 86400 seconds")
         if type(self.retention) is not int or not 0 <= self.retention <= 604800:
             raise ValueError("connections receipt retention must be from 0 through 604800 seconds")
+        PulsePolicy(self.pulse_cooldown, self.pulse_burst)
 
     @classmethod
     def from_environment(cls, namespace: str) -> ConnectionSettings:
@@ -82,6 +90,8 @@ class ConnectionSettings:
             namespace=os.environ.get("POLYAD_CONNECTIONS_NAMESPACE", ""),
             max_ttl=int(os.environ.get("POLYAD_CONNECTIONS_MAX_TTL", "3600")),
             retention=int(os.environ.get("POLYAD_CONNECTIONS_RETENTION", "3600")),
+            pulse_cooldown=float(os.environ.get("POLYAD_CONNECTION_PULSE_COOLDOWN_SECONDS", "0")),
+            pulse_burst=int(os.environ.get("POLYAD_CONNECTION_PULSE_BURST", "1")),
         )
 
     def allows(self, namespace: str) -> bool:
@@ -181,15 +191,16 @@ class ConnectionStore:
             raise Forbidden("caller namespace is outside the configured connections scope")
         return caller
 
-    async def authorize(self, caller: Caller, namespace: str, kind: str, graph: str) -> None:
+    async def authorize(self, caller: Caller, namespace: str, kind: str, graph: str, *, verb: str = "connect") -> None:
         """
-        Require the connect verb on the exact target graph without granting CRD writes.
+        Require the requested verb on the exact target graph without granting CRD writes.
 
         Args:
             caller (Caller): Verified service account.
             namespace (str): Target namespace.
             kind (str): Target boundary kind.
             graph (str): Target graph name.
+            verb (str): Separate connect or approve permission on this exact graph.
 
         Returns:
             None: Scope or Kubernetes authorization failures raise Forbidden.
@@ -217,13 +228,13 @@ class ConnectionStore:
                         "group": asts.GROUP,
                         "resource": asts.RESOURCE_TYPES[kind].plural,
                         "name": graph,
-                        "verb": "connect",
+                        "verb": verb,
                     },
                 },
             },
         )
         if review.get("status", {}).get("allowed") is not True:
-            raise Forbidden("caller requires the connect verb on the target graph")
+            raise Forbidden(f"caller requires the {verb} verb on the target graph")
 
     async def submit(self, request: ConnectionRequest, caller: Caller) -> dict[str, Any]:
         """
@@ -256,6 +267,7 @@ class ConnectionStore:
             nodes = {node.name for node in topology(spec, request.kind).nodes}
             if request.source not in nodes or request.target not in nodes:
                 raise ValueError("temporary connection endpoints must exist in the target boundary")
+            await self.pulse(f"request:{request.namespace}:{request.graphUid}")
             desired = asts.TemporaryConnection(
                 metadata=asts.ObjectMeta(
                     name=name,
@@ -285,7 +297,141 @@ class ConnectionStore:
                     raise
         if existing["metadata"].get("deletionTimestamp") or existing["spec"] != intent:
             raise Conflict("requestId already identifies a different or deleting connection")
+        from polyad.api.connections.consent import TERMINAL, endpoint
+
+        if existing.get("status", {}).get("phase") not in TERMINAL and datetime.now(UTC) < deadline(existing):
+            try:
+                node = await endpoint(self.api, caller, existing)
+            except Forbidden:
+                node = None  # A third-party requester cannot consent for either service.
+            if node is not None:
+                existing = await self.record(existing, caller, node, "Approve", verb="connect", implicit=True)
         return self.receipt(existing)
+
+    async def record(
+        self, value: dict[str, Any], caller: Caller, node: str, decision: str, *, verb: str, implicit: bool = False
+    ) -> dict[str, Any]:
+        """
+        Persist one endpoint's consent with optimistic concurrency and no TTL extension.
+
+        Args:
+            value (dict[str, Any]): Current receipt with its original UID fence.
+            caller (Caller): Verified endpoint representative.
+            node (str): Endpoint resolved from current Pod ownership.
+            decision (str): Approve or Reject.
+            verb (str): Permission establishing this consent.
+            implicit (bool): Requester consent must never replace a later explicit response.
+
+        Returns:
+            dict[str, Any]: Updated or idempotently acknowledged receipt.
+        """
+        from polyad.api.connections.consent import CONSENTS, TERMINAL, decisions, endpoint
+
+        name, namespace, uid = (value["metadata"][key] for key in ("name", "namespace", "uid"))
+        extra = {key: caller.extra[key] for key in ("authentication.kubernetes.io/pod-name", "authentication.kubernetes.io/pod-uid")}
+        charged = False
+        for _ in range(5):
+            if value["metadata"]["uid"] != uid or value["metadata"].get("deletionTimestamp") or datetime.now(UTC) >= deadline(value):
+                raise Conflict("connection proposal was replaced, deleted or expired")
+            if (
+                value.get("status", {}).get("phase") in TERMINAL
+                or value["metadata"].get("annotations", {}).get(f"{asts.GROUP}/revoke-requested") == "true"
+            ):
+                raise Conflict("connection is terminal or being revoked")
+            current = decisions(value)
+            if node in current:
+                previous = current[node]
+                if (implicit and previous["verb"] != "connect") or (
+                    previous["decision"] == decision and previous["uid"] == caller.uid and previous["extra"] == extra
+                ):
+                    return value
+                if previous["decision"] == "Reject":
+                    raise Conflict("a rejected proposal requires a new requestId")
+            await self.authorize(caller, namespace, value["spec"]["kind"], value["spec"]["graph"], verb=verb)
+            if await endpoint(self.api, caller, value) != node:
+                raise Forbidden("connection participant changed before recording consent")
+            # Keep only verified Pod claims, never a bearer token or arbitrary authentication extras.
+            current[node] = {
+                "receiptUid": uid,
+                "decision": decision,
+                "verb": verb,
+                "username": caller.username,
+                "uid": caller.uid,
+                "namespace": caller.namespace,
+                "groups": list(caller.groups),
+                "extra": extra,
+                "observedAt": datetime.now(UTC).isoformat(),
+            }
+            if not implicit and decision == "Approve" and not charged:
+                await self.pulse(f"response:{namespace}:{value['spec']['graphUid']}:{node}")
+                charged = True
+            try:
+                updated: dict[str, Any] = await self.api.request(
+                    "PATCH",
+                    "TemporaryConnection",
+                    namespace,
+                    name,
+                    {"metadata": {"resourceVersion": value["metadata"]["resourceVersion"], "annotations": {CONSENTS: json.dumps(current)}}},
+                )
+                return updated
+            except ApiException as error:
+                if error.status != 409:
+                    raise
+                refreshed = await self.api.get("TemporaryConnection", namespace, name)
+                if refreshed is None:
+                    raise Conflict("connection proposal no longer exists") from error
+                value = refreshed
+        raise Unavailable("connection changed repeatedly; retry the same response")
+
+    async def pulse(self, identity: str) -> None:
+        """
+        Apply the optional shared negotiation budget without slowing revocation or expiry.
+
+        Args:
+            identity (str): Graph-wide proposal lane or graph-endpoint response lane.
+
+        Returns:
+            None: Replayed receipts and unchanged decisions bypass new-pulse accounting.
+        """
+        from polyad.auth.policy import public_demo
+
+        if self.settings.pulse_cooldown == 0 or public_demo():
+            return
+        from polyad.cache import Cache, cache_url
+
+        cache = Cache(cache_url(), self.settings.operator_namespace)
+        try:
+            await PulsePolicy(self.settings.pulse_cooldown, self.settings.pulse_burst).admit(cache.client, f"connections:{identity}")
+        finally:
+            await cache.close()
+
+    async def respond(self, namespace: str, name: str, response: ConnectionResponse, caller: Caller) -> dict[str, Any] | None:
+        """
+        Accept consent only from a permitted Pod belonging to the proposed endpoint.
+
+        Args:
+            namespace (str): Receipt namespace from the event.
+            name (str): Server-assigned receipt name from the event, not the requester's private ID.
+            response (ConnectionResponse): Receipt UID and explicit decision.
+            caller (Caller): TokenReview-verified responding service.
+
+        Returns:
+            dict[str, Any] | None: Public receipt after recording consent, or absence.
+        """
+        from polyad.api.connections.consent import endpoint
+
+        if not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", namespace) or not re.fullmatch(r"connection-[a-f0-9]{40}", name):
+            raise ValueError("invalid connection proposal identity")
+        if not self.settings.allows(caller.namespace) or not self.settings.allows(namespace):
+            raise Forbidden("caller and target must be inside the configured connections scope")
+        value = await self.api.get("TemporaryConnection", namespace, name)
+        if value is None:
+            return None
+        if value["metadata"]["uid"] != response.uid:
+            raise Conflict("connection proposal UID changed")
+        await self.authorize(caller, namespace, value["spec"]["kind"], value["spec"]["graph"], verb="approve")
+        node = await endpoint(self.api, caller, value)
+        return self.receipt(await self.record(value, caller, node, response.decision, verb="approve"))
 
     @staticmethod
     def receipt(value: dict[str, Any]) -> dict[str, Any]:
@@ -298,6 +444,8 @@ class ConnectionStore:
         Returns:
             dict[str, Any]: Public response without credentials or workload templates.
         """
+        from polyad.api.connections.consent import decisions
+
         return {
             "requestId": value["spec"]["requestId"],
             "name": value["metadata"]["name"],
@@ -306,6 +454,7 @@ class ConnectionStore:
             "expiresAt": deadline(value).isoformat(),
             "target": {key: value["spec"][key] for key in ("kind", "graph", "graphUid", "source", "target", "ports", "bidirectional")},
             "status": value.get("status", {"phase": "Pending"}),
+            "consent": {node: entry["decision"] for node, entry in decisions(value).items()},
             "revokeRequested": value["metadata"].get("annotations", {}).get(f"{asts.GROUP}/revoke-requested") == "true",
         }
 

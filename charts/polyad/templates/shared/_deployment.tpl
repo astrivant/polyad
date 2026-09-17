@@ -173,6 +173,16 @@ spec:
               value: {{ .Values.operator.logLevel | quote }}
             - name: POLYAD_WRITE_QUEUE_MAX_PENDING
               value: {{ .Values.operator.writeQueue.maxPending | int | quote }}
+            - name: POLYAD_MUTATION_PLANNER_PARALLELISM
+              value: {{ .Values.operator.writeQueue.plannerParallelism | int | quote }}
+            - name: POLYAD_RECONCILIATION_COOLDOWN_SECONDS
+              value: {{ .Values.operator.writeQueue.reconciliationCooldownSeconds | quote }}
+            - name: POLYAD_RECONCILIATION_BURST
+              value: {{ .Values.operator.writeQueue.reconciliationBurst | int | quote }}
+            - name: POLYAD_CONNECTION_PULSE_COOLDOWN_SECONDS
+              value: {{ .Values.connections.pulses.cooldownSeconds | quote }}
+            - name: POLYAD_CONNECTION_PULSE_BURST
+              value: {{ .Values.connections.pulses.burst | int | quote }}
             - name: POLYAD_WRITE_MAX_IN_FLIGHT
               value: {{ .Values.operator.writeQueue.maxInFlight | int | quote }}
             - name: POLYAD_WRITE_VALIDATION_WORKERS

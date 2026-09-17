@@ -774,16 +774,25 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "plannerParallelism",
             "maxPending",
             "validationIntervalSeconds",
             "validationWindowSeconds",
             "validationBurst",
             "maxInFlight",
             "validationWorkers",
-            "reconciliationWorkers"
+            "reconciliationWorkers",
+            "reconciliationCooldownSeconds",
+            "reconciliationBurst"
           ],
           "description": "Bound concrete Kubernetes writes separately from coalesced reconciliation hints.",
           "properties": {
+            "plannerParallelism": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32,
+              "description": "Maximum mutation callbacks per approved planner batch. One keeps batches serial; callers may lower this ceiling only. Parallel transport also needs maxInFlight slots and sufficient maxInFlight + maxPending admission capacity per adapter. Dependency and shared-budget checks still apply."
+            },
             "maxPending": {
               "type": "integer",
               "minimum": 0,
@@ -825,6 +834,18 @@
               "minimum": 1,
               "maximum": 32,
               "description": "Concurrent local reconciliation attempts and remote deliveries per cluster. Same-key follow-ups and graph-family leases remain serialized; separate families can prepare decisions together."
+            },
+            "reconciliationCooldownSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 300,
+              "description": "Shared cooldown window in seconds; zero disables additional pulse pacing. Refused work retries from fresh state."
+            },
+            "reconciliationBurst": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 128,
+              "description": "Maximum new pulses admitted in one cooldown window; duplicate retries do not extend the window."
             }
           }
         }
@@ -2719,7 +2740,8 @@
         "scope",
         "namespace",
         "maxTtlSeconds",
-        "retentionSeconds"
+        "retentionSeconds",
+        "pulses"
       ],
       "properties": {
         "enabled": {
@@ -2752,6 +2774,28 @@
           "minimum": 0,
           "maximum": 604800,
           "description": "Retain terminal receipts for retry identity and audit before cleanup"
+        },
+        "pulses": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cooldownSeconds",
+            "burst"
+          ],
+          "properties": {
+            "cooldownSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 300,
+              "description": "Shared cooldown window in seconds; zero disables additional pulse pacing. Refused work retries from fresh state."
+            },
+            "burst": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 128,
+              "description": "Maximum new pulses admitted in one cooldown window; duplicate retries do not extend the window."
+            }
+          }
         }
       },
       "allOf": [

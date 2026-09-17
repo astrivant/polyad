@@ -55,8 +55,8 @@ lockfile when the dependencies or Node version change.
 ## Formatting and checks
 
 ```bash
-bash scripts/tooling/project-python.sh -m ruff check --fix pkg tests examples
-bash scripts/tooling/project-python.sh -m ruff format pkg tests examples
+bash scripts/tooling/project-python.sh -m ruff check --fix pkg examples
+bash scripts/tooling/project-python.sh -m ruff format pkg examples
 git ls-files -z --cached --others --exclude-standard -- '*.sh' '*.bash' | xargs -0 shfmt -w
 poetry run pre-commit run --all-files
 poetry run pytest
@@ -66,6 +66,9 @@ Pytest runs in parallel locally and in CI through the `pytest-xdist` development
 dependency. The project defaults to automatic CPU-based worker selection, capped
 at eight workers. Work stealing redistributes pending tests as workers finish.
 The installed-wheel typing checks use the same configuration.
+
+The Python suite and its fixtures live in `pkg/tests/`; pytest discovers them
+automatically. Run a specific file with `poetry run pytest pkg/tests/test_operator.py`.
 
 Use `poetry run pytest -n 4` to choose a worker count, or
 `poetry run pytest -n 0` for serial debugging. See the
@@ -96,7 +99,7 @@ Describe the module, class or function here.
 Check the layout directly with:
 
 ```sh
-bash scripts/tooling/project-python.sh scripts/validation/check-docstrings.py pkg tests examples scripts
+bash scripts/tooling/project-python.sh scripts/validation/check-docstrings.py pkg examples scripts
 ```
 
 Ruff requires postponed annotations and separates imports used only by type
@@ -282,12 +285,28 @@ they do not publish to a Helm registry or GitHub Release.
 
 ## Helm documentation
 
-The pinned Bitnami generator derives the parameters table in
-`charts/polyad/README.md` from the `@param` comments in `values.yaml`:
+Every shipped values file uses explicit schema-derived parameter tags, for
+example `## @param global.meshID [string] ...`. Types are `string`, `boolean`,
+`integer`, `number`, `object` or `array`; comma-separated alternatives describe
+unions, and `nullable` permits YAML `null`. An integer default does not make a
+fractional-duration setting an integer: the schema defines the accepted type.
+Descriptions explain the setting's purpose and tradeoffs.
+
+After changing the canonical schema or adding values, synchronize annotations
+across defaults, reference overlays, examples and test fixtures, then regenerate
+the chart's parameter table:
 
 ```bash
+poetry run python scripts/validation/check-values.py --fix-annotations
 poetry run pre-commit run helm-readme-generator --all-files
 ```
+
+`check-values.py` rejects missing or stale tags as well as invalid YAML values,
+duplicate keys and untyped nested fields. Its repair option preserves values
+and authored descriptions. The pinned Bitnami generator runs through
+`scripts/schemas/generate-helm-readme.py`, which shows these tags as visible types
+while retaining actual defaults, including nonempty strings and collections.
+Run the hook through pre-commit to use its pinned Node environment.
 
 Commit any regenerated table with the values change. The chart's hand-authored
 `values.schema.json` retains its conditional validation rules. CI runs the same

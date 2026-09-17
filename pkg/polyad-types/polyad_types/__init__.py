@@ -29,6 +29,7 @@ from polyad_types.requests import ActivationRequest as ActivationRequest
 from polyad_types.requests import CompositionItem as CompositionItem
 from polyad_types.requests import CompositionRequest as CompositionRequest
 from polyad_types.requests import ConnectionRequest as ConnectionRequest
+from polyad_types.requests import ConnectionResponse as ConnectionResponse
 from polyad_types.resources.capacity import CapacityNodeStatus as CapacityNodeStatus
 from polyad_types.resources.capacity import CapacityStatus as CapacityStatus
 from polyad_types.resources.capacity import PodSet as PodSet

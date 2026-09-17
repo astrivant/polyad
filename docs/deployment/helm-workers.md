@@ -31,6 +31,12 @@ reserved PolyGraph and pool name; another root cannot adopt it accidentally.
 The root never overwrites an attached Deployment's Pod template or adds a
 controller owner reference.
 
+Configure each downstream release's internal worker counts, planner parallelism,
+write admission and validation cadence with `operator.writeQueue`. Those settings
+remain under the downstream administrator's control for either scaling authority.
+See the [configuration flow and example](../development/write-pipeline.md#configuration)
+and [typed tuning overlay](../../charts/polyad/values-tuning.reference.yaml).
+
 ```mermaid
 flowchart TB
     subgraph reserved["Reserved root PolyGraph"]

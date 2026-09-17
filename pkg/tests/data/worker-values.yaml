@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../../../charts/polyad/values.reference.schema.json
+## @param worker [object] Settings for worker.
+worker:
+  ## @param worker.enabled [boolean] Install a Helm-owned execution worker connected to an existing root.
+  enabled: true
+  ## @param worker.rootNamespace [string] Root namespace for queues, leases and pool registration; not the worker release namespace.
+  rootNamespace: control
+  ## @param worker.rootClusterName [string] Root federation identity, distinct from this worker hosting cluster.
+  rootClusterName: management
+  ## @param worker.rootDeployment [string] Root Deployment allowed to manage this attachment.
+  rootDeployment: root-polyad
+  ## @param worker.rootGraph [string] Reserved PolyGraph name at the root, normally ROOT_RELEASE-operators.
+  rootGraph: root-operators
+  ## @param worker.poolName [string] Root-namespace OperatorPool authorized to attach this Deployment.
+  poolName: west-workers
+  ## @param worker.scalingAuthority [string] Root permits the approved OperatorPool to change replicas; Local keeps replica intent and optional HPA with the downstream administrator.
+  scalingAuthority: Root
+## @param rootControlPlane [object] Settings for rootControlPlane.
+rootControlPlane:
+  ## @param rootControlPlane.kubeconfigSecret [string] Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
+  kubeconfigSecret: root-access
+## @param global [object] Settings for global.
+global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
+  multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad
+    clusterName: west
+## @param federation [object] Settings for federation.
+federation:
+  ## @param federation.enabled [boolean] Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
+  enabled: true
+  ## @param federation.clusters [array] Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only
+  clusters:
+    ## @param federation.clusters[].name [string] Settings for federation.clusters[].name.
+    - name: west
+      ## @param federation.clusters[].namespace [string] Settings for federation.clusters[].namespace.
+      namespace: test
+      ## @param federation.clusters[].kubeconfigSecret [string] Settings for federation.clusters[].kubeconfigSecret.
+      kubeconfigSecret: west-access
+## @param dragonfly [object] Settings for dragonfly.
+dragonfly:
+  ## @param dragonfly.enabled [boolean] Deploy Dragonfly through the upstream operator Helm dependency
+  enabled: false
+  ## @param dragonfly.existingSecret [string] Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings
+  existingSecret: root-cache

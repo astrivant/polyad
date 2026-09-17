@@ -46,7 +46,10 @@ class ValidationSettings:
         Returns:
             None: Every bounded pass can revisit the earliest expiring receipt.
         """
-        if not all(math.isfinite(value) for value in (self.interval, self.window)) or not 0.01 <= self.interval <= self.window <= 60:
+        if (
+            not all(type(value) in (int, float) and math.isfinite(value) for value in (self.interval, self.window))
+            or not 0.01 <= self.interval <= self.window <= 60
+        ):
             raise ValueError("write validation requires 0.01 <= interval <= window <= 60 seconds")
         if type(self.burst) is not int or not 1 <= self.burst <= 128:
             raise ValueError("write validation burst must be an integer between 1 and 128")

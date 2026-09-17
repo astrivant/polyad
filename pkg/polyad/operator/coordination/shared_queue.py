@@ -14,6 +14,8 @@ from redis.exceptions import ResponseError
 
 from polyad.cache import Cache
 from polyad.lua import script
+from polyad.operator.coordination.pulses import PulsePolicy
+from polyad.operator.coordination.settings import WorkGraphSettings
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,24 @@ class SharedQueue:
             str: Namespace-scoped Redis stream key with a shard hash tag.
         """
         return f"{self.prefix}:{{{shard}}}:work"
+
+    async def pulse(self, key: Key, *, cluster: str = "") -> None:
+        """
+        Rate new reconciliation decisions across replicas while leaving cleanup live.
+
+        Args:
+            key (Key): Resource whose desired state will be refreshed after admission.
+            cluster (str): Destination cluster, distinguishing identical remote names.
+
+        Returns:
+            None: A denied pulse leaves its shared delivery unacknowledged for retry.
+        """
+        if key[0] == "TemporaryConnection":
+            return  # Consent, expiry and revocation have their own intake limits.
+        settings = WorkGraphSettings.from_environment()
+        await PulsePolicy(settings.reconciliation_cooldown, settings.reconciliation_burst).admit(
+            self.client, json.dumps(("reconciliation", self.prefix, cluster, *key))
+        )
 
     async def publish(self, shard: int, key: Key) -> None:
         """

@@ -16,7 +16,7 @@ class Event:
 
     Attributes:
         id (str): Stream cursor to persist after processing.
-        event (str): Event type, including graph, topology, reset or unavailable.
+        event (str): Event type, including graph, topology, connection, reset or unavailable.
         data (dict[str, Any]): Observation payload.
     """
 

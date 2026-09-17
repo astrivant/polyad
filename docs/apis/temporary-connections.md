@@ -2,6 +2,7 @@
 
 Services can request a directed connection between existing nodes of a `Graph`,
 `PolyGraph`, or `ReplicaGroup` for a bounded lifetime. Polyad records each request,
+obtains the participating services' consent through [events](../workloads/workload-events.md),
 checks the live graph family's [GraphRules](../graphs/graph-rules.md), adds admitted edges
 to the instance's effective topology, and removes their grants after expiry.
 The graph's reusable specification is unchanged.
@@ -11,6 +12,8 @@ The graph's reusable specification is unchanged.
 - [Enable the endpoint and choose its scope](#enable-the-endpoint-and-choose-its-scope)
 - [Authenticate workloads](#authenticate-workloads)
 - [Submit, observe and revoke](#submit-observe-and-revoke)
+- [Service consent](#service-consent)
+- [Administrator pulse limits](#administrator-pulse-limits)
 - [Meaning at each graph layer](#meaning-at-each-graph-layer)
 - [Deadline, retries and cleanup](#deadline-retries-and-cleanup)
 - [Implementation boundaries](#implementation-boundaries)
@@ -26,7 +29,16 @@ connections:
   namespace: ''
   maxTtlSeconds: 3600
   retentionSeconds: 3600
+events:
+  enabled: true
+  existingSecret: polyad-events
 ```
+
+Provision the event credential and subscribe the participating services before
+requesting connections. The [connection reference values](../../charts/polyad/values-connections.reference.yaml)
+include separate proposal and reconciliation pulse controls. For named API keys,
+grant `events` access to the target graph tree; these credentials control event
+visibility, while projected service-account tokens identify connection participants.
 
 The internal Service is `<release>-polyad-connections.<operator-namespace>.svc:8093`.
 Managed workloads receive its address as `POLYAD_CONNECTIONS_URL`. Outside Helm,
@@ -185,7 +197,7 @@ network teardown. Requests outside caller/target scope or without `connect`
 permission return 403. Invalid authentication returns 401; conflicting request
 identity returns 409. The authenticated schema is at `/openapi.json`.
 
-The [standalone Python client](../../pkg/client/README.md) supports all three
+The [standalone Python client](../../pkg/client/README.md) supports these
 operations without installing the operator package:
 
 ```python
@@ -217,6 +229,119 @@ status = connections().connection(namespace, "handoff-42")
 connections().disconnect(namespace, "handoff-42")
 ```
 
+## Service consent
+
+The requesting service's authenticated proposal counts as its consent. It does
+not need to approve again. The operator resolves its Pod to a logical endpoint
+through current controller ownership, checking the UID at every step. If the
+requester represents neither endpoint, both services must respond explicitly.
+A service account alone cannot claim a node: consent requires a
+[Pod-bound projected token](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#verifying-and-inspecting-private-claims).
+
+The existing event stream emits `event: connection` when a receipt changes. Its
+`data.graph` identifies the target boundary and `data.connection` contains the
+public receipt, including its name, UID, endpoints, original deadline, consent
+summary and status. Services subscribe to this graph tree and resume with
+`Last-Event-ID` after interruptions. Reserved operator graphs retain their event
+isolation. A Pending receipt creates no neighbor or network permission.
+
+Give responding services the separate custom `approve` verb on the exact
+boundary, using a Role and RoleBinding like the requester example above:
+
+```yaml
+rules:
+  - apiGroups: [polyad.astrivant.com]
+    resources: [graphs]
+    resourceNames: [pipeline]
+    verbs: [approve]
+```
+
+Respond using the **server-assigned receipt name** from the event, its UID, and
+the responding service's projected token:
+
+```http
+POST /v1/connections/analytics/connection-<server-generated-hash>/response
+Authorization: Bearer <responding-service-projected-token>
+Content-Type: application/json
+
+{"uid": "<receipt-uid>", "decision": "Approve"}
+```
+
+`decision` is `Approve` or `Reject`. The caller cannot select the endpoint it
+approves for; the operator derives it from its live Pod ownership. A named API
+key that can read events does not grant approval authority. The standalone client
+provides the same operation:
+
+```python
+from polyad_types import ConnectionResponse
+
+# Within the application's event handler, after checking the proposed peer,
+# ports, deadline and its own ability to accept work:
+proposal = event.data["connection"]
+connections().respond_connection(
+    proposal["namespace"],
+    proposal["name"],
+    ConnectionResponse(uid=proposal["uid"], decision="Approve"),
+)
+```
+
+Applications decide whether to approve; the client never automatically consents.
+The operator rechecks participant identity and permissions before admission,
+then evaluates GraphRules and observes the network policies. Missing permission,
+an absent service or a lost notification leaves the proposal Pending until the
+original TTL expires. There is no timeout bypass or anonymous consent, including
+in demonstration mode. Replayed responses do not extend the deadline.
+The stream uses bounded replay; a missed event does not imply consent.
+
+Either endpoint can reject with `approve` permission, including after activation;
+this removes the grant. A rejected proposal needs a new request ID. Ordinary Pod
+replacement after activation does not revoke an agreed logical connection.
+Before activation, replacement invalidates that Pod's consent; its replacement
+must respond (or the requester must replay its proposal).
+
+Ownership resolution runs in the receipt's cluster. A workload in another
+cluster cannot claim a local endpoint through remote-parent annotations; use
+the owning cluster's operator and locally verifiable participants.
+
+## Administrator pulse limits
+
+These optional budgets limit new decisions independently of HTTP rate limits,
+writer concurrency and the existing [validation windows](../development/write-pipeline.md#configuration):
+
+```yaml
+connections:
+  pulses:
+    cooldownSeconds: 10
+    burst: 2
+operator:
+  writeQueue:
+    reconciliationCooldownSeconds: 1
+    reconciliationBurst: 2
+```
+
+| Value | Type and range | Scope |
+| --- | --- | --- |
+| `connections.pulses.cooldownSeconds` | number, 0–300; default 0 disables | Fixed window for new connection proposals per graph and positive responses per graph endpoint |
+| `connections.pulses.burst` | integer, 1–128; default 1 | Accepted new pulses in each window |
+| `operator.writeQueue.reconciliationCooldownSeconds` | number, 0–300; default 0 disables | Fixed window for queued reconciliation attempts per resource and cluster |
+| `operator.writeQueue.reconciliationBurst` | integer, 1–128; default 1 | Reconciliation starts allowed per window |
+
+The first admitted pulse starts the window. Redis/Dragonfly atomically tracks
+the budget across HA replicas. Intake returns HTTP 429 with `Retry-After` when
+the connection budget is exhausted; retry the same request or response from
+fresh state. Identical receipt/consent replays do not consume another pulse.
+Rejected operations during outages never fall back to a local budget.
+Rejection, early revocation and expiry bypass the negotiation budget.
+
+The broader budget retains queue notifications for a later attempt. It does not
+delay dependency invalidation, validation, active writes or lease renewals.
+TemporaryConnection reconciliation has a separate path so this cooldown cannot
+hold up consent or cleanup. Connection pulses are disabled in public demo mode;
+leave the independent reconciliation cooldown at zero for unrestricted demos.
+Outside Helm, use `POLYAD_CONNECTION_PULSE_COOLDOWN_SECONDS`,
+`POLYAD_CONNECTION_PULSE_BURST`, `POLYAD_RECONCILIATION_COOLDOWN_SECONDS` and
+`POLYAD_RECONCILIATION_BURST`.
+
 ## Meaning at each graph layer
 
 Temporary edges have the same meaning as declarative
@@ -245,15 +370,21 @@ otherwise unrestricted network into a restricted one.
 ```mermaid
 sequenceDiagram
     participant W as Workload
+    participant S as Peer service
     participant A as Connections API
     participant K as Kubernetes receipts
     participant O as Target namespace operator
     participant N as Graph topology and policies
     W->>A: POST nodes, ports and TTL
     A->>K: Verify service account and connect permission
-    A->>K: Persist immutable TemporaryConnection
+    A->>K: Persist proposal and requester consent
     A-->>W: 202 with expiresAt
+    O-->>W: Connection event through subscribed stream
+    O-->>S: Connection event through subscribed stream
+    S->>A: Approve receipt UID using Pod identity
+    A->>K: Check approve permission and record consent
     O->>K: Refresh intent under owning graph-family lease
+    O->>O: Recheck consent identities and permissions
     O->>O: Check live graph-family GraphRules
     O->>N: Admit edge and reconcile policies
     O->>K: Observe policies and mark Active

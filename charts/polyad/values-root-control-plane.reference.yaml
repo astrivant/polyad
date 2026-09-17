@@ -14,7 +14,7 @@ ha: true
 operator:
   ## @param operator.logLevel [string] INFO keeps normal operational logs; DEBUG traces Polyad reconciliation and API timings, including observers. Choices: DEBUG, INFO, WARNING, ERROR, CRITICAL.
   logLevel: INFO
-  ## @param operator.replicaCount [integer|null] Operator replicas; null selects 1 for singular or 2 for ha Minimum: 1. Maximum: 32.
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha Minimum: 1. Maximum: 32.
   replicaCount: 2
 
 ## @param global [object] Settings for global; configure the fields below.

@@ -141,7 +141,7 @@ Run Python tests under the same init process:
 
 ```sh
 docker run --rm --entrypoint /usr/bin/tini polyad:dev \
-    -- python -m pytest -n 2 tests/test_balance_gates.py
+    -- python -m pytest -n 2 pkg/tests/test_balance_gates.py
 ```
 
 Both targets use the same non-root identity. The development image owns `/app`,

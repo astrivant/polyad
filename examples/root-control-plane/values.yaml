@@ -1,50 +1,96 @@
 # yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # Install only in the management cluster, in namespace polyad.
+## @param ha [boolean] Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true.
 ha: true
+## @param global [object] Settings for global.
 global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
   multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad
     clusterName: management
+## @param rootControlPlane [object] Settings for rootControlPlane.
 rootControlPlane:
+  ## @param rootControlPlane.enabled [boolean] Manage registered clusters and remote execution replicas through one root scheduler; requires ha
   enabled: true
+  ## @param rootControlPlane.pools [array] Root-owned OperatorPools; existingDeployment attaches a Helm-owned worker with explicit Root or Local scaling authority.
   pools:
+    ## @param rootControlPlane.pools[].name [string] Settings for rootControlPlane.pools[].name.
     - name: west-workers
+      ## @param rootControlPlane.pools[].cluster [string] Settings for rootControlPlane.pools[].cluster.
       cluster: west
+      ## @param rootControlPlane.pools[].replicas [integer] Settings for rootControlPlane.pools[].replicas.
       replicas: 2
+      ## @param rootControlPlane.pools[].resources [object] Settings for rootControlPlane.pools[].resources.
       resources:
+        ## @param rootControlPlane.pools[].resources.requests [object] Settings for rootControlPlane.pools[].resources.requests.
         requests:
+          ## @param rootControlPlane.pools[].resources.requests.cpu [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
           cpu: 250m
+          ## @param rootControlPlane.pools[].resources.requests.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
           memory: 256Mi
+        ## @param rootControlPlane.pools[].resources.limits [object] Settings for rootControlPlane.pools[].resources.limits.
         limits:
+          ## @param rootControlPlane.pools[].resources.limits.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
           memory: 1Gi
+  ## @param rootControlPlane.kubeconfigSecret [string] Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
   kubeconfigSecret: root-access
+  ## @param rootControlPlane.endpoints [object] Settings for rootControlPlane.endpoints.
   endpoints:
+    ## @param rootControlPlane.endpoints.api [string] Externally reachable root composition API URL advertised to workloads
     api: https://polyad.example.com/composition
+    ## @param rootControlPlane.endpoints.events [string] Externally reachable root events URL advertised to workloads
     events: https://polyad.example.com/events
+    ## @param rootControlPlane.endpoints.metrics [string] Externally reachable root metrics URL advertised to workloads
     metrics: https://polyad.example.com/metrics
+## @param federation [object] Settings for federation.
 federation:
+  ## @param federation.enabled [boolean] Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
   enabled: true
+  ## @param federation.clusters [array] Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only
   clusters:
+    ## @param federation.clusters[].name [string] Settings for federation.clusters[].name.
     - name: west
+      ## @param federation.clusters[].namespace [string] Settings for federation.clusters[].namespace.
       namespace: workloads
+      ## @param federation.clusters[].kubeconfigSecret [string] Settings for federation.clusters[].kubeconfigSecret.
       kubeconfigSecret: west-access
+## @param operator [object] Settings for operator.
 operator:
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha
   replicaCount: 2
+  ## @param operator.autoscaling [object] Settings for operator.autoscaling.
   autoscaling:
+    ## @param operator.autoscaling.enabled [boolean] Enable operator HPA using CPU and optional memory utilization
     enabled: false
 # This existing Secret holds a root Dragonfly URL reachable from all worker clusters.
 # Manage its credentials and TLS outside this example; do not use a public unauthenticated cache.
+## @param dragonfly [object] Settings for dragonfly.
 dragonfly:
+  ## @param dragonfly.enabled [boolean] Deploy Dragonfly through the upstream operator Helm dependency
   enabled: false
+  ## @param dragonfly.existingSecret [string] Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings
   existingSecret: root-cache
+## @param metrics [object] Settings for metrics.
 metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: true
+  ## @param metrics.graphLabels [boolean] Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes
   graphLabels: true
+  ## @param metrics.authentication [object] Settings for metrics.authentication.
   authentication:
+    ## @param metrics.authentication.enabled [boolean] Require a dedicated bearer token on all metrics endpoints
     enabled: true
+    ## @param metrics.authentication.existingSecret [string] Existing or ESO-managed Secret containing the metrics token
     existingSecret: metrics-access
+## @param events [object] Settings for events.
 events:
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
   enabled: true
+  ## @param events.existingSecret [string] Existing Secret containing a token key for read-only event subscriptions
   existingSecret: events-access
+## @param api [object] Settings for api.
 api:
+  ## @param api.enabled [boolean] Serve authenticated composition requests on port 8090 through a ClusterIP Service
   enabled: true
+  ## @param api.existingSecret [string] Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
   existingSecret: api-access

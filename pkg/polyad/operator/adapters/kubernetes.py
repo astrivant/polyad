@@ -20,6 +20,7 @@ from opentelemetry import trace
 from polyad.compiler.registry import GRAPH_OWNED_KINDS, RESOURCE_TYPES
 from polyad.operator.coordination.contracts import active_contract, without_capture
 from polyad.operator.coordination.dispatch import DispatchGraph, admission
+from polyad.operator.coordination.settings import WorkGraphSettings
 from polyad.operator.coordination.validation import ValidationQueue, invalidate
 from polyad.operator.coordination.write_queue import PendingWrites, WriteConflict, write_intent
 from polyad.operator.observability.decisions import decision
@@ -84,6 +85,16 @@ class API:
         _ = self.validations.settings
 
     @cached_property
+    def work_graph(self) -> WorkGraphSettings:
+        """
+        Retain validated process limits for this adapter's worker and admission budgets.
+
+        Returns:
+            WorkGraphSettings: Settings loaded before this adapter starts accepting writes.
+        """
+        return WorkGraphSettings.from_environment()
+
+    @cached_property
     def max_pending_writes(self) -> int:
         """
         Bound admitted waiters separately from active validation or transport slots.
@@ -91,10 +102,7 @@ class API:
         Returns:
             int: Configured burst allowance; rejected callers must retry from fresh intent.
         """
-        value = int(os.environ.get("POLYAD_WRITE_QUEUE_MAX_PENDING", "1"))
-        if not 0 <= value <= 128:
-            raise ValueError("POLYAD_WRITE_QUEUE_MAX_PENDING must be an integer between 0 and 128")
-        return value
+        return self.work_graph.max_pending
 
     @cached_property
     def writes(self) -> WriteBacklog:
@@ -114,7 +122,7 @@ class API:
         Returns:
             DispatchGraph: Bounded dependency scheduler on the operator event loop.
         """
-        return DispatchGraph(int(os.environ.get("POLYAD_WRITE_MAX_IN_FLIGHT", "1")))
+        return DispatchGraph(self.work_graph.max_in_flight)
 
     @cached_property
     def validations(self) -> ValidationQueue:
@@ -124,7 +132,7 @@ class API:
         Returns:
             ValidationQueue: Validation receipts consumed by ready writers.
         """
-        return ValidationQueue()
+        return ValidationQueue(settings=self.work_graph.validation)
 
     @cached_property
     def active_write_targets(self) -> set[tuple[str, str, str]]:

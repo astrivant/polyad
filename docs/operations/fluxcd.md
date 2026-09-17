@@ -139,10 +139,10 @@ CI runs the generated expressions through Flux's actual CEL status evaluator,
 with parallel cases for all Polyad kinds, stale generations and remote intents,
 nested failures, activation receipts, cache replication, deletion and suspension.
 The pinned Go dependencies live under
-`tests/flux`; they are test tooling, not operator dependencies.
+`pkg/tests/flux`; they are test tooling, not operator dependencies.
 
 ```sh
 bash scripts/tooling/install-asdf-tools.sh golang
 poetry run python scripts/gitops/flux-health.py --json > /tmp/polyad-flux-checks.json
-POLYAD_FLUX_CHECKS=/tmp/polyad-flux-checks.json go -C tests/flux test -mod=readonly -parallel 8 ./...
+POLYAD_FLUX_CHECKS=/tmp/polyad-flux-checks.json go -C pkg/tests/flux test -mod=readonly -parallel 8 ./...
 ```

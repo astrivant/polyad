@@ -148,6 +148,12 @@ worker. The JSON snapshot exposes the same values in `tuning`. Readiness and
 ownership cadence, Prometheus scrape intervals, HPA synchronization and trace
 batching are separate controls.
 
+The JSON snapshot also includes `workGraph`, with the effective
+`operator.writeQueue` limits for that process. Root mode collects each reporting
+operator's limits in `workers[identity].workGraph`; use only fresh worker reports.
+These configuration values are separate from the backlog gauges and do not
+represent measured active workers. See [work-graph configuration](../development/write-pipeline.md#configuration).
+
 Writers are `workloads`, `coordination` and `apiIntake`. Queue entries
 are refresh notifications: several can refer to the same object, and an
 unacknowledged entry can also be undergoing reconciliation. **Do not add inbound,

@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../../../charts/polyad/values.reference.schema.json
+## @param ha [boolean] Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true.
+ha: true
+## @param rootControlPlane [object] Settings for rootControlPlane.
+rootControlPlane:
+  ## @param rootControlPlane.enabled [boolean] Manage registered clusters and remote execution replicas through one root scheduler; requires ha
+  enabled: true
+  ## @param rootControlPlane.kubeconfigSecret [string] Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
+  kubeconfigSecret: root-access
+## @param federation [object] Settings for federation.
+federation:
+  ## @param federation.enabled [boolean] Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
+  enabled: true
+  ## @param federation.clusters [array] Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only
+  clusters:
+    ## @param federation.clusters[].name [string] Settings for federation.clusters[].name.
+    - name: west
+      ## @param federation.clusters[].namespace [string] Settings for federation.clusters[].namespace.
+      namespace: workloads
+      ## @param federation.clusters[].kubeconfigSecret [string] Settings for federation.clusters[].kubeconfigSecret.
+      kubeconfigSecret: west-access
+## @param global [object] Settings for global.
+global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
+  multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad
+    clusterName: management
+## @param dragonfly [object] Settings for dragonfly.
+dragonfly:
+  ## @param dragonfly.enabled [boolean] Deploy Dragonfly through the upstream operator Helm dependency
+  enabled: false
+  ## @param dragonfly.existingSecret [string] Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings
+  existingSecret: root-cache
+## @param metrics [object] Settings for metrics.
+metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
+  enabled: true

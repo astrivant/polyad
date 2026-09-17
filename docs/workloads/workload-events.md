@@ -19,6 +19,7 @@ operator PolyGraphs and their descendants remain private.
 
 - [Application stream boundary](#application-stream-boundary)
 - [Changes that notify workloads](#changes-that-notify-workloads)
+- [Connection consent events](#connection-consent-events)
 - [Proposed rollout events](#proposed-rollout-events)
 - [Read current neighbors](#read-current-neighbors)
 - [Subscribe from a workload](#subscribe-from-a-workload)
@@ -97,6 +98,23 @@ Notifications follow owning-shard reconciliation and periodic rescans. They are
 observations, not a synchronous barrier or a complete log of every intermediate
 Kubernetes change. Several changes can be coalesced before an observation.
 GraphRules control admission independently of event delivery.
+
+## Connection consent events
+
+Temporary-connection proposals and response/status changes emit `event: connection`.
+`data.graph` identifies the enclosing boundary; `data.connection` contains the
+receipt name, UID, endpoints, deadline, consent summary and current status.
+The same graph-tree visibility, reserved-family isolation and bounded replay
+rules apply. Enable both events and connections and subscribe before proposing
+an edge. Keep the stream cursor so a reconnect can replay pending proposals.
+
+The request already supplies consent for its verified endpoint. The peer must
+respond using its own Pod-bound projected token and graph-specific `approve`
+permission; event access alone grants neither. A third-party request needs both
+endpoints' responses. Applications inspect the proposed connection and choose
+whether to approve. No response means Pending until expiry, without network access.
+See [service consent](../apis/temporary-connections.md#service-consent) for payloads,
+RBAC, client calls and the separate [pulse budgets](../apis/temporary-connections.md#administrator-pulse-limits).
 
 ## Proposed rollout events
 

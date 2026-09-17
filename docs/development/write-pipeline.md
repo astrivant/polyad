@@ -14,6 +14,8 @@ shared reconciliation streams remain the source of recoverable work.
 - [Duplicates and revised decisions](#duplicates-and-revised-decisions)
 - [Dependencies and ordering](#dependencies-and-ordering)
 - [Configuration](#configuration)
+  - [Choosing concurrency](#choosing-concurrency)
+  - [Deployment propagation](#deployment-propagation)
 - [Failure and cancellation](#failure-and-cancellation)
 - [Scope and consistency limits](#scope-and-consistency-limits)
 
@@ -200,6 +202,7 @@ which may itself remain blocked while external state continues to change.
 ```yaml
 operator:
   writeQueue:
+    plannerParallelism: 1
     maxInFlight: 1
     maxPending: 1
     validationIntervalSeconds: 1
@@ -207,10 +210,13 @@ operator:
     validationBurst: 8
     validationWorkers: 1
     reconciliationWorkers: 1
+    reconciliationCooldownSeconds: 0
+    reconciliationBurst: 1
 ```
 
 | Setting | Bounds | Meaning |
 | --- | --- | --- |
+| `plannerParallelism` | Integer 1–32 | Maximum callbacks per approved mutation batch; callers may lower this ceiling, and dependencies can make batches smaller |
 | `maxInFlight` | Integer 1–32 | Writer slots per adapter; higher limits only overlap independent approved mutations |
 | `maxPending` | Integer 0–128 | Extra admission capacity beyond writer slots; dependent items can still wait even with spare slots |
 | `validationIntervalSeconds` | Number 0.01–60, at most the window | Maximum pause between producer passes; notifications wake it sooner |
@@ -218,6 +224,8 @@ operator:
 | `validationBurst` | Integer 1–128 | Candidates examined per background pass; does not increase mutation concurrency |
 | `validationWorkers` | Integer 1–32 | Concurrent candidate validations per adapter, shared by producer and dispatch checks |
 | `reconciliationWorkers` | Integer 1–32 | Local refresh workers and remote deliveries per cluster; same-key follow-ups and graph-family duties remain ordered |
+| `reconciliationCooldownSeconds` | Number 0–300 | Optional fixed window for reconciliation starts per resource and cluster, shared across HA replicas; zero disables |
+| `reconciliationBurst` | Integer 1–128 | New attempts permitted per resource in each cooldown window |
 
 Defaults permit one active operation plus one waiter per adapter. Raising
 `maxPending` allows bounded bursts; overflow returns retryable `429` without
@@ -226,16 +234,26 @@ capacity is full. Total concrete admission is bounded by `maxInFlight + maxPendi
 Queue gauges include active validation until transport starts, so `queued` can
 reach that total while `inFlight` is zero. Limits apply per adapter, not as a
 cluster-wide cap; additional operator replicas and remote adapters add capacity.
+The optional reconciliation pulse budget is shared across replicas through
+Dragonfly. Denials leave notifications pending for a refreshed attempt after
+the window. This governs new queued attempts; validation, dependency
+invalidation, in-flight writes and lease renewal retain their own cadence.
+TemporaryConnection handling bypasses this budget and has separate
+[proposal/response controls](../apis/temporary-connections.md#administrator-pulse-limits).
 
 These are Python runtime settings; Helm is an optional way to configure them when
-deploying the operator. Helm projects them as `POLYAD_WRITE_MAX_IN_FLIGHT`,
+deploying the operator. Helm projects them as `POLYAD_MUTATION_PLANNER_PARALLELISM`,
+`POLYAD_WRITE_MAX_IN_FLIGHT`,
 `POLYAD_WRITE_QUEUE_MAX_PENDING`, `POLYAD_WRITE_VALIDATION_WORKERS`,
 `POLYAD_RECONCILIATION_WORKERS`,
+`POLYAD_RECONCILIATION_COOLDOWN_SECONDS`, `POLYAD_RECONCILIATION_BURST`,
 `POLYAD_WRITE_VALIDATION_INTERVAL_SECONDS`, `POLYAD_WRITE_VALIDATION_WINDOW_SECONDS`
 and `POLYAD_WRITE_VALIDATION_BURST`. The settings apply to local and remote adapters
 in that process and are inherited by root-managed operator worker templates. See
 the typed [tuning reference](../../charts/polyad/values-tuning.reference.yaml).
 Deployments without Helm can set the same environment variables directly.
+
+### Choosing concurrency
 
 Reconciliation workers prepare decisions and invoke the mutation planner as part
 of each attempt; the planner is not another independent writer. Validation workers
@@ -243,6 +261,72 @@ check immutable contracts in bounded batches and writers consume their receipts.
 Raising one limit does not implicitly raise the others. Same-key notifications
 received during reconciliation coalesce into a later pass rather than overlapping
 that resource's current attempt.
+
+For example, this overlay allows four reconciliation attempts, two mutation
+callbacks per approved batch, two writer slots and two validators:
+
+```yaml
+operator:
+  writeQueue:
+    reconciliationWorkers: 4
+    plannerParallelism: 2
+    maxInFlight: 2
+    maxPending: 2
+    validationWorkers: 2
+    validationIntervalSeconds: 0.5
+    validationWindowSeconds: 3
+    validationBurst: 4
+```
+
+This permits four admitted writes per adapter, including those still validating.
+Size `plannerParallelism` with the admission capacity of the adapters its callbacks
+use; callbacks from other attempts also compete for that capacity. Increasing only
+`maxPending` retains more decisions without adding transport capacity. Increasing
+only `maxInFlight` leaves planner batches at their default size of one. Unknown
+effects and shared dependencies still serialize, including existing whole-topology
+rewrites. A larger planner ceiling does not decompose those rewrites automatically.
+
+These worker counts bound asynchronous work on the existing event loop, with
+blocking Kubernetes calls delegated to threads. They do not create additional
+operator Pods or dedicated thread pools. Event and recovery publication use the
+existing shared streams; there is no separate configurable publisher worker pool.
+Pod replicas remain controlled by the selected deployment and autoscaling settings.
+
+### Deployment propagation
+
+```mermaid
+flowchart TD
+    values["Helm operator.writeQueue values"] --> template["Shared operator Pod template<br/>POLYAD_* environment variables"]
+    template --> local["Singular or HA dense operators"]
+    template --> split["Bootstrap and split component operators"]
+    template --> attached["Helm-installed downstream operators<br/>Their own release values"]
+    local --> copy["Root copies its Pod template<br/>when provisioning remote pools"]
+    split --> copy
+    copy --> managed["Root-managed Deployment or DaemonSet workers"]
+    local --> runtime["Validated Python limits<br/>Planner, reconcilers, validators, writers"]
+    split --> runtime
+    attached --> runtime
+    managed --> runtime
+    runtime --> report["Health and metrics JSON: workGraph<br/>Worker reports also flow to root"]
+```
+
+Helm validates types and ranges and writes the configuration into each operator
+Pod template. Python validates it again before starting workers. Apply changes
+with a Helm upgrade; the changed Pod environment takes effect on replacement.
+Root-provisioned pools inherit the root template and receive its updates during
+pool reconciliation. A downstream operator installed through Helm instead uses
+its own `operator.writeQueue` values, even when the root controls its replica
+count; see [Helm-installed operator workers](../deployment/helm-workers.md).
+
+The scheduler health probe and `/v1/metrics` JSON report `workGraph` with the same
+keys as the Helm values. In root mode, `workers[identity].workGraph` reports each
+worker's configuration while its report is fresh. These are configured limits,
+not measurements of active work; compare the existing write and refresh backlog
+gauges to see pressure. Each adapter has its own writer/validation/admission
+budget, each cluster has its own reconciliation delivery budget, and each plan
+has its own callback limit. Adding Pods or adapters increases aggregate capacity;
+these settings do not impose a fleet-wide Kubernetes API quota. Graph-family
+leases, shared-budget checks and write preconditions continue to constrain work.
 
 ## Failure and cancellation
 

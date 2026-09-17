@@ -1,386 +1,454 @@
 # yaml-language-server: $schema=values.schema.json
 ## @section Deployment profiles
-## @param ha Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
+## @param ha [boolean] Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
 ha: false
 
 ## @section Helm-installed downstream operator workers
+## @param worker [object] Settings for worker.
 worker:
-  ## @param worker.enabled Install an execution replica connected to an existing root; disables root election and requires external root/cache credentials
+  ## @param worker.enabled [boolean] Install an execution replica connected to an existing root; disables root election and requires external root/cache credentials
   enabled: false
-  ## @param worker.rootNamespace Namespace of the root's queues, leases and OperatorPool; independent of this Helm release namespace
+  ## @param worker.rootNamespace [string] Namespace of the root's queues, leases and OperatorPool; independent of this Helm release namespace
   rootNamespace: ''
-  ## @param worker.rootClusterName Root federation identity; global.multiCluster.clusterName identifies this worker's hosting cluster instead
+  ## @param worker.rootClusterName [string] Root federation identity; global.multiCluster.clusterName identifies this worker's hosting cluster instead
   rootClusterName: ''
-  ## @param worker.rootDeployment Name of the existing root Deployment, used to identify the attachment authority
+  ## @param worker.rootDeployment [string] Name of the existing root Deployment, used to identify the attachment authority
   rootDeployment: ''
-  ## @param worker.rootGraph Name of the root's reserved PolyGraph; normally ROOT_RELEASE-operators
+  ## @param worker.rootGraph [string] Name of the root's reserved PolyGraph; normally ROOT_RELEASE-operators
   rootGraph: ''
-  ## @param worker.poolName Name of the root-namespace OperatorPool that may attach this Deployment
+  ## @param worker.poolName [string] Name of the root-namespace OperatorPool that may attach this Deployment
   poolName: ''
-  ## @param worker.scalingAuthority Root lets the matching OperatorPool/KEDA control replicas; Local keeps replicas and optional HPA under this Helm release
+  ## @param worker.scalingAuthority [string] Root lets the matching OperatorPool/KEDA control replicas; Local keeps replicas and optional HPA under this Helm release
   scalingAuthority: Root
 
 ## @section OpenTelemetry traces and logs
+## @param tracing [object] Opt-in OTLP/HTTP traces and independently enabled logs for operators and observers.
 tracing:
-  ## @param tracing.enabled Export operator and observer traces over OTLP/HTTP; disabled creates no exporter
+  ## @param tracing.enabled [boolean] Export operator and observer traces over OTLP/HTTP; disabled creates no exporter
   enabled: false
-  ## @param tracing.endpoint Full HTTP/protobuf trace URL, including /v1/traces; use a Collector reachable from every execution cluster
+  ## @param tracing.endpoint [string] Full HTTP/protobuf trace URL, including /v1/traces; use a Collector reachable from every execution cluster
   endpoint: http://otel-collector:4318/v1/traces
-  ## @param tracing.serviceName Service identity in the trace backend; resource attributes can identify cluster and environment
+  ## @param tracing.serviceName [string] Service identity in the trace backend; resource attributes can identify cluster and environment
   serviceName: polyad-operator
-  ## @param tracing.samplingRatio Fraction of new root traces to sample (number, 0-1); child spans honor their parent's sampling decision
+  ## @param tracing.samplingRatio [number] Fraction of new root traces to sample (number, 0-1); child spans honor their parent's sampling decision
   samplingRatio: 1
-  ## @param tracing.timeoutSeconds Export request timeout in seconds; exports are batched off the reconciliation path
+  ## @param tracing.timeoutSeconds [integer] Export request timeout in seconds; exports are batched off the reconciliation path
   timeoutSeconds: 10
-  ## @param tracing.resourceAttributes Comma-separated OpenTelemetry resource attributes, for example deployment.environment.name=production
+  ## @param tracing.resourceAttributes [string] Comma-separated OpenTelemetry resource attributes, for example deployment.environment.name=production
   resourceAttributes: ''
-  ## @param tracing.headersSecret Existing Secret with a headers key containing OTLP exporter headers; empty for collectors without authentication
+  ## @param tracing.headersSecret [string] Existing Secret with a headers key containing OTLP exporter headers; empty for collectors without authentication
   headersSecret: ''
+  ## @param tracing.logs [object] Settings for tracing.logs.
   logs:
-    ## @param tracing.logs.enabled Export structured operator logs independently of trace enablement and sampling; console logging remains available
+    ## @param tracing.logs.enabled [boolean] Export structured operator logs independently of trace enablement and sampling; console logging remains available
     enabled: false
-    ## @param tracing.logs.endpoint Full HTTP/protobuf log URL, including /v1/logs; shares service identity, timeout, resource attributes and headersSecret with traces
+    ## @param tracing.logs.endpoint [string] Full HTTP/protobuf log URL, including /v1/logs; shares service identity, timeout, resource attributes and headersSecret with traces
     endpoint: http://otel-collector:4318/v1/logs
 
 ## @section Operator and shared queue parameters
+## @param operator [object] Settings for operator.
 operator:
-  ## @param operator.logLevel Operator and observer Python logging verbosity; INFO for normal operation, DEBUG for reconciliation diagnostics (DEBUG, INFO, WARNING, ERROR or CRITICAL)
+  ## @param operator.logLevel [string] Operator and observer Python logging verbosity; INFO for normal operation, DEBUG for reconciliation diagnostics (DEBUG, INFO, WARNING, ERROR or CRITICAL)
   logLevel: INFO
-  ## @param operator.replicaCount [nullable] Operator replicas; null selects 1 for singular or 2 for ha, and must remain null for Root-scaled workers
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha, and must remain null for Root-scaled workers
   replicaCount: null
-  ## @param operator.nodeSelector Node labels selecting the operator node group, independent of workload graph placement
+  ## @param operator.nodeSelector [object] Node labels selecting the operator node group, independent of workload graph placement
   nodeSelector: {}
   ## @param operator.tolerations [array] Taints tolerated by the operator replicas
   tolerations: []
+  ## @param operator.autoscaling [object] Settings for operator.autoscaling.
   autoscaling:
-    ## @param operator.autoscaling.enabled Enable operator HPA using CPU and optional memory utilization
+    ## @param operator.autoscaling.enabled [boolean] Enable operator HPA using CPU and optional memory utilization
     enabled: false
-    ## @param operator.autoscaling.minReplicas Minimum operator replicas
+    ## @param operator.autoscaling.minReplicas [integer] Minimum operator replicas
     minReplicas: 2
-    ## @param operator.autoscaling.maxReplicas Maximum operator replicas, at least minReplicas and at most 32
+    ## @param operator.autoscaling.maxReplicas [integer] Maximum operator replicas, at least minReplicas and at most 32
     maxReplicas: 8
-    ## @param operator.autoscaling.targetCPUUtilizationPercentage Target operator CPU utilization relative to requested CPU
+    ## @param operator.autoscaling.targetCPUUtilizationPercentage [integer] Target operator CPU utilization relative to requested CPU
     targetCPUUtilizationPercentage: 70
-    ## @param operator.autoscaling.targetMemoryUtilizationPercentage [nullable] Optional target memory utilization relative to requested memory (1-100); null disables the memory metric
+    ## @param operator.autoscaling.targetMemoryUtilizationPercentage [integer, nullable] Optional target memory utilization relative to requested memory (1-100); null disables the memory metric
     targetMemoryUtilizationPercentage: null
+    ## @param operator.autoscaling.behavior [object] Settings for operator.autoscaling.behavior.
     behavior:
+      ## @param operator.autoscaling.behavior.scaleUp [object] Settings for operator.autoscaling.behavior.scaleUp.
       scaleUp:
-        ## @param operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds Scale-up recommendation window in seconds (0-3600)
+        ## @param operator.autoscaling.behavior.scaleUp.stabilizationWindowSeconds [integer] Scale-up recommendation window in seconds (0-3600)
         stabilizationWindowSeconds: 0
-        ## @param operator.autoscaling.behavior.scaleUp.selectPolicy Choose the largest or smallest permitted change, or disable scale-up (Max, Min, Disabled)
+        ## @param operator.autoscaling.behavior.scaleUp.selectPolicy [string] Choose the largest or smallest permitted change, or disable scale-up (Max, Min, Disabled)
         selectPolicy: Max
         ## @param operator.autoscaling.behavior.scaleUp.policies [array] Rate limits (Pods or Percent); defaults to 100 percent or 4 Pods per 15 seconds; periodSeconds accepts 1-1800
         policies:
+          ## @param operator.autoscaling.behavior.scaleUp.policies[].type [string] Settings for operator.autoscaling.behavior.scaleUp.policies[].type.
           - type: Percent
+            ## @param operator.autoscaling.behavior.scaleUp.policies[].value [integer] Settings for operator.autoscaling.behavior.scaleUp.policies[].value.
             value: 100
+            ## @param operator.autoscaling.behavior.scaleUp.policies[].periodSeconds [integer] Settings for operator.autoscaling.behavior.scaleUp.policies[].periodSeconds.
             periodSeconds: 15
+          ## @param operator.autoscaling.behavior.scaleUp.policies[].type [string] Settings for operator.autoscaling.behavior.scaleUp.policies[].type.
           - type: Pods
+            ## @param operator.autoscaling.behavior.scaleUp.policies[].value [integer] Settings for operator.autoscaling.behavior.scaleUp.policies[].value.
             value: 4
+            ## @param operator.autoscaling.behavior.scaleUp.policies[].periodSeconds [integer] Settings for operator.autoscaling.behavior.scaleUp.policies[].periodSeconds.
             periodSeconds: 15
+      ## @param operator.autoscaling.behavior.scaleDown [object] Settings for operator.autoscaling.behavior.scaleDown.
       scaleDown:
-        ## @param operator.autoscaling.behavior.scaleDown.stabilizationWindowSeconds Scale-down recommendation window in seconds (0-3600)
+        ## @param operator.autoscaling.behavior.scaleDown.stabilizationWindowSeconds [integer] Scale-down recommendation window in seconds (0-3600)
         stabilizationWindowSeconds: 300
-        ## @param operator.autoscaling.behavior.scaleDown.selectPolicy Choose the largest or smallest permitted change, or disable scale-down (Max, Min, Disabled)
+        ## @param operator.autoscaling.behavior.scaleDown.selectPolicy [string] Choose the largest or smallest permitted change, or disable scale-down (Max, Min, Disabled)
         selectPolicy: Max
         ## @param operator.autoscaling.behavior.scaleDown.policies [array] Rate limits (Pods or Percent); defaults to 100 percent per 15 seconds; periodSeconds accepts 1-1800
         policies:
+          ## @param operator.autoscaling.behavior.scaleDown.policies[].type [string] Settings for operator.autoscaling.behavior.scaleDown.policies[].type.
           - type: Percent
+            ## @param operator.autoscaling.behavior.scaleDown.policies[].value [integer] Settings for operator.autoscaling.behavior.scaleDown.policies[].value.
             value: 100
+            ## @param operator.autoscaling.behavior.scaleDown.policies[].periodSeconds [integer] Settings for operator.autoscaling.behavior.scaleDown.policies[].periodSeconds.
             periodSeconds: 15
   # With further research in cheeger configuration, we can more efficiently scale this approach instead of leaning on composition for larger graphs.
+  ## @param operator.cheeger [object] Deployment-wide ceilings for each Cheeger calculation. Policies inherit these or choose smaller budgets; prioritized search never weakens hard bounds.
   cheeger:
-    ## @param operator.cheeger.maxVertices Maximum vertices per Cheeger calculation (2-4096); 20 is the default, and raising it also requires enough cut/time budget
+    ## @param operator.cheeger.maxVertices [integer] Maximum vertices per Cheeger calculation (2-4096); 20 is the default, and raising it also requires enough cut/time budget
     maxVertices: 20
-    ## @param operator.cheeger.maxCuts Maximum distinct cuts per calculation (1-2147483647); 524287 covers 20 vertices, and incomplete searches block constrained actions
+    ## @param operator.cheeger.maxCuts [integer] Maximum distinct cuts per calculation (1-2147483647); 524287 covers 20 vertices, and incomplete searches block constrained actions
     maxCuts: 524287
-    ## @param operator.cheeger.timeoutSeconds Cooperative time ceiling per calculation (0.001-300 seconds); checked between cut batches, never converts partial results into exact constants
+    ## @param operator.cheeger.timeoutSeconds [number] Cooperative time ceiling per calculation (0.001-300 seconds); checked between cut batches, never converts partial results into exact constants
     timeoutSeconds: 5
+  ## @param operator.writeQueue [object] Bound concrete Kubernetes writes separately from coalesced reconciliation hints.
   writeQueue:
-    ## @param operator.writeQueue.maxInFlight Maximum concurrent writer slots per adapter (integer 1-32); 1 serializes transport, larger values allow only planner-approved independent writes to overlap; shared dependencies remain ordered
+    ## @param operator.writeQueue.reconciliationCooldownSeconds [number] Shared per-resource cooldown window before new reconciliation decisions (0-300 seconds); zero disables pacing, expiry and connection consent remain live
+    reconciliationCooldownSeconds: 0
+    ## @param operator.writeQueue.reconciliationBurst [integer] New decisions per resource in one cooldown window (1-128); coalesced desired-state deliveries retry after deferral
+    reconciliationBurst: 1
+    ## @param operator.writeQueue.plannerParallelism [integer] Maximum mutation callbacks per approved planner batch (integer 1-32); 1 keeps batches serial, higher values require independent effects and sufficient writer/admission capacity; callers can lower this ceiling only
+    plannerParallelism: 1
+    ## @param operator.writeQueue.maxInFlight [integer] Maximum concurrent writer slots per adapter (integer 1-32); 1 serializes transport, larger values allow only planner-approved independent writes to overlap; shared dependencies remain ordered
     maxInFlight: 1
-    ## @param operator.writeQueue.maxPending Extra admitted writes beyond writer slots (integer 0-128); 1 keeps decisions fresh, larger bursts add reads and may return more drift conflicts; overflow retries from fresh state
+    ## @param operator.writeQueue.maxPending [integer] Extra admitted writes beyond writer slots (integer 0-128); 1 keeps decisions fresh, larger bursts add reads and may return more drift conflicts; overflow retries from fresh state
     maxPending: 1
-    ## @param operator.writeQueue.validationIntervalSeconds Maximum pause between validator passes (0.01-60 seconds, no greater than validationWindowSeconds); watch notifications wake it sooner
+    ## @param operator.writeQueue.validationIntervalSeconds [number] Maximum pause between validator passes (0.01-60 seconds, no greater than validationWindowSeconds); watch notifications wake it sooner
     validationIntervalSeconds: 1
-    ## @param operator.writeQueue.validationWindowSeconds Maximum age of a reusable dependency validation from its start (0.01-60 seconds); shorter windows add reads, longer windows tolerate more unobserved external drift
+    ## @param operator.writeQueue.validationWindowSeconds [number] Maximum age of a reusable dependency validation from its start (0.01-60 seconds); shorter windows add reads, longer windows tolerate more unobserved external drift
     validationWindowSeconds: 5
-    ## @param operator.writeQueue.validationBurst Maximum pending candidates examined per validator pass (integer 1-128); later items use spare time before the oldest receipts expire
+    ## @param operator.writeQueue.validationBurst [integer] Maximum pending candidates examined per validator pass (integer 1-128); later items use spare time before the oldest receipts expire
     validationBurst: 8
-    ## @param operator.writeQueue.validationWorkers Maximum concurrent candidate validations per adapter (integer 1-32), shared by background and dispatch checks; raise only with Kubernetes read capacity available
+    ## @param operator.writeQueue.validationWorkers [integer] Maximum concurrent candidate validations per adapter (integer 1-32), shared by background and dispatch checks; raise only with Kubernetes read capacity available
     validationWorkers: 1
-    ## @param operator.writeQueue.reconciliationWorkers Maximum concurrent local reconciliation attempts and remote deliveries per cluster (integer 1-32); same-key follow-ups and graph-family leases remain serialized, separate families can prepare decisions together
+    ## @param operator.writeQueue.reconciliationWorkers [integer] Maximum concurrent local reconciliation attempts and remote deliveries per cluster (integer 1-32); same-key follow-ups and graph-family leases remain serialized, separate families can prepare decisions together
     reconciliationWorkers: 1
+  ## @param operator.tuning [object] Settings for operator.tuning.
   tuning:
-    ## @param operator.tuning.rescanIntervalSeconds Pause after local and root-managed remote inventory scans (1-15s); watch polyad_inventory_sample_age_seconds and polyad_cluster_inventory_sample_fresh; lower values add Kubernetes and optional state writes
+    ## @param operator.tuning.rescanIntervalSeconds [number] Pause after local and root-managed remote inventory scans (1-15s); watch polyad_inventory_sample_age_seconds and polyad_cluster_inventory_sample_fresh; lower values add Kubernetes and optional state writes
     rescanIntervalSeconds: 5
-    ## @param operator.tuning.consumeIntervalSeconds Pause after local and remote queue consumption passes (0.1-5s); watch polyad_inbound_updates and polyad_kubernetes_writes_queued before increasing dispatch pressure
+    ## @param operator.tuning.consumeIntervalSeconds [number] Pause after local and remote queue consumption passes (0.1-5s); watch polyad_inbound_updates and polyad_kubernetes_writes_queued before increasing dispatch pressure
     consumeIntervalSeconds: 1
-    ## @param operator.tuning.metricsIntervalSeconds Pause after cached metrics publication and component/worker reporting (1-5s); also controls enabled PostgreSQL and Dragonfly connection sampling, not Prometheus scrape frequency or trace export
+    ## @param operator.tuning.metricsIntervalSeconds [number] Pause after cached metrics publication and component/worker reporting (1-5s); also controls enabled PostgreSQL and Dragonfly connection sampling, not Prometheus scrape frequency or trace export
     metricsIntervalSeconds: 5
-    ## @param operator.tuning.backlogIntervalSeconds Pause after local shared-queue samples (1-5s); watch polyad_inbound_sample_age_seconds; root-managed remote backlog is sampled by rescanIntervalSeconds
+    ## @param operator.tuning.backlogIntervalSeconds [number] Pause after local shared-queue samples (1-5s); watch polyad_inbound_sample_age_seconds; root-managed remote backlog is sampled by rescanIntervalSeconds
     backlogIntervalSeconds: 5
+  ## @param operator.image [object] Settings for operator.image.
   image:
-    ## @param operator.image.repository Operator image repository
+    ## @param operator.image.repository [string] Operator image repository
     repository: ghcr.io/astrivant/polyad
-    ## @param operator.image.tag Operator image tag
+    ## @param operator.image.tag [string] Operator image tag
     tag: '0.0.1-alpha3'
-    ## @param operator.image.pullPolicy Operator image pull policy
+    ## @param operator.image.pullPolicy [string] Operator image pull policy
     pullPolicy: IfNotPresent
+  ## @param operator.resources [object] Settings for operator.resources.
   resources:
+    ## @param operator.resources.requests [object] Settings for operator.resources.requests.
     requests:
-      ## @param operator.resources.requests.cpu Requested operator CPU, required for CPU autoscaling
+      ## @param operator.resources.requests.cpu [string] Requested operator CPU, required for CPU autoscaling
       cpu: 100m
-      ## @param operator.resources.requests.memory Requested operator memory, required when the HPA memory metric is enabled
+      ## @param operator.resources.requests.memory [string] Requested operator memory, required when the HPA memory metric is enabled
       memory: 128Mi
+    ## @param operator.resources.limits [object] Settings for operator.resources.limits.
     limits:
-      ## @param operator.resources.limits.memory Operator memory limit
+      ## @param operator.resources.limits.memory [string] Operator memory limit
       memory: 512Mi
-  ## @param operator.terminationGracePeriodSeconds Time allowed for operator shutdown and outstanding API calls
+  ## @param operator.terminationGracePeriodSeconds [integer] Time allowed for operator shutdown and outstanding API calls
   terminationGracePeriodSeconds: 60
 
 ## @section Optional PostgreSQL state storage
+## @param postgresql [object] Settings for postgresql.
 postgresql:
-  ## @param postgresql.enabled Persist graph state and tracked parameters in PostgreSQL
+  ## @param postgresql.enabled [boolean] Persist graph state and tracked parameters in PostgreSQL
   enabled: false
-  ## @param postgresql.managed Create a CloudNativePG Cluster; install its operator first
+  ## @param postgresql.managed [boolean] Create a CloudNativePG Cluster; install its operator first
   managed: true
-  ## @param postgresql.existingSecret External database Secret containing the connection DSN when managed is false
+  ## @param postgresql.existingSecret [string] External database Secret containing the connection DSN when managed is false
   existingSecret: ''
-  ## @param postgresql.secretKey DSN key in the external database Secret
+  ## @param postgresql.secretKey [string] DSN key in the external database Secret
   secretKey: uri
-  ## @param postgresql.database String. Application database for graph state and optional event history; set only when bootstrapping a new managed cluster
+  ## @param postgresql.database [string] String. Application database for graph state and optional event history; set only when bootstrapping a new managed cluster
   database: polyad
-  ## @param postgresql.username String. Dedicated application owner; PUBLIC database access is revoked and superuser access stays disabled
+  ## @param postgresql.username [string] String. Dedicated application owner; PUBLIC database access is revoked and superuser access stays disabled
   username: polyad
+  ## @param postgresql.events [object] Settings for postgresql.events.
   events:
-    ## @param postgresql.events.enabled Boolean. Archive approved application events in PostgreSQL; bounded live replay still uses Dragonfly
+    ## @param postgresql.events.enabled [boolean] Boolean. Archive approved application events in PostgreSQL; bounded live replay still uses Dragonfly
     enabled: true
-    ## @param postgresql.events.retentionDays Integer. Retain durable event history for this many days; graph snapshots retain current state independently
+    ## @param postgresql.events.retentionDays [integer] Integer. Retain durable event history for this many days; graph snapshots retain current state independently
     retentionDays: 30
-  ## @param postgresql.scope State identity within the database; empty uses the release namespace and name
+  ## @param postgresql.scope [string] State identity within the database; empty uses the release namespace and name
   scope: ''
-  ## @param postgresql.image PostgreSQL image for the managed cluster
+  ## @param postgresql.image [string] PostgreSQL image for the managed cluster
   image: ghcr.io/cloudnative-pg/postgresql:18.3-standard-trixie
-  ## @param postgresql.maxConnections Maximum connections per managed database instance, including administration
+  ## @param postgresql.maxConnections [integer] Maximum connections per managed database instance, including administration
   maxConnections: 100
+  ## @param postgresql.storage [object] Settings for postgresql.storage.
   storage:
-    ## @param postgresql.storage.size Persistent storage per PostgreSQL instance
+    ## @param postgresql.storage.size [string] Persistent storage per PostgreSQL instance
     size: 10Gi
-    ## @param postgresql.storage.storageClass Storage class; empty uses the cluster default
+    ## @param postgresql.storage.storageClass [string] Storage class; empty uses the cluster default
     storageClass: ''
+  ## @param postgresql.ha [object] Settings for postgresql.ha.
   ha:
-    ## @param postgresql.ha.enabled Enable primary plus standby instances and synchronous replication
+    ## @param postgresql.ha.enabled [boolean] Enable primary plus standby instances and synchronous replication
     enabled: false
-    ## @param postgresql.ha.instances Total instances when HA is enabled and autoscaling is disabled
+    ## @param postgresql.ha.instances [integer] Total instances when HA is enabled and autoscaling is disabled
     instances: 3
-    ## @param postgresql.ha.topologyKey Failure-domain label for required database pod anti-affinity
+    ## @param postgresql.ha.topologyKey [string] Failure-domain label for required database pod anti-affinity
     topologyKey: kubernetes.io/hostname
   ## @param postgresql.resources [object] Resource requests and limits for each PostgreSQL instance
   resources:
+    ## @param postgresql.resources.requests [object] Settings for postgresql.resources.requests.
+               ## @param postgresql.resources.requests.cpu [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
+                          ## @param postgresql.resources.requests.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
     requests: {cpu: 250m, memory: 512Mi}
+    ## @param postgresql.resources.limits [object] Settings for postgresql.resources.limits.
+             ## @param postgresql.resources.limits.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
     limits: {memory: 1Gi}
+  ## @param postgresql.autoscaling [object] Settings for postgresql.autoscaling.
   autoscaling:
-    ## @param postgresql.autoscaling.enabled Create a KEDA ScaledObject for the managed Cluster using operator connection counts
+    ## @param postgresql.autoscaling.enabled [boolean] Create a KEDA ScaledObject for the managed Cluster using operator connection counts
     enabled: false
-    ## @param postgresql.autoscaling.minInstances Minimum instances; at least 3 with HA, never zero
+    ## @param postgresql.autoscaling.minInstances [integer] Minimum instances; at least 3 with HA, never zero
     minInstances: 3
-    ## @param postgresql.autoscaling.maxInstances Maximum database instances
+    ## @param postgresql.autoscaling.maxInstances [integer] Maximum database instances
     maxInstances: 6
-    ## @param postgresql.autoscaling.connectionsPerInstance Operator connections per desired database instance; does not add primary write capacity
+    ## @param postgresql.autoscaling.connectionsPerInstance [integer] Operator connections per desired database instance; does not add primary write capacity
     connectionsPerInstance: 20
 
 ## @section Optional HA component deployment architecture
+## @param architecture [object] Settings for architecture.
 architecture:
-  ## @param architecture.mode Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha
+  ## @param architecture.mode [string] Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha
   mode: Dense
-  ## @param architecture.cheegerMinimum Minimum edge expansion of the three-component Graph; the default chain has h=1
+  ## @param architecture.cheegerMinimum [number] Minimum edge expansion of the three-component Graph; the default chain has h=1
   cheegerMinimum: 1
-  ## @param architecture.cheegerMaximum [nullable] Optional maximum edge expansion of the component Graph; null leaves it unbounded, 1 permits the chain but excludes a fully connected triangle
+  ## @param architecture.cheegerMaximum [number, nullable] Optional maximum edge expansion of the component Graph; null leaves it unbounded, 1 permits the chain but excludes a fully connected triangle
   cheegerMaximum: null
-  ## @param architecture.expandedNodes Maximum recursive vertices in the self-managed Graph
+  ## @param architecture.expandedNodes [integer] Maximum recursive vertices in the self-managed Graph
   expandedNodes: 27
-  ## @param architecture.autoscaling Enable KEDA scaling of all component ReplicaGroup definitions
+  ## @param architecture.autoscaling [boolean] Enable KEDA scaling of all component ReplicaGroup definitions
   autoscaling: false
+  ## @param architecture.components [object] Settings for architecture.components.
   components:
+    ## @param architecture.components.gateway [object] Settings for architecture.components.gateway.
     gateway:
-      ## @param architecture.components.gateway.replicas Initial gateway copies
+      ## @param architecture.components.gateway.replicas [integer] Initial gateway copies
       replicas: 2
-      ## @param architecture.components.gateway.minReplicas Minimum gateway copies
+      ## @param architecture.components.gateway.minReplicas [integer] Minimum gateway copies
       minReplicas: 2
-      ## @param architecture.components.gateway.maxReplicas Maximum gateway copies
+      ## @param architecture.components.gateway.maxReplicas [integer] Maximum gateway copies
       maxReplicas: 8
-      ## @param architecture.components.gateway.requestsPerSecond Target total HTTP requests per second per copy
+      ## @param architecture.components.gateway.requestsPerSecond [number] Target total HTTP requests per second per copy
       requestsPerSecond: 50
-      ## @param architecture.components.gateway.concurrentRequests Target open HTTP requests and event streams per copy
+      ## @param architecture.components.gateway.concurrentRequests [integer] Target open HTTP requests and event streams per copy
       concurrentRequests: 8
+    ## @param architecture.components.executor [object] Settings for architecture.components.executor.
     executor:
-      ## @param architecture.components.executor.replicas Initial execution copies
+      ## @param architecture.components.executor.replicas [integer] Initial execution copies
       replicas: 2
-      ## @param architecture.components.executor.minReplicas Minimum execution copies
+      ## @param architecture.components.executor.minReplicas [integer] Minimum execution copies
       minReplicas: 2
-      ## @param architecture.components.executor.maxReplicas Maximum execution copies
+      ## @param architecture.components.executor.maxReplicas [integer] Maximum execution copies
       maxReplicas: 8
-      ## @param architecture.components.executor.backlog Target outstanding graph hints per execution copy across all managed clusters
+      ## @param architecture.components.executor.backlog [integer] Target outstanding graph hints per execution copy across all managed clusters
       backlog: 8
+    ## @param architecture.components.telemetry [object] Settings for architecture.components.telemetry.
     telemetry:
-      ## @param architecture.components.telemetry.replicas Initial metrics-serving copies
+      ## @param architecture.components.telemetry.replicas [integer] Initial metrics-serving copies
       replicas: 2
-      ## @param architecture.components.telemetry.minReplicas Minimum metrics-serving copies
+      ## @param architecture.components.telemetry.minReplicas [integer] Minimum metrics-serving copies
       minReplicas: 2
-      ## @param architecture.components.telemetry.maxReplicas Maximum metrics-serving copies
+      ## @param architecture.components.telemetry.maxReplicas [integer] Maximum metrics-serving copies
       maxReplicas: 8
-      ## @param architecture.components.telemetry.requestsPerSecond Target total metrics requests per second per copy
+      ## @param architecture.components.telemetry.requestsPerSecond [number] Target total metrics requests per second per copy
       requestsPerSecond: 50
-      ## @param architecture.components.telemetry.concurrentRequests Target concurrent metrics requests per copy
+      ## @param architecture.components.telemetry.concurrentRequests [integer] Target concurrent metrics requests per copy
       concurrentRequests: 2
 
+## @param dragonfly [object] Settings for dragonfly.
 dragonfly:
-  ## @param dragonfly.enabled Deploy Dragonfly through the upstream operator Helm dependency
+  ## @param dragonfly.enabled [boolean] Deploy Dragonfly through the upstream operator Helm dependency
   enabled: true
-  ## @param dragonfly.image Bundled Dragonfly image
+  ## @param dragonfly.image [string] Bundled Dragonfly image
   image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0
+  ## @param dragonfly.ha [object] Settings for dragonfly.ha.
   ha:
-    ## @param dragonfly.ha.enabled Enable primary/replica replication and automatic failover
+    ## @param dragonfly.ha.enabled [boolean] Enable primary/replica replication and automatic failover
     enabled: false
-    ## @param dragonfly.ha.replicas Initial Dragonfly instances in HA mode, including the primary; fixed when autoscaling is disabled
+    ## @param dragonfly.ha.replicas [integer] Initial Dragonfly instances in HA mode, including the primary; fixed when autoscaling is disabled
     replicas: 2
-    ## @param dragonfly.ha.topologyKey Place HA instances on distinct values of this node label
+    ## @param dragonfly.ha.topologyKey [string] Place HA instances on distinct values of this node label
     topologyKey: kubernetes.io/hostname
+  ## @param dragonfly.autoscaling [object] Settings for dragonfly.autoscaling.
   autoscaling:
-    ## @param dragonfly.autoscaling.enabled Use KEDA for bundled HA Dragonfly and enable Polyad metrics; inactive outside bundled HA
+    ## @param dragonfly.autoscaling.enabled [boolean] Use KEDA for bundled HA Dragonfly and enable Polyad metrics; inactive outside bundled HA
     enabled: true
-    ## @param dragonfly.autoscaling.minReplicas Minimum total cache instances, including the primary; never below two
+    ## @param dragonfly.autoscaling.minReplicas [integer] Minimum total cache instances, including the primary; never below two
     minReplicas: 2
-    ## @param dragonfly.autoscaling.maxReplicas Maximum total cache instances; requires sufficient eligible nodes and storage
+    ## @param dragonfly.autoscaling.maxReplicas [integer] Maximum total cache instances; requires sufficient eligible nodes and storage
     maxReplicas: 5
-    ## @param dragonfly.autoscaling.connectionsPerReplica Primary connected clients per desired cache instance; scales failover copies, not write capacity
+    ## @param dragonfly.autoscaling.connectionsPerReplica [integer] Primary connected clients per desired cache instance; scales failover copies, not write capacity
     connectionsPerReplica: 50
-  ## @param dragonfly.externalUrl External Redis-compatible URL when bundled Dragonfly is disabled
+  ## @param dragonfly.externalUrl [string] External Redis-compatible URL when bundled Dragonfly is disabled
   externalUrl: redis://dragonfly:6379/0
-  ## @param dragonfly.existingSecret Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings
+  ## @param dragonfly.existingSecret [string] Existing Secret containing a url key for Dragonfly, taking precedence over other connection settings
   existingSecret: ''
+  ## @param dragonfly.persistence [object] Settings for dragonfly.persistence.
   persistence:
-    ## @param dragonfly.persistence.enabled Persist bundled Dragonfly snapshots on a PVC
+    ## @param dragonfly.persistence.enabled [boolean] Persist bundled Dragonfly snapshots on a PVC
     enabled: true
-    ## @param dragonfly.persistence.size Snapshot volume capacity
+    ## @param dragonfly.persistence.size [string] Snapshot volume capacity
     size: 1Gi
-    ## @param dragonfly.persistence.storageClass Snapshot volume storage class; empty uses the cluster default
+    ## @param dragonfly.persistence.storageClass [string] Snapshot volume storage class; empty uses the cluster default
     storageClass: ''
 
 ## @section Upstream Dragonfly operator dependency
+## @param dragonflyOperator [object] Settings for dragonflyOperator.
 dragonflyOperator:
-  ## @param dragonflyOperator.nameOverride Upstream controller resource name
+  ## @param dragonflyOperator.nameOverride [string] Upstream controller resource name
   nameOverride: dragonfly-operator
-  ## @param dragonflyOperator.replicaCount Leader-elected Dragonfly controller replicas
+  ## @param dragonflyOperator.replicaCount [integer] Leader-elected Dragonfly controller replicas
   replicaCount: 2
+  ## @param dragonflyOperator.crds [object] Settings for dragonflyOperator.crds.
   crds:
-    ## @param dragonflyOperator.crds.install Must remain false; Polyad installs the pinned upstream CRD from crds before rendering instances
+    ## @param dragonflyOperator.crds.install [boolean] Must remain false; Polyad installs the pinned upstream CRD from crds before rendering instances
     install: false
+  ## @param dragonflyOperator.manager [object] Settings for dragonflyOperator.manager.
   manager:
     ## @param dragonflyOperator.manager.extraArgs [array] Additional Dragonfly controller command arguments
     extraArgs: []
+  ## @param dragonflyOperator.rbacProxy [object] Settings for dragonflyOperator.rbacProxy.
   rbacProxy:
     ## @param dragonflyOperator.rbacProxy.extraArgs [array] Additional metrics proxy command arguments
     extraArgs: []
 
 ## @section Composition API
+## @param api [object] Settings for api.
 api:
-  ## @param api.enabled Serve authenticated composition requests on port 8090 through a ClusterIP Service
+  ## @param api.enabled [boolean] Serve authenticated composition requests on port 8090 through a ClusterIP Service
   enabled: false
-  ## @param api.existingSecret Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
+  ## @param api.existingSecret [string] Existing Secret with a token key authorizing namespace-scoped composition submissions and audit reads
   existingSecret: polyad-api
-  ## @param api.key Inline composition token; creates a managed Secret and requires existingSecret to be empty
+  ## @param api.key [string] Inline composition token; creates a managed Secret and requires existingSecret to be empty
   key: ''
+  ## @param api.rateLimit [object] Settings for api.rateLimit.
   rateLimit:
-    ## @param api.rateLimit.enabled Enforce shared Redis/Dragonfly composition request quotas on every logical shard
+    ## @param api.rateLimit.enabled [boolean] Enforce shared Redis/Dragonfly composition request quotas on every logical shard
     enabled: true
-    ## @param api.rateLimit.requestsPerMinute Combined submission and audit requests per minute per shard, shared by all replicas
+    ## @param api.rateLimit.requestsPerMinute [integer] Combined submission and audit requests per minute per shard, shared by all replicas
     requestsPerMinute: 60
+  ## @param api.gateway [object] Settings for api.gateway.
   gateway:
-    ## @param api.gateway.enabled Expose the composition Service through a Gateway API v1 HTTPRoute; requires api.enabled
+    ## @param api.gateway.enabled [boolean] Expose the composition Service through a Gateway API v1 HTTPRoute; requires api.enabled
     enabled: false
-    ## @param api.gateway.create Create a Gateway in this release namespace instead of attaching to an existing Gateway
+    ## @param api.gateway.create [boolean] Create a Gateway in this release namespace instead of attaching to an existing Gateway
     create: false
-    ## @param api.gateway.name Existing Gateway name when create is false; created Gateways use the release API name
+    ## @param api.gateway.name [string] Existing Gateway name when create is false; created Gateways use the release API name
     name: ''
-    ## @param api.gateway.namespace Existing Gateway namespace; empty uses the release namespace
+    ## @param api.gateway.namespace [string] Existing Gateway namespace; empty uses the release namespace
     namespace: ''
-    ## @param api.gateway.className Installed GatewayClass used when create is true
+    ## @param api.gateway.className [string] Installed GatewayClass used when create is true
     className: ''
-    ## @param api.gateway.sectionName Listener name to attach to or create
+    ## @param api.gateway.sectionName [string] Listener name to attach to or create
     sectionName: http
     ## @param api.gateway.hostnames [array] DNS hostnames matched by the HTTPRoute; empty matches all listener hostnames
     hostnames: []
-    ## @param api.gateway.tlsSecret Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80
+    ## @param api.gateway.tlsSecret [string] Existing TLS certificate Secret in the release namespace for a created HTTPS listener on port 443; empty creates HTTP on port 80
     tlsSecret: ''
 
 ## @section Temporary connections
+## @param connections [object] Settings for connections.
 connections:
-  ## @param connections.enabled Serve service-account authenticated temporary connections on port 8093
+  ## @param connections.enabled [boolean] Serve service-account authenticated temporary connections on port 8093
   enabled: false
-  ## @param connections.scope Allowed caller and target namespaces: Cluster, OperatorNamespace or Namespace
+  ## @param connections.scope [string] Allowed caller and target namespaces: Cluster, OperatorNamespace or Namespace
   scope: Cluster
-  ## @param connections.namespace Allowed namespace when scope is Namespace; otherwise empty
+  ## @param connections.namespace [string] Allowed namespace when scope is Namespace; otherwise empty
   namespace: ''
-  ## @param connections.maxTtlSeconds Maximum connection lifetime from receipt creation, capped at 86400 seconds
+  ## @param connections.maxTtlSeconds [integer] Maximum connection lifetime from receipt creation, capped at 86400 seconds
   maxTtlSeconds: 3600
-  ## @param connections.retentionSeconds Retain terminal receipts for retry identity and audit before cleanup
+  ## @param connections.retentionSeconds [integer] Retain terminal receipts for retry identity and audit before cleanup
   retentionSeconds: 3600
+  ## @param connections.pulses [object] Settings for connections.pulses.
+  pulses:
+    ## @param connections.pulses.cooldownSeconds [number] HA-shared proposal and approval cooldown window (0-300 seconds); zero disables extra pacing, rejection and revocation bypass it
+    cooldownSeconds: 0
+    ## @param connections.pulses.burst [integer] New proposals per graph and positive responses per graph endpoint in a cooldown window (1-128); identical retries consume no new pulse
+    burst: 1
 
 ## @section Event subscriptions
+## @param events [object] Settings for events.
 events:
-  ## @param events.enabled Serve namespace graph observations through a separate SSE Service on port 8091
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
   enabled: false
-  ## @param events.existingSecret Existing Secret containing a token key for read-only event subscriptions
+  ## @param events.existingSecret [string] Existing Secret containing a token key for read-only event subscriptions
   existingSecret: polyad-events
-  ## @param events.key Inline subscriber token; creates a managed Secret and requires existingSecret to be empty
+  ## @param events.key [string] Inline subscriber token; creates a managed Secret and requires existingSecret to be empty
   key: ''
-  ## @param events.retention Maximum observations retained in the shared replay stream
+  ## @param events.retention [integer] Maximum observations retained in the shared replay stream
   retention: 10000
-  ## @param events.maxConnections Maximum simultaneous event subscribers per operator replica
+  ## @param events.maxConnections [integer] Maximum simultaneous event subscribers per operator replica
   maxConnections: 16
 
 ## @section Scheduler metrics
+## @param metrics [object] Settings for metrics.
 metrics:
-  ## @param metrics.enabled Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: false
-  ## @param metrics.graphLabels Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes
+  ## @param metrics.graphLabels [boolean] Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes
   graphLabels: false
 
+  ## @param metrics.authentication [object] Settings for metrics.authentication.
   authentication:
-    ## @param metrics.authentication.enabled Require a dedicated bearer token on all metrics endpoints
+    ## @param metrics.authentication.enabled [boolean] Require a dedicated bearer token on all metrics endpoints
     enabled: false
-    ## @param metrics.authentication.existingSecret Existing or ESO-managed Secret containing the metrics token
+    ## @param metrics.authentication.existingSecret [string] Existing or ESO-managed Secret containing the metrics token
     existingSecret: polyad-metrics
-    ## @param metrics.authentication.secretKey Key containing the metrics bearer token
+    ## @param metrics.authentication.secretKey [string] Key containing the metrics bearer token
     secretKey: token
-    ## @param metrics.authentication.key Inline metrics token; requires existingSecret to be empty
+    ## @param metrics.authentication.key [string] Inline metrics token; requires existingSecret to be empty
     key: ''
 
 ## @section Named operator API credentials
+## @param authentication [object] Settings for authentication.
 authentication:
-  ## @param authentication.mode String. Required enforces endpoint credentials; Disabled opts into an unauthenticated demo without HTTP request quotas
+  ## @param authentication.mode [string] String. Required enforces endpoint credentials; Disabled opts into an unauthenticated demo without HTTP request quotas
   mode: Required
-  ## @param authentication.backend String. Builtin uses Polyad's Flask hooks; FlaskHTTPAuth loads the adapter included in official operator images
+  ## @param authentication.backend [string] String. Builtin uses Polyad's Flask hooks; FlaskHTTPAuth loads the adapter included in official operator images
   backend: Builtin
+  ## @param authentication.storage [object] Settings for authentication.storage.
   storage:
-    ## @param authentication.storage.enabled Boolean. Persist one-way key verifiers and policy records in PostgreSQL and enforce database revocation; raw tokens stay in Kubernetes Secrets
+    ## @param authentication.storage.enabled [boolean] Boolean. Persist one-way key verifiers and policy records in PostgreSQL and enforce database revocation; raw tokens stay in Kubernetes Secrets
     enabled: false
-    ## @param authentication.storage.separateDatabase Boolean. Use an isolated authentication database; false reuses the state database and its role, requiring postgresql.enabled
+    ## @param authentication.storage.separateDatabase [boolean] Boolean. Use an isolated authentication database; false reuses the state database and its role, requiring postgresql.enabled
     separateDatabase: true
-    ## @param authentication.storage.managed Boolean. Provision a separate CloudNativePG Cluster; false uses the DSN from existingSecret
+    ## @param authentication.storage.managed [boolean] Boolean. Provision a separate CloudNativePG Cluster; false uses the DSN from existingSecret
     managed: true
-    ## @param authentication.storage.existingSecret String. Externally managed authentication database connection Secret; used with separateDatabase=true and managed=false
+    ## @param authentication.storage.existingSecret [string] String. Externally managed authentication database connection Secret; used with separateDatabase=true and managed=false
     existingSecret: ''
-    ## @param authentication.storage.secretKey String. DSN key in the external authentication database Secret
+    ## @param authentication.storage.secretKey [string] String. DSN key in the external authentication database Secret
     secretKey: uri
-    ## @param authentication.storage.database String. Database name for a new managed authentication cluster
+    ## @param authentication.storage.database [string] String. Database name for a new managed authentication cluster
     database: polyad-authentication
-    ## @param authentication.storage.username String. Sole application login owning the managed authentication database; PostgreSQL administrators retain administrative access
+    ## @param authentication.storage.username [string] String. Sole application login owning the managed authentication database; PostgreSQL administrators retain administrative access
     username: polyad_authentication
-    ## @param authentication.storage.size String. Persistent storage per managed authentication database instance
+    ## @param authentication.storage.size [string] String. Persistent storage per managed authentication database instance
     size: 1Gi
-    ## @param authentication.storage.storageClass String. Authentication database storage class; empty uses the cluster default
+    ## @param authentication.storage.storageClass [string] String. Authentication database storage class; empty uses the cluster default
     storageClass: ''
   ## @param authentication.services [array] Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits
   services: []
@@ -388,50 +456,56 @@ authentication:
   operators: []
 
 ## @section KEDA installation, observation and credentials
+## @param keda [object] Settings for keda.
 keda:
-  ## @param keda.install Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation
+  ## @param keda.install [boolean] Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation
   install: false
+  ## @param keda.observation [object] Settings for keda.observation.
   observation:
-    ## @param keda.observation.enabled Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA
+    ## @param keda.observation.enabled [boolean] Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA
     enabled: true
-    ## @param keda.observation.namespace Namespace of an existing KEDA installation; bundled KEDA always uses the release namespace
+    ## @param keda.observation.namespace [string] Namespace of an existing KEDA installation; bundled KEDA always uses the release namespace
     namespace: keda
     ## @param keda.observation.deployments [array] Existing KEDA Deployment names to observe; remove disabled components or replace customized names; ignored for bundled KEDA
     deployments: [keda-operator, keda-operator-metrics-apiserver, keda-admission-webhooks]
     ## @param keda.observation.services [array] Existing KEDA Service names to observe; match the installed KEDA chart; ignored for bundled KEDA
     services: [keda-operator, keda-operator-metrics-apiserver, keda-admission-webhooks]
+  ## @param keda.authentication [object] Settings for keda.authentication.
   authentication:
-    ## @param keda.authentication.enabled Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics
+    ## @param keda.authentication.enabled [boolean] Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics
     enabled: false
-    ## @param keda.authentication.name TriggerAuthentication name; empty uses the release metrics name
+    ## @param keda.authentication.name [string] TriggerAuthentication name; empty uses the release metrics name
     name: ''
 
 ## @param kedaOperator [object] Upstream KEDA chart overrides used only when keda.install is true; its rendered workloads and Services are automatically included in the reserved root Graph
 kedaOperator: {}
 
 ## @section Optional External Secrets Operator resources
+## @param externalSecrets [object] Settings for externalSecrets.
 externalSecrets:
-  ## @param externalSecrets.enabled Generate ExternalSecret resources; requires an installed ESO operator and SecretStore
+  ## @param externalSecrets.enabled [boolean] Generate ExternalSecret resources; requires an installed ESO operator and SecretStore
   enabled: false
-  ## @param externalSecrets.reloadOnChange Opt into Stakater Reloader annotations for ESO Secrets, operator and observer Deployments, and Daemons with spec.reloadOnSecretChange; requires externalSecrets.enabled and an installed Reloader
+  ## @param externalSecrets.reloadOnChange [boolean] Opt into Stakater Reloader annotations for ESO Secrets, operator and observer Deployments, and Daemons with spec.reloadOnSecretChange; requires externalSecrets.enabled and an installed Reloader
   reloadOnChange: false
-  ## @param externalSecrets.refreshInterval ESO credential refresh interval
+  ## @param externalSecrets.refreshInterval [string] ESO credential refresh interval
   refreshInterval: 1h
+  ## @param externalSecrets.secretStoreRef [object] Settings for externalSecrets.secretStoreRef.
   secretStoreRef:
-    ## @param externalSecrets.secretStoreRef.name Existing SecretStore or ClusterSecretStore name
+    ## @param externalSecrets.secretStoreRef.name [string] Existing SecretStore or ClusterSecretStore name
     name: ''
-    ## @param externalSecrets.secretStoreRef.kind Secret store reference kind
+    ## @param externalSecrets.secretStoreRef.kind [string] Secret store reference kind
     kind: SecretStore
   ## @param externalSecrets.secrets [array] Secret mappings with name and data entries of secretKey and remoteRef; reference names via existingSecret settings
   secrets: []
 
 ## @section Operator endpoint and cache isolation
+## @param networkPolicy [object] Settings for networkPolicy.
 networkPolicy:
-  ## @param networkPolicy.enabled Isolate operator pods; requires explicit Kubernetes API and cache egress rules
+  ## @param networkPolicy.enabled [boolean] Isolate operator pods; requires explicit Kubernetes API and cache egress rules
   enabled: false
   ## @param networkPolicy.apiServerCIDRs [array] Kubernetes API endpoint CIDRs reachable through this cluster's CNI
   apiServerCIDRs: []
-  ## @param networkPolicy.apiServerPort Kubernetes API endpoint port after this cluster's service translation
+  ## @param networkPolicy.apiServerPort [integer] Kubernetes API endpoint port after this cluster's service translation
   apiServerPort: 443
   ## @param networkPolicy.compositionPeers [array] NetworkPolicy peers allowed to connect to the composition API
   compositionPeers: []
@@ -445,25 +519,29 @@ networkPolicy:
   extraEgress: []
 
 ## @section Optional Istio integration
+## @param mesh [object] Settings for mesh.
 mesh:
-  ## @param mesh.enabled Allow graph HTTP and service-identity authorization and generate Istio security resources
+  ## @param mesh.enabled [boolean] Allow graph HTTP and service-identity authorization and generate Istio security resources
   enabled: false
-  ## @param mesh.install Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled
+  ## @param mesh.install [boolean] Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled
   install: false
+  ## @param mesh.multicluster [object] Settings for mesh.multicluster.
   multicluster:
-    ## @param mesh.multicluster.enabled Enable the existing or bundled sidecar mesh's multicluster configuration
+    ## @param mesh.multicluster.enabled [boolean] Enable the existing or bundled sidecar mesh's multicluster configuration
     enabled: false
+    ## @param mesh.multicluster.eastWest [object] Settings for mesh.multicluster.eastWest.
     eastWest:
-      ## @param mesh.multicluster.eastWest.enabled Install a dedicated east-west gateway for separate networks
+      ## @param mesh.multicluster.eastWest.enabled [boolean] Install a dedicated east-west gateway for separate networks
       enabled: false
-      ## @param mesh.multicluster.eastWest.portName Istio Gateway listener name; protocol TLS and AUTO_PASSTHROUGH mode are required by this integration
+      ## @param mesh.multicluster.eastWest.portName [string] Istio Gateway listener name; protocol TLS and AUTO_PASSTHROUGH mode are required by this integration
       portName: tls
       ## @param mesh.multicluster.eastWest.hosts [array] Service SNI suffixes exposed through AUTO_PASSTHROUGH
       hosts: ['*.local']
     ## @param mesh.multicluster.peers [array] Remote transport registrations; see docs/deployment/multicluster.md for same-network and gateway configurations
     peers: []
+  ## @param mesh.operator [object] Settings for mesh.operator.
   operator:
-    ## @param mesh.operator.enabled Inject the operator pods and authorize their API and event ports with Istio
+    ## @param mesh.operator.enabled [boolean] Inject the operator pods and authorize their API and event ports with Istio
     enabled: false
     ## @param mesh.operator.compositionPrincipals [array] Exact mTLS source identities allowed to use the composition endpoint
     compositionPrincipals: []
@@ -473,72 +551,96 @@ mesh:
     eventPrincipals: []
     ## @param mesh.operator.connectionPrincipals [array] Exact mTLS source identities allowed to request temporary connections
     connectionPrincipals: []
+  ## @param mesh.ingress [object] Settings for mesh.ingress.
   ingress:
-    ## @param mesh.ingress.enabled Install the optional upstream Istio gateway dependency
+    ## @param mesh.ingress.enabled [boolean] Install the optional upstream Istio gateway dependency
     enabled: false
     ## @param mesh.ingress.hosts [array] Hosts served by the Istio Gateway and VirtualService
     hosts: []
-    ## @param mesh.ingress.tlsSecret TLS credential Secret in the gateway namespace, required when exposing the APIs
+    ## @param mesh.ingress.tlsSecret [string] TLS credential Secret in the gateway namespace, required when exposing the APIs
     tlsSecret: ''
 ## @param istioBase [object] Upstream Istio base chart overrides
 istioBase: {}
 ## @param istiod [object] Upstream Istio control-plane chart overrides
 istiod:
+  ## @param istiod.env [object] Settings for istiod.env.
   env:
+    ## @param istiod.env.ENABLE_NATIVE_SIDECARS [string] Settings for istiod.env.ENABLE_NATIVE_SIDECARS.
     ENABLE_NATIVE_SIDECARS: 'true'
+  ## @param istiod.meshConfig [object] Settings for istiod.meshConfig.
   meshConfig:
+    ## @param istiod.meshConfig.enableAutoMtls [boolean] Settings for istiod.meshConfig.enableAutoMtls.
     enableAutoMtls: true
+    ## @param istiod.meshConfig.defaultConfig [object] Settings for istiod.meshConfig.defaultConfig.
     defaultConfig:
+      ## @param istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts [boolean] Settings for istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts.
       holdApplicationUntilProxyStarts: true
 ## @param istioIngress [object] Upstream Istio gateway chart overrides
 istioIngress:
+  ## @param istioIngress.labels [object] Settings for istioIngress.labels.
   labels:
+    ## @param istioIngress.labels.istio [string] Settings for istioIngress.labels.istio.
     istio: polyad-ingress
 ## @param istioEastWest [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
 istioEastWest:
+  ## @param istioEastWest.name [string] Settings for istioEastWest.name.
   name: polyad-eastwest
+  ## @param istioEastWest.labels [object] Settings for istioEastWest.labels.
   labels:
+    ## @param istioEastWest.labels.istio [string] Settings for istioEastWest.labels.istio.
     istio: polyad-eastwest
+  ## @param istioEastWest.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
   networkGateway: ''
+  ## @param istioEastWest.networkGatewayPorts [object, nullable] Null retains the pinned upstream Istio profile default.
   networkGatewayPorts:
+    ## @param istioEastWest.networkGatewayPorts.status-port [object] Settings for istioEastWest.networkGatewayPorts.status-port.
     status-port:
+      ## @param istioEastWest.networkGatewayPorts.status-port.port [integer] Settings for istioEastWest.networkGatewayPorts.status-port.port.
       port: 15021
+      ## @param istioEastWest.networkGatewayPorts.status-port.targetPort [integer] Settings for istioEastWest.networkGatewayPorts.status-port.targetPort.
       targetPort: 15021
+    ## @param istioEastWest.networkGatewayPorts.tls [object] Settings for istioEastWest.networkGatewayPorts.tls.
     tls:
       # Gateway.port.number uses this Service port. For a custom port, also set
       # labels.networking.istio.io/gatewayPort to its string value for discovery.
+      ## @param istioEastWest.networkGatewayPorts.tls.port [integer] Settings for istioEastWest.networkGatewayPorts.tls.port.
       port: 15443
       # Istio translates the Gateway's Service port to this Pod listener port.
+      ## @param istioEastWest.networkGatewayPorts.tls.targetPort [integer] Settings for istioEastWest.networkGatewayPorts.tls.targetPort.
       targetPort: 15443
 
 ## @section Shared Istio namespace
+## @param global [object] Settings for global.
 global:
-  ## @param global.istioNamespace Istio control-plane namespace; must equal the release namespace when mesh.install is enabled
+  ## @param global.istioNamespace [string] Istio control-plane namespace; must equal the release namespace when mesh.install is enabled
   istioNamespace: istio-system
-  ## @param global.meshID Shared mesh identity across participating clusters
+  ## @param global.meshID [string] Shared mesh identity across participating clusters
   meshID: ''
-  ## @param global.network Network containing this cluster; different networks use east-west gateways
+  ## @param global.network [string] Network containing this cluster; different networks use east-west gateways
   network: ''
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
   multiCluster:
-    ## @param global.multiCluster.clusterName Unique, stable cluster identity used by Istio and Polyad
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad
     clusterName: ''
 
 ## @section Cross-cluster PolyGraph management
+## @param federation [object] Settings for federation.
 federation:
-  ## @param federation.enabled Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
+  ## @param federation.enabled [boolean] Allow PolyGraph nodes to deploy Graphs and nested PolyGraphs in registered clusters
   enabled: false
   ## @param federation.clusters [array] Cluster name, namespace and kubeconfigSecret registrations; credentials are mounted read-only
   clusters: []
 
 ## @section Optional shared graph observers
+## @param observer [object] Settings for observer.
 observer:
-  ## @param observer.enabled Deploy shared read-only observers independently of execution operators
+  ## @param observer.enabled [boolean] Deploy shared read-only observers independently of execution operators
   enabled: false
-  ## @param observer.replicaCount Number of stateless read replicas in this cluster and namespace
+  ## @param observer.replicaCount [integer] Number of stateless read replicas in this cluster and namespace
   replicaCount: 1
-  ## @param observer.existingSecret Existing Secret containing a dedicated read credential under token
+  ## @param observer.existingSecret [string] Existing Secret containing a dedicated read credential under token
   existingSecret: ''
-  ## @param observer.mesh Enable native sidecar injection, strict mTLS and source-identity authorization for observer Pods
+  ## @param observer.mesh [boolean] Enable native sidecar injection, strict mTLS and source-identity authorization for observer Pods
   mesh: false
   ## @param observer.principals [array] Exact source principals allowed to read the observer when observer.mesh is enabled
   principals: []
@@ -546,45 +648,55 @@ observer:
   peers: []
   ## @param observer.resources [object] CPU and memory requests and limits for the read replicas
   resources:
+    ## @param observer.resources.requests [object] Settings for observer.resources.requests.
     requests:
+      ## @param observer.resources.requests.cpu [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
       cpu: 100m
+      ## @param observer.resources.requests.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
       memory: 128Mi
+    ## @param observer.resources.limits [object] Settings for observer.resources.limits.
     limits:
+      ## @param observer.resources.limits.cpu [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
       cpu: '1'
+      ## @param observer.resources.limits.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
       memory: 512Mi
 
 ## @section Advance graph capacity
+## @param capacity [object] Settings for capacity.
 capacity:
-  ## @param capacity.enabled Allow graph capacity plans to create autoscaler requests and inert placeholder Pods
+  ## @param capacity.enabled [boolean] Allow graph capacity plans to create autoscaler requests and inert placeholder Pods
   enabled: false
-  ## @param capacity.provisioningClassName Autoscaler class used when a graph does not select one
+  ## @param capacity.provisioningClassName [string] Autoscaler class used when a graph does not select one
   provisioningClassName: best-effort-atomic-scale-up.autoscaling.x-k8s.io
-  ## @param capacity.maxPods Maximum forecast Pods per graph boundary, also bounded by each graph's maxPods
+  ## @param capacity.maxPods [integer] Maximum forecast Pods per graph boundary, also bounded by each graph's maxPods
   maxPods: 128
-  ## @param capacity.placeholderImage Inert image used to expose advance scheduling demand
+  ## @param capacity.placeholderImage [string] Inert image used to expose advance scheduling demand
   placeholderImage: registry.k8s.io/pause:3.10
+  ## @param capacity.priorityClass [object] Settings for capacity.priorityClass.
   priorityClass:
-    ## @param capacity.priorityClass.create Install a release-scoped PriorityClass for placeholder Pods
+    ## @param capacity.priorityClass.create [boolean] Install a release-scoped PriorityClass for placeholder Pods
     create: true
-    ## @param capacity.priorityClass.name Existing PriorityClass name, or an override for the generated name
+    ## @param capacity.priorityClass.name [string] Existing PriorityClass name, or an override for the generated name
     name: ""
-    ## @param capacity.priorityClass.value Placeholder priority; must meet the autoscaler's cutoff and be below workload priorities
+    ## @param capacity.priorityClass.value [integer] Placeholder priority; must meet the autoscaler's cutoff and be below workload priorities
     value: -5
 
 ## @section Root control plane
+## @param rootControlPlane [object] Settings for rootControlPlane.
 rootControlPlane:
-  ## @param rootControlPlane.enabled Manage registered clusters and remote execution replicas through one root scheduler; requires ha
+  ## @param rootControlPlane.enabled [boolean] Manage registered clusters and remote execution replicas through one root scheduler; requires ha
   enabled: false
   ## @param rootControlPlane.pools [array] Root-owned OperatorPools; set existingDeployment to attach a Helm-installed worker and scalingAuthority to Root or Local instead of provisioning it
   pools: []
-  ## @param rootControlPlane.kubeconfigSecret Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
+  ## @param rootControlPlane.kubeconfigSecret [string] Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters
   kubeconfigSecret: ''
   ## @param rootControlPlane.meshPeers [array] Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster
   meshPeers: []
+  ## @param rootControlPlane.endpoints [object] Settings for rootControlPlane.endpoints.
   endpoints:
-    ## @param rootControlPlane.endpoints.api Externally reachable root composition API URL advertised to workloads
+    ## @param rootControlPlane.endpoints.api [string] Externally reachable root composition API URL advertised to workloads
     api: ''
-    ## @param rootControlPlane.endpoints.events Externally reachable root events URL advertised to workloads
+    ## @param rootControlPlane.endpoints.events [string] Externally reachable root events URL advertised to workloads
     events: ''
-    ## @param rootControlPlane.endpoints.metrics Externally reachable root metrics URL advertised to workloads
+    ## @param rootControlPlane.endpoints.metrics [string] Externally reachable root metrics URL advertised to workloads
     metrics: ''

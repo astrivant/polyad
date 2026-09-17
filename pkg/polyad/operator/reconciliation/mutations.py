@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.mutations import PreconditionFailed, advance_budgets, check_preconditions, compile_mutations
 from polyad.operator.coordination.dispatch import Admission, Batch, admission
+from polyad.operator.coordination.settings import WorkGraphSettings
 from polyad.operator.observability.decisions import decision
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ async def execute_mutations(
     apply: Callable[[Mutation], Awaitable[None]],
     budgets: tuple[Budget, ...] = (),
     observe_budgets: Callable[[], Awaitable[Mapping[str, int]]] | None = None,
-    max_parallelism: int = 1,
+    max_parallelism: int | None = None,
 ) -> MutationPlan:
     """
     Refresh each batch, dispatch bounded callbacks and stop after any failed batch.
@@ -36,12 +37,16 @@ async def execute_mutations(
         apply (Callable[[Mutation], Awaitable[None]]): Fenced operation; completion must satisfy its declared effects.
         budgets (tuple[Budget, ...]): Shared capacity counters controlled by the caller's coordination boundary.
         observe_budgets (Callable[[], Awaitable[Mapping[str, int]]] | None): Required fresh counter reader when budgets exist.
-        max_parallelism (int): Positive concurrency bound, defaulting to serial execution.
+        max_parallelism (int | None): Optional lower batch limit; omitted uses the administrator's configured planner ceiling.
 
     Returns:
         MutationPlan: Executed plan, suitable for audit serialization after successful completion.
     """
-    plan = compile_mutations(mutations, budgets=budgets, max_parallelism=max_parallelism)
+    ceiling = WorkGraphSettings.from_environment().planner_parallelism
+    if max_parallelism is not None and (type(max_parallelism) is not int or max_parallelism < 1):
+        raise ValueError("mutation parallelism must be a positive integer")
+    limit = ceiling if max_parallelism is None else min(max_parallelism, ceiling)
+    plan = compile_mutations(mutations, budgets=budgets, max_parallelism=limit)
     for ordering in plan.orderings:
         decision(
             "polyad.mutation.ordered",

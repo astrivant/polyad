@@ -1,7 +1,12 @@
 # yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # One dense operator in this release's cluster; dependencies remain configurable.
+## @param ha [boolean] Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true.
 ha: false
+## @param operator [object] Settings for operator.
 operator:
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha
   replicaCount: 1
+  ## @param operator.autoscaling [object] Settings for operator.autoscaling.
   autoscaling:
+    ## @param operator.autoscaling.enabled [boolean] Enable operator HPA using CPU and optional memory utilization
     enabled: false

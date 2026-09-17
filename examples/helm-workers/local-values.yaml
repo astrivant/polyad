@@ -2,12 +2,15 @@
 # Overlay values-worker.reference.yaml in the downstream cluster.
 ## @param ha [boolean] Local ownership uses the normal profile: HA permits two or more replicas and optional HPA.
 ha: true
+## @param worker [object] Settings for worker.
 worker:
   ## @param worker.scalingAuthority [string] Local retains replica ownership here; also set Local on the root OperatorPool and disable its KEDA scaler.
   scalingAuthority: Local
+## @param operator [object] Settings for operator.
 operator:
-  ## @param operator.replicaCount [nullable] Local initial replica count; ignored when the optional local HPA owns replicas.
+  ## @param operator.replicaCount [integer, nullable] Local initial replica count; ignored when the optional local HPA owns replicas.
   replicaCount: 2
+  ## @param operator.autoscaling [object] Settings for operator.autoscaling.
   autoscaling:
     ## @param operator.autoscaling.enabled [boolean] Enable for downstream CPU/memory HPA; never combine it with Root scaling authority.
     enabled: false

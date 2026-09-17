@@ -1,22 +1,42 @@
 # yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
 # Install CloudNativePG and KEDA first. PostgreSQL is disabled in chart defaults.
+## @param postgresql [object] Settings for postgresql.
 postgresql:
+  ## @param postgresql.enabled [boolean] Persist graph state and tracked parameters in PostgreSQL
   enabled: true
+  ## @param postgresql.ha [object] Settings for postgresql.ha.
   ha:
+    ## @param postgresql.ha.enabled [boolean] Enable primary plus standby instances and synchronous replication
     enabled: true
+    ## @param postgresql.ha.instances [integer] Total instances when HA is enabled and autoscaling is disabled
     instances: 3
+  ## @param postgresql.storage [object] Settings for postgresql.storage.
   storage:
+    ## @param postgresql.storage.size [string] Persistent storage per PostgreSQL instance
     size: 20Gi
+  ## @param postgresql.autoscaling [object] Settings for postgresql.autoscaling.
   autoscaling:
+    ## @param postgresql.autoscaling.enabled [boolean] Create a KEDA ScaledObject for the managed Cluster using operator connection counts
     enabled: true
+    ## @param postgresql.autoscaling.minInstances [integer] Minimum instances; at least 3 with HA, never zero
     minInstances: 3
+    ## @param postgresql.autoscaling.maxInstances [integer] Maximum database instances
     maxInstances: 6
+    ## @param postgresql.autoscaling.connectionsPerInstance [integer] Operator connections per desired database instance; does not add primary write capacity
     connectionsPerInstance: 20
+## @param metrics [object] Settings for metrics.
 metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: true
+  ## @param metrics.authentication [object] Settings for metrics.authentication.
   authentication:
+    ## @param metrics.authentication.enabled [boolean] Require a dedicated bearer token on all metrics endpoints
     enabled: true
+    ## @param metrics.authentication.existingSecret [string] Existing or ESO-managed Secret containing the metrics token
     existingSecret: polyad-metrics
+## @param keda [object] Settings for keda.
 keda:
+  ## @param keda.authentication [object] Settings for keda.authentication.
   authentication:
+    ## @param keda.authentication.enabled [boolean] Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics
     enabled: true

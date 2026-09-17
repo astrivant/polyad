@@ -4,6 +4,7 @@ Validate shipped Helm values and require schemas for every supplied nested value
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 from pathlib import Path
@@ -19,6 +20,93 @@ if TYPE_CHECKING:
 
 ROOT = Path(__file__).resolve().parents[2]
 CHART = ROOT / "charts/polyad"
+PARAMETER = re.compile(r"^(\s*##\s*@param\s+)(\S+)\s+(?:\[([^]]+)\]\s*)?(.*)$")
+
+
+def annotated_values(source: str, schema: dict[str, Any]) -> str:
+    """
+    Add schema-derived type tags while preserving authored parameter descriptions.
+
+    Args:
+        source (str): Values YAML with optional parameter comments.
+        schema (dict[str, Any]): Canonical schema for this values file.
+
+    Returns:
+        str: Values with explicit type tags on each documented mapping parameter.
+    """
+    lines = source.splitlines()
+    matches = [(index, match) for index, line in enumerate(lines) if (match := PARAMETER.match(line))]
+    existing: dict[str, list[tuple[int, re.Match[str]]]] = {}
+    for index, match in matches:
+        existing.setdefault(match[2], []).append((index, match))
+    used: set[int] = set()
+    previous: dict[str, int] = {}
+    inserts: dict[int, list[str]] = {}
+
+    def visit(node: yaml.Node, definition: dict[str, Any], path: str = "") -> None:
+        while "$ref" in definition:
+            reference = definition["$ref"]
+            if not reference.startswith("#/"):
+                return
+            definition = schema
+            for part in reference[2:].split("/"):
+                definition = definition[part.replace("~1", "/").replace("~0", "~")]
+        if isinstance(node, yaml.SequenceNode):
+            items = definition.get("items", {})
+            if isinstance(items, dict):
+                for item in node.value:
+                    visit(item, items, path + "[]")
+            return
+        if not isinstance(node, yaml.MappingNode):
+            return
+        for key_node, value_node in node.value:
+            name = key_node.value
+            child = definition.get("properties", {}).get(name)
+            if child is None and isinstance(definition.get("additionalProperties"), dict):
+                child = definition["additionalProperties"]
+            if child is None:
+                continue  # User-defined map keys are covered by their parent object's type.
+            full = f"{path}.{name}" if path else name
+            resolved = child
+            while "$ref" in resolved and resolved["$ref"].startswith("#/"):
+                reference = resolved["$ref"]
+                resolved = schema
+                for part in reference[2:].split("/"):
+                    resolved = resolved[part.replace("~1", "/").replace("~0", "~")]
+            types = resolved.get("type", [])
+            types = [types] if isinstance(types, str) else types
+            if not types:
+                types = sorted({branch["type"] for branch in resolved.get("anyOf", []) if isinstance(branch.get("type"), str)})
+            tags = [kind for kind in types if kind != "null"] + (["nullable"] if "null" in types else [])
+            if not tags:
+                raise ValueError(f"{full} has no explicit annotation type")
+            rendered = ", ".join(tags)
+            candidates = [
+                (index, match)
+                for index, match in existing.get(full, [])
+                if index not in used and previous.get(full, -1) < index < key_node.start_mark.line
+            ]
+            if len(candidates) > 1:
+                raise ValueError(f"duplicate @param annotation for {full}")
+            if candidates:
+                index, match = candidates[0]
+                used.add(index)
+                lines[index] = f"{match[1]}{full} [{rendered}] {match[4]}"
+            else:
+                description = " ".join(resolved.get("description", f"Settings for {full}.").split())
+                line = lines[key_node.start_mark.line]
+                indentation = len(line) - len(line.lstrip())
+                comment = f"{' ' * indentation}## @param {full} [{rendered}] {description}"
+                inserts.setdefault(key_node.start_mark.line, []).append(comment)
+            previous[full] = key_node.start_mark.line
+            visit(value_node, child, full)
+
+    document = yaml.compose(source)
+    if document is not None:
+        visit(document, schema)
+    if stale := {match[2] for index, match in matches if index not in used}:
+        raise ValueError("@param annotations without a typed value: " + ", ".join(sorted(stale)))
+    return "\n".join(part for index, line in enumerate(lines) for part in [*inserts.get(index, []), line]) + "\n"
 
 
 class UniqueLoader(yaml.SafeLoader):
@@ -59,7 +147,7 @@ def value_files() -> list[Path]:
             *CHART.glob("values-*.reference.yaml"),
             *(ROOT / "examples").rglob("*values.yaml"),
             *(ROOT / "examples/deployment-profiles").glob("*.yaml"),
-            *(ROOT / "tests/data").rglob("*values.yaml"),
+            *(ROOT / "pkg/tests/data").rglob("*values.yaml"),
         }
     )
 
@@ -141,6 +229,8 @@ def validate(path: Path) -> None:
     gaps = list(type_gaps(value, coverage, coverage))
     if gaps:
         raise ValueError("missing nested type schemas: " + ", ".join(gaps))
+    if annotated_values(source, coverage) != source:
+        raise ValueError("missing or stale @param type tags; run scripts/validation/check-values.py --fix-annotations")
 
 
 def main() -> int:
@@ -150,10 +240,24 @@ def main() -> int:
     Returns:
         int: Nonzero when any shipped values file has a type or schema error.
     """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fix-annotations", action="store_true", help="Synchronize @param type tags with the values schemas.")
+    args = parser.parse_args()
     failed = False
     paths = value_files()
     for path in paths:
         try:
+            if args.fix_annotations:
+                source = path.read_text()
+                match = re.match(r"# yaml-language-server: \$schema=(\S+)\n", source)
+                if match is None:
+                    raise ValueError("missing YAML editor schema directive")
+                schema_path = (path.parent / match[1]).resolve()
+                if schema_path.name == "values.reference.schema.json":
+                    schema_path = CHART / "values.schema.json"
+                updated = annotated_values(source, json.loads(schema_path.read_text()))
+                if updated != source:
+                    path.write_text(updated)
             validate(path)
         except (ValueError, OSError, jsonschema.ValidationError, jsonschema.SchemaError, yaml.YAMLError) as error:
             print(f"{path.relative_to(ROOT)}: {error}")

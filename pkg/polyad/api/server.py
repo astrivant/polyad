@@ -18,6 +18,7 @@ from polyad.api.application import create_application
 from polyad.api.errors import RequestError, Unavailable
 from polyad.api.limits import RateLimitPolicy
 from polyad.auth.http import Access
+from polyad.operator.coordination.pulses import PulseDeferred
 from polyad.operator.lifecycle.health import lifecycle
 from polyad.operator.observability.pressure import pressure
 
@@ -140,7 +141,7 @@ class APIServer:
         future.add_done_callback(lambda completed: self.finished(completed, slots))
         try:
             return future.result(timeout=timeout)
-        except (RequestError, ValueError, TypeError):
+        except (RequestError, PulseDeferred, ValueError, TypeError):
             raise
         except Exception as error:
             if not retain:
@@ -259,6 +260,7 @@ class APIServer:
             lambda value, caller: self.invoke(store.submit(value, caller)),
             lambda namespace, identity, caller: self.invoke(store.lookup(namespace, identity, caller)),
             lambda namespace, identity, caller: self.invoke(store.revoke(namespace, identity, caller)),
+            respond=lambda namespace, identity, response, caller: self.invoke(store.respond(namespace, identity, response, caller)),
             limits=RateLimitPolicy.from_environment(settings.operator_namespace + ":connections"),
             application=self.app,
         )
