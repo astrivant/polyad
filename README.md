@@ -1,6 +1,6 @@
 # Polyad
 
-<img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoe logo" width="120" height="120">
+<img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoe logo" width="140" height="140">
 
 Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29)) is a Kubernetes operator for deploying, connecting and scaling applications as graphs.
 Compose batch jobs, persistent services and supporting resources into reusable
@@ -85,6 +85,14 @@ might fetch records, process partitions in parallel, then publish the results;
 a service graph might keep consumers and their supporting resources running.<sup>[\[3\]](docs/introduction/concepts.md)</sup>
 
 ### Motivation
+
+While at Klaviyo, I briefly worked alongside engineers who had come from Medium.
+They described a setup where clusters managed other clusters. That idea helped
+motivate Polyad's [root control plane](docs/deployment/root-control-plane.md) and
+nested PolyGraphs. Medium's
+[Kubernetes Infrastructure At Medium](https://medium.engineering/kubernetes-infrastructure-at-medium-d9e2444932ef)
+provides public background on its multi-cluster infrastructure, gradual rollouts
+and capacity planning.
 
 Deploying a distributed application means deciding how its services connect,
 which work can run together, and how those relationships should change as demand
