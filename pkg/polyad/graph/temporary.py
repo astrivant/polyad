@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 ANNOTATION = "polyad.astrivant.com/temporary-connections"
+CLEANUP = "polyad.astrivant.com/connection-cleanup-pending"
 MAX_CONNECTIONS = 128
 
 

@@ -27,6 +27,8 @@ from polyad.compiler.passes.mutations import PreconditionFailed
 from polyad.compiler.passes.network import configure_pod
 from polyad.compiler.passes.storage import configure_storage
 from polyad.graph.gates import DelayGate, Gate
+from polyad.graph.temporary import ANNOTATION as CONNECTIONS
+from polyad.graph.temporary import CLEANUP as CONNECTION_CLEANUP
 from polyad.graph.temporary import active_entries, overlay
 from polyad.metrics.workloads import current_observation, observation_time
 from polyad.operator.adapters.kubernetes import GROUP
@@ -397,6 +399,10 @@ class Controller:
             obj["metadata"].get("generation"),
             bool(obj["metadata"].get("deletionTimestamp")),
         )
+        if kind in BOUNDARIES and {CONNECTIONS, CONNECTION_CLEANUP} & obj["metadata"].get("annotations", {}).keys():
+            from polyad.operator.policies.connections import cleanup_connections
+
+            obj = await cleanup_connections(self, obj)
         if obj["metadata"].get("deletionTimestamp"):
             await CapacityManager(self, obj).cancel("graph deletion requested")
             if not await self.drain(obj):

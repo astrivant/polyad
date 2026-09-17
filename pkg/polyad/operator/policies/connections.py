@@ -14,7 +14,8 @@ from cattrs.errors import CattrsError
 
 from polyad.api.connections.store import FINALIZER, ConnectionSettings
 from polyad.compiler.passes.network import NetworkScope
-from polyad.graph.temporary import ANNOTATION, MAX_CONNECTIONS, active_entries, deadline, entries, overlay
+from polyad.graph.temporary import ANNOTATION, CLEANUP, MAX_CONNECTIONS, active_entries, deadline, entries, overlay
+from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.network import context, ensure_policies
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.rules import RuleViolation
@@ -24,12 +25,13 @@ from polyad_types.codec import converter
 from polyad_types.network import NetworkAccess
 from polyad_types.replication import replica_topology
 from polyad_types.requests import ConnectionRequest
-from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any
 
     from polyad.operator.reconciliation.controller import Controller
+
+REVOKE_REASON = f"{asts.GROUP}/connection-revocation-reason"
 
 
 async def write_grants(controller: Controller, graph: dict[str, Any], grants: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -48,12 +50,15 @@ async def write_grants(controller: Controller, graph: dict[str, Any], grants: di
     if len(encoded.encode()) > 131072 or len(grants) > MAX_CONNECTIONS:
         raise ValueError("temporary connections exceed the per-graph annotation budget")
     meta = graph["metadata"]
+    annotations = {ANNOTATION: encoded if grants else None}
+    if entries(graph).keys() - grants.keys():
+        annotations[CLEANUP] = "true"
     result: dict[str, Any] = await controller.api.request(
         "PATCH",
         graph["kind"],
         meta["namespace"],
         meta["name"],
-        {"metadata": {"resourceVersion": meta["resourceVersion"], "annotations": {ANNOTATION: encoded if grants else None}}},
+        {"metadata": {"resourceVersion": meta["resourceVersion"], "annotations": annotations}},
     )
     return result
 
@@ -116,6 +121,63 @@ async def refresh_network(controller: Controller, root: dict[str, Any], *, revok
             changed = True
     if changed:
         raise Pending("waiting to observe temporary connection policy updates")
+    if revoking and root["metadata"].get("annotations", {}).get(CLEANUP) == "true":
+        meta = root["metadata"]
+        await controller.api.request(
+            "PATCH",
+            root["kind"],
+            meta["namespace"],
+            meta["name"],
+            {"metadata": {"resourceVersion": meta["resourceVersion"], "annotations": {CLEANUP: None}}},
+        )
+
+
+async def cleanup_connections(controller: Controller, graph: dict[str, Any]) -> dict[str, Any]:
+    """
+    Reconcile tracked grants before graph admission, including orphaned receipts.
+
+    Args:
+        controller (Controller): Controller holding the graph-family lease.
+        graph (dict[str, Any]): Current boundary intent with tracked connection metadata.
+
+    Returns:
+        dict[str, Any]: Fresh boundary after cleanup; incomplete policy writes remain pending.
+    """
+    from polyad.operator.reconciliation.controller import Pending
+
+    meta = graph["metadata"]
+
+    async def refreshed() -> dict[str, Any]:
+        current = await controller.api.get(graph["kind"], meta["namespace"], meta["name"])
+        if current is None or current["metadata"]["uid"] != meta["uid"]:
+            raise Pending("connection graph changed during cleanup")
+        return current
+
+    if meta.get("annotations", {}).get(CLEANUP) == "true":
+        await refresh_network(controller, graph, revoking=True)
+        graph = await refreshed()
+    grants = entries(graph)
+    if not grants:
+        return graph
+    listing = await controller.api.request(
+        "GET", "TemporaryConnection", meta["namespace"], query=[("labelSelector", f"{asts.GROUP}/owner={meta['uid']}")]
+    )
+    receipts = {item["metadata"]["uid"]: item for item in listing.get("items", [])}
+    orphaned = grants.keys() - receipts.keys()
+    if orphaned:
+        graph = await write_grants(controller, graph, {uid: grant for uid, grant in grants.items() if uid not in orphaned})
+        decision(
+            "polyad.connections.cleaned",
+            "Removed temporary connection grants whose receipts no longer exist.",
+            obj=graph,
+            outcome="applied",
+            reason="connection_receipts_absent",
+            attributes={"polyad.connections.removed": len(orphaned)},
+        )
+        await refresh_network(controller, graph, revoking=True)
+    for uid in sorted(grants.keys() & receipts.keys()):
+        await reconcile_connection(controller, receipts[uid])
+    return await refreshed()
 
 
 async def finish(controller: Controller, receipt: dict[str, Any], graph: dict[str, Any] | None, phase: str, message: str) -> None:
@@ -216,7 +278,11 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         or datetime.now(UTC) >= expires
     ):
         phase = terminal if terminal in {"Expired", "Revoked", "Rejected"} else "Expired" if datetime.now(UTC) >= expires else "Revoked"
-        message = receipt.get("status", {}).get("message") if terminal in {"Expired", "Revoked", "Rejected"} else None
+        message = (
+            receipt.get("status", {}).get("message")
+            if terminal in {"Expired", "Revoked", "Rejected"}
+            else meta.get("annotations", {}).get(REVOKE_REASON)
+        )
         await finish(controller, receipt, graph, phase, message or "connection expired or revocation requested")
         return
     settings = ConnectionSettings.from_environment(os.environ.get("POLYAD_NAMESPACE", meta["namespace"]))
@@ -238,6 +304,44 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         await finish(controller, receipt, graph, "Rejected", "target or TTL is not eligible for temporary connections")
         return
     grants = entries(graph)
+    base = copy.deepcopy(graph)
+    if graph["kind"] == "ReplicaGroup":
+        base["spec"], _ = await effective_spec(controller.api, graph)
+        base["spec"] = replica_topology(base["spec"])
+    nodes = {node["name"] for node in base["spec"].get("nodes", [])}
+    missing = {request.source, request.target} - nodes
+    if missing or (terminal == "Active" and meta["uid"] not in grants):
+        message = (
+            f"connection endpoint removed from the graph: {', '.join(sorted(missing))}"
+            if missing
+            else "admitted connection grant is no longer present"
+        )
+        if meta["uid"] not in grants and terminal != "Active":
+            await finish(controller, receipt, graph, "Rejected", message)
+            return
+        # Persist revocation before removing the grant: a retry must not restore
+        # it if the endpoint returns while network policy cleanup is incomplete.
+        receipt = await controller.api.request(
+            "PATCH",
+            "TemporaryConnection",
+            meta["namespace"],
+            meta["name"],
+            {
+                "metadata": {
+                    "resourceVersion": meta["resourceVersion"],
+                    "annotations": {f"{asts.GROUP}/revoke-requested": "true", REVOKE_REASON: message},
+                }
+            },
+        )
+        decision(
+            "polyad.connections.revoking",
+            f"Revoking temporary connection: {message}.",
+            obj=receipt,
+            outcome="applied",
+            reason="connection_endpoint_removed" if missing else "connection_grant_absent",
+        )
+        await finish(controller, receipt, graph, "Revoked", message)
+        return
     if meta["uid"] not in grants:
         if os.environ.get("POLYAD_CONNECTIONS_ENABLED", "false").lower() != "true":
             await finish(controller, receipt, graph, "Rejected", "temporary connection admission is disabled in this namespace")
@@ -245,14 +349,6 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         grants = active_entries(graph)
         if len(grants) >= MAX_CONNECTIONS:
             await finish(controller, receipt, graph, "Rejected", "graph already has 128 temporary connections")
-            return
-        base = copy.deepcopy(graph)
-        if graph["kind"] == "ReplicaGroup":
-            base["spec"], _ = await effective_spec(controller.api, graph)
-            base["spec"] = replica_topology(base["spec"])
-        nodes = {node.name for node in topology(base["spec"], graph["kind"]).nodes}
-        if request.source not in nodes or request.target not in nodes:
-            await finish(controller, receipt, graph, "Rejected", "a connection endpoint is no longer present")
             return
         grants[meta["uid"]] = {
             "graphUid": request.graphUid,

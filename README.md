@@ -47,6 +47,7 @@ in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deplo
   - [Get started](#get-started)
   - [What Polyad abstracts](#what-polyad-abstracts)
     - [Motivation](#motivation)
+    - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
     - [Graphs of graphs](#graphs-of-graphs)
     - [Replica connections](#replica-connections)
     - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
@@ -101,59 +102,38 @@ and capacity planning.
 
 Deploying a distributed application means deciding how its services connect,
 which work can run together, and how those relationships should change as demand
-grows. Polyad makes that topology an explicit, reusable part of the deployment,
-with [rules](docs/graphs/graph-rules.md) that constrain its size, structure and permitted
-connections across nested graphs.
+grows. Those relationships need to remain understandable and enforceable as the
+application spans more services, teams and clusters.
 
-This lets teams scale individual services, complete pipelines or compositions of
-graphs while preserving the application's topology requirements.
-[KEDA requests replica counts](docs/graphs/replication.md#connect-keda) through
-ReplicaGroups; Polyad recomputes the live graph family's measurements and checks
-applicable constraints before creating or retiring copies. A scaling decision
-must fit the surrounding application's rules as well as the group's own limits.
+A scaling decision that helps one service can leave the rest of its pipeline
+overloaded or disconnected. Teams need a way to express what must remain true
+for the whole application as its parts grow, shrink or span more clusters.
+Polyad aims to make that coordination repeatable, with room for applications to
+adapt within boundaries their administrators can trust.
 
-For data pipelines, [Cheeger bounds](docs/graphs/graph-rules.md#cheeger-bottleneck-bounds)
-constrain structural bottlenecks. A minimum requires enough distinct connections
-across every split relative to the number of vertices on its smaller side, at
-each configured boundary. For example, a minimum of `1` requires at least three
-crossing connections for a split whose smaller side contains three vertices.
-This rejects overly sparse topologies; achieved throughput also depends on
-processing capacity, bandwidth and the work each request requires.
+### How Polyad addresses these problems
 
-[Soul searching](docs/graphs/throughput-feedback.md) connects application
-measurements to two possible actions: change the approved connection layout, or
-redistribute incoming traffic among connected replicas. Hard GraphRules bounds
-remain separate from the **application-driven Cheeger target** selected by a
-calibrated demand tier. Every automatic change must satisfy both, with fresh
-graph-family checks, stabilization, cooldowns and a change budget. Observe mode
-reports recommendations; Adapt permits bounded changes.
+[Graphs and PolyGraphs](docs/introduction/concepts.md) make related workloads and
+their connections reusable deployment units. [GraphRules](docs/graphs/graph-rules.md)
+express their structural requirements, which Polyad checks against live state
+before applying [ReplicaGroup scaling requests](docs/graphs/replication.md#constraints-before-scaling).
+A [root control plane](docs/deployment/root-control-plane.md) extends that model
+across registered clusters, coordinating deployments and collecting observations.
 
-With optional [Istio traffic balancing](docs/graphs/traffic-balancing.md),
-`Tiers` mode selects configured percentages after a sustained throughput shortfall.
-`Headroom` mode uses each destination's completed work plus its reported additional
-sustainable capacity to rebalance under positive demand, even before aggregate
-throughput falls. Both modes can redistribute requests among Workload, Daemon,
-Graph, PolyGraph and nested ReplicaGroup copies through compatible service
-entrypoints. KEDA and ReplicaGroups separately control how many copies exist.
+For pipelines with idle workers behind busy stages, [Cheeger bounds](docs/graphs/cheeger-orchestration.md)
+constrain sparse connectivity, while [Soul searching](docs/graphs/throughput-feedback.md)
+uses application measurements to guide approved connection changes and
+[traffic balancing](docs/graphs/traffic-balancing.md) between replicas. This helps
+direct work toward available capacity. Structural bounds do not guarantee a data
+rate; throughput feedback ties adaptation to the application's observed demand
+and processing capacity.
 
-**Both Cheeger bounds use the same unweighted structural measurement.** Changing
-a traffic split from 90/10 to 50/50 can improve application throughput without
-changing the Cheeger value. A zero-percent destination still contributes its
-declared connection until that edge is removed. Traffic percentages and measured
-capacity are separate inputs to routing; they do not turn Cheeger into a measured
-data rate. See [comparing Cheeger policies](docs/graphs/cheeger-orchestration.md)
-and [traffic balancing between replicas](docs/graphs/traffic-balancing.md#connections-percentages-and-replicas)
-for diagrams of how these controls work together.
-
-Services can also participate in changing their own topology. By installing the
-[Python client](pkg/client/README.md), applications can submit
-[compositions](docs/apis/composition-requests.md), activate work and request
-[temporary connections](docs/apis/temporary-connections.md) with a bounded lifetime
-through enabled, authorized APIs. Polyad checks requested changes against the
-applicable rules and removes temporary connection grants after expiry.
-[Topology events](docs/workloads/workload-events.md) let workloads discover their current
-neighbors as connections and replica membership change. This gives applications
-room to adapt while keeping deployment constraints under operator control.
+The [Python client](pkg/client/README.md) lets services request new compositions,
+activate work and establish [temporary connections](docs/apis/temporary-connections.md)
+as needs emerge. [Topology events](docs/workloads/workload-events.md) keep them
+informed as their neighbors change. Authorization and graph rules constrain
+those requests, giving applications a way to adapt without an administrator
+rewriting the deployment for every change.
 
 ### Graphs of graphs
 

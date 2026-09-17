@@ -19,7 +19,7 @@ from polyad.api.errors import Conflict, Forbidden, Unauthorized
 from polyad.compiler.passes.network import NetworkScope, traffic
 from polyad.events.topology import topology_snapshot
 from polyad.graph import NetworkAccess
-from polyad.graph.temporary import ANNOTATION, deadline, entries, overlay
+from polyad.graph.temporary import ANNOTATION, CLEANUP, deadline, entries, overlay
 from polyad.operator.policies.network import context, ensure_policies
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.rules import RuleViolation
@@ -259,6 +259,196 @@ def test_admission_changes_neighbors_at_each_boundary(kind, monkeypatch):
         assert len(snapshot["connections"]) == 1
         assert api.children("TemporaryConnection")[0]["status"]["phase"] == "Active"
         assert len(entries(stored)) == 1
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("kind", ["Graph", "PolyGraph", "ReplicaGroup"])
+@pytest.mark.parametrize("endpoint", ["source", "target"])
+def test_graph_reconciliation_revokes_removed_connection_endpoints(kind, endpoint, monkeypatch):
+    """
+    Revoke removed logical nodes and scaled-in copies before the graph admits more work.
+    """
+    monkeypatch.setenv("POLYAD_CONNECTIONS_ENABLED", "true")
+
+    async def run():
+        graph, definitions = graph_fixture(kind)
+        api = ConnectionAPI(graph, *definitions)
+        controller = Controller(api)
+        request = request_for(graph)
+        receipt = await ConnectionStore(api, ConnectionSettings("test")).submit(request, CALLER)
+        key = ("TemporaryConnection", "test", receipt["name"])
+        await settle(controller, key)
+        before = await topology_snapshot(api, await api.get(kind, "test", "root"))
+        changed = await api.get(kind, "test", "root")
+        if kind == "ReplicaGroup":
+            changed["spec"]["replicas"] = 0 if endpoint == "source" else 1
+        else:
+            changed["spec"]["nodes"] = [node for node in changed["spec"]["nodes"] if node["name"] != getattr(request, endpoint)]
+        await api.request("PUT", kind, "test", "root", changed)
+        # Cleanup is independent of the listener's current admission setting.
+        monkeypatch.setenv("POLYAD_CONNECTIONS_ENABLED", "false")
+        await settle(controller, (kind, "test", "root"))
+        current = await api.get(kind, "test", "root")
+        assert entries(current) == {}
+        assert CLEANUP not in current["metadata"]["annotations"]
+        assert api.objects[key]["status"]["phase"] == "Revoked"
+        assert "endpoint removed" in api.objects[key]["status"]["message"]
+        after = await topology_snapshot(api, current)
+        assert after["revision"] != before["revision"]
+        assert after["connections"] == []
+        current["spec"] = graph["spec"]
+        await api.request("PUT", kind, "test", "root", current)
+        await settle(Controller(api), key)
+        assert entries(await api.get(kind, "test", "root")) == {}
+        assert api.objects[key]["status"]["phase"] == "Revoked"
+
+    asyncio.run(run())
+
+
+def test_missing_or_unready_workload_keeps_logical_connection(monkeypatch):
+    """
+    Missing runtime objects and Pod readiness do not remove declared graph neighbors.
+    """
+    monkeypatch.setenv("POLYAD_CONNECTIONS_ENABLED", "true")
+
+    async def run():
+        graph, definitions = graph_fixture()
+        api = ConnectionAPI(graph, *definitions)
+        receipt = await ConnectionStore(api, ConnectionSettings("test")).submit(request_for(graph), CALLER)
+        key = ("TemporaryConnection", "test", receipt["name"])
+        controller = Controller(api)
+        await settle(controller, key)
+        assert not api.children("Deployment")
+        await settle(controller, ("Graph", "test", "root"))
+        child = api.children("Deployment")[0]
+        api.objects.pop(("Deployment", "test", child["metadata"]["name"]))
+        await settle(controller, ("Graph", "test", "root"))
+        assert len(api.children("Deployment")) == 2
+        assert api.objects[key]["status"]["phase"] == "Active"
+        assert len(entries(await api.get("Graph", "test", "root"))) == 1
+
+    asyncio.run(run())
+
+
+def test_cleanup_uses_inherited_replica_count_and_waits_for_missing_source(monkeypatch):
+    """
+    Resolve shared replica intent without treating an unavailable source as scale-to-zero.
+    """
+    monkeypatch.setenv("POLYAD_CONNECTIONS_ENABLED", "true")
+
+    async def run():
+        graph, definitions = graph_fixture("ReplicaGroup")
+        source = resource("ReplicaGroup", "pool", {**graph["spec"], "templateOnly": True})
+        graph["spec"]["replicaSource"] = {"name": "pool", "uid": source["metadata"]["uid"]}
+        api = ConnectionAPI(graph, source, *definitions)
+        receipt = await ConnectionStore(api, ConnectionSettings("test")).submit(request_for(graph), CALLER)
+        key = ("TemporaryConnection", "test", receipt["name"])
+        controller = Controller(api)
+        await settle(controller, key)
+        api.objects.pop(("ReplicaGroup", "test", "pool"))
+        with pytest.raises(Pending, match="source incarnation is unavailable"):
+            await controller.reconcile(("ReplicaGroup", "test", "root"))
+        assert len(entries(await api.get("ReplicaGroup", "test", "root"))) == 1
+        assert api.objects[key]["status"]["phase"] == "Active"
+        source["spec"]["replicas"] = 1
+        api.objects[("ReplicaGroup", "test", "pool")] = source
+        await settle(controller, ("ReplicaGroup", "test", "root"))
+        assert api.objects[key]["status"]["phase"] == "Revoked"
+        assert entries(await api.get("ReplicaGroup", "test", "root")) == {}
+
+    asyncio.run(run())
+
+
+def test_orphan_cleanup_preserves_other_receipts(monkeypatch):
+    """
+    Removing an orphaned grant cannot remove an overlapping grant with a live receipt.
+    """
+    monkeypatch.setenv("POLYAD_CONNECTIONS_ENABLED", "true")
+
+    async def run():
+        graph, definitions = graph_fixture()
+        api = ConnectionAPI(graph, *definitions)
+        store, controller = ConnectionStore(api, ConnectionSettings("test")), Controller(api)
+        receipts = [await store.submit(request_for(graph, requestId=name), CALLER) for name in ("orphaned", "live")]
+        for receipt in receipts:
+            await settle(controller, ("TemporaryConnection", "test", receipt["name"]))
+        before = await topology_snapshot(api, await api.get("Graph", "test", "root"))
+        api.objects.pop(("TemporaryConnection", "test", receipts[0]["name"]))
+        await settle(controller, ("Graph", "test", "root"))
+        current = await api.get("Graph", "test", "root")
+        assert set(entries(current)) == {receipts[1]["uid"]}
+        after = await topology_snapshot(api, current)
+        assert after["connections"] == before["connections"]
+        assert api.children("TemporaryConnection")[0]["status"]["phase"] == "Active"
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("orphaned", [False, True])
+def test_dead_connection_cleanup_survives_policy_failure_and_endpoint_return(orphaned, monkeypatch):
+    """
+    Retry policy removal after restart without reviving dead grants or losing static edges.
+    """
+    monkeypatch.setenv("POLYAD_CONNECTIONS_ENABLED", "true")
+
+    async def run():
+        graph, definitions = graph_fixture()
+        graph["spec"]["connections"] = [{"source": "b", "target": "a", "ports": [{"port": 9090}]}]
+        api = ConnectionAPI(graph, *definitions)
+        controller = Controller(api)
+        await settle(controller, ("Graph", "test", "root"))
+        receipt = await ConnectionStore(api, ConnectionSettings("test")).submit(request_for(graph), CALLER)
+        key = ("TemporaryConnection", "test", receipt["name"])
+        await settle(controller, key)
+        if orphaned:
+            api.objects.pop(key)
+        else:
+            current = await api.get("Graph", "test", "root")
+            current["spec"]["nodes"] = current["spec"]["nodes"][:1]
+            current["spec"]["connections"] = []
+            await api.request("PUT", "Graph", "test", "root", current)
+        original = api.request
+
+        async def failing(method, kind, *args, **kwargs):
+            if method == "PUT" and kind == "NetworkPolicy":
+                raise OSError("policy API unavailable")
+            return await original(method, kind, *args, **kwargs)
+
+        api.request = failing
+        with pytest.raises(OSError):
+            await controller.reconcile(("Graph", "test", "root"))
+        current = await api.get("Graph", "test", "root")
+        assert entries(current) == {}
+        assert current["metadata"]["annotations"][CLEANUP] == "true"
+        if not orphaned:
+            assert api.objects[key]["status"]["phase"] == "Active"
+            assert api.objects[key]["metadata"]["annotations"][f"{asts.GROUP}/revoke-requested"] == "true"
+        current["spec"] = graph["spec"]
+        api.request = original
+        await api.request("PUT", "Graph", "test", "root", current)
+        # Normal graph admission now fails, but cleanup must still finish.
+        api.objects[("GraphRule", "test", "tight")] = resource("GraphRule", "tight", {"relation": "connections", "cheeger": {"minimum": 2}})
+        restarted = Controller(api)
+        for _ in range(12):
+            try:
+                await restarted.reconcile(("Graph", "test", "root"))
+            except Pending:
+                continue
+            except RuleViolation:
+                break
+        else:
+            pytest.fail("cleanup did not finish before graph rule validation")
+        if not orphaned:
+            await settle(restarted, key)
+            assert api.objects[key]["status"]["phase"] == "Revoked"
+        current = await api.get("Graph", "test", "root")
+        assert entries(current) == {}
+        assert CLEANUP not in current["metadata"]["annotations"]
+        assert current["spec"]["connections"] == graph["spec"]["connections"]
+        policy = next(p for p in api.children("NetworkPolicy") if p["metadata"]["labels"][f"{asts.GROUP}/node"] == "net-a")
+        assert policy["spec"]["egress"] == []
+        assert policy["spec"]["ingress"][0]["ports"] == [{"protocol": "TCP", "port": 9090}]
 
     asyncio.run(run())
 

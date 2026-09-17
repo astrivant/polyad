@@ -257,7 +257,7 @@ sequenceDiagram
     O->>O: Check live graph-family GraphRules
     O->>N: Admit edge and reconcile policies
     O->>K: Observe policies and mark Active
-    Note over O,N: TTL deadline or early revocation
+    Note over O,N: TTL deadline, endpoint removal or early revocation
     O->>N: Remove this grant and reconcile remaining policies
     O->>K: Mark Expired or Revoked after observing cleanup
 ```
@@ -270,10 +270,13 @@ add a neighbor. Admission and expiry change topology revisions when they change
 effective connections; overlapping identical grants need not change neighbors.
 
 Endpoints are logical nodes, not Pod UIDs. Multiple Pods and activation runs of
-the same node share its network identity. A replica ordinal removed by scale-in
-has no effective edge; if that ordinal returns before the deadline, its still-live
-grant applies again. Replacing the entire target graph cannot transfer a grant to
-the replacement because `graphUid` pins the graph incarnation.
+the same node share its network identity. Pod restarts, readiness failures and
+workloads waiting to be created do not revoke a connection while both logical
+nodes remain declared. Removing a node or scaling in a replica ordinal removes
+its effective edges; reconciliation then revokes the affected grants. Once
+revocation starts, returning that node or ordinal does not restore the connection:
+submit a new request to connect it again. Replacing the entire target graph cannot
+transfer a grant to the replacement because `graphUid` pins the graph incarnation.
 
 ## Deadline, retries and cleanup
 
@@ -291,6 +294,21 @@ removes only this receipt's contribution: static edges and other live grants
 remain. Expiry and revocation proceed even if the resulting graph violates a
 minimum Cheeger or connectivity bound; that violation can block subsequent graph
 or scaling actions, but cannot extend an expired grant.
+
+Graph reconciliation also checks tracked connections before admitting new work.
+It revokes grants whose logical endpoints have disappeared and removes orphaned
+grants whose tracking receipts no longer exist. Cleanup refreshes the affected
+NetworkPolicies and Istio authorization policies, including those on descendant
+workloads, and emits a decision log with its reason. Changes to effective edges
+appear through the existing topology events. Static connections and overlapping
+live grants remain under their existing ownership.
+
+Revocation intent and pending policy cleanup are persisted before removing a
+grant, so a failed policy write or operator restart cannot silently restore it.
+Cleanup retries even when graph rules block normal admission. Static connections
+remain declarative: update their specification when removing their endpoints;
+reconciliation does not rewrite reusable graph definitions or treat a temporary
+workload outage as a request to change the topology.
 
 **Network enforcement is asynchronous.** Queue backlog, unavailable operators,
 Kubernetes API outages and CNI/mesh propagation can delay actual traffic removal.
