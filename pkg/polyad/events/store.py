@@ -15,61 +15,21 @@ from redis.exceptions import ResponseError
 
 from polyad.cache import Cache
 from polyad.events.topology import neighbors
+from polyad.lua import script
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from typing import Any
 
-PUBLISH = """
-if redis.call('HGET', KEYS[2], ARGV[1]) == ARGV[2] then return false end
-if redis.call('HLEN', KEYS[2]) >= tonumber(ARGV[4]) and redis.call('HEXISTS', KEYS[2], ARGV[1]) == 0 then
-    redis.call('DEL', KEYS[2])
-end
-local id = redis.call('XADD', KEYS[1], 'MAXLEN', ARGV[4], '*', 'event', ARGV[3])
-redis.call('HSET', KEYS[2], ARGV[1], ARGV[2])
-redis.call('EXPIRE', KEYS[2], 86400)
-return id
-"""
+PUBLISH = script("events/publish.lua")
 
 
-READ = """
-local first = redis.call('XRANGE', KEYS[1], '-', '+', 'COUNT', 1)
-local function older(a, b)
-    local am, as = string.match(a, '^(%d+)%-(%d+)$')
-    local bm, bs = string.match(b, '^(%d+)%-(%d+)$')
-    if #am ~= #bm then return #am < #bm end
-    if am ~= bm then return am < bm end
-    if #as ~= #bs then return #as < #bs end
-    return as < bs
-end
-if ARGV[1] ~= '0-0' and (#first == 0 or older(ARGV[1], first[1][1])) then
-    return redis.error_reply('CURSOR_EXPIRED')
-end
-return redis.call('XRANGE', KEYS[1], '(' .. ARGV[1], '+', 'COUNT', 64)
-"""
+READ = script("events/read.lua")
 
-PUBLISH_TOPOLOGY = """
-local previous = redis.call('HGET', KEYS[2], ARGV[1])
-local changed = not previous or cjson.decode(previous).revision ~= ARGV[3]
-if not previous and redis.call('HLEN', KEYS[2]) >= tonumber(ARGV[5]) then
-    redis.call('DEL', KEYS[2])
-end
-local id = false
-if changed then
-    id = redis.call('XADD', KEYS[1], 'MAXLEN', ARGV[5], '*', 'event', ARGV[4])
-end
-redis.call('HSET', KEYS[2], ARGV[1], ARGV[2])
-redis.call('EXPIRE', KEYS[2], 86400)
-return id
-"""
+PUBLISH_TOPOLOGY = script("events/publish-topology.lua")
 
-SNAPSHOT = """
-local snapshot = redis.call('HGET', KEYS[2], ARGV[1])
-if not snapshot then return false end
-local last = redis.call('XREVRANGE', KEYS[1], '+', '-', 'COUNT', 1)
-return {snapshot, #last > 0 and last[1][1] or '0-0'}
-"""
+SNAPSHOT = script("events/snapshot.lua")
 
 
 class TopologyReplaced(ValueError):

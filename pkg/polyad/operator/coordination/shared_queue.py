@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, cast
 from redis.exceptions import ResponseError
 
 from polyad.cache import Cache
+from polyad.lua import script
 
 logger = logging.getLogger(__name__)
 
@@ -22,24 +23,10 @@ if TYPE_CHECKING:
 
     from polyad.operator.coordination.queue import Key
 
-PUBLISH = """
-if redis.call('EXISTS', KEYS[2]) == 1 then return false end
-local id = redis.call('XADD', KEYS[1], '*', 'key', ARGV[1])
-redis.call('SET', KEYS[2], id, 'EX', 5)
-return id
-"""
+PUBLISH = script("coordination/publish.lua")
 
 
-BACKLOG = """
-local total = redis.call('XLEN', KEYS[1])
-if total == 0 then return {0, 0} end
-local pending = redis.pcall('XPENDING', KEYS[1], ARGV[1])
-if pending.err then
-    if string.find(pending.err, 'NOGROUP', 1, true) then return {total, 0} end
-    return redis.error_reply(pending.err)
-end
-return {total, pending[1]}
-"""
+BACKLOG = script("coordination/backlog.lua")
 
 
 class SharedQueue:

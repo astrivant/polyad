@@ -69,6 +69,13 @@ handler registration and reconciliation. See
 [runtime capability selection](../deployment/containers.md) and the isolated
 startup probes in [`tests/test_runtime_capabilities.py`](../../tests/test_runtime_capabilities.py).
 
+Redis/Dragonfly Lua programs live in [`polyad/lua`](../../pkg/polyad/lua), grouped
+into coordination, events and authentication scripts. PostgreSQL statements live
+in [`polyad/sql`](../../pkg/polyad/sql). Both are package resources included in
+wheels and source distributions, loaded through `importlib.resources` without
+depending on the working directory. Keep server-side programs in these artifacts
+and pass runtime values through their existing parameters.
+
 ## Where to make changes
 
 - Add graph execution behavior in `reconciliation`; check live policy before writes.

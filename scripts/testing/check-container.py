@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 
 import polyad.operator.runtime
+from polyad.lua import script
 from polyad.sql import statement
 
 
@@ -43,6 +44,9 @@ def main() -> None:
     assert sys.prefix == "/opt/venv"
     assert "CREATE TABLE" in statement("state/schema.sql")
     assert "CREATE TABLE" in statement("authentication/schema.sql")
+    assert "XPENDING" in script("coordination/backlog.lua")
+    assert "ZREMRANGEBYSCORE" in script("authentication/acquire.lua")
+    assert "CURSOR_EXPIRED" in script("events/read.lua")
     for dependency in (
         "kopf",
         "kubernetes",

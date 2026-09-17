@@ -14,35 +14,14 @@ from redis import Redis
 from redis.backoff import NoBackoff
 from redis.retry import Retry
 
+from polyad.lua import script
+
 if TYPE_CHECKING:
     from polyad_types.auth import APIKey
 
 LEASE_SECONDS = 120
-ACQUIRE = """
-local clock = redis.call('TIME')
-local now = tonumber(clock[1])
-local window = math.floor(now / 60)
-local count = 0
-if tonumber(redis.call('HGET', KEYS[1], 'window')) == window then
-  count = tonumber(redis.call('HGET', KEYS[1], 'count')) or 0
-end
-redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', now)
-if count >= tonumber(ARGV[1]) then return {0, 60 - now % 60} end
-if redis.call('ZCARD', KEYS[2]) >= tonumber(ARGV[2]) then return {0, 1} end
-redis.call('HSET', KEYS[1], 'window', window, 'count', count + 1)
-redis.call('EXPIRE', KEYS[1], 120)
-redis.call('ZADD', KEYS[2], now + tonumber(ARGV[4]), ARGV[3])
-redis.call('EXPIRE', KEYS[2], tonumber(ARGV[4]) * 2)
-return {1, 0}
-"""
-RENEW = """
-local now = tonumber(redis.call('TIME')[1])
-local deadline = tonumber(redis.call('ZSCORE', KEYS[1], ARGV[1]))
-if not deadline or deadline <= now then return 0 end
-redis.call('ZADD', KEYS[1], now + tonumber(ARGV[2]), ARGV[1])
-redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]) * 2)
-return 1
-"""
+ACQUIRE = script("authentication/acquire.lua")
+RENEW = script("authentication/renew.lua")
 
 
 class LaneFull(Exception):

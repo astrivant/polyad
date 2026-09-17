@@ -55,7 +55,10 @@ polyad-operator = "polyad.operator.runtime:main"
 
 [tool.poetry]
 packages = [{include = "polyad", from = "pkg"}]
-include = [{path = "pkg/polyad/sql/**/*.sql", format = ["sdist", "wheel"]}]
+include = [
+    {path = "pkg/polyad/sql/**/*.sql", format = ["sdist", "wheel"]},
+    {path = "pkg/polyad/lua/**/*.lua", format = ["sdist", "wheel"]},
+]
 
 [tool.poetry.dependencies]
 polyad-types = {path = "pkg/polyad-types"}
