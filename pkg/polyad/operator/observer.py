@@ -12,9 +12,9 @@ import signal
 
 from polyad.api.observations import ObservationAPI, build_app, observe
 from polyad.api.server import APIServer
-from polyad.operator.health import credential_token
-from polyad.operator.logging import add_logging_options, configure_log_export, configure_logging, shutdown_log_export
-from polyad.operator.tracing import configure_tracing, shutdown_tracing
+from polyad.operator.lifecycle.health import credential_token
+from polyad.operator.observability.logging import add_logging_options, configure_log_export, configure_logging, shutdown_log_export
+from polyad.operator.observability.tracing import configure_tracing, shutdown_tracing
 
 
 async def run() -> None:

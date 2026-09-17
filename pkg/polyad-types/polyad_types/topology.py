@@ -16,7 +16,7 @@ from polyad_types.activation import ActivationPolicy
 from polyad_types.capacity import CapacityPlan
 from polyad_types.codec import converter
 from polyad_types.network import NetworkAccess, NetworkPort
-from polyad_types.rules import Cheeger
+from polyad_types.rules import Cheeger, CheegerComputation
 
 
 @frozen
@@ -85,7 +85,25 @@ class ThroughputTier:
     """
 
     offeredPerSecond: float = field(metadata={"schema": {"minimum": 0}})
-    cheeger: Cheeger
+    cheeger: Cheeger = field(
+        metadata={
+            "schema": {
+                "x-kubernetes-validations": [
+                    {
+                        "rule": "(has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum != null)",
+                        "message": "A throughput tier requires at least one Cheeger bound.",
+                    },
+                    {
+                        "rule": (
+                            "!has(self.minimum) || self.minimum == null || !has(self.maximum) || "
+                            "self.maximum == null || self.minimum <= self.maximum"
+                        ),
+                        "message": "Cheeger minimum must not exceed maximum.",
+                    },
+                ]
+            }
+        }
+    )
 
     def __attrs_post_init__(self) -> None:
         """
@@ -130,6 +148,7 @@ class ThroughputPolicy:
         shortfallRatio (float): Completed/offered ratio below which demanded throughput is unmet.
         cooldownSeconds (int): Minimum time between successful topology changes.
         maxChangesPerHour (int): Maximum successful changes in a rolling hour.
+        cheegerComputation (CheegerComputation): Search priorities and budgets shared by current and candidate layouts.
     """
 
     unit: str = field(metadata={"schema": {"minLength": 1, "maxLength": 64}})
@@ -142,6 +161,7 @@ class ThroughputPolicy:
     shortfallRatio: float = field(default=0.9, metadata={"schema": {"minimum": 0, "exclusiveMinimum": True, "maximum": 1}})
     cooldownSeconds: int = field(default=300, metadata={"schema": {"minimum": 1, "maximum": 86400}})
     maxChangesPerHour: int = field(default=2, metadata={"schema": {"minimum": 1, "maximum": 60}})
+    cheegerComputation: CheegerComputation = field(factory=CheegerComputation)
 
     def __attrs_post_init__(self) -> None:
         """
@@ -247,8 +267,6 @@ class Topology:
         """
         names = {node.name for node in self.nodes}
         if self.throughput is not None:
-            if len(names) > 20:
-                raise ValueError("throughput Cheeger feedback supports at most 20 vertices per boundary")
             for layout in self.throughput.layouts:
                 if any(edge.source not in names or edge.target not in names for edge in layout.connections):
                     raise ValueError("throughput layout connection endpoint is absent")
@@ -302,18 +320,6 @@ def topology(spec: dict[str, object], kind: str = "Graph") -> Topology:
         return converter.structure(spec, PolyGraph[GraphNode] if kind == "PolyGraph" else Topology)
     except CattrsError as error:
         raise ValueError(str(error)) from error
-
-
-@frozen
-class Daemon(Node):
-    """
-    Reference a persistent capability whose lifecycle is readiness and explicit shutdown.
-
-    Attributes:
-        kind (Literal['Daemon']): Kubernetes resource kind.
-    """
-
-    kind: Literal["Daemon"] = field(default="Daemon", init=False)
 
 
 @frozen(kw_only=True)

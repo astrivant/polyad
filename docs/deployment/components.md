@@ -114,7 +114,11 @@ observes it within the reserved PolyGraph.
 The component graph's simple undirected projection is a three-vertex chain with
 Cheeger constant 1. Its referenced GraphRule uses `scope: Boundary`,
 `relation: connections`, a connected-shape requirement and a configurable
-`architecture.cheegerMinimum` (default 1). `architecture.expandedNodes` bounds
+`architecture.cheegerMinimum` (default 1). Optional `architecture.cheegerMaximum`
+defaults to `null` (unbounded); set it to `1` to permit the chain but reject a
+fully connected triangle, whose expansion is `2`. See the
+[typed component reference](../../charts/polyad/values-components.reference.yaml)
+and [practical tuning guide](../graphs/cheeger-tuning.md). `architecture.expandedNodes` bounds
 the three group vertices plus their Daemon copies. The default 27 permits all
 three groups to reach eight copies; smaller budgets can block a scaling request.
 Namespace GraphRules also remain applicable.

@@ -11,8 +11,8 @@ import networkx as nx
 import pytest
 
 from polyad.graph import Connection, Dependency, Node, Spectrum, StructuralRule, Topology, evaluate_rule, graph_spectrum
-from polyad.operator.controller import Controller
-from polyad.operator.rules import RuleViolation, check_rules
+from polyad.operator.policies.rules import RuleViolation, check_rules
+from polyad.operator.reconciliation.controller import Controller
 from tests.test_operator import FakeAPI, resource, template
 
 

@@ -55,6 +55,12 @@ def test_example_values_render_with_the_full_helm_schema(path):
     "value",
     [
         {"ha": "true"},
+        {"architecture": {"cheegerMaximum": "1"}},
+        {"architecture": {"cheegerMaximum": True}},
+        {"architecture": {"cheegerMaximum": 0.5}},
+        {"operator": {"cheeger": {"maxVertices": True}}},
+        {"operator": {"cheeger": {"maxCuts": 0}}},
+        {"operator": {"cheeger": {"timeoutSeconds": "5"}}},
         {"observer": {"resources": {"requests": {"cpu": 1}}}},
         {"observer": {"resources": {"requests": "100m"}}},
         {"postgresql": {"resources": {"limits": {"memory": True}}}},

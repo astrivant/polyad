@@ -13,7 +13,7 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.operator import observer, runtime
-from polyad.operator.api import API
+from polyad.operator.adapters.kubernetes import API
 
 
 @pytest.mark.parametrize(
@@ -45,7 +45,7 @@ def test_log_level_precedence_does_not_enable_transport_logging(monkeypatch, cap
     transport_level = logging.getLogger("urllib3").getEffectiveLevel()
     with caplog.at_level(logging.INFO, logger="polyad"):
         entrypoint.main()
-        assert logging.getLogger("polyad.operator.api").getEffectiveLevel() == level
+        assert logging.getLogger("polyad.operator.adapters.kubernetes").getEffectiveLevel() == level
         assert logging.getLogger("urllib3").getEffectiveLevel() == transport_level
     if entrypoint is runtime:
         fake.start.assert_called_once()

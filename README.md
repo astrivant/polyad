@@ -899,8 +899,11 @@ choices.
 - **Structural bottlenecks:** Shlomo Hoory, Nathan Linial and Avi Wigderson,
   [Expander Graphs and Their Applications](https://www.math.ias.edu/~avi/PUBLICATIONS/MYPAPERS/HLW06/hlw06.pdf#page=14)
   (2006, Section 2.1). The edge-expansion definition used by Polyad's
-  [Cheeger bounds](docs/graphs/graph-rules.md#cheeger-bottleneck-bounds), which measure
-  graph structure rather than application throughput.
+  [hard Cheeger bounds](docs/graphs/graph-rules.md#cheeger-bottleneck-bounds) and
+  [throughput-driven Cheeger targets](docs/graphs/cheeger-orchestration.md).
+  Application-reported demand selects a calibrated target; sustained completion
+  shortfalls can trigger topology changes within the hard bounds. The Cheeger
+  value itself measures structural connectivity.
 - **Rewriting and composition:** Dimitri Ara et al.,
   [Polygraphs: From Rewriting to Higher Categories](https://arxiv.org/abs/2312.00429).
   Background for the rewriting, confluence and higher-dimensional diagrams in

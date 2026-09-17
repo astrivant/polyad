@@ -113,7 +113,7 @@ exists, the SDK attaches its trace ID, span ID and flags.
 For example, a local ReplicaGroup edit can invalidate a remote scaling request:
 
 ```text
-2026-09-16T12:00:00Z WARNING [polyad-kopf] polyad.operator.decisions:
+2026-09-16T12:00:00Z WARNING [polyad-kopf] polyad.operator.observability.decisions:
 A local edit superseded this remote scaling request; local intent takes precedence.
 | event=polyad.remote_scale.conflict polyad.decision.outcome=blocked
   polyad.decision.reason=local_edit_wins polyad.resource.kind=RemoteScale
@@ -235,13 +235,13 @@ terminated abruptly.
 
 Polyad owns this provider explicitly and does not replace the global Python
 provider or automatically instrument other libraries. Embedders using the app
-builders directly can call `polyad.operator.tracing.configure_tracing()` before
+builders directly can call `polyad.operator.observability.tracing.configure_tracing()` before
 starting workers and `shutdown_tracing()` after stopping them. Standalone client
 and types packages do not gain the operator's SDK dependencies.
 
 Log export similarly owns one process-local provider and one bounded batch
 processor. Entrypoints initialize it before workers start and drain it after they
-stop. Embedders use `polyad.operator.logging.configure_log_export()` and
+stop. Embedders use `polyad.operator.observability.logging.configure_log_export()` and
 `shutdown_log_export()`. Collector failures do not change admitted operations;
 buffer overflow or abrupt termination can lose records. Disabled log export loads
 no log SDK/exporter and starts no log export thread.

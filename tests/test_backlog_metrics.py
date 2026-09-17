@@ -13,12 +13,12 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from kubernetes.client.exceptions import ApiException
 
-from polyad.operator.api import API
-from polyad.operator.controller import Controller
-from polyad.operator.coordination import Coordinator, NotOwner
-from polyad.operator.metrics import WriteBacklog
-from polyad.operator.queue import RefreshQueue
-from polyad.operator.shared_queue import SharedQueue
+from polyad.operator.adapters.kubernetes import API
+from polyad.operator.coordination.leases import Coordinator, NotOwner
+from polyad.operator.coordination.queue import RefreshQueue
+from polyad.operator.coordination.shared_queue import SharedQueue
+from polyad.operator.observability.metrics import WriteBacklog
+from polyad.operator.reconciliation.controller import Controller
 
 
 def test_write_backlog_serialization_and_cancellation():
@@ -100,7 +100,7 @@ def test_write_age_tracks_each_stage(monkeypatch):
     Measure waiting age and transport age from their respective start times.
     """
     now = [10.0]
-    monkeypatch.setattr("polyad.operator.metrics.time", SimpleNamespace(monotonic=lambda: now[0]))
+    monkeypatch.setattr("polyad.operator.observability.metrics.time", SimpleNamespace(monotonic=lambda: now[0]))
     metrics = WriteBacklog()
     token = metrics.enqueue()
     now[0] = 13.0
@@ -117,7 +117,7 @@ def test_health_uses_cached_backlogs_and_preserves_stale_values(monkeypatch):
     """
     Probe snapshots perform no network I/O, aggregate local writes, and flag stale samples.
     """
-    from polyad.operator import handlers
+    from polyad.operator.lifecycle import handlers
 
     async def scenario():
         api, coordination_api = API.__new__(API), API.__new__(API)

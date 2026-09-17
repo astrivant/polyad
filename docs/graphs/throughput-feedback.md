@@ -190,8 +190,10 @@ samples.
 | `shortfallRatio` | 0.9 | Greater than 0 and at most 1 |
 | `cooldownSeconds` | 300 | 1–86,400 |
 | `maxChangesPerHour` | 2 | 1–60 successful changes in a rolling hour |
+| `cheegerComputation` | Inherit operator ceilings | [Vertex/cut/time budgets and ordered priority cuts](cheeger-tuning.md#understand-computation-and-scale) |
 
-Exact Cheeger computation is limited to **20 vertices per boundary**. Decompose
+Exact Cheeger computation defaults to **20 vertices per boundary**, with
+[configurable computation budgets and priority cuts](cheeger-tuning.md#understand-computation-and-scale). Decompose
 larger applications into local Graphs and PolyGraphs and calibrate each layer;
 do not interpret measurements of different projections as interchangeable.
 Reconciliation offloads cut enumeration from the asynchronous operator loop.

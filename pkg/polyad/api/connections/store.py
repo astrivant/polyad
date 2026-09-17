@@ -20,7 +20,7 @@ from polyad_types.requests import MAX_TTL
 from polyad_types.topology import topology
 
 if TYPE_CHECKING:
-    from polyad.operator.api import API
+    from polyad.operator.adapters.kubernetes import API
     from polyad_types.requests import ConnectionRequest
 
 FINALIZER = f"{asts.GROUP}/temporary-connection"
@@ -250,7 +250,7 @@ class ConnectionStore:
                 raise Conflict("temporary connections require an executable, unsuspended graph instance")
             spec = graph["spec"]
             if request.kind == "ReplicaGroup":
-                from polyad.operator.replication import effective_spec
+                from polyad.operator.reconciliation.replication import effective_spec
 
                 spec, _ = await effective_spec(self.api, graph)
             nodes = {node.name for node in topology(spec, request.kind).nodes}

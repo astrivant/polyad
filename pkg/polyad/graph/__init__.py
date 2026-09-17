@@ -36,11 +36,11 @@ from polyad_types.replication import ReplicaConnectivity as ReplicaConnectivity
 from polyad_types.replication import ReplicaTemplate as ReplicaTemplate
 from polyad_types.replication import Replication as Replication
 from polyad_types.rules import Cheeger as Cheeger
+from polyad_types.rules import CheegerComputation as CheegerComputation
 from polyad_types.rules import Spectrum as Spectrum
 from polyad_types.rules import StructuralRule as StructuralRule
 from polyad_types.storage import Persistence as Persistence
 from polyad_types.topology import Connection as Connection
-from polyad_types.topology import Daemon as Daemon
 from polyad_types.topology import Dependency as Dependency
 from polyad_types.topology import GraphNode as GraphNode
 from polyad_types.topology import Node as Node

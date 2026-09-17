@@ -11,8 +11,8 @@ import pytest
 
 from polyad.compiler.passes.network import scope_label, traffic
 from polyad.graph import ReplicaConnection, ReplicaConnectivity, Replication, graph_cheeger
-from polyad.operator.controller import Controller
-from polyad.operator.network import context
+from polyad.operator.policies.network import context
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types import resources as asts
 from polyad_types.codec import converter
 from polyad_types.replication import replica_topology
@@ -164,7 +164,7 @@ def test_cheeger_bound_blocks_scale_changes_before_mutation(mode, initial, reque
         root["spec"]["replicas"] = requested
         root["metadata"]["generation"] += 1
         api.calls.clear()
-        with pytest.raises(ValueError, match="cheeger="):
+        with pytest.raises(ValueError, match=r"cheeger(?:<=|=)"):
             await turn(api)
         assert not any(method in {"POST", "DELETE"} for method, _, _ in api.calls)
         assert not root["status"]["scaleCurrent"]
@@ -193,7 +193,7 @@ def test_shared_source_rebuilds_connections_and_preserves_existing_copies():
         assert instance["status"]["metrics"]["topology"]["connections"]["edgeCount"] == 5
         source["spec"]["replicas"] = 6
         source["metadata"]["generation"] += 1
-        with pytest.raises(ValueError, match="cheeger="):
+        with pytest.raises(ValueError, match=r"cheeger(?:<=|=)"):
             await turn(api, instance["metadata"]["name"])
         assert len(api.children("Deployment")) == 5
 

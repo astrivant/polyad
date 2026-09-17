@@ -738,6 +738,36 @@
               "description": "Pause after local shared-queue samples (1-5s); watch polyad_inbound_sample_age_seconds; root-managed remote backlog is sampled by rescanIntervalSeconds"
             }
           }
+        },
+        "cheeger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxVertices",
+            "maxCuts",
+            "timeoutSeconds"
+          ],
+          "description": "Deployment-wide ceilings for each Cheeger calculation. Policies inherit these or choose smaller budgets; prioritized search never weakens hard bounds.",
+          "properties": {
+            "maxVertices": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 4096,
+              "description": "Maximum vertices per boundary; defaults to 20. Larger connected boundaries also need increased cut and time budgets."
+            },
+            "maxCuts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647,
+              "description": "Maximum distinct cuts per calculation; 524287 covers 20 vertices. Budget exhaustion blocks constrained actions."
+            },
+            "timeoutSeconds": {
+              "type": "number",
+              "minimum": 0.001,
+              "maximum": 300,
+              "description": "Cooperative runtime ceiling per calculation, checked between batches. Incomplete search is never an exact constant."
+            }
+          }
         }
       },
       "allOf": [
@@ -3744,6 +3774,14 @@
           "minimum": 0,
           "maximum": 1,
           "description": "Minimum edge expansion of the three-component Graph; the default chain has h=1"
+        },
+        "cheegerMaximum": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 1,
+          "description": "Optional upper edge-expansion bound for the component Graph. Null leaves it unbounded; at least 1 is required to admit the initial three-component chain. A maximum of 1 excludes a fully connected triangle."
         },
         "expandedNodes": {
           "type": "integer",

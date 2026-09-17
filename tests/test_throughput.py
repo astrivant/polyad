@@ -8,16 +8,18 @@ import asyncio
 import copy
 import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
+import yaml
 from attrs import evolve
 from cattrs.errors import CattrsError
 from kubernetes.client.exceptions import ApiException
 
 from polyad.api.errors import Conflict, Forbidden
 from polyad.api.throughput import report_throughput
-from polyad.operator.controller import Controller
-from polyad.operator.throughput import SAMPLE, STATE, reconcile_throughput
+from polyad.operator.policies.throughput import SAMPLE, STATE, reconcile_throughput
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types import GraphAccess, ThroughputSample
 from polyad_types.codec import converter, to_dict
 from polyad_types.resources import GROUP
@@ -269,3 +271,55 @@ def test_invalid_feedback_budgets_are_rejected(change):
     policy = fixture().objects[("Graph", "test", "pipeline")]["spec"]["throughput"]
     with pytest.raises((ValueError, TypeError, CattrsError)):
         converter.structure({**policy, **change}, ThroughputPolicy)
+
+
+def test_incomplete_computation_cannot_change_a_layout(monkeypatch):
+    """
+    The feedback loop inherits operator budgets and publishes an explicit blocked result.
+    """
+    monkeypatch.setenv("POLYAD_CHEEGER_MAX_CUTS", "1")
+
+    async def run():
+        api = fixture("Adapt")
+        before = copy.deepcopy(api.objects[("Graph", "test", "pipeline")]["spec"])
+        await feed(api, 0)
+        changed, graph = await feed(api, 10)
+        assert not changed and graph["spec"] == before
+        status = graph["status"]["throughput"]
+        assert status["phase"] == "ComputationLimited" and status["currentCheeger"] is None
+        assert status["computation"]["reason"] == "CutBudget" and not status["computation"]["exact"]
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize(("offered", "layout", "edges"), [(200, "ring", 4), (1500, "mesh", 6)])
+@pytest.mark.parametrize("mode", ["Observe", "Adapt"])
+def test_tuning_reference_selects_demand_tiers_without_relaxing_hard_bounds(offered, layout, edges, mode):
+    """
+    Exercise the shipped reference's timing, separate demand targets and ordered alternatives.
+    """
+    documents = list(yaml.safe_load_all((Path(__file__).parents[1] / "examples/cheeger-tuning.yaml").read_text()))
+    objects = [resource(doc["kind"], doc["metadata"]["name"], doc["spec"]) for doc in documents]
+    graph = next(obj for obj in objects if obj["kind"] == "Graph")
+    graph["metadata"]["name"] = "pipeline"
+    graph["spec"]["throughput"]["mode"] = mode
+    api = FeedbackAPI(*objects)
+
+    async def run():
+        for second in (0, 30, 60, 90, 120):
+            clock = datetime(2026, 9, 16, tzinfo=UTC) + timedelta(seconds=second)
+            obj = await api.get("Graph", "test", "pipeline")
+            sample = ThroughputSample(
+                "pipeline", obj["metadata"]["uid"], obj["metadata"]["generation"], clock.isoformat(), "records", offered, 50
+            )
+            obj["metadata"].setdefault("annotations", {})[SAMPLE] = json.dumps(to_dict(sample))
+            api.objects[("Graph", "test", "pipeline")] = obj
+            changed = await reconcile_throughput(Controller(api), obj, now=clock)
+            if second < 120:
+                assert not changed
+        actual = await api.get("Graph", "test", "pipeline")
+        assert actual["status"]["throughput"]["recommendedLayout"] == layout
+        assert actual["status"]["throughput"]["phase"] == ("Applied" if mode == "Adapt" else "Recommended")
+        assert len(actual["spec"]["connections"]) == (edges if mode == "Adapt" else 3)
+
+    asyncio.run(run())

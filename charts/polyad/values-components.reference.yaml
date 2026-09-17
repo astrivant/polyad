@@ -22,6 +22,8 @@ architecture:
   autoscaling: true # KEDA requests counts; the operator admits them through GraphRules.
   ## @param architecture.cheegerMinimum [number] Minimum edge expansion of the three-component Graph; the default chain has h=1 Structural edge-expansion bound, not measured throughput. Minimum: 0. Maximum: 1.
   cheegerMinimum: 1 # Structural edge-expansion bound, not measured throughput.
+  ## @param architecture.cheegerMaximum [number|null] Optional upper structural bound; null leaves it unbounded. Use 1 to permit the initial chain while excluding a fully connected triangle; values below 1 cannot admit this chart's topology.
+  cheegerMaximum: null
   ## @param architecture.expandedNodes [integer] Maximum recursive vertices in the self-managed Graph Budget for recursive vertices in the component Graph. Minimum: 6. Maximum: 1000000.
   expandedNodes: 27 # Budget for recursive vertices in the component Graph.
   ## @param architecture.components [object] Settings for architecture.components; configure the fields below.

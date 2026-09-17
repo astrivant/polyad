@@ -15,8 +15,8 @@ from jsonschema import validate
 from polyad.api.store import CompositionStore
 from polyad.compiler.passes.composition import receipt_spec, request_name
 from polyad.compiler.passes.daemon import compile_daemon, execution_pod
-from polyad.operator.controller import Controller, Pending
-from polyad.operator.graph_status import observed
+from polyad.operator.observability.graph_status import observed
+from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types import resources as asts
 from tests.test_capacity import passes, scenario
 from tests.test_composition import settle

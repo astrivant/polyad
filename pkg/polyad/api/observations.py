@@ -16,8 +16,8 @@ from polyad.auth.http import install
 from polyad.auth.policy import public_demo
 from polyad.events.topology import topology_snapshot
 from polyad.metrics.workloads import current_observation
-from polyad.operator.api import API
-from polyad.operator.graph_status import instance_metrics
+from polyad.operator.adapters.kubernetes import API
+from polyad.operator.observability.graph_status import instance_metrics
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:

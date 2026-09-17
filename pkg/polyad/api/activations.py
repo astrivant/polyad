@@ -17,7 +17,7 @@ from polyad_types.codec import converter
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.operator.api import API
+    from polyad.operator.adapters.kubernetes import API
     from polyad_types.requests import ActivationRequest
 
 

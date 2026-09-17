@@ -87,6 +87,14 @@ operator:
           - type: Percent
             value: 100
             periodSeconds: 15
+  # With further research in cheeger configuration, we can more efficiently scale this approach instead of leaning on composition for larger graphs.
+  cheeger:
+    ## @param operator.cheeger.maxVertices Maximum vertices per Cheeger calculation (2-4096); 20 is the default, and raising it also requires enough cut/time budget
+    maxVertices: 20
+    ## @param operator.cheeger.maxCuts Maximum distinct cuts per calculation (1-2147483647); 524287 covers 20 vertices, and incomplete searches block constrained actions
+    maxCuts: 524287
+    ## @param operator.cheeger.timeoutSeconds Cooperative time ceiling per calculation (0.001-300 seconds); checked between cut batches, never converts partial results into exact constants
+    timeoutSeconds: 5
   tuning:
     ## @param operator.tuning.rescanIntervalSeconds Pause after local and root-managed remote inventory scans (1-15s); watch polyad_inventory_sample_age_seconds and polyad_cluster_inventory_sample_fresh; lower values add Kubernetes and optional state writes
     rescanIntervalSeconds: 5
@@ -172,6 +180,8 @@ architecture:
   mode: Dense
   ## @param architecture.cheegerMinimum Minimum edge expansion of the three-component Graph; the default chain has h=1
   cheegerMinimum: 1
+  ## @param architecture.cheegerMaximum [nullable] Optional maximum edge expansion of the component Graph; null leaves it unbounded, 1 permits the chain but excludes a fully connected triangle
+  cheegerMaximum: null
   ## @param architecture.expandedNodes Maximum recursive vertices in the self-managed Graph
   expandedNodes: 27
   ## @param architecture.autoscaling Enable KEDA scaling of all component ReplicaGroup definitions

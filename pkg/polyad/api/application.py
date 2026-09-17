@@ -11,7 +11,7 @@ from flask import Blueprint, Flask, request
 from opentelemetry.trace import SpanKind, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-from polyad.operator.tracing import span
+from polyad.operator.observability.tracing import span
 
 if TYPE_CHECKING:
     from typing import Any

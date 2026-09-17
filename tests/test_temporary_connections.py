@@ -20,10 +20,10 @@ from polyad.compiler.passes.network import NetworkScope, traffic
 from polyad.events.topology import topology_snapshot
 from polyad.graph import NetworkAccess
 from polyad.graph.temporary import ANNOTATION, deadline, entries, overlay
-from polyad.operator.controller import Controller, Pending
-from polyad.operator.network import context, ensure_policies
-from polyad.operator.rule_state import check_live_rules
-from polyad.operator.rules import RuleViolation
+from polyad.operator.policies.network import context, ensure_policies
+from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.rules import RuleViolation
+from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_client import APIError, Client
 from polyad_types import resources as asts
 from polyad_types.codec import converter
@@ -496,7 +496,7 @@ def test_receipt_and_target_share_the_same_family_shard():
     """
     Persisting a receipt does not bypass root-family coordination for graph mutations.
     """
-    from polyad.operator.coordination import Coordinator
+    from polyad.operator.coordination.leases import Coordinator
 
     async def run():
         graph, definitions = graph_fixture()

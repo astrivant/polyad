@@ -17,9 +17,9 @@ from polyad.events.builder import EventAPIBuilder
 from polyad.events.store import PUBLISH, PUBLISH_TOPOLOGY, READ, SNAPSHOT, EventStore
 from polyad.events.topology import topology_snapshot
 from polyad.events.visibility import INTERNAL, public_observation
-from polyad.operator.controller import Controller
-from polyad.operator.coordination import root_shard
-from polyad.operator.root import ClusterWorker
+from polyad.operator.clusters.root import ClusterWorker
+from polyad.operator.coordination.leases import root_shard
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types.resources import to_document
 from tests.test_operator import FakeAPI, resource
 

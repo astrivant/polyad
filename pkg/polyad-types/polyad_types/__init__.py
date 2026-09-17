@@ -109,6 +109,7 @@ from polyad_types.resources.status import RollupMetrics as RollupMetrics
 from polyad_types.resources.status import SubgraphMetrics as SubgraphMetrics
 from polyad_types.resources.status import TopologyMetrics as TopologyMetrics
 from polyad_types.rules import Cheeger as Cheeger
+from polyad_types.rules import CheegerComputation as CheegerComputation
 from polyad_types.rules import Spectrum as Spectrum
 from polyad_types.rules import StructuralRule as StructuralRule
 from polyad_types.storage import Persistence as Persistence

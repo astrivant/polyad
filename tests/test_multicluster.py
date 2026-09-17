@@ -14,9 +14,9 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.observations import ObservationAPI, build_app, observe
 from polyad.compiler.passes.network import policy_specs, traffic
-from polyad.operator.controller import FINALIZER, Controller, Pending
-from polyad.operator.federation import INVENTORY, PARENT, REMOTE, Federation
-from polyad.operator.rules import RuleViolation, check_rules
+from polyad.operator.clusters.federation import INVENTORY, PARENT, REMOTE, Federation
+from polyad.operator.policies.rules import RuleViolation, check_rules
+from polyad.operator.reconciliation.controller import FINALIZER, Controller, Pending
 from polyad_types import GraphNode, MeshPeer, NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
 from polyad_types.topology import topology
 from tests.test_network import scope

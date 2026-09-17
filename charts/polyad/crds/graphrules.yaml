@@ -32,6 +32,41 @@ spec:
             description: Engineer-controlled structural constraints applied before scheduler admission. Namespace defaults
               cannot be opted out of by compositions.
             properties:
+              cheegerComputation:
+                type: object
+                description: Budget exact cut search and examine important partitions first without weakening bounds.
+                properties:
+                  maxVertices:
+                    type: integer
+                    nullable: true
+                    description: Boundary vertex cap; null inherits the operator ceiling, normally 20.
+                    minimum: 2
+                    maximum: 4096
+                  maxCuts:
+                    type: integer
+                    nullable: true
+                    description: Unique cut evaluation budget; null inherits the operator ceiling, normally 524287.
+                    minimum: 1
+                    maximum: 2147483647
+                  timeoutSeconds:
+                    type: number
+                    nullable: true
+                    description: Cooperative time budget; null inherits the operator ceiling, normally five seconds.
+                    minimum: 0.001
+                    maximum: 300
+                  priorityCuts:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                        maxLength: 253
+                      minItems: 1
+                      maxItems: 4096
+                      uniqueItems: true
+                    description: Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
+                    maxItems: 64
               scope:
                 type: string
                 enum:
@@ -317,7 +352,7 @@ spec:
                   - planar
               cheeger:
                 type: object
-                description: Exact unnormalized edge expansion on the simple undirected projection; at most 20 vertices.
+                description: Exact unnormalized edge expansion on the simple undirected projection; computation budgets default to 20 vertices.
                 x-kubernetes-validations:
                 - rule: '!has(self.minimum) || !has(self.maximum) || self.minimum <= self.maximum'
                   message: Cheeger minimum must not exceed maximum.

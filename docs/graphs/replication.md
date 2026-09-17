@@ -1533,7 +1533,8 @@ spec:
     minimum: 1
 ```
 
-Exact Cheeger evaluation remains limited to 20 vertices per evaluated boundary.
+Exact Cheeger evaluation defaults to 20 vertices per evaluated boundary, with
+[configurable budgets and priority cuts](cheeger-tuning.md#understand-computation-and-scale).
 Other computation limits still apply: a FullMesh produces `n × (n − 1)` directed
 edges and exceeds the 16,384-edge expansion limit above 128 copies. Custom edges
 can leave replicas isolated; positive connectivity or Cheeger constraints can

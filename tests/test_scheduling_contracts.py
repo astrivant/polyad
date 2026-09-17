@@ -12,8 +12,8 @@ import pytest
 
 from polyad.compiler.passes.storage import configure_storage
 from polyad.graph import DelayGate
-from polyad.operator.controller import Controller
-from polyad.operator.placement import merge_placement, place_pod
+from polyad.operator.reconciliation.controller import Controller
+from polyad.operator.reconciliation.placement import merge_placement, place_pod
 from polyad_types.resources import GROUP
 from tests.test_composition import settle
 from tests.test_operator import FakeAPI, resource, template
@@ -203,7 +203,7 @@ def test_delay_is_persisted_and_recovered_without_blocking_other_nodes():
             resource("Gate", "cooldown", {"delaySeconds": 10}),
         )
         start = datetime(2026, 9, 15, tzinfo=UTC)
-        with patch("polyad.operator.controller.datetime", wraps=datetime) as clock:
+        with patch("polyad.operator.reconciliation.controller.datetime", wraps=datetime) as clock:
             clock.now.return_value = start
             await settle(api)
             assert len(api.children("Job")) == 2

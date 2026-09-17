@@ -17,8 +17,8 @@ from prometheus_client.parser import text_string_to_metric_families
 from polyad.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.inventory import inventory
 from polyad.metrics.store import MetricsStore
-from polyad.operator.api import GROUP, VERSION
-from polyad.operator.coordination import root_shard
+from polyad.operator.adapters.kubernetes import GROUP, VERSION
+from polyad.operator.coordination.leases import root_shard
 
 
 def graph(name, kind="Graph", parent=None, **spec):
@@ -209,7 +209,7 @@ def test_api_builder_schema_snapshot_and_retirement(monkeypatch):
     Serve valid OpenAPI and both formats; never return empty success before sampling or while retiring.
     """
     from polyad.metrics import builder
-    from polyad.operator.health import Lifecycle
+    from polyad.operator.lifecycle.health import Lifecycle
 
     state = Lifecycle()
     monkeypatch.setattr(builder, "lifecycle", state)
@@ -238,7 +238,7 @@ def test_rescan_retains_complete_inventory_on_partial_failure(monkeypatch):
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
 
-    from polyad.operator import handlers
+    from polyad.operator.lifecycle import handlers
 
     async def scenario():
         original = (time.monotonic(), inventory([graph("old")]))
@@ -302,7 +302,7 @@ def test_projected_metrics_and_cache_secret_rotation_requests_replacement(tmp_pa
     """
     Track projected Secret changes using health replacement rather than hot-swapping credentials.
     """
-    from polyad.operator import health
+    from polyad.operator.lifecycle import health
 
     state = health.Lifecycle()
     monkeypatch.setattr(health, "lifecycle", state)

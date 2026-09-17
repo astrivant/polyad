@@ -18,8 +18,8 @@ from polyad.api.application import create_application
 from polyad.api.errors import RequestError, Unavailable
 from polyad.api.limits import RateLimitPolicy
 from polyad.auth.http import Access
-from polyad.operator.health import lifecycle
-from polyad.operator.pressure import pressure
+from polyad.operator.lifecycle.health import lifecycle
+from polyad.operator.observability.pressure import pressure
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from polyad.api.connections.store import ConnectionSettings
     from polyad.events.store import EventStore
     from polyad.metrics.store import MetricsStore
-    from polyad.operator.api import API
+    from polyad.operator.adapters.kubernetes import API
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")

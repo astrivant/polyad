@@ -30,6 +30,7 @@ then [run your first workload](introduction/getting-started.md).
 | --- | --- |
 | [Graph boundaries](graphs/graph-boundaries.md) | Three boundary types, repeated execution, placement and storage |
 | [Graph rules](graphs/graph-rules.md) | Every structural, spectral, Cheeger and network constraint, with Mermaid examples |
+| [Practical Cheeger tuning](graphs/cheeger-tuning.md) | Bounds, throughput response settings, computation budgets, important cuts and a runnable reference |
 | [Comparing Cheeger policies](graphs/cheeger-orchestration.md) | Hard bounds versus throughput targets, nested parent/child measurements, subgraph replication and Observe/Adapt diagrams |
 | [Replication and KEDA](graphs/replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
 | [Soul searching](graphs/throughput-feedback.md) | Topology optimization through application throughput feedback, separate Cheeger targets and bounded Observe/Adapt modes |
@@ -88,6 +89,7 @@ then [run your first workload](introduction/getting-started.md).
 | Guide | Contents |
 | --- | --- |
 | [Resource registry](development/resource-registry.md) | Supported kinds, AST models, API identities and scheduling capabilities |
+| [Operator package layout](development/operator-layout.md) | Lifecycle, reconciliation, policies, coordination, clusters, observability and adapters |
 | [Mutation plans](development/mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |
 | [Mutation diagrams](development/mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
 | [Python types and serialization](development/toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |

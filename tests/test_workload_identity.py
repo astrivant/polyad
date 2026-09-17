@@ -11,8 +11,8 @@ import json
 import pytest
 
 from polyad.compiler.passes.identity import inject_environment
-from polyad.operator.controller import Controller, Pending
-from polyad.operator.identity import graph_ancestry
+from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.identity import graph_ancestry
 from polyad_types.resources import GROUP
 from tests.test_activations import pulse, setup, turn
 from tests.test_composition import settle

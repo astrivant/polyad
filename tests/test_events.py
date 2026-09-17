@@ -17,7 +17,7 @@ from polyad.events.builder import EventAPIBuilder
 from polyad.events.store import CursorExpired, EventStore
 from polyad.events.topology import topology_snapshot
 from polyad.events.visibility import public_observation
-from polyad.operator import health as health_state
+from polyad.operator.lifecycle import health as health_state
 from tests.test_operator import FakeAPI, resource
 
 
@@ -150,7 +150,8 @@ def test_signals_make_health_require_replacement(monkeypatch):
     """
     SIGHUP leaves health observable; termination marks draining and forwards shutdown.
     """
-    from polyad.operator import handlers, runtime
+    from polyad.operator import runtime
+    from polyad.operator.lifecycle import handlers
 
     state = health_state.Lifecycle()
     monkeypatch.setattr(runtime, "lifecycle", state)
@@ -196,7 +197,7 @@ def test_live_event_server_streams_and_stops_cleanly(monkeypatch):
     import urllib.request
 
     from polyad.api.server import APIServer
-    from polyad.operator.api import API
+    from polyad.operator.adapters.kubernetes import API
 
     monkeypatch.setenv("POLYAD_CACHE_URL", os.environ["POLYAD_TEST_DRAGONFLY_URL"])
 

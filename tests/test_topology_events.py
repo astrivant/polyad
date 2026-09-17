@@ -15,8 +15,8 @@ import pytest
 from polyad.events.builder import EventAPIBuilder
 from polyad.events.store import EventStore, TopologyReplaced
 from polyad.events.topology import neighbors, topology_snapshot
-from polyad.operator import handlers
-from polyad.operator.controller import Controller
+from polyad.operator.lifecycle import handlers
+from polyad.operator.reconciliation.controller import Controller
 from polyad_client import APIError, Client
 from polyad_types.resources import GROUP
 from tests.test_client import Adapter

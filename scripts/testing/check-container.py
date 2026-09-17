@@ -67,7 +67,7 @@ def main() -> None:
     ):
         assert importlib.metadata.version(dependency)
     # Runtime dependencies are installed, but disabled optional services stay unloaded.
-    from polyad.operator import handlers  # noqa: F401
+    from polyad.operator.lifecycle import handlers  # noqa: F401
 
     for module in (
         "flask",

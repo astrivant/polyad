@@ -81,16 +81,28 @@ spec:
                           description: Bound exact edge expansion on the simple undirected projection. A cut's ratio
                             is its crossing-edge count divided by its smaller side's vertex count. The constant is the
                             minimum ratio over all cuts. Raising the minimum rejects severe structural bottlenecks;
-                            lowering the maximum requires a sparse cut. These bounds do not measure execution throughput.
+                            lowering the maximum requires a sparse cut. Throughput policies can select these structural
+                            targets using application-reported rates; the constant itself is edge expansion.
                           properties:
                             minimum:
                               type: number
                               nullable: true
-                              description: Inclusive minimum Cheeger constant.
+                              description: Inclusive nonnegative minimum; raise it to reject sparse bottlenecks, or
+                                omit for no lower bound.
+                              minimum: 0
                             maximum:
                               type: number
                               nullable: true
-                              description: Inclusive maximum Cheeger constant.
+                              description: Inclusive nonnegative maximum; lower it to require a sparse cut, or omit
+                                for no upper bound.
+                              minimum: 0
+                          x-kubernetes-validations:
+                          - rule: (has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum
+                              != null)
+                            message: A throughput tier requires at least one Cheeger bound.
+                          - rule: '!has(self.minimum) || self.minimum == null || !has(self.maximum) || self.maximum
+                              == null || self.minimum <= self.maximum'
+                            message: Cheeger minimum must not exceed maximum.
                       required:
                       - offeredPerSecond
                       - cheeger
@@ -188,6 +200,41 @@ spec:
                     description: Maximum successful changes in a rolling hour.
                     minimum: 1
                     maximum: 60
+                  cheegerComputation:
+                    type: object
+                    description: Budget exact cut search and examine important partitions first without weakening bounds.
+                    properties:
+                      maxVertices:
+                        type: integer
+                        nullable: true
+                        description: Boundary vertex cap; null inherits the operator ceiling, normally 20.
+                        minimum: 2
+                        maximum: 4096
+                      maxCuts:
+                        type: integer
+                        nullable: true
+                        description: Unique cut evaluation budget; null inherits the operator ceiling, normally 524287.
+                        minimum: 1
+                        maximum: 2147483647
+                      timeoutSeconds:
+                        type: number
+                        nullable: true
+                        description: Cooperative time budget; null inherits the operator ceiling, normally five seconds.
+                        minimum: 0.001
+                        maximum: 300
+                      priorityCuts:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: string
+                            minLength: 1
+                            maxLength: 253
+                          minItems: 1
+                          maxItems: 4096
+                          uniqueItems: true
+                        description: Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
+                        maxItems: 64
                 required:
                 - unit
                 - tiers
@@ -884,6 +931,25 @@ spec:
               throughput:
                 type: object
                 properties:
+                  computation:
+                    type: object
+                    nullable: true
+                    properties:
+                      exact:
+                        type: boolean
+                      upperBound:
+                        type: number
+                        nullable: true
+                      cut:
+                        type: array
+                        items:
+                          type: string
+                      evaluatedCuts:
+                        type: integer
+                      reason:
+                        type: string
+                      skippedPriorityCuts:
+                        type: integer
                   mode:
                     type: string
                     nullable: true

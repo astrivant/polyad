@@ -11,14 +11,14 @@ from typing import TYPE_CHECKING
 from cattrs.errors import CattrsError
 
 from polyad.graph.temporary import overlay
-from polyad.operator.replication import effective_spec
+from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types.resources import AUXILIARY_KINDS, GROUP
 from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.operator.api import API
+    from polyad.operator.adapters.kubernetes import API
 
 
 async def topology_snapshot(api: API, obj: dict[str, Any], children: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -33,7 +33,7 @@ async def topology_snapshot(api: API, obj: dict[str, Any], children: list[dict[s
     Returns:
         dict[str, Any]: Canonical, revisioned snapshot with no Pod templates or credentials.
     """
-    from polyad.operator.controller import Pending
+    from polyad.operator.reconciliation.controller import Pending
 
     meta = obj["metadata"]
     spec = obj["spec"]

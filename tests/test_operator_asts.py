@@ -13,7 +13,7 @@ import pytest
 from deepdiff import DeepDiff
 
 from polyad.compiler.passes.children import owned_child
-from polyad.operator.api import API
+from polyad.operator.adapters.kubernetes import API
 from polyad_types import resources as asts
 from polyad_types.resources.resources import RESOURCE_CLASSES
 

@@ -14,9 +14,9 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.graph import Node, Placement, Topology
-from polyad.operator.api import GROUP, VERSION
-from polyad.operator.controller import FINALIZER, Controller, Pending, observed
-from polyad.operator.queue import RefreshQueue
+from polyad.operator.adapters.kubernetes import GROUP, VERSION
+from polyad.operator.coordination.queue import RefreshQueue
+from polyad.operator.reconciliation.controller import FINALIZER, Controller, Pending, observed
 from polyad.operator.runtime import OperatorThread
 from polyad_types.codec import converter
 from polyad_types.resources import encode_body
@@ -452,7 +452,7 @@ def test_api_list_items_can_omit_kind():
     """
     Normalize Kubernetes list items, whose TypeMeta is commonly absent on the wire.
     """
-    from polyad.operator.api import API
+    from polyad.operator.adapters.kubernetes import API
 
     async def scenario():
         api = API.__new__(API)
@@ -513,7 +513,7 @@ def test_placement_intersects_affinity_alternatives_and_does_not_mutate_inputs()
     """
     AND scopes together while retaining OR within each scope's node selector terms.
     """
-    from polyad.operator.placement import REQUIRED, merge_placement, place_pod
+    from polyad.operator.reconciliation.placement import REQUIRED, merge_placement, place_pod
 
     def term(key, value):
         return {"matchExpressions": [{"key": key, "operator": "In", "values": [value]}]}

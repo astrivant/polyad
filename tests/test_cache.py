@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from polyad.cache import Cache, cache_url
-from polyad.operator.shared_queue import SharedQueue
+from polyad.operator.coordination.shared_queue import SharedQueue
 
 
 def test_cache_endpoint_precedence(monkeypatch):

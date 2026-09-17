@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from polyad.compiler.passes.daemon import compile_daemon
-from polyad.operator.controller import Controller, Pending, observed
-from polyad.operator.federation import Federation
+from polyad.operator.clusters.federation import Federation
+from polyad.operator.reconciliation.controller import Controller, Pending, observed
 from polyad_types.resources import to_document
 from tests.test_operator import FakeAPI, resource, template
 from tests.test_root_control_plane import ManagementAPI, manager

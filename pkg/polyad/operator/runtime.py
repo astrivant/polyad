@@ -14,9 +14,9 @@ from typing import TYPE_CHECKING
 
 import kopf
 
-from polyad.operator.health import lifecycle
-from polyad.operator.logging import add_logging_options, configure_log_export, configure_logging, shutdown_log_export
-from polyad.operator.tracing import configure_tracing, shutdown_tracing
+from polyad.operator.lifecycle.health import lifecycle
+from polyad.operator.observability.logging import add_logging_options, configure_log_export, configure_logging, shutdown_log_export
+from polyad.operator.observability.tracing import configure_tracing, shutdown_tracing
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -96,7 +96,7 @@ def main() -> None:
         None: No return value.
     """
     # Import registers handlers before Kopf starts its event loop.
-    from polyad.operator import handlers  # noqa: F401
+    from polyad.operator.lifecycle import handlers  # noqa: F401
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--namespace", default=os.environ.get("POLYAD_NAMESPACE", "default"))

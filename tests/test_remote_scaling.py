@@ -12,10 +12,10 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.metrics.inventory import inventory
-from polyad.operator.controller import Pending
-from polyad.operator.remote_scaling import INTENT, approved_intent, remote_revision
-from polyad.operator.replication import effective_spec
-from polyad.operator.rule_state import check_live_rules
+from polyad.operator.clusters.remote_scaling import INTENT, approved_intent, remote_revision
+from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.reconciliation.controller import Pending
+from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types.replication import replica_topology
 from tests.test_operator import resource, template
 from tests.test_replication import group, turn

@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock
 import pytest
 from redis.exceptions import ReadOnlyError, ResponseError
 
-from polyad.operator.shared_queue import SharedQueue
+from polyad.operator.coordination.shared_queue import SharedQueue
 
 
 def test_pending_entries_precede_new_work():

@@ -51,15 +51,16 @@ class Cheeger:
     A cut's ratio is its crossing-edge count divided by its smaller side's
     vertex count. The constant is the minimum ratio over all cuts. Raising
     the minimum rejects severe structural bottlenecks; lowering the maximum
-    requires a sparse cut. These bounds do not measure execution throughput.
+    requires a sparse cut. Throughput policies can select these structural
+    targets using application-reported rates; the constant itself is edge expansion.
 
     Attributes:
-        minimum (float | None): Inclusive minimum Cheeger constant.
-        maximum (float | None): Inclusive maximum Cheeger constant.
+        minimum (float | None): Inclusive nonnegative minimum; raise it to reject sparse bottlenecks, or omit for no lower bound.
+        maximum (float | None): Inclusive nonnegative maximum; lower it to require a sparse cut, or omit for no upper bound.
     """
 
-    minimum: float | None = None
-    maximum: float | None = None
+    minimum: float | None = field(default=None, metadata={"schema": {"minimum": 0}})
+    maximum: float | None = field(default=None, metadata={"schema": {"minimum": 0}})
 
     def __attrs_post_init__(self) -> None:
         """
@@ -78,6 +79,61 @@ class Cheeger:
 
 
 @frozen
+class CheegerComputation:
+    """
+    Budget exact cut search and examine important partitions first without weakening bounds.
+
+    Attributes:
+        maxVertices (int | None): Boundary vertex cap; null inherits the operator ceiling, normally 20.
+        maxCuts (int | None): Unique cut evaluation budget; null inherits the operator ceiling, normally 524287.
+        timeoutSeconds (float | None): Cooperative time budget; null inherits the operator ceiling, normally five seconds.
+        priorityCuts (tuple[tuple[str, ...], ...]): Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
+    """
+
+    maxVertices: int | None = field(default=None, metadata={"schema": {"minimum": 2, "maximum": 4096}})
+    maxCuts: int | None = field(default=None, metadata={"schema": {"minimum": 1, "maximum": 2147483647}})
+    timeoutSeconds: float | None = field(default=None, metadata={"schema": {"minimum": 0.001, "maximum": 300}})
+    priorityCuts: tuple[tuple[str, ...], ...] = field(
+        default=(),
+        metadata={
+            "schema": {
+                "maxItems": 64,
+                "items": {
+                    "minItems": 1,
+                    "maxItems": 4096,
+                    "uniqueItems": True,
+                    "items": {"type": "string", "minLength": 1, "maxLength": 253},
+                },
+            }
+        },
+    )
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject unbounded work, ambiguous cuts and invalid public Python inputs.
+
+        Returns:
+            None: No return value.
+        """
+        for value, lower, upper in ((self.maxVertices, 2, 4096), (self.maxCuts, 1, 2147483647)):
+            if value is not None and (type(value) is not int or not lower <= value <= upper):
+                raise ValueError("Cheeger vertex and cut budgets must be bounded positive integers")
+        seconds = self.timeoutSeconds
+        if seconds is not None and (
+            isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not math.isfinite(seconds) or not 0.001 <= seconds <= 300
+        ):
+            raise ValueError("Cheeger timeoutSeconds must be finite and between 0.001 and 300")
+        if len(self.priorityCuts) > 64 or any(
+            isinstance(cut, str)
+            or not 1 <= len(cut) <= 4096
+            or any(not isinstance(node, str) or not node or len(node) > 253 for node in cut)
+            or len(set(cut)) != len(cut)
+            for cut in self.priorityCuts
+        ):
+            raise ValueError("Cheeger priorityCuts require at most 64 nonempty subsets with unique vertex names")
+
+
+@frozen
 class StructuralRule:
     """
     Apply reusable mathematical constraints to each graph boundary and its subtree.
@@ -90,7 +146,8 @@ class StructuralRule:
         shapes (tuple[Literal['acyclic', 'connected', 'tree', 'planar'], ...]): Required graph properties.
         spectrum (Spectrum | None): Optional undirected spectral constraints, limited to 256 vertices.
         network (NetworkAccess | None): Mandatory or referenced traffic restrictions inherited by graph descendants.
-        cheeger (Cheeger | None): Optional exact edge-expansion bounds, limited to 20 vertices.
+        cheeger (Cheeger | None): Optional exact edge-expansion bounds.
+        cheegerComputation (CheegerComputation): Cut priorities and per-calculation budgets within operator ceilings.
     """
 
     scope: Literal["Boundary", "Subtree"] = "Subtree"
@@ -101,6 +158,7 @@ class StructuralRule:
     spectrum: Spectrum | None = None
     network: NetworkAccess | None = None
     cheeger: Cheeger | None = None
+    cheegerComputation: CheegerComputation = field(factory=CheegerComputation)
 
     def __attrs_post_init__(self) -> None:
         """

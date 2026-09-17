@@ -13,7 +13,7 @@ import jsonschema
 import pytest
 import yaml
 
-from polyad.operator.tuning import OperatorTuning
+from polyad.operator.lifecycle.tuning import OperatorTuning
 from tests.test_chart import CHART
 
 
@@ -67,7 +67,7 @@ def test_worker_uses_configured_pause(monkeypatch, name, database_outage):
     """
     Complete one worker pass and observe its actual scheduled pause.
     """
-    from polyad.operator import handlers
+    from polyad.operator.lifecycle import handlers
 
     async def scenario():
         tuning = OperatorTuning(rescan=12, consume=0.25, metrics=2, backlog=3)

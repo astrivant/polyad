@@ -11,9 +11,9 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from polyad.operator.api import API
-from polyad.operator.controller import FINALIZER, Controller, Pending
-from polyad.operator.coordination import DURATION, SHARDS, Coordinator, NotOwner, active_shard, assignment
+from polyad.operator.adapters.kubernetes import API
+from polyad.operator.coordination.leases import DURATION, SHARDS, Coordinator, NotOwner, active_shard, assignment
+from polyad.operator.reconciliation.controller import FINALIZER, Controller, Pending
 from tests.test_operator import FakeAPI, resource
 
 
@@ -56,7 +56,7 @@ def test_election_contention_and_expiry(monkeypatch):
     Only one CAS contender wins; stale holders cannot write after takeover.
     """
     now = [100.0]
-    monkeypatch.setattr("polyad.operator.coordination.time.monotonic", lambda: now[0])
+    monkeypatch.setattr("polyad.operator.coordination.leases.time.monotonic", lambda: now[0])
 
     async def scenario():
         api = LeaseAPI()
@@ -83,7 +83,7 @@ def test_replica_rebalance_and_leader_failover(monkeypatch):
     Scale-out transfers expired shards; a survivor replaces a failed planner.
     """
     now = [100.0]
-    monkeypatch.setattr("polyad.operator.coordination.time.monotonic", lambda: now[0])
+    monkeypatch.setattr("polyad.operator.coordination.leases.time.monotonic", lambda: now[0])
 
     async def scenario():
         api = LeaseAPI()
@@ -144,7 +144,7 @@ def test_renewal_deadline_fails_closed(monkeypatch):
     A slow or unavailable renewal stops admission before the lease expires.
     """
     now = [100.0]
-    monkeypatch.setattr("polyad.operator.coordination.time.monotonic", lambda: now[0])
+    monkeypatch.setattr("polyad.operator.coordination.leases.time.monotonic", lambda: now[0])
 
     async def scenario():
         coordinator = Coordinator(LeaseAPI(), "test", "first")
@@ -221,7 +221,7 @@ def test_config_resolution_and_guard(monkeypatch):
     """
     from kubernetes import config
 
-    from polyad.operator import api as module
+    from polyad.operator.adapters import kubernetes as module
 
     incluster, local = Mock(), Mock()
     monkeypatch.setattr(module.config, "load_incluster_config", incluster)

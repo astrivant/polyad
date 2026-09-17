@@ -11,8 +11,8 @@ from openapi_spec_validator import validate
 
 from polyad.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
-from polyad.operator.controller import Controller, Pending
-from polyad.operator.replication import replica_selector
+from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.replication import replica_selector
 from tests.test_metrics_api import snapshot
 from tests.test_operator import FakeAPI, resource, template
 

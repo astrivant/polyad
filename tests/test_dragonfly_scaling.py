@@ -13,8 +13,8 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
-from polyad.operator import dragonfly
-from polyad.operator.coordination import Coordinator, NotOwner
+from polyad.operator.coordination import dragonfly
+from polyad.operator.coordination.leases import Coordinator, NotOwner
 from tests.test_coordination import LeaseAPI
 from tests.test_metrics_api import samples, snapshot
 from tests.test_operator import resource

@@ -7,9 +7,9 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from polyad.operator.coordination import root_shard
-from polyad.operator.remote_scaling import remote_revision
-from polyad.operator.rollup import PHASES
+from polyad.operator.clusters.remote_scaling import remote_revision
+from polyad.operator.coordination.leases import root_shard
+from polyad.operator.observability.rollup import PHASES
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:

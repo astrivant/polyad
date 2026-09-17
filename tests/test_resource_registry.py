@@ -25,9 +25,9 @@ from polyad.compiler.registry import (
     RESOURCE_MODELS,
     RESOURCE_TYPES,
 )
-from polyad.operator.api import API, BUILTINS, KINDS, WORKLOAD_KINDS
-from polyad.operator.graph_status import instance_metrics
-from polyad.operator.handlers import KINDS as WATCHED_KINDS
+from polyad.operator.adapters.kubernetes import API, BUILTINS, KINDS, WORKLOAD_KINDS
+from polyad.operator.lifecycle.handlers import KINDS as WATCHED_KINDS
+from polyad.operator.observability.graph_status import instance_metrics
 from polyad_types.resources import GROUP, ResourceCounts
 from polyad_types.resources.resources import RESOURCE_CLASSES
 from tests.test_operator import resource

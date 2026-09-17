@@ -9,10 +9,13 @@ from typing import TYPE_CHECKING
 import networkx as nx
 import numpy as np
 
+from polyad.graph.cheeger import compute_cheeger
+from polyad.graph.cheeger import graph_cheeger as graph_cheeger
+
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.rules import StructuralRule
+    from polyad_types.rules import CheegerComputation, StructuralRule
     from polyad_types.topology import Topology
 
 
@@ -70,44 +73,9 @@ def graph_spectrum(graph: nx.DiGraph[str]) -> dict[str, Any]:
     }
 
 
-def graph_cheeger(graph: nx.Graph[str]) -> float:
-    """
-    Compute exact unnormalized edge expansion on at most 20 vertices.
-
-    Args:
-        graph (nx.Graph[str]): Relation; direction, weights, repeated edges and self-loops are ignored.
-
-    Returns:
-        float: Minimum cut size divided by the smaller side's vertex count; zero for fewer than two vertices.
-    """
-    if len(graph) > 20:
-        raise ValueError("Cheeger rules support at most 20 vertices per boundary")
-    simple: nx.Graph[str] = nx.Graph()
-    simple.add_nodes_from(graph)
-    simple.add_edges_from(graph.edges())
-    simple.remove_edges_from(nx.selfloop_edges(simple))
-    n = len(simple)
-    if n < 2 or not nx.is_connected(simple):
-        return 0.0
-    indices = {node: index for index, node in enumerate(simple)}
-    neighbors = [sum(1 << indices[neighbor] for neighbor in simple[node]) for node in simple]
-    best = float(min(dict(simple.degree()).values()))
-    subset = cut = 0
-    # Gray-code traversal changes one vertex at a time. Fix the last vertex
-    # outside the subset to visit each cut exactly once, without storing subsets.
-    for step in range(1, 1 << (n - 1)):
-        next_subset = step ^ (step >> 1)
-        changed = subset ^ next_subset
-        vertex = changed.bit_length() - 1
-        delta = neighbors[vertex].bit_count() - 2 * (neighbors[vertex] & subset).bit_count()
-        cut += delta if next_subset & changed else -delta
-        subset = next_subset
-        size = subset.bit_count()
-        best = min(best, cut / min(size, n - size))
-    return best
-
-
-def evaluate_rule(rule: StructuralRule, topology: Topology, *, expanded_nodes: int, nesting_depth: int) -> dict[str, Any]:
+def evaluate_rule(
+    rule: StructuralRule, topology: Topology, *, expanded_nodes: int, nesting_depth: int, cheeger_limits: CheegerComputation | None = None
+) -> dict[str, Any]:
     """
     Evaluate inclusive bounds, required shapes and optional spectral constraints.
 
@@ -116,6 +84,7 @@ def evaluate_rule(rule: StructuralRule, topology: Topology, *, expanded_nodes: i
         topology (Topology): Validated boundary being considered for admission.
         expanded_nodes (int): Node occurrences across this boundary and all referenced subgraph instances.
         nesting_depth (int): Maximum boundary nesting, counting this boundary as one.
+        cheeger_limits (CheegerComputation | None): Operator ceilings for every selected rule calculation.
 
     Returns:
         dict[str, Any]: Measurements, violations and the policy verdict.
@@ -139,14 +108,26 @@ def evaluate_rule(rule: StructuralRule, topology: Topology, *, expanded_nodes: i
         "nestingDepth": nesting_depth,
     }
     violations = [f"{key}={measured[key]} exceeds {limit}" for key, limit in rule.limits.items() if measured[key] > limit]
+    computation = None
     if rule.cheeger is not None:
-        actual = graph_cheeger(graph)
-        measured["cheeger"] = actual
-        for threshold, lower in ((rule.cheeger.minimum, True), (rule.cheeger.maximum, False)):
-            if threshold is not None:
-                tolerance = 1e-9 * max(1.0, abs(actual), abs(threshold))
-                if (actual + tolerance < threshold) if lower else (actual - tolerance > threshold):
-                    violations.append(f"cheeger={actual:.12g} violates {'minimum' if lower else 'maximum'} {threshold}")
+        try:
+            result = compute_cheeger(graph, rule.cheegerComputation, limits=cheeger_limits, minimum=rule.cheeger.minimum)
+            computation = result.report()
+            if result.exact:
+                assert result.upperBound is not None
+                actual = result.upperBound
+                measured["cheeger"] = actual
+                for threshold, lower in ((rule.cheeger.minimum, True), (rule.cheeger.maximum, False)):
+                    if threshold is not None:
+                        tolerance = 1e-9 * max(1.0, abs(actual), abs(threshold))
+                        if (actual + tolerance < threshold) if lower else (actual - tolerance > threshold):
+                            violations.append(f"cheeger={actual:.12g} violates {'minimum' if lower else 'maximum'} {threshold}")
+            elif result.reason == "MinimumViolated":
+                violations.append(f"cheeger<={result.upperBound} violates minimum {rule.cheeger.minimum}; witnessed cut {result.cut}")
+            else:
+                violations.append(f"Cheeger computation inconclusive: {result.reason} after {result.evaluatedCuts} cuts")
+        except ValueError as error:
+            violations.append(str(error))
     shapes = {
         "acyclic": nx.is_directed_acyclic_graph(graph),
         "connected": bool(simple) and nx.is_connected(simple),
@@ -167,4 +148,11 @@ def evaluate_rule(rule: StructuralRule, topology: Topology, *, expanded_nodes: i
                 tolerance = 1e-9 * max(1.0, abs(actual), abs(threshold))
                 if (actual + tolerance < threshold) if lower else (actual - tolerance > threshold):
                     violations.append(f"{key}={actual:.12g} violates {'minimum' if lower else 'maximum'} {threshold}")
-    return {"allowed": not violations, "relation": rule.relation, "measurements": measured, "spectrum": spectrum, "violations": violations}
+    return {
+        "allowed": not violations,
+        "relation": rule.relation,
+        "measurements": measured,
+        "spectrum": spectrum,
+        "violations": violations,
+        "cheegerComputation": computation,
+    }

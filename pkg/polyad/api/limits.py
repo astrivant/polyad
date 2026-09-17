@@ -15,7 +15,7 @@ from polyad.api.application import Routes
 from polyad.auth.policy import public_demo
 from polyad.cache import cache_url
 from polyad.compiler.passes.composition import request_name
-from polyad.operator.coordination import root_shard
+from polyad.operator.coordination.leases import root_shard
 
 if TYPE_CHECKING:
     from typing import Any

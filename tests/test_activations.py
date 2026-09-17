@@ -13,8 +13,8 @@ from kubernetes.client.exceptions import ApiException
 from polyad.api.activations import ActivationStore
 from polyad.api.app import Conflict
 from polyad.api.builder import APIBuilder
-from polyad.operator.controller import Controller, Pending
-from polyad.operator.coordination import Coordinator
+from polyad.operator.coordination.leases import Coordinator
+from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types.activation import ActivationPolicy
 from polyad_types.requests import ActivationRequest
 from polyad_types.resources import GROUP

@@ -15,10 +15,10 @@ import pytest
 
 from polyad.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
-from polyad.operator.controller import Controller, Pending
-from polyad.operator.coordination import DURATION, WRITE_BUDGET, Coordinator, NotOwner, active_shard, root_shard
-from polyad.operator.pools import FINALIZER, OWNER, PoolManager
-from polyad.operator.root import RootControlPlane
+from polyad.operator.clusters.pools import FINALIZER, OWNER, PoolManager
+from polyad.operator.clusters.root import RootControlPlane
+from polyad.operator.coordination.leases import DURATION, WRITE_BUDGET, Coordinator, NotOwner, active_shard, root_shard
+from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types.resources import encode_body
 from tests.test_coordination import LeaseAPI
 from tests.test_metrics_api import snapshot
@@ -87,7 +87,7 @@ def test_remote_workers_never_elect_a_planner_and_stop_on_root_heartbeat_loss(mo
     A surviving remote worker cannot replace root authority or keep mutating indefinitely.
     """
     now = [100.0]
-    monkeypatch.setattr("polyad.operator.coordination.time.monotonic", lambda: now[0])
+    monkeypatch.setattr("polyad.operator.coordination.leases.time.monotonic", lambda: now[0])
 
     async def scenario():
         api = LeaseAPI()
@@ -497,8 +497,8 @@ def test_remote_worker_consumes_root_queue_and_freezes_execution_when_root_is_lo
                 await self.before_write()
             return await super().request(method, *args, **kwargs)
 
-    monkeypatch.setattr("polyad.operator.root.SharedQueue", MemoryQueue)
-    monkeypatch.setattr("polyad.operator.root.EventStore", MemoryEvents)
+    monkeypatch.setattr("polyad.operator.clusters.root.SharedQueue", MemoryQueue)
+    monkeypatch.setattr("polyad.operator.clusters.root.EventStore", MemoryEvents)
 
     async def scenario():
         coordinator = Coordinator(LeaseAPI(), "test", "root")

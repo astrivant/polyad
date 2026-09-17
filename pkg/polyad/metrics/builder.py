@@ -16,8 +16,8 @@ from polyad.api.application import Routes
 from polyad.auth.http import Access, install
 from polyad.metrics.store import MetricsStore
 from polyad.metrics.workloads import workload_metric
-from polyad.operator.health import lifecycle
-from polyad.operator.pressure import demand
+from polyad.operator.lifecycle.health import lifecycle
+from polyad.operator.observability.pressure import demand
 
 if TYPE_CHECKING:
     from flask import Flask

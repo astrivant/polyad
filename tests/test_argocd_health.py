@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from polyad.operator.graph_status import instance_metrics, observed
+from polyad.operator.observability.graph_status import instance_metrics, observed
 from polyad_types.resources import GROUP, RESOURCE_TYPES
 from tests.test_operator import resource
 

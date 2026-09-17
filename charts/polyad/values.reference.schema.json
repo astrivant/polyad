@@ -165,6 +165,22 @@
               "$ref": "values.schema.json#/properties/operator/properties/tuning/properties/backlogIntervalSeconds"
             }
           }
+        },
+        "cheeger": {
+          "type": "object",
+          "description": "Deployment-wide ceilings for each Cheeger calculation. Policies inherit these or choose smaller budgets; prioritized search never weakens hard bounds.",
+          "additionalProperties": false,
+          "properties": {
+            "maxVertices": {
+              "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/maxVertices"
+            },
+            "maxCuts": {
+              "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/maxCuts"
+            },
+            "timeoutSeconds": {
+              "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/timeoutSeconds"
+            }
+          }
         }
       }
     },
@@ -1116,6 +1132,9 @@
       "properties": {
         "cheegerMinimum": {
           "$ref": "values.schema.json#/properties/architecture/properties/cheegerMinimum"
+        },
+        "cheegerMaximum": {
+          "$ref": "values.schema.json#/properties/architecture/properties/cheegerMaximum"
         },
         "expandedNodes": {
           "$ref": "values.schema.json#/properties/architecture/properties/expandedNodes"

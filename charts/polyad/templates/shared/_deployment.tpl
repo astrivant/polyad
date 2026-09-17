@@ -164,6 +164,12 @@ spec:
               value: {{ and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange | quote }}
             - name: POLYAD_LOG_LEVEL
               value: {{ .Values.operator.logLevel | quote }}
+            - name: POLYAD_CHEEGER_MAX_VERTICES
+              value: {{ .Values.operator.cheeger.maxVertices | int | quote }}
+            - name: POLYAD_CHEEGER_MAX_CUTS
+              value: {{ .Values.operator.cheeger.maxCuts | int | quote }}
+            - name: POLYAD_CHEEGER_TIMEOUT_SECONDS
+              value: {{ .Values.operator.cheeger.timeoutSeconds | quote }}
             - name: POLYAD_RESCAN_INTERVAL_SECONDS
               value: {{ .Values.operator.tuning.rescanIntervalSeconds | quote }}
             - name: POLYAD_CONSUME_INTERVAL_SECONDS

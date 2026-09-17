@@ -15,10 +15,10 @@ from deepdiff import DeepDiff
 from kubernetes.client.exceptions import ApiException
 
 from polyad.events.visibility import INTERNAL, public_observation
-from polyad.operator.controller import Pending
-from polyad.operator.coordination import DURATION, Coordinator, NotOwner, active_shard
-from polyad.operator.pools import ATTACHMENT, FINALIZER, REGISTERED, SCALING
-from polyad.operator.reserved import DEPLOYMENT
+from polyad.operator.clusters.pools import ATTACHMENT, FINALIZER, REGISTERED, SCALING
+from polyad.operator.clusters.reserved import DEPLOYMENT
+from polyad.operator.coordination.leases import DURATION, Coordinator, NotOwner, active_shard
+from polyad.operator.reconciliation.controller import Pending
 from tests.test_chart import render
 from tests.test_coordination import LeaseAPI
 from tests.test_operator import resource
@@ -287,7 +287,7 @@ def test_helm_worker_waits_for_registration_and_stops_when_detached(monkeypatch)
     Registration gates both shard membership and fresh write authority without planner failover.
     """
     now = [100.0]
-    monkeypatch.setattr("polyad.operator.coordination.time.monotonic", lambda: now[0])
+    monkeypatch.setattr("polyad.operator.coordination.leases.time.monotonic", lambda: now[0])
 
     async def run():
         api = LeaseAPI()
@@ -350,7 +350,7 @@ def test_attached_scale_requires_fresh_rules_at_both_boundaries(monkeypatch, bou
         if api is (local if boundary == "root" else remote):
             raise ValueError("live graph constraint blocks scale")
 
-    monkeypatch.setattr("polyad.operator.pools.check_live_rules", check)
+    monkeypatch.setattr("polyad.operator.clusters.pools.check_live_rules", check)
     with pytest.raises(ValueError, match="live graph constraint"):
         asyncio.run(pools.pool(pool))
     assert checks == ([(local, "PolyGraph")] if boundary == "root" else [(local, "PolyGraph"), (remote, "Graph")])

@@ -12,9 +12,9 @@ import pytest
 from attrs import frozen
 
 from polyad.graph import GraphNode, Node, PolyGraph
-from polyad.operator import handlers
-from polyad.operator.controller import Controller, Pending
-from polyad.operator.coordination import Coordinator
+from polyad.operator.coordination.leases import Coordinator
+from polyad.operator.lifecycle import handlers
+from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types import resources as asts
 from polyad_types.codec import converter
 from polyad_types.topology import topology

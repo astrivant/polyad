@@ -6,6 +6,9 @@ checks for work and publishes observations. Both affect response time and the
 load placed on Kubernetes and the shared cache.
 
 Start with the typed [tuning values reference](../../charts/polyad/values-tuning.reference.yaml).
+It also exposes `operator.cheeger` computation ceilings; see
+[Cheeger search budgets and priorities](../graphs/cheeger-tuning.md#understand-computation-and-scale)
+for how they bound per-rule and application-feedback work.
 The [metric inventory](metrics.md#metric-inventory-and-scope) lists every exposed
 family, its scope and the feature required to publish it.
 

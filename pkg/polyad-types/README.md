@@ -69,6 +69,10 @@ describes a PolyGraph's specification. Resource `spec` dictionaries preserve
 native Kubernetes extensions and should be populated from the relevant
 configuration model when local validation is needed.
 
+Reference a Daemon definition inside a persistent graph with
+`Node(name="server", kind="Daemon", ref="server")`. The `Daemon` resource model
+describes the reusable service definition; `Node` describes its place in a graph.
+
 ## Serialization
 
 `to_dict(model)` and `from_dict(document, Model)` serialize and validate models.

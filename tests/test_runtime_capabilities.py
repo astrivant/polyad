@@ -18,10 +18,10 @@ STARTUP = """
 import asyncio, json, sys
 from unittest.mock import Mock, patch
 import kopf
-from polyad.operator import handlers
-from polyad.operator.metrics import WriteBacklog
-from polyad.operator.roles import serves
-from polyad.operator.tracing import configure_tracing, shutdown_tracing
+from polyad.operator.lifecycle import handlers
+from polyad.operator.observability.metrics import WriteBacklog
+from polyad.operator.lifecycle.roles import serves
+from polyad.operator.observability.tracing import configure_tracing, shutdown_tracing
 
 async def main():
     configure_tracing()
@@ -110,8 +110,8 @@ def test_minimal_helm_startup_avoids_optional_services():
         "prometheus_client",
         "opentelemetry.sdk",
         "opentelemetry.exporter",
-        "polyad.operator.root",
-        "polyad.operator.dragonfly",
+        "polyad.operator.clusters.root",
+        "polyad.operator.coordination.dragonfly",
         "polyad.events.store",
     )
 

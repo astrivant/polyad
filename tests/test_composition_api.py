@@ -14,9 +14,9 @@ from polyad.api import create_app
 from polyad.api.app import Conflict
 from polyad.api.store import CompositionStore
 from polyad.compiler.passes.composition import compile_composition, read_receipt, receipt_spec, request_name
-from polyad.operator.controller import Controller, Pending
-from polyad.operator.coordination import Coordinator
-from polyad.operator.rules import RuleViolation
+from polyad.operator.coordination.leases import Coordinator
+from polyad.operator.policies.rules import RuleViolation
+from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types import resources as asts
 from polyad_types.codec import converter
 from polyad_types.requests import CompositionRequest

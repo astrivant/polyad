@@ -50,6 +50,7 @@ def test_operator_and_client_share_the_public_models():
     "model",
     [
         Topology(nodes=(Node("work", "Workload", "worker"),)),
+        Topology(mode="persistent", nodes=(Node("service", "Daemon", "server"),)),
         StructuralRule(relation="connections", cheeger=Cheeger(minimum=0.5)),
         Replication(ReplicaTemplate("Graph", "pipeline"), connectivity=ReplicaConnectivity(mode="Ring")),
         ActivationRequest("pulse", "pipeline", "uid", "work"),

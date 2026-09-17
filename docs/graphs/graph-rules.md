@@ -43,6 +43,7 @@ validating webhook for arbitrary native Pods.
 - [Cheeger bottleneck bounds](#cheeger-bottleneck-bounds)
   - [Minimum Cheeger constant](#minimum-cheeger-constant)
   - [Maximum Cheeger constant](#maximum-cheeger-constant)
+  - [Cheeger computation budgets and priorities](#cheeger-computation-budgets-and-priorities)
 - [Network contracts](#network-contracts)
   - [Network scope](#network-scope)
   - [Directional isolation](#directional-isolation)
@@ -71,6 +72,7 @@ are applied by the operator even where the CRD does not persist a default value.
 | [`shapes`](#required-shapes) | `[]` | Any combination of `acyclic`, `connected`, `tree`, `planar`; all must hold |
 | [`spectrum`](#spectral-bounds) | Omitted | `maxRadius`, `minConnectivity`, `maxLaplacian`; optional nonnegative finite bounds |
 | [`cheeger`](#cheeger-bottleneck-bounds) | Omitted | `minimum`, `maximum`; optional nonnegative finite edge-expansion bounds |
+| [`cheegerComputation`](#cheeger-computation-budgets-and-priorities) | Inherit operator ceilings | `maxVertices`, `maxCuts`, `timeoutSeconds`, ordered `priorityCuts`; preferences never weaken bounds |
 | [`network`](#network-contracts) | Omitted | Scope, isolation, peer, port and optional Istio restrictions |
 
 The [GraphRule CRD](../../charts/polyad/crds/graphrules.yaml) defines the Kubernetes
@@ -557,11 +559,32 @@ For a larger example, a ten-vertex path has `h = 0.2`, a ten-vertex cycle has
 `h = 0.4`, and a complete ten-vertex graph has `h = 5`. Bounds are not percentages
 and the constant can exceed one.
 
-Exact subset search supports **at most 20 vertices per boundary**, including when
-`cheeger: {}` requests measurement without bounds. Larger boundaries fail
-validation when a Cheeger rule is selected. Omitting `cheeger` avoids this
-computation and size restriction. Measurements appear in
-`status.structuralRules[].measurements.cheeger`.
+### Cheeger computation budgets and priorities
+
+The default computation ceiling is **20 vertices per boundary**, including when
+`cheeger: {}` requests measurement without bounds. Administrators can change
+Helm `operator.cheeger.maxVertices`, `maxCuts` and `timeoutSeconds`. Rules may
+lower those ceilings with `spec.cheegerComputation`, or inherit them by omission.
+Its `priorityCuts` lists important vertex subsets to inspect first. The rest of
+the search space remains subject to exactly the same bounds.
+
+```mermaid
+flowchart TD
+    size["maxVertices: bound boundary size"] --> priority["priorityCuts: ordered subsets first"]
+    priority --> rest["Search all remaining partitions"]
+    rest --> count["maxCuts: bound distinct cut evaluations"]
+    count --> time["timeoutSeconds: bound cooperative computation time"]
+    time --> exact{"Exact result or witnessed minimum violation?"}
+    exact -->|Yes| compare["Enforce the original hard bounds"]
+    exact -->|No| stop["Inconclusive: block the action"]
+```
+
+A witnessed cut below the minimum can reject early. Exhausted budgets cannot
+approve an unverified graph. Exact measurements appear in
+`status.structuralRules[].measurements.cheeger`; partial-search diagnostics keep
+an `upperBound` separately. Omitting `cheeger` avoids this computation entirely.
+See [practical tuning](cheeger-tuning.md) for every field's range, application
+feedback tradeoffs and [cut-priority examples](cheeger-tuning.md#prioritize-important-cuts).
 
 The projection ignores direction, bandwidth, task duration and resource demand.
 Passing a Cheeger rule does not guarantee throughput or eliminate execution
@@ -1003,8 +1026,8 @@ Spectral and Cheeger comparisons allow
 `1e-9 * max(1, |measured|, |bound|)` numerical tolerance. Their calculations run
 outside the operator's event loop. Independent preflight caps are 4,096 expanded
 node occurrences, 256 boundaries, 32 nesting levels and 32 GraphRules per namespace.
-User bounds cannot raise these caps, the 256-vertex spectral cap or the 20-vertex
-Cheeger cap. Recursive counts describe the current composition; they do not
+User bounds cannot raise these caps or the 256-vertex spectral cap. Cheeger
+computation ceilings are separately [configurable](cheeger-tuning.md#understand-computation-and-scale). Recursive counts describe the current composition; they do not
 bound lifetime work submitted through repeated activation requests.
 
 Structural rule updates block further admission on subsequent reconciliations;

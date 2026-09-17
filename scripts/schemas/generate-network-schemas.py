@@ -18,6 +18,7 @@ from polyad_types.network import NetworkAccess, NetworkPort
 from polyad_types.replication import Replication
 from polyad_types.requests import ConnectionRequest
 from polyad_types.resources import CapacityStatus
+from polyad_types.rules import CheegerComputation
 from polyad_types.topology import GraphNode, ThroughputPolicy
 
 if TYPE_CHECKING:
@@ -76,6 +77,7 @@ def main() -> int:
         props = ROOT + (("topology", "properties") if kind == "rewrites" else ())
         updated = refresh(source, props, "network", structural_schema(NetworkAccess))
         if kind == "graphrules":
+            updated = refresh(updated, props, "cheegerComputation", structural_schema(CheegerComputation))
             updated = refresh(
                 updated,
                 props,
@@ -104,6 +106,18 @@ def main() -> int:
                     {
                         "type": "object",
                         "properties": {
+                            "computation": {
+                                "type": "object",
+                                "nullable": True,
+                                "properties": {
+                                    "exact": {"type": "boolean"},
+                                    "upperBound": {"type": "number", "nullable": True},
+                                    "cut": {"type": "array", "items": {"type": "string"}},
+                                    "evaluatedCuts": {"type": "integer"},
+                                    "reason": {"type": "string"},
+                                    "skippedPriorityCuts": {"type": "integer"},
+                                },
+                            },
                             **{name: {"type": "string", "nullable": True} for name in ("mode", "phase", "observedAt", "recommendedLayout")},
                             **{
                                 name: {"type": "number", "nullable": True}

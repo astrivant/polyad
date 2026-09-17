@@ -14,7 +14,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 
 from polyad.api import APIBuilder, RateLimitPolicy
 from polyad.compiler.passes.composition import request_name
-from polyad.operator.coordination import Coordinator, root_shard
+from polyad.operator.coordination.leases import Coordinator, root_shard
 from tests.test_composition_api import document
 from tests.test_operator import FakeAPI
 

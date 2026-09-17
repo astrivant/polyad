@@ -1,0 +1,93 @@
+# A runnable configuration reference, using health-only demonstration workers.
+# Replace the Daemon with your application and report its measured rates.
+# Guide: ../docs/graphs/cheeger-tuning.md
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: cheeger-stage
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: stage
+          image: busybox:1.37
+          command: [sh, -c, 'mkdir -p /www; echo ready > /www/index.html; httpd -f -p 8080 -h /www']
+          startupProbe:
+            httpGet: {path: /, port: 8080}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /, port: 8080}
+          livenessProbe:
+            httpGet: {path: /, port: 8080}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: GraphRule
+metadata:
+  name: pipeline-cheeger
+spec:
+  # Explicit selection avoids imposing this example's bounds on other graphs.
+  enforcement: Referenced
+  # Measure this four-stage boundary; children may select different rules.
+  scope: Boundary
+  # Use communication links, rather than admission dependencies.
+  relation: connections
+  cheeger:
+    minimum: 0.5 # Admit the initial chain; reject disconnected layouts.
+    maximum: 2 # Permit the full mesh; omit this field for no upper bound.
+  cheegerComputation:
+    priorityCuts: [[a, b]] # Inspect the middle handoff before other cuts.
+  limits:
+    nodes: 4
+    edges: 6 # Total directed-edge budget, separate from the sparsest-cut ratio.
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: cheeger-pipeline
+spec:
+  mode: persistent
+  rules: [pipeline-cheeger]
+  nodes:
+    - {name: a, kind: Daemon, ref: cheeger-stage}
+    - {name: b, kind: Daemon, ref: cheeger-stage}
+    - {name: c, kind: Daemon, ref: cheeger-stage}
+    - {name: d, kind: Daemon, ref: cheeger-stage}
+  connections:
+    - {source: a, target: b}
+    - {source: b, target: c}
+    - {source: c, target: d}
+  throughput:
+    cheegerComputation:
+      priorityCuts: [[a, b]] # Independent search preferences, same operator ceilings.
+    mode: Observe # Inspect recommendations before opting into Adapt.
+    unit: records # Offered and completed rates must use the same work unit.
+    tiers:
+      # Illustrative demand thresholds: calibrate these with application load tests.
+      - offeredPerSecond: 100
+        cheeger: {minimum: 1, maximum: 1.5}
+      - offeredPerSecond: 1000
+        cheeger: {minimum: 2, maximum: 2}
+    layouts:
+      # Complete replacement connections, tried in order; each must satisfy both policies.
+      - name: ring
+        connections:
+          - {source: a, target: b}
+          - {source: b, target: c}
+          - {source: c, target: d}
+          - {source: d, target: a}
+      - name: mesh
+        connections:
+          - {source: a, target: b}
+          - {source: a, target: c}
+          - {source: a, target: d}
+          - {source: b, target: c}
+          - {source: b, target: d}
+          - {source: c, target: d}
+    sampleMaxAgeSeconds: 60 # Also the largest permitted gap between reports.
+    sustainedSeconds: 120 # Require two minutes of continuous shortfall.
+    minSamples: 4 # Both sample count and sustained duration must pass.
+    shortfallRatio: 0.9 # Below 90% completed/offered is a shortfall.
+    cooldownSeconds: 300 # At least five minutes between successful changes.
+    maxChangesPerHour: 2 # A rolling-hour budget retained across operator failover.

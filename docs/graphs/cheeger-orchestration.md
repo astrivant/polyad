@@ -4,8 +4,14 @@ Polyad uses the same structural Cheeger measurement for two different policies:
 **GraphRules define permitted topology**, while **throughput policies select a
 desired topology in response to measured application demand**.
 [Soul searching](throughput-feedback.md), Polyad's bounded topology optimizer,
-implements the second policy with `Observe` and `Adapt` modes. Neither policy
-computes a new Cheeger constant in records per second.
+implements the second policy with `Observe` and `Adapt` modes.
+
+Polyad tracks application-reported `offeredPerSecond` and `completedPerSecond`
+alongside `currentCheeger` and the selected `target` in `status.throughput`.
+The offered rate selects an administrator-calibrated Cheeger target; a sustained
+completion shortfall can trigger a recommendation or an admitted layout change.
+The target remains a structural range, while the reported rates measure
+application throughput. Meeting that range does not guarantee a completion rate.
 
 ## Table of contents
 
@@ -307,8 +313,8 @@ Cheeger constant. The parent continues to see that child as one vertex.
 Calibrate targets independently at each layer. Fresh local family checks enforce
 the applicable rules; remote clusters retain their local rule enforcement. A
 cross-cluster PolyGraph does not turn local measurements into one atomic,
-cluster-wide throughput guarantee. Exact Cheeger evaluation is capped at
-20 vertices per measured boundary.
+cluster-wide throughput guarantee. Exact Cheeger evaluation defaults to
+20 vertices per measured boundary; [budgets and search priorities are configurable](cheeger-tuning.md).
 
 One reserved PolyGraph contains a Graph for each operator group, including the root:
 

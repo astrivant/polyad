@@ -17,7 +17,7 @@ from polyad.api import APIBuilder
 from polyad.auth.policy import inject_credentials
 from polyad.auth.store import CredentialStore
 from polyad.events.visibility import observation_ancestry, permitted_observation
-from polyad.operator.federation import INVENTORY, PARENT
+from polyad.operator.clusters.federation import INVENTORY, PARENT
 from polyad_types import APIKey, GraphAccess
 from tests.test_authentication import access, header, registry
 from tests.test_operator import FakeAPI, resource

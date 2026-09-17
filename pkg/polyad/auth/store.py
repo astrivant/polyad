@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
-from polyad.operator.health import credential_token
+from polyad.operator.lifecycle.health import credential_token
 from polyad.sql import statement
 from polyad_types.codec import to_dict
 

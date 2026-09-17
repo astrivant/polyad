@@ -17,7 +17,7 @@ from jsonschema import ValidationError, validate
 
 from polyad.compiler.passes.schema import structural_schema
 from polyad.graph import measure_topology, topology_metrics
-from polyad.operator.graph_status import instance_metrics, observe_graph
+from polyad.operator.observability.graph_status import instance_metrics, observe_graph
 from polyad_types.resources import AST, GraphMetrics, ObjectMeta, ResourceMetrics, SubgraphMetrics, converter, to_document
 from polyad_types.topology import topology
 from tests.test_graph_metrics import diamond

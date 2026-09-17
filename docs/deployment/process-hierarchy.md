@@ -247,16 +247,19 @@ deployed workloads running; resource deletion follows graph lifecycle rules.
 
 ## Source map and diagnostics
 
+The [operator package layout](../development/operator-layout.md) groups modules
+by responsibility and describes their import and feature-enablement boundaries.
+
 | Source | Responsibility |
 | --- | --- |
 | [runtime.py](../../pkg/polyad/operator/runtime.py) | Main-thread signals and the owned Kopf thread |
-| [handlers.py](../../pkg/polyad/operator/handlers.py) | Task startup, health and cleanup |
-| [queue.py](../../pkg/polyad/operator/queue.py) | Local FIFO reconciliation |
+| [handlers.py](../../pkg/polyad/operator/lifecycle/handlers.py) | Task startup, health and cleanup |
+| [queue.py](../../pkg/polyad/operator/coordination/queue.py) | Local FIFO reconciliation |
 | [server.py](../../pkg/polyad/api/server.py) | Shared Flask/Waitress lifecycle and thread-to-loop bridge |
-| [api.py](../../pkg/polyad/operator/api.py) | Kubernetes transport offloading and write fences |
-| [roles.py](../../pkg/polyad/operator/roles.py) / [root.py](../../pkg/polyad/operator/root.py) | Role selection and remote cluster tasks |
+| [kubernetes.py](../../pkg/polyad/operator/adapters/kubernetes.py) | Kubernetes transport offloading and write fences |
+| [roles.py](../../pkg/polyad/operator/lifecycle/roles.py) / [root.py](../../pkg/polyad/operator/clusters/root.py) | Role selection and remote cluster tasks |
 | [observer.py](../../pkg/polyad/operator/observer.py) | Observer's main-thread event loop |
-| [lanes.py](../../pkg/polyad/auth/lanes.py) / [tracing.py](../../pkg/polyad/operator/tracing.py) / [logging.py](../../pkg/polyad/operator/logging.py) | Optional renewal, trace-export and log-export workers |
+| [lanes.py](../../pkg/polyad/auth/lanes.py) / [tracing.py](../../pkg/polyad/operator/observability/tracing.py) / [logging.py](../../pkg/polyad/operator/observability/logging.py) | Optional renewal, trace-export and log-export workers |
 
 [Debug logging](operator.md#debug-logging) includes thread names. Use
 [queue and write metrics](../operations/metrics.md) to distinguish waiting work

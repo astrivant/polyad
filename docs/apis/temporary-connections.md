@@ -314,5 +314,5 @@ Composition, connection, event and metrics blueprints share one Flask applicatio
 one Waitress runtime and one shutdown lifecycle in `polyad.api.server`. Listener
 ports retain independent enablement and authentication policies. See the
 [HTTP runtime](composition-api.md) for worker reservations and socket-based routing. `polyad.graph.temporary` defines the
-request and effective topology overlay. `polyad.operator.connections` performs
+request and effective topology overlay. `polyad.operator.policies.connections` performs
 admission and expiry under the existing graph-family lease.

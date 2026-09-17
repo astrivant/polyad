@@ -11,9 +11,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from polyad.operator.coordination import Coordinator, root_shard
-from polyad.operator.pressure import Pressure, demand
-from polyad.operator.roles import executes, role, serves
+from polyad.operator.coordination.leases import Coordinator, root_shard
+from polyad.operator.lifecycle.roles import executes, role, serves
+from polyad.operator.observability.pressure import Pressure, demand
 from tests.test_coordination import LeaseAPI
 
 
@@ -106,7 +106,7 @@ def test_telemetry_discovers_executor_reports_without_claiming_leases(monkeypatc
     """
     Split metrics replicas can aggregate root worker state while remaining read-only participants.
     """
-    from polyad.operator import handlers
+    from polyad.operator.lifecycle import handlers
 
     async def scenario():
         api = LeaseAPI()
@@ -138,7 +138,7 @@ def test_rendered_service_graph_creates_component_deployments_and_enforces_its_b
     """
     Exercise actual graph reconciliation and block a requested group expansion over the parent budget.
     """
-    from polyad.operator.controller import Controller, Pending
+    from polyad.operator.reconciliation.controller import Controller, Pending
     from tests.test_chart import render
     from tests.test_operator import FakeAPI, resource
 

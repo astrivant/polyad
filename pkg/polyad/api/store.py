@@ -16,7 +16,7 @@ from polyad_types.requests import COMPOSITION_KINDS
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.operator.api import API
+    from polyad.operator.adapters.kubernetes import API
     from polyad_types.requests import CompositionRequest
 
 

@@ -331,7 +331,7 @@ For an API response, decode `resource["status"]["metrics"]` in the same way.
 Missing fields use Python defaults; this does **not** establish that an observation
 is fresh or complete. The operator checks raw child generations and rollup field
 presence before aggregating descendants. `observe_graph` in
-`polyad.operator.graph_status` builds the full typed tree from a graph document
+`polyad.operator.observability.graph_status` builds the full typed tree from a graph document
 and its owned children. Existing `instance_metrics` and `topology_metrics` calls
 still return dictionaries.
 

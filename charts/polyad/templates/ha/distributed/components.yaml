@@ -99,6 +99,9 @@ spec:
   shapes: [connected]
   cheeger:
     minimum: {{ .Values.architecture.cheegerMinimum }}
+    {{- if ne .Values.architecture.cheegerMaximum nil }}
+    maximum: {{ .Values.architecture.cheegerMaximum }}
+    {{- end }}
   limits:
     nodes: 3
     expandedNodes: {{ .Values.architecture.expandedNodes }}

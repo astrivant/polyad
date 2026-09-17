@@ -1065,6 +1065,7 @@ def test_distributed_components_form_a_real_constrained_graph_without_postgresql
     assert graph["spec"]["rules"] == ["test-control-plane"]
     assert len(graph["spec"]["nodes"]) == 3
     assert len(graph["spec"]["connections"]) == 2
+    assert next(obj for obj in objects if obj["kind"] == "GraphRule")["spec"]["cheeger"] == {"minimum": 1}
     groups = [obj for obj in objects if obj["kind"] == "ReplicaGroup"]
     assert len(groups) == 3 and all(obj["spec"]["templateOnly"] for obj in groups)
     scaled = [obj for obj in objects if obj["kind"] == "ScaledObject"]
@@ -1093,3 +1094,43 @@ def test_distributed_components_form_a_real_constrained_graph_without_postgresql
         if obj["kind"] in {"Daemon", "GraphRule", "Graph", "ReplicaGroup"}:
             assert obj["metadata"]["labels"]["polyad.astrivant.com/internal"] == "true"
             jsonschema.Draft7Validator(schemas[obj["kind"]]).validate(obj)
+
+
+@pytest.mark.parametrize("profile", [None, "values-ha.reference.yaml", "values-components.reference.yaml", "values-worker.reference.yaml"])
+def test_cheeger_ceilings_reach_every_executor_profile(profile):
+    """
+    Dense, HA, component and administrator-installed worker containers use the same ceilings.
+    """
+    objects = render(
+        "operator.cheeger.maxVertices=22",
+        "operator.cheeger.maxCuts=2097151",
+        "operator.cheeger.timeoutSeconds=15",
+        *(("federation.clusters[0].namespace=test",) if profile == "values-worker.reference.yaml" else ()),
+        values_files=(CHART / profile,) if profile else (),
+    )
+    pods = [obj["spec"]["template"] for obj in objects if obj["kind"] in {"Deployment", "Daemon"} and "template" in obj["spec"]]
+    operators = [container for pod in pods for container in pod["spec"]["containers"] if container["name"] == "operator"]
+    assert operators
+    for container in operators:
+        env = {item["name"]: item.get("value") for item in container["env"]}
+        assert env["POLYAD_CHEEGER_MAX_VERTICES"] == "22"
+        assert env["POLYAD_CHEEGER_MAX_CUTS"] == "2097151"
+        assert env["POLYAD_CHEEGER_TIMEOUT_SECONDS"] == "15"
+
+
+def test_component_graph_accepts_the_optional_cheeger_maximum():
+    """
+    Render both inclusive bounds into the policy enforcing the existing component chain.
+    """
+    from polyad.graph import StructuralRule, evaluate_rule
+    from polyad_types.codec import converter
+    from polyad_types.topology import topology
+
+    objects = render("architecture.cheegerMaximum=1", values_files=(CHART / "values-components.reference.yaml",))
+    rule = next(obj for obj in objects if obj["kind"] == "GraphRule")
+    graph = next(obj for obj in objects if obj["kind"] == "Graph")
+    assert rule["spec"]["cheeger"] == {"minimum": 1, "maximum": 1}
+    verdict = evaluate_rule(
+        converter.structure(rule["spec"], StructuralRule), topology(graph["spec"], "Graph"), expanded_nodes=9, nesting_depth=2
+    )
+    assert verdict["allowed"] and verdict["measurements"]["cheeger"] == 1

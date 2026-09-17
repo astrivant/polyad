@@ -2,6 +2,16 @@
 # Overlay for any architecture. Cadences pause AFTER a pass, not on a fixed clock.
 # Guide and full metric inventory: ../../docs/operations/performance.md and ../../docs/operations/metrics.md.
 operator:
+  cheeger:
+    # Integer, 2-4096. Each Graph/PolyGraph/ReplicaGroup boundary is measured separately.
+    # Raising this alone does not make an exponential search affordable.
+    maxVertices: 20
+    # Integer, 1-2147483647. A connected n-vertex graph takes 2^(n-1)-1 cuts.
+    # Hard rules fail closed if this or the time budget prevents completion.
+    maxCuts: 524287
+    # Number, 0.001-300 seconds, cooperative per calculation; excludes queue wait.
+    # Rule/throughput cheegerComputation settings may only reduce these ceilings.
+    timeoutSeconds: 5
   tuning:
     # Number, 1-15 seconds. Refreshes local/remote inventory and remote backlog.
     # Lower values add Kubernetes reads and optional PostgreSQL persistence work.
