@@ -1,6 +1,6 @@
 # Polyad
 
-<img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoe logo" width="140" height="140">
+<img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoes fading toward the right" width="630" height="140">
 
 Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics) is a Kubernetes operator for deploying, connecting and scaling applications as graphs.
 Compose batch jobs, persistent services and supporting resources into reusable
