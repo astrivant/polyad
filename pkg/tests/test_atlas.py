@@ -553,3 +553,22 @@ def test_namespace_credentials_cannot_bypass_home_relative_modes(monkeypatch, mo
     else:
         with pytest.raises(Forbidden):
             asyncio.run(directory.authorize_stream(None, None))
+
+
+def test_portless_service_edges_do_not_grant_unrestricted_transport(monkeypatch):
+    """
+    Preserve structural-only semantics instead of interpreting an empty port list as every port.
+    """
+    from polyad.operator.policies.service_connections import policies
+
+    store, controller, request, _, _, callers = setup_atlas(monkeypatch)
+
+    async def run():
+        receipt = await store.connect_services(request, callers["west"])
+        stored = await controller.api.get("TemporaryConnection", "test", receipt["name"])
+        stored["spec"]["ports"] = []
+        stored["spec"]["peers"]["target"]["cluster"] = "west"
+        grants = policies(stored)
+        assert all(not grant["ingress"] and not grant["egress"] for grant in grants.values())
+
+    asyncio.run(run())

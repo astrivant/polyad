@@ -68,6 +68,7 @@ def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch,
 
     monkeypatch.setenv("POLYAD_API_RATE_LIMIT_ENABLED", "false")
     monkeypatch.setenv("POLYAD_AUTH_MODE", "Disabled" if demo else "Required")
+    monkeypatch.setenv("POLYAD_SERVICE_ACCESS", '{"discovery":"Cluster"}')
     monkeypatch.setenv("POLYAD_CACHE_URL", "redis://127.0.0.1:6379/0")
     application_factory = Mock(wraps=module.create_application)
     server_factory = Mock(wraps=module.create_server)

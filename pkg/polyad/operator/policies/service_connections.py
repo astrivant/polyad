@@ -143,6 +143,8 @@ def policies(receipt: dict[str, Any]) -> dict[str, dict[str, Any]]:
         side: {"graphUid": peer["graphUid"], "node": peer["node"], "expiresAt": deadline(receipt).isoformat(), "ingress": [], "egress": []}
         for side, peer in peers.items()
     }
+    if not spec.get("ports"):
+        return result  # Portless edges remain structural, never unrestricted transport rules.
     pairs = [("source", "target"), *(([("target", "source")]) if spec.get("bidirectional") else [])]
     for sending, receiving in pairs:
         source, target = peers[sending], peers[receiving]

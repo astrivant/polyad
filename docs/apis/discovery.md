@@ -252,7 +252,9 @@ with the configured values. Existing multicluster service routing must already
 work; negotiation changes authorization, not cluster transport infrastructure.
 
 The common PolyGraph gets a structural edge for GraphRules and Cheeger checks.
-That edge carries no broad transport allowance. Each leaf workload instead gets
+That edge carries no broad transport allowance. Within one cluster, omitting
+ports declares only a structural edge and opens no network access; cross-cluster
+requests require explicit TCP ports. Each leaf workload instead gets
 an expiring network exception, intersected with its local ancestor and GraphRule
 policies. Remote ingress also restricts the authenticated mesh principal. Gateway
 egress uses the registered tunnel port, while destination ingress uses the
