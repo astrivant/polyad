@@ -43,6 +43,12 @@ for the application. [Cheeger remains a structural measurement](cheeger-orchestr
 
 ## Define demand
 
+Configure demand under `spec.throughput` on a `Graph` or `PolyGraph`; the Helm chart
+installs their CRDs. The [complete resource example](../../examples/load-profiles.yaml)
+defines a Graph, its referenced GraphRule and the Workload/Daemon resources used
+by its nodes. Uncomment `demand: {name: queueDepth, unit: jobs}` in that manifest
+to make its thresholds count queued jobs instead of offered work per second.
+
 Administrators choose the signal, its unit and the thresholds at each boundary.
 Omitting `throughput.demand` uses the report's `offeredPerSecond` value, measured
 in `throughput.unit` per second. To use another signal, declare its exact identity:

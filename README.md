@@ -346,10 +346,13 @@ shows where each cluster refreshes live values and enforces its own rules.
 
 [Soul searching](docs/graphs/soul-searching.md) lets a Graph or PolyGraph respond
 to application demand within administrator-approved profiles. Demand defaults to
-offered work per second. Administrators can instead select an exact signal name
-and unit—such as `queueDepth` in `jobs` or `activeSessions` in `sessions`—and define
-the thresholds that select each profile. An authorized application reporter
-supplies the measurements; configuring a signal does not automatically scrape it.
+offered work per second. Administrators can instead
+[select an exact signal name and unit](docs/graphs/load-profiles.md#define-demand)—such
+as `queueDepth` in `jobs` or `activeSessions` in `sessions`—and define the thresholds
+that select each profile. The [complete resource example](examples/load-profiles.yaml)
+includes the Graph, its GraphRule and its Workload/Daemon definitions. An authorized
+application reporter supplies the measurements; configuring a signal does not
+automatically scrape it.
 
 A profile combines a separate application Cheeger target with optional
 [traffic percentages](docs/graphs/traffic-balancing.md) and capacity preparation
