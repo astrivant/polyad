@@ -11,6 +11,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.network import NetworkScope, policy_specs, scope_label
+from polyad.graph.service_connections import access as service_access
+from polyad.graph.service_connections import grants as service_grants
 from polyad.graph.temporary import active_entries, overlay
 from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.reconciliation.replication import effective_spec, replica_selector
@@ -74,7 +76,7 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
         if any(documents[name]["metadata"].get("deletionTimestamp") for name in selected):
             raise Pending("a selected network GraphRule is being deleted")
         accesses = [
-            graph.network,
+            service_access(current, graph.network),
             *(rules[name].network for name in sorted(selected) if current is obj or rules[name].scope == "Subtree"),
         ]
         for access in accesses:
@@ -90,7 +92,10 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
                         access,
                         tuple((edge.source, edge.target, edge.ports) for edge in graph.connections),
                         min(
-                            (datetime.fromisoformat(grant["expiresAt"]) for grant in active_entries(current, now=observed_at).values()),
+                            (
+                                datetime.fromisoformat(grant["expiresAt"])
+                                for grant in [*active_entries(current, now=observed_at).values(), *service_grants(current).values()]
+                            ),
                             default=None,
                         ),
                     )

@@ -291,6 +291,12 @@ application actions. Subscribers can react by submitting another composition.
 
 ## Event subscriptions
 
+For the default `GraphTree` discovery mode, use a named key with a fixed `home`
+graph and explicit graph grants. Namespace-wide bearer tokens and unauthenticated
+demos have no home identity; set `operator.serviceAccess.discovery: Cluster` for
+local subscriptions or `Atlas` for permitted registered cluster streams. See
+[discovery modes](../apis/discovery.md#access-modes-and-inherited-ceilings).
+
 Enable `events.enabled` for a separate ClusterIP Service,
 `<release>-polyad-events:8091`. `GET /v1/events` serves Server-Sent Events, and
 `GET /openapi.json` serves its authenticated schema. This is a one-way observation

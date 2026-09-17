@@ -9,6 +9,11 @@ ha: true
 
 ## @param operator [object] Settings for operator; configure the fields below.
 operator:
+  # Namespace bearer tokens have no home graph; scoped modes require named keys.
+  ## @param operator.serviceAccess [object] Administrator ceilings inherited down the operator tree. Every request must fit both participant policies and the receiving operator; children cannot widen parent scope.
+  serviceAccess:
+    ## @param operator.serviceAccess.discovery [string] Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.
+    discovery: Cluster
   ## @param operator.logLevel [string] INFO keeps normal operational logs; DEBUG traces Polyad reconciliation and API timings, including observers. Choices: DEBUG, INFO, WARNING, ERROR, CRITICAL.
   logLevel: INFO
   ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha Recovery/bootstrap replicas, separate from the component copies. Minimum: 1. Maximum: 32.

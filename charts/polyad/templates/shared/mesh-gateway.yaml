@@ -33,6 +33,8 @@ spec:
         - uri:
             exact: /v1/events
         - uri:
+            exact: /v1/discovery
+        - uri:
             prefix: /v1/graphs/
         - uri:
             exact: /events/openapi.json

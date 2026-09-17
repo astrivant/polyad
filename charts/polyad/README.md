@@ -129,6 +129,9 @@ grace settings under that key (for example, `image.tag` becomes `operator.image.
 
 ## Reference values
 
+[Atlas discovery values](values-discovery.reference.yaml) demonstrate inherited
+operator modes, named-key home graphs and cross-cluster service negotiation.
+
 The commented `values-*.reference.yaml` files highlight settings for each profile
 and optional extension. Copy and adapt the files you need, then pass them with
 `--values`; Helm does not load them automatically. [`values.yaml`](values.yaml)
@@ -239,7 +242,7 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | `worker.rootNamespace`    | **Type: string.** Namespace of the root's queues, leases and OperatorPool; independent of this Helm release namespace                              | `""` |
 | `worker.rootClusterName`  | **Type: string.** Root federation identity; global.multiCluster.clusterName identifies this worker's hosting cluster instead                       | `""` |
 | `worker.rootDeployment`   | **Type: string.** Name of the existing root Deployment, used to identify the attachment authority                                                  | `""` |
-| `worker.rootGraph`        | **Type: string.** Name of the root's reserved PolyGraph; normally ROOT_RELEASE-operators                                                           | `""` |
+| `worker.rootGraph`        | **Type: string.** Name of the root's reserved PolyGraph; normally ROOT_RELEASE-atlas                                                               | `""` |
 | `worker.poolName`         | **Type: string.** Name of the root-namespace OperatorPool that may attach this Deployment                                                          | `""` |
 | `worker.scalingAuthority` | **Type: string.** Root lets the matching OperatorPool/KEDA control replicas; Local keeps replicas and optional HPA under this Helm release         | `Root` |
 
@@ -261,6 +264,10 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 | Name                                                                 | Description                                                                                                                                                                                                                              | Value                      |
 | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `operator.serviceAccess.discovery`                                   | **Type: string.** Disabled, SameGraph, GraphTree, Cluster or Atlas; GraphTree confines discovery to related graphs in the home cluster                                                                                                   | `GraphTree` |
+| `operator.serviceAccess.connections`                                 | **Type: string.** SameGraph by default; Atlas permits cross-cluster negotiation only when the receiving operator owns the common application boundary                                                                                    | `SameGraph` |
+| `operator.serviceAccess.clusters`                                    | **Type: object.** Child cluster modes and parent links; each child can narrow but cannot widen its parent ceiling                                                                                                                        | `{}` |
+| `operator.serviceAccess.trustDomains`                                | **Type: object.** Explicit Istio trust domain for each participating cluster; required for cross-cluster connections                                                                                                                     | `{}` |
 | `operator.logLevel`                                                  | **Type: string.** Operator and observer Python logging verbosity; INFO for normal operation, DEBUG for reconciliation diagnostics (DEBUG, INFO, WARNING, ERROR or CRITICAL)                                                              | `INFO` |
 | `operator.replicaCount`                                              | **Type: integer or null.** Operator replicas; null selects 1 for singular or 2 for ha, and must remain null for Root-scaled workers                                                                                                      | `null` |
 | `operator.nodeSelector`                                              | **Type: object.** Node labels selecting the operator node group, independent of workload graph placement                                                                                                                                 | `{}` |

@@ -5,7 +5,9 @@ Services can request a directed connection between existing nodes of a `Graph`,
 obtains the participating services' consent through [events](../workloads/workload-events.md),
 checks the live graph family's [GraphRules](../graphs/graph-rules.md), adds admitted edges
 to the instance's effective topology, and removes their grants after expiry.
-The graph's reusable specification is unchanged.
+The graph's reusable specification is unchanged. For endpoints in different graph
+or cluster boundaries, see [Atlas discovery and negotiation](discovery.md). It adds
+exact service identities, inherited operator access modes and per-participant events.
 
 ## Table of contents
 
@@ -23,6 +25,9 @@ The graph's reusable specification is unchanged.
 The listener is disabled by default. Enable it in Helm:
 
 ```yaml
+operator:
+  serviceAccess:
+    discovery: Cluster # Namespace event token; use named home-graph keys for narrower modes.
 connections:
   enabled: true
   scope: Cluster
@@ -37,7 +42,7 @@ events:
 Provision the event credential and subscribe the participating services before
 requesting connections. The [connection reference values](../../charts/polyad/values-connections.reference.yaml)
 include separate proposal and reconciliation pulse controls. For named API keys,
-grant `events` access to the target graph tree; these credentials control event
+assign a fixed `home` graph and grant `events` access to the target graph tree; these credentials control event
 visibility, while projected service-account tokens identify connection participants.
 
 The internal Service is `<release>-polyad-connections.<operator-namespace>.svc:8093`.

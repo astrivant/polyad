@@ -23,7 +23,7 @@ from polyad.operator.lifecycle.health import lifecycle
 from polyad.operator.observability.pressure import pressure
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Callable, Coroutine
     from concurrent.futures import Future
     from typing import Any
 
@@ -63,6 +63,7 @@ class APIServer:
         self.read_slots = BoundedSemaphore(128)
         self.lock = Lock()
         self.pending: set[Future[Any]] = set()
+        self.closers: list[Callable[[], None]] = []
 
     def start(self, *, host: str = "0.0.0.0", ports: dict[str, int] | None = None) -> None:
         """
@@ -195,6 +196,8 @@ class APIServer:
         with self.lock:
             pending = list(self.pending)
         await asyncio.gather(*(asyncio.wrap_future(future) for future in pending), return_exceptions=True)
+        for close in self.closers:
+            close()
         self.api.client.close()
         for routes in self.app.extensions["polyad.routes"].values():
             limiter = routes.extensions.get("polyad.limiter")
@@ -255,11 +258,13 @@ class APIServer:
         from polyad.api.connections.store import ConnectionStore
 
         store = ConnectionStore(self.api, settings)
+        self.closers.append(store.federation.close)
         connection_app(
-            lambda token: self.invoke(store.authenticate(token)),
+            lambda token: self.invoke(store.authenticate(token, request.headers.get("X-Polyad-Cluster", ""))),
             lambda value, caller: self.invoke(store.submit(value, caller)),
             lambda namespace, identity, caller: self.invoke(store.lookup(namespace, identity, caller)),
             lambda namespace, identity, caller: self.invoke(store.revoke(namespace, identity, caller)),
+            services=lambda value, caller: self.invoke(store.connect_services(value, caller)),
             respond=lambda namespace, identity, response, caller: self.invoke(store.respond(namespace, identity, response, caller)),
             limits=RateLimitPolicy.from_environment(settings.operator_namespace + ":connections"),
             application=self.app,
@@ -283,10 +288,16 @@ class APIServer:
             None: Streaming routes use the same server and shutdown signal.
         """
         from polyad.events.builder import EventAPIBuilder
+        from polyad.events.discovery import Directory
+        from polyad.operator.clusters.federation import Federation
+
+        federation = Federation(self.api)
+        self.closers.append(federation.close)
+        directory = Directory(self.api, namespace, federation, {federation.name: store, **(clusters or {})})
 
         def selected() -> EventStore:
             cluster = request.args.get("cluster")
-            if cluster is None:
+            if cluster is None or cluster == federation.name:
                 return store
             if cluster not in (clusters or {}):
                 abort(404, "cluster is not registered")
@@ -299,6 +310,11 @@ class APIServer:
                 max_connections=connections,
                 limits=RateLimitPolicy.from_environment(namespace + ":events"),
                 access=self.access,
+                authorize_stream=lambda key, cluster: self.invoke(directory.authorize_stream(key, cluster), timeout=7, retain=False),
+                permits=lambda key, identity: self.invoke(directory.permits(key, identity), timeout=7, retain=False),
+                discover=lambda key, target, offset, limit: self.invoke(
+                    directory.discover(key, target, offset=offset, limit=limit), timeout=25, retain=False
+                ),
             )
             .with_handlers(
                 lambda cursor: self.invoke(selected().cursor(cursor), timeout=7, retain=False),

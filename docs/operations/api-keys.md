@@ -164,7 +164,9 @@ this configuration without installing the operator.
 
 ## Graph access and workload assignments
 
-Event and topology permissions also require `graphs` grants. Each grant has
+Discovery, event and topology permissions also require `graphs` grants and a
+fixed `home` graph. The [inherited discovery ceiling](../apis/discovery.md#access-modes-and-inherited-ceilings)
+limits those grants relative to that home; HTTP callers cannot change it. Each grant has
 `kind` (`Graph`, `PolyGraph` or `ReplicaGroup`), `name`, `namespace`, optional
 `cluster` and `uid`, and `descendants` (default true). Empty grants reveal no graph
 events or snapshots. The operator verifies local ownership and, at the root,
@@ -186,7 +188,8 @@ authentication:
       direction: Inbound
       existingSecret: pipeline-key
       secretKey: token
-      endpoints: [throughput, events, topology]
+      endpoints: [throughput, discovery, events, topology]
+      home: {kind: Graph, name: pipeline, namespace: apps}
       requestsPerMinute: 120
       maxConcurrentRequests: 8
       graphs:

@@ -16,7 +16,7 @@ from polyad.auth.policy import public_demo
 from polyad.compiler.passes.schema import structural_schema
 from polyad.operator.coordination.pulses import PulseDeferred
 from polyad_types.codec import converter
-from polyad_types.requests import ConnectionRequest, ConnectionResponse
+from polyad_types.requests import ConnectionRequest, ConnectionResponse, ServiceConnectionRequest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -34,6 +34,7 @@ def build_app(
     lookup: Callable[[str, str, Caller], dict[str, Any] | None],
     revoke: Callable[[str, str, Caller], dict[str, Any] | None],
     *,
+    services: Callable[[ServiceConnectionRequest, Caller], dict[str, Any]] | None = None,
     respond: Callable[[str, str, ConnectionResponse, Caller], dict[str, Any] | None] | None = None,
     limits: RateLimitPolicy | None = None,
     application: Flask | None = None,
@@ -46,6 +47,7 @@ def build_app(
         submit (Callable[[ConnectionRequest, Caller], dict[str, Any]]): Durable intake callback.
         lookup (Callable[[str, str, Caller], dict[str, Any] | None]): Authorized receipt lookup.
         revoke (Callable[[str, str, Caller], dict[str, Any] | None]): Authorized early revocation.
+        services (Callable[[ServiceConnectionRequest, Caller], dict[str, Any]] | None): Exact-service negotiation callback.
         respond (Callable[[str, str, ConnectionResponse, Caller], dict[str, Any] | None] | None): Endpoint consent callback.
         limits (RateLimitPolicy | None): Optional shared HTTP request budget.
         application (Flask | None): Existing process application for blueprint registration.
@@ -95,6 +97,23 @@ def build_app(
         if not isinstance(ports, list) or any(not isinstance(port, dict) or type(port.get("port")) is not int for port in ports):
             raise ValueError("ports must be a list of destination ports with integer port numbers")
         return jsonify(submit(converter.structure(value, ConnectionRequest), g.caller)), 202
+
+    @app.post("/v1/connections/atlas")
+    def create_service_connection() -> tuple[Response, int]:
+        if services is None:
+            raise Unavailable("this operator cannot fulfill atlas service negotiation")
+        value = request.get_json()
+        if not isinstance(value, dict) or type(value.get("ttlSeconds")) is not int or type(value.get("bidirectional", False)) is not bool:
+            raise ValueError("request requires integer ttlSeconds and boolean bidirectional")
+        if not isinstance(value.get("requestId"), str):
+            raise ValueError("requestId must be a string")
+        for side in ("source", "target"):
+            if not isinstance(value.get(side), dict) or not all(isinstance(item, str) for item in value[side].values()):
+                raise ValueError("service endpoints require string identity fields")
+        ports = value.get("ports", [])
+        if not isinstance(ports, list) or any(not isinstance(port, dict) or type(port.get("port")) is not int for port in ports):
+            raise ValueError("ports require integer port numbers")
+        return jsonify(services(converter.structure(value, ServiceConnectionRequest), g.caller)), 202
 
     @app.get("/v1/connections/<namespace>/<request_id>")
     def observe(namespace: str, request_id: str) -> tuple[Response, int]:
@@ -151,9 +170,31 @@ def build_app(
                             "bearerFormat": "Kubernetes projected service-account JWT; audience polyad-connections",
                         }
                     },
-                    "schemas": {"ConnectionRequest": schema, "ConnectionResponse": structural_schema(ConnectionResponse)},
+                    "schemas": {
+                        "ConnectionRequest": schema,
+                        "ConnectionResponse": structural_schema(ConnectionResponse),
+                        "ServiceConnectionRequest": structural_schema(ServiceConnectionRequest),
+                    },
                 },
                 "paths": {
+                    "/v1/connections/atlas": {
+                        "post": {
+                            "description": "Negotiate exact services at a common application boundary owned by this operator.",
+                            "parameters": [
+                                {
+                                    "name": "X-Polyad-Cluster",
+                                    "in": "header",
+                                    "schema": {"type": "string"},
+                                    "description": "Registered token issuer; authenticated through that cluster TokenReview API.",
+                                }
+                            ],
+                            "requestBody": {
+                                "required": True,
+                                "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ServiceConnectionRequest"}}},
+                            },
+                            "responses": responses,
+                        }
+                    },
                     "/v1/connections/{namespace}/{name}/response": {
                         "post": {
                             "parameters": [

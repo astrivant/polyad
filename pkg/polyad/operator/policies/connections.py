@@ -14,6 +14,7 @@ from cattrs.errors import CattrsError
 
 from polyad.api.connections.consent import confirmed, decisions
 from polyad.api.connections.store import FINALIZER, ConnectionSettings
+from polyad.api.errors import Conflict, Forbidden, Unavailable
 from polyad.compiler.passes.network import NetworkScope
 from polyad.graph.temporary import ANNOTATION, CLEANUP, MAX_CONNECTIONS, active_entries, deadline, entries, overlay
 from polyad.operator.coordination.contracts import expires_before
@@ -197,6 +198,28 @@ async def finish(controller: Controller, receipt: dict[str, Any], graph: dict[st
         None: Finalizers are released only after policy cleanup has been observed.
     """
     meta = receipt["metadata"]
+    if receipt["spec"].get("peers"):
+        from polyad.operator.policies.service_connections import reconcile as reconcile_services
+
+        if meta.get("annotations", {}).get(f"{asts.GROUP}/revoke-requested") != "true":
+            receipt = await controller.api.request(
+                "PATCH",
+                "TemporaryConnection",
+                meta["namespace"],
+                meta["name"],
+                {
+                    "metadata": {
+                        "resourceVersion": meta["resourceVersion"],
+                        "annotations": {
+                            f"{asts.GROUP}/revoke-requested": "true",
+                            REVOKE_REASON: message,
+                            f"{asts.GROUP}/connection-terminal-phase": phase,
+                        },
+                    }
+                },
+            )
+            meta = receipt["metadata"]
+        await reconcile_services(controller, receipt, remove=True)
     if graph is not None:
         grants = entries(graph)
         if meta["uid"] in grants:
@@ -280,6 +303,9 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         or datetime.now(UTC) >= expires
     ):
         phase = terminal if terminal in {"Expired", "Revoked", "Rejected"} else "Expired" if datetime.now(UTC) >= expires else "Revoked"
+        recorded = meta.get("annotations", {}).get(f"{asts.GROUP}/connection-terminal-phase")
+        if recorded in {"Rejected", "Revoked", "Expired"}:
+            phase = recorded
         message = (
             receipt.get("status", {}).get("message")
             if terminal in {"Expired", "Revoked", "Rejected"}
@@ -305,6 +331,20 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
     ):
         await finish(controller, receipt, graph, "Rejected", "target or TTL is not eligible for temporary connections")
         return
+    from polyad.events.access import configuration
+    from polyad_types.discovery import AccessMode
+
+    if configuration().effective(controller.federation.name, "connections") == AccessMode.DISABLED:
+        await finish(controller, receipt, graph, "Rejected", "connections are disabled by this operator access mode")
+        return
+    if request.peers:
+        from polyad.operator.policies.service_connections import validate
+
+        try:
+            await validate(controller, receipt)
+        except (Conflict, Forbidden, Unavailable, ValueError, RuleViolation) as error:
+            await finish(controller, receipt, graph, "Rejected", str(error))
+            return
     grants = entries(graph)
     base = copy.deepcopy(graph)
     consent = decisions(receipt)
@@ -335,7 +375,11 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
             {
                 "metadata": {
                     "resourceVersion": meta["resourceVersion"],
-                    "annotations": {f"{asts.GROUP}/revoke-requested": "true", REVOKE_REASON: message},
+                    "annotations": {
+                        f"{asts.GROUP}/revoke-requested": "true",
+                        REVOKE_REASON: message,
+                        f"{asts.GROUP}/connection-terminal-phase": "Revoked",
+                    },
                 }
             },
         )
@@ -352,7 +396,9 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         if meta["uid"] not in grants and os.environ.get("POLYAD_CONNECTIONS_ENABLED", "false").lower() != "true":
             await finish(controller, receipt, graph, "Rejected", "temporary connection admission is disabled in this namespace")
             return
-        approved = await confirmed(controller.api, receipt, settings)
+        from polyad.operator.policies.service_connections import resolver
+
+        approved = await confirmed(controller.api, receipt, settings, resolve=resolver(controller, meta["namespace"]))
         awaiting = sorted({request.source, request.target} - approved)
         if awaiting:
             if meta["uid"] in grants:
@@ -384,7 +430,7 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
             "graphUid": request.graphUid,
             "source": request.source,
             "target": request.target,
-            "ports": converter.unstructure(request.ports),
+            "ports": [] if request.peers else converter.unstructure(request.ports),
             "bidirectional": request.bidirectional,
             "expiresAt": expires.isoformat(),
         }
@@ -400,6 +446,14 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
             raise Pending("temporary connection intent or deadline changed before admission")
         expires_before(expires)
         graph = await write_grants(controller, graph, grants)
+    if request.peers:
+        from polyad.operator.policies.service_connections import reconcile as reconcile_services
+
+        try:
+            await reconcile_services(controller, receipt)
+        except (Conflict, Forbidden, Unavailable, ValueError) as error:
+            await finish(controller, receipt, graph, "Rejected", str(error))
+            return
     if terminal == "Active":
         return
     # Re-evaluate on policy retries too: a persisted annotation may precede

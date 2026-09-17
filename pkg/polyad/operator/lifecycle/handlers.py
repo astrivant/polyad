@@ -80,6 +80,9 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     global state, metrics_store, work_graph
     if initialized or http is not None:
         raise RuntimeError("operator HTTP lifecycle is already initialized")
+    from polyad.events.access import configuration
+
+    configuration()  # Invalid parent chains prevent intake and execution startup.
     tuning = OperatorTuning.from_environment()
     work_graph = WorkGraphSettings.from_environment()
     settings.posting.enabled = False
@@ -427,6 +430,16 @@ async def publish_observation(key: Key) -> None:
         await coordinator.guard()
         await events.publish(obj, topology=snapshot)
         if key[0] == "TemporaryConnection":
+            for side, peer in obj["spec"].get("peers", {}).items():
+                stream, reader = events, controller.api
+                if peer["cluster"] and peer["cluster"] != controller.federation.name:
+                    if root_plane is None or peer["cluster"] not in root_plane.workers:
+                        raise RuntimeError("participant event stream is unavailable")
+                    worker = root_plane.workers[peer["cluster"]]
+                    stream, reader = worker.events, worker.controller.api
+                participant = await reader.get(peer["kind"], peer["namespace"], peer["graph"])
+                if participant is not None:
+                    await stream.publish_connection(obj, participant, side)
             target = await controller.api.get(obj["spec"]["kind"], key[1], obj["spec"]["graph"])
             if target is not None and target["metadata"]["uid"] == obj["spec"]["graphUid"]:
                 await publish_observation((target["kind"], key[1], target["metadata"]["name"]))

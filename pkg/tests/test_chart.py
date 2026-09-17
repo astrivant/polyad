@@ -488,7 +488,7 @@ def test_optional_network_policies_and_mesh_auth_are_separate_from_workloads():
     auth = next(obj for obj in objects if obj["kind"] == "AuthorizationPolicy")
     assert auth["spec"]["rules"][1]["from"][0]["source"]["principals"] == ["cluster.local/ns/consumers/sa/reader"]
     assert auth["spec"]["rules"][1]["to"][0]["operation"]["methods"] == ["GET"]
-    assert "/v1/graphs/*" in auth["spec"]["rules"][1]["to"][0]["operation"]["paths"]
+    assert {"/v1/graphs/*", "/v1/discovery"} <= set(auth["spec"]["rules"][1]["to"][0]["operation"]["paths"])
     gateway = next(obj for obj in objects if obj["kind"] == "VirtualService")
     event_route = gateway["spec"]["http"][0]
     assert {"uri": {"prefix": "/v1/graphs/"}} in event_route["match"]

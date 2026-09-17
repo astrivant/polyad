@@ -177,6 +177,48 @@ class EventStore:
                 ),
             )
 
+    async def publish_connection(self, receipt: dict[str, Any], graph: dict[str, Any], participant: str) -> None:
+        """
+        Deliver a consent proposal within the exact participant's authorized graph stream.
+
+        Args:
+            receipt (dict[str, Any]): Durable common-boundary receipt.
+            graph (dict[str, Any]): Fresh UID-matching participant graph in this stream's cluster.
+            participant (str): Source or target side represented by this projection.
+
+        Returns:
+            None: Internal graphs are excluded and replay deduplicates each receipt revision per side.
+        """
+        from polyad.api.connections.store import ConnectionStore
+
+        peer = receipt["spec"]["peers"][participant]
+        meta = graph["metadata"]
+        if meta["uid"] != peer["graphUid"] or not await self.visible(graph):
+            return
+        ancestry = await self.ancestry(graph) if self.ancestry else []
+        payload = {
+            "type": "connection",
+            "participant": participant,
+            "graph": {"cluster": peer["cluster"], "kind": graph["kind"], **{key: meta[key] for key in ("namespace", "name", "uid")}},
+            "ancestry": ancestry,
+            "connection": ConnectionStore.receipt(receipt),
+        }
+        if self.archive is not None:
+            await self.archive(payload)
+        await cast(
+            "Awaitable[Any]",
+            self.cache.client.eval(
+                PUBLISH,
+                2,
+                self.key,
+                self.key + ":versions",
+                receipt["metadata"]["uid"] + ":" + participant,
+                receipt["metadata"]["resourceVersion"],
+                json.dumps(payload),
+                str(self.retention),
+            ),
+        )
+
     async def topology(self, kind: str, name: str, uid: str | None = None, node: str | None = None) -> dict[str, Any]:
         """
         Read fresh neighbors and an atomic stream cursor for race-free subscription startup.

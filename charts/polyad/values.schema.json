@@ -848,6 +848,95 @@
               "description": "Maximum new pulses admitted in one cooldown window; duplicate retries do not extend the window."
             }
           }
+        },
+        "serviceAccess": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "discovery",
+            "connections",
+            "clusters",
+            "trustDomains"
+          ],
+          "description": "Administrator ceilings inherited down the operator tree. Every request must fit both participant policies and the receiving operator; children cannot widen parent scope.",
+          "properties": {
+            "discovery": {
+              "type": "string",
+              "enum": [
+                "Disabled",
+                "SameGraph",
+                "GraphTree",
+                "Cluster",
+                "Atlas"
+              ],
+              "description": "Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.",
+              "default": "GraphTree"
+            },
+            "connections": {
+              "type": "string",
+              "enum": [
+                "Disabled",
+                "SameGraph",
+                "GraphTree",
+                "Cluster",
+                "Atlas"
+              ],
+              "description": "Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.",
+              "default": "SameGraph"
+            },
+            "clusters": {
+              "type": "object",
+              "maxProperties": 32,
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "parent": {
+                    "type": "string",
+                    "maxLength": 63,
+                    "description": "Configured parent cluster; empty inherits directly from the root. Cycles and missing parents prevent startup."
+                  },
+                  "discovery": {
+                    "type": "string",
+                    "enum": [
+                      "Disabled",
+                      "SameGraph",
+                      "GraphTree",
+                      "Cluster",
+                      "Atlas"
+                    ],
+                    "description": "Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.",
+                    "default": "GraphTree"
+                  },
+                  "connections": {
+                    "type": "string",
+                    "enum": [
+                      "Disabled",
+                      "SameGraph",
+                      "GraphTree",
+                      "Cluster",
+                      "Atlas"
+                    ],
+                    "description": "Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.",
+                    "default": "SameGraph"
+                  }
+                }
+              },
+              "description": "Per-cluster child ceilings and parent links; omitted clusters inherit root ceilings."
+            },
+            "trustDomains": {
+              "type": "object",
+              "maxProperties": 33,
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253,
+                "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+                "description": "Istio trust domain matching that cluster actual mesh identity."
+              },
+              "description": "Explicit cluster-to-Istio trust-domain map required for cross-cluster service negotiation; no inferred identity domains."
+            }
+          }
         }
       },
       "allOf": [
@@ -4174,7 +4263,7 @@
         "rootGraph": {
           "type": "string",
           "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
-          "description": "Reserved PolyGraph name at the root, normally ROOT_RELEASE-operators."
+          "description": "Reserved PolyGraph name at the root, normally ROOT_RELEASE-atlas."
         },
         "poolName": {
           "type": "string",
@@ -4328,7 +4417,8 @@
               "events",
               "topology",
               "metrics",
-              "observations"
+              "observations",
+              "discovery"
             ]
           }
         },
@@ -4422,6 +4512,42 @@
               }
             }
           }
+        },
+        "home": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "namespace"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "Graph",
+                "PolyGraph",
+                "ReplicaGroup"
+              ]
+            },
+            "cluster": {
+              "type": "string"
+            },
+            "uid": {
+              "type": "string"
+            },
+            "descendants": {
+              "type": "boolean"
+            }
+          },
+          "description": "Fixed service home graph used for operator access tiers on discovery, topology and event streams. Never taken from request input."
         }
       },
       "allOf": [

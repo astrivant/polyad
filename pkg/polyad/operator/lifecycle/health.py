@@ -47,7 +47,7 @@ def credential_token(endpoint: str, *, setting: str = "TOKEN") -> str:
             return ""
         keys = Keyring.from_environment()
         scope = {"API": "composition", "EVENTS": "events", "METRICS": "metrics", "OBSERVER": "observations"}.get(endpoint)
-        if keys and scope and keys.inbound(scope):
+        if keys and scope and (keys.inbound(scope) or (endpoint == "EVENTS" and (keys.inbound("topology") or keys.inbound("discovery")))):
             return ""
     filename = os.environ.get(f"POLYAD_{endpoint}_{setting}_FILE")
     if not filename:

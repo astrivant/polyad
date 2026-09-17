@@ -31,7 +31,8 @@ the Kubernetes Operators Framework for Python.
   NetworkPolicy and Istio integration.
 - **Let services participate.** Through the [standalone Python client](pkg/client/README.md),
   workloads can submit compositions, activate work, request [TTL-bound connections](docs/apis/temporary-connections.md)
-  and discover neighbors through [topology events](docs/workloads/workload-events.md).
+  and discover permitted services across the [atlas](docs/apis/discovery.md), with filtered
+  event hooks and peer-approved connections.
   [Shared types](pkg/polyad-types/README.md) are also available separately from the operator.
 - **Coordinate across clusters.** A [root operator](docs/deployment/root-control-plane.md) can
   run in a dedicated management cluster, deploy graphs and execution replicas into
@@ -823,13 +824,13 @@ Polyad can run as a compact HA Deployment or manage its own service components
 in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemetry
 ReplicaGroups scale independently through KEDA and fresh GraphRule checks. A
 root bootstrap Deployment retains planning and recovery responsibility. With
-root mode enabled, one reserved PolyGraph contains a Graph for each operator
+root mode enabled, the **atlas**, a reserved root PolyGraph, contains a Graph for each operator
 group. The root operator Graph contains the bootstrap, managed component pipeline,
 KEDA and all enabled local chart services; remote operator groups join as peers.
 
 ```mermaid
 flowchart TB
-    subgraph operators["Reserved root PolyGraph · all operator groups"]
+    subgraph operators["Atlas · reserved root PolyGraph"]
         subgraph rootGroup["Graph · root operator group"]
             subgraph bootstrap["Graph · bootstrap observation"]
                 root["Helm-owned root Deployment<br/>planning and recovery"]

@@ -7,11 +7,15 @@ existing copies' neighbors. Independent mode also changes its vertex set.
 
 Enable `events.enabled`, provide the events bearer token through the workload's
 own Secret, and permit traffic with the applicable NetworkPolicy and mesh rules.
+Use a named key with `home` for the default `GraphTree` discovery mode; a namespace
+bearer token requires explicit `Cluster` or `Atlas` mode.
 `POLYAD_EVENTS_URL` is injected when the listener is enabled. Subscribers do not
 need Kubernetes API credentials. See [event service setup](../deployment/networking.md#event-subscriptions).
 
 Named API keys additionally need `events` or `topology` capabilities and explicit
-[graph-tree grants](../operations/api-keys.md#graph-access-and-workload-assignments). A key sees
+[graph-tree grants](../operations/api-keys.md#graph-access-and-workload-assignments)
+and an administrator-assigned `home` graph. The parent operator's
+[discovery mode](../apis/discovery.md#access-modes-and-inherited-ceilings) bounds those grants. A key sees
 only its assigned trees, including verified descendants when enabled. Remote
 operator PolyGraphs and their descendants remain private.
 

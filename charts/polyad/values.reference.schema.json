@@ -218,6 +218,25 @@
               "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/reconciliationBurst"
             }
           }
+        },
+        "serviceAccess": {
+          "type": "object",
+          "description": "Administrator ceilings inherited down the operator tree. Every request must fit both participant policies and the receiving operator; children cannot widen parent scope.",
+          "additionalProperties": false,
+          "properties": {
+            "discovery": {
+              "$ref": "values.schema.json#/properties/operator/properties/serviceAccess/properties/discovery"
+            },
+            "connections": {
+              "$ref": "values.schema.json#/properties/operator/properties/serviceAccess/properties/connections"
+            },
+            "clusters": {
+              "$ref": "values.schema.json#/properties/operator/properties/serviceAccess/properties/clusters"
+            },
+            "trustDomains": {
+              "$ref": "values.schema.json#/properties/operator/properties/serviceAccess/properties/trustDomains"
+            }
+          }
         }
       }
     },

@@ -9,6 +9,7 @@ import json
 import os
 import re
 from datetime import UTC, datetime
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Literal
 
 from attrs import field, frozen
@@ -24,7 +25,8 @@ from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
-    from polyad_types.requests import ConnectionRequest, ConnectionResponse
+    from polyad.operator.clusters.federation import Federation
+    from polyad_types.requests import ConnectionRequest, ConnectionResponse, ServiceConnectionRequest
 
 FINALIZER = f"{asts.GROUP}/temporary-connection"
 AUDIENCE = "polyad-connections"
@@ -118,6 +120,7 @@ class Caller:
         namespace (str): Namespace parsed from the verified username.
         groups (tuple[str, ...]): Verified groups for SubjectAccessReview.
         extra (dict[str, Any]): Verified additional authentication attributes.
+        cluster (str): Token issuer's registered cluster; empty is the local cluster.
     """
 
     username: str
@@ -125,6 +128,7 @@ class Caller:
     namespace: str
     groups: tuple[str, ...] = ()
     extra: dict[str, Any] = field(factory=dict)
+    cluster: str = ""
 
 
 def receipt_name(request_id: str, caller: Caller) -> str:
@@ -140,7 +144,8 @@ def receipt_name(request_id: str, caller: Caller) -> str:
     """
     if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", request_id):
         raise ValueError("invalid requestId")
-    return "connection-" + hashlib.sha256(f"{caller.uid}\0{request_id}".encode()).hexdigest()[:40]
+    identity = f"{caller.cluster}\0{caller.uid}" if caller.cluster else caller.uid
+    return "connection-" + hashlib.sha256(f"{identity}\0{request_id}".encode()).hexdigest()[:40]
 
 
 class ConnectionStore:
@@ -158,17 +163,53 @@ class ConnectionStore:
         """
         self.api, self.settings = api, settings
 
-    async def authenticate(self, token: str) -> Caller:
+    @cached_property
+    def federation(self) -> Federation:
+        """
+        Load registered destinations only when cross-cluster negotiation is used.
+
+        Returns:
+            Federation: Dedicated intake transports with no caller-supplied kubeconfigs.
+        """
+        from polyad.operator.clusters.federation import Federation
+
+        return Federation(self.api)
+
+    def resolve(self, cluster: str) -> tuple[API, str]:
+        """
+        Reject cluster requests this operator cannot fulfill instead of forwarding them.
+
+        Args:
+            cluster (str): Explicit registered cluster identity.
+
+        Returns:
+            tuple[API, str]: Local or registered remote transport and namespace.
+        """
+        if not cluster or cluster == self.federation.name:
+            return self.api, self.settings.operator_namespace
+        if cluster not in self.federation.clusters:
+            raise Unavailable("this operator cannot fulfill requests for the selected cluster")
+        return self.federation.target(cluster)
+
+    async def authenticate(self, token: str, cluster: str = "") -> Caller:
         """
         Verify a projected service-account token using its dedicated audience.
 
         Args:
             token (str): Bearer credential; never persisted or logged.
+            cluster (str): Token issuer's registered cluster; verified using that cluster's TokenReview API.
 
         Returns:
             Caller: Kubernetes-verified identity within the configured scope.
         """
         from polyad.auth.policy import public_demo
+
+        if cluster and cluster != os.environ.get("POLYAD_CLUSTER_NAME", ""):
+            remote, namespace = self.resolve(cluster)
+            identity = await ConnectionStore(remote, self.settings).authenticate(token)
+            if identity.namespace != namespace:
+                raise Forbidden("caller is outside this child operator's registered namespace")
+            return Caller(identity.username, identity.uid, identity.namespace, identity.groups, identity.extra, cluster)
 
         if public_demo():
             namespace = self.settings.namespace if self.settings.scope == "Namespace" else self.settings.operator_namespace
@@ -247,11 +288,24 @@ class ConnectionStore:
         Returns:
             dict[str, Any]: Durable receipt; network admission remains asynchronous.
         """
-        await self.authorize(caller, request.namespace, request.kind, request.graph)
+        from polyad.events.access import configuration
+        from polyad_types.discovery import AccessMode
+
+        if configuration().effective(caller.cluster or os.environ.get("POLYAD_CLUSTER_NAME", ""), "connections") == AccessMode.DISABLED:
+            raise Forbidden("connection requests are disabled by this operator's access mode")
+        if request.peers:
+            from polyad.api.connections.cross import authorize_request
+
+            await authorize_request(self, request, caller)
+        else:
+            if caller.cluster:
+                raise Forbidden("a remote participant must use an atlas service connection request")
+            await self.authorize(caller, request.namespace, request.kind, request.graph)
         if request.ttlSeconds > self.settings.max_ttl:
             raise ValueError("ttlSeconds exceeds the configured maximum")
         name = receipt_name(request.requestId, caller)
-        intent = {**converter.unstructure(request), "requester": {"username": caller.username, "uid": caller.uid}}
+        requester = {"username": caller.username, "uid": caller.uid, **({"cluster": caller.cluster} if caller.cluster else {})}
+        intent = {**converter.unstructure(request), "requester": requester}
         existing = await self.api.get("TemporaryConnection", request.namespace, name)
         if existing is None:
             graph = await self.api.get(request.kind, request.namespace, request.graph)
@@ -301,7 +355,7 @@ class ConnectionStore:
 
         if existing.get("status", {}).get("phase") not in TERMINAL and datetime.now(UTC) < deadline(existing):
             try:
-                node = await endpoint(self.api, caller, existing)
+                node = await endpoint(self.api, caller, existing, resolve=self.resolve)
             except Forbidden:
                 node = None  # A third-party requester cannot consent for either service.
             if node is not None:
@@ -342,13 +396,16 @@ class ConnectionStore:
             if node in current:
                 previous = current[node]
                 if (implicit and previous["verb"] != "connect") or (
-                    previous["decision"] == decision and previous["uid"] == caller.uid and previous["extra"] == extra
+                    previous["decision"] == decision
+                    and previous["uid"] == caller.uid
+                    and previous["extra"] == extra
+                    and previous.get("cluster", "") == caller.cluster
                 ):
                     return value
                 if previous["decision"] == "Reject":
                     raise Conflict("a rejected proposal requires a new requestId")
-            await self.authorize(caller, namespace, value["spec"]["kind"], value["spec"]["graph"], verb=verb)
-            if await endpoint(self.api, caller, value) != node:
+            await self.authorize_receipt(caller, value, verb=verb)
+            if await endpoint(self.api, caller, value, resolve=self.resolve) != node:
                 raise Forbidden("connection participant changed before recording consent")
             # Keep only verified Pod claims, never a bearer token or arbitrary authentication extras.
             current[node] = {
@@ -357,6 +414,7 @@ class ConnectionStore:
                 "verb": verb,
                 "username": caller.username,
                 "uid": caller.uid,
+                "cluster": caller.cluster,
                 "namespace": caller.namespace,
                 "groups": list(caller.groups),
                 "extra": extra,
@@ -429,8 +487,21 @@ class ConnectionStore:
             return None
         if value["metadata"]["uid"] != response.uid:
             raise Conflict("connection proposal UID changed")
-        await self.authorize(caller, namespace, value["spec"]["kind"], value["spec"]["graph"], verb="approve")
-        node = await endpoint(self.api, caller, value)
+        if response.decision == "Approve" and value["spec"].get("peers"):
+            from polyad.api.connections.cross import connection_request
+            from polyad_types.requests import ConnectionRequest, ServiceConnectionRequest
+
+            intent = converter.structure({key: item for key, item in value["spec"].items() if key != "requester"}, ConnectionRequest)
+            refreshed = await connection_request(
+                self,
+                ServiceConnectionRequest(
+                    intent.requestId, intent.peers["source"], intent.peers["target"], intent.ttlSeconds, intent.ports, intent.bidirectional
+                ),
+            )
+            if refreshed != intent:
+                raise Conflict("proposal ancestry changed before consent")
+        await self.authorize_receipt(caller, value, verb="approve")
+        node = await endpoint(self.api, caller, value, resolve=self.resolve)
         return self.receipt(await self.record(value, caller, node, response.decision, verb="approve"))
 
     @staticmethod
@@ -455,6 +526,7 @@ class ConnectionStore:
             "target": {key: value["spec"][key] for key in ("kind", "graph", "graphUid", "source", "target", "ports", "bidirectional")},
             "status": value.get("status", {"phase": "Pending"}),
             "consent": {node: entry["decision"] for node, entry in decisions(value).items()},
+            "peers": value["spec"].get("peers", {}),
             "revokeRequested": value["metadata"].get("annotations", {}).get(f"{asts.GROUP}/revoke-requested") == "true",
         }
 
@@ -476,10 +548,55 @@ class ConnectionStore:
             raise Forbidden("caller and target must be inside the configured connections scope")
         value = await self.api.get("TemporaryConnection", namespace, receipt_name(request_id, caller))
         if value is not None:
-            if value["spec"]["requester"] != {"username": caller.username, "uid": caller.uid}:
+            if value["spec"]["requester"] != {
+                "username": caller.username,
+                "uid": caller.uid,
+                **({"cluster": caller.cluster} if caller.cluster else {}),
+            }:
                 raise Forbidden("connection belongs to a different service-account incarnation")
-            await self.authorize(caller, namespace, value["spec"]["kind"], value["spec"]["graph"])
+            await self.authorize_receipt(caller, value)
         return value
+
+    async def authorize_receipt(self, caller: Caller, value: dict[str, Any], *, verb: str = "connect") -> None:
+        """
+        Check permissions in the participant's verified home cluster.
+
+        Args:
+            caller (Caller): Verified projected-token identity.
+            value (dict[str, Any]): Immutable proposal with exact endpoint references.
+            verb (str): Connect or approve permission.
+
+        Returns:
+            None: Remote names cannot impersonate same-named local service accounts.
+        """
+        from polyad.api.connections.consent import endpoint
+
+        peers = value["spec"].get("peers", {})
+        if not peers:
+            if caller.cluster:
+                raise Forbidden("remote identity cannot authorize a local connection receipt")
+            await self.authorize(caller, value["metadata"]["namespace"], value["spec"]["kind"], value["spec"]["graph"], verb=verb)
+            return
+        node = await endpoint(self.api, caller, value, resolve=self.resolve)
+        side = "source" if node == value["spec"]["source"] else "target"
+        peer = peers[side]
+        remote, _ = self.resolve(peer["cluster"])
+        await ConnectionStore(remote, self.settings).authorize(caller, peer["namespace"], peer["kind"], peer["graph"], verb=verb)
+
+    async def connect_services(self, request: ServiceConnectionRequest, caller: Caller) -> dict[str, Any]:
+        """
+        Resolve a discovered peer pair to a common boundary this operator owns.
+
+        Args:
+            request (ServiceConnectionRequest): Exact discovered service identities.
+            caller (Caller): Verified source service identity.
+
+        Returns:
+            dict[str, Any]: Durable proposal, pending the target's explicit consent.
+        """
+        from polyad.api.connections.cross import connection_request
+
+        return await self.submit(await connection_request(self, request), caller)
 
     async def lookup(self, namespace: str, request_id: str, caller: Caller) -> dict[str, Any] | None:
         """

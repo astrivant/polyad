@@ -52,6 +52,9 @@ assert rule.cheeger == Cheeger(minimum=0.5)
 
 ## Public models
 
+`ServiceEndpoint`, `ServiceConnectionRequest`, `AtlasAccess`, `ServiceAccess` and
+`AccessMode` describe [atlas discovery and service negotiation](https://github.com/astrivant/polyad/blob/main/docs/apis/discovery.md).
+
 | Module | Public models |
 | --- | --- |
 | `polyad_types.resources` | Kubernetes resource envelopes, metadata, status metrics, capacity status and mutation plans |

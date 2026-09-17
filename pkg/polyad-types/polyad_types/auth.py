@@ -39,8 +39,16 @@ class GraphAccess:
         Returns:
             None: Invalid scopes raise before credentials become usable.
         """
-        if not self.name or not self.namespace or self.kind not in {"Graph", "PolyGraph", "ReplicaGroup"}:
-            raise ValueError("graph access requires a namespace, name and boundary kind")
+        if not all(isinstance(value, str) for value in (self.name, self.namespace, self.cluster, self.uid)):
+            raise ValueError("graph access identity fields must be strings")
+        if self.kind not in {"Graph", "PolyGraph", "ReplicaGroup"}:
+            raise ValueError("graph access requires a supported boundary kind")
+        if not re.fullmatch(r"[a-z0-9](?:[-a-z0-9.]{0,251}[a-z0-9])?", self.name):
+            raise ValueError("graph access name must be a Kubernetes resource name")
+        if any(not re.fullmatch(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?", value) for value in (self.namespace, self.cluster or "local")):
+            raise ValueError("graph access namespace and cluster must be DNS labels")
+        if len(self.uid) > 128 or type(self.descendants) is not bool:
+            raise ValueError("graph access requires a bounded UID and boolean descendants")
 
 
 @frozen
@@ -110,6 +118,7 @@ class APIKey:
         baseUrl (str): Pinned outbound origin and optional path prefix.
         graphs (tuple[GraphAccess, ...]): Explicit graph trees visible through events and application telemetry.
         workloads (tuple[CredentialAssignment, ...]): Administrator-approved Secret environment assignments.
+        home (GraphAccess | None): Service's fixed home graph for operator access tiers; never supplied by an HTTP caller.
     """
 
     name: str
@@ -122,6 +131,7 @@ class APIKey:
     baseUrl: str = ""
     graphs: tuple[GraphAccess, ...] = ()
     workloads: tuple[CredentialAssignment, ...] = ()
+    home: GraphAccess | None = None
 
     def __attrs_post_init__(self) -> None:
         """
@@ -138,7 +148,7 @@ class APIKey:
             raise ValueError("API key direction must be Inbound, Outbound or Bidirectional")
         if any(type(value) is not int or value < 1 for value in (self.requestsPerMinute, self.maxConcurrentRequests)):
             raise ValueError("API key limits must be positive integers")
-        supported = {"composition", "activations", "throughput", "events", "topology", "metrics", "observations"}
+        supported = {"composition", "activations", "throughput", "events", "topology", "discovery", "metrics", "observations"}
         if set(self.endpoints) - supported or len(set(self.endpoints)) != len(self.endpoints):
             raise ValueError("API key endpoints must be unique supported API names")
         if (self.direction != KeyDirection.OUTBOUND) != bool(self.endpoints):

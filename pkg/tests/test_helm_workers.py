@@ -39,7 +39,7 @@ def test_worker_chart_connects_to_root_without_local_authority_or_servers():
         "management",
         "control",
         "root-polyad",
-        "root-operators",
+        "root-atlas",
         "west-workers",
     ]
     pod = deployment["spec"]["template"]["spec"]
@@ -58,7 +58,7 @@ def test_worker_chart_connects_to_root_without_local_authority_or_servers():
         "POLYAD_WORKER_DEPLOYMENT": "test-polyad",
         "POLYAD_WORKER_CLUSTER": "west",
         "POLYAD_ROOT_DEPLOYMENT": "root-polyad",
-        "POLYAD_SELF_GRAPH": "root-operators",
+        "POLYAD_SELF_GRAPH": "root-atlas",
         "POLYAD_SELF_GRAPH_KIND": "PolyGraph",
         "KUBECONFIG": "/var/run/polyad/root/config",
         "POLYAD_API_ENABLED": "false",

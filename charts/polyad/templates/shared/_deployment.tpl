@@ -96,6 +96,8 @@ spec:
             - --liveness=http://0.0.0.0:8080/healthz
           env:
             {{- include "polyad.tracingEnv" . | nindent 12 }}
+            - name: POLYAD_SERVICE_ACCESS
+              value: {{ .Values.operator.serviceAccess | toJson | quote }}
             - name: POLYAD_AUTH_MODE
               value: {{ .Values.authentication.mode | quote }}
             - name: POLYAD_AUTH_BACKEND
@@ -126,7 +128,7 @@ spec:
             {{- end }}
             {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled }}
             - name: POLYAD_SELF_GRAPH
-              value: {{ ternary .Values.worker.rootGraph (printf "%s-operators" .Release.Name) .Values.worker.enabled | quote }}
+              value: {{ ternary .Values.worker.rootGraph (printf "%s-atlas" .Release.Name) .Values.worker.enabled | quote }}
             - name: POLYAD_SELF_GRAPH_KIND
               value: PolyGraph
             {{- if eq .Values.architecture.mode "Distributed" }}

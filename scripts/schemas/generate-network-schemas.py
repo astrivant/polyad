@@ -198,6 +198,7 @@ def main() -> int:
         "type": "object",
         "required": ["username", "uid"],
         "properties": {
+            "cluster": {"type": "string", "maxLength": 63},
             "username": {"type": "string", "maxLength": 320, "pattern": "^system:serviceaccount:[a-z0-9-]+:[a-z0-9.-]+$"},
             "uid": {"type": "string", "minLength": 1, "maxLength": 128},
         },

@@ -52,6 +52,7 @@ then [run your first workload](introduction/getting-started.md).
 | --- | --- |
 | [Composition API service](apis/composition-api.md) | Service setup, authentication, gateway routing, shared shard rate limits and OpenAPI |
 | [Composition requests](apis/composition-requests.md) | Request format, ID references, admission, retries and resource audit |
+| [Atlas discovery and service connections](apis/discovery.md) | Inherited operator access modes, live service discovery, client filters and cross-cluster consent |
 | [Temporary connections](apis/temporary-connections.md) | Optional TTL-bound edges, caller and target scope, service-account authentication and cleanup |
 
 ## Deployment

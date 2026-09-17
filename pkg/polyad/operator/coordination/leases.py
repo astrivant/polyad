@@ -104,7 +104,7 @@ class Coordinator:
         self.component = role()
         root_mode = os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() == "true"
         root_deployment = os.environ.get("POLYAD_ROOT_DEPLOYMENT", "")
-        self.self_graph = os.environ.get("POLYAD_SELF_GRAPH") or (f"{root_deployment}-operators" if root_mode and root_deployment else "")
+        self.self_graph = os.environ.get("POLYAD_SELF_GRAPH") or (f"{root_deployment}-atlas" if root_mode and root_deployment else "")
         self.self_graph_kind = os.environ.get("POLYAD_SELF_GRAPH_KIND", "PolyGraph" if root_mode else "Graph")
         if self.self_graph_kind not in {"Graph", "PolyGraph"}:
             raise ValueError("POLYAD_SELF_GRAPH_KIND must be Graph or PolyGraph")
@@ -126,6 +126,10 @@ class Coordinator:
         Returns:
             bool: Whether the attachment still matches a live, provisioned root pool.
         """
+        from polyad.events.access import parent_allows_worker
+
+        if not await parent_allows_worker(self.api, self.namespace):
+            return False
         if not self.worker_pool:
             return True
         pool = await self.api.get("OperatorPool", self.namespace, self.worker_pool)

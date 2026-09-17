@@ -13,6 +13,10 @@ from polyad_types.auth import KeyDirection as KeyDirection
 from polyad_types.capacity import CapacityPlan as CapacityPlan
 from polyad_types.codec import from_dict as from_dict
 from polyad_types.codec import to_dict as to_dict
+from polyad_types.discovery import AccessMode as AccessMode
+from polyad_types.discovery import AtlasAccess as AtlasAccess
+from polyad_types.discovery import ServiceAccess as ServiceAccess
+from polyad_types.discovery import ServiceEndpoint as ServiceEndpoint
 from polyad_types.events import Event as Event
 from polyad_types.network import MeshPeer as MeshPeer
 from polyad_types.network import NetworkAccess as NetworkAccess
@@ -30,6 +34,7 @@ from polyad_types.requests import CompositionItem as CompositionItem
 from polyad_types.requests import CompositionRequest as CompositionRequest
 from polyad_types.requests import ConnectionRequest as ConnectionRequest
 from polyad_types.requests import ConnectionResponse as ConnectionResponse
+from polyad_types.requests import ServiceConnectionRequest as ServiceConnectionRequest
 from polyad_types.resources.capacity import CapacityNodeStatus as CapacityNodeStatus
 from polyad_types.resources.capacity import CapacityStatus as CapacityStatus
 from polyad_types.resources.capacity import PodSet as PodSet

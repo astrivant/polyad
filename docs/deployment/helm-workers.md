@@ -7,6 +7,10 @@ Helm retains installation, Pod configuration, credentials, upgrades and deletion
 in both cases. Workers execute under root coordination; they never elect a root
 planner or start another composition, event or metrics server.
 
+[Discovery access ceilings](../apis/discovery.md#administrator-configuration)
+also apply to manually installed workers; use the root policy tree and narrow it
+as needed. Workers do not forward unsupported requests or expose their own APIs.
+
 ## Table of contents
 
 - [Ownership and scaling choices](#ownership-and-scaling-choices)
@@ -77,7 +81,7 @@ cluster and namespace. Root settings identify the existing management release:
 | `worker.rootClusterName` | `management` | Root's `global.multiCluster.clusterName`; coordination identity |
 | `worker.rootNamespace` | `polyad` | Root release namespace; queues, leases and OperatorPool live here |
 | `worker.rootDeployment` | `polyad-polyad` | Root Deployment's actual Kubernetes name |
-| `worker.rootGraph` | `polyad-operators` | Root's reserved PolyGraph name |
+| `worker.rootGraph` | `polyad-atlas` | Root's reserved PolyGraph name |
 | `worker.poolName` | `west-workers` | Matching OperatorPool name in the root namespace |
 | `global.multiCluster.clusterName` | `west` | Physical hosting cluster; also used in telemetry |
 | Helm `--namespace` | `workloads` | Worker Deployment and mounted Secrets live here |

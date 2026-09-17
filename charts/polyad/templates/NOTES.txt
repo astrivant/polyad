@@ -60,6 +60,7 @@ Istio HTTPS ingress (each API requires its own bearer credential)
 {{ include "polyad.notes.composition" (printf "https://%s" .) }}
 {{- end }}
 {{- if $.Values.events.enabled }}
+  GET  https://{{ . }}/v1/discovery              (authorized service discovery)
   GET  https://{{ . }}/v1/events                 (Server-Sent Events)
   GET  https://{{ . }}/v1/graphs/{kind}/{name}/topology (neighbor snapshot)
   GET  https://{{ . }}/events/openapi.json       (event API schema)
@@ -89,6 +90,7 @@ Composition and activation API (bearer authentication required):
 {{- end }}
 {{- if .Values.events.enabled }}
 Event subscriptions (bearer authentication required):
+  GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/discovery
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/events
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/graphs/{kind}/{name}/topology
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/openapi.json

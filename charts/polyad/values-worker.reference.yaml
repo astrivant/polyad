@@ -12,8 +12,8 @@ worker:
   rootClusterName: management
   ## @param worker.rootDeployment [string] Match the management Deployment name, normally ROOT_RELEASE-polyad.
   rootDeployment: polyad-polyad
-  ## @param worker.rootGraph [string] Match the management reserved PolyGraph, normally ROOT_RELEASE-operators.
-  rootGraph: polyad-operators
+  ## @param worker.rootGraph [string] Match the management reserved PolyGraph, normally ROOT_RELEASE-atlas.
+  rootGraph: polyad-atlas
   ## @param worker.poolName [string] Only this root-namespace OperatorPool may attach the Deployment.
   poolName: west-workers
   ## @param worker.scalingAuthority [string] Root delegates replicas to the matching pool/KEDA. Local keeps replicaCount and optional HPA here; match the pool's setting.

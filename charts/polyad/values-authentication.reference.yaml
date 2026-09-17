@@ -67,7 +67,15 @@ authentication:
       ## @param authentication.services[].secretKey [string] Key inside the referenced Secret; default token for API keys and uri for database DSNs.
       secretKey: token
       ## @param authentication.services[].endpoints [array] Entries for authentication.services[].endpoints; an empty list disables these entries.
-      endpoints: [composition, activations, throughput, events, topology]
+      endpoints: [composition, activations, throughput, discovery, events, topology]
+      ## @param authentication.services[].home [object] Fixed service home graph used for operator access tiers on discovery, topology and event streams. Never taken from request input.
+      home:
+        ## @param authentication.services[].home.name [string] Settings for authentication.services[].home.name.
+        name: pipeline
+        ## @param authentication.services[].home.namespace [string] Settings for authentication.services[].home.namespace.
+        namespace: apps
+        ## @param authentication.services[].home.kind [string] Settings for authentication.services[].home.kind.
+        kind: Graph
       ## @param authentication.services[].graphs [array] Entries for authentication.services[].graphs; an empty list disables these entries.
       graphs:
         ## @param authentication.services[].graphs[].name [string] Stable identity within this configuration; choose a distinct name.

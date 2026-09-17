@@ -147,7 +147,7 @@ def test_component_recovery_and_scaling_stay_inside_the_root_operator_graph(monk
     from tests.test_chart import render
 
     monkeypatch.setenv("POLYAD_ROOT_DEPLOYMENT", "test-polyad")
-    monkeypatch.setenv("POLYAD_SELF_GRAPH", "test-operators")
+    monkeypatch.setenv("POLYAD_SELF_GRAPH", "test-atlas")
     monkeypatch.setenv("POLYAD_COMPONENT_GRAPH", "test-control-plane")
     monkeypatch.setenv("POLYAD_CLUSTER_NAME", "management")
     rendered = render(
@@ -206,7 +206,7 @@ def test_component_recovery_and_scaling_stay_inside_the_root_operator_graph(monk
             {"source": "endpoints", "target": "bootstrap"},
         ]
         assert members["components"]["status"]["structuralRules"][0]["measurements"]["cheeger"] == 1
-        poly = api.objects["PolyGraph", "test", "test-operators"]
+        poly = api.objects["PolyGraph", "test", "test-atlas"]
         assert poly["status"]["ready"]
         assert poly["status"]["metrics"]["rollup"]["leafNodes"] == 9
         assert len(api.children("Deployment")) == 7
@@ -223,7 +223,7 @@ def test_component_recovery_and_scaling_stay_inside_the_root_operator_graph(monk
         await settle()
         assert lost in api.objects
         assert len(api.children("Deployment")) == 7
-        assert api.objects["PolyGraph", "test", "test-operators"]["status"]["ready"]
+        assert api.objects["PolyGraph", "test", "test-atlas"]["status"]["ready"]
 
         source = api.objects["ReplicaGroup", "test", "test-executor"]
         source["spec"]["replicas"] = 3
@@ -306,7 +306,7 @@ def test_root_mode_defaults_match_pool_topology_without_helm_environment(monkeyp
     monkeypatch.delenv("POLYAD_SELF_GRAPH_KIND", raising=False)
     coordinator = Coordinator(LeaseAPI(), "test", "root")
     assert coordinator.self_graph_kind == "PolyGraph"
-    assert coordinator.self_graph == manager(ManagementAPI(), ManagementAPI()).topology_name == "root-operators"
+    assert coordinator.self_graph == manager(ManagementAPI(), ManagementAPI()).topology_name == "root-atlas"
 
 
 def test_pool_status_refreshes_registration_but_never_acknowledges_newer_intent():

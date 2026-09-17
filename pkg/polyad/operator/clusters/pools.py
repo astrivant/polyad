@@ -88,7 +88,7 @@ class PoolManager:
         Returns:
             str: Release-scoped reserved topology name.
         """
-        return os.environ.get("POLYAD_SELF_GRAPH") or f"{os.environ['POLYAD_ROOT_DEPLOYMENT']}-operators"
+        return os.environ.get("POLYAD_SELF_GRAPH") or f"{os.environ['POLYAD_ROOT_DEPLOYMENT']}-atlas"
 
     @traced("polyad.operator_topology.refresh")
     async def topology(self) -> dict[str, Any]:

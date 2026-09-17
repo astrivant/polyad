@@ -14,11 +14,13 @@ from attrs import evolve, field, frozen
 from flask import Response, g, jsonify, request, stream_with_context
 
 from polyad.api.application import Routes
+from polyad.api.errors import Forbidden, Unavailable
 from polyad.api.limits import RateLimitPolicy, install_limits
 from polyad.auth.http import Access, install
 from polyad.auth.policy import public_demo
 from polyad.events.store import CursorExpired, TopologyReplaced
 from polyad.events.visibility import permitted_observation
+from polyad_types.auth import APIKey, GraphAccess
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
@@ -42,6 +44,9 @@ class EventAPIBuilder:
         limits (RateLimitPolicy | None): Shared connection-request rate limit.
         snapshot (Callable[[str, str, str | None, str | None], dict[str, Any]] | None): Current topology reader.
         access (Access | None): Named subscriber credentials and shared lanes.
+        authorize_stream (Callable[[APIKey | None, str | None], None] | None): Reject unsupported subscriptions before opening them.
+        permits (Callable[[APIKey, dict[str, Any]], bool] | None): Fresh operator-mode and home-graph observation check.
+        discover (Callable[[APIKey, GraphAccess | None, int, int], dict[str, Any]] | None): Live authorized service directory.
     """
 
     resolve: Callable[[str | None], str] | None = None
@@ -52,6 +57,9 @@ class EventAPIBuilder:
     limits: RateLimitPolicy | None = None
     snapshot: Callable[[str, str, str | None, str | None], dict[str, Any]] | None = None
     access: Access | None = None
+    authorize_stream: Callable[[APIKey | None, str | None], None] | None = None
+    permits: Callable[[APIKey, dict[str, Any]], bool] | None = None
+    discover: Callable[[APIKey, GraphAccess | None, int, int], dict[str, Any]] | None = None
 
     def with_handlers(self, resolve: Callable[[str | None], str], read: Callable[[str], list[tuple[str, str]]]) -> Self:
         """
@@ -101,7 +109,11 @@ class EventAPIBuilder:
             Flask: Application containing the event blueprint.
         """
         if (
-            (not self.token and not (self.access and self.access.supports("events")) and not public_demo())
+            (
+                not self.token
+                and not (self.access and any(self.access.supports(scope) for scope in ("events", "topology", "discovery")))
+                and not public_demo()
+            )
             or self.resolve is None
             or self.read is None
             or not 1 <= self.max_connections <= 128
@@ -116,6 +128,42 @@ class EventAPIBuilder:
         if self.limits:
             app.extensions["polyad.limiter"] = install_limits(app, self.limits)
 
+        @app.get("/v1/discovery")
+        def discovery() -> tuple[Response, int] | Response:
+            key = getattr(g, "polyad_key", None)
+            if key is None:
+                return jsonify(error="discovery requires a named credential with graph grants and a home graph"), 403
+            if self.discover is None or self.stopping.is_set():
+                return jsonify(error="this operator cannot fulfill discovery requests"), 503
+            if set(request.args) - {"graph", "kind", "namespace", "cluster", "uid", "offset", "limit"}:
+                return jsonify(error="unsupported discovery parameter"), 400
+            try:
+                target = None
+                if request.args.get("graph"):
+                    target = GraphAccess(
+                        request.args["graph"],
+                        request.args.get("namespace", ""),
+                        kind=request.args.get("kind", "Graph"),
+                        cluster=request.args.get("cluster", ""),
+                        uid=request.args.get("uid", ""),
+                    )
+                result = self.discover(key, target, int(request.args.get("offset", "0")), int(request.args.get("limit", "100")))
+                response = jsonify(result)
+                if len(response.get_data()) > 4 * 1024 * 1024:
+                    return jsonify(error="discovery result exceeds 4 MiB; select a smaller graph"), 503
+                response.headers["Cache-Control"] = "no-store"
+                return response
+            except Forbidden as error:
+                return jsonify(error=str(error)), 403
+            except KeyError:
+                return jsonify(error="graph is absent or replaced"), 404
+            except ValueError as error:
+                return jsonify(error=str(error)), 400
+            except Unavailable as error:
+                return jsonify(error=str(error)), 503
+            except Exception:
+                return jsonify(error="discovery state or its parent operator is unavailable"), 503
+
         @app.get("/v1/graphs/<kind>/<name>/topology")
         def topology(kind: str, name: str) -> tuple[Response, int] | Response:
             if kind not in BOUNDARY_KINDS or not re.fullmatch(r"[a-z0-9](?:[-a-z0-9.]{0,251}[a-z0-9])?", name):
@@ -123,15 +171,21 @@ class EventAPIBuilder:
             if self.snapshot is None or self.stopping.is_set():
                 return jsonify(error="topology reader unavailable"), 503
             try:
+                if self.authorize_stream is not None:
+                    self.authorize_stream(getattr(g, "polyad_key", None), request.args.get("cluster"))
                 snapshot = self.snapshot(kind, name, request.args.get("uid"), request.args.get("node"))
                 key = getattr(g, "polyad_key", None)
                 if key is not None and not permitted_observation(snapshot["graph"], snapshot.get("ancestry", []), key.graphs):
                     return jsonify(error="graph snapshot or node not found"), 404
+                if key is not None and self.permits is not None and not self.permits(key, snapshot["graph"]):
+                    return jsonify(error="graph exceeds the operator access mode or credential home scope"), 403
                 response = jsonify(snapshot)
                 if len(response.get_data()) > 4 * 1024 * 1024:
                     return jsonify(error="topology selection exceeds 4 MiB"), 503
                 response.headers["Cache-Control"] = "no-store"
                 return response
+            except Forbidden as error:
+                return jsonify(error=str(error)), 403
             except TopologyReplaced as error:
                 return jsonify(error=str(error)), 409
             except KeyError:
@@ -141,6 +195,13 @@ class EventAPIBuilder:
 
         @app.get("/v1/events")
         def events() -> Response | tuple[Response, int]:
+            if self.authorize_stream is not None:
+                try:
+                    self.authorize_stream(getattr(g, "polyad_key", None), request.args.get("cluster"))
+                except Forbidden as error:
+                    return jsonify(error=str(error)), 403
+                except Exception:
+                    return jsonify(error="this operator cannot fulfill the requested event subscription"), 503
             # Stream slots protect shared HTTP worker capacity even in demo mode.
             if self.stopping.is_set() or not slots.acquire(blocking=False):
                 return jsonify(error="event subscriber capacity exhausted"), 503
@@ -171,6 +232,12 @@ class EventAPIBuilder:
                             identity_scope = payload.get("graph", payload) if payload.get("type") == "connection" else payload
                             if key is not None and not permitted_observation(identity_scope, payload.get("ancestry", []), key.graphs):
                                 continue
+                            if key is not None and self.permits is not None:
+                                scope = identity_scope
+                                if scope.get("kind") not in BOUNDARY_KINDS:
+                                    scope = next(iter(payload.get("ancestry", [])), {})
+                                if not scope or not self.permits(key, scope):
+                                    continue
                             event_type = payload["type"] if payload.get("type") in {"topology", "connection"} else "graph"
                             yield f"id: {identity}\nevent: {event_type}\ndata: {data}\n\n"
                         if batch:
@@ -198,6 +265,26 @@ class EventAPIBuilder:
                 "security": [{"bearerAuth": []}] if authenticated else [],
                 "components": {"securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}}},
                 "paths": {
+                    "/v1/discovery": {
+                        "get": {
+                            "description": "Fresh service directory requiring a named key, home graph and explicit graph grants.",
+                            "parameters": [
+                                {"name": name, "in": "query", "schema": {"type": "string"}}
+                                for name in ("graph", "namespace", "kind", "cluster", "uid", "offset", "limit")
+                            ],
+                            "responses": {
+                                str(code): {"description": message}
+                                for code, message in (
+                                    (200, "Authorized graph roots or services with replay cursors"),
+                                    (400, "Invalid selection"),
+                                    (401, "Invalid credential"),
+                                    (403, "Scope or access mode denied"),
+                                    (404, "Graph absent or replaced"),
+                                    (503, "This operator cannot fulfill discovery"),
+                                )
+                            },
+                        }
+                    },
                     "/v1/events": {
                         "get": {
                             "description": (

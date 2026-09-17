@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 LISTENERS = {
     "composition": {"composition", "activations", "throughput"},
-    "events": {"events", "topology"},
+    "events": {"events", "topology", "discovery"},
     "metrics": {"metrics"},
     "observations": {"observations"},
 }
@@ -52,6 +52,8 @@ def endpoint_scope(listener: str, path: str) -> str:
             return "throughput"
     if listener == "events" and path.startswith("/v1/graphs/"):
         return "topology"
+    if listener == "events" and path == "/v1/discovery":
+        return "discovery"
     return listener
 
 

@@ -112,12 +112,47 @@ spec:
                 bidirectional:
                   type: boolean
                   description: Whether to add the reverse connection with the same ports.
+                peers:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    description: Address one logical service with its exact graph incarnation and execution cluster.
+                    properties:
+                      cluster:
+                        type: string
+                        description: Registered cluster hosting this endpoint; empty selects local execution.
+                      namespace:
+                        type: string
+                        description: Namespace of the graph instance.
+                      kind:
+                        type: string
+                        description: Graph, PolyGraph or ReplicaGroup boundary kind.
+                      graph:
+                        type: string
+                        description: Persisted graph instance name.
+                      graphUid:
+                        type: string
+                        description: Graph UID fencing deletion and replacement.
+                      node:
+                        type: string
+                        description: Logical node or replica ordinal within that boundary.
+                    required:
+                    - cluster
+                    - namespace
+                    - kind
+                    - graph
+                    - graphUid
+                    - node
+                  description: Exact service participants for an atlas-coordinated connection.
                 requester:
                   type: object
                   required:
                   - username
                   - uid
                   properties:
+                    cluster:
+                      type: string
+                      maxLength: 63
                     username:
                       type: string
                       maxLength: 320

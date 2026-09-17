@@ -13,6 +13,7 @@ from attrs import field, frozen
 
 from polyad_types import resources as asts
 from polyad_types.codec import converter
+from polyad_types.discovery import ServiceEndpoint
 from polyad_types.network import NetworkPort
 from polyad_types.resources.resources import COMPOSABLE_KINDS
 
@@ -175,6 +176,7 @@ class ConnectionRequest:
         ttlSeconds (int): Lifetime measured from Kubernetes receipt creation.
         ports (tuple[NetworkPort, ...]): Destination grants, empty for topology only.
         bidirectional (bool): Whether to add the reverse connection with the same ports.
+        peers (dict[str, ServiceEndpoint]): Exact service participants for an atlas-coordinated connection.
     """
 
     requestId: str = field(metadata={"schema": {"minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9_.:-]+$"}})
@@ -187,6 +189,7 @@ class ConnectionRequest:
     ttlSeconds: int = field(metadata={"schema": {"minimum": 1, "maximum": MAX_TTL}})
     ports: tuple[NetworkPort, ...] = field(default=(), metadata={"schema": {"maxItems": 32}})
     bidirectional: bool = False
+    peers: dict[str, ServiceEndpoint] = field(factory=dict)
 
     def __attrs_post_init__(self) -> None:
         """
@@ -208,3 +211,43 @@ class ConnectionRequest:
             raise ValueError("ttlSeconds must be an integer from 1 through 86400")
         if self.source == self.target or len(self.ports) > 32 or type(self.bidirectional) is not bool:
             raise ValueError("connections require distinct endpoints, at most 32 ports and a boolean bidirectional flag")
+        if self.peers and set(self.peers) != {"source", "target"}:
+            raise ValueError("atlas connections require exactly source and target peers")
+
+
+@frozen
+class ServiceConnectionRequest:
+    """
+    Negotiate an edge between discovered services through their common graph boundary.
+
+    Attributes:
+        requestId (str): Stable idempotency key for this proposal.
+        source (ServiceEndpoint): Sending service's exact graph and node.
+        target (ServiceEndpoint): Receiving service's exact graph and node.
+        ttlSeconds (int): Lifetime including time spent awaiting consent.
+        ports (tuple[NetworkPort, ...]): Explicit destination TCP ports for remote transport.
+        bidirectional (bool): Also negotiate the reverse direction.
+    """
+
+    requestId: str
+    source: ServiceEndpoint
+    target: ServiceEndpoint
+    ttlSeconds: int
+    ports: tuple[NetworkPort, ...] = ()
+    bidirectional: bool = False
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject malformed or unbounded negotiation before contacting cluster APIs.
+
+        Returns:
+            None: Invalid service requests raise ValueError.
+        """
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", self.requestId):
+            raise ValueError("invalid requestId")
+        if type(self.ttlSeconds) is not int or not 1 <= self.ttlSeconds <= MAX_TTL:
+            raise ValueError("ttlSeconds must be an integer from 1 through 86400")
+        if self.source == self.target or len(self.ports) > 32 or type(self.bidirectional) is not bool:
+            raise ValueError("service connections require distinct peers, at most 32 ports and boolean bidirectional")
+        if self.source.cluster != self.target.cluster and (not self.ports or any(port.protocol != "TCP" for port in self.ports)):
+            raise ValueError("cross-cluster service connections require explicit TCP ports")

@@ -14,7 +14,7 @@ worker:
   rootClusterName: ''
   ## @param worker.rootDeployment [string] Name of the existing root Deployment, used to identify the attachment authority
   rootDeployment: ''
-  ## @param worker.rootGraph [string] Name of the root's reserved PolyGraph; normally ROOT_RELEASE-operators
+  ## @param worker.rootGraph [string] Name of the root's reserved PolyGraph; normally ROOT_RELEASE-atlas
   rootGraph: ''
   ## @param worker.poolName [string] Name of the root-namespace OperatorPool that may attach this Deployment
   poolName: ''
@@ -48,6 +48,16 @@ tracing:
 ## @section Operator and shared queue parameters
 ## @param operator [object] Settings for operator.
 operator:
+  ## @param operator.serviceAccess [object] Inherited service discovery and negotiation ceilings; graph grants and consent remain mandatory
+  serviceAccess:
+    ## @param operator.serviceAccess.discovery [string] Disabled, SameGraph, GraphTree, Cluster or Atlas; GraphTree confines discovery to related graphs in the home cluster
+    discovery: GraphTree
+    ## @param operator.serviceAccess.connections [string] SameGraph by default; Atlas permits cross-cluster negotiation only when the receiving operator owns the common application boundary
+    connections: SameGraph
+    ## @param operator.serviceAccess.clusters [object] Child cluster modes and parent links; each child can narrow but cannot widen its parent ceiling
+    clusters: {}
+    ## @param operator.serviceAccess.trustDomains [object] Explicit Istio trust domain for each participating cluster; required for cross-cluster connections
+    trustDomains: {}
   ## @param operator.logLevel [string] Operator and observer Python logging verbosity; INFO for normal operation, DEBUG for reconciliation diagnostics (DEBUG, INFO, WARNING, ERROR or CRITICAL)
   logLevel: INFO
   ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha, and must remain null for Root-scaled workers

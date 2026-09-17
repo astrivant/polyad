@@ -385,13 +385,17 @@ keeps cleanup pending rather than forgetting potentially live replicas.
 
 ## Reserved operator hierarchy
 
+The reserved root PolyGraph is the **atlas**, named `<root-release>-atlas`.
+[Service discovery](../apis/discovery.md) uses its registered operator tree to
+serve permitted application graphs while keeping the infrastructure graph private.
+
 Membership changes produce `polyad.operator_topology.membership` decision logs
 with the group node, Graph reference and destination cluster. Ownership,
 generation and admission conflicts explain why a change was rejected. See
 [decision and conflict logs](../operations/tracing.md#decision-and-conflict-logs)
 for console examples and optional OpenTelemetry export.
 
-With root mode enabled, one reserved `PolyGraph/<release>-operators` models the
+With root mode enabled, one reserved `PolyGraph/<release>-atlas` models the
 whole operator deployment. Each operator group has its own Graph: the root group
 in the management cluster and one group for each provisioned or attached remote OperatorPool.
 The root group's Graph contains a bootstrap observation Graph and, in Distributed
@@ -411,7 +415,7 @@ Other groups and the root retain their identities.
 
 ```mermaid
 flowchart TB
-    subgraph hierarchy["Reserved root PolyGraph · all operator groups"]
+    subgraph hierarchy["Atlas · reserved root PolyGraph"]
         subgraph management["Graph · root operator group · management cluster"]
             subgraph bootstrap["Graph · bootstrap observation"]
                 root["Helm-owned root Deployment replicas<br/>Authority and recovery"]

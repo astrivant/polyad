@@ -9,8 +9,8 @@ worker:
   rootClusterName: management
   ## @param worker.rootDeployment [string] Root Deployment allowed to manage this attachment.
   rootDeployment: root-polyad
-  ## @param worker.rootGraph [string] Reserved PolyGraph name at the root, normally ROOT_RELEASE-operators.
-  rootGraph: root-operators
+  ## @param worker.rootGraph [string] Reserved PolyGraph name at the root, normally ROOT_RELEASE-atlas.
+  rootGraph: root-atlas
   ## @param worker.poolName [string] Root-namespace OperatorPool authorized to attach this Deployment.
   poolName: west-workers
   ## @param worker.scalingAuthority [string] Root permits the approved OperatorPool to change replicas; Local keeps replica intent and optional HPA with the downstream administrator.

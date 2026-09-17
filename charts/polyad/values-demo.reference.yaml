@@ -56,3 +56,11 @@ connections:
 postgresql:
   ## @param postgresql.enabled [boolean] Persist graph state and tracked parameters in PostgreSQL
   enabled: false
+
+## @param operator [object] Settings for operator.
+operator:
+  # Namespace bearer tokens have no home graph; scoped modes require named keys.
+  ## @param operator.serviceAccess [object] Administrator ceilings inherited down the operator tree. Every request must fit both participant policies and the receiving operator; children cannot widen parent scope.
+  serviceAccess:
+    ## @param operator.serviceAccess.discovery [string] Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.
+    discovery: Cluster

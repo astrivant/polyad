@@ -16,6 +16,7 @@ does not install the operator.
 - [Activation](#activation)
 - [Composition and request handling](#composition-and-request-handling)
 - [Events and topology](#events-and-topology)
+- [Discovery and hooks](#discovery-and-hooks)
 - [Temporary connection consent](#temporary-connection-consent)
 - [Remote clusters](#remote-clusters)
 - [Report throughput to Soul searching](#report-throughput-to-soul-searching)
@@ -128,6 +129,24 @@ cross-namespace callers also need the corresponding network and identity grants.
 
 See the repository's [activation guide](https://github.com/astrivant/polyad/blob/main/docs/workloads/activation.md) and
 [networking guide](https://github.com/astrivant/polyad/blob/main/docs/deployment/networking.md) for policies and deployment settings.
+
+## Discovery and hooks
+
+`discover()` reads permitted live graph services and replay cursors. `services()`
+walks their authorized child graphs. `subscribe().on(filter, callback)` dispatches
+observations on the caller's thread; `event_type`, `graph`, `phase`, `field` and
+`connection_pending` compose with `&`, `|` and `~`. Field filters support trusted
+application regex patterns and collection traversal. Callbacks checkpoint only
+after success; applications own reconnection and durable idempotency.
+
+Use `connect_services(ServiceConnectionRequest(...))` to negotiate exact discovered
+endpoints at their common application boundary, including across clusters when
+administrator modes allow it. Set `identity_cluster` and a rotating
+`token_provider` for projected-token authentication at the root. A request counts
+as the source service's consent; the target responds explicitly.
+
+See [Atlas discovery and service connections](https://github.com/astrivant/polyad/blob/main/docs/apis/discovery.md)
+for runnable hook patterns, every access mode, error handling and mesh requirements.
 
 ## Temporary connection consent
 

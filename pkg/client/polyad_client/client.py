@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections import deque
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
@@ -15,10 +16,11 @@ from polyad_types import ActivationRequest, to_dict
 from polyad_types.events import Event
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from typing import Any, Literal
 
-    from polyad_types import CompositionRequest, ConnectionRequest, ConnectionResponse, ThroughputSample
+    from polyad_client.subscriptions import Subscription
+    from polyad_types import CompositionRequest, ConnectionRequest, ConnectionResponse, ServiceConnectionRequest, ThroughputSample
 
 
 class APIError(RuntimeError):
@@ -48,7 +50,15 @@ class Client:
     Call Polyad APIs with no implicit mutation retries.
     """
 
-    def __init__(self, url: str, token: str | None, *, timeout: float = 30) -> None:
+    def __init__(
+        self,
+        url: str,
+        token: str | None,
+        *,
+        timeout: float = 30,
+        identity_cluster: str = "",
+        token_provider: Callable[[], str] | None = None,
+    ) -> None:
         """
         Configure an API base address and bearer credential.
 
@@ -56,6 +66,8 @@ class Client:
             url (str): Operator API Service or gateway URL.
             token (str | None): Namespace-scoped bearer credential; explicitly None for an unauthenticated demo.
             timeout (float): Finite socket timeout for requests and event reads.
+            identity_cluster (str): Registered token issuer for service negotiation; empty uses the receiving operator cluster.
+            token_provider (Callable[[], str] | None): Read a rotating projected token immediately before each HTTP request.
         """
         parsed = urlsplit(url)
         if (
@@ -70,6 +82,9 @@ class Client:
         if (token is not None and (not token or any(char in token for char in "\r\n"))) or not math.isfinite(timeout) or timeout <= 0:
             raise ValueError("a bearer token and positive finite timeout are required")
         self.url, self._token, self.timeout = url.rstrip("/"), token, timeout
+        if any(char in identity_cluster for char in "\r\n") or len(identity_cluster) > 63:
+            raise ValueError("invalid identity cluster")
+        self.identity_cluster, self._token_provider = identity_cluster, token_provider
         self._opener = build_opener(_NoRedirect())
 
     def report_throughput(self, sample: ThroughputSample) -> dict[str, Any]:
@@ -85,6 +100,67 @@ class Client:
         with self._open("POST", "/v1/throughput", to_dict(sample)) as response:
             result: dict[str, Any] = json.loads(response.read())
             return result
+
+    def connect_services(self, request: ServiceConnectionRequest) -> dict[str, Any]:
+        """
+        Propose a TTL connection between discovered services through their common boundary owner.
+
+        Args:
+            request (ServiceConnectionRequest): Exact service identities and stable idempotency key.
+
+        Returns:
+            dict[str, Any]: Durable proposal awaiting peer approval and policy admission.
+        """
+        return self._request("POST", "/v1/connections/atlas", to_dict(request))
+
+    def services(self, *, max_graphs: int = 256) -> Iterator[dict[str, Any]]:
+        """
+        Traverse granted graph branches with a bounded breadth-first discovery walk.
+
+        Args:
+            max_graphs (int): Maximum distinct graph incarnations visited before stopping with an error.
+
+        Yields:
+            dict[str, Any]: Current public service record; no workload payloads or credentials.
+        """
+        if type(max_graphs) is not int or not 1 <= max_graphs <= 4096:
+            raise ValueError("max_graphs must be from 1 through 4096")
+        pending: deque[dict[str, Any]] = deque()
+        seen: set[tuple[str, str]] = set()
+
+        def enqueue(addresses: list[dict[str, Any]]) -> None:
+            for address in addresses:
+                identity = address.get("cluster", ""), address["uid"]
+                if identity in seen:
+                    continue
+                if len(seen) >= max_graphs:
+                    raise ValueError("discovery exceeds max_graphs; narrow the credential grants")
+                seen.add(identity)
+                pending.append(address)
+
+        offset = 0
+        while True:
+            roots = self.discover(offset=offset)
+            enqueue(roots["roots"])
+            if roots.get("nextOffset") is None:
+                break
+            offset = roots["nextOffset"]
+        while pending:
+            address = pending.popleft()
+            try:
+                result = self.discover(
+                    graph=address["name"],
+                    namespace=address["namespace"],
+                    kind=address["kind"],
+                    cluster=address.get("cluster"),
+                    graph_uid=address["uid"],
+                )
+            except APIError as error:
+                if error.status in {403, 404}:
+                    continue
+                raise
+            yield from result["services"]
+            enqueue(result["children"])
 
     def respond_connection(self, namespace: str, name: str, response: ConnectionResponse) -> dict[str, Any]:
         """
@@ -102,12 +178,16 @@ class Client:
 
     def _open(self, method: str, path: str, body: dict[str, Any] | None = None, *, headers: dict[str, str] | None = None) -> Any:
         data = json.dumps(body, allow_nan=False).encode() if body is not None else None
+        token = self._token_provider() if self._token_provider else self._token
+        if token is not None and (not token or any(char in token for char in "\r\n")):
+            raise ValueError("invalid bearer token")
         request = Request(
             self.url + path,
             data=data,
             method=method,
             headers={
-                **({"Authorization": f"Bearer {self._token}"} if self._token is not None else {}),
+                **({"Authorization": f"Bearer {token}"} if token is not None else {}),
+                **({"X-Polyad-Cluster": self.identity_cluster} if self.identity_cluster else {}),
                 "Accept": "application/json",
                 "Content-Type": "application/json",
                 **(headers or {}),
@@ -332,3 +412,53 @@ class Client:
                         event_type = value
                     elif field == "data":
                         data.append(value)
+
+    def subscribe(self, *, cluster: str | None = None, cursor: str | None = None, history: int = 1024) -> Subscription:
+        """
+        Build a resumable subscription with explicit application event hooks.
+
+        Args:
+            cluster (str | None): Registered cluster stream.
+            cursor (str | None): Previously committed stream cursor.
+            history (int): Bounded count of successful event-handler calls remembered during retries.
+
+        Returns:
+            Subscription: Register filters and callbacks, then call run on the application's chosen thread.
+        """
+        from polyad_client.subscriptions import Subscription
+
+        return Subscription(self, cluster=cluster, cursor=cursor, history=history)
+
+    def discover(
+        self,
+        *,
+        graph: str | None = None,
+        namespace: str | None = None,
+        kind: str = "Graph",
+        cluster: str | None = None,
+        graph_uid: str | None = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """
+        Read permitted atlas roots or one graph's current service and child identities.
+
+        Args:
+            graph (str | None): Exact graph instance; omitted enumerates credential-granted starting points.
+            namespace (str | None): Required when selecting a graph.
+            kind (str): Graph, PolyGraph or ReplicaGroup.
+            cluster (str | None): Registered cluster; omitted selects local execution.
+            graph_uid (str | None): Expected graph incarnation.
+            offset (int): Pagination offset for starting points.
+            limit (int): Maximum root grants examined per page, up to 100.
+
+        Returns:
+            dict[str, Any]: Current permitted service identities and cursors for event subscriptions.
+        """
+        parameters: dict[str, Any] = {"offset": offset, "limit": limit}
+        if graph is not None:
+            if not namespace:
+                raise ValueError("graph discovery requires its namespace")
+            parameters.update(graph=graph, namespace=namespace, kind=kind)
+            parameters.update({key: value for key, value in {"cluster": cluster, "uid": graph_uid}.items() if value is not None})
+        return self._request("GET", "/v1/discovery?" + urlencode(parameters))

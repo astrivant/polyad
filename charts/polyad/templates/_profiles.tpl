@@ -31,7 +31,7 @@
 {{- range .endpoints -}}
 {{- $_ := set $authEndpoints . true -}}
 {{- if has . (list "activations" "throughput") }}{{ $_ := set $authEndpoints "composition" true }}{{ end -}}
-{{- if eq . "topology" }}{{ $_ := set $authEndpoints "events" true }}{{ end -}}
+{{- if has . (list "topology" "discovery") }}{{ $_ := set $authEndpoints "events" true }}{{ end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}

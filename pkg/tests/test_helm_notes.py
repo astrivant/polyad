@@ -130,6 +130,7 @@ def test_istio_notes_include_events_and_their_rewritten_schema(composition):
         "mesh.ingress.hosts[0]=polyad.example.com",
         "mesh.ingress.tlsSecret=tls",
     ).split("CLUSTER-INTERNAL ENDPOINTS")[0]
+    assert "https://polyad.example.com/v1/discovery" in public
     assert "https://polyad.example.com/v1/events" in public
     assert "https://polyad.example.com/events/openapi.json" in public
     assert ("https://polyad.example.com/v1/activations" in public) == composition
