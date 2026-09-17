@@ -2,23 +2,34 @@
 
 **Soul searching** is Polyad's bounded topology optimizer. It uses application
 throughput reports to recommend or apply administrator-approved connection layouts
-and optional [traffic percentages between graph replicas](traffic-balancing.md).
+and optional [traffic percentages between workload and graph replicas](traffic-balancing.md).
 
 Polyad keeps **hard structural Cheeger bounds** in GraphRules and a separate
 **application-driven Cheeger target** in `Graph.spec.throughput` or
 `PolyGraph.spec.throughput`. Configure `mode: Observe` (the default) to report
 recommendations, or `mode: Adapt` to let the operator apply approved connection
-layouts. Omitting `throughput` disables this feedback controller.
+layouts and bounded traffic adjustments. Omitting `throughput` disables this
+feedback controller; configured static traffic splits can still operate.
 
 For side-by-side graph examples and orchestration diagrams, see
 [comparing Cheeger bounds and throughput targets](cheeger-orchestration.md).
 For policies active in both a parent and child, see
 [nested Graphs and subgraph replication](cheeger-orchestration.md#nested-graphs-and-subgraph-replication).
 
+## Table of contents
+
+- [How the controls fit together](#how-the-controls-fit-together)
+- [Calibrate the relationship](#calibrate-the-relationship)
+- [Configure a bounded policy](#configure-a-bounded-policy)
+- [Report measurements](#report-measurements)
+- [Bounds, observations and scalability](#bounds-observations-and-scalability)
+
+## How the controls fit together
+
 | Control | Responsibility | Changes |
 | --- | --- | --- |
 | GraphRule `cheeger.minimum` / `maximum` | Hard limits on permitted topology | Administrator-managed rules |
-| Throughput policy `tiers[].cheeger` | Empirically calibrated target range for a demand tier | Recommendations, or approved connections in Adapt mode |
+| Throughput policy `tiers[].cheeger` | Empirically calibrated target range for a demand tier | Constrains recommended or applied connection and traffic changes |
 | KEDA / HPA | Workload or ReplicaGroup capacity | Replica counts through the selected scaling target |
 | Optional Istio percentage routing | Divide incoming work among approved downstream targets | Bounded percentages from demand tiers or per-replica throughput/headroom |
 
@@ -29,7 +40,9 @@ hard rule. For example, a static range `[0.5, 1.5]` and an application target
 `NoAllowedLayout`; the operator does not relax policy to meet demand.
 
 These controls complement each other. Replica scaling adds processing capacity;
-topology adaptation changes which stages or graph instances can communicate.
+topology adaptation changes which stages or graph instances can communicate;
+traffic balancing redistributes requests among connected replicas. Changing
+percentages alone does not change the unweighted Cheeger measurement.
 Keep adaptation slower than workload autoscaling and allow measurements to settle
 after a change. KEDA generally supplies metrics to its managed HPA; do not attach
 a competing HPA to the same target. For graph-enforced scaling, target a
@@ -40,25 +53,21 @@ Deployment or StatefulSet bypasses that admission path.
 ```mermaid
 flowchart TB
     application["Application reporter<br/>Offered and completed records per second"]
-    feedback["Soul searching<br/>Fresh samples and sustained shortfall"]
+    feedback["Soul searching<br/>Fresh samples and stabilization"]
     targets["Separate Cheeger target<br/>Calibrated demand tiers"]
     layouts["Approved connection layouts"]
+    traffic["Bounded traffic splits<br/>Tiers or measured Headroom"]
     rules["Hard GraphRules<br/>Fresh family checks and revision fence"]
-    topology["Graph or PolyGraph<br/>Connections updated"]
+    topology["Graph or PolyGraph<br/>Connections or Istio percentages updated"]
     autoscale["KEDA and its HPA<br/>ReplicaGroup capacity request"]
     replicas["ReplicaGroup controller<br/>Fresh GraphRules before execution"]
     application --> feedback --> targets --> layouts --> rules --> topology
+    feedback --> traffic --> rules
+    targets --> traffic
     application -. "Capacity metrics" .-> autoscale --> replicas
     topology --> application
     replicas --> application
 ```
-
-## Table of contents
-
-- [Calibrate the relationship](#calibrate-the-relationship)
-- [Configure a bounded policy](#configure-a-bounded-policy)
-- [Report measurements](#report-measurements)
-- [Bounds, observations and scalability](#bounds-observations-and-scalability)
 
 ## Calibrate the relationship
 
@@ -71,13 +80,14 @@ targets and layouts for your application's routing and partitioning contracts.
 Report **offered demand and successfully completed work over the same measurement
 window**, in the configured unit. Use one aggregate reporter per graph rather than
 letting individual replicas overwrite one another's partial measurements. Low
-traffic alone is not a throughput shortfall. For connection changes and Tiers routing, the controller considers a change
-only when offered demand is positive and completed work is below
+traffic alone is not a throughput shortfall. For connection changes and Tiers
+routing, the controller considers a change only when offered demand is positive
+and completed work is below
 `offeredPerSecond * shortfallRatio` for the required duration and sample count.
 
 The highest tier whose `offeredPerSecond` threshold is met supplies the target.
-Below the first tier, no target applies. This implementation adapts in response to
-sustained shortfall; it does not automatically remove connections when demand falls.
+Below the first tier, no target applies. Connection layout changes respond to
+sustained shortfall; the controller does not automatically remove connections when demand falls.
 When Cheeger already meets the target, configured traffic balancing can still
 redistribute work among its connected destinations. Without a remaining approved
 connection or traffic adjustment, `ThroughputShortfall` reports the unresolved problem.
@@ -149,6 +159,11 @@ measurement describes those boundary vertices. Each child Graph may configure
 its own independently calibrated feedback policy. This is not a single global
 throughput guarantee across clusters.
 
+To configure percentage routing instead of, or alongside, connection layouts,
+see [fixed splits and automatic Tiers or Headroom balancing](traffic-balancing.md#choose-an-automatic-balancing-mode).
+Those routes can target Workload, Daemon, Graph, PolyGraph and nested ReplicaGroup
+copies through their local service entrypoints.
+
 ## Report measurements
 
 Enable the composition API and grant the reporting key `endpoints: [throughput]`
@@ -181,20 +196,28 @@ rejected. A layout change increments generation, so the reporter must refresh it
 and begin a new measurement window. Graph deletion or recreation invalidates old
 samples.
 
+Headroom balancing additionally requires current throughput and spare-capacity
+reports for every configured destination. See
+[per-replica measurements](traffic-balancing.md#report-per-replica-measurements)
+for the `ThroughputSample.traffic` fields and execution identity checks.
+
 ## Bounds, observations and scalability
 
 | Setting | Default | Permitted values |
 | --- | --- | --- |
-| `mode` | `Observe` | `Observe`, `Adapt`; Adapt requires layouts |
+| `mode` | `Observe` | `Observe`, `Adapt`; Adapt requires layouts, tier traffic weights or Headroom balancing |
 | `unit` | Required | Nonempty string, at most 64 characters |
 | `tiers` | Required | 1–16 strictly increasing demand thresholds, with at least one Cheeger bound each |
 | `layouts` | Empty | At most 8 uniquely named layouts, at most 380 connections each |
+| `trafficMode` | `Tiers` | `Tiers` selects calibrated percentages; `Headroom` uses per-replica completed throughput and spare capacity |
+| `tiers[].trafficWeights` | Empty | Approved route percentages for Tiers mode; not accepted in Headroom mode |
+| `maxWeightStep` | 10 | 1–100 percentage points per destination per adjustment |
 | `sampleMaxAgeSeconds` | 60 | 1–3,600; also the maximum gap in a sustained sample sequence |
 | `sustainedSeconds` | 60 | 1–86,400 |
 | `minSamples` | 3 | 2–1,000 distinct observations |
 | `shortfallRatio` | 0.9 | Greater than 0 and at most 1 |
 | `cooldownSeconds` | 300 | 1–86,400 |
-| `maxChangesPerHour` | 2 | 1–60 successful changes in a rolling hour |
+| `maxChangesPerHour` | 2 | 1–60 successful changes in a rolling hour, shared by connection and traffic changes |
 | `cheegerComputation` | Inherit operator ceilings | [Vertex/cut/time budgets and ordered priority cuts](cheeger-tuning.md#understand-computation-and-scale) |
 
 Exact Cheeger computation defaults to **20 vertices per boundary**, with
@@ -212,7 +235,12 @@ as additional samples. Changes to local execution membership, nested graph
 revisions, replica intent or DaemonSet node eligibility reset stabilization; fresh
 measurements must follow the observed capacity change.
 
-Before applying a layout, Polyad refreshes the complete local graph family,
+With traffic routing, `currentTraffic`, `targetTraffic` and `proposedTraffic`
+show the current, desired and next bounded splits. See
+[traffic bounds and stabilization](traffic-balancing.md#bounds-and-stabilization)
+for destination limits and how direction changes affect Headroom stabilization.
+
+Before applying a connection or traffic change, Polyad refreshes the complete local graph family,
 definitions and GraphRules, then uses a resource-version fence. Concurrent changes
 require another pass. Active temporary connections defer application, and expired
 measurements cannot authorize it. `CoolingDown`, `Stabilizing`, `StaleSample`,

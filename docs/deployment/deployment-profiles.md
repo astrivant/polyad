@@ -6,8 +6,8 @@ operator; `true` runs at least two replicas. `architecture.mode` and
 
 | Profile | Operator resources in the Helm release cluster | Optional extensions |
 | --- | --- | --- |
-| `singular` | One dense operator replica and enabled endpoint Services | Workload APIs, networking, observers and optional PostgreSQL |
-| `ha` | At least two dense operator replicas sharing queues and leases | Split components, root-managed execution pools, and the same optional integrations |
+| `ha: false` (singular) | One dense operator replica and enabled endpoint Services | Workload APIs, networking, observers and optional PostgreSQL |
+| `ha: true` | At least two dense operator replicas sharing queues and leases | Split components, root-managed execution pools, and the same optional integrations |
 
 `operator.replicaCount: null` selects one replica for singular and two for HA.
 An explicit count must be one for singular or at least two for HA. Singular
@@ -18,8 +18,10 @@ groups likewise require at least two copies and a minimum of two when scaled.
 The profile controls operator replication. Configure failure-domain placement,
 cache HA and database HA separately for the availability required by the cluster.
 PostgreSQL stays optional, and `dragonfly.ha.enabled` and `postgresql.ha.enabled`
-retain their own meanings. Profiles do not install KEDA or cluster infrastructure
-that the existing feature guides require administrators to supply.
+retain their own meanings. KEDA can use an existing installation or the
+[optional chart dependency](local-services.md#install-keda-with-the-chart), enabled
+separately with `keda.install: true`. Other infrastructure prerequisites remain
+listed in their feature guides.
 
 ## Table of contents
 
@@ -83,7 +85,8 @@ use the same `polyad-api`, `polyad-events` and `polyad-metrics` Secret names so
 combining them preserves endpoint credentials. Add
 [`values-postgresql.reference.yaml`](../../charts/polyad/values-postgresql.reference.yaml)
 last to enable optional durable state, database HA and KEDA instance scaling;
-install CloudNativePG and KEDA before using it.
+install CloudNativePG and provide KEDA through an existing installation or the
+[KEDA values reference](../../charts/polyad/values-keda.reference.yaml).
 
 Helm merges files in order, with later values taking precedence. Lists replace
 earlier lists entirely, including cluster registries, execution pools and network
@@ -94,7 +97,7 @@ The mesh reference configures transport separately from federation placement.
 
 These are explicit opt-in overrides, not new defaults or additional deployment
 profiles. The HA reference enables [cache replication and KEDA scaling](dragonfly.md),
-so install KEDA first; PostgreSQL is enabled only by
+so provide KEDA separately or add the KEDA values reference; PostgreSQL is enabled only by
 its separate reference. All native Helm resources still target the selected
 Kubernetes context. Root-owned OperatorPools are declarations in the management
 namespace; the root creates their execution Deployments in registered clusters.

@@ -191,7 +191,8 @@ CPU and memory utilization for the operator HPA come from Kubernetes resource
 metrics, not this exporter. Application throughput reports and Cheeger policy
 decisions currently remain in `status.throughput` / `status.structuralRules` and
 their APIs; they are not additional Prometheus metric families. OpenTelemetry
-exports [traces](tracing.md), not a second copy of these metrics.
+exports [traces and decision logs](tracing.md); these exports do not duplicate
+the Prometheus metrics.
 
 ## Freshness and failures
 
@@ -246,16 +247,16 @@ sum(polyad_kubernetes_writes_queued{namespace="polyad"})
 KEDA's Prometheus scaler expects a query returning one scalar/vector element.
 When configuring it later, use the first query as a starting point, choose a
 measured backlog threshold and set `ignoreNullValues: "false"` so missing samples
-do not silently become zero demand. Keep at least one operator replica to
-consume notifications and emit telemetry. Disable the chart's operator HPA before
+do not silently become zero demand. Use `ha: true` for operator autoscaling and
+keep `minReplicaCount: 2` or higher to preserve its replica floor. Disable the chart's operator HPA before
 letting a KEDA ScaledObject manage the same Deployment. The scheduler currently
 has 32 logical shards; one graph family remains serialized, so adding replicas
 cannot speed up a single busy family. Kubernetes API saturation can also worsen
 with more writers. [KEDA Prometheus scaler](https://keda.sh/docs/2.20/scalers/prometheus/)
 
 For workload scaling, [ReplicaGroup and the workload metrics endpoint](../graphs/replication.md)
-provide a bounded Kubernetes scale target for services and entire graphs. KEDA
-is installed separately.
+provide a bounded Kubernetes scale target for services and entire graphs. Use
+an existing KEDA installation or the [optional chart dependency](../deployment/local-services.md#install-keda-with-the-chart).
 
 See [per-workload metric scopes and freshness](../graphs/replication.md#metric-scopes-and-freshness)
 for scalar KEDA endpoints and `polyad_workload_signal` series.

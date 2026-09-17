@@ -3,7 +3,7 @@
 Polyad uses the same structural Cheeger measurement for two different policies:
 **GraphRules define permitted topology**, while **throughput policies select a
 desired topology in response to measured application demand**.
-[Soul searching](throughput-feedback.md), Polyad's bounded topology optimizer,
+[Soul searching](soul-searching.md), Polyad's bounded topology optimizer,
 implements the second policy with `Observe` and `Adapt` modes.
 
 Polyad tracks application-reported `offeredPerSecond` and `completedPerSecond`
@@ -12,11 +12,14 @@ The offered rate selects an administrator-calibrated Cheeger target; a sustained
 completion shortfall can trigger a recommendation or an admitted layout change.
 The target remains a structural range, while the reported rates measure
 application throughput. Meeting that range does not guarantee a completion rate.
+Soul searching can also rebalance [traffic percentages](traffic-balancing.md)
+within the same bounds, including Headroom adjustments before an aggregate shortfall.
 
 ## Table of contents
 
 - [One metric, two responsibilities](#one-metric-two-responsibilities)
 - [The same graph, different decisions](#the-same-graph-different-decisions)
+- [Rebalancing traffic without changing Cheeger](#rebalancing-traffic-without-changing-cheeger)
 - [Observe, Adapt and conflicting bounds](#observe-adapt-and-conflicting-bounds)
 - [Coordinating topology with replica scaling](#coordinating-topology-with-replica-scaling)
 - [Nested Graphs and subgraph replication](#nested-graphs-and-subgraph-replication)
@@ -44,9 +47,9 @@ bandwidth, message sizes, CPU capacity, processing costs or edge direction.
 | Where configured? | `GraphRule.spec.cheeger.minimum` / `maximum` | `Graph.spec.throughput.tiers[].cheeger` or the equivalent PolyGraph field |
 | What sets the bounds? | Administrator policy | Administrator-calibrated demand tiers, selected using reported `offeredPerSecond` |
 | Which relation is measured? | The rule's selected relation; use `relation: connections` for these comparisons | The boundary's logical `connections` relation |
-| When evaluated? | During admission and before graph-managed changes, including scaling | After fresh reports demonstrate a sustained application shortfall |
-| What does it orchestrate? | Permits or blocks an otherwise requested change | Recommends an approved connection layout, or applies it in Adapt mode |
-| Can it change replicas? | Constrains scaling through Polyad's admission path | No; it replaces boundary connections |
+| When evaluated? | During admission and before graph-managed changes, including scaling | After a sustained shortfall for connection/Tiers changes, or sustained Headroom imbalance under positive demand |
+| What does it orchestrate? | Permits or blocks an otherwise requested change | Recommends approved connection layouts or bounded traffic splits, or applies them in Adapt mode |
+| Can it change replicas? | Constrains scaling through Polyad's admission path | No; it changes connections or routing percentages |
 | How does it apply through a hierarchy? | Referenced/inherited rules and namespace rules govern applicable boundaries | Each Graph or PolyGraph configures its own feedback policy |
 | What if the application misses its throughput goal? | The hard bounds still apply | An eligible approved layout may be considered; the hard bounds still apply |
 
@@ -101,11 +104,43 @@ The example does **not** predict the ring's resulting records/s. Its target and
 layout should come from application load tests, and fresh measurements are needed
 after the change to determine whether it helped.
 
+## Rebalancing traffic without changing Cheeger
+
+The same connections can carry different shares of application work. Here, a
+producer and two downstream Graph nodes form a three-vertex boundary with
+Cheeger `1` in both configurations:
+
+```mermaid
+flowchart LR
+    subgraph before["Before · h = 1"]
+        p1["Producer"] -->|"90%"| a1["Graph A entrypoint"]
+        p1 -->|"10%"| b1["Graph B entrypoint"]
+    end
+    subgraph after["After · h = 1"]
+        p2["Producer"] -->|"50%"| a2["Graph A entrypoint"]
+        p2 -->|"50%"| b2["Graph B entrypoint"]
+    end
+    before -. "Adjust Istio percentages" .-> after
+```
+
+`trafficMode: Tiers` selects an administrator-calibrated split after sustained
+shortfall. `Headroom` uses each destination's completed throughput plus reported
+spare capacity and can rebalance before aggregate throughput falls. Both keep
+the selected Cheeger target, hard rules, destination bounds, stabilization and
+shared change budget. Neither changes the number of replicas.
+
+Routing percentages are separate from the unweighted structural measurement;
+even a zero-percent target keeps its declared edge until that connection is
+removed. The same routing mechanism supports Workload, Daemon, Graph, PolyGraph
+and nested ReplicaGroup entrypoints. See [traffic balancing](traffic-balancing.md)
+for local Service requirements, configuration and reporting examples.
+
 ## Observe, Adapt and conflicting bounds
 
 Observe and Adapt share sample validation, stabilization, target selection and
 candidate rule checks. Their difference is whether an approved recommendation can
-be committed.
+be committed. This diagram follows a connection-layout change; percentage
+adjustments use the same admission and timing guards with their selected routing mode.
 
 ```mermaid
 flowchart TB
@@ -344,7 +379,7 @@ flowchart TB
 DaemonSet worker pools follow eligible nodes and require `replicas: 1`; they
 cannot be scaled by choosing a Pod replica count. Deployment worker pools retain
 replica-based scaling through the root. These are capacity mechanisms, distinct
-from the application feedback policy's connection changes.
+from the application feedback policy's connection and traffic changes.
 
 The reserved hierarchy does not automatically opt the operator into application
 throughput adaptation. `/v1/throughput` rejects reserved/internal targets, and
@@ -380,11 +415,12 @@ throughput:
 
 Use `status.structuralRules` for structural verdicts and
 `status.throughput` for the selected target, current value, recommendation and
-feedback phase. Check freshness and generation: stored status does not authorize
+feedback phase, including `currentTraffic`, `targetTraffic` and `proposedTraffic`
+when routing is configured. Check freshness and generation: stored status does not authorize
 a future mutation. Successful adaptation increments generation, so the reporter
 must refresh the graph identity before submitting its next measurement window.
 
 For a complete manifest, reporting examples and all timing controls, see
-[application throughput feedback](throughput-feedback.md#configure-a-bounded-policy).
+[Soul searching policy configuration](soul-searching.md#configure-a-bounded-policy).
 For rule scope, admission and every available structural constraint, see
 [GraphRules](graph-rules.md).

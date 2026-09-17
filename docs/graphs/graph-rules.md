@@ -1041,9 +1041,10 @@ See [comparing Cheeger policies](cheeger-orchestration.md) for diagrams showing
 how hard admission bounds, Observe/Adapt feedback and replica scaling interact.
 
 GraphRule Cheeger bounds remain hard structural constraints. Optional
-[application throughput feedback](throughput-feedback.md) maintains a **separate**
+[Soul searching](soul-searching.md) maintains a **separate**
 Cheeger target range derived from administrator-calibrated demand tiers. Observe
-mode reports recommendations; Adapt may replace connections with an approved
-layout only after fresh family checks pass both policies. Throughput feedback
+mode reports recommendations; Adapt may apply an approved connection layout or
+bounded [traffic adjustment](traffic-balancing.md) only after fresh family checks
+pass both policies. Soul searching
 cannot relax a GraphRule. Disjoint bounds block adaptation and report
 `NoAllowedLayout`; neither metric is a guarantee of an application data rate.

@@ -174,7 +174,8 @@ peer address, while ownership of the generated policy remains UID-fenced.
 NetworkPolicy requires a CNI that enforces it. Istio is additionally required for
 HTTP and service-identity checks. With `mesh: true`, Polyad requests native sidecar
 injection, emits strict `PeerAuthentication` and an `AuthorizationPolicy`, and
-verifies injection with a dry-run Pod admission before creating a Job, Deployment or StatefulSet.
+verifies injection with a dry-run Pod admission before creating a Job, Deployment,
+StatefulSet or DaemonSet.
 Native sidecars allow finite Jobs to complete. Mesh application containers must
 run as non-root, avoid Istio's reserved UID 1337, and work with dropped capabilities.
 Host namespaces, hostPath volumes, elevated capabilities and user-supplied mesh
@@ -191,7 +192,9 @@ Policy writes use the same serialized, lease-fenced Kubernetes adapter as worklo
 writes. New admission waits for a fresh read of the persisted policies. Policies
 are updated in place with resource versions, and stay in place while removed
 workloads finish deletion and custom finalizers. Graph status inventories include
-NetworkPolicy, AuthorizationPolicy and PeerAuthentication counts.
+NetworkPolicy, AuthorizationPolicy and PeerAuthentication counts, plus
+VirtualService and DestinationRule counts when [traffic routing](../graphs/traffic-balancing.md)
+is configured.
 
 An API acknowledgement does **not** acknowledge CNI or Envoy configuration
 propagation. Policy changes are eventually enforced, and existing connections can

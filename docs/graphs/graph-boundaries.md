@@ -9,7 +9,7 @@ Polyad has three graph boundary types:
 | `ReplicaGroup` | Scale copies of a reusable definition through the Kubernetes scale API |
 
 All three participate in ownership, live GraphRule evaluation and recursive
-status. StatefulSet and Deployment execution remain choices on Daemon definitions.
+status. Deployment, StatefulSet and DaemonSet execution remain choices on Daemon definitions.
 
 Cross-cluster placement, Istio transport and shared read-only observers are
 independent optional extensions. PolyGraphs manage remote child Graph intent;

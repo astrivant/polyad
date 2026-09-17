@@ -59,6 +59,8 @@ assert rule.cheeger == Cheeger(minimum=0.5)
 | `polyad_types.replication` | Replica templates, bounds and connection modes |
 | `polyad_types.rules` | Structural, spectral and Cheeger configuration |
 | `polyad_types.network` | Network access, peers, ports and traffic rules |
+| `polyad_types.traffic` | Istio routes, destination weights and bounds, and approved traffic splits |
+| `polyad_types.throughput` | Application throughput and per-destination capacity reports for Soul searching |
 | `polyad_types.activation`, `capacity`, `storage` | Activation, advance capacity and persistence configuration |
 | `polyad_types.requests` | Composition, activation and temporary connection requests |
 | `polyad_types.events` | Event stream observations |

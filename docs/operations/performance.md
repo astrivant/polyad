@@ -167,7 +167,8 @@ When KEDA owns a Deployment or ReplicaGroup, put the equivalent behavior in its
 ScaledObject under `spec.advanced.horizontalPodAutoscalerConfig.behavior`.
 The chart's operator HPA settings do not modify separately managed ScaledObjects.
 Disable `operator.autoscaling.enabled` before letting KEDA own the operator
-Deployment, and keep at least one operator replica running.
+Deployment. Use `ha: true` and keep KEDA's `minReplicaCount` at least two to
+preserve the HA profile's replica floor.
 
 KEDA's `pollingInterval` and `cooldownPeriod` are separate controls; cooldown
 governs returning to zero, while HPA behavior governs scaling between active

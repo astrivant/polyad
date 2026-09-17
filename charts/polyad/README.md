@@ -140,6 +140,7 @@ with canonical field types; Helm validates all requirements after merging defaul
 | --- | --- | --- |
 | [`values-singular.reference.yaml`](values-singular.reference.yaml) | One dense operator and a persistent cache in the release cluster | [Singular](../../docs/deployment/deployment-profiles.md#one-dense-operator) |
 | [`values-ha.reference.yaml`](values-ha.reference.yaml) | Replicated dense operators; also opts into cache HA | [HA](../../docs/deployment/deployment-profiles.md#ha-in-one-cluster) |
+| [`values-keda.reference.yaml`](values-keda.reference.yaml) | Optional bundled KEDA installation and observation in the root operator Graph | [KEDA installation](../../docs/deployment/local-services.md#install-keda-with-the-chart) |
 | [`values-components.reference.yaml`](values-components.reference.yaml) | HA bootstrap plus a self-managed gateway/executor/telemetry Graph and KEDA scaling in the release cluster | [Components](../../docs/deployment/components.md) |
 | [`values-federation.reference.yaml`](values-federation.reference.yaml) | Remote cluster registrations for PolyGraph placement; destinations have independent execution operators | [Federation](../../docs/deployment/multicluster.md#placement-and-ownership) |
 | [`values-root-control-plane.reference.yaml`](values-root-control-plane.reference.yaml) | HA management release that installs and controls remote execution pools | [Root control plane](../../docs/deployment/root-control-plane.md) |

@@ -1,7 +1,8 @@
 # Dragonfly HA and KEDA
 
-Bundled Dragonfly HA uses KEDA by default. Install KEDA before enabling
-`dragonfly.ha.enabled`, or set `dragonfly.autoscaling.enabled: false` for a fixed
+Bundled Dragonfly HA uses KEDA by default. Provide an existing KEDA installation
+or enable the [optional chart dependency](local-services.md#install-keda-with-the-chart)
+alongside `dragonfly.ha.enabled`. Set `dragonfly.autoscaling.enabled: false` for a fixed
 `dragonfly.ha.replicas` count. Single-instance and externally managed caches do
 not get a scaler. PostgreSQL remains independent and optional.
 

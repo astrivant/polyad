@@ -41,7 +41,7 @@ These are three separate controls:
 | Control | What it changes |
 | --- | --- |
 | Graph connections and [Cheeger bounds](cheeger-orchestration.md) | Which nodes may exchange work and the structural expansion required at each boundary |
-| `traffic` and optional [Soul searching](throughput-feedback.md) feedback | The percentage of incoming requests assigned to each configured downstream target |
+| `traffic` and optional [Soul searching](soul-searching.md) feedback | The percentage of incoming requests assigned to each configured downstream target |
 | [ReplicaGroup scaling](replication.md#connect-keda) | How many copies of a workload or complete graph exist |
 
 ```mermaid
@@ -195,7 +195,7 @@ flowchart TB
 
 Use one application reporter to assemble measurements over the same window and
 unit. The [Python client](../../pkg/client/README.md) submits these through the
-existing [throughput endpoint](throughput-feedback.md#report-measurements).
+existing [Soul searching throughput endpoint](soul-searching.md#report-measurements).
 
 ```python
 from polyad_types import ThroughputSample, TrafficSample

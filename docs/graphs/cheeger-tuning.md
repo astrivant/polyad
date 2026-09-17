@@ -22,7 +22,7 @@ when the proposed layouts are useful.
 | --- | --- | --- |
 | `GraphRule.spec` | A policy administrator with Kubernetes rule-write permissions | Defines structural limits that admitted changes must respect |
 | `Graph.spec.rules`, `PolyGraph.spec.rules`, `ReplicaGroup.spec.rules` | Application owners | Selects rules with `enforcement: Referenced`; namespace rules still apply |
-| `Graph.spec.throughput`, `PolyGraph.spec.throughput` | Application owners through manifests or composition requests | Configures demand tiers, approved layouts and response timing |
+| `Graph.spec.throughput`, `PolyGraph.spec.throughput` | Application owners through manifests or composition requests | Configures demand tiers, approved layouts, traffic adjustment and response timing |
 | Helm `operator.cheeger` | Operator administrators | Sets deployment-wide vertex, cut-count and time ceilings; local policies may lower them |
 | Helm `architecture.cheegerMinimum` / `cheegerMaximum` | Operator administrators | Constrains the optional distributed operator component Graph |
 
@@ -62,17 +62,20 @@ These settings live under `spec.throughput` on Graphs and PolyGraphs:
 
 | Setting | Default | How to choose it |
 | --- | --- | --- |
-| `mode` | `Observe` | Observe reports recommendations; Adapt may apply an approved layout. Omit the whole policy to disable feedback. |
+| `mode` | `Observe` | Observe reports recommendations; Adapt may apply an approved layout or bounded traffic split. Omit the whole policy to disable feedback. |
 | `unit` | Required | Use the same work unit for offered and completed rates, such as records or requests. |
 | `tiers[].offeredPerSecond` | Required | Calibrate increasing demand thresholds with load tests; the highest matching threshold selects its target. Below the first tier, no target applies. |
 | `tiers[].cheeger.minimum` / `maximum` | At least one required | Select structural ranges whose approved layouts helped at that demand. Keep feasible overlap with hard bounds. |
-| `layouts` | Empty | List complete, application-supported connection layouts in preference order. Adapt requires at least one; node identities and admission dependencies stay fixed. |
+| `layouts` | Empty | List complete, application-supported connection layouts in preference order. Required for automatic connection changes; Adapt can also operate on traffic splits alone. Node identities and admission dependencies stay fixed. |
+| `trafficMode` | `Tiers` | Use calibrated tier percentages, or choose `Headroom` to use each destination's completed rate plus reported spare capacity. Headroom requires reports for every configured destination. |
+| `tiers[].trafficWeights` | Empty | Set approved percentages for each configured route in Tiers mode; omit in Headroom mode. |
+| `maxWeightStep` | `10` | Limit each destination's adjustment to 1–100 percentage points per action. Smaller steps redistribute traffic more gradually. |
 | `shortfallRatio` | `0.9` | A completed/offered ratio below this threshold is a shortfall. Higher values react to smaller deficits; lower values tolerate more backlog. Valid range: greater than zero through one. |
 | `sampleMaxAgeSeconds` | `60` | Set above the normal report interval plus expected delivery jitter. Also limits gaps in a continuous sequence. Range: 1–3,600. |
 | `sustainedSeconds` | `60` | Lengthen to ignore bursts; shorten to respond sooner to sustained deficits. Range: 1–86,400. |
 | `minSamples` | `3` | Require enough distinct observations to support the decision. Both sample count and duration must pass. Range: 2–1,000. |
 | `cooldownSeconds` | `300` | Allow routing and workload capacity to settle before another successful topology change. Range: 1–86,400. |
-| `maxChangesPerHour` | `2` | Bound successful changes in a rolling hour independently of cooldown. Range: 1–60. |
+| `maxChangesPerHour` | `2` | Bound successful connection and traffic changes together in a rolling hour independently of cooldown. Range: 1–60. |
 
 For example, with reports every 30 seconds, `sustainedSeconds: 120` and
 `minSamples: 4`, a fresh continuous sequence still needs to span two minutes.
@@ -80,10 +83,12 @@ Four reports alone do not authorize a change. Keep topology adaptation slower
 than ordinary workload autoscaling; capacity changes reset stabilization.
 
 If the current graph meets the selected target but completed throughput remains
-low, the controller reports `ThroughputShortfall`. It does not keep adding edges
-or increase replicas. Investigate processing capacity, routing and downstream
-services using the actual application measurements. Low demand alone does not
-automatically remove connections. See [all feedback guards](throughput-feedback.md#bounds-observations-and-scalability).
+low, [traffic balancing](traffic-balancing.md) can still redistribute requests.
+With no remaining approved connection or traffic adjustment, the controller
+reports `ThroughputShortfall`. It does not increase replicas. Investigate
+processing capacity, routing and downstream services using the actual application
+measurements. Low demand alone does not automatically remove connections. See
+[Soul searching bounds and guards](soul-searching.md#bounds-observations-and-scalability).
 
 ## Try the configuration reference
 
@@ -98,7 +103,7 @@ kubectl -n workloads apply -f examples/cheeger-tuning.yaml
 Use the namespace watched by your operator. Creating the example's GraphRule
 requires policy-administrator access. The included workers serve health responses;
 replace them with your application and
-[report its measured rates](throughput-feedback.md#report-measurements).
+[report its measured rates to Soul searching](soul-searching.md#report-measurements).
 The thresholds are illustrative, not a prediction of what those workers can process.
 Connections describe data flow; applications must implement the approved routing.
 

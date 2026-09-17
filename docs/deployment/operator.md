@@ -5,6 +5,13 @@ constraints and admission gates. Storage and application recovery are explicit
 workload responsibilities. A graph's `mode: persistent` describes a long-running
 lifecycle; it does not enable persistent storage or checkpointing.
 
+The Kubernetes operator is built on [Kopf](https://docs.kopf.dev/en/stable/),
+the Kubernetes Operators Framework for Python. Kopf supplies resource watches,
+startup and shutdown hooks, and health probes. Polyad's handlers feed observations
+into its coordinated queues, where graph reconciliation checks live constraints
+before applying mutations. See the [process and thread hierarchy](process-hierarchy.md)
+for how the embedded Kopf runtime fits into the operator.
+
 The [root control-plane architecture](root-control-plane.md#authority-and-execution)
 lets a dedicated management cluster own remote execution replicas, central
 observations and [KEDA scaling decisions](root-control-plane.md#keda-from-the-root).

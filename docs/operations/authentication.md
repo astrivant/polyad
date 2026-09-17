@@ -52,7 +52,8 @@ KEDA's [Metrics API scaler](https://keda.sh/docs/2.20/scalers/metrics-api/)
 sends the token as a bearer credential. The
 [TriggerAuthentication](https://keda.sh/docs/2.20/concepts/authentication/#re-use-credentials-and-delegate-auth-with-triggerauthentication)
 must be in the ScaledObject's namespace, alongside the referenced Secret.
-Several ScaledObjects can share it. Install KEDA and its CRDs separately.
+Several ScaledObjects can share it. Use an existing KEDA installation or enable
+the [optional KEDA chart dependency](../deployment/local-services.md#install-keda-with-the-chart).
 
 Tokens must be nonempty printable ASCII without whitespace or a trailing
 newline. Missing or invalid credentials return HTTP 401. Enabling authentication
@@ -112,7 +113,8 @@ Secrets, but those consumers must reference them explicitly.
 Wait for ESO's target Secrets to exist before expecting operator Pods to start.
 Duplicate targets, duplicate data keys and collisions with inline managed
 credentials are rejected at Helm render time. Authentication and ESO resources
-are disabled by default. No KEDA or ESO controllers are installed by this chart.
+are disabled by default. ESO is installed separately. KEDA installation is an
+independent opt-in through `keda.install`; authentication settings alone do not install it.
 
 Inline `metrics.authentication.key` is also supported when `existingSecret` is
 empty. Inline credentials become part of Helm release data; prefer an existing

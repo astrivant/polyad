@@ -17,7 +17,7 @@ does not install the operator.
 - [Composition and request handling](#composition-and-request-handling)
 - [Events and topology](#events-and-topology)
 - [Remote clusters](#remote-clusters)
-- [Throughput feedback](#throughput-feedback)
+- [Report throughput to Soul searching](#report-throughput-to-soul-searching)
 - [Publishing](#publishing)
 
 ## Installation
@@ -134,10 +134,10 @@ With a [root control plane](../../docs/deployment/root-control-plane.md), pass `
 to `topology()` and `events()` when reading a registered remote cluster through the
 root event endpoint. Replay cursors belong to their selected cluster stream.
 
-## Throughput feedback
+## Report throughput to Soul searching
 
 The client also exposes `report_throughput(ThroughputSample(...))` for
-[application throughput feedback](../../docs/graphs/throughput-feedback.md). Its key needs
+[Soul searching](../../docs/graphs/soul-searching.md#report-measurements). Its key needs
 the `throughput` capability and an explicit grant to the measured graph tree.
 
 ## Publishing

@@ -1580,7 +1580,8 @@ own cluster.
 
 Enable `metrics.enabled`, `metrics.authentication.enabled` and
 `keda.authentication.enabled` in the Helm chart, and supply the metrics Secret
-as described in [authentication and ESO setup](../operations/authentication.md). Install KEDA separately and give its
+as described in [authentication and ESO setup](../operations/authentication.md).
+Use an existing KEDA installation or the [optional chart dependency](../deployment/local-services.md#install-keda-with-the-chart), and give its
 operator and HPA controllers permission to read/update `replicagroups/scale` in
 the target namespace. KEDA supports custom resources through this standard
 [scale subresource](https://keda.sh/docs/2.20/concepts/scaling-deployments/).
@@ -1749,5 +1750,7 @@ cleanup contracts. Storage and application state must support the chosen number
 of concurrent copies; replication does not clone or checkpoint application state.
 
 Upgrade the chart's CRDs, including `ReplicaGroup`, before the operator. Helm does
-not automatically upgrade existing CRDs. No KEDA installation or ScaledObject is
-created implicitly by Polyad.
+not automatically upgrade existing CRDs. Application ReplicaGroups need an
+explicit ScaledObject; creating a group does not enable autoscaling. The chart
+can separately install KEDA with `keda.install` and creates ScaledObjects for its
+enabled component, cache and database autoscaling integrations.

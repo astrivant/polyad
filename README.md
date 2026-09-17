@@ -7,6 +7,8 @@ Compose batch jobs, persistent services and supporting resources into reusable
 Graphs and PolyGraphs. Define how work starts, how components communicate and
 which structural constraints must hold as the application changes—from a workflow
 in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deployment/operator.md#api-and-python-abstractions)</sup>
+The Kubernetes operator is built on [Kopf](https://docs.kopf.dev/en/stable/),
+the Kubernetes Operators Framework for Python.
 
 **[Get started](docs/introduction/getting-started.md)** · **[Documentation](docs/README.md)** · **[Helm chart](charts/polyad/README.md)**
 
@@ -17,7 +19,7 @@ in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deplo
   scale individual services, whole graphs or nested compositions. Polyad refreshes
   live graph state and enforces [GraphRules](docs/graphs/graph-rules.md), including size,
   shape and structural Cheeger bounds, before applying scaling changes.
-  Optional [Soul searching](docs/graphs/throughput-feedback.md), Polyad's topology optimizer,
+  Optional [Soul searching](docs/graphs/soul-searching.md), Polyad's topology optimizer,
   uses application measurements to recommend or apply approved connection layouts
   and bounded [Istio traffic splits](docs/graphs/traffic-balancing.md). Demand selects
   a separate Cheeger target; routing percentages come from calibrated demand tiers
@@ -121,7 +123,7 @@ A [root control plane](docs/deployment/root-control-plane.md) extends that model
 across registered clusters, coordinating deployments and collecting observations.
 
 For pipelines with idle workers behind busy stages, [Cheeger bounds](docs/graphs/cheeger-orchestration.md)
-constrain sparse connectivity, while [Soul searching](docs/graphs/throughput-feedback.md)
+constrain sparse connectivity, while [Soul searching](docs/graphs/soul-searching.md)
 uses application measurements to guide approved connection changes and
 [traffic balancing](docs/graphs/traffic-balancing.md) between replicas. This helps
 direct work toward available capacity. Structural bounds do not guarantee a data
@@ -927,6 +929,10 @@ Polyad coordinates application graphs alongside existing cluster components.
 Selected background reading for Polyad's architecture and less common design
 choices.
 
+- **Operator framework:** [Kopf — Kubernetes Operators Framework](https://docs.kopf.dev/en/stable/).
+  The Python framework behind Polyad's Kubernetes watches, startup and shutdown
+  hooks, and health probes. Polyad builds graph reconciliation and coordinated
+  mutations on top of it; see the [operator runtime](docs/deployment/process-hierarchy.md).
 - **Infrastructure at scale:** Eduardo Barth, Medium Engineering,
   [Kubernetes Infrastructure At Medium](https://medium.engineering/kubernetes-infrastructure-at-medium-d9e2444932ef)
   (February 14, 2023). A case study covering separate clusters, gradual
