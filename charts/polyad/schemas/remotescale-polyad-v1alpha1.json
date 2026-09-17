@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/remotescale.v1alpha1.schema.json",
+  "title": "polyad.astrivant.com RemoteScale v1alpha1",
+  "type": "object",
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "polyad.astrivant.com/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "RemoteScale"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "cluster",
+        "replicas",
+        "target"
+      ],
+      "properties": {
+        "cluster": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 63,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf",
+              "message": "cluster is immutable"
+            }
+          ]
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256,
+          "default": 1
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "name",
+            "uid",
+            "generation"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63
+            },
+            "uid": {
+              "type": "string",
+              "minLength": 1
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Locally approved target spec generation; local edits invalidate the request."
+            }
+          },
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf",
+              "message": "target identity and approved generation are immutable"
+            }
+          ]
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "readyReplicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "labelSelector": {
+          "type": "string"
+        },
+        "observedGeneration": {
+          "type": "integer"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "$comment": "Generated from charts/polyad/crds/remotescales.yaml; do not edit this artifact."
+}

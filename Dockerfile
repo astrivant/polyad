@@ -47,6 +47,7 @@ RUN --mount=type=cache,id=polyad-pip-${TARGETARCH}${TARGETVARIANT},target=/root/
     && python -m venv /opt/venv
 COPY pyproject.toml poetry.lock README.md LICENSE ./
 COPY pkg/polyad-types ./pkg/polyad-types
+COPY pkg/polyad-schemas ./pkg/polyad-schemas
 RUN /opt/poetry/bin/poetry check --lock
 
 FROM build-tools AS production-build

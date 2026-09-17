@@ -56,6 +56,8 @@ def prepare(tag: str) -> None:
     replace("pyproject.toml", rf'^(version\s*=\s*)"{re.escape(old_version)}"\s*$', rf'\g<1>"{package}"')
     replace("pkg/client/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
     replace("pkg/polyad-types/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
+    replace("pkg/polyad-schemas/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
+    replace("pyproject.toml", r'^schemas = \["polyad-schemas==[^"\n]+"\]$', f'schemas = ["polyad-schemas=={package}"]')
     for path in ("pyproject.toml", "pkg/client/pyproject.toml"):
         replace(path, r'^(\s*)"polyad-types==[^"\n]+",?$', rf'\g<1>"polyad-types=={package}",')
     # The local path dependency's version and the root dependency metadata change
@@ -65,6 +67,7 @@ def prepare(tag: str) -> None:
         r'(^name = "polyad-types"\nversion = )"[^"\n]+"',
         rf'\g<1>"{package}"',
     )
+    replace("poetry.lock", r'(^name = "polyad-schemas"\nversion = )"[^"\n]+"', rf'\g<1>"{package}"')
     replace("charts/polyad/Chart.yaml", r"^version: .+$", f"version: {chart}")
     replace("charts/polyad/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
     replace("charts/polyad/values.yaml", r"^    tag: .+$", f"    tag: '{chart}'")

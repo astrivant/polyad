@@ -34,36 +34,12 @@ repos:
         language: system
         pass_filenames: false
         files: '^(charts/polyad/values.*\.(yaml|json)|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|pkg/tests/data/.*values\.yaml|terraform/.*values.*\.(yaml|json)|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
-      - id: status-schemas
-        name: Generated graph status schemas
-        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-status-schemas.py --check
+      - id: schema-artifacts
+        name: Generated chart and Python schema artifacts
+        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-all.py --check
         language: system
         pass_filenames: false
-        files: '^(pkg/polyad/compiler/|pkg/polyad-types/|charts/polyad/crds/|scripts/schemas/generate-status-schemas\.py$|\.pre-commit-config\.yaml$)'
-      - id: event-schemas
-        name: Generated public event schemas
-        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-event-schemas.py --check
-        language: system
-        pass_filenames: false
-        files: '^(pkg/polyad-types/|scripts/schemas/generate-event-schemas\.py$|\.pre-commit-config\.yaml$)'
-      - id: packaged-json-schemas
-        name: Generated importable JSON schemas
-        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-json-schemas.py --check
-        language: system
-        pass_filenames: false
-        files: '^(pkg/polyad-types/|charts/polyad/(crds/|values.*\.json)|scripts/schemas/|\.pre-commit-config\.yaml$)'
-      - id: reference-schema
-        name: Generated Helm overlay editor schema
-        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-reference-schema.py --check
-        language: system
-        pass_filenames: false
-        files: '^(charts/polyad/values.*\.json|scripts/schemas/generate-reference-schema\.py|\.pre-commit-config\.yaml)$'
-      - id: network-schemas
-        name: Generated graph network and capacity schemas
-        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-network-schemas.py --check
-        language: system
-        pass_filenames: false
-        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-types/|charts/polyad/crds/|scripts/schemas/generate-network-schemas\.py$|\.pre-commit-config\.yaml$)'
+        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-(types|schemas)/|schemas/|charts/polyad/(crds/|schemas/|values.*\.json|Chart\.(yaml|lock)|LICENSE.*)|scripts/schemas/|\.pre-commit-config\.yaml$)'
       - id: docstring-layout
         name: Multiline docstring layout
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-docstrings.py

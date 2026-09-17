@@ -17,10 +17,12 @@ the framing, not graph visibility, consent permissions or replay semantics.
 ## Import the contract
 
 Install `polyad-types` to use event types without installing the operator. The
-`polyad-client` package already depends on it:
+`polyad-client` package already depends on it. Install `polyad-schemas` separately
+for the JSON artifacts used below:
 
 ```python
-from polyad_types import EventAST, TopologyEvent, decode_event, event_schema
+from polyad_types import EventAST, TopologyEvent, decode_event
+from polyad_schemas.events import event_schema
 
 document = {
     "id": "1750000000000-0",
@@ -113,7 +115,7 @@ startup, topology refresh and connection hooks.
 
 ## Schemas and validation
 
-The [packaged JSON Schema](../../pkg/polyad-types/polyad_types/schemas/events.schema.json)
+The [packaged JSON Schema](../../pkg/polyad-schemas/polyad_schemas/events/events.schema.json)
 uses Draft 2020-12, a discriminated `oneOf`, and named `$defs` for nested nodes.
 It is generated from the Python models and field constraints. Pre-commit checks
 that the artifact matches its source. Both wheels and source distributions ship it.
@@ -125,7 +127,10 @@ GET /v1/events/schema    # Installed operator's event schema
 GET /v1/events/config    # Its current EventStreamSettings
 ```
 
-Both routes require the `events` endpoint permission when using named keys.
+Schema serving requires `polyad[schemas]`; the production image includes it.
+Without the extra, `/v1/events/schema` returns 503 with installation guidance;
+event streaming and typed decoding still work. Both routes require the `events`
+endpoint permission when using named keys.
 They reveal no graph identities or credentials. Their paths appear in the events
 OpenAPI document and the chart's Istio gateway and authorization rules.
 

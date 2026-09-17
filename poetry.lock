@@ -2767,6 +2767,21 @@ dev = ["pre-commit", "tox"]
 testing = ["coverage", "pytest", "pytest-benchmark"]
 
 [[package]]
+name = "polyad-schemas"
+version = "0.0.1a3"
+description = "Generated JSON Schemas for Polyad models, Kubernetes resources, events and Helm values"
+optional = true
+python-versions = ">=3.11,<4"
+groups = ["main"]
+markers = "extra == \"schemas\""
+files = []
+develop = false
+
+[package.source]
+type = "directory"
+url = "pkg/polyad-schemas"
+
+[[package]]
 name = "polyad-types"
 version = "0.0.1a3"
 description = "Shared resource, configuration and API models for Polyad"
@@ -4350,8 +4365,9 @@ propcache = ">=0.2.1"
 
 [extras]
 flask-auth = ["flask-httpauth"]
+schemas = ["polyad-schemas"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4.0"
-content-hash = "9185ae5e30d34d164be1d2145933174dccc97e8615a4e960bd49ad15667519a5"
+content-hash = "d0bee1d113402ae8e73aa6d2630663ccef4fb30faa994aa778f2dd01325c88f6"

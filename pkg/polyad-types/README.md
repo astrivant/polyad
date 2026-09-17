@@ -2,7 +2,7 @@
 
 Shared Python 3.11–3.14 resource, configuration and API models for Polyad. This
 package provides the same definitions used by the operator and Python client,
-including constructor validation, serialization, importable JSON Schemas and a `py.typed` marker.
+including constructor validation, serialization and a `py.typed` marker.
 Its only dependencies are attrs, cattrs and typing-extensions.
 
 ## Table of contents
@@ -67,7 +67,7 @@ assert rule.cheeger == Cheeger(minimum=0.5)
 | `polyad_types.throughput` | Application throughput and per-destination capacity reports for Soul searching |
 | `polyad_types.activation`, `capacity`, `storage` | Activation, advance capacity and persistence configuration |
 | `polyad_types.requests` | Composition, activation and temporary connection requests |
-| `polyad_types.events`, `event_models` | Event envelopes, typed payload trees, stream settings and the packaged JSON Schema |
+| `polyad_types.events`, `event_models` | Event envelopes, typed payload trees, stream settings |
 
 Top-level `Graph`, `PolyGraph` and `Daemon` are Kubernetes resource envelopes.
 `Topology` describes a Graph's specification; `polyad_types.topology.PolyGraph`
@@ -90,13 +90,14 @@ operator.
 
 ## JSON Schemas
 
-The package ships generated schemas for shared models, Polyad CRD manifests,
-event envelopes and Helm values. Load them without installing the operator or
-a JSON Schema validator:
+The separate `polyad-schemas` distribution ships generated schemas for these
+models, CRD manifests, event envelopes and Helm values. Install it with
+`pip install polyad-schemas`, or use `pip install 'polyad[schemas]'` for the
+operator and schemas together. The types package remains independent:
 
 ```python
 from polyad_types import ConnectionRequest
-from polyad_types.schemas import available_schemas, load_schema, resource_schema, schema_for
+from polyad_schemas import available_schemas, load_schema, resource_schema, schema_for
 
 request = schema_for(ConnectionRequest)
 graph = resource_schema("Graph")
@@ -105,7 +106,8 @@ print(available_schemas())
 ```
 
 Each result is an independent dictionary with local references; the JSON files
-also ship as `polyad_types.schemas` package resources in wheels and source
+ship in the `polyad_schemas.models`, `.resources`, `.events` and `.helm`
+submodules in wheels and source
 distributions. `schema_for(Graph)` describes the Python resource envelope;
 `resource_schema("Graph")` checks the fuller chart manifest contract.
 See [importable JSON Schemas](https://github.com/astrivant/polyad/blob/main/docs/apis/json-schemas.md)
@@ -118,7 +120,8 @@ and `HeartbeatEvent` from `polyad_types`. `decode_event(document)` validates and
 constructs the matching AST; `Event.typed()` does the same for client observations.
 `to_dict(ast)` serializes it. Nested payload models live in `polyad_types.event_models`.
 
-`event_schema()` reads the shipped Draft 2020-12 JSON Schema without an operator
+`polyad_schemas.events.event_schema()` reads the separately packaged Draft 2020-12
+JSON Schema without an operator
 import or a network request. `EventStreamSettings` defines configurable event byte,
 batch and polling budgets, and `EventTooLarge` identifies size rejection. See the
 [event contract and Helm tuning guide](https://github.com/astrivant/polyad/blob/main/docs/apis/event-contract.md)

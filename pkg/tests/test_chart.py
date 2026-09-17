@@ -467,8 +467,7 @@ def test_vendored_crd_matches_locked_dependency(tmp_path):
         ["helm", "template", "upstream", str(tmp_path / "dragonfly-operator"), "--show-only", "templates/crds.yaml"], text=True
     )
     assert yaml.safe_load(rendered) == yaml.safe_load((CHART / "crds" / "dragonflies.yaml").read_text())
-    schema = yaml.safe_load(rendered)["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
-    assert json.loads((CHART / "schemas" / "dragonfly-dragonflydb-v1alpha1.json").read_text()) == schema
+    # The converted chart/Python copies are checked together in test_json_schemas.
 
 
 def test_composition_service_and_policy_rbac():

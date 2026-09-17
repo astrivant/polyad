@@ -1,13 +1,18 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/httproute.gateway.networking.k8s.io.v1.schema.json",
+  "title": "gateway.networking.k8s.io HTTPRoute v1",
   "description": "HTTPRoute provides a way to route HTTP requests. This includes the capability\nto match requests by hostname, path, header, or query param. Filters can be\nused to specify additional processing steps. Backends specify where matching\nrequests should be routed.",
   "properties": {
     "apiVersion": {
       "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-      "type": "string"
+      "type": "string",
+      "const": "gateway.networking.k8s.io/v1"
     },
     "kind": {
       "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-      "type": "string"
+      "type": "string",
+      "const": "HTTPRoute"
     },
     "metadata": {
       "type": "object"
@@ -1852,9 +1857,11 @@
     }
   },
   "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
     "spec"
   ],
   "type": "object",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$comment": "Extracted from kubernetes-sigs/gateway-api v1.5.1 config/crd/standard/gateway.networking.k8s.io_httproutes.yaml (Apache-2.0); validation only, not installed by this chart."
+  "$comment": "Generated from https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml (v1.5.1); source SHA-256 c7211bda68beb1cecaffa1f87e927afdd25769a6bdcba5b6b965108c60793b44. Apache-2.0; see gateway-api-LICENSE. Do not edit this artifact."
 }

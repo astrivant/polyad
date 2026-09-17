@@ -1,4 +1,7 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/virtualservice.networking.istio.io.v1.schema.json",
+  "title": "networking.istio.io VirtualService v1",
   "properties": {
     "spec": {
       "description": "Configuration affecting label/content routing, sni routing, etc. See more details at: https://istio.io/docs/reference/config/networking/virtual-service.html",
@@ -32,9 +35,15 @@
                 "description": "Cross-Origin Resource Sharing policy (CORS).",
                 "properties": {
                   "allowCredentials": {
-                    "description": "Indicates whether the caller is allowed to send the actual request (not the preflight) using credentials.",
-                    "nullable": true,
-                    "type": "boolean"
+                    "anyOf": [
+                      {
+                        "description": "Indicates whether the caller is allowed to send the actual request (not the preflight) using credentials.",
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "allowHeaders": {
                     "description": "List of HTTP headers that can be used when requesting the resource.",
@@ -865,16 +874,28 @@
                 "type": "object"
               },
               "mirror_percent": {
-                "maximum": 4294967295,
-                "minimum": 0,
-                "nullable": true,
-                "type": "integer"
+                "anyOf": [
+                  {
+                    "maximum": 4294967295,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "mirrorPercent": {
-                "maximum": 4294967295,
-                "minimum": 0,
-                "nullable": true,
-                "type": "integer"
+                "anyOf": [
+                  {
+                    "maximum": 4294967295,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "mirrorPercentage": {
                 "description": "Percentage of the traffic to be mirrored by the `mirror` field.",
@@ -1035,18 +1056,30 @@
                     ]
                   },
                   "retryIgnorePreviousHosts": {
-                    "description": "Flag to specify whether the retries should ignore previously tried hosts during retry.",
-                    "nullable": true,
-                    "type": "boolean"
+                    "anyOf": [
+                      {
+                        "description": "Flag to specify whether the retries should ignore previously tried hosts during retry.",
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "retryOn": {
                     "description": "Specifies the conditions under which retry takes place.",
                     "type": "string"
                   },
                   "retryRemoteLocalities": {
-                    "description": "Flag to specify whether the retries should retry to other localities.",
-                    "nullable": true,
-                    "type": "boolean"
+                    "anyOf": [
+                      {
+                        "description": "Flag to specify whether the retries should retry to other localities.",
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "type": "object"
@@ -1496,9 +1529,24 @@
       },
       "type": "object",
       "x-kubernetes-preserve-unknown-fields": true
+    },
+    "apiVersion": {
+      "type": "string",
+      "const": "networking.istio.io/v1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "VirtualService"
+    },
+    "metadata": {
+      "type": "object"
     }
   },
   "type": "object",
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "$comment": "Istio 1.30.4 base/files/crd-all.gen.yaml; Apache-2.0."
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata"
+  ],
+  "$comment": "Generated from https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml (1.30.4); source SHA-256 1ce7de1dbb3f21ed3c402f9b7a29d7ecc070b91fd4623173128f89ce6fef05f0. Apache-2.0; see istio-LICENSE. Do not edit this artifact."
 }

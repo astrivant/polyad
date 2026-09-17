@@ -80,7 +80,7 @@ def event_schema() -> dict[str, Any]:
         definitions[model.__name__]["required"] = ["id", "event", "data"]
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-types/polyad_types/schemas/events.schema.json",
+        "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/events/events.schema.json",
         "title": "Polyad event AST",
         "description": "Transport-neutral public observations and stream controls; SSE maps id/event/data to this JSON envelope.",
         "oneOf": variants,
@@ -98,7 +98,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    path = Path(__file__).resolve().parents[2] / "pkg/polyad-types/polyad_types/schemas/events.schema.json"
+    path = Path(__file__).resolve().parents[2] / "pkg/polyad-schemas/polyad_schemas/events/events.schema.json"
     rendered = json.dumps(event_schema(), indent=2) + "\n"
     if args.check:
         return int(not path.exists() or path.read_text() != rendered)

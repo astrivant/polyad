@@ -110,6 +110,7 @@ jobs:
         run: |
           poetry build
           poetry -C pkg/polyad-types build --output ../../dist
+          poetry -C pkg/polyad-schemas build --output ../../dist
           poetry -C pkg/client build --output ../../dist
           poetry run python -m venv /tmp/polyad-typing
           /tmp/polyad-typing/bin/python -m pip install dist/*.whl
@@ -139,8 +140,12 @@ jobs:
         with:
           name: python-distributions-${{ needs.python.outputs.version }}
           path: dist/
-      - name: Check standalone types and client wheels
+      - name: Check standalone schemas, types and client wheels
         run: |
+          python -m venv /tmp/polyad-schemas
+          /tmp/polyad-schemas/bin/python -m pip install --no-deps dist/polyad_schemas-*.whl
+          /tmp/polyad-schemas/bin/python -I scripts/testing/check-schemas-package.py
+          /tmp/polyad-schemas/bin/python -m pip check
           python -m venv /tmp/polyad-client
           /tmp/polyad-client/bin/python -m pip install dist/polyad_types-*.whl
           /tmp/polyad-client/bin/python -I scripts/testing/check-types-package.py

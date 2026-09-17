@@ -6,6 +6,9 @@ from __future__ import annotations
 
 import json
 import runpy
+import sys
+import tomllib
+from importlib.resources import files
 from pathlib import Path
 
 import jsonschema
@@ -13,6 +16,7 @@ import pytest
 import yaml
 from deepdiff import DeepDiff
 
+from polyad_schemas import available_schemas, event_schema, load_schema, resource_schema, schema_for
 from polyad_types import (
     CheegerComputation,
     ConnectionRequest,
@@ -23,11 +27,6 @@ from polyad_types import (
     ReplicaConnectivity,
     ReplicaTemplate,
     Replication,
-    available_schemas,
-    event_schema,
-    load_schema,
-    resource_schema,
-    schema_for,
     to_dict,
     to_document,
 )
@@ -74,6 +73,117 @@ def test_generated_artifacts_match_sources():
     assert set(available_schemas()) == {*generated, "events"}
     for name, schema in generated.items():
         assert not DeepDiff(schema, load_schema(name)), name
+
+
+def test_chart_and_package_outputs_share_the_same_contracts_and_licenses():
+    """
+    Prevent either generated distribution from acquiring independently maintained constraints.
+    """
+    generator = runpy.run_path(str(GENERATOR))
+    outputs = generator["outputs"]()
+    chart_paths = set((ROOT / "charts/polyad/schemas").glob("*.json"))
+    assert chart_paths == {path for path in outputs if path.parent == ROOT / "charts/polyad/schemas" and path.suffix == ".json"}
+    for path, expected in outputs.items():
+        assert path.read_text() == expected, path
+        if path in chart_paths:
+            chart = json.loads(expected)
+            jsonschema.Draft7Validator.check_schema(chart)
+            group, version = chart["properties"]["apiVersion"]["const"].split("/")
+            kind = chart["properties"]["kind"]["const"]
+            package = resource_schema(kind, version, group=group)
+            assert not DeepDiff({**package, "$schema": chart["$schema"]}, chart)
+
+
+def test_catalog_checks_detect_dependency_and_snapshot_drift(tmp_path, monkeypatch):
+    """
+    Require a reviewed source refresh when dependencies or pinned snapshots change.
+    """
+    generator = runpy.run_path(str(GENERATOR))
+    catalog = json.loads((ROOT / "schemas/sources.json").read_text())
+    entry = catalog["providers"][0]["resources"][0]
+    assert generator["checked_source"](entry)
+    altered = tmp_path / "snapshot.json"
+    altered.write_text("{}")
+    with pytest.raises(ValueError, match="source digest mismatch"):
+        generator["checked_source"]({**entry, "path": str(altered)})
+    chart = tmp_path / "charts/polyad/Chart.yaml"
+    chart.parent.mkdir(parents=True)
+    chart.write_text("dependencies: []\n")
+    monkeypatch.setitem(generator["upstream_catalog"].__globals__, "ROOT", tmp_path)
+    with pytest.raises(ValueError, match="schema pin differs from Chart.yaml"):
+        generator["upstream_catalog"]()
+
+
+def test_check_mode_detects_modified_missing_and_obsolete_outputs_without_writing(tmp_path, monkeypatch):
+    """
+    Check every output directory and fail safely without fixing files during pre-commit.
+    """
+    generator = runpy.run_path(str(GENERATOR))
+    package = tmp_path / "package"
+    chart = tmp_path / "chart"
+    package.mkdir()
+    chart.mkdir()
+    modified = chart / "graph.json"
+    modified.write_text("changed")
+    orphan = package / "removed.schema.json"
+    orphan.write_text("old")
+    missing = package / "new.schema.json"
+    namespace = generator["main"].__globals__
+    for name, value in {
+        "ROOT": tmp_path,
+        "OUTPUT": package,
+        "CHART_SCHEMAS": chart,
+        "outputs": lambda: {modified: "expected", missing: "new"},
+    }.items():
+        monkeypatch.setitem(namespace, name, value)
+    monkeypatch.setattr(sys, "argv", [str(GENERATOR), "--check"])
+    assert generator["main"]() == 1
+    assert modified.read_text() == "changed"
+    assert orphan.read_text() == "old"
+    assert not missing.exists()
+
+
+def test_upstream_resource_groups_disambiguate_gateway_contracts():
+    """
+    Give Istio and Gateway API different identities despite sharing kind and API version.
+    """
+    istio = resource_schema("Gateway", "v1", group="networking.istio.io")
+    gateway = resource_schema("Gateway", "v1", group="gateway.networking.k8s.io")
+    assert istio["properties"]["apiVersion"]["const"] == "networking.istio.io/v1"
+    assert gateway["properties"]["apiVersion"]["const"] == "gateway.networking.k8s.io/v1"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate({"apiVersion": "gateway.networking.k8s.io/v1", "kind": "Gateway", "metadata": {}, "spec": {}}, istio)
+
+
+def test_categorized_schema_modules_work_without_importing_models():
+    """
+    Preserve the module-specific APIs and expose files through their matching resource packages.
+    """
+    from polyad_schemas.events import event_schema as event_contract
+    from polyad_schemas.helm import values_schema
+    from polyad_schemas.models import schema_for as model_contract
+    from polyad_schemas.resources import resource_schema as manifest_contract
+
+    assert model_contract("polyad_types.network.NetworkPort") == schema_for(NetworkPort)
+    assert event_contract() == event_schema()
+    assert manifest_contract("Graph") == resource_schema("Graph")
+    assert values_schema() == load_schema("helm-values")
+    assert values_schema(partial=True) == load_schema("helm-reference")
+    for category in ("models", "resources", "events", "helm"):
+        assert any(item.name.endswith(".schema.json") for item in files(f"polyad_schemas.{category}").iterdir())
+
+
+def test_schemas_extra_pins_a_standalone_package_without_types_dependencies():
+    """
+    Keep optional operator installation and standalone wheel metadata consistent.
+    """
+    root = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    schemas = tomllib.loads((ROOT / "pkg/polyad-schemas/pyproject.toml").read_text())["project"]
+    types = tomllib.loads((ROOT / "pkg/polyad-types/pyproject.toml").read_text())["project"]
+    assert schemas["dependencies"] == []
+    assert root["project"]["optional-dependencies"]["schemas"] == [f"polyad-schemas=={schemas['version']}"]
+    assert root["tool"]["poetry"]["dependencies"]["polyad-schemas"]["optional"]
+    assert not any("polyad-schemas" in dependency for dependency in types["dependencies"])
 
 
 @pytest.mark.parametrize(

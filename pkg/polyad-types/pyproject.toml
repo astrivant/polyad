@@ -1,13 +1,13 @@
 [project]
 name = "polyad-types"
 version = "0.0.1a3"
-description = "Shared resource, configuration and API models and JSON Schemas for Polyad"
+description = "Shared resource, configuration and API models for Polyad"
 authors = [{name = "Emma Doyle"}]
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.11,<4"
-keywords = ["polyad", "kubernetes", "graphs", "topology", "types", "validation", "jsonschema"]
+keywords = ["polyad", "kubernetes", "graphs", "topology", "types", "validation"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
@@ -36,7 +36,6 @@ Changelog = "https://github.com/astrivant/polyad/releases"
 
 [tool.poetry]
 packages = [{include = "polyad_types"}]
-include = [{path = "polyad_types/schemas/*.json", format = ["sdist", "wheel"]}]
 
 [build-system]
 requires = ["poetry-core>=2.2,<3.0"]

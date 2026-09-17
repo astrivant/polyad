@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import importlib
 import inspect
 import json
@@ -15,6 +16,7 @@ from enum import Enum
 from pathlib import Path
 from types import UnionType
 from typing import TYPE_CHECKING, Literal, TypeVar, Union, get_args, get_origin, get_type_hints
+from urllib.request import urlopen
 
 import yaml
 from attrs import NOTHING, fields, has
@@ -29,9 +31,88 @@ if TYPE_CHECKING:
     from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT = ROOT / "pkg/polyad-types/polyad_types/schemas"
+OUTPUT = ROOT / "pkg/polyad-schemas/polyad_schemas"
 DIALECT = "https://json-schema.org/draft/2020-12/schema"
-BASE_ID = "https://github.com/astrivant/polyad/raw/main/pkg/polyad-types/polyad_types/schemas/"
+BASE_ID = "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/"
+CATALOG = ROOT / "schemas/sources.json"
+CHART_SCHEMAS = ROOT / "charts/polyad/schemas"
+
+
+def upstream_catalog() -> dict[str, Any]:
+    """
+    Read the central upstream pins and reject divergence from bundled chart dependencies.
+
+    Returns:
+        dict[str, Any]: Catalog with release, source, digest and license provenance.
+    """
+    catalog = json.loads(CATALOG.read_text())
+    chart = yaml.safe_load((ROOT / "charts/polyad/Chart.yaml").read_text())
+    dependencies = {item["name"]: item["version"] for item in chart["dependencies"]}
+    for provider in catalog["providers"]:
+        pin = provider.get("dependency")
+        if pin and dependencies.get(pin["name"]) != pin["version"]:
+            raise ValueError(f"{provider['name']} schema pin differs from Chart.yaml; update schemas/sources.json and refresh upstream")
+    return catalog
+
+
+def refresh_upstream() -> None:
+    """
+    Download explicitly pinned CRDs and licenses before writing their verified snapshot updates.
+
+    Returns:
+        None: Network access occurs only for an explicit refresh; failed reads leave snapshots unchanged.
+    """
+    catalog = upstream_catalog()
+    fetched: dict[str, bytes] = {}
+    parsed: dict[str, list[Any]] = {}
+    updates: dict[Path, bytes] = {}
+    for provider in catalog["providers"]:
+        for entry in [*provider["resources"], provider["license"]]:
+            source = entry["source"]
+            if not source.startswith("https://raw.githubusercontent.com/") or f"/{provider['release']}/" not in source:
+                raise ValueError(f"upstream source must name its pinned GitHub release: {source}")
+            if source not in fetched:
+                with urlopen(source, timeout=30) as response:
+                    fetched[source] = response.read()
+            content = fetched[source]
+            if "kind" in entry:
+                if source not in parsed:
+                    parsed[source] = list(yaml.safe_load_all(content))
+                schemas = [
+                    version["schema"]["openAPIV3Schema"]
+                    for crd in parsed[source]
+                    if crd
+                    and crd.get("kind") == "CustomResourceDefinition"
+                    and crd["spec"]["group"] == entry["group"]
+                    and crd["spec"]["names"]["kind"] == entry["kind"]
+                    for version in crd["spec"]["versions"]
+                    if version["name"] == entry["version"] and version["served"]
+                ]
+                if len(schemas) != 1:
+                    raise ValueError(f"expected one served upstream schema for {entry['kind']} {entry['group']}/{entry['version']}")
+                content = (json.dumps(schemas[0], indent=2) + "\n").encode()
+            updates[ROOT / entry["path"]] = content
+            entry["sha256"] = hashlib.sha256(content).hexdigest()
+    for path, content in updates.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+    CATALOG.write_text(json.dumps(catalog, indent=2) + "\n")
+
+
+def checked_source(entry: dict[str, Any]) -> bytes:
+    """
+    Verify that an offline snapshot still matches the reviewed catalog digest.
+
+    Args:
+        entry (dict[str, Any]): Catalog resource or license entry.
+
+    Returns:
+        bytes: Verified source; manual edits or incomplete refreshes raise ValueError.
+    """
+    content = (ROOT / entry["path"]).read_bytes()
+    if hashlib.sha256(content).hexdigest() != entry["sha256"]:
+        raise ValueError(f"source digest mismatch: {entry['path']}; use --refresh-upstream after reviewing the source pin")
+    return content
 
 
 def json_schema(node: Any) -> Any:
@@ -167,7 +248,7 @@ def model_schema() -> dict[str, Any]:
                 lower(model)
     return {
         "$schema": DIALECT,
-        "$id": BASE_ID + "models.schema.json",
+        "$id": BASE_ID + "models/models.schema.json",
         "title": "Polyad shared model definitions",
         "description": (
             "Serialized shapes and explicit field constraints. Select a definition; constructor and live admission checks still apply."
@@ -200,7 +281,7 @@ def rewrite_refs(node: Any, prefix: str, replacement: str) -> Any:
 
 def artifacts() -> dict[str, dict[str, Any]]:
     """
-    Generate shared models, all first-party CRD versions and self-contained Helm contracts.
+    Generate models, local and pinned upstream CRDs, and self-contained Helm contracts.
 
     Returns:
         dict[str, dict[str, Any]]: Stable artifact names mapped to generated documents.
@@ -208,30 +289,79 @@ def artifacts() -> dict[str, dict[str, Any]]:
     documents = {"models": model_schema()}
     for path in sorted((ROOT / "charts/polyad/crds").glob("*.yaml")):
         crd = yaml.safe_load(path.read_text())
-        if crd["spec"]["group"] != GROUP:
-            continue
+        group = crd["spec"]["group"]
         kind = crd["spec"]["names"]["kind"]
         for version in crd["spec"]["versions"]:
             if not version["served"]:
                 continue
-            name = f"{kind.lower()}.{version['name']}"
-            schema = json_schema(version["schema"]["openAPIV3Schema"])
-            schema["properties"]["apiVersion"]["const"] = f"{GROUP}/{version['name']}"
-            schema["properties"]["kind"]["const"] = kind
-            schema["required"] = sorted(set(schema.get("required", [])) | {"apiVersion", "kind", "metadata"})
-            documents[name] = {
-                "$schema": DIALECT,
-                "$id": BASE_ID + name + ".schema.json",
-                "title": f"Polyad {kind} {version['name']}",
-                **schema,
-            }
+            name, schema = manifest_schema(kind, group, version["name"], version["schema"]["openAPIV3Schema"])
+            schema["$comment"] = f"Generated from {path.relative_to(ROOT)}; do not edit this artifact."
+            documents[name] = schema
+    for provider in upstream_catalog()["providers"]:
+        for entry in provider["resources"]:
+            name, schema = manifest_schema(entry["kind"], entry["group"], entry["version"], json.loads(checked_source(entry)))
+            schema["$comment"] = (
+                f"Generated from {entry['source']} ({provider['release']}); source SHA-256 {entry['sha256']}. "
+                f"Apache-2.0; see {provider['name']}-LICENSE. Do not edit this artifact."
+            )
+            documents[name] = schema
     canonical = json.loads((ROOT / "charts/polyad/values.schema.json").read_text())
-    documents["helm-values"] = {**canonical, "$id": BASE_ID + "helm-values.schema.json", "title": "Polyad merged Helm values"}
+    documents["helm-values"] = {**canonical, "$id": BASE_ID + "helm/helm-values.schema.json", "title": "Polyad merged Helm values"}
     overlay = json.loads((ROOT / "charts/polyad/values.reference.schema.json").read_text())
     overlay = rewrite_refs(overlay, "values.schema.json#", "#/definitions/helmValues")
     overlay.setdefault("definitions", {})["helmValues"] = rewrite_refs(canonical, "#", "#/definitions/helmValues")
-    documents["helm-reference"] = {**overlay, "$id": BASE_ID + "helm-reference.schema.json", "title": "Polyad partial Helm values"}
+    documents["helm-reference"] = {**overlay, "$id": BASE_ID + "helm/helm-reference.schema.json", "title": "Polyad partial Helm values"}
     return documents
+
+
+def manifest_schema(kind: str, group: str, version: str, source: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """
+    Build one manifest contract for both Python consumers and chart validation.
+
+    Args:
+        kind (str): Kubernetes resource kind.
+        group (str): API group used to disambiguate kinds such as Gateway.
+        version (str): Served API version.
+        source (dict[str, Any]): Canonical structural OpenAPI schema.
+
+    Returns:
+        tuple[str, dict[str, Any]]: Public artifact name and normalized manifest schema.
+    """
+    name = f"{kind.lower()}.{version}" if group == GROUP else f"{kind.lower()}.{group}.{version}"
+    schema = json_schema(source)
+    properties = schema.setdefault("properties", {})
+    properties.setdefault("apiVersion", {"type": "string"})["const"] = f"{group}/{version}"
+    properties.setdefault("kind", {"type": "string"})["const"] = kind
+    properties.setdefault("metadata", {"type": "object"})
+    schema["required"] = sorted(set(schema.get("required", [])) | {"apiVersion", "kind", "metadata"})
+    return name, {"$schema": DIALECT, "$id": BASE_ID + "resources/" + name + ".schema.json", "title": f"{group} {kind} {version}", **schema}
+
+
+def outputs() -> dict[Path, str]:
+    """
+    Derive both distribution copies and their license notices from the same source graph.
+
+    Returns:
+        dict[Path, str]: Generated package, chart and license files.
+    """
+    rendered = {}
+    for name, document in artifacts().items():
+        category = "models" if name == "models" else "helm" if name.startswith("helm-") else "resources"
+        rendered[OUTPUT / category / f"{name}.schema.json"] = json.dumps(document, indent=2, allow_nan=False) + "\n"
+        properties = document.get("properties", {})
+        if "const" in properties.get("apiVersion", {}) and "const" in properties.get("kind", {}):
+            group, version = properties["apiVersion"]["const"].split("/")
+            filename = f"{properties['kind']['const'].lower()}-{group.split('.')[0]}-{version}.json"
+            chart_schema = {**document, "$schema": "http://json-schema.org/draft-07/schema#"}
+            rendered[CHART_SCHEMAS / filename] = json.dumps(chart_schema, indent=2, allow_nan=False) + "\n"
+    for provider in upstream_catalog()["providers"]:
+        license_text = checked_source(provider["license"]).decode()
+        for directory in (OUTPUT / "resources", CHART_SCHEMAS):
+            rendered[directory / f"{provider['name']}-LICENSE"] = license_text
+    license_text = (ROOT / "charts/polyad/LICENSE.dragonfly-operator").read_text()
+    for directory in (OUTPUT / "resources", CHART_SCHEMAS):
+        rendered[directory / "dragonfly-operator-LICENSE"] = license_text
+    return rendered
 
 
 def main() -> int:
@@ -242,24 +372,30 @@ def main() -> int:
         int: Nonzero when check mode discovers differences.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true", help="Report drift without modifying packaged artifacts.")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--check", action="store_true", help="Report drift without modifying artifacts or accessing the network.")
+    modes.add_argument(
+        "--refresh-upstream", action="store_true", help="Fetch explicitly pinned upstream CRDs and licenses before generation."
+    )
     args = parser.parse_args()
-    documents = artifacts()
+    if args.refresh_upstream:
+        refresh_upstream()
+    generated = outputs()
     changed = []
-    for name, document in documents.items():
-        path = OUTPUT / f"{name}.schema.json"
-        rendered = json.dumps(document, indent=2, allow_nan=False) + "\n"
+    for path, rendered in generated.items():
         if not path.exists() or path.read_text() != rendered:
-            changed.append(path.name)
+            changed.append(str(path.relative_to(ROOT)))
             if not args.check:
+                path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(rendered)
-    for path in OUTPUT.glob("*.schema.json"):
-        if path.name != "events.schema.json" and path.name.removesuffix(".schema.json") not in documents:
-            changed.append(path.name)
+    managed = [*OUTPUT.rglob("*.schema.json"), *CHART_SCHEMAS.glob("*.json"), *OUTPUT.rglob("*-LICENSE"), *CHART_SCHEMAS.glob("*-LICENSE")]
+    for path in managed:
+        if path.name != "events.schema.json" and path not in generated:
+            changed.append(str(path.relative_to(ROOT)))
             if not args.check:
                 path.unlink()
     if changed:
-        print(("Stale" if args.check else "Regenerated") + " packaged schemas: " + ", ".join(changed))
+        print(("Stale" if args.check else "Regenerated") + " schema artifacts: " + ", ".join(changed))
     return int(args.check and bool(changed))
 
 

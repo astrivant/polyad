@@ -15,7 +15,8 @@ fresh install can immediately submit a Dragonfly instance. This CRD is installed
 even when the bundled cache is disabled, like the other APIs shipped here.
 
 `schemas/dragonfly-dragonflydb-v1alpha1.json` contains that CRD's
-`spec.versions[0].schema.openAPIV3Schema` as JSON. The CI Kubeconform wrapper uses
+converted served-version `openAPIV3Schema` as JSON. The same source produces
+the standalone Python schema through the [central pipeline](../../schemas/README.md). The CI Kubeconform wrapper uses
 it alongside Kubernetes schemas to validate the managed Dragonfly instance.
 
 ## Table of contents
@@ -40,16 +41,8 @@ its provenance comment, and update this document and license if needed. Run
 the following to refresh the validator schema:
 
 ```sh
-poetry run python - <<'PY'
-import json
-from pathlib import Path
-import yaml
-
-chart = Path("charts/polyad")
-crd = yaml.safe_load((chart / "crds/dragonflies.yaml").read_text())
-schema = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
-(chart / "schemas/dragonfly-dragonflydb-v1alpha1.json").write_text(json.dumps(schema, indent=2) + "\n")
-PY
+poetry run python scripts/schemas/generate-all.py
+poetry run python scripts/schemas/generate-all.py --check
 ```
 
 Run

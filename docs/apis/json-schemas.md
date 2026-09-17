@@ -1,13 +1,14 @@
 # Importable JSON Schemas
 
-`polyad-types` ships JSON Schemas alongside the models shared by the operator and
-client. Applications, editors and build tools can load the same versioned
+`polyad-schemas` ships generated JSON Schemas for the contracts shared by the
+operator and client. It has no runtime dependencies. Applications, editors and build tools can load the same versioned
 contracts without installing the operator or contacting a cluster. The JSON files
 are included in both wheels and source distributions.
 
 ## Table of contents
 
 - [Install and import](#install-and-import)
+- [Modules](#modules)
 - [Choose a contract](#choose-a-contract)
 - [Validate documents](#validate-documents)
 - [Use the files directly](#use-the-files-directly)
@@ -17,27 +18,44 @@ are included in both wheels and source distributions.
 ## Install and import
 
 ```sh
-pip install polyad-types
+pip install polyad-schemas
 ```
 
 ```python
-from polyad_types import ConnectionRequest
-from polyad_types.schemas import (
+from polyad_schemas import (
     available_schemas, load_schema, resource_schema, schema_for,
 )
 
-request_schema = schema_for(ConnectionRequest)
+request_schema = schema_for("polyad_types.requests.ConnectionRequest")
 graph_schema = resource_schema("Graph")
 events_schema = load_schema("events")
 overlay_schema = load_schema("helm-reference")
 print(available_schemas())
 ```
 
-The four helpers are also exported from `polyad_types`. Each load returns an
+The helpers are exported from `polyad_schemas`. Each load returns an
 independent dictionary. All `$ref` references resolve within that returned
 document, including those in the Helm overlay schema. An `$id` identifies a
 schema; loading it does not fetch that URL. See the JSON Schema guide to
 [identifiers and local references](https://json-schema.org/understanding-json-schema/structuring).
+
+## Modules
+
+Use `pip install 'polyad[schemas]'` to install the operator with this extra.
+`pip install polyad-schemas` installs only the standalone schema library.
+The production image includes the extra; importing the types or client package
+alone does not install or import schemas.
+
+| Submodule | Loader | Contents |
+| --- | --- | --- |
+| `polyad_schemas.models` | `schema_for(Model)` or a fully qualified model name | Shared model definitions |
+| `polyad_schemas.resources` | `resource_schema(kind, version, group=...)` | Polyad and pinned integration CRDs |
+| `polyad_schemas.events` | `event_schema()` | Event envelopes and payload trees |
+| `polyad_schemas.helm` | `values_schema(partial=False)` | Full Helm values or partial administrator overlays |
+
+Each submodule contains its JSON artifacts. The root re-exports these loaders
+and provides `available_schemas()` and `load_schema(name)` for discovery.
+Passing a model name to `schema_for` works without installing `polyad-types`.
 
 ## Choose a contract
 
@@ -53,8 +71,11 @@ schema; loading it does not fetch that URL. See the JSON Schema guide to
 Resource artifacts use lowercase kind and version names, such as
 `graph.v1alpha1`, `polygraph.v1alpha1`, `replicagroup.v1alpha1` and
 `temporaryconnection.v1alpha1`. `resource_schema(kind, version="v1alpha1")`
-selects one. Third-party CRDs such as Dragonfly's upstream CRD are outside this
-catalog. `available_schemas()` lists the exact artifacts in the installed release.
+selects one. Pinned third-party contracts are included as well:
+`resource_schema("Gateway", "v1", group="networking.istio.io")` selects Istio,
+while `group="gateway.networking.k8s.io"` selects Gateway API. Their artifact names
+include the full API group. `available_schemas()` lists the installed catalog.
+Upstream license notices accompany the resource artifacts.
 
 Model definitions use fully qualified Python names. This distinguishes the
 `polyad_types.resources.Graph` resource envelope from topology configuration,
@@ -68,13 +89,13 @@ Schema loading adds no validator dependency. Applications that want local
 validation can install `jsonschema` separately:
 
 ```sh
-pip install jsonschema
+pip install jsonschema polyad-types
 ```
 
 ```python
 from jsonschema import validate
 from polyad_types import ConnectionRequest, NetworkPort, to_dict
-from polyad_types.schemas import load_schema, resource_schema, schema_for
+from polyad_schemas import load_schema, resource_schema, schema_for
 
 request = ConnectionRequest(
     requestId="edge-1", namespace="workloads", kind="Graph",
@@ -99,14 +120,14 @@ and resource serialization, see the [types package](../../pkg/polyad-types/READM
 
 ## Use the files directly
 
-The `polyad_types.schemas` package contains ordinary `*.schema.json` resources.
+Each `polyad_schemas` submodule contains ordinary `*.schema.json` resources.
 Use `importlib.resources` so code works with both installed directories and
 zipped distributions:
 
 ```python
 from importlib.resources import as_file, files
 
-artifact = files("polyad_types.schemas").joinpath("graph.v1alpha1.schema.json")
+artifact = files("polyad_schemas.resources").joinpath("graph.v1alpha1.schema.json")
 with as_file(artifact) as path:
     # Pass this path to an editor or tool while the context remains open.
     print(path.read_text(encoding="utf-8"))
@@ -117,7 +138,7 @@ To keep an exported schema for a non-Python consumer, write the loaded document:
 ```python
 import json
 from pathlib import Path
-from polyad_types.schemas import resource_schema
+from polyad_schemas import resource_schema
 
 Path("graph.schema.json").write_text(
     json.dumps(resource_schema("Graph"), indent=2) + "\n", encoding="utf-8",
@@ -152,20 +173,18 @@ The installed package pins the document content; an identifier containing
 
 ## Regenerate artifacts
 
-Models and chart contracts remain the sources of truth. From a development
-checkout, regenerate their existing derived schemas before packaging:
+The [central schema catalog](../../schemas/README.md) documents source ownership
+and pins verified upstream snapshots. From a checkout:
 
 ```sh
-poetry run python scripts/schemas/generate-status-schemas.py
-poetry run python scripts/schemas/generate-network-schemas.py
-poetry run python scripts/schemas/generate-reference-schema.py
-poetry run python scripts/schemas/generate-event-schemas.py
-poetry run python scripts/schemas/generate-json-schemas.py
+poetry run python scripts/schemas/generate-all.py
+poetry run python scripts/schemas/generate-all.py --check
 ```
 
-The last command emits the shared model library, served versions of all
-Polyad-owned CRDs and self-contained Helm schemas. `--check` reports drift
-without editing files. The `packaged-json-schemas` pre-commit hook and CI keep
-those artifacts synchronized; standalone wheel checks verify that consumers can
-import them without operator dependencies. See the
+This generates chart validation files and categorized Python artifacts from the
+same inputs. Both commands run offline; `--check` reports drift without writing.
+The `schema-artifacts` pre-commit hook and CI keep both copies synchronized.
+Use the [upstream refresh procedure](../../schemas/README.md#refresh-upstream-contracts)
+when changing dependency versions. Standalone wheel checks verify artifacts and
+licenses without operator or types dependencies. See the
 [development toolchain](../development/toolchain.md) for release commands.

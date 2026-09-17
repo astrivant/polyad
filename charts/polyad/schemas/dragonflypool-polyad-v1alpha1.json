@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/dragonflypool.v1alpha1.schema.json",
+  "title": "polyad.astrivant.com DragonflyPool v1alpha1",
+  "type": "object",
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "polyad.astrivant.com/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "DragonflyPool"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "replicas",
+        "minReplicas",
+        "maxReplicas"
+      ],
+      "x-kubernetes-validations": [
+        {
+          "rule": "self.minReplicas <= self.maxReplicas",
+          "message": "minReplicas must not exceed maxReplicas"
+        },
+        {
+          "rule": "self.replicas >= self.minReplicas && self.replicas <= self.maxReplicas",
+          "message": "replicas must stay within the configured bounds"
+        }
+      ],
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9
+        },
+        "minReplicas": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9
+        },
+        "maxReplicas": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "readyReplicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "labelSelector": {
+          "type": "string"
+        },
+        "observedGeneration": {
+          "type": "integer"
+        },
+        "phase": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$comment": "Generated from charts/polyad/crds/dragonflypools.yaml; do not edit this artifact."
+}

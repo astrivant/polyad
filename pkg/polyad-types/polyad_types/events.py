@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 from attrs import field, frozen
 
-from polyad_types.schemas import load_schema
-
 if TYPE_CHECKING:
     from typing import Literal
 
@@ -73,16 +71,6 @@ class EventTooLarge(ValueError):
     """
     Reject an event that exceeds the selected byte budget without truncating its payload.
     """
-
-
-def event_schema() -> dict[str, Any]:
-    """
-    Read the packaged JSON Schema for all supported event syntax trees.
-
-    Returns:
-        dict[str, Any]: Independent Draft 2020-12 schema, including settings and nested payload definitions.
-    """
-    return load_schema("events")
 
 
 @frozen

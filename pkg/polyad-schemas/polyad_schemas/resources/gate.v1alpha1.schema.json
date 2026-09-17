@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/gate.v1alpha1.schema.json",
+  "title": "polyad.astrivant.com Gate v1alpha1",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "description": "API group and version of this custom resource: polyad.astrivant.com/v1alpha1.",
+      "const": "polyad.astrivant.com/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Custom resource kind: Gate.",
+      "const": "Gate"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {}
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "expression": {
+          "type": "object",
+          "x-kubernetes-preserve-unknown-fields": true,
+          "required": [
+            "operator"
+          ],
+          "description": "Serialized Gate expression with operator, optional operands and signal name. Operators are signal, and, or, not, xor and nxor. Signals use NODE.started, NODE.ready, NODE.completed or NODE.failed; absent observations remain unknown."
+        },
+        "delaySeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 315360000,
+          "description": "Standalone admission delay after dependencies are observed. Each graph instance persists its own deadline in status; waits do not occupy workers or slots."
+        }
+      },
+      "description": "Reusable Boolean expression or delay gate controlling admission to the next vertex.",
+      "x-kubernetes-validations": [
+        {
+          "rule": "has(self.expression) != has(self.delaySeconds)",
+          "message": "Gate requires exactly one of expression or delaySeconds"
+        }
+      ]
+    },
+    "status": {
+      "type": "object",
+      "x-kubernetes-preserve-unknown-fields": true,
+      "description": "Reserved operator observation subresource. This reusable definition does not execute independently or currently publish lifecycle status."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "description": "Define a Boolean or delay gate. Instances keep delay observations on their containing graph.",
+  "$comment": "Generated from charts/polyad/crds/gates.yaml; do not edit this artifact."
+}

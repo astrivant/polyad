@@ -47,8 +47,7 @@ def main() -> None:
     assert "XPENDING" in script("coordination/backlog.lua")
     assert "ZREMRANGEBYSCORE" in script("authentication/acquire.lua")
     assert "CURSOR_EXPIRED" in script("events/read.lua")
-    from polyad_types.events import event_schema
-    from polyad_types.schemas import load_schema, resource_schema
+    from polyad_schemas import event_schema, load_schema, resource_schema
 
     assert "TopologyEvent" in event_schema()["$defs"]
     assert resource_schema("Graph")["properties"]["kind"]["const"] == "Graph"

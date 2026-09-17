@@ -59,5 +59,6 @@ jobs:
             exit 1
           fi
           poetry -C pkg/polyad-types publish --dist-dir ../../dist --no-interaction
+          poetry -C pkg/polyad-schemas publish --dist-dir ../../dist --no-interaction
           poetry -C pkg/client publish --dist-dir ../../dist --no-interaction
           poetry publish --no-interaction

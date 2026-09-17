@@ -1,0 +1,567 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/graphrule.v1alpha1.schema.json",
+  "title": "polyad.astrivant.com GraphRule v1alpha1",
+  "type": "object",
+  "description": "Constrain graph structure and spectrum across an operator namespace. Grants no workload execution by itself.",
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "description": "Polyad API group and version.",
+      "const": "polyad.astrivant.com/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Custom resource kind: GraphRule.",
+      "const": "GraphRule"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "type": "object",
+      "description": "Engineer-controlled structural constraints applied before scheduler admission. Namespace defaults cannot be opted out of by compositions.",
+      "properties": {
+        "cheegerComputation": {
+          "type": "object",
+          "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+          "properties": {
+            "maxVertices": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "description": "Boundary vertex cap; null inherits the operator ceiling, normally 20.",
+                  "minimum": 2,
+                  "maximum": 4096
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "maxCuts": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "description": "Unique cut evaluation budget; null inherits the operator ceiling, normally 524287.",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "timeoutSeconds": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "description": "Cooperative time budget; null inherits the operator ceiling, normally five seconds.",
+                  "minimum": 0.001,
+                  "maximum": 300
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "priorityCuts": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                },
+                "minItems": 1,
+                "maxItems": 4096,
+                "uniqueItems": true
+              },
+              "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent.",
+              "maxItems": 64
+            }
+          }
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "Boundary",
+            "Subtree"
+          ],
+          "default": "Subtree",
+          "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary."
+        },
+        "network": {
+          "type": "object",
+          "description": "Isolate a graph subtree and intersect its exceptions with inherited constraints.",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "Boundary",
+                "Subtree"
+              ],
+              "description": "Apply to direct workloads or propagate to all descendant workloads."
+            },
+            "ingress": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Allow one peer on selected ports, with optional inbound mesh authorization.",
+                "properties": {
+                  "peer": {
+                    "type": "object",
+                    "description": "Select peers in an explicit namespace, optionally by graph or pod labels.",
+                    "properties": {
+                      "namespace": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Peer namespace; omitted means this graph's namespace."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "graph": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Named graph instance; omitted with node selects a node in this boundary."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "Graph",
+                          "PolyGraph",
+                          "ReplicaGroup"
+                        ],
+                        "description": "Kind of the referenced graph instance."
+                      },
+                      "node": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Node and its descendants inside the selected graph."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "podLabels": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Additional exact pod-label matches, combined with graph selection."
+                      },
+                      "cluster": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Registered remote transport; cannot be combined with local pod or namespace selectors.",
+                            "maxLength": 63,
+                            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ports": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "Select a transport port on the destination workload.",
+                      "properties": {
+                        "port": {
+                          "type": "integer",
+                          "description": "Destination transport port.",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "protocol": {
+                          "type": "string",
+                          "enum": [
+                            "TCP",
+                            "UDP",
+                            "SCTP"
+                          ],
+                          "description": "Transport protocol."
+                        }
+                      },
+                      "required": [
+                        "port"
+                      ]
+                    },
+                    "description": "Destination ports; empty means every transport port."
+                  },
+                  "node": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Local node subtree to which this rule applies; omitted selects every local node."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "principals": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exact Istio source identities such as cluster.local/ns/team/sa/client."
+                  },
+                  "methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Allowed inbound HTTP methods; empty leaves methods unconstrained."
+                  },
+                  "paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exact inbound HTTP paths; empty leaves paths unconstrained."
+                  }
+                },
+                "required": [
+                  "peer"
+                ]
+              },
+              "description": "Additional allowed inbound traffic."
+            },
+            "egress": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Allow one peer on selected ports, with optional inbound mesh authorization.",
+                "properties": {
+                  "peer": {
+                    "type": "object",
+                    "description": "Select peers in an explicit namespace, optionally by graph or pod labels.",
+                    "properties": {
+                      "namespace": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Peer namespace; omitted means this graph's namespace."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "graph": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Named graph instance; omitted with node selects a node in this boundary."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "Graph",
+                          "PolyGraph",
+                          "ReplicaGroup"
+                        ],
+                        "description": "Kind of the referenced graph instance."
+                      },
+                      "node": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Node and its descendants inside the selected graph."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "podLabels": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Additional exact pod-label matches, combined with graph selection."
+                      },
+                      "cluster": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Registered remote transport; cannot be combined with local pod or namespace selectors.",
+                            "maxLength": 63,
+                            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ports": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "Select a transport port on the destination workload.",
+                      "properties": {
+                        "port": {
+                          "type": "integer",
+                          "description": "Destination transport port.",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "protocol": {
+                          "type": "string",
+                          "enum": [
+                            "TCP",
+                            "UDP",
+                            "SCTP"
+                          ],
+                          "description": "Transport protocol."
+                        }
+                      },
+                      "required": [
+                        "port"
+                      ]
+                    },
+                    "description": "Destination ports; empty means every transport port."
+                  },
+                  "node": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Local node subtree to which this rule applies; omitted selects every local node."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "principals": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exact Istio source identities such as cluster.local/ns/team/sa/client."
+                  },
+                  "methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Allowed inbound HTTP methods; empty leaves methods unconstrained."
+                  },
+                  "paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exact inbound HTTP paths; empty leaves paths unconstrained."
+                  }
+                },
+                "required": [
+                  "peer"
+                ]
+              },
+              "description": "Additional allowed outbound traffic."
+            },
+            "isolateIngress": {
+              "type": "boolean",
+              "description": "Restrict incoming connections."
+            },
+            "isolateEgress": {
+              "type": "boolean",
+              "description": "Restrict outgoing connections."
+            },
+            "allowWithin": {
+              "type": "boolean",
+              "description": "Allow traffic between all workloads inside this boundary."
+            },
+            "allowDNS": {
+              "type": "boolean",
+              "description": "Allow TCP/UDP 53 to kube-system pods labeled k8s-app=kube-dns."
+            },
+            "mesh": {
+              "type": "boolean",
+              "description": "Require Istio injection, strict mutual TLS and inbound authorization."
+            }
+          }
+        },
+        "enforcement": {
+          "type": "string",
+          "description": "Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor.",
+          "enum": [
+            "Namespace",
+            "Referenced"
+          ],
+          "default": "Namespace"
+        },
+        "relation": {
+          "type": "string",
+          "description": "Relation measured independently inside every graph boundary.",
+          "enum": [
+            "admission",
+            "connections"
+          ],
+          "default": "admission"
+        },
+        "limits": {
+          "type": "object",
+          "description": "Inclusive structural maxima; omitted fields impose no bound.",
+          "properties": {
+            "nodes": {
+              "type": "integer",
+              "description": "Maximum vertices in each immediate boundary, including isolated vertices.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "edges": {
+              "type": "integer",
+              "description": "Maximum distinct directed edges of the selected relation; self-loops count.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "depth": {
+              "type": "integer",
+              "description": "Maximum layers in the SCC condensation DAG. Admission is already acyclic.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "breadth": {
+              "type": "integer",
+              "description": "Maximum number of SCCs in an earliest topological layer; not maximum antichain width.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "fanIn": {
+              "type": "integer",
+              "description": "Maximum directed in-degree.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "fanOut": {
+              "type": "integer",
+              "description": "Maximum directed out-degree.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "cycleRank": {
+              "type": "integer",
+              "description": "Maximum m - n + c of the simple undirected projection, excluding self-loops.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "strongComponent": {
+              "type": "integer",
+              "description": "Maximum vertices in one strongly connected component.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "expandedNodes": {
+              "type": "integer",
+              "description": "Maximum recursively expanded vertex occurrences, counting boundary vertices and repeated instances.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "nestingDepth": {
+              "type": "integer",
+              "description": "Maximum nested boundary layers including this boundary as layer one.",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          }
+        },
+        "shapes": {
+          "type": "array",
+          "description": "Required shapes. Acyclic tests the directed relation; connected, tree and planar test the simple undirected projection.",
+          "maxItems": 4,
+          "x-kubernetes-list-type": "set",
+          "items": {
+            "type": "string",
+            "description": "Required graph shape.",
+            "enum": [
+              "acyclic",
+              "connected",
+              "tree",
+              "planar"
+            ]
+          }
+        },
+        "cheeger": {
+          "type": "object",
+          "description": "Exact unnormalized edge expansion on the simple undirected projection; computation budgets default to 20 vertices.",
+          "x-kubernetes-validations": [
+            {
+              "rule": "!has(self.minimum) || !has(self.maximum) || self.minimum <= self.maximum",
+              "message": "Cheeger minimum must not exceed maximum."
+            }
+          ],
+          "properties": {
+            "minimum": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Inclusive lower bound on the sparsest cut ratio. Every cut must have at least this many crossing edges per vertex on its smaller side; raising the bound rejects more severe bottlenecks."
+            },
+            "maximum": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Inclusive upper bound on the sparsest cut ratio. Requires some cut with at most this many crossing edges per vertex on its smaller side; does not protect against bottlenecks."
+            }
+          }
+        },
+        "spectrum": {
+          "type": "object",
+          "description": "Spectral bounds on the simple undirected, unweighted projection with self-loops removed. At most 256 vertices; relative tolerance 1e-9.",
+          "properties": {
+            "maxRadius": {
+              "type": "number",
+              "description": "Maximum absolute adjacency eigenvalue.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "minConnectivity": {
+              "type": "number",
+              "description": "Minimum second-smallest combinatorial Laplacian eigenvalue; zero for fewer than two vertices.",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "maxLaplacian": {
+              "type": "number",
+              "description": "Maximum combinatorial Laplacian eigenvalue.",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "$comment": "Generated from charts/polyad/crds/graphrules.yaml; do not edit this artifact."
+}

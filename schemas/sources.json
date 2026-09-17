@@ -1,0 +1,120 @@
+{
+  "providers": [
+    {
+      "name": "gateway-api",
+      "release": "v1.5.1",
+      "resources": [
+        {
+          "kind": "Gateway",
+          "group": "gateway.networking.k8s.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_gateways.yaml",
+          "path": "schemas/upstream/gateway-gateway-v1.json",
+          "sha256": "2875d941d7ce77f6a623d5e46eca5c40e5dfaa462cc46c2be755ae81bb0951af"
+        },
+        {
+          "kind": "HTTPRoute",
+          "group": "gateway.networking.k8s.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml",
+          "path": "schemas/upstream/httproute-gateway-v1.json",
+          "sha256": "c7211bda68beb1cecaffa1f87e927afdd25769a6bdcba5b6b965108c60793b44"
+        }
+      ],
+      "license": {
+        "source": "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.5.1/LICENSE",
+        "path": "schemas/licenses/gateway-api-LICENSE",
+        "sha256": "20b6dde626f521dbb384f75e6d96c3d16789df3bf878b58bc2810614fb4db07c"
+      }
+    },
+    {
+      "name": "istio",
+      "release": "1.30.4",
+      "dependency": {
+        "name": "base",
+        "version": "1.30.4"
+      },
+      "resources": [
+        {
+          "kind": "AuthorizationPolicy",
+          "group": "security.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/authorizationpolicy-security-v1.json",
+          "sha256": "855a6d372382b6bc742c0a98e44d1e23749b6e4f40b2317cd32d1b50ba9f0b46"
+        },
+        {
+          "kind": "PeerAuthentication",
+          "group": "security.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/peerauthentication-security-v1.json",
+          "sha256": "548edd15f6c94f1837137b967857c78dfe60f52608e9de3af1831482a4b7ca4f"
+        },
+        {
+          "kind": "Gateway",
+          "group": "networking.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/gateway-networking-v1.json",
+          "sha256": "05f73d0aaf02afa95ccd65e35ef53f41e7f44c6c47ac531bb724633db4e6f053"
+        },
+        {
+          "kind": "VirtualService",
+          "group": "networking.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/virtualservice-networking-v1.json",
+          "sha256": "1ce7de1dbb3f21ed3c402f9b7a29d7ecc070b91fd4623173128f89ce6fef05f0"
+        }
+      ],
+      "license": {
+        "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/LICENSE",
+        "path": "schemas/licenses/istio-LICENSE",
+        "sha256": "9fa6e54dafda853bb3cdc01486b677a55102f0d488282a85ba6e426d9125f8c5"
+      }
+    },
+    {
+      "name": "keda",
+      "release": "v2.20.2",
+      "dependency": {
+        "name": "keda",
+        "version": "2.20.2"
+      },
+      "resources": [
+        {
+          "kind": "TriggerAuthentication",
+          "group": "keda.sh",
+          "version": "v1alpha1",
+          "source": "https://raw.githubusercontent.com/kedacore/keda/v2.20.2/config/crd/bases/keda.sh_triggerauthentications.yaml",
+          "path": "schemas/upstream/triggerauthentication-keda-v1alpha1.json",
+          "sha256": "2e784ca882d7ee4b911fff4ad0c6dc51e31b0c71c97d8eefaf94dc4d1dfdb5a6"
+        }
+      ],
+      "license": {
+        "source": "https://raw.githubusercontent.com/kedacore/keda/v2.20.2/LICENSE",
+        "path": "schemas/licenses/keda-LICENSE",
+        "sha256": "56531aa6d5a0ae8aae14b050f6aafe55a068b97c1f57728b547e55bcc0e29036"
+      }
+    },
+    {
+      "name": "external-secrets",
+      "release": "helm-chart-2.10.0",
+      "resources": [
+        {
+          "kind": "ExternalSecret",
+          "group": "external-secrets.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/external-secrets/external-secrets/helm-chart-2.10.0/config/crds/bases/external-secrets.io_externalsecrets.yaml",
+          "path": "schemas/upstream/externalsecret-external-secrets-v1.json",
+          "sha256": "43b9d7f8a624619d894d434555cc347b840565b407346a46a7d7dfe02a63dae1"
+        }
+      ],
+      "license": {
+        "source": "https://raw.githubusercontent.com/external-secrets/external-secrets/helm-chart-2.10.0/LICENSE",
+        "path": "schemas/licenses/external-secrets-LICENSE",
+        "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+      }
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 Polyad uses pre-commit checks and four-space indentation for Python and shell
 scripts. `.tool-versions` pins the local and CI tools; `.python-version` keeps
 the Python 3.13 interpreter selected for development. The operator supports
-Python 3.13 and 3.14; the standalone client and types packages support Python
+Python 3.13 and 3.14; the standalone client, types and schemas packages support Python
 3.11 through 3.14. CI runs operator tests on both supported versions and checks
 the standalone wheels on each supported version. `.editorconfig` supplies
 editor indentation.
@@ -165,10 +165,11 @@ installs that wheel into a consumer environment and checks positive and negative
 Mypy contracts, including generic `PolyGraph` references. There is no separate
 stub package to keep synchronized.
 
-`polyad-types` also ships [importable JSON Schemas](../apis/json-schemas.md) for
+The separate `polyad-schemas` package ships [importable JSON Schemas](../apis/json-schemas.md) for
 shared models, resource manifests, events and Helm values. Regenerate them with
-`poetry run python scripts/schemas/generate-json-schemas.py` after updating their
-sources. The `packaged-json-schemas` hook checks drift; release CI checks the
+`poetry run python scripts/schemas/generate-all.py` after updating their
+[canonical sources](../../schemas/README.md). The `schema-artifacts` hook checks
+chart and Python copies for drift; release CI checks the
 artifacts in the installed standalone wheel.
 
 ## Version tags
@@ -208,18 +209,21 @@ example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the ch
 README's image-tag default. Alpha, beta and release-candidate spellings are
 normalized; malformed tags fail before metadata changes.
 
-The standalone `polyad-client` and [`polyad-types`](../../pkg/polyad-types/README.md)
-packages receive the same release version. The client and operator pin the matching
+The standalone `polyad-client`, [`polyad-types`](../../pkg/polyad-types/README.md)
+and [`polyad-schemas`](../../pkg/polyad-schemas/README.md) packages receive the same
+release version. The operator's `schemas` extra pins the matching schema package. The client and operator pin the matching
 types release; Poetry resolves that dependency from `pkg/polyad-types` in a checkout,
 while built distributions declare a version dependency suitable for PyPI. CI checks
 standalone types and client installations without operator dependencies and publishes
-types first, then the client and operator. The PyPI token must permit all three names.
+types and schemas first, then the client and operator. The PyPI token must permit
+all four names. CI checks schemas in a separate environment without types, client
+or operator dependencies.
 
 Python builds, both Docker profiles, operator integration tests, every Helm
 validation shard, Helm packaging and PyPI publishing use this preparation step.
 `.github/release-version.py` still verifies that the resulting package version
 matches the tag. Changes exist only in the build checkout: CI does not commit
-version bumps or move tags. Release preparation updates the local types lock entry;
+version bumps or move tags. Release preparation updates the local types and schemas lock entries;
 Python and Docker builds refresh the lock metadata before installation, retaining
 the locked third-party versions.
 
@@ -246,18 +250,20 @@ project's Python 3.13 interpreter selected:
 
 ```sh
 poetry -C pkg/polyad-types check --strict
+poetry -C pkg/polyad-schemas check --strict
 poetry -C pkg/client check --strict
 poetry check --strict
 
 poetry -C pkg/polyad-types publish --build
+poetry -C pkg/polyad-schemas publish --build
 poetry -C pkg/client publish --build
 poetry publish --build
 ```
 
 Run only the first publish command to release `polyad-types` on its own. When
-releasing all three, publish types first because the client and operator require
-the matching version. Use the release-preparation commands above when changing
-versions so all three distributions and dependency pins stay aligned; PyPI
+releasing all four, publish types and schemas first because the client and
+operator extras require their matching versions. Use the release-preparation commands above when changing
+versions so all four distributions and dependency pins stay aligned; PyPI
 requires a new version for a subsequent release.
 
 `publish --build` builds the wheel and source distribution, then uploads them to

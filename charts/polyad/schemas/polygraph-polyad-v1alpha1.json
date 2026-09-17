@@ -1,0 +1,2857 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/polygraph.v1alpha1.schema.json",
+  "title": "polyad.astrivant.com PolyGraph v1alpha1",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "description": "API group and version of this custom resource: polyad.astrivant.com/v1alpha1.",
+      "const": "polyad.astrivant.com/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Custom resource kind: PolyGraph.",
+      "const": "PolyGraph"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {}
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "traffic": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "description": "Split mesh HTTP requests to one Service among downstream node subtrees.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Unique route name within this graph.",
+                "maxLength": 63,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+              },
+              "source": {
+                "type": "string",
+                "description": "Local caller node; selects its descendant mesh pods."
+              },
+              "service": {
+                "type": "string",
+                "description": "Existing Service in the graph namespace covering all destination pods.",
+                "maxLength": 63,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+              },
+              "port": {
+                "type": "integer",
+                "description": "Service port carrying HTTP, HTTP/2 or gRPC traffic.",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "destinations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "description": "Select a downstream node subtree and bound its share of requests.",
+                  "properties": {
+                    "target": {
+                      "type": "string",
+                      "description": "Downstream node path, such as workers/replica-0/entrypoint, whose pods form a subset.",
+                      "minLength": 1,
+                      "maxLength": 2047,
+                      "pattern": "^[a-z0-9-]+(/[a-z0-9-]+)*$"
+                    },
+                    "weight": {
+                      "type": "integer",
+                      "description": "Configured percentage of new HTTP requests.",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "minWeight": {
+                      "type": "integer",
+                      "description": "Smallest percentage allowed by automatic adjustment.",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "maxWeight": {
+                      "type": "integer",
+                      "description": "Largest percentage allowed by automatic adjustment.",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  },
+                  "required": [
+                    "target",
+                    "weight"
+                  ]
+                },
+                "description": "Distinct downstream subsets whose percentages sum to 100.",
+                "minItems": 2,
+                "maxItems": 16
+              }
+            },
+            "required": [
+              "name",
+              "source",
+              "service",
+              "port",
+              "destinations"
+            ]
+          }
+        },
+        "throughput": {
+          "type": "object",
+          "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+          "properties": {
+            "unit": {
+              "type": "string",
+              "description": "Application work unit shared by offered and completed rates, such as records.",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "tiers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Associate measured application demand with an independently calibrated expansion target.",
+                "properties": {
+                  "offeredPerSecond": {
+                    "type": "number",
+                    "description": "Inclusive demand threshold in the application's declared unit.",
+                    "minimum": 0
+                  },
+                  "cheeger": {
+                    "type": "object",
+                    "description": "Bound exact edge expansion on the simple undirected projection. A cut's ratio is its crossing-edge count divided by its smaller side's vertex count. The constant is the minimum ratio over all cuts. Raising the minimum rejects severe structural bottlenecks; lowering the maximum requires a sparse cut. Throughput policies can select these structural targets using application-reported rates; the constant itself is edge expansion.",
+                    "properties": {
+                      "minimum": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "description": "Inclusive nonnegative minimum; raise it to reject sparse bottlenecks, or omit for no lower bound.",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "maximum": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "description": "Inclusive nonnegative maximum; lower it to require a sparse cut, or omit for no upper bound.",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "x-kubernetes-validations": [
+                      {
+                        "rule": "(has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum != null)",
+                        "message": "A throughput tier requires at least one Cheeger bound."
+                      },
+                      {
+                        "rule": "!has(self.minimum) || self.minimum == null || !has(self.maximum) || self.maximum == null || self.minimum <= self.maximum",
+                        "message": "Cheeger minimum must not exceed maximum."
+                      }
+                    ]
+                  },
+                  "trafficWeights": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "Approve a calibrated traffic distribution for one application demand tier.",
+                      "properties": {
+                        "route": {
+                          "type": "string",
+                          "description": "Name of the configured traffic route."
+                        },
+                        "weights": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "description": "Complete target-to-percentage mapping for that route.",
+                          "minProperties": 2,
+                          "maxProperties": 16
+                        }
+                      },
+                      "required": [
+                        "route",
+                        "weights"
+                      ]
+                    },
+                    "description": "Optional calibrated request percentages for configured routes.",
+                    "maxItems": 16
+                  }
+                },
+                "required": [
+                  "offeredPerSecond",
+                  "cheeger"
+                ]
+              },
+              "description": "Strictly increasing demand thresholds; highest matching tier wins.",
+              "minItems": 1,
+              "maxItems": 16
+            },
+            "layouts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Approve one complete set of boundary-local data-flow connections.",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Stable administrator-selected layout name.",
+                    "minLength": 1,
+                    "maxLength": 63
+                  },
+                  "connections": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "Declare a data-flow edge, which may cycle without blocking admission.",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "Node emitting data on this connection."
+                        },
+                        "target": {
+                          "type": "string",
+                          "description": "Node receiving data on this connection."
+                        },
+                        "ports": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "description": "Select a transport port on the destination workload.",
+                            "properties": {
+                              "port": {
+                                "type": "integer",
+                                "description": "Destination transport port.",
+                                "minimum": 1,
+                                "maximum": 65535
+                              },
+                              "protocol": {
+                                "type": "string",
+                                "enum": [
+                                  "TCP",
+                                  "UDP",
+                                  "SCTP"
+                                ],
+                                "description": "Transport protocol."
+                              }
+                            },
+                            "required": [
+                              "port"
+                            ]
+                          },
+                          "description": "Optional transport grants when graph networking is enabled."
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "target"
+                      ]
+                    },
+                    "description": "Complete replacement connections; nodes and admission stay unchanged.",
+                    "maxItems": 380
+                  }
+                },
+                "required": [
+                  "name",
+                  "connections"
+                ]
+              },
+              "description": "Approved alternatives, tried in declaration order.",
+              "maxItems": 8
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "Observe",
+                "Adapt"
+              ],
+              "description": "Observe reports recommendations; Adapt may replace connections."
+            },
+            "sampleMaxAgeSeconds": {
+              "type": "integer",
+              "description": "Maximum age and gap between usable samples.",
+              "minimum": 1,
+              "maximum": 3600
+            },
+            "sustainedSeconds": {
+              "type": "integer",
+              "description": "Continuous shortfall duration required before selecting a layout.",
+              "minimum": 1,
+              "maximum": 86400
+            },
+            "minSamples": {
+              "type": "integer",
+              "description": "Distinct reports required during the sustained shortfall.",
+              "minimum": 2,
+              "maximum": 1000
+            },
+            "shortfallRatio": {
+              "type": "number",
+              "description": "Completed/offered ratio below which demanded throughput is unmet.",
+              "maximum": 1,
+              "exclusiveMinimum": 0
+            },
+            "cooldownSeconds": {
+              "type": "integer",
+              "description": "Minimum time between successful topology changes.",
+              "minimum": 1,
+              "maximum": 86400
+            },
+            "maxChangesPerHour": {
+              "type": "integer",
+              "description": "Maximum successful changes in a rolling hour.",
+              "minimum": 1,
+              "maximum": 60
+            },
+            "cheegerComputation": {
+              "type": "object",
+              "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+              "properties": {
+                "maxVertices": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "description": "Boundary vertex cap; null inherits the operator ceiling, normally 20.",
+                      "minimum": 2,
+                      "maximum": 4096
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxCuts": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "description": "Unique cut evaluation budget; null inherits the operator ceiling, normally 524287.",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "timeoutSeconds": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "description": "Cooperative time budget; null inherits the operator ceiling, normally five seconds.",
+                      "minimum": 0.001,
+                      "maximum": 300
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "priorityCuts": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 253
+                    },
+                    "minItems": 1,
+                    "maxItems": 4096,
+                    "uniqueItems": true
+                  },
+                  "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent.",
+                  "maxItems": 64
+                }
+              }
+            },
+            "maxWeightStep": {
+              "type": "integer",
+              "description": "Maximum percentage-point change per destination in one automatic adjustment.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "trafficMode": {
+              "type": "string",
+              "enum": [
+                "Tiers",
+                "Headroom"
+              ],
+              "description": "Use calibrated tier percentages or measured per-destination sustainable capacity."
+            }
+          },
+          "required": [
+            "unit",
+            "tiers"
+          ]
+        },
+        "activation": {
+          "type": "object",
+          "description": "Control how repeated requests start a downstream workload or graph.",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "Queue",
+                "Reject",
+                "Coalesce",
+                "Parallel"
+              ],
+              "description": "Busy-target admission policy."
+            },
+            "maxConcurrent": {
+              "type": "integer",
+              "description": "Maximum selected or running executions for parallel mode.",
+              "minimum": 1,
+              "maximum": 64
+            },
+            "maxPending": {
+              "type": "integer",
+              "description": "Maximum retained pending requests admitted to the queue.",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "replicasPerActivation": {
+              "type": "integer",
+              "description": "Deployment or StatefulSet replicas in each daemon activation.",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "maxReplicas": {
+              "type": "integer",
+              "description": "Upper bound on the total daemon replicas reserved by concurrent pulses.",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "minIntervalSeconds": {
+              "type": "integer",
+              "description": "Minimum time between execution admissions.",
+              "minimum": 0,
+              "maximum": 86400
+            },
+            "maxIntervalSeconds": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "description": "Maximum expected time between admissions.",
+                  "minimum": 1,
+                  "maximum": 604800
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "onDeadline": {
+              "type": "string",
+              "enum": [
+                "Report",
+                "Activate"
+              ],
+              "description": "Report overdue admission or submit a timer pulse."
+            }
+          }
+        },
+        "capacity": {
+          "type": "object",
+          "description": "Forecast missing execution nodes before their admission dependencies finish.",
+          "properties": {
+            "backend": {
+              "type": "string",
+              "enum": [
+                "Auto",
+                "ProvisioningRequest",
+                "Placeholders"
+              ],
+              "description": "Preferred capacity mechanism."
+            },
+            "lookaheadStages": {
+              "type": "integer",
+              "description": "Number of uncreated dependency layers to forecast at each boundary.",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "maxPods": {
+              "type": "integer",
+              "description": "Maximum forecast Pods held by this boundary at once.",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "description": "Maximum time to hold an unconsumed request, including gate waits.",
+              "minimum": 10,
+              "maximum": 86400
+            },
+            "provisioningClassName": {
+              "type": "string",
+              "description": "Autoscaler provisioning class; empty uses the operator default."
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "description": "Provider-specific ProvisioningRequest parameters.",
+              "maxProperties": 100
+            },
+            "retryToken": {
+              "type": "string",
+              "description": "Change this value to retry a failed or expired plan."
+            }
+          }
+        },
+        "network": {
+          "type": "object",
+          "description": "Isolate a graph subtree and intersect its exceptions with inherited constraints.",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "Boundary",
+                "Subtree"
+              ],
+              "description": "Apply to direct workloads or propagate to all descendant workloads."
+            },
+            "ingress": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Allow one peer on selected ports, with optional inbound mesh authorization.",
+                "properties": {
+                  "peer": {
+                    "type": "object",
+                    "description": "Select peers in an explicit namespace, optionally by graph or pod labels.",
+                    "properties": {
+                      "namespace": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Peer namespace; omitted means this graph's namespace."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "graph": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Named graph instance; omitted with node selects a node in this boundary."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "Graph",
+                          "PolyGraph",
+                          "ReplicaGroup"
+                        ],
+                        "description": "Kind of the referenced graph instance."
+                      },
+                      "node": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Node and its descendants inside the selected graph."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "podLabels": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Additional exact pod-label matches, combined with graph selection."
+                      },
+                      "cluster": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Registered remote transport; cannot be combined with local pod or namespace selectors.",
+                            "maxLength": 63,
+                            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ports": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "Select a transport port on the destination workload.",
+                      "properties": {
+                        "port": {
+                          "type": "integer",
+                          "description": "Destination transport port.",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "protocol": {
+                          "type": "string",
+                          "enum": [
+                            "TCP",
+                            "UDP",
+                            "SCTP"
+                          ],
+                          "description": "Transport protocol."
+                        }
+                      },
+                      "required": [
+                        "port"
+                      ]
+                    },
+                    "description": "Destination ports; empty means every transport port."
+                  },
+                  "node": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Local node subtree to which this rule applies; omitted selects every local node."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "principals": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exact Istio source identities such as cluster.local/ns/team/sa/client."
+                  },
+                  "methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Allowed inbound HTTP methods; empty leaves methods unconstrained."
+                  },
+                  "paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exact inbound HTTP paths; empty leaves paths unconstrained."
+                  }
+                },
+                "required": [
+                  "peer"
+                ]
+              },
+              "description": "Additional allowed inbound traffic."
+            },
+            "egress": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Allow one peer on selected ports, with optional inbound mesh authorization.",
+                "properties": {
+                  "peer": {
+                    "type": "object",
+                    "description": "Select peers in an explicit namespace, optionally by graph or pod labels.",
+                    "properties": {
+                      "namespace": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Peer namespace; omitted means this graph's namespace."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "graph": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Named graph instance; omitted with node selects a node in this boundary."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "Graph",
+                          "PolyGraph",
+                          "ReplicaGroup"
+                        ],
+                        "description": "Kind of the referenced graph instance."
+                      },
+                      "node": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Node and its descendants inside the selected graph."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "podLabels": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Additional exact pod-label matches, combined with graph selection."
+                      },
+                      "cluster": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Registered remote transport; cannot be combined with local pod or namespace selectors.",
+                            "maxLength": 63,
+                            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ports": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "Select a transport port on the destination workload.",
+                      "properties": {
+                        "port": {
+                          "type": "integer",
+                          "description": "Destination transport port.",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "protocol": {
+                          "type": "string",
+                          "enum": [
+                            "TCP",
+                            "UDP",
+                            "SCTP"
+                          ],
+                          "description": "Transport protocol."
+                        }
+                      },
+                      "required": [
+                        "port"
+                      ]
+                    },
+                    "description": "Destination ports; empty means every transport port."
+                  },
+                  "node": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Local node subtree to which this rule applies; omitted selects every local node."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "principals": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exact Istio source identities such as cluster.local/ns/team/sa/client."
+                  },
+                  "methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Allowed inbound HTTP methods; empty leaves methods unconstrained."
+                  },
+                  "paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Exact inbound HTTP paths; empty leaves paths unconstrained."
+                  }
+                },
+                "required": [
+                  "peer"
+                ]
+              },
+              "description": "Additional allowed outbound traffic."
+            },
+            "isolateIngress": {
+              "type": "boolean",
+              "description": "Restrict incoming connections."
+            },
+            "isolateEgress": {
+              "type": "boolean",
+              "description": "Restrict outgoing connections."
+            },
+            "allowWithin": {
+              "type": "boolean",
+              "description": "Allow traffic between all workloads inside this boundary."
+            },
+            "allowDNS": {
+              "type": "boolean",
+              "description": "Allow TCP/UDP 53 to kube-system pods labeled k8s-app=kube-dns."
+            },
+            "mesh": {
+              "type": "boolean",
+              "description": "Require Istio injection, strict mutual TLS and inbound authorization."
+            }
+          }
+        },
+        "rules": {
+          "type": "array",
+          "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+          "maxItems": 32,
+          "x-kubernetes-list-type": "set",
+          "items": {
+            "type": "string",
+            "description": "GraphRule name.",
+            "maxLength": 253,
+            "minLength": 1
+          }
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "cluster": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "Registered destination cluster; omitted keeps the child in this cluster.",
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "id": {
+                "type": "string",
+                "description": "Optional request-local node identity retained on generated manifests for auditing.",
+                "minLength": 1,
+                "maxLength": 63,
+                "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+              },
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63,
+                "minLength": 1,
+                "description": "Unique name of this node within its graph. Used by dependencies, connections and lifecycle signals."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "Graph",
+                  "PolyGraph",
+                  "ReplicaGroup"
+                ],
+                "description": "Graph boundary kind instantiated from the referenced template."
+              },
+              "ref": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63,
+                "minLength": 1,
+                "description": "Name of the reusable definition in the same namespace. Nested Graph and PolyGraph definitions must set templateOnly to true."
+              },
+              "requires": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "node": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                      "maxLength": 63,
+                      "minLength": 1,
+                      "description": "Name of the upstream node within this graph."
+                    },
+                    "condition": {
+                      "type": "string",
+                      "enum": [
+                        "started",
+                        "ready",
+                        "completed"
+                      ],
+                      "default": "completed",
+                      "description": "Observation required before admission: started means the execution resource exists; ready means it exposes readiness; completed means finite execution succeeded. Daemons and resources cannot satisfy completed. Readiness loss does not cancel already-admitted consumers."
+                    }
+                  },
+                  "required": [
+                    "node"
+                  ],
+                  "description": "One entry in requires."
+                },
+                "description": "Lifecycle prerequisites that must all hold before initial admission. Admission dependencies must be acyclic; use connections for cyclic data flow."
+              },
+              "gate": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63,
+                "minLength": 1,
+                "description": "Name of a Gate definition in the same namespace. Admission requires its expression to evaluate to true; false or unknown blocks admission."
+              },
+              "slots": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1,
+                "description": "Admission slots reserved by this node until finite work completes or execution is removed. Must fit the containing graph; this is not a CPU request."
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "ref"
+            ],
+            "description": "One entry in nodes."
+          },
+          "x-kubernetes-list-type": "map",
+          "x-kubernetes-list-map-keys": [
+            "name"
+          ],
+          "description": "Graph membership in deterministic admission order. Names are unique within this boundary; definitions are resolved in the same namespace."
+        },
+        "connections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ports": {
+                "type": "array",
+                "description": "Destination transport grants; omitted connections remain data-flow declarations.",
+                "items": {
+                  "type": "object",
+                  "description": "Select a transport port on the destination workload.",
+                  "properties": {
+                    "port": {
+                      "type": "integer",
+                      "description": "Destination transport port.",
+                      "minimum": 1,
+                      "maximum": 65535
+                    },
+                    "protocol": {
+                      "type": "string",
+                      "enum": [
+                        "TCP",
+                        "UDP",
+                        "SCTP"
+                      ],
+                      "description": "Transport protocol."
+                    }
+                  },
+                  "required": [
+                    "port"
+                  ]
+                }
+              },
+              "source": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63,
+                "minLength": 1,
+                "description": "Name of the source node for this data-flow connection."
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63,
+                "minLength": 1,
+                "description": "Name of the destination node for this data-flow connection."
+              }
+            },
+            "required": [
+              "source",
+              "target"
+            ],
+            "description": "One entry in connections."
+          },
+          "description": "Declarative data-flow edges, including cycles and self-loops. These edges neither block admission nor configure network transport."
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "finite",
+            "persistent"
+          ],
+          "default": "finite",
+          "description": "Finite graphs report completion when finite work completes and resource nodes are ready. Persistent graphs remain active until stopped or deleted. Graphs containing daemons must be persistent."
+        },
+        "slots": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 64,
+          "description": "Total admission-slot capacity for this boundary. Node reservations govern admission; Kubernetes independently schedules actual CPU, memory and device requests."
+        },
+        "shutdownPolicy": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 63,
+          "minLength": 1,
+          "description": "Name of a ShutdownPolicy in the same namespace, specifying a runtime limit and termination grace period."
+        },
+        "suspend": {
+          "type": "boolean",
+          "default": false,
+          "description": "Stop admitting work and drain owned execution while true. Clearing suspension permits fresh execution; this is not an application checkpoint request."
+        },
+        "templateOnly": {
+          "type": "boolean",
+          "default": false,
+          "description": "Keep this boundary as an inert reusable definition. A parent graph creates an owned executable copy with this flag cleared."
+        },
+        "placement": {
+          "type": "object",
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "description": "Value for an individual key in nodeSelector."
+              },
+              "description": "Exact Kubernetes node-label matches, all of which must hold. Use labels for node groups or resource slices; cloud tags must first be exposed as node labels. Conflicting inherited values are rejected."
+            },
+            "nodeAffinity": {
+              "type": "object",
+              "properties": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "type": "object",
+                  "properties": {
+                    "nodeSelectorTerms": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "matchExpressions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                  "description": "Node label or node field tested by this requirement."
+                                },
+                                "operator": {
+                                  "type": "string",
+                                  "enum": [
+                                    "In",
+                                    "NotIn",
+                                    "Exists",
+                                    "DoesNotExist",
+                                    "Gt",
+                                    "Lt"
+                                  ],
+                                  "description": "Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt."
+                                },
+                                "values": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "description": "One entry in values."
+                                  },
+                                  "description": "Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string."
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "operator"
+                              ],
+                              "description": "One entry in matchExpressions."
+                            },
+                            "description": "Node-label requirements combined with AND within this term."
+                          },
+                          "matchFields": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                  "description": "Node label or node field tested by this requirement."
+                                },
+                                "operator": {
+                                  "type": "string",
+                                  "enum": [
+                                    "In",
+                                    "NotIn",
+                                    "Exists",
+                                    "DoesNotExist",
+                                    "Gt",
+                                    "Lt"
+                                  ],
+                                  "description": "Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt."
+                                },
+                                "values": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "description": "One entry in values."
+                                  },
+                                  "description": "Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string."
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "operator"
+                              ],
+                              "description": "One entry in matchFields."
+                            },
+                            "description": "Node-field requirements combined with AND within this term."
+                          }
+                        },
+                        "description": "One entry in nodeSelectorTerms."
+                      },
+                      "description": "Alternative node-selection terms combined with OR. Expressions within one term are combined with AND. An empty term selects no nodes."
+                    }
+                  },
+                  "required": [
+                    "nodeSelectorTerms"
+                  ],
+                  "description": "Hard node eligibility rules evaluated when scheduling. Changes to node labels after scheduling do not by themselves evict a running pod."
+                },
+                "preferredDuringSchedulingIgnoredDuringExecution": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "weight": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "description": "Preference weight from 1 to 100. Matching preferred rules contribute to the node scheduling score."
+                      },
+                      "preference": {
+                        "type": "object",
+                        "properties": {
+                          "matchExpressions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                  "description": "Node label or node field tested by this requirement."
+                                },
+                                "operator": {
+                                  "type": "string",
+                                  "enum": [
+                                    "In",
+                                    "NotIn",
+                                    "Exists",
+                                    "DoesNotExist",
+                                    "Gt",
+                                    "Lt"
+                                  ],
+                                  "description": "Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt."
+                                },
+                                "values": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "description": "One entry in values."
+                                  },
+                                  "description": "Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string."
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "operator"
+                              ],
+                              "description": "One entry in matchExpressions."
+                            },
+                            "description": "Node-label requirements combined with AND within this term."
+                          },
+                          "matchFields": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                  "description": "Node label or node field tested by this requirement."
+                                },
+                                "operator": {
+                                  "type": "string",
+                                  "enum": [
+                                    "In",
+                                    "NotIn",
+                                    "Exists",
+                                    "DoesNotExist",
+                                    "Gt",
+                                    "Lt"
+                                  ],
+                                  "description": "Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt."
+                                },
+                                "values": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "description": "One entry in values."
+                                  },
+                                  "description": "Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string."
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "operator"
+                              ],
+                              "description": "One entry in matchFields."
+                            },
+                            "description": "Node-field requirements combined with AND within this term."
+                          }
+                        },
+                        "description": "Node-selection term whose match contributes the associated weight."
+                      }
+                    },
+                    "required": [
+                      "weight",
+                      "preference"
+                    ],
+                    "description": "One entry in preferredDuringSchedulingIgnoredDuringExecution."
+                  },
+                  "description": "Weighted node preferences applied after hard eligibility checks. Unmatched preferences do not prevent scheduling."
+                }
+              },
+              "description": "Required and preferred Kubernetes node-selection rules. Required rules intersect across graph, definition and pod scopes; preferences are combined."
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Taint key to match. An empty key requires operator Exists and matches all keys."
+                  },
+                  "operator": {
+                    "type": "string",
+                    "enum": [
+                      "Exists",
+                      "Equal"
+                    ],
+                    "description": "Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal."
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Taint value to match when operator is Equal. Omit or leave empty when operator is Exists."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "",
+                      "NoSchedule",
+                      "PreferNoSchedule",
+                      "NoExecute"
+                    ],
+                    "description": "Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute."
+                  },
+                  "tolerationSeconds": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 0,
+                    "description": "Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction."
+                  }
+                },
+                "description": "One entry in tolerations."
+              },
+              "description": "Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations allow placement on tainted nodes; they do not select or guarantee a node."
+            },
+            "enforce": {
+              "type": "boolean",
+              "default": true,
+              "description": "Keep these constraints in every descendant pod. False allows a more specific workload or graph placement to replace these defaults; an enforced ancestor cannot be relaxed."
+            }
+          },
+          "description": "Placement defaults or enforced constraints copied to descendant pod templates. Tolerations permit matching taints; selectors and required affinity restrict eligible nodes. This does not reserve capacity."
+        }
+      },
+      "required": [
+        "nodes"
+      ],
+      "description": "Desired configuration for this PolyGraph resource. Compose graph boundaries into a finite or persistent graph of workloads and resources. Admission follows lifecycle dependencies; deletion waits for owned resources to finish cleanup."
+    },
+    "status": {
+      "type": "object",
+      "description": "Operator-observed instance lifecycle and graph metrics. Inert templateOnly definitions do not publish execution status. Updates are fenced by resourceVersion.",
+      "properties": {
+        "throughput": {
+          "type": "object",
+          "properties": {
+            "currentTraffic": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Split mesh HTTP requests to one Service among downstream node subtrees.",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Unique route name within this graph.",
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "Local caller node; selects its descendant mesh pods."
+                  },
+                  "service": {
+                    "type": "string",
+                    "description": "Existing Service in the graph namespace covering all destination pods.",
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                  },
+                  "port": {
+                    "type": "integer",
+                    "description": "Service port carrying HTTP, HTTP/2 or gRPC traffic.",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "destinations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "Select a downstream node subtree and bound its share of requests.",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "description": "Downstream node path, such as workers/replica-0/entrypoint, whose pods form a subset.",
+                          "minLength": 1,
+                          "maxLength": 2047,
+                          "pattern": "^[a-z0-9-]+(/[a-z0-9-]+)*$"
+                        },
+                        "weight": {
+                          "type": "integer",
+                          "description": "Configured percentage of new HTTP requests.",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "minWeight": {
+                          "type": "integer",
+                          "description": "Smallest percentage allowed by automatic adjustment.",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "maxWeight": {
+                          "type": "integer",
+                          "description": "Largest percentage allowed by automatic adjustment.",
+                          "minimum": 0,
+                          "maximum": 100
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "weight"
+                      ]
+                    },
+                    "description": "Distinct downstream subsets whose percentages sum to 100.",
+                    "minItems": 2,
+                    "maxItems": 16
+                  }
+                },
+                "required": [
+                  "name",
+                  "source",
+                  "service",
+                  "port",
+                  "destinations"
+                ]
+              }
+            },
+            "proposedTraffic": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Split mesh HTTP requests to one Service among downstream node subtrees.",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Unique route name within this graph.",
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "Local caller node; selects its descendant mesh pods."
+                  },
+                  "service": {
+                    "type": "string",
+                    "description": "Existing Service in the graph namespace covering all destination pods.",
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                  },
+                  "port": {
+                    "type": "integer",
+                    "description": "Service port carrying HTTP, HTTP/2 or gRPC traffic.",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "destinations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "Select a downstream node subtree and bound its share of requests.",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "description": "Downstream node path, such as workers/replica-0/entrypoint, whose pods form a subset.",
+                          "minLength": 1,
+                          "maxLength": 2047,
+                          "pattern": "^[a-z0-9-]+(/[a-z0-9-]+)*$"
+                        },
+                        "weight": {
+                          "type": "integer",
+                          "description": "Configured percentage of new HTTP requests.",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "minWeight": {
+                          "type": "integer",
+                          "description": "Smallest percentage allowed by automatic adjustment.",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "maxWeight": {
+                          "type": "integer",
+                          "description": "Largest percentage allowed by automatic adjustment.",
+                          "minimum": 0,
+                          "maximum": 100
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "weight"
+                      ]
+                    },
+                    "description": "Distinct downstream subsets whose percentages sum to 100.",
+                    "minItems": 2,
+                    "maxItems": 16
+                  }
+                },
+                "required": [
+                  "name",
+                  "source",
+                  "service",
+                  "port",
+                  "destinations"
+                ]
+              }
+            },
+            "targetTraffic": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Approve a calibrated traffic distribution for one application demand tier.",
+                "properties": {
+                  "route": {
+                    "type": "string",
+                    "description": "Name of the configured traffic route."
+                  },
+                  "weights": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "description": "Complete target-to-percentage mapping for that route.",
+                    "minProperties": 2,
+                    "maxProperties": 16
+                  }
+                },
+                "required": [
+                  "route",
+                  "weights"
+                ]
+              }
+            },
+            "computation": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "exact": {
+                      "type": "boolean"
+                    },
+                    "upperBound": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "cut": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "evaluatedCuts": {
+                      "type": "integer"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "skippedPriorityCuts": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "mode": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "phase": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "observedAt": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "recommendedLayout": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "currentCheeger": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "proposedCheeger": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "offeredPerSecond": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "completedPerSecond": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "target": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "minimum": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "maximum": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "capacity": {
+          "type": "object",
+          "description": "Expose durable advance capacity plans independently of execution readiness.",
+          "properties": {
+            "observedGeneration": {
+              "type": "integer",
+              "description": "Graph generation used for this forecast."
+            },
+            "nodes": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "description": "Retain generation-fenced provisioning and handoff state for one execution node.",
+                "properties": {
+                  "revision": {
+                    "type": "string",
+                    "description": "Hash of the graph generation, workload and capacity policy."
+                  },
+                  "backend": {
+                    "type": "string",
+                    "description": "Backend selected for this revision."
+                  },
+                  "phase": {
+                    "type": "string",
+                    "enum": [
+                      "Planned",
+                      "Provisioning",
+                      "Ready",
+                      "Releasing",
+                      "Consumed",
+                      "Failed",
+                      "Expired",
+                      "Cancelled"
+                    ],
+                    "description": "Current capacity lifecycle."
+                  },
+                  "startedAt": {
+                    "type": "string",
+                    "description": "UTC start of this bounded request."
+                  },
+                  "pods": {
+                    "type": "integer",
+                    "description": "Requested Pod count."
+                  },
+                  "waitSeconds": {
+                    "type": "integer",
+                    "description": "Elapsed time since the capacity forecast was recorded."
+                  },
+                  "readyPods": {
+                    "type": "integer",
+                    "description": "Pods with freshly observed usable capacity."
+                  },
+                  "resources": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Total requested resources for this node's future Pods."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Provisioning or expiry explanation."
+                  },
+                  "requestName": {
+                    "type": "string",
+                    "description": "ProvisioningRequest name, or empty for placeholders."
+                  }
+                },
+                "required": [
+                  "revision",
+                  "backend",
+                  "startedAt",
+                  "pods"
+                ]
+              },
+              "description": "Per-execution-node capacity lifecycle."
+            }
+          }
+        },
+        "structuralRules": {
+          "type": "array",
+          "description": "Most recent successful admission policy observations, including rule UID and generation, structural measurements and compact spectral summaries. Check phase and observedGeneration for current validity.",
+          "items": {
+            "type": "object",
+            "description": "One evaluated policy verdict; live family checks include the measured boundary identity.",
+            "x-kubernetes-preserve-unknown-fields": true
+          }
+        },
+        "phase": {
+          "type": "string",
+          "description": "Lifecycle phase: Reconciling, Ready, Running, Waiting, Draining, Suspended, Stopped, Completed, Failed or Invalid."
+        },
+        "ready": {
+          "type": "boolean",
+          "description": "Whether the evaluated instance currently satisfies its readiness contract."
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether finite execution has completed. Persistent graphs do not complete."
+        },
+        "failed": {
+          "type": "boolean",
+          "description": "Whether the evaluated graph contains a terminal execution failure."
+        },
+        "observedGeneration": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Spec generation evaluated for lifecycle status; compare with metadata.generation."
+        },
+        "message": {
+          "type": "string",
+          "description": "Explanation of a blocked or invalid reconciliation, cleared after successful reconciliation."
+        },
+        "nodes": {
+          "type": "object",
+          "description": "Per-node lifecycle observations from the last graph admission pass.",
+          "additionalProperties": {
+            "type": "object",
+            "description": "Observed node lifecycle predicates.",
+            "properties": {
+              "started": {
+                "type": "boolean",
+                "description": "Whether the node is started."
+              },
+              "ready": {
+                "type": "boolean",
+                "description": "Whether the node is ready."
+              },
+              "completed": {
+                "type": "boolean",
+                "description": "Whether the node is completed."
+              },
+              "failed": {
+                "type": "boolean",
+                "description": "Whether the node is failed."
+              }
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Graph instance metrics refreshed through the ordered, ownership-guarded API queue. Counts describe direct owned resources, not a flattened descendant tree.",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "boundary"
+              ],
+              "description": "Metrics cover this scheduling boundary only."
+            },
+            "observedGeneration": {
+              "type": "integer",
+              "description": "Parent spec generation used to compute these metrics, independently of lifecycle observedGeneration.",
+              "minimum": 0
+            },
+            "topology": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Desired shape of the current graph spec. Null when invalid.",
+                  "properties": {
+                    "nodeCount": {
+                      "type": "integer",
+                      "description": "Number of nodes in this graph or induced observed subset.",
+                      "minimum": 0
+                    },
+                    "nodesByKind": {
+                      "type": "object",
+                      "description": "Node counts by execution abstraction.",
+                      "properties": {
+                        "Workload": {
+                          "type": "integer",
+                          "description": "Number of Workload nodes.",
+                          "minimum": 0
+                        },
+                        "Daemon": {
+                          "type": "integer",
+                          "description": "Number of Daemon nodes.",
+                          "minimum": 0
+                        },
+                        "Resource": {
+                          "type": "integer",
+                          "description": "Number of Resource nodes.",
+                          "minimum": 0
+                        },
+                        "Graph": {
+                          "type": "integer",
+                          "description": "Number of Graph nodes.",
+                          "minimum": 0
+                        },
+                        "ReplicaGroup": {
+                          "type": "integer",
+                          "description": "Number of replication boundaries.",
+                          "minimum": 0
+                        },
+                        "PolyGraph": {
+                          "type": "integer",
+                          "description": "Number of PolyGraph boundaries.",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    "subgraphCount": {
+                      "type": "integer",
+                      "description": "Number of immediate nested Graph, PolyGraph and ReplicaGroup nodes.",
+                      "minimum": 0
+                    },
+                    "admission": {
+                      "type": "object",
+                      "description": "Acyclic lifecycle dependencies used for admission.",
+                      "properties": {
+                        "depth": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Number of dependency layers; zero for an empty graph and one for independent nodes."
+                        },
+                        "breadth": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Largest layer size. This is layer breadth, not maximum antichain width or available concurrency."
+                        },
+                        "layerWidths": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of nodes in this generation."
+                          },
+                          "description": "Node counts by earliest topological generation, starting at the roots."
+                        },
+                        "breadthDepth": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Breadth multiplied by depth; a shape summary, not an estimate of execution cost."
+                        },
+                        "edgeCount": {
+                          "type": "integer",
+                          "description": "Number of distinct dependency pairs, regardless of lifecycle predicate.",
+                          "minimum": 0
+                        },
+                        "rootCount": {
+                          "type": "integer",
+                          "description": "Nodes with no dependencies in this subset.",
+                          "minimum": 0
+                        },
+                        "leafCount": {
+                          "type": "integer",
+                          "description": "Nodes with no dependents in this subset.",
+                          "minimum": 0
+                        },
+                        "maxFanIn": {
+                          "type": "integer",
+                          "description": "Largest number of direct prerequisites.",
+                          "minimum": 0
+                        },
+                        "maxFanOut": {
+                          "type": "integer",
+                          "description": "Largest number of direct dependents.",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    "connections": {
+                      "type": "object",
+                      "description": "Directed data-flow connections, which may contain cycles. Isolated nodes are included in component counts.",
+                      "properties": {
+                        "edgeCount": {
+                          "type": "integer",
+                          "description": "Number of distinct directed data-flow connections, including self-loops.",
+                          "minimum": 0
+                        },
+                        "weakComponents": {
+                          "type": "integer",
+                          "description": "Connected components after ignoring edge direction.",
+                          "minimum": 0
+                        },
+                        "strongComponents": {
+                          "type": "integer",
+                          "description": "Maximal components in which each node can reach every other node.",
+                          "minimum": 0
+                        },
+                        "cyclicComponents": {
+                          "type": "integer",
+                          "description": "Strong components with multiple nodes or a self-loop; this does not enumerate individual cycles.",
+                          "minimum": 0
+                        },
+                        "largestStrongComponent": {
+                          "type": "integer",
+                          "description": "Number of nodes in the largest strongly connected component.",
+                          "minimum": 0
+                        },
+                        "condensation": {
+                          "type": "object",
+                          "description": "Layer shape after collapsing each strongly connected component to one node. These depths count components, not paths through cycles.",
+                          "properties": {
+                            "depth": {
+                              "type": "integer",
+                              "description": "Number of dependency layers; zero for an empty graph and one for independent nodes.",
+                              "minimum": 0
+                            },
+                            "breadth": {
+                              "type": "integer",
+                              "description": "Largest layer size. This is layer breadth, not maximum antichain width or available concurrency.",
+                              "minimum": 0
+                            },
+                            "layerWidths": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Number of nodes in this generation."
+                              },
+                              "description": "Node counts by earliest topological generation, starting at the roots."
+                            },
+                            "breadthDepth": {
+                              "type": "integer",
+                              "description": "Breadth multiplied by depth; a shape summary, not an estimate of execution cost.",
+                              "minimum": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "observedTopology": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Induced graph of declared nodes with observed child resources, including terminating or superseded execution. Null when the topology is invalid.",
+                  "properties": {
+                    "nodeCount": {
+                      "type": "integer",
+                      "description": "Number of nodes in this graph or induced observed subset.",
+                      "minimum": 0
+                    },
+                    "nodesByKind": {
+                      "type": "object",
+                      "description": "Node counts by execution abstraction.",
+                      "properties": {
+                        "Workload": {
+                          "type": "integer",
+                          "description": "Number of Workload nodes.",
+                          "minimum": 0
+                        },
+                        "Daemon": {
+                          "type": "integer",
+                          "description": "Number of Daemon nodes.",
+                          "minimum": 0
+                        },
+                        "Resource": {
+                          "type": "integer",
+                          "description": "Number of Resource nodes.",
+                          "minimum": 0
+                        },
+                        "Graph": {
+                          "type": "integer",
+                          "description": "Number of Graph nodes.",
+                          "minimum": 0
+                        },
+                        "ReplicaGroup": {
+                          "type": "integer",
+                          "description": "Number of replication boundaries.",
+                          "minimum": 0
+                        },
+                        "PolyGraph": {
+                          "type": "integer",
+                          "description": "Number of PolyGraph boundaries.",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    "subgraphCount": {
+                      "type": "integer",
+                      "description": "Number of immediate nested Graph, PolyGraph and ReplicaGroup nodes.",
+                      "minimum": 0
+                    },
+                    "admission": {
+                      "type": "object",
+                      "description": "Acyclic lifecycle dependencies used for admission.",
+                      "properties": {
+                        "depth": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Number of dependency layers; zero for an empty graph and one for independent nodes."
+                        },
+                        "breadth": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Largest layer size. This is layer breadth, not maximum antichain width or available concurrency."
+                        },
+                        "layerWidths": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of nodes in this generation."
+                          },
+                          "description": "Node counts by earliest topological generation, starting at the roots."
+                        },
+                        "breadthDepth": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Breadth multiplied by depth; a shape summary, not an estimate of execution cost."
+                        },
+                        "edgeCount": {
+                          "type": "integer",
+                          "description": "Number of distinct dependency pairs, regardless of lifecycle predicate.",
+                          "minimum": 0
+                        },
+                        "rootCount": {
+                          "type": "integer",
+                          "description": "Nodes with no dependencies in this subset.",
+                          "minimum": 0
+                        },
+                        "leafCount": {
+                          "type": "integer",
+                          "description": "Nodes with no dependents in this subset.",
+                          "minimum": 0
+                        },
+                        "maxFanIn": {
+                          "type": "integer",
+                          "description": "Largest number of direct prerequisites.",
+                          "minimum": 0
+                        },
+                        "maxFanOut": {
+                          "type": "integer",
+                          "description": "Largest number of direct dependents.",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    "connections": {
+                      "type": "object",
+                      "description": "Directed data-flow connections, which may contain cycles. Isolated nodes are included in component counts.",
+                      "properties": {
+                        "edgeCount": {
+                          "type": "integer",
+                          "description": "Number of distinct directed data-flow connections, including self-loops.",
+                          "minimum": 0
+                        },
+                        "weakComponents": {
+                          "type": "integer",
+                          "description": "Connected components after ignoring edge direction.",
+                          "minimum": 0
+                        },
+                        "strongComponents": {
+                          "type": "integer",
+                          "description": "Maximal components in which each node can reach every other node.",
+                          "minimum": 0
+                        },
+                        "cyclicComponents": {
+                          "type": "integer",
+                          "description": "Strong components with multiple nodes or a self-loop; this does not enumerate individual cycles.",
+                          "minimum": 0
+                        },
+                        "largestStrongComponent": {
+                          "type": "integer",
+                          "description": "Number of nodes in the largest strongly connected component.",
+                          "minimum": 0
+                        },
+                        "condensation": {
+                          "type": "object",
+                          "description": "Layer shape after collapsing each strongly connected component to one node. These depths count components, not paths through cycles.",
+                          "properties": {
+                            "depth": {
+                              "type": "integer",
+                              "description": "Number of dependency layers; zero for an empty graph and one for independent nodes.",
+                              "minimum": 0
+                            },
+                            "breadth": {
+                              "type": "integer",
+                              "description": "Largest layer size. This is layer breadth, not maximum antichain width or available concurrency.",
+                              "minimum": 0
+                            },
+                            "layerWidths": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Number of nodes in this generation."
+                              },
+                              "description": "Node counts by earliest topological generation, starting at the roots."
+                            },
+                            "breadthDepth": {
+                              "type": "integer",
+                              "description": "Breadth multiplied by depth; a shape summary, not an estimate of execution cost.",
+                              "minimum": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "execution": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Fresh observations for nodes in this boundary. Counts overlap: a completed Job can also be ready. Terminating or failed execution retains slots until cleanup or completion.",
+                  "properties": {
+                    "observedNodes": {
+                      "type": "integer",
+                      "description": "Declared nodes with an owned execution resource, including terminating resources.",
+                      "minimum": 0
+                    },
+                    "pendingNodes": {
+                      "type": "integer",
+                      "description": "Declared nodes with no observed execution resource; includes dependency, gate and capacity waits.",
+                      "minimum": 0
+                    },
+                    "activeNodes": {
+                      "type": "integer",
+                      "description": "Observed nodes that are not terminating, completed or failed. This is not a Pod Running count.",
+                      "minimum": 0
+                    },
+                    "readyNodes": {
+                      "type": "integer",
+                      "description": "Observed nodes satisfying their resource readiness predicate.",
+                      "minimum": 0
+                    },
+                    "completedNodes": {
+                      "type": "integer",
+                      "description": "Observed nodes whose finite execution completed.",
+                      "minimum": 0
+                    },
+                    "failedNodes": {
+                      "type": "integer",
+                      "description": "Observed nodes with terminal failure.",
+                      "minimum": 0
+                    },
+                    "terminatingNodes": {
+                      "type": "integer",
+                      "description": "Observed nodes whose execution resources have deletion timestamps.",
+                      "minimum": 0
+                    },
+                    "slotCapacity": {
+                      "type": "integer",
+                      "description": "Slot budget declared by this graph.",
+                      "minimum": 0
+                    },
+                    "reservedSlots": {
+                      "type": "integer",
+                      "description": "Slots reserved by observed nodes that have not completed, including terminating or failed nodes.",
+                      "minimum": 0
+                    },
+                    "availableSlots": {
+                      "type": "integer",
+                      "description": "Nonnegative difference between slot capacity and observed reservations.",
+                      "minimum": 0
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "topologyError": {
+              "type": "string",
+              "description": "Validation error if graph shape cannot be computed; empty for a valid topology."
+            },
+            "resources": {
+              "type": "object",
+              "description": "All directly owned resources, including obsolete and terminating children awaiting cleanup.",
+              "properties": {
+                "total": {
+                  "type": "integer",
+                  "description": "Total directly owned resource count.",
+                  "minimum": 0
+                },
+                "terminating": {
+                  "type": "integer",
+                  "description": "Directly owned resources awaiting deletion.",
+                  "minimum": 0
+                },
+                "byKind": {
+                  "type": "object",
+                  "description": "Directly owned resource counts by Kubernetes kind.",
+                  "properties": {
+                    "Activation": {
+                      "type": "integer",
+                      "description": "Durable activation receipts.",
+                      "minimum": 0
+                    },
+                    "TemporaryConnection": {
+                      "type": "integer",
+                      "description": "Temporary connection receipts.",
+                      "minimum": 0
+                    },
+                    "NetworkPolicy": {
+                      "type": "integer",
+                      "description": "Owned transport policies.",
+                      "minimum": 0
+                    },
+                    "AuthorizationPolicy": {
+                      "type": "integer",
+                      "description": "Owned Istio authorization policies.",
+                      "minimum": 0
+                    },
+                    "PeerAuthentication": {
+                      "type": "integer",
+                      "description": "Owned mutual TLS policies.",
+                      "minimum": 0
+                    },
+                    "VirtualService": {
+                      "type": "integer",
+                      "description": "Owned percentage routes.",
+                      "minimum": 0
+                    },
+                    "DestinationRule": {
+                      "type": "integer",
+                      "description": "Owned destination subset policies.",
+                      "minimum": 0
+                    },
+                    "Job": {
+                      "type": "integer",
+                      "description": "Number of owned Job resources.",
+                      "minimum": 0
+                    },
+                    "Deployment": {
+                      "type": "integer",
+                      "description": "Number of owned Deployment resources.",
+                      "minimum": 0
+                    },
+                    "StatefulSet": {
+                      "type": "integer",
+                      "description": "Number of owned StatefulSet resources.",
+                      "minimum": 0
+                    },
+                    "DaemonSet": {
+                      "type": "integer",
+                      "description": "Number of owned DaemonSet resources.",
+                      "minimum": 0
+                    },
+                    "Dragonfly": {
+                      "type": "integer",
+                      "description": "Observed upstream Dragonfly instances.",
+                      "minimum": 0
+                    },
+                    "Cluster": {
+                      "type": "integer",
+                      "description": "Observed CloudNativePG clusters.",
+                      "minimum": 0
+                    },
+                    "Service": {
+                      "type": "integer",
+                      "description": "Number of owned Service resources.",
+                      "minimum": 0
+                    },
+                    "ConfigMap": {
+                      "type": "integer",
+                      "description": "Number of owned ConfigMap resources.",
+                      "minimum": 0
+                    },
+                    "PersistentVolumeClaim": {
+                      "type": "integer",
+                      "description": "Number of owned PersistentVolumeClaim resources.",
+                      "minimum": 0
+                    },
+                    "Graph": {
+                      "type": "integer",
+                      "description": "Number of owned Graph resources.",
+                      "minimum": 0
+                    },
+                    "ReplicaGroup": {
+                      "type": "integer",
+                      "description": "Number of replication boundaries.",
+                      "minimum": 0
+                    },
+                    "PolyGraph": {
+                      "type": "integer",
+                      "description": "Number of PolyGraph boundaries.",
+                      "minimum": 0
+                    },
+                    "Pod": {
+                      "type": "integer",
+                      "description": "Owned capacity placeholder Pods.",
+                      "minimum": 0
+                    },
+                    "PodTemplate": {
+                      "type": "integer",
+                      "description": "Owned scheduling templates for capacity plans.",
+                      "minimum": 0
+                    },
+                    "ProvisioningRequest": {
+                      "type": "integer",
+                      "description": "Owned autoscaler capacity requests.",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            },
+            "subgraphs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Identity and freshness of a nested graph boundary.",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "description": "Nested boundary kind."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Nested instance name in the parent namespace."
+                  },
+                  "uid": {
+                    "type": "string",
+                    "description": "Persisted nested instance identity."
+                  },
+                  "node": {
+                    "type": "string",
+                    "description": "Parent node name."
+                  },
+                  "phase": {
+                    "type": "string",
+                    "description": "Last reported lifecycle phase; consult current before using it."
+                  },
+                  "generation": {
+                    "type": "integer",
+                    "description": "Current child spec generation.",
+                    "minimum": 0
+                  },
+                  "observedGeneration": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "description": "Child generation evaluated by its metrics.",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "current": {
+                    "type": "boolean",
+                    "description": "Whether child lifecycle and metrics observations match its generation and it is not terminating. This is generation freshness, not a heartbeat."
+                  },
+                  "topology": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "description": "Boundary-local graph shape. Nested Graph, PolyGraph and ReplicaGroup instances count as single nodes. Duplicate directed edges are collapsed.",
+                        "properties": {
+                          "nodeCount": {
+                            "type": "integer",
+                            "description": "Number of nodes in this graph or induced observed subset.",
+                            "minimum": 0
+                          },
+                          "nodesByKind": {
+                            "type": "object",
+                            "description": "Node counts by execution abstraction.",
+                            "properties": {
+                              "Workload": {
+                                "type": "integer",
+                                "description": "Number of Workload nodes.",
+                                "minimum": 0
+                              },
+                              "Daemon": {
+                                "type": "integer",
+                                "description": "Number of Daemon nodes.",
+                                "minimum": 0
+                              },
+                              "Resource": {
+                                "type": "integer",
+                                "description": "Number of Resource nodes.",
+                                "minimum": 0
+                              },
+                              "Graph": {
+                                "type": "integer",
+                                "description": "Number of Graph nodes.",
+                                "minimum": 0
+                              },
+                              "ReplicaGroup": {
+                                "type": "integer",
+                                "description": "Number of replication boundaries.",
+                                "minimum": 0
+                              },
+                              "PolyGraph": {
+                                "type": "integer",
+                                "description": "Number of PolyGraph boundaries.",
+                                "minimum": 0
+                              }
+                            }
+                          },
+                          "subgraphCount": {
+                            "type": "integer",
+                            "description": "Number of immediate nested Graph, PolyGraph and ReplicaGroup nodes.",
+                            "minimum": 0
+                          },
+                          "admission": {
+                            "type": "object",
+                            "description": "Acyclic lifecycle dependencies used for admission.",
+                            "properties": {
+                              "depth": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Number of dependency layers; zero for an empty graph and one for independent nodes."
+                              },
+                              "breadth": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Largest layer size. This is layer breadth, not maximum antichain width or available concurrency."
+                              },
+                              "layerWidths": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "Number of nodes in this generation."
+                                },
+                                "description": "Node counts by earliest topological generation, starting at the roots."
+                              },
+                              "breadthDepth": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Breadth multiplied by depth; a shape summary, not an estimate of execution cost."
+                              },
+                              "edgeCount": {
+                                "type": "integer",
+                                "description": "Number of distinct dependency pairs, regardless of lifecycle predicate.",
+                                "minimum": 0
+                              },
+                              "rootCount": {
+                                "type": "integer",
+                                "description": "Nodes with no dependencies in this subset.",
+                                "minimum": 0
+                              },
+                              "leafCount": {
+                                "type": "integer",
+                                "description": "Nodes with no dependents in this subset.",
+                                "minimum": 0
+                              },
+                              "maxFanIn": {
+                                "type": "integer",
+                                "description": "Largest number of direct prerequisites.",
+                                "minimum": 0
+                              },
+                              "maxFanOut": {
+                                "type": "integer",
+                                "description": "Largest number of direct dependents.",
+                                "minimum": 0
+                              }
+                            }
+                          },
+                          "connections": {
+                            "type": "object",
+                            "description": "Directed data-flow connections, which may contain cycles. Isolated nodes are included in component counts.",
+                            "properties": {
+                              "edgeCount": {
+                                "type": "integer",
+                                "description": "Number of distinct directed data-flow connections, including self-loops.",
+                                "minimum": 0
+                              },
+                              "weakComponents": {
+                                "type": "integer",
+                                "description": "Connected components after ignoring edge direction.",
+                                "minimum": 0
+                              },
+                              "strongComponents": {
+                                "type": "integer",
+                                "description": "Maximal components in which each node can reach every other node.",
+                                "minimum": 0
+                              },
+                              "cyclicComponents": {
+                                "type": "integer",
+                                "description": "Strong components with multiple nodes or a self-loop; this does not enumerate individual cycles.",
+                                "minimum": 0
+                              },
+                              "largestStrongComponent": {
+                                "type": "integer",
+                                "description": "Number of nodes in the largest strongly connected component.",
+                                "minimum": 0
+                              },
+                              "condensation": {
+                                "type": "object",
+                                "description": "Layer shape after collapsing each strongly connected component to one node. These depths count components, not paths through cycles.",
+                                "properties": {
+                                  "depth": {
+                                    "type": "integer",
+                                    "description": "Number of dependency layers; zero for an empty graph and one for independent nodes.",
+                                    "minimum": 0
+                                  },
+                                  "breadth": {
+                                    "type": "integer",
+                                    "description": "Largest layer size. This is layer breadth, not maximum antichain width or available concurrency.",
+                                    "minimum": 0
+                                  },
+                                  "layerWidths": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "description": "Number of nodes in this generation."
+                                    },
+                                    "description": "Node counts by earliest topological generation, starting at the roots."
+                                  },
+                                  "breadthDepth": {
+                                    "type": "integer",
+                                    "description": "Breadth multiplied by depth; a shape summary, not an estimate of execution cost.",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "execution": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "description": "Fresh observations for nodes in this boundary. Counts overlap: a completed Job can also be ready. Terminating or failed execution retains slots until cleanup or completion.",
+                        "properties": {
+                          "observedNodes": {
+                            "type": "integer",
+                            "description": "Declared nodes with an owned execution resource, including terminating resources.",
+                            "minimum": 0
+                          },
+                          "pendingNodes": {
+                            "type": "integer",
+                            "description": "Declared nodes with no observed execution resource; includes dependency, gate and capacity waits.",
+                            "minimum": 0
+                          },
+                          "activeNodes": {
+                            "type": "integer",
+                            "description": "Observed nodes that are not terminating, completed or failed. This is not a Pod Running count.",
+                            "minimum": 0
+                          },
+                          "readyNodes": {
+                            "type": "integer",
+                            "description": "Observed nodes satisfying their resource readiness predicate.",
+                            "minimum": 0
+                          },
+                          "completedNodes": {
+                            "type": "integer",
+                            "description": "Observed nodes whose finite execution completed.",
+                            "minimum": 0
+                          },
+                          "failedNodes": {
+                            "type": "integer",
+                            "description": "Observed nodes with terminal failure.",
+                            "minimum": 0
+                          },
+                          "terminatingNodes": {
+                            "type": "integer",
+                            "description": "Observed nodes whose execution resources have deletion timestamps.",
+                            "minimum": 0
+                          },
+                          "slotCapacity": {
+                            "type": "integer",
+                            "description": "Slot budget declared by this graph.",
+                            "minimum": 0
+                          },
+                          "reservedSlots": {
+                            "type": "integer",
+                            "description": "Slots reserved by observed nodes that have not completed, including terminating or failed nodes.",
+                            "minimum": 0
+                          },
+                          "availableSlots": {
+                            "type": "integer",
+                            "description": "Nonnegative difference between slot capacity and observed reservations.",
+                            "minimum": 0
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              },
+              "description": "Immediate graph instances, sorted by kind and name. Summaries do not recursively embed descendant metrics."
+            },
+            "rollup": {
+              "type": "object",
+              "description": "Recursive status fold across mixed graph types. Local leaves are combined with each child subtree exactly once. Missing or stale summaries are omitted and flagged.",
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "subtree"
+                  ],
+                  "description": "This boundary and all currently observed descendant boundaries."
+                },
+                "observedGeneration": {
+                  "type": "integer",
+                  "description": "Parent generation evaluated for this aggregate.",
+                  "minimum": 0
+                },
+                "observationsComplete": {
+                  "type": "boolean",
+                  "description": "All expected immediate graph instances and recursively composed summaries were observed at matching generations. This is eventual generation freshness, not a heartbeat or atomic cluster snapshot."
+                },
+                "graphCount": {
+                  "type": "integer",
+                  "description": "Known graph boundaries including this one. Each boundary counts once.",
+                  "minimum": 0
+                },
+                "unobservedGraphs": {
+                  "type": "integer",
+                  "description": "Known missing instances or unavailable/stale child summaries. Descendant totals are lower bounds when nonzero.",
+                  "minimum": 0
+                },
+                "nestingDepth": {
+                  "type": "integer",
+                  "description": "Maximum known nesting layers including this boundary as layer one; independent of admission dependency depth.",
+                  "minimum": 0
+                },
+                "graphsByPhase": {
+                  "type": "object",
+                  "description": "Known boundaries by their generation-current lifecycle phase; unavailable summaries count as Unknown.",
+                  "properties": {
+                    "Reconciling": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Reconciling.",
+                      "minimum": 0
+                    },
+                    "Ready": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Ready.",
+                      "minimum": 0
+                    },
+                    "Running": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Running.",
+                      "minimum": 0
+                    },
+                    "Waiting": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Waiting.",
+                      "minimum": 0
+                    },
+                    "Draining": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Draining.",
+                      "minimum": 0
+                    },
+                    "Suspended": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Suspended.",
+                      "minimum": 0
+                    },
+                    "Stopped": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Stopped.",
+                      "minimum": 0
+                    },
+                    "Completed": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Completed.",
+                      "minimum": 0
+                    },
+                    "Failed": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Failed.",
+                      "minimum": 0
+                    },
+                    "Invalid": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Invalid.",
+                      "minimum": 0
+                    },
+                    "Unknown": {
+                      "type": "integer",
+                      "description": "Boundaries in phase Unknown.",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "leafNodes": {
+                  "type": "integer",
+                  "description": "Declared non-boundary nodes across observed graph specs. Uninstantiated subgraph contents are unknown.",
+                  "minimum": 0
+                },
+                "observedLeafNodes": {
+                  "type": "integer",
+                  "description": "Declared non-boundary nodes with owned execution resources.",
+                  "minimum": 0
+                },
+                "pendingLeafNodes": {
+                  "type": "integer",
+                  "description": "Known leaf nodes with no observed execution resource.",
+                  "minimum": 0
+                },
+                "activeLeafNodes": {
+                  "type": "integer",
+                  "description": "Observed leaf resources that are not completed, failed or terminating; not a Pod Running count.",
+                  "minimum": 0
+                },
+                "readyLeafNodes": {
+                  "type": "integer",
+                  "description": "Leaf nodes satisfying readiness.",
+                  "minimum": 0
+                },
+                "completedLeafNodes": {
+                  "type": "integer",
+                  "description": "Observed finite leaf nodes that completed.",
+                  "minimum": 0
+                },
+                "failedLeafNodes": {
+                  "type": "integer",
+                  "description": "Leaf nodes reporting terminal failure.",
+                  "minimum": 0
+                },
+                "terminatingLeafNodes": {
+                  "type": "integer",
+                  "description": "Declared leaf executions awaiting deletion.",
+                  "minimum": 0
+                },
+                "resourceCount": {
+                  "type": "integer",
+                  "description": "All known owned resources across descendants, including nested boundary CRs and obsolete resources. Excludes this root CR; each owned resource counts once.",
+                  "minimum": 0
+                },
+                "terminatingResources": {
+                  "type": "integer",
+                  "description": "Known owned resources awaiting deletion across descendants.",
+                  "minimum": 0
+                },
+                "capacityPlans": {
+                  "type": "integer",
+                  "description": "Known active capacity plans across observed graph instances.",
+                  "minimum": 0
+                },
+                "capacityRequestedPods": {
+                  "type": "integer",
+                  "description": "Future Pods in active capacity plans.",
+                  "minimum": 0
+                },
+                "capacityReadyPods": {
+                  "type": "integer",
+                  "description": "Future Pods with last-observed usable capacity.",
+                  "minimum": 0
+                },
+                "capacityFailedPlans": {
+                  "type": "integer",
+                  "description": "Failed or expired capacity plans requiring a retry.",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        "delays": {
+          "type": "object",
+          "description": "Durable admission deadlines keyed by node name; shared by operator replicas.",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "token",
+              "notBefore"
+            ],
+            "properties": {
+              "token": {
+                "type": "object",
+                "x-kubernetes-preserve-unknown-fields": true,
+                "description": "Gate, graph, workload and dependency identities fencing this admission timer."
+              },
+              "notBefore": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Earliest UTC admission time after dependency eligibility was observed."
+              }
+            }
+          }
+        }
+      },
+      "x-kubernetes-preserve-unknown-fields": true
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "description": "Compose graph boundaries into a finite or persistent graph of workloads and resources. Admission follows lifecycle dependencies; deletion waits for owned resources to finish cleanup.",
+  "$comment": "Generated from charts/polyad/crds/polygraphs.yaml; do not edit this artifact."
+}

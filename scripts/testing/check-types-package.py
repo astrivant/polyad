@@ -14,13 +14,8 @@ from polyad_types import (
     Cheeger,
     Graph,
     ObjectMeta,
-    available_schemas,
-    event_schema,
     from_dict,
     from_document,
-    load_schema,
-    resource_schema,
-    schema_for,
     to_dict,
     to_document,
 )
@@ -44,13 +39,9 @@ def main() -> None:
     assert to_dict(rule) == {"minimum": 1.0, "maximum": None}
     graph = Graph(metadata=ObjectMeta(name="pipeline"), spec={"nodes": []})
     assert from_document(to_document(graph)) == graph
-    for name in available_schemas():
-        assert "$schema" in load_schema(name), name
-    assert {"models", "events", "helm-values", "helm-reference", "graph.v1alpha1"} <= set(available_schemas())
-    assert schema_for(Cheeger)["$ref"].endswith(".Cheeger")
-    assert resource_schema("PolyGraph")["properties"]["kind"]["const"] == "PolyGraph"
-    assert "TopologyEvent" in event_schema()["$defs"]
-    print("Standalone types package, imports, serialization and schema artifacts passed")
+    assert importlib.util.find_spec("polyad_schemas") is None
+    assert not list(package.rglob("*.schema.json"))
+    print("Standalone types package, imports and serialization passed")
 
 
 if __name__ == "__main__":

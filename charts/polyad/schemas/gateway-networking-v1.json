@@ -1,4 +1,7 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/gateway.networking.istio.io.v1.schema.json",
+  "title": "networking.istio.io Gateway v1",
   "properties": {
     "spec": {
       "description": "Configuration affecting edge load balancer. See more details at: https://istio.io/docs/reference/config/networking/gateway.html",
@@ -314,9 +317,24 @@
       },
       "type": "object",
       "x-kubernetes-preserve-unknown-fields": true
+    },
+    "apiVersion": {
+      "type": "string",
+      "const": "networking.istio.io/v1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "Gateway"
+    },
+    "metadata": {
+      "type": "object"
     }
   },
   "type": "object",
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "$comment": "Istio 1.30.4 base/files/crd-all.gen.yaml; Apache-2.0."
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata"
+  ],
+  "$comment": "Generated from https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml (1.30.4); source SHA-256 05f73d0aaf02afa95ccd65e35ef53f41e7f44c6c47ac531bb724633db4e6f053. Apache-2.0; see istio-LICENSE. Do not edit this artifact."
 }

@@ -33,7 +33,8 @@ the Kubernetes Operators Framework for Python.
   workloads can submit compositions, activate work, request [TTL-bound connections](docs/apis/temporary-connections.md)
   and discover permitted services across the [atlas](docs/apis/discovery.md), with filtered
   event hooks and peer-approved connections.
-  [Shared types](pkg/polyad-types/README.md) are also available separately from the operator.
+  [Shared types](pkg/polyad-types/README.md) and [JSON Schemas](pkg/polyad-schemas/README.md)
+  are also available separately from the operator.
 - **Coordinate across clusters.** A [root operator](docs/deployment/root-control-plane.md) can
   run in a dedicated management cluster, deploy graphs and execution replicas into
   registered workload clusters, and collect their observations centrally.

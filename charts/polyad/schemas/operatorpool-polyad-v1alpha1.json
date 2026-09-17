@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/operatorpool.v1alpha1.schema.json",
+  "title": "polyad.astrivant.com OperatorPool v1alpha1",
+  "type": "object",
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "polyad.astrivant.com/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "OperatorPool"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "cluster",
+        "replicas"
+      ],
+      "x-kubernetes-validations": [
+        {
+          "rule": "!has(self.existingDeployment) || ((!has(self.controller) || self.controller == 'Deployment') && !has(self.resources) && !has(self.nodeSelector) && !has(self.tolerations))",
+          "message": "Existing deployments retain Helm Pod configuration and require controller Deployment."
+        },
+        {
+          "rule": "(has(self.existingDeployment) ? self.existingDeployment : '') == (has(oldSelf.existingDeployment) ? oldSelf.existingDeployment : '')",
+          "message": "Existing deployment attachment is immutable; create a new pool to change it."
+        },
+        {
+          "rule": "!has(self.scalingAuthority) || self.scalingAuthority != 'Local' || has(self.existingDeployment)",
+          "message": "Local scaling requires an existing deployment."
+        },
+        {
+          "rule": "!has(self.scalingAuthority) || self.scalingAuthority != 'Local' || self.replicas == oldSelf.replicas",
+          "message": "Local scaling is controlled at the downstream Deployment; OperatorPool replica edits are disabled."
+        },
+        {
+          "rule": "!has(self.controller) || self.controller != 'DaemonSet' || self.replicas == 1",
+          "message": "DaemonSet pools use node eligibility and require replicas equal to one; do not attach a KEDA scaler."
+        },
+        {
+          "rule": "(has(self.controller) ? self.controller : 'Deployment') == (has(oldSelf.controller) ? oldSelf.controller : 'Deployment')",
+          "message": "Pool controller is immutable; create a new pool to change scheduling."
+        }
+      ],
+      "properties": {
+        "existingDeployment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+          "description": "Helm-owned Deployment in the registered namespace; root never replaces its template or deletes it."
+        },
+        "scalingAuthority": {
+          "type": "string",
+          "enum": [
+            "Root",
+            "Local"
+          ],
+          "default": "Root",
+          "description": "Root may patch replicas after admission; Local only observes the Helm-owned Deployment."
+        },
+        "controller": {
+          "type": "string",
+          "enum": [
+            "Deployment",
+            "DaemonSet"
+          ],
+          "default": "Deployment",
+          "description": "Deployment scales by replicas; DaemonSet executes through a reserved PolyGraph and follows eligible nodes."
+        },
+        "cluster": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 63,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "x-kubernetes-validations": [
+            {
+              "rule": "self == oldSelf",
+              "message": "cluster is immutable"
+            }
+          ]
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32,
+          "default": 1
+        },
+        "resources": {
+          "type": "object",
+          "x-kubernetes-preserve-unknown-fields": true
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-kubernetes-preserve-unknown-fields": true
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "readyReplicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "labelSelector": {
+          "type": "string"
+        },
+        "observedGeneration": {
+          "type": "integer"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "$comment": "Generated from charts/polyad/crds/operatorpools.yaml; do not edit this artifact."
+}

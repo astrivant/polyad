@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/activation.v1alpha1.schema.json",
+  "title": "polyad.astrivant.com Activation v1alpha1",
+  "type": "object",
+  "description": "Durable pulse receipt. The owning graph shard admits execution using the downstream definition's activation policy.",
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "polyad.astrivant.com/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "Activation"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "type": "object",
+      "description": "Immutable request and revision fences; retain the receipt to retain idempotency.",
+      "required": [
+        "requestId",
+        "kind",
+        "graph",
+        "graphUid",
+        "node",
+        "graphGeneration",
+        "definitionUid",
+        "definitionGeneration"
+      ],
+      "x-kubernetes-validations": [
+        {
+          "rule": "self == oldSelf",
+          "message": "Activation intent is immutable; use a new requestId for another pulse."
+        }
+      ],
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "maxLength": 63,
+          "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+          "description": "Client idempotency identity, shared across API retries."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Graph",
+            "PolyGraph",
+            "ReplicaGroup"
+          ],
+          "description": "Containing executable graph kind."
+        },
+        "graph": {
+          "type": "string",
+          "maxLength": 63,
+          "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+          "description": "Containing graph instance name."
+        },
+        "graphUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Graph incarnation; recreated graphs cannot consume old requests."
+        },
+        "node": {
+          "type": "string",
+          "maxLength": 63,
+          "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+          "description": "Downstream logical vertex name."
+        },
+        "graphGeneration": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Graph revision observed at acceptance."
+        },
+        "definitionUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Reusable target definition incarnation."
+        },
+        "definitionGeneration": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Reusable target definition revision."
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "x-kubernetes-preserve-unknown-fields": true,
+      "description": "Admission phase, timestamp, execution identity and reasons for rejection or coalescing."
+    }
+  },
+  "$comment": "Generated from charts/polyad/crds/activations.yaml; do not edit this artifact."
+}

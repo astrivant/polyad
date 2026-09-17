@@ -22,7 +22,7 @@ from polyad.events.store import CursorExpired, TopologyReplaced
 from polyad.events.visibility import permitted_observation
 from polyad_types.auth import APIKey, GraphAccess
 from polyad_types.events import Event as Observation
-from polyad_types.events import EventStreamSettings, EventTooLarge, event_schema
+from polyad_types.events import EventStreamSettings, EventTooLarge
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
@@ -208,7 +208,13 @@ class EventAPIBuilder:
             )
 
         @app.get("/v1/events/schema")
-        def schema_document() -> Response:
+        def schema_document() -> Response | tuple[Response, int]:
+            try:
+                from polyad_schemas import event_schema
+            except ModuleNotFoundError as error:
+                if error.name != "polyad_schemas":
+                    raise
+                return jsonify(error="event schemas require installing polyad[schemas]"), 503
             response = jsonify(event_schema())
             response.mimetype = "application/schema+json"
             return response

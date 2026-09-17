@@ -137,8 +137,9 @@ See the repository's [activation guide](https://github.com/astrivant/polyad/blob
 `Event.typed()` returns a validated `GraphEvent`, `TopologyEvent`,
 `ConnectionEvent`, `ControlEvent` or `HeartbeatEvent` from `polyad_types`.
 Existing callbacks can continue using the raw `data` dictionary. Import
-`decode_event` for independent documents and `event_schema` for the packaged JSON
-Schema, without installing the operator.
+`decode_event` from `polyad_types` for independent documents. For JSON Schema,
+install `polyad-schemas` and import `event_schema` from `polyad_schemas.events`;
+this does not install the operator.
 
 Choose a maximum complete event size for either transport:
 

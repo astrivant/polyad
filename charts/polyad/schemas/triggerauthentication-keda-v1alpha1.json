@@ -1,13 +1,18 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/triggerauthentication.keda.sh.v1alpha1.schema.json",
+  "title": "keda.sh TriggerAuthentication v1alpha1",
   "description": "TriggerAuthentication defines how a trigger can authenticate",
   "properties": {
     "apiVersion": {
       "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-      "type": "string"
+      "type": "string",
+      "const": "keda.sh/v1alpha1"
     },
     "kind": {
       "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-      "type": "string"
+      "type": "string",
+      "const": "TriggerAuthentication"
     },
     "metadata": {
       "type": "object"
@@ -792,9 +797,11 @@
     }
   },
   "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
     "spec"
   ],
   "type": "object",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$comment": "Extracted without modification from https://github.com/kedacore/keda/blob/v2.20.0/config/crd/bases/keda.sh_triggerauthentications.yaml"
+  "$comment": "Generated from https://raw.githubusercontent.com/kedacore/keda/v2.20.2/config/crd/bases/keda.sh_triggerauthentications.yaml (v2.20.2); source SHA-256 2e784ca882d7ee4b911fff4ad0c6dc51e31b0c71c97d8eefaf94dc4d1dfdb5a6. Apache-2.0; see keda-LICENSE. Do not edit this artifact."
 }

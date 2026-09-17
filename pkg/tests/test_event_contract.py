@@ -5,6 +5,7 @@ Verify public event syntax trees, schema parity and configurable delivery budget
 from __future__ import annotations
 
 import asyncio
+import builtins
 import copy
 import io
 import json
@@ -19,7 +20,8 @@ from attrs import fields
 from polyad.events.builder import EventAPIBuilder
 from polyad.events.store import EventStore
 from polyad_client import Client
-from polyad_types import Event, EventStreamSettings, EventTooLarge, decode_event, event_schema, to_dict
+from polyad_schemas import event_schema
+from polyad_types import Event, EventStreamSettings, EventTooLarge, decode_event, to_dict
 from tests.test_chart import CHART, render
 from tests.test_client import Adapter
 from tests.test_operator import resource
@@ -77,6 +79,28 @@ def test_event_schema_is_generated_from_models_and_packaged():
     helm = json.loads((CHART / "values.schema.json").read_text())["properties"]["events"]["properties"]
     for attribute in fields(EventStreamSettings):
         assert all(helm[attribute.name][key] == value for key, value in attribute.metadata["schema"].items())
+
+
+def test_event_service_remains_available_without_the_optional_schema_distribution(monkeypatch):
+    """
+    Import schema artifacts only for their route and explain a missing extra without breaking event configuration.
+    """
+    original_import = builtins.__import__
+
+    def importing(name, *args, **kwargs):
+        if name == "polyad_schemas":
+            raise ModuleNotFoundError("missing optional schemas package", name="polyad_schemas")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", importing)
+    app = EventAPIBuilder().with_handlers(lambda _: "0-0", lambda _: []).with_bearer_token("reader").build()
+    client = app.test_client()
+    headers = {"Authorization": "Bearer reader"}
+    assert client.get("/v1/events/config", headers=headers).status_code == 200
+    assert client.get("/v1/events/schema").status_code == 401
+    response = client.get("/v1/events/schema", headers=headers)
+    assert response.status_code == 503
+    assert "polyad[schemas]" in response.json["error"]
 
 
 @pytest.mark.parametrize(

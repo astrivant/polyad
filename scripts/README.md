@@ -14,7 +14,7 @@ these paths directly.
 | --- | --- |
 | [tooling](tooling/) | Select the checkout's Python, read tool version pins, and install local or CI tools. |
 | [validation](validation/) | Check docstrings, shell scripts, Helm values, Kubernetes manifests and Mermaid diagrams. The Mermaid Node package lives in `validation/mermaid/`. |
-| [schemas](schemas/) | Generate resource status, network and Helm reference schemas, render typed Helm parameter documentation, or check for drift. |
+| [schemas](schemas/) | Generate chart and Python schemas from the [central catalog](../schemas/README.md), check drift, and render Helm documentation. |
 | [gitops](gitops/) | Generate Argo CD and Flux health configurations from the resource registry. |
 | [testing](testing/) | Check built containers and the installed types package; exercise an operator in a test cluster. |
 | [release](release/) | Derive a release tag from package metadata. |
@@ -25,7 +25,7 @@ Run repository commands from the checkout root:
 
 ```sh
 bash scripts/tooling/project-python.sh scripts/validation/check-values.py
-bash scripts/tooling/project-python.sh scripts/schemas/generate-reference-schema.py --check
+bash scripts/tooling/project-python.sh scripts/schemas/generate-all.py --check
 bash scripts/validation/check-shell.sh
 bash scripts/validation/check-mermaid.sh
 npm test --prefix scripts/validation/mermaid

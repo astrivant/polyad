@@ -51,6 +51,7 @@ Changelog = "https://github.com/astrivant/polyad/releases"
 
 [project.optional-dependencies]
 flask-auth = ["flask-httpauth>=4.8,<5"]
+schemas = ["polyad-schemas==0.0.1a3"]
 
 [project.scripts]
 polyad-operator = "polyad.operator.runtime:main"
@@ -64,6 +65,7 @@ include = [
 
 [tool.poetry.dependencies]
 polyad-types = {path = "pkg/polyad-types"}
+polyad-schemas = {path = "pkg/polyad-schemas", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=9.0.3,<10"
@@ -86,16 +88,17 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["pkg/tests"]
-pythonpath = ["pkg", "pkg/client", "pkg/polyad-types"]
+pythonpath = ["pkg", "pkg/client", "pkg/polyad-types", "pkg/polyad-schemas"]
 addopts = "-n auto --maxprocesses=8 --dist=worksteal"
 
 [tool.ruff]
-src = [".", "pkg", "pkg/client", "pkg/polyad-types"]
+src = [".", "pkg", "pkg/client", "pkg/polyad-types", "pkg/polyad-schemas"]
 line-length = 140
 target-version = "py313"
 
 [tool.ruff.per-file-target-version]
 "pkg/polyad-types/**/*.py" = "py311"
+"pkg/polyad-schemas/**/*.py" = "py311"
 "pkg/client/**/*.py" = "py311"
 
 [tool.ruff.lint]
