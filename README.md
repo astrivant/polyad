@@ -2,7 +2,7 @@
 
 <img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoe logo" width="140" height="140">
 
-Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29)) is a Kubernetes operator for deploying, connecting and scaling applications as graphs.
+Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics) is a Kubernetes operator for deploying, connecting and scaling applications as graphs.
 Compose batch jobs, persistent services and supporting resources into reusable
 Graphs and PolyGraphs. Define how work starts, how components communicate and
 which structural constraints must hold as the application changes—from a workflow
