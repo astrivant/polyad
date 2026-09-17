@@ -17,11 +17,13 @@ in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deplo
   scale individual services, whole graphs or nested compositions. Polyad refreshes
   live graph state and enforces [GraphRules](docs/graphs/graph-rules.md), including size,
   shape and structural Cheeger bounds, before applying scaling changes.
-  Optional [Soul searching](docs/graphs/throughput-feedback.md), Polyad's topology optimizer, maps application demand
-  to separate Cheeger targets and recommends or applies approved connection layouts.
-  Optional [Istio traffic balancing](docs/graphs/traffic-balancing.md) splits incoming work
-  between workload, Daemon, Graph or PolyGraph replicas using configured percentages,
-  calibrated demand tiers or measured headroom.
+  Optional [Soul searching](docs/graphs/throughput-feedback.md), Polyad's topology optimizer,
+  uses application measurements to recommend or apply approved connection layouts
+  and bounded [Istio traffic splits](docs/graphs/traffic-balancing.md). Demand selects
+  a separate Cheeger target; routing percentages come from calibrated demand tiers
+  or each replica's completed throughput and reported spare capacity. Fixed percentages
+  also work without feedback. These routes can balance Workload, Daemon, Graph,
+  PolyGraph or nested ReplicaGroup replicas through their service entrypoints.
 - **Make connectivity explicit.** Choose replica connection patterns, including
   custom edges, and enforce [network boundaries](docs/deployment/networking.md) with optional
   NetworkPolicy and Istio integration.
@@ -111,19 +113,37 @@ applicable constraints before creating or retiring copies. A scaling decision
 must fit the surrounding application's rules as well as the group's own limits.
 
 For data pipelines, [Cheeger bounds](docs/graphs/graph-rules.md#cheeger-bottleneck-bounds)
-provide a structural assurance against bottlenecks: a minimum requires enough
-edges across every split relative to the size of its smaller side, at each
-configured boundary. This supports throughput goals by rejecting topologies with
-overly sparse connections between stages or replicas. Actual throughput still
-depends on processing capacity, bandwidth and workload; the Cheeger measurement
-counts connections and does not guarantee a data rate.
+constrain structural bottlenecks. A minimum requires enough distinct connections
+across every split relative to the number of vertices on its smaller side, at
+each configured boundary. For example, a minimum of `1` requires at least three
+crossing connections for a split whose smaller side contains three vertices.
+This rejects overly sparse topologies; achieved throughput also depends on
+processing capacity, bandwidth and the work each request requires.
 
-[Soul searching](docs/graphs/throughput-feedback.md) connects those
-structural measurements to workload-specific demand tiers. Keep hard GraphRules
-bounds separate from calibrated targets, use Observe mode to inspect recommendations,
-and opt into Adapt for bounded changes with stabilization and cooldowns.
-See [comparing Cheeger policies](docs/graphs/cheeger-orchestration.md) for diagrams of
-their different orchestration decisions and interaction with replica scaling.
+[Soul searching](docs/graphs/throughput-feedback.md) connects application
+measurements to two possible actions: change the approved connection layout, or
+redistribute incoming traffic among connected replicas. Hard GraphRules bounds
+remain separate from the **application-driven Cheeger target** selected by a
+calibrated demand tier. Every automatic change must satisfy both, with fresh
+graph-family checks, stabilization, cooldowns and a change budget. Observe mode
+reports recommendations; Adapt permits bounded changes.
+
+With optional [Istio traffic balancing](docs/graphs/traffic-balancing.md),
+`Tiers` mode selects configured percentages after a sustained throughput shortfall.
+`Headroom` mode uses each destination's completed work plus its reported additional
+sustainable capacity to rebalance under positive demand, even before aggregate
+throughput falls. Both modes can redistribute requests among Workload, Daemon,
+Graph, PolyGraph and nested ReplicaGroup copies through compatible service
+entrypoints. KEDA and ReplicaGroups separately control how many copies exist.
+
+**Both Cheeger bounds use the same unweighted structural measurement.** Changing
+a traffic split from 90/10 to 50/50 can improve application throughput without
+changing the Cheeger value. A zero-percent destination still contributes its
+declared connection until that edge is removed. Traffic percentages and measured
+capacity are separate inputs to routing; they do not turn Cheeger into a measured
+data rate. See [comparing Cheeger policies](docs/graphs/cheeger-orchestration.md)
+and [traffic balancing between replicas](docs/graphs/traffic-balancing.md#connections-percentages-and-replicas)
+for diagrams of how these controls work together.
 
 Services can also participate in changing their own topology. By installing the
 [Python client](pkg/client/README.md), applications can submit
@@ -314,6 +334,11 @@ constraints can block its application. Target the ReplicaGroup to use these
 checks: directly autoscaling a generated Deployment or StatefulSet bypasses graph
 admission. See [constraints before scaling](docs/graphs/replication.md#constraints-before-scaling).
 
+When percentage routing is configured, a positive traffic assignment also blocks
+removing its destination. Drain its share to zero before scale-in; newly added
+copies need explicit routing assignments. See
+[traffic balancing and scaling](docs/graphs/traffic-balancing.md#scaling-ownership-and-limitations).
+
 A ReplicaGroup of PolyGraphs can also scale a complete cross-cluster composition.
 Each destination can independently scale its own local groups. The
 [multicluster scaling diagram](docs/deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling)
@@ -379,6 +404,14 @@ Read about [composition requests](docs/apis/composition-requests.md) and [GraphR
 Group workloads into subgraphs with explicit network connections. Scoped rules
 control traffic across boundaries and namespaces; optional Istio integration
 adds HTTP and service-identity authorization.<sup>[\[7\]](docs/deployment/networking.md#selection-scope-and-inheritance)</sup><sup>[\[8\]](docs/deployment/networking.md#cross-namespace-peers-and-http-authorization)</sup>
+
+Optional [percentage routing](docs/graphs/traffic-balancing.md) controls how incoming
+requests are divided among connected replicas, while network policies control
+which traffic is permitted. Polyad generates Istio VirtualServices and
+DestinationRules for local sidecar HTTP, HTTP/2 and gRPC Services. A Graph or
+PolyGraph copy receives its share through its entrypoint workloads. Try the
+[traffic-balancing example](examples/traffic-balancing.yaml), or compare fixed
+percentages with the [Tiers and Headroom feedback modes](docs/graphs/traffic-balancing.md#choose-an-automatic-balancing-mode).
 
 <details>
 <summary>Example: subgraph connections and cross-namespace authorization</summary>
@@ -897,8 +930,9 @@ Polyad coordinates application graphs alongside existing cluster components.
   Kubernetes places Pods; the configured autoscaler provisions machines.
   Grouping work does not guarantee that every Pod starts together.<sup>[\[9\]](docs/deployment/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup><sup>[\[20\]](docs/graphs/capacity.md#scheduling-demand-and-placement)</sup>
 - **A service mesh or network transport.** Polyad generates network and Istio
-  policy resources. The cluster's networking implementation and mesh enforce
-  them; drawing a graph connection does not transport application data.<sup>[\[21\]](docs/deployment/networking.md#enforcement-and-lifecycle)</sup>
+  authorization and routing resources, including optional percentage splits.
+  The cluster's networking implementation and mesh enforce them; drawing a graph
+  connection does not transport application data.<sup>[\[21\]](docs/deployment/networking.md#enforcement-and-lifecycle)</sup>
 - **Automatic process checkpointing or exactly-once execution.** Restarting
   containers with persistent storage requires application recovery logic.
   Workloads must handle retries and duplicate effects; graph ownership and
@@ -923,8 +957,10 @@ choices.
   [hard Cheeger bounds](docs/graphs/graph-rules.md#cheeger-bottleneck-bounds) and
   [throughput-driven Cheeger targets](docs/graphs/cheeger-orchestration.md).
   Application-reported demand selects a calibrated target; sustained completion
-  shortfalls can trigger topology changes within the hard bounds. The Cheeger
-  value itself measures structural connectivity.
+  shortfalls can trigger connection changes within the hard bounds. Optional
+  [traffic balancing](docs/graphs/traffic-balancing.md) also uses calibrated splits
+  or per-replica throughput and headroom to redistribute requests. Those routing
+  weights are separate from the unweighted Cheeger value used by both bounds.
 - **Rewriting and composition:** Dimitri Ara et al.,
   [Polygraphs: From Rewriting to Higher Categories](https://arxiv.org/abs/2312.00429).
   Background for the rewriting, confluence and higher-dimensional diagrams in
