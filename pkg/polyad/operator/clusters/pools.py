@@ -118,7 +118,7 @@ class PoolManager:
                 "apiVersion": f"{GROUP}/v1alpha1",
                 "kind": "Graph",
                 "metadata": {
-                    "name": name + "-root",
+                    "name": name + "-root-bootstrap",
                     "namespace": self.namespace,
                     "labels": labels,
                     "annotations": {DEPLOYMENT: source["metadata"]["name"]},
@@ -131,9 +131,34 @@ class PoolManager:
             },
             owner,
         )
-        nodes = [{"name": "root", "kind": "Graph", "ref": name + "-root"}]
+        # Keep the Helm-owned bootstrap observation separate from managed
+        # components, but contain both within the same operator group Graph.
+        root_nodes = [{"name": "bootstrap", "kind": "Graph", "ref": name + "-root-bootstrap"}]
         if component_graph := os.environ.get("POLYAD_COMPONENT_GRAPH"):
-            nodes.append({"name": "components", "kind": "Graph", "ref": component_graph})
+            root_nodes.append({"name": "components", "kind": "Graph", "ref": component_graph})
+        await self.apply(
+            self.api,
+            {
+                "apiVersion": f"{GROUP}/v1alpha1",
+                "kind": "Graph",
+                "metadata": {"name": name + "-root", "namespace": self.namespace, "labels": labels},
+                "spec": {
+                    "templateOnly": True,
+                    "mode": "persistent",
+                    "nodes": root_nodes,
+                    "connections": [
+                        edge
+                        for node in root_nodes[1:]
+                        for edge in (
+                            {"source": "bootstrap", "target": node["name"]},
+                            {"source": node["name"], "target": "bootstrap"},
+                        )
+                    ],
+                },
+            },
+            owner,
+        )
+        nodes = [{"name": "root", "kind": "Graph", "ref": name + "-root"}]
         listing = await self.api.request("GET", "OperatorPool", self.namespace)
         for pool in sorted((listing or {}).get("items", []), key=lambda item: item["metadata"]["name"]):
             meta = pool["metadata"]

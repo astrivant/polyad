@@ -392,8 +392,10 @@ for console examples and optional OpenTelemetry export.
 With root mode enabled, one reserved `PolyGraph/<release>-operators` models the
 whole operator deployment. Each operator group has its own Graph: the root group
 in the management cluster and one group for each provisioned or attached remote OperatorPool.
-Distributed mode also links the local gateway/executor/telemetry component Graph.
-The root group exists even before the first remote pool is added.
+The root group's Graph contains a bootstrap observation Graph and, in Distributed
+mode, the local gateway/executor/telemetry component Graph. Component management
+and recovery therefore belong inside the root operator group. The root group
+exists even before the first remote pool is added.
 
 Register a downstream cluster under `federation.clusters`, then add its operator
 deployment under `rootControlPlane.pools` or create an OperatorPool directly.
@@ -407,7 +409,12 @@ Other groups and the root retain their identities.
 flowchart TB
     subgraph hierarchy["Reserved root PolyGraph · all operator groups"]
         subgraph management["Graph · root operator group · management cluster"]
-            root["Root Deployment replicas<br/>Authority, queues and metrics"]
+            subgraph bootstrap["Graph · bootstrap observation"]
+                root["Helm-owned root Deployment replicas<br/>Authority and recovery"]
+            end
+            components["Nested component Graph · Distributed mode<br/>Gateway → executor → telemetry"]
+            bootstrap -->|"Reconcile and restore components"| components
+            components -->|"Observations"| bootstrap
         end
         subgraph west["Graph · west operator group"]
             deployment["Deployment workers<br/>Root KEDA replica count"]
@@ -428,9 +435,14 @@ They describe control and observation relationships; Kubernetes and the shared
 queue provide the actual transport. Graph status rolls up fresh group readiness,
 native workload counts and descendant metrics into the PolyGraph.
 
-Membership and workload ownership are separate. The root group's Graph observes
-the existing Helm-owned Deployment. Deployment pool Graphs similarly observe
-their root-provisioned or Helm-owned Deployment; DaemonSet group Graphs own their native DaemonSet.
+The component Graph keeps its own three-stage Cheeger bound and replica budget;
+the bootstrap observation does not become a fourth pipeline stage. See
+[the component topology and scaling rules](components.md#the-operators-own-graph).
+
+Membership and workload ownership are separate. The root group's bootstrap
+observation Graph observes the existing Helm-owned Deployment. Deployment pool
+Graphs similarly observe their root-provisioned or Helm-owned Deployment;
+DaemonSet group Graphs own their native DaemonSet.
 Observation bindings never create a second operator Deployment, change its Pod
 count, or delete it when the observation Graph is suspended or removed. Helm/HPA
 continue to manage root replicas. OperatorPool/KEDA manage remote replicas with

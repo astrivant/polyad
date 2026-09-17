@@ -58,31 +58,48 @@ file to opt into database storage after installing CloudNativePG.
 For release `polyad`, Helm declares `Graph/polyad-control-plane`, three reusable
 ReplicaGroups (`polyad-gateway`, `polyad-executor`, `polyad-telemetry`), their
 Daemon definitions and `GraphRule/polyad-control-plane`.
-With `rootControlPlane.enabled`, this Graph becomes a reusable definition whose
-instance is linked into the [reserved root PolyGraph](root-control-plane.md#reserved-operator-hierarchy),
-alongside the root group and each remote operator group.
+Without root mode, the component Graph runs on its own and the Helm bootstrap
+reconciles it from outside the Graph.
+
+With `rootControlPlane.enabled`, the component Graph becomes a reusable
+definition instantiated **inside the root operator group's Graph**. A sibling
+bootstrap observation Graph tracks the existing Helm Deployment. Both branches
+belong to the same root operator group in the
+[reserved root PolyGraph](root-control-plane.md#reserved-operator-hierarchy):
 
 ```mermaid
 flowchart TB
-    bootstrap["Helm-owned bootstrap Deployment<br/>planner and recovery"]
-    subgraph plane["Graph: polyad-control-plane"]
-        direction LR
-        gateway["Gateway ReplicaGroup<br/>HTTP APIs and event streams"]
-        executor["Executor ReplicaGroup<br/>admission and reconciliation"]
-        telemetry["Telemetry ReplicaGroup<br/>observations and metrics"]
-        gateway -->|"declared connection"| executor
-        executor -->|"declared connection"| telemetry
+    subgraph operators["Reserved root PolyGraph"]
+        subgraph group["Graph · root operator group"]
+            subgraph observation["Graph · bootstrap observation"]
+                bootstrap["Helm-owned bootstrap Deployment<br/>planner and recovery"]
+            end
+            subgraph plane["Graph · polyad-control-plane instance"]
+                direction LR
+                gateway["Gateway ReplicaGroup<br/>HTTP APIs and event streams"]
+                executor["Executor ReplicaGroup<br/>admission and reconciliation"]
+                telemetry["Telemetry ReplicaGroup<br/>observations and metrics"]
+                gateway -->|"declared connection"| executor
+                executor -->|"declared connection"| telemetry
+            end
+            observation -->|"reconcile and restore components"| plane
+            plane -->|"observations"| observation
+        end
+        remote["Remote operator group Graphs"]
+        group <-->|"root coordination and observations"| remote
     end
-    bootstrap -->|"owns this family's mutation shard"| plane
     rule["GraphRule<br/>connected, Cheeger ≥ 1<br/>expandedNodes ≤ 27"] -. checks .-> plane
     keda["KEDA"] -->|"read global demand"| telemetry
     keda -->|"request group counts"| bootstrap
 ```
 
-These two port-free connections describe logical stages. Communication between
-roles uses Kubernetes and the shared store; the edges do not implement a direct
-HTTP forwarding pipeline or claim an inter-process bandwidth guarantee. The
-physical control and storage paths are:
+The component Graph's two port-free connections describe logical stages. The
+enclosing root Graph connects its bootstrap and components branches in both
+directions for reconciliation and observations. These are separate boundaries:
+nesting preserves the component Graph's three-stage Cheeger calculation and
+replica budget. Communication between roles uses Kubernetes and the shared store;
+the edges do not implement a direct HTTP forwarding pipeline or claim an
+inter-process bandwidth guarantee. The physical control and storage paths are:
 
 ```mermaid
 flowchart TB
@@ -106,8 +123,8 @@ NetworkPolicy, Istio authorization and Secret mounts apply to component Pods.
 With ESO reloads enabled, generated Daemons also opt into Secret-change restart
 annotations. Credential file checks continue to request process replacement.
 The managed database and Dragonfly stay outside this component Graph. The
-bootstrap Deployment retains Helm ownership; in root mode its own group Graph
-observes it within the reserved PolyGraph.
+bootstrap Deployment retains Helm ownership; in root mode its observation Graph
+and managed components share one operator group Graph within the reserved PolyGraph.
 
 ## Scaling and structural bounds
 
@@ -170,8 +187,11 @@ bootstrap group temporarily receives ordinary shards as well; existing lease
 expiry rules still apply.
 
 In root mode, this reservation follows the enclosing PolyGraph instead, including
-its local root group and component Graph. Adding remote operator groups updates
-that existing hierarchy. Dense root planners receive the same protection.
+the root operator Graph's bootstrap and component branches. The bootstrap
+reconciles and restores missing managed components from within that modeled
+group, while Helm owns the bootstrap's lifecycle. Adding remote operator groups
+updates the enclosing PolyGraph. Dense root planners receive the same protection;
+their root Graph has only the bootstrap observation branch.
 
 The HA chart requires at least two bootstrap replicas. Deleting or
 suspending the managed Graph stops its components; bootstrap survives and can

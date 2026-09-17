@@ -805,21 +805,26 @@ Polyad can run as a compact HA Deployment or manage its own service components
 in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemetry
 ReplicaGroups scale independently through KEDA and fresh GraphRule checks. A
 root bootstrap Deployment retains planning and recovery responsibility. With
-root mode enabled, one reserved PolyGraph contains a Graph for the root operator
-group and a Graph for each remote operator group, plus the optional component Graph.
+root mode enabled, one reserved PolyGraph contains a Graph for each operator
+group. The root operator Graph contains both the bootstrap observation Graph and
+the optional service-component Graph; remote operator groups join as peers.
 
 ```mermaid
 flowchart TB
     subgraph operators["Reserved root PolyGraph · all operator groups"]
         subgraph rootGroup["Graph · root operator group"]
-            root["Helm-owned root Deployment<br/>planning and recovery"]
-        end
-        subgraph self["Graph · local service components"]
-            direction LR
-            gateway["Gateway replicas<br/>APIs and event subscriptions"]
-            executor["Executor replicas<br/>graph admission and workloads"]
-            telemetry["Telemetry replicas<br/>observations and metrics"]
-            gateway --> executor --> telemetry
+            subgraph bootstrap["Graph · bootstrap observation"]
+                root["Helm-owned root Deployment<br/>planning and recovery"]
+            end
+            subgraph self["Graph · local service components"]
+                direction LR
+                gateway["Gateway replicas<br/>APIs and event subscriptions"]
+                executor["Executor replicas<br/>graph admission and workloads"]
+                telemetry["Telemetry replicas<br/>observations and metrics"]
+                gateway --> executor --> telemetry
+            end
+            bootstrap -->|"reconcile and restore components"| self
+            self -->|"observations"| bootstrap
         end
         subgraph west["Graph · west workload cluster"]
             workers["DaemonSet · execution workers<br/>One Pod per eligible node"]
@@ -827,7 +832,6 @@ flowchart TB
         subgraph east["Graph · east workload cluster"]
             pool["Deployment · execution workers<br/>KEDA replica scaling"]
         end
-        rootGroup -->|"manage and recover"| self
         rootGroup -->|"root coordination"| west
         rootGroup -->|"root coordination"| east
         workers -->|"observations"| root
@@ -849,8 +853,10 @@ and [deployable example](examples/components/values.yaml).
 Adding an OperatorPool in a registered downstream cluster automatically links its
 Graph into the [reserved root PolyGraph](docs/deployment/root-control-plane.md#reserved-operator-hierarchy).
 Deployment pools support KEDA replica scaling; DaemonSet capacity follows node
-eligibility. The root Graph observes its existing Deployment, preserving Helm
-ownership and recovery. Application event streams exclude this operator tree.
+eligibility. The root Graph's bootstrap branch observes its existing Deployment,
+preserving Helm ownership and recovery. The nested component Graph retains its
+own Cheeger and replica-budget checks. Application event streams exclude this
+operator tree.
 
 Administrators can also [install downstream workers with Helm](docs/deployment/helm-workers.md)
 and attach their existing Deployments. Helm retains installation and upgrades;

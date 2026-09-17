@@ -58,7 +58,7 @@ def test_new_operator_groups_join_one_root_polygraph_without_replacing_the_root(
         assert [node["name"] for node in first["spec"]["nodes"]] == ["root"]
 
         async def settle():
-            for _ in range(5):
+            for _ in range(12):
                 for api in (local, west, east):
                     selected = controller if api is local else Controller(api)
                     for key, obj in list(api.objects.items()):
@@ -136,6 +136,98 @@ def test_root_observation_refreshes_readiness_and_never_mutates_its_deployment()
         await controller.reconcile(key)
         assert not any(kind == "Deployment" for _, kind, _ in api.calls)
         assert not api.objects["Deployment", "test", "root"]["metadata"].get("ownerReferences")
+
+    asyncio.run(run())
+
+
+def test_component_recovery_and_scaling_stay_inside_the_root_operator_graph(monkeypatch):
+    """
+    Reconcile the Helm component pipeline inside its operator group without adopting bootstrap.
+    """
+    from tests.test_chart import render
+
+    monkeypatch.setenv("POLYAD_ROOT_DEPLOYMENT", "test-polyad")
+    monkeypatch.setenv("POLYAD_SELF_GRAPH", "test-operators")
+    monkeypatch.setenv("POLYAD_COMPONENT_GRAPH", "test-control-plane")
+    monkeypatch.setenv("POLYAD_CLUSTER_NAME", "management")
+    rendered = render(
+        "architecture.mode=Distributed",
+        "api.enabled=true",
+        "architecture.expandedNodes=9",
+        values_files=("root-values.yaml",),
+    )
+    definitions = []
+    for obj in rendered:
+        if obj["apiVersion"] == f"{GROUP}/v1alpha1":
+            definition = resource(obj["kind"], obj["metadata"]["name"], obj["spec"])
+            definition["metadata"].update(obj["metadata"])
+            definitions.append(definition)
+
+    async def run():
+        root = operator_deployment("test-polyad")
+        api = ManagementAPI(root, *definitions)
+        pools = manager(api, ManagementAPI())
+        controller = Controller(api)
+        boundary = await pools.topology()
+        assert [node["name"] for node in boundary["spec"]["nodes"]] == ["root"]
+
+        async def settle():
+            for _ in range(12):
+                for key, obj in list(api.objects.items()):
+                    if key[0] in {"Graph", "PolyGraph", "ReplicaGroup"} and not obj["spec"].get("templateOnly"):
+                        try:
+                            await controller.reconcile(key)
+                        except Pending:
+                            pass
+                for deployment in api.children("Deployment"):
+                    count = deployment["spec"].get("replicas", 1)
+                    deployment["status"] = {
+                        "observedGeneration": deployment["metadata"]["generation"],
+                        "replicas": count,
+                        "updatedReplicas": count,
+                        "readyReplicas": count,
+                        "availableReplicas": count,
+                    }
+
+        await settle()
+        root_group = (await api.owned("test", boundary["metadata"]["uid"]))[0]
+        members = {obj["metadata"]["labels"][f"{GROUP}/node"]: obj for obj in await api.owned("test", root_group["metadata"]["uid"])}
+        assert set(members) == {"bootstrap", "components"}
+        assert members["bootstrap"]["metadata"]["annotations"][DEPLOYMENT] == "test-polyad"
+        assert DEPLOYMENT not in root_group["metadata"]["annotations"]
+        assert root_group["spec"]["connections"] == [
+            {"source": "bootstrap", "target": "components"},
+            {"source": "components", "target": "bootstrap"},
+        ]
+        assert members["components"]["status"]["structuralRules"][0]["measurements"]["cheeger"] == 1
+        poly = api.objects["PolyGraph", "test", "test-operators"]
+        assert poly["status"]["ready"]
+        assert poly["status"]["metrics"]["rollup"]["leafNodes"] == 7
+        assert len(api.children("Deployment")) == 7
+        for obj in (poly, root_group, *members.values()):
+            assert not await public_observation(api, obj)
+
+        executor = next(
+            obj
+            for obj in api.children("Deployment")
+            if obj["spec"]["template"].get("metadata", {}).get("labels", {}).get(f"{GROUP}/component") == "executor"
+        )
+        lost = "Deployment", "test", executor["metadata"]["name"]
+        del api.objects[lost]
+        await settle()
+        assert lost in api.objects
+        assert len(api.children("Deployment")) == 7
+        assert api.objects["PolyGraph", "test", "test-operators"]["status"]["ready"]
+
+        source = api.objects["ReplicaGroup", "test", "test-executor"]
+        source["spec"]["replicas"] = 3
+        source["metadata"]["generation"] += 1
+        instance = next(obj for obj in api.children("ReplicaGroup") if obj["spec"].get("replicaSource", {}).get("name") == "test-executor")
+        with pytest.raises(ValueError, match="expandedNodes"):
+            await controller.reconcile(("ReplicaGroup", "test", instance["metadata"]["name"]))
+        assert len(api.children("Deployment")) == 7
+        assert not DeepDiff(root, api.objects["Deployment", "test", "test-polyad"])
+        assert not any(kind == "Deployment" and name == "test-polyad" for _, kind, name in api.calls)
 
     asyncio.run(run())
 
