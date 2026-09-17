@@ -131,6 +131,10 @@ from polyad_types.rules import Cheeger as Cheeger
 from polyad_types.rules import CheegerComputation as CheegerComputation
 from polyad_types.rules import Spectrum as Spectrum
 from polyad_types.rules import StructuralRule as StructuralRule
+from polyad_types.schemas import available_schemas as available_schemas
+from polyad_types.schemas import load_schema as load_schema
+from polyad_types.schemas import resource_schema as resource_schema
+from polyad_types.schemas import schema_for as schema_for
 from polyad_types.storage import Persistence as Persistence
 from polyad_types.throughput import ThroughputSample as ThroughputSample
 from polyad_types.throughput import TrafficSample as TrafficSample

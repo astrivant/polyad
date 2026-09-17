@@ -1,13 +1,13 @@
 [project]
 name = "polyad-types"
 version = "0.0.1a3"
-description = "Shared resource, configuration and API models for Polyad"
+description = "Shared resource, configuration and API models and JSON Schemas for Polyad"
 authors = [{name = "Emma Doyle"}]
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.11,<4"
-keywords = ["polyad", "kubernetes", "graphs", "topology", "types", "validation"]
+keywords = ["polyad", "kubernetes", "graphs", "topology", "types", "validation", "jsonschema"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",

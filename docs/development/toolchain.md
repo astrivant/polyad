@@ -165,6 +165,12 @@ installs that wheel into a consumer environment and checks positive and negative
 Mypy contracts, including generic `PolyGraph` references. There is no separate
 stub package to keep synchronized.
 
+`polyad-types` also ships [importable JSON Schemas](../apis/json-schemas.md) for
+shared models, resource manifests, events and Helm values. Regenerate them with
+`poetry run python scripts/schemas/generate-json-schemas.py` after updating their
+sources. The `packaged-json-schemas` hook checks drift; release CI checks the
+artifacts in the installed standalone wheel.
+
 ## Version tags
 
 After every successful Test workflow for a push on `main`,

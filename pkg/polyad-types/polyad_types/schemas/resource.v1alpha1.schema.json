@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-types/polyad_types/schemas/resource.v1alpha1.schema.json",
+  "title": "Polyad Resource v1alpha1",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "description": "API group and version of this custom resource: polyad.astrivant.com/v1alpha1.",
+      "const": "polyad.astrivant.com/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Custom resource kind: Resource.",
+      "const": "Resource"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {}
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "manifest": {
+          "type": "object",
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "enum": [
+                "v1"
+              ],
+              "description": "API version of the owned resource; supported manifests use core v1."
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "Service",
+                "ConfigMap",
+                "PersistentVolumeClaim"
+              ],
+              "description": "Kind of core v1 resource to create: Service, ConfigMap or PersistentVolumeClaim."
+            },
+            "spec": {
+              "type": "object",
+              "x-kubernetes-preserve-unknown-fields": true,
+              "description": "Native spec for a Service or PersistentVolumeClaim, such as selectors, ports, storageClassName or volume requirements. ConfigMaps use data or binaryData instead."
+            },
+            "data": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "description": "Value for an individual key in data."
+              },
+              "description": "UTF-8 string data for a ConfigMap. Keys are preserved in the graph-owned resource."
+            },
+            "binaryData": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "description": "Value for an individual key in binaryData."
+              },
+              "description": "Base64-encoded binary values for a ConfigMap."
+            },
+            "immutable": {
+              "type": "boolean",
+              "description": "Make ConfigMap data immutable when true. Intended for ConfigMap manifests."
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "description": "Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}."
+        }
+      },
+      "required": [
+        "manifest"
+      ],
+      "description": "Desired configuration for this Resource resource. Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup."
+    },
+    "status": {
+      "type": "object",
+      "x-kubernetes-preserve-unknown-fields": true,
+      "description": "Reserved operator observation subresource. This reusable definition does not execute independently or currently publish lifecycle status."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "description": "Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup."
+}

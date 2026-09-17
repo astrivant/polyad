@@ -48,8 +48,11 @@ def main() -> None:
     assert "ZREMRANGEBYSCORE" in script("authentication/acquire.lua")
     assert "CURSOR_EXPIRED" in script("events/read.lua")
     from polyad_types.events import event_schema
+    from polyad_types.schemas import load_schema, resource_schema
 
     assert "TopologyEvent" in event_schema()["$defs"]
+    assert resource_schema("Graph")["properties"]["kind"]["const"] == "Graph"
+    assert "operator" in load_schema("helm-values")["properties"]
     for dependency in (
         "kopf",
         "kubernetes",

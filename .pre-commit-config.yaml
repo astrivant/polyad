@@ -46,6 +46,12 @@ repos:
         language: system
         pass_filenames: false
         files: '^(pkg/polyad-types/|scripts/schemas/generate-event-schemas\.py$|\.pre-commit-config\.yaml$)'
+      - id: packaged-json-schemas
+        name: Generated importable JSON schemas
+        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-json-schemas.py --check
+        language: system
+        pass_filenames: false
+        files: '^(pkg/polyad-types/|charts/polyad/(crds/|values.*\.json)|scripts/schemas/|\.pre-commit-config\.yaml$)'
       - id: reference-schema
         name: Generated Helm overlay editor schema
         entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-reference-schema.py --check

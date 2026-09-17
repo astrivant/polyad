@@ -6,10 +6,11 @@ from __future__ import annotations
 
 import json
 import math
-from importlib.resources import files
 from typing import TYPE_CHECKING, Any
 
 from attrs import field, frozen
+
+from polyad_types.schemas import load_schema
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -81,7 +82,7 @@ def event_schema() -> dict[str, Any]:
     Returns:
         dict[str, Any]: Independent Draft 2020-12 schema, including settings and nested payload definitions.
     """
-    return json.loads(files("polyad_types").joinpath("schemas/events.schema.json").read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+    return load_schema("events")
 
 
 @frozen

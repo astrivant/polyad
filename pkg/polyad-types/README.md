@@ -2,7 +2,7 @@
 
 Shared Python 3.11–3.14 resource, configuration and API models for Polyad. This
 package provides the same definitions used by the operator and Python client,
-including constructor validation, serialization and a `py.typed` marker.
+including constructor validation, serialization, importable JSON Schemas and a `py.typed` marker.
 Its only dependencies are attrs, cattrs and typing-extensions.
 
 ## Table of contents
@@ -11,21 +11,21 @@ Its only dependencies are attrs, cattrs and typing-extensions.
 - [Example](#example)
 - [Public models](#public-models)
 - [Serialization](#serialization)
+- [JSON Schemas](#json-schemas)
 - [Event syntax trees and schemas](#event-syntax-trees-and-schemas)
 - [Client integration](#client-integration)
 - [Publishing](#publishing)
 
 ## Installation
 
-Install from a repository checkout:
+Install the published package:
 
 ```sh
-pip install ./pkg/polyad-types
+pip install polyad-types
 ```
 
-Release CI builds and publishes this distribution separately. Once that release
-is available, install it with `pip install polyad-types` and import `polyad_types`.
-Installing it does not install `polyad` or `polyad-client`.
+Import it as `polyad_types`. Installing it does not install `polyad` or
+`polyad-client`. From a repository checkout, use `pip install ./pkg/polyad-types`.
 
 ## Example
 
@@ -87,6 +87,29 @@ preserving unmodeled native fields and checking kind and API version. Configurat
 and request decoding rejects unknown fields. These checks validate the supplied
 document; live graph admission, Cheeger computation and reconciliation run in the
 operator.
+
+## JSON Schemas
+
+The package ships generated schemas for shared models, Polyad CRD manifests,
+event envelopes and Helm values. Load them without installing the operator or
+a JSON Schema validator:
+
+```python
+from polyad_types import ConnectionRequest
+from polyad_types.schemas import available_schemas, load_schema, resource_schema, schema_for
+
+request = schema_for(ConnectionRequest)
+graph = resource_schema("Graph")
+overlay = load_schema("helm-reference")
+print(available_schemas())
+```
+
+Each result is an independent dictionary with local references; the JSON files
+also ship as `polyad_types.schemas` package resources in wheels and source
+distributions. `schema_for(Graph)` describes the Python resource envelope;
+`resource_schema("Graph")` checks the fuller chart manifest contract.
+See [importable JSON Schemas](https://github.com/astrivant/polyad/blob/main/docs/apis/json-schemas.md)
+for validation examples, direct file access, dialects and regeneration.
 
 ## Event syntax trees and schemas
 

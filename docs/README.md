@@ -54,6 +54,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Composition requests](apis/composition-requests.md) | Request format, ID references, admission, retries and resource audit |
 | [Atlas discovery and service connections](apis/discovery.md) | Inherited operator access modes, live service discovery, client filters and cross-cluster consent |
 | [Event syntax trees, schemas and limits](apis/event-contract.md) | Importable event ASTs, schema validation, byte budgets, replay tuning and client receive limits |
+| [Importable JSON Schemas](apis/json-schemas.md) | Packaged shared models, CRD manifests, events and Helm contracts for offline validation and editors |
 | [Temporary connections](apis/temporary-connections.md) | Optional TTL-bound edges, caller and target scope, service-account authentication and cleanup |
 
 ## Deployment
