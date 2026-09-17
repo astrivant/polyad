@@ -244,7 +244,7 @@ def test_event_envelopes_keep_the_same_contract_through_both_schema_apis():
                 jsonschema.validate(incomplete, schema)
 
 
-@pytest.mark.parametrize("filename", ["finite.yaml", "polygraph.yaml", "repeated-graph.yaml", "cheeger-tuning.yaml"])
+@pytest.mark.parametrize("filename", ["finite.yaml", "polygraph.yaml", "repeated-graph.yaml", "cheeger-tuning.yaml", "load-profiles.yaml"])
 def test_manifest_schemas_validate_documented_examples(filename):
     """
     Keep resource artifacts compatible with the repository's executable examples.

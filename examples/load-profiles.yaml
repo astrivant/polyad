@@ -1,0 +1,107 @@
+# Guide: ../docs/graphs/load-profiles.md
+# Health-only demo: replace the workers with your pipeline and report actual rates.
+# Enable capacity via values-soul-searching.reference.yaml and configure a node autoscaler.
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  name: profile-prepare
+spec:
+  template:
+    spec:
+      containers:
+        - name: prepare
+          image: busybox:1.37
+          command: [sh, -c, 'sleep 300; echo prepared']
+          resources:
+            requests: {cpu: 100m, memory: 64Mi}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: profile-stage
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: stage
+          image: busybox:1.37
+          command: [sh, -c, 'mkdir -p /www; echo ready > /www/index.html; httpd -f -p 8080 -h /www']
+          resources:
+            requests: {cpu: 250m, memory: 128Mi}
+          readinessProbe:
+            httpGet: {path: /, port: 8080}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: GraphRule
+metadata:
+  name: profile-envelope
+spec:
+  enforcement: Referenced
+  scope: Boundary
+  relation: connections
+  cheeger: {minimum: 0.5, maximum: 1}
+  limits: {nodes: 4, edges: 4}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: load-pipeline
+spec:
+  mode: persistent
+  rules: [profile-envelope]
+  nodes:
+    - {name: a, kind: Workload, ref: profile-prepare}
+    - name: b
+      kind: Daemon
+      ref: profile-stage
+      requires: [{node: a, condition: completed}]
+    - name: c
+      kind: Daemon
+      ref: profile-stage
+      requires: [{node: b, condition: ready}]
+    - name: d
+      kind: Daemon
+      ref: profile-stage
+      requires: [{node: c, condition: ready}]
+  connections:
+    - {source: a, target: b}
+    - {source: b, target: c}
+    - {source: c, target: d}
+  capacity:
+    backend: Auto
+    lookaheadStages: 1
+    maxPods: 4
+    timeoutSeconds: 900
+  throughput:
+    mode: Observe # Set Adapt after inspecting recommendations under representative load.
+    trigger: Demand # Does not require completed throughput to fall behind.
+    unit: records
+    # Optional alternative to offered records/second: report demand with this exact name/unit.
+    # demand: {name: queueDepth, unit: jobs}
+    # When configured, thresholds below count queued jobs instead of arrival rates.
+    capacityCeiling: {lookaheadStages: 3, maxPods: 16}
+    tiers:
+      - threshold: 1
+        cheeger: {minimum: 0.5, maximum: 1}
+        capacity: {lookaheadStages: 1, maxPods: 4}
+      - threshold: 1000
+        cheeger: {minimum: 1, maximum: 1}
+        capacity: {lookaheadStages: 3, maxPods: 16}
+    layouts:
+      - name: chain
+        connections:
+          - {source: a, target: b}
+          - {source: b, target: c}
+          - {source: c, target: d}
+      - name: ring
+        connections:
+          - {source: a, target: b}
+          - {source: b, target: c}
+          - {source: c, target: d}
+          - {source: d, target: a}
+    sampleMaxAgeSeconds: 30
+    sustainedSeconds: 30
+    minSamples: 3
+    cooldownSeconds: 300
+    maxChangesPerHour: 4

@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import os
 import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -112,7 +113,7 @@ async def capacity_revision(api: API, obj: dict[str, Any]) -> str:
 
 async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, now: datetime | None = None) -> bool:
     """
-    Consume fresh samples and atomically commit an approved layout with its change budget.
+    Consume fresh samples and atomically commit approved parameters with their change budget.
 
     Args:
         controller (Controller): Existing family-leased execution adapter.
@@ -144,9 +145,17 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
                     "observedAt": None,
                     "offeredPerSecond": None,
                     "completedPerSecond": None,
+                    "demandValue": None,
+                    "demandSignal": policy.demand.name if policy.demand else "offeredPerSecond",
+                    "demandUnit": policy.demand.unit if policy.demand else f"{policy.unit}/second",
                     "currentTraffic": converter.unstructure(graph.traffic),
                     "targetTraffic": [],
                     "proposedTraffic": [],
+                    "currentCapacity": None
+                    if graph.capacity is None
+                    else {"lookaheadStages": graph.capacity.lookaheadStages, "maxPods": graph.capacity.maxPods},
+                    "targetCapacity": None,
+                    "proposedCapacity": None,
                     "computation": diagnostic,
                 }
             },
@@ -179,9 +188,17 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
         "proposedCheeger": None,
         "offeredPerSecond": None,
         "completedPerSecond": None,
+        "demandValue": None,
+        "demandSignal": policy.demand.name if policy.demand else "offeredPerSecond",
+        "demandUnit": policy.demand.unit if policy.demand else f"{policy.unit}/second",
         "currentTraffic": converter.unstructure(graph.traffic),
         "targetTraffic": [],
         "proposedTraffic": [],
+        "currentCapacity": None
+        if graph.capacity is None
+        else {"lookaheadStages": graph.capacity.lookaheadStages, "maxPods": graph.capacity.maxPods},
+        "targetCapacity": None,
+        "proposedCapacity": None,
     }
     raw = json.loads(annotations.get(SAMPLE, "null"))
     candidate = None
@@ -195,15 +212,21 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
             and 0 <= clock - observed <= policy.sampleMaxAgeSeconds
             and observed >= state.get("settledAfter", 0)
         )
-        if valid:
+        try:
+            demand_value = policy.demand_value(sample)
+        except ValueError:
+            demand_value = None
+        if valid and demand_value is not None:
             status.update(
                 observedAt=sample.observedAt, offeredPerSecond=sample.offeredPerSecond, completedPerSecond=sample.completedPerSecond
             )
-            tier = next((item for item in reversed(policy.tiers) if sample.offeredPerSecond >= item.offeredPerSecond), None)
+            status["demandValue"] = demand_value
+            tier = next((item for item in reversed(policy.tiers) if demand_value >= item.threshold), None)
             target = to_dict(tier.cheeger) if tier else None
             status["target"] = target
             status["targetTraffic"] = converter.unstructure(tier.trafficWeights) if tier else []
-            target_identity = {"cheeger": target, "traffic": status["targetTraffic"]}
+            status["targetCapacity"] = to_dict(tier.capacity) if tier and tier.capacity else None
+            target_identity = {"cheeger": target, "traffic": status["targetTraffic"], "capacity": status["targetCapacity"]}
             traffic_targets: tuple[TrafficWeights, ...] | None = tier.trafficWeights if tier else ()
             if tier and policy.trafficMode == "Headroom":
                 from polyad.operator.policies.traffic import headroom_targets
@@ -216,6 +239,7 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
                 }
                 target_identity = {
                     "cheeger": target,
+                    "capacity": status["targetCapacity"],
                     "trafficMode": "Headroom",
                     "direction": {
                         item.route: {
@@ -227,19 +251,21 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
                 }
             shortfall = (
                 tier is not None
+                and demand_value > 0
                 and sample.offeredPerSecond > 0
                 and sample.completedPerSecond < sample.offeredPerSecond * policy.shortfallRatio
             )
+            demand = tier is not None and demand_value > 0 and policy.trigger == "Demand"
             rebalance = bool(
                 policy.trafficMode == "Headroom"
                 and traffic_targets
-                and sample.offeredPerSecond > 0
+                and demand_value > 0
                 and step_weights(graph, traffic_targets, policy.maxWeightStep) != graph.traffic
             )
             if tier and policy.trafficMode == "Headroom" and traffic_targets is None:
                 state.update(since=0, count=0)
                 status["phase"] = "WaitingForTrafficSample"
-            elif not shortfall and not rebalance:
+            elif not shortfall and not demand and not rebalance:
                 state.update(since=0, count=0, target=target_identity, observed=observed)
                 status["phase"] = "Satisfied" if tier else "BelowDemandThreshold"
             else:
@@ -255,8 +281,12 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
                 assert tier is not None
                 status["phase"] = "Stabilizing"
                 if observed - state["since"] >= policy.sustainedSeconds and state["count"] >= policy.minSamples:
-                    status["phase"] = "ThroughputShortfall" if within(status["currentCheeger"], tier.cheeger) else "NoAllowedLayout"
-                    if shortfall and not within(status["currentCheeger"], tier.cheeger):
+                    status["phase"] = (
+                        ("ThroughputShortfall" if shortfall else "Satisfied")
+                        if within(status["currentCheeger"], tier.cheeger)
+                        else "NoAllowedLayout"
+                    )
+                    if (shortfall or demand) and not within(status["currentCheeger"], tier.cheeger):
                         for layout in policy.layouts:
                             proposal = {**obj["spec"], "connections": converter.unstructure(layout.connections)}
                             try:
@@ -277,12 +307,14 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
                             candidate = proposal
                             break
                     traffic = step_weights(graph, traffic_targets or (), policy.maxWeightStep)
+                    blocked = False
                     if traffic != graph.traffic and (candidate is not None or within(current, tier.cheeger)):
                         proposal = {**(candidate or obj["spec"]), "traffic": converter.unstructure(traffic)}
                         try:
                             topology(proposal, obj["kind"])
                             await check_live_rules(controller.api, obj, candidate=proposal, candidate_is_logical=True)
                         except (ValueError, RuleViolation):
+                            blocked = True
                             candidate = None
                             status.update(phase="NoAllowedLayout", recommendedLayout=None, proposedCheeger=None)
                         else:
@@ -292,6 +324,30 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
                                 proposedTraffic=proposal["traffic"],
                                 proposedCheeger=status["proposedCheeger"] or current,
                             )
+                    if tier.capacity and not blocked and (candidate is not None or within(current, tier.cheeger)):
+                        if os.environ.get("POLYAD_CAPACITY_ENABLED", "false").lower() != "true" or tier.capacity.maxPods > int(
+                            os.environ.get("POLYAD_CAPACITY_MAX_PODS", "1024")
+                        ):
+                            candidate = None
+                            status.update(phase="CapacityUnavailable", recommendedLayout=None, proposedCheeger=None, proposedTraffic=[])
+                        elif status["targetCapacity"] != status["currentCapacity"]:
+                            proposal = {
+                                **(candidate or obj["spec"]),
+                                "capacity": {**obj["spec"]["capacity"], **status["targetCapacity"]},
+                            }
+                            try:
+                                topology(proposal, obj["kind"])
+                                await check_live_rules(controller.api, obj, candidate=proposal, candidate_is_logical=True)
+                            except (ValueError, RuleViolation):
+                                candidate = None
+                                status.update(phase="NoAllowedLayout", recommendedLayout=None, proposedCheeger=None, proposedTraffic=[])
+                            else:
+                                candidate = proposal
+                                status.update(
+                                    phase="Recommended",
+                                    proposedCapacity=status["targetCapacity"],
+                                    proposedCheeger=status["proposedCheeger"] if status["proposedCheeger"] is not None else current,
+                                )
                     if policy.trafficMode == "Headroom" and traffic_targets is None:
                         candidate = None
                         status.update(phase="WaitingForTrafficSample", recommendedLayout=None, proposedCheeger=None, proposedTraffic=[])
@@ -303,7 +359,7 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
                         else:
                             status["phase"] = "Applied"
         else:
-            status["phase"] = "StaleSample"
+            status["phase"] = "WaitingForDemandSignal" if valid else "StaleSample"
             state.update(since=0, count=0)
     state["decision"] = {key: value for key, value in status.items() if key not in {"currentTraffic", "proposedTraffic", "targetTraffic"}}
     changed = bool(status["phase"] == "Applied")
@@ -324,9 +380,11 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
         }
         if changed:
             assert candidate is not None
-            body["spec"] = {"connections": candidate["connections"]}
-            if "traffic" in candidate:
-                body["spec"]["traffic"] = candidate["traffic"]
+            body["spec"] = {
+                key: candidate[key]
+                for key in ("connections", "traffic", "capacity")
+                if key in candidate and candidate[key] != obj["spec"].get(key)
+            }
         obj = await controller.api.request("PATCH", obj["kind"], meta["namespace"], meta["name"], body)
     await controller.status(obj, {"throughput": status})
     return changed

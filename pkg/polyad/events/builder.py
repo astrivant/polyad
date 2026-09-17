@@ -18,6 +18,7 @@ from polyad.api.errors import Forbidden, Unavailable
 from polyad.api.limits import RateLimitPolicy, install_limits
 from polyad.auth.http import Access, install
 from polyad.auth.policy import public_demo
+from polyad.events.rebalance import Rebalancer
 from polyad.events.store import CursorExpired, TopologyReplaced
 from polyad.events.visibility import permitted_observation
 from polyad_types.auth import APIKey, GraphAccess
@@ -51,6 +52,7 @@ class EventAPIBuilder:
         discover (Callable[[APIKey, GraphAccess | None, int, int], dict[str, Any]] | None): Live authorized service directory.
         websockets (bool): Enable WebSocket subscriptions alongside Server-Sent Events.
         settings (EventStreamSettings): Event serialization and replay budgets advertised to subscribers.
+        rebalance (Rebalancer | None): Optional endpoint directory and bounded copulse scheduler.
     """
 
     resolve: Callable[[str | None], str] | None = None
@@ -66,6 +68,7 @@ class EventAPIBuilder:
     discover: Callable[[APIKey, GraphAccess | None, int, int], dict[str, Any]] | None = None
     websockets: bool = False
     settings: EventStreamSettings = field(factory=EventStreamSettings)
+    rebalance: Rebalancer | None = None
 
     def with_handlers(self, resolve: Callable[[str | None], str], read: Callable[[str], list[tuple[str, str]]]) -> Self:
         """
@@ -133,6 +136,21 @@ class EventAPIBuilder:
 
         if self.limits:
             app.extensions["polyad.limiter"] = install_limits(app, self.limits)
+
+        @app.get("/v1/events/endpoints")
+        def endpoints() -> Response | tuple[Response, int]:
+            if self.rebalance is None:
+                return jsonify(error="event endpoint discovery is disabled"), 404
+            try:
+                if self.authorize_stream is not None:
+                    self.authorize_stream(getattr(g, "polyad_key", None), request.args.get("cluster"))
+                response = jsonify({**self.rebalance.endpoints(), "cursor": resolve(None)})
+                response.headers["Cache-Control"] = "no-store"
+                return response
+            except Forbidden as error:
+                return jsonify(error=str(error)), 403
+            except Exception:
+                return jsonify(error="event endpoints unavailable; retry the configured operator Service"), 503
 
         @app.get("/v1/discovery")
         def discovery() -> tuple[Response, int] | Response:
@@ -252,6 +270,16 @@ class EventAPIBuilder:
                 slots.release()
                 return jsonify(error="event cache unavailable"), 503
 
+            subscription = ""
+            if self.rebalance is not None:
+                try:
+                    subscription = self.rebalance.register()
+                except RuntimeError:
+                    slots.release()
+                    response = jsonify(error="event replica is draining; rediscover ready endpoints")
+                    response.headers["Retry-After"] = "1"
+                    return response, 503
+
             def stream() -> Iterator[str]:
                 nonlocal cursor
                 disconnected = request.environ.get("polyad.disconnected")
@@ -265,6 +293,9 @@ class EventAPIBuilder:
                 yield heartbeat if websocket else "retry: 3000\n\n"
                 while not self.stopping.is_set() and not (disconnected and disconnected.is_set()):
                     try:
+                        if self.rebalance is not None and (control := self.rebalance.control(subscription)) is not None:
+                            yield frame("copulse", control)
+                            return
                         batch = read(cursor)
                         if not batch:
                             yield heartbeat
@@ -301,6 +332,9 @@ class EventAPIBuilder:
                 headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
             )
             response.call_on_close(slots.release)
+            if self.rebalance is not None:
+                rebalance = self.rebalance
+                response.call_on_close(lambda: rebalance.release(subscription))
             return response
 
         @app.get("/openapi.json")
@@ -413,6 +447,15 @@ class EventAPIBuilder:
             ):
                 schema["paths"][path] = {"get": {"responses": {"200": {"description": description}}}}
             schema["x-polyad-event-schema"] = "/v1/events/schema"
+            if self.rebalance is not None:
+                schema["paths"]["/v1/events/endpoints"] = {
+                    "get": {
+                        "responses": {
+                            "200": {"description": "Ready event membership with Service or Direct routing; requires events permission."},
+                            "503": {"description": "Membership is unavailable or stale."},
+                        }
+                    }
+                }
             if self.websockets:
                 schema["paths"]["/v1/events/ws"] = {
                     "get": {

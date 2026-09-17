@@ -50,6 +50,7 @@ async def report_throughput(api: API, namespace: str, sample: ThroughputSample, 
     policy = topology(obj["spec"], obj["kind"]).throughput
     if policy is None or obj["spec"].get("templateOnly") or sample.unit != policy.unit:
         raise ValueError("throughput target requires an active policy with the same work unit")
+    policy.demand_value(sample)
     observed = datetime.fromisoformat(sample.observedAt.replace("Z", "+00:00"))
     if not 0 <= (datetime.now(UTC) - observed).total_seconds() <= policy.sampleMaxAgeSeconds:
         raise ValueError("throughput sample is stale or from the future")

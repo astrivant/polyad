@@ -1,5 +1,10 @@
 {{/* Shared by the Dense operator, Distributed bootstrap and component Pod templates. */}}
 {{- define "polyad.operatorDeployment" -}}
+{{- if .Values.events.rebalance.enabled -}}
+{{- if not .Values.events.enabled }}{{ fail "event rebalancing requires events.enabled" }}{{ end -}}
+{{- if lt (float64 .Values.operator.terminationGracePeriodSeconds) (addf 35 (mulf .Values.events.rebalance.drainSeconds (ternary 2 1 .Values.mesh.operator.enabled))) }}{{ fail "operator.terminationGracePeriodSeconds must cover preStop drain, optional sidecar drain and 35 seconds of shutdown" }}{{ end -}}
+{{- if and (gt (float64 .Values.events.rebalance.maxConnectionSeconds) 0.0) (lt (float64 .Values.events.rebalance.maxConnectionSeconds) (float64 .Values.events.rebalance.cooldownSeconds)) }}{{ fail "events.rebalance.maxConnectionSeconds must be zero or at least cooldownSeconds" }}{{ end -}}
+{{- end -}}
 {{- if gt (float64 .Values.operator.writeQueue.validationIntervalSeconds) (float64 .Values.operator.writeQueue.validationWindowSeconds) -}}
 {{- fail "operator.writeQueue.validationIntervalSeconds must not exceed validationWindowSeconds" -}}
 {{- end -}}
@@ -51,7 +56,9 @@ spec:
         {{- if .Values.mesh.operator.enabled }}
         sidecar.istio.io/inject: "true"
         sidecar.istio.io/nativeSidecar: "true"
-        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts":true}'
+        {{- $proxy := dict "holdApplicationUntilProxyStarts" true -}}
+        {{- if .Values.events.rebalance.enabled }}{{ $_ := set $proxy "terminationDrainDuration" (printf "%vs" .Values.events.rebalance.drainSeconds) }}{{ end }}
+        proxy.istio.io/config: {{ $proxy | toJson | quote }}
         {{- end }}
       labels:
         app.kubernetes.io/instance: {{ .Release.Name }}
@@ -219,6 +226,12 @@ spec:
               value: {{ .Values.events.enabled | quote }}
             - name: POLYAD_EVENTS_WEBSOCKETS_ENABLED
               value: {{ and .Values.events.enabled .Values.events.websockets.enabled | quote }}
+            {{- if .Values.events.rebalance.enabled }}
+            - name: POLYAD_EVENTS_REBALANCE
+              value: {{ .Values.events.rebalance | toJson | quote }}
+            - name: POLYAD_EVENTS_SERVICE
+              value: {{ printf "%s-polyad-events" .Release.Name | quote }}
+            {{- end }}
             - name: POLYAD_EVENT_PUBLICATION_ENABLED
               value: {{ or .Values.events.enabled (and .Values.postgresql.enabled .Values.postgresql.events.enabled) | quote }}
             - name: POLYAD_EVENTS_MAX_EVENT_BYTES
@@ -423,10 +436,16 @@ spec:
               command:
                 - python
                 - -c
-                - "import json,urllib.request; s=json.load(urllib.request.urlopen('http://localhost:8080/healthz',timeout=2))['scheduler']; assert s['initialized'] and s['worker'] and s['apiFresh'] and s['cacheFresh'] and s.get('attached',True)"
+                - "import json,pathlib,urllib.request; assert not pathlib.Path('/tmp/polyad-events-draining').exists(); s=json.load(urllib.request.urlopen('http://localhost:8080/healthz',timeout=2))['scheduler']; assert s['initialized'] and s['worker'] and s['apiFresh'] and s['cacheFresh'] and s.get('attached',True)"
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+          {{- if .Values.events.rebalance.enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command: [python, -m, polyad.events.rebalance]
+          {{- end }}
       volumes:{{ if not (or $auth .Values.postgresql.enabled .Values.federation.enabled $apiToken $eventToken .Values.dragonfly.existingSecret $metricsToken) }} []{{ end }}
         {{- if $auth }}
         {{- include "polyad.authenticationVolume" . | nindent 8 }}

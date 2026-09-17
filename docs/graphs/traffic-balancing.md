@@ -130,7 +130,7 @@ Keep `mode: Observe` while calibrating, then choose `Adapt` to permit bounded wr
 
 | `throughput.trafficMode` | How a split is chosen | When adjustment is considered |
 | --- | --- | --- |
-| `Tiers` (default) | An administrator supplies `tiers[].trafficWeights` for each demand range | Sustained aggregate throughput shortfall |
+| `Tiers` (default) | An administrator supplies `tiers[].trafficWeights` for each demand range | Sustained aggregate throughput shortfall, or sustained positive demand with [`trigger: Demand`](load-profiles.md) |
 | `Headroom` | Each destination's completed rate plus reported additional sustainable capacity determines its share | Sustained imbalance under positive demand, even before an aggregate shortfall |
 
 Both require a matching demand tier and a proposed topology satisfying that
@@ -151,7 +151,7 @@ throughput:
   cooldownSeconds: 300
   maxChangesPerHour: 2
   tiers:
-    - offeredPerSecond: 100
+    - threshold: 100
       cheeger: {minimum: 1}
       trafficWeights:
         - route: pipeline
@@ -173,7 +173,7 @@ throughput:
   cooldownSeconds: 300
   maxChangesPerHour: 2
   tiers:
-    - offeredPerSecond: 100
+    - threshold: 100
       cheeger: {minimum: 1}
 ```
 

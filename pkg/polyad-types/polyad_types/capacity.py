@@ -7,6 +7,46 @@ from __future__ import annotations
 from typing import Literal
 
 from attrs import field, frozen
+from cattrs.gen import make_dict_structure_fn, override
+
+from polyad_types.codec import converter
+
+
+@frozen
+class CapacityTuning:
+    """
+    Select forecast depth and reservation budget without changing workload resource requests.
+
+    Attributes:
+        lookaheadStages (int): Missing dependency layers to prepare, bounded by the approved ceiling.
+        maxPods (int): Maximum outstanding forecast Pods, also bounded by operator configuration.
+    """
+
+    lookaheadStages: int = field(metadata={"schema": {"minimum": 1, "maximum": 32}})
+    maxPods: int = field(metadata={"schema": {"minimum": 1, "maximum": 1024}})
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Validate the mathematical profile before it can be selected.
+
+        Returns:
+            None: Invalid values raise ValueError.
+        """
+        for name, maximum in (("lookaheadStages", 32), ("maxPods", 1024)):
+            value = getattr(self, name)
+            if type(value) is not int or not 1 <= value <= maximum:
+                raise ValueError(f"capacity tuning {name} must be an integer from 1 through {maximum}")
+
+
+converter.register_structure_hook(
+    CapacityTuning,
+    make_dict_structure_fn(
+        CapacityTuning,
+        converter,
+        lookaheadStages=override(struct_hook=lambda value, _: value),
+        maxPods=override(struct_hook=lambda value, _: value),
+    ),
+)
 
 
 @frozen(kw_only=True)

@@ -12,6 +12,11 @@ For example, a preparation Job can run while Polyad requests machines for the
 next processing stage. The processing Jobs remain behind their dependencies
 and gates until both their admission conditions and capacity checks pass.
 
+[Soul searching load profiles](load-profiles.md) can select forecast depth and
+Pod budgets from sustained application demand. Enable `trigger: Demand` for
+preparation before a throughput shortfall. This adjusts planning within fixed
+ceilings; existing KEDA/HPA replica scaling remains separate.
+
 ## Table of contents
 
 - [Enable the integration](#enable-the-integration)

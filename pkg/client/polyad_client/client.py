@@ -17,6 +17,7 @@ from polyad_types.events import DEFAULT_MAX_EVENT_BYTES, Event, EventStreamSetti
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+    from threading import Event as StopEvent
     from typing import Any, Literal
 
     from polyad_client.subscriptions import Subscription
@@ -188,7 +189,15 @@ class Client:
             **({"X-Polyad-Cluster": self.identity_cluster} if self.identity_cluster else {}),
         }
 
-    def _open(self, method: str, path: str, body: dict[str, Any] | None = None, *, headers: dict[str, str] | None = None) -> Any:
+    def _open(
+        self,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None = None,
+        *,
+        headers: dict[str, str] | None = None,
+        endpoint: tuple[str, int] | None = None,
+    ) -> Any:
         data = json.dumps(body, allow_nan=False).encode() if body is not None else None
         request = Request(
             self.url + path,
@@ -202,7 +211,12 @@ class Client:
             },
         )
         try:
-            return self._opener.open(request, timeout=self.timeout)
+            transport = self._opener
+            if endpoint is not None:
+                from polyad_client.routing import opener
+
+                transport = opener(endpoint)
+            return transport.open(request, timeout=self.timeout)
         except HTTPError as error:
             with error:
                 raw = error.read(1024 * 1024)
@@ -389,7 +403,13 @@ class Client:
         return EventStreamSettings(**self._request("GET", "/v1/events/config"))
 
     def events(
-        self, *, last_event_id: str | None = None, cluster: str | None = None, transport: Literal["sse", "websocket"] = "sse"
+        self,
+        *,
+        last_event_id: str | None = None,
+        cluster: str | None = None,
+        transport: Literal["sse", "websocket"] = "sse",
+        endpoint: tuple[str, int] | None = None,
+        stop_event: StopEvent | None = None,
     ) -> Iterator[Event]:
         """
         Stream observations using a client configured for the separate events Service.
@@ -398,6 +418,8 @@ class Client:
             last_event_id (str | None): Last processed cursor for explicit reconnection.
             cluster (str | None): Registered cluster stream; cursors belong to that selected stream.
             transport (Literal['sse', 'websocket']): Subscription framing; WebSocket requires operator enablement.
+            endpoint (tuple[str, int] | None): Explicit trusted socket target; normally selected by a rebalancing subscription.
+            stop_event (StopEvent | None): Optional cancellation, checked on heartbeats and observations.
 
         Yields:
             Event: One bounded JSON observation or stream control message.
@@ -415,13 +437,22 @@ class Client:
 
             address = urlsplit(self.url + "/v1/events/ws" + query)
             uri = address._replace(scheme="wss" if address.scheme == "https" else "ws").geturl()
-            yield from events(uri, {**self._authorization_headers(), **headers}, self.timeout, self.max_event_bytes)
+            yield from events(
+                uri,
+                {**self._authorization_headers(), **headers},
+                self.timeout,
+                self.max_event_bytes,
+                endpoint=endpoint,
+                stop_event=stop_event,
+            )
             return
         path = "/v1/events" + query
-        with self._open("GET", path, headers=headers) as response:
+        with self._open("GET", path, headers=headers, endpoint=endpoint) as response:
             data: list[str] = []
             event_id, event_type, size = "", "message", 0
             while raw := response.readline(self.max_event_bytes - size + 1):
+                if stop_event is not None and stop_event.is_set():
+                    return
                 size += len(raw)
                 if size > self.max_event_bytes:
                     raise EventTooLarge(f"event exceeds {self.max_event_bytes} bytes")
@@ -431,7 +462,7 @@ class Client:
                         value = json.loads("\n".join(data))
                         if not isinstance(value, dict):
                             raise ValueError("expected a JSON event object")
-                        yield Event("" if event_type in {"reset", "unavailable"} else event_id, event_type, value)
+                        yield Event("" if event_type in {"reset", "unavailable", "copulse"} else event_id, event_type, value)
                     event_type, data, size = "message", [], 0
                 elif not line.startswith(":"):
                     field, _, value = line.partition(":")
@@ -450,6 +481,7 @@ class Client:
         cursor: str | None = None,
         history: int = 1024,
         transport: Literal["sse", "websocket"] = "sse",
+        rebalance: bool = False,
     ) -> Subscription:
         """
         Build a resumable subscription with explicit application event hooks.
@@ -459,13 +491,27 @@ class Client:
             cursor (str | None): Previously committed stream cursor.
             history (int): Bounded count of successful event-handler calls remembered during retries.
             transport (Literal['sse', 'websocket']): SSE by default, or an operator-enabled WebSocket subscription.
+            rebalance (bool): Rediscover and reconnect on copulses or transient transport failures, preserving completed checkpoints.
 
         Returns:
             Subscription: Register filters and callbacks, then call run on the application's chosen thread.
         """
         from polyad_client.subscriptions import Subscription
 
-        return Subscription(self, cluster=cluster, cursor=cursor, history=history, transport=transport)
+        return Subscription(self, cluster=cluster, cursor=cursor, history=history, transport=transport, rebalance=rebalance)
+
+    def event_endpoints(self, *, cluster: str | None = None) -> dict[str, Any]:
+        """
+        Discover stream replicas from the configured authority, never from an event-provided URL.
+
+        Args:
+            cluster (str | None): Root-held cluster stream; authorization must match the subscription.
+
+        Returns:
+            dict[str, Any]: Operator membership, routing policy and initial replay cursor.
+        """
+        query = "?" + urlencode({"cluster": cluster}) if cluster is not None else ""
+        return self._request("GET", "/v1/events/endpoints" + query)
 
     def discover(
         self,

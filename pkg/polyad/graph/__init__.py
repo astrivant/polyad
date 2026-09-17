@@ -26,6 +26,7 @@ from polyad.graph.workloads import Work as Work
 from polyad.graph.workloads import Workload as Workload
 from polyad_types.activation import ActivationPolicy as ActivationPolicy
 from polyad_types.capacity import CapacityPlan as CapacityPlan
+from polyad_types.capacity import CapacityTuning as CapacityTuning
 from polyad_types.network import MeshPeer as MeshPeer
 from polyad_types.network import NetworkAccess as NetworkAccess
 from polyad_types.network import NetworkPeer as NetworkPeer

@@ -119,7 +119,7 @@ spec:
     unit: requests
     maxWeightStep: 10
     tiers:
-      - offeredPerSecond: 100
+      - threshold: 100
         cheeger: {minimum: 1}
         trafficWeights:
           - route: pipeline

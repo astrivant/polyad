@@ -65,9 +65,9 @@ spec:
     unit: records # Offered and completed rates must use the same work unit.
     tiers:
       # Illustrative demand thresholds: calibrate these with application load tests.
-      - offeredPerSecond: 100
+      - threshold: 100
         cheeger: {minimum: 1, maximum: 1.5}
-      - offeredPerSecond: 1000
+      - threshold: 1000
         cheeger: {minimum: 2, maximum: 2}
     layouts:
       # Complete replacement connections, tried in order; each must satisfy both policies.

@@ -3,12 +3,14 @@
 **Soul searching** is Polyad's bounded topology optimizer. It uses application
 throughput reports to recommend or apply administrator-approved connection layouts
 and optional [traffic percentages between workload and graph replicas](traffic-balancing.md).
+Approved [load profiles](load-profiles.md) can also adjust capacity lookahead before
+completed throughput falls behind, independently of KEDA/HPA replica scaling.
 
 Polyad keeps **hard structural Cheeger bounds** in GraphRules and a separate
 **application-driven Cheeger target** in `Graph.spec.throughput` or
 `PolyGraph.spec.throughput`. Configure `mode: Observe` (the default) to report
 recommendations, or `mode: Adapt` to let the operator apply approved connection
-layouts and bounded traffic adjustments. Omitting `throughput` disables this
+layouts, bounded traffic adjustments and capacity profiles. Omitting `throughput` disables this
 feedback controller; configured static traffic splits can still operate.
 
 For side-by-side graph examples and orchestration diagrams, see
@@ -32,6 +34,7 @@ For policies active in both a parent and child, see
 | Throughput policy `tiers[].cheeger` | Empirically calibrated target range for a demand tier | Constrains recommended or applied connection and traffic changes |
 | KEDA / HPA | Workload or ReplicaGroup capacity | Replica counts through the selected scaling target |
 | Optional Istio percentage routing | Divide incoming work among approved downstream targets | Bounded percentages from demand tiers or per-replica throughput/headroom |
+| Throughput tier `capacity` | Prepare known upcoming workload stages | Approved forecast depth and Pod budget within fixed ceilings |
 
 The topology controller never changes replica counts or rewrites GraphRules.
 An adaptation must satisfy **both** its application target and every applicable
@@ -80,14 +83,19 @@ targets and layouts for your application's routing and partitioning contracts.
 Report **offered demand and successfully completed work over the same measurement
 window**, in the configured unit. Use one aggregate reporter per graph rather than
 letting individual replicas overwrite one another's partial measurements. Low
-traffic alone is not a throughput shortfall. For connection changes and Tiers
-routing, the controller considers a change only when offered demand is positive
+traffic alone is not a throughput shortfall. With the default `trigger: Shortfall`,
+the controller considers connection changes and Tiers routing when offered demand is positive
 and completed work is below
 `offeredPerSecond * shortfallRatio` for the required duration and sample count.
 
-The highest tier whose `offeredPerSecond` threshold is met supplies the target.
+The highest tier whose `threshold` is met supplies the target. Demand defaults
+to `offeredPerSecond`; administrators can [select a named signal and unit](load-profiles.md#define-demand)
+such as queued jobs or active sessions instead.
 Below the first tier, no target applies. Connection layout changes respond to
-sustained shortfall; the controller does not automatically remove connections when demand falls.
+sustained shortfall by default. Set `trigger: Demand` to select approved profiles
+under sustained positive demand while throughput still keeps up; a lower tier can
+select a smaller forecast or a sparser layout if its target requires one. See
+[approved profiles and preparation](load-profiles.md#configure-approved-profiles).
 When Cheeger already meets the target, configured traffic balancing can still
 redistribute work among its connected destinations. Without a remaining approved
 connection or traffic adjustment, `ThroughputShortfall` reports the unresolved problem.
@@ -131,7 +139,7 @@ spec:
     mode: Observe # Choose Adapt to permit the approved replacement.
     unit: records
     tiers:
-      - offeredPerSecond: 100
+      - threshold: 100
         cheeger: {minimum: 1, maximum: 1.5}
     layouts:
       - name: ring
@@ -205,19 +213,24 @@ for the `ThroughputSample.traffic` fields and execution identity checks.
 
 | Setting | Default | Permitted values |
 | --- | --- | --- |
-| `mode` | `Observe` | `Observe`, `Adapt`; Adapt requires layouts, tier traffic weights or Headroom balancing |
+| `mode` | `Observe` | `Observe`, `Adapt`; Adapt requires layouts, tier traffic weights, Headroom balancing or capacity profiles |
+| `trigger` | `Shortfall` | `Shortfall` requires a completed/offered deficit; `Demand` also allows preparation under sustained positive demand |
+| `demand` | Omitted | Optional exact signal `name` and `unit`; otherwise uses reported offered work per second |
+| `tiers[].threshold` | Required | Inclusive nonnegative minimum in the selected demand unit |
 | `unit` | Required | Nonempty string, at most 64 characters |
 | `tiers` | Required | 1–16 strictly increasing demand thresholds, with at least one Cheeger bound each |
 | `layouts` | Empty | At most 8 uniquely named layouts, at most 380 connections each |
 | `trafficMode` | `Tiers` | `Tiers` selects calibrated percentages; `Headroom` uses per-replica completed throughput and spare capacity |
 | `tiers[].trafficWeights` | Empty | Approved route percentages for Tiers mode; not accepted in Headroom mode |
+| `tiers[].capacity` | Omitted | Optional approved `lookaheadStages` (1–32) and `maxPods` (1–1,024); both integers required when present |
+| `capacityCeiling` | Omitted | Required fixed ceiling for capacity profiles; current `spec.capacity` must also fit |
 | `maxWeightStep` | 10 | 1–100 percentage points per destination per adjustment |
 | `sampleMaxAgeSeconds` | 60 | 1–3,600; also the maximum gap in a sustained sample sequence |
 | `sustainedSeconds` | 60 | 1–86,400 |
 | `minSamples` | 3 | 2–1,000 distinct observations |
 | `shortfallRatio` | 0.9 | Greater than 0 and at most 1 |
 | `cooldownSeconds` | 300 | 1–86,400 |
-| `maxChangesPerHour` | 2 | 1–60 successful changes in a rolling hour, shared by connection and traffic changes |
+| `maxChangesPerHour` | 2 | 1–60 successful changes in a rolling hour, shared by connection, traffic and capacity adjustments |
 | `cheegerComputation` | Inherit operator ceilings | [Vertex/cut/time budgets and ordered priority cuts](cheeger-tuning.md#understand-computation-and-scale) |
 
 Exact Cheeger computation defaults to **20 vertices per boundary**, with
@@ -240,7 +253,11 @@ show the current, desired and next bounded splits. See
 [traffic bounds and stabilization](traffic-balancing.md#bounds-and-stabilization)
 for destination limits and how direction changes affect Headroom stabilization.
 
-Before applying a connection or traffic change, Polyad refreshes the complete local graph family,
+With capacity profiles, `currentCapacity`, `targetCapacity` and `proposedCapacity`
+show forecast depth and budget. `CapacityUnavailable` blocks changes when the
+operator has disabled preparation or its Pod ceiling is too small.
+
+Before applying a profile change, Polyad refreshes the complete local graph family,
 definitions and GraphRules, then uses a resource-version fence. Concurrent changes
 require another pass. Active temporary connections defer application, and expired
 measurements cannot authorize it. `CoolingDown`, `Stabilizing`, `StaleSample`,

@@ -334,7 +334,39 @@ class HeartbeatEvent:
     id: Literal[""] = ""
 
 
-EventAST: TypeAlias = GraphEvent | TopologyEvent | ConnectionEvent | ControlEvent | HeartbeatEvent
+@frozen(kw_only=True)
+class Copulse:
+    """
+    Request transport rediscovery while preserving the last application checkpoint.
+
+    Attributes:
+        reason (str): Membership change, administrative roll, stream age or replica drain.
+        revision (str): Observed operator membership revision; never a graph revision.
+        retryAfterSeconds (float): Bounded delay before rediscovery, spreading reconnect load.
+    """
+
+    reason: str
+    revision: str
+    retryAfterSeconds: float = field(metadata={"schema": {"minimum": 0, "maximum": 30}})
+
+
+@frozen(kw_only=True)
+class CopulseEvent:
+    """
+    Carry an operator connection roll without publishing reserved graph observations.
+
+    Attributes:
+        data (Copulse): Reconnection instruction without destinations or credentials.
+        event (Literal['copulse']): Transport control discriminator.
+        id (Literal['']): Reconnection never acknowledges an application event.
+    """
+
+    data: Copulse
+    event: Literal["copulse"] = "copulse"
+    id: Literal[""] = ""
+
+
+EventAST: TypeAlias = GraphEvent | TopologyEvent | ConnectionEvent | ControlEvent | HeartbeatEvent | CopulseEvent
 EVENT_MODELS: dict[str, type] = {
     "graph": GraphEvent,
     "topology": TopologyEvent,
@@ -342,4 +374,5 @@ EVENT_MODELS: dict[str, type] = {
     "reset": ControlEvent,
     "unavailable": ControlEvent,
     "heartbeat": HeartbeatEvent,
+    "copulse": CopulseEvent,
 }

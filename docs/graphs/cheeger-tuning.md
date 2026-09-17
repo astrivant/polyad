@@ -62,9 +62,12 @@ These settings live under `spec.throughput` on Graphs and PolyGraphs:
 
 | Setting | Default | How to choose it |
 | --- | --- | --- |
-| `mode` | `Observe` | Observe reports recommendations; Adapt may apply an approved layout or bounded traffic split. Omit the whole policy to disable feedback. |
+| `mode` | `Observe` | Observe reports recommendations; Adapt may apply an approved layout, bounded traffic split or capacity profile. Omit the whole policy to disable feedback. |
+| `trigger` | `Shortfall` | Choose `Demand` to prepare under sustained positive demand before completed throughput falls behind. |
+| `demand` | Offered work per second | Select an exact application signal `name` and `unit`, such as queueDepth/jobs; see [defining demand](load-profiles.md#define-demand). |
+| `tiers[].capacity` / `capacityCeiling` | Omitted | [Approved forecast depth and Pod budgets](load-profiles.md) within fixed graph and operator ceilings. |
 | `unit` | Required | Use the same work unit for offered and completed rates, such as records or requests. |
-| `tiers[].offeredPerSecond` | Required | Calibrate increasing demand thresholds with load tests; the highest matching threshold selects its target. Below the first tier, no target applies. |
+| `tiers[].threshold` | Required | Calibrate increasing thresholds in the selected demand unit; the highest matching threshold selects its target. Below the first tier, no target applies. |
 | `tiers[].cheeger.minimum` / `maximum` | At least one required | Select structural ranges whose approved layouts helped at that demand. Keep feasible overlap with hard bounds. |
 | `layouts` | Empty | List complete, application-supported connection layouts in preference order. Required for automatic connection changes; Adapt can also operate on traffic splits alone. Node identities and admission dependencies stay fixed. |
 | `trafficMode` | `Tiers` | Use calibrated tier percentages, or choose `Headroom` to use each destination's completed rate plus reported spare capacity. Headroom requires reports for every configured destination. |
@@ -75,7 +78,7 @@ These settings live under `spec.throughput` on Graphs and PolyGraphs:
 | `sustainedSeconds` | `60` | Lengthen to ignore bursts; shorten to respond sooner to sustained deficits. Range: 1–86,400. |
 | `minSamples` | `3` | Require enough distinct observations to support the decision. Both sample count and duration must pass. Range: 2–1,000. |
 | `cooldownSeconds` | `300` | Allow routing and workload capacity to settle before another successful topology change. Range: 1–86,400. |
-| `maxChangesPerHour` | `2` | Bound successful connection and traffic changes together in a rolling hour independently of cooldown. Range: 1–60. |
+| `maxChangesPerHour` | `2` | Bound successful connection, traffic and capacity changes together in a rolling hour independently of cooldown. Range: 1–60. |
 
 For example, with reports every 30 seconds, `sustainedSeconds: 120` and
 `minSamples: 4`, a fresh continuous sequence still needs to span two minutes.

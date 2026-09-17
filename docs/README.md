@@ -34,6 +34,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Comparing Cheeger bounds and throughput targets](graphs/cheeger-orchestration.md) | Hard bounds versus throughput targets, nested parent/child measurements, subgraph replication and Observe/Adapt diagrams |
 | [Replication and KEDA](graphs/replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
 | [Soul searching: application throughput and graph structure](graphs/soul-searching.md) | Separate Cheeger targets, approved connection layouts and bounded traffic balancing in Observe/Adapt modes |
+| [Soul searching: approved load profiles and preparation](graphs/load-profiles.md) | Demand-triggered profiles, fixed ceilings, capacity lookahead and a sequence diagram separating replica and node scaling |
 | [Balance traffic between workload and graph replicas](graphs/traffic-balancing.md) | Optional Istio percentage routing to workload and graph replicas, calibrated splits and bounded adjustment from measured headroom |
 | [Advance capacity planning](graphs/capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
 
@@ -85,6 +86,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Scheduler metrics API](operations/metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |
 | [OpenTelemetry traces and decision logs](operations/tracing.md) | Readable decisions and conflicts, trace correlation, independent OTLP log export, sampling and collector configuration |
 | [Operator performance and autoscaling](operations/performance.md) | Autoscaling stabilization, rate policies, queue polling and observation intervals |
+| [Event connection rebalancing and copulses](operations/event-rebalancing.md) | Istio or client routing, rolling subscription resets, ready endpoint discovery and scale-down draining |
 | [Authentication and external credentials](operations/authentication.md) | KEDA bearer credentials, ExternalSecrets, namespace boundaries and rotation |
 | [API keys and request lanes](operations/api-keys.md) | Service/operator groups, credential directions and HA-wide per-key rate/concurrency limits |
 | [Argo CD graph health](operations/argocd.md) | Graph and leaf health, descendant failures and GitOps configuration |

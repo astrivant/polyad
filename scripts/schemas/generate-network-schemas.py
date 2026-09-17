@@ -13,7 +13,7 @@ import yaml
 
 from polyad.compiler.passes.schema import structural_schema
 from polyad_types.activation import ActivationPolicy
-from polyad_types.capacity import CapacityPlan
+from polyad_types.capacity import CapacityPlan, CapacityTuning
 from polyad_types.network import NetworkAccess, NetworkPort
 from polyad_types.replication import Replication
 from polyad_types.requests import ConnectionRequest
@@ -111,6 +111,10 @@ def main() -> int:
                             "currentTraffic": {"type": "array", "items": structural_schema(TrafficRoute)},
                             "proposedTraffic": {"type": "array", "items": structural_schema(TrafficRoute)},
                             "targetTraffic": {"type": "array", "items": structural_schema(TrafficWeights)},
+                            **{
+                                name: {**structural_schema(CapacityTuning), "nullable": True}
+                                for name in ("currentCapacity", "targetCapacity", "proposedCapacity")
+                            },
                             "computation": {
                                 "type": "object",
                                 "nullable": True,
@@ -123,7 +127,10 @@ def main() -> int:
                                     "skippedPriorityCuts": {"type": "integer"},
                                 },
                             },
-                            **{name: {"type": "string", "nullable": True} for name in ("mode", "phase", "observedAt", "recommendedLayout")},
+                            **{
+                                name: {"type": "string", "nullable": True}
+                                for name in ("mode", "phase", "observedAt", "recommendedLayout", "demandSignal", "demandUnit")
+                            },
                             **{
                                 name: {"type": "number", "nullable": True}
                                 for name in (
@@ -131,6 +138,7 @@ def main() -> int:
                                     "proposedCheeger",
                                     "offeredPerSecond",
                                     "completedPerSecond",
+                                    "demandValue",
                                 )
                             },
                             "target": {

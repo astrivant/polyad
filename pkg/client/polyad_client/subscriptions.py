@@ -5,8 +5,14 @@ Dispatch resumable observations to explicit application callbacks.
 from __future__ import annotations
 
 import hashlib
+import random
+import re
+import ssl
 from collections import OrderedDict
+from threading import Event as StopEvent
 from typing import TYPE_CHECKING
+
+from polyad_client.client import APIError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -27,7 +33,7 @@ class StreamInterrupted(RuntimeError):
         Retain the control event without treating it as a successful checkpoint.
 
         Args:
-            event (Event): Reset or unavailable event.
+            event (Event): Reset, unavailable or copulse event.
         """
         self.event = event
         super().__init__(f"Polyad event stream requires recovery: {event.event}")
@@ -46,6 +52,7 @@ class Subscription:
         cursor: str | None = None,
         history: int = 1024,
         transport: Literal["sse", "websocket"] = "sse",
+        rebalance: bool = False,
     ) -> None:
         """
         Bind one authorized stream and a bounded in-process callback replay history.
@@ -56,6 +63,7 @@ class Subscription:
             cursor (str | None): Last completely handled event ID, restored by the application.
             history (int): Maximum remembered event-handler successes; not durable exactly-once delivery.
             transport (Literal['sse', 'websocket']): Operator event transport, retaining the same callbacks and cursors.
+            rebalance (bool): Discover authoritative membership and automatically resume after bounded transport resets.
         """
         if type(history) is not int or not 1 <= history <= 65536:
             raise ValueError("subscription history must be an integer from 1 through 65536")
@@ -66,6 +74,11 @@ class Subscription:
         self._hooks: list[tuple[Filter, Callable[[Event], None]]] = []
         self._handled: OrderedDict[tuple[str, int], None] = OrderedDict()
         self._running = False
+        if type(rebalance) is not bool:
+            raise ValueError("rebalance must be a boolean")
+        self.rebalance = rebalance
+        self._stopped = StopEvent()
+        self._rotation = random.randrange(2**32)
 
     def on(self, match: Filter, callback: Callable[[Event], None]) -> Subscription:
         """
@@ -93,7 +106,7 @@ class Subscription:
         Returns:
             None: Replayed successful hooks are skipped while retained in this instance's history.
         """
-        if event.event in {"reset", "unavailable"}:
+        if event.event in {"reset", "unavailable", "copulse"}:
             raise StreamInterrupted(event)
         for index, (match, callback) in enumerate(self._hooks):
             identity = event.id, index
@@ -112,13 +125,16 @@ class Subscription:
         Consume with natural callback backpressure and close the stream on errors or cancellation.
 
         Returns:
-            None: EOF returns; timeouts, callback failures and reset controls propagate to the application.
+            None: Ordinary EOF returns; managed subscriptions reconnect until stopped. Callback and replay failures always propagate.
         """
         if self._running:
             raise RuntimeError("a subscription cannot run concurrently")
         self._running = True
         stream: Iterator[Event] | None = None
         try:
+            if self.rebalance:
+                self._resume()
+                return
             stream = self.client.events(last_event_id=self.cursor, cluster=self.cluster, transport=self.transport)
             for event in stream:
                 self.dispatch(event)
@@ -127,6 +143,82 @@ class Subscription:
             if close:
                 close()
             self._running = False
+
+    def stop(self) -> None:
+        """
+        Stop automatic reconnection and interrupt any reconnect delay.
+
+        Returns:
+            None: An active read finishes within the client's configured transport timeout.
+        """
+        self._stopped.set()
+
+    def _retryable(self, error: Exception) -> bool:
+        if isinstance(error, ssl.SSLCertVerificationError) or isinstance(getattr(error, "reason", None), ssl.SSLCertVerificationError):
+            return False
+        if isinstance(error, APIError):
+            return error.status in {429, 502, 503, 504}
+        if isinstance(error, OSError):
+            return True
+        if self.transport == "websocket":
+            from websockets.exceptions import ConnectionClosedError
+
+            return isinstance(error, ConnectionClosedError) and all(
+                close is None or close.code not in {1008, 1009} for close in (error.sent, error.rcvd)
+            )
+        return False
+
+    def _resume(self) -> None:
+        from polyad_client.routing import addresses
+
+        backoff = 1.0
+        while not self._stopped.is_set():
+            stream: Iterator[Event] | None = None
+            delay = random.uniform(backoff / 2, backoff)
+            try:
+                try:
+                    directory = self.client.event_endpoints(cluster=self.cluster)
+                    if directory.get("replicas") == 0:
+                        raise APIError(503, {"error": "no ready event replicas"})
+                    targets = addresses(directory)
+                    if self.cursor is None:
+                        cursor = directory.get("cursor")
+                        if not isinstance(cursor, str) or not re.fullmatch(r"(?:0|[1-9][0-9]{0,19})-(?:0|[1-9][0-9]{0,19})", cursor):
+                            raise ValueError("event discovery requires an initial replay cursor")
+                        self.cursor = cursor
+                    target = targets[self._rotation % len(targets)] if targets else None
+                    self._rotation += 1
+                    stream = self.client.events(
+                        last_event_id=self.cursor, cluster=self.cluster, transport=self.transport, endpoint=target, stop_event=self._stopped
+                    )
+                except Exception as error:
+                    if not self._retryable(error):
+                        raise
+                if stream is not None:
+                    while not self._stopped.is_set():
+                        try:
+                            event = next(stream)
+                        except StopIteration:
+                            break
+                        except Exception as error:
+                            if not self._retryable(error):
+                                raise
+                            break
+                        if event.event == "copulse":
+                            event.typed()  # Reject malformed controls before using their delay.
+                            delay = max(0.1, float(event.data["retryAfterSeconds"]))
+                            break
+                        if event.event == "unavailable":
+                            break
+                        # Callback exceptions and expired replay always escape, even if they resemble transport errors.
+                        self.dispatch(event)
+                        backoff = 1.0
+            finally:
+                close = getattr(stream, "close", None)
+                if close:
+                    close()
+            self._stopped.wait(delay)
+            backoff = min(30, backoff * 2)
 
     def request_id(self, event: Event, action: str) -> str:
         """

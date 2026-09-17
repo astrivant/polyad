@@ -11,6 +11,7 @@ from polyad_types.auth import CredentialAssignment as CredentialAssignment
 from polyad_types.auth import GraphAccess as GraphAccess
 from polyad_types.auth import KeyDirection as KeyDirection
 from polyad_types.capacity import CapacityPlan as CapacityPlan
+from polyad_types.capacity import CapacityTuning as CapacityTuning
 from polyad_types.codec import from_dict as from_dict
 from polyad_types.codec import to_dict as to_dict
 from polyad_types.discovery import AccessMode as AccessMode
@@ -20,11 +21,13 @@ from polyad_types.discovery import ServiceEndpoint as ServiceEndpoint
 from polyad_types.event_codec import decode_event as decode_event
 from polyad_types.event_models import ConnectionEvent as ConnectionEvent
 from polyad_types.event_models import ControlEvent as ControlEvent
+from polyad_types.event_models import CopulseEvent as CopulseEvent
 from polyad_types.event_models import EventAST as EventAST
 from polyad_types.event_models import GraphEvent as GraphEvent
 from polyad_types.event_models import HeartbeatEvent as HeartbeatEvent
 from polyad_types.event_models import TopologyEvent as TopologyEvent
 from polyad_types.events import Event as Event
+from polyad_types.events import EventRebalanceSettings as EventRebalanceSettings
 from polyad_types.events import EventStreamSettings as EventStreamSettings
 from polyad_types.events import EventTooLarge as EventTooLarge
 from polyad_types.network import MeshPeer as MeshPeer
@@ -131,6 +134,8 @@ from polyad_types.rules import CheegerComputation as CheegerComputation
 from polyad_types.rules import Spectrum as Spectrum
 from polyad_types.rules import StructuralRule as StructuralRule
 from polyad_types.storage import Persistence as Persistence
+from polyad_types.throughput import DemandSample as DemandSample
+from polyad_types.throughput import DemandSource as DemandSource
 from polyad_types.throughput import ThroughputSample as ThroughputSample
 from polyad_types.throughput import TrafficSample as TrafficSample
 from polyad_types.topology import Connection as Connection

@@ -66,7 +66,7 @@ spec:
         - operation:
             ports: ["8091"]
             methods: [GET]
-            paths: [/v1/events, /v1/events/config, /v1/events/schema, {{ if $.Values.events.websockets.enabled }}/v1/events/ws, {{ end }}/v1/discovery, /v1/graphs/*, /openapi.json]
+            paths: [/v1/events, /v1/events/config, /v1/events/schema, {{ if $.Values.events.rebalance.enabled }}/v1/events/endpoints, {{ end }}{{ if $.Values.events.websockets.enabled }}/v1/events/ws, {{ end }}/v1/discovery, /v1/graphs/*, /openapi.json]
     {{- end }}
     {{- if .Values.connections.enabled }}
     {{- with .Values.mesh.operator.connectionPrincipals }}

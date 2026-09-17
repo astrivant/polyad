@@ -8,12 +8,15 @@ implements the second policy with `Observe` and `Adapt` modes.
 
 Polyad tracks application-reported `offeredPerSecond` and `completedPerSecond`
 alongside `currentCheeger` and the selected `target` in `status.throughput`.
-The offered rate selects an administrator-calibrated Cheeger target; a sustained
+The selected demand signal (offered rate by default) selects an administrator-calibrated Cheeger target; a sustained
 completion shortfall can trigger a recommendation or an admitted layout change.
 The target remains a structural range, while the reported rates measure
 application throughput. Meeting that range does not guarantee a completion rate.
 Soul searching can also rebalance [traffic percentages](traffic-balancing.md)
 within the same bounds, including Headroom adjustments before an aggregate shortfall.
+With [`trigger: Demand`](load-profiles.md), approved profiles can change connections,
+traffic and capacity lookahead under sustained positive demand while completed
+throughput keeps up. Hard rules and replica-scaling ownership remain independent.
 
 ## Table of contents
 
@@ -45,9 +48,9 @@ bandwidth, message sizes, CPU capacity, processing costs or edge direction.
 | Question | Hard GraphRule bounds | Application throughput targets |
 | --- | --- | --- |
 | Where configured? | `GraphRule.spec.cheeger.minimum` / `maximum` | `Graph.spec.throughput.tiers[].cheeger` or the equivalent PolyGraph field |
-| What sets the bounds? | Administrator policy | Administrator-calibrated demand tiers, selected using reported `offeredPerSecond` |
+| What sets the bounds? | Administrator policy | Administrator-calibrated demand tiers; input defaults to `offeredPerSecond` or an explicitly configured signal |
 | Which relation is measured? | The rule's selected relation; use `relation: connections` for these comparisons | The boundary's logical `connections` relation |
-| When evaluated? | During admission and before graph-managed changes, including scaling | After a sustained shortfall for connection/Tiers changes, or sustained Headroom imbalance under positive demand |
+| When evaluated? | During admission and before graph-managed changes, including scaling | After sustained shortfall, positive demand with `trigger: Demand`, or Headroom imbalance under positive demand |
 | What does it orchestrate? | Permits or blocks an otherwise requested change | Recommends approved connection layouts or bounded traffic splits, or applies them in Adapt mode |
 | Can it change replicas? | Constrains scaling through Polyad's admission path | No; it changes connections or routing percentages |
 | How does it apply through a hierarchy? | Referenced/inherited rules and namespace rules govern applicable boundaries | Each Graph or PolyGraph configures its own feedback policy |
@@ -124,7 +127,8 @@ flowchart LR
 ```
 
 `trafficMode: Tiers` selects an administrator-calibrated split after sustained
-shortfall. `Headroom` uses each destination's completed throughput plus reported
+shortfall by default; `trigger: Demand` also allows changes while throughput keeps up.
+`Headroom` uses each destination's completed throughput plus reported
 spare capacity and can rebalance before aggregate throughput falls. Both keep
 the selected Cheeger target, hard rules, destination bounds, stabilization and
 shared change budget. Neither changes the number of replicas.
@@ -408,7 +412,7 @@ throughput:
   mode: Observe # Adapt permits the approved layouts to be applied.
   unit: records
   tiers:
-    - offeredPerSecond: 100
+    - threshold: 100
       cheeger: {minimum: 1, maximum: 1.5}
   # Configure layouts before choosing Adapt; see the complete example below.
 ```

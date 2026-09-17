@@ -70,7 +70,7 @@ def fixture(mode="Observe", maximum=None):
                 "sustainedSeconds": 10,
                 "sampleMaxAgeSeconds": 30,
                 "minSamples": 2,
-                "tiers": [{"offeredPerSecond": 100, "cheeger": {"minimum": 1}}],
+                "tiers": [{"threshold": 100, "cheeger": {"minimum": 1}}],
                 "layouts": [{"name": "ring", "connections": ring}],
             },
         },
@@ -79,13 +79,22 @@ def fixture(mode="Observe", maximum=None):
     return FeedbackAPI(graph, rule)
 
 
-async def feed(api, second):
+async def feed(api, second, *, offered=200, completed=50, demand=None):
     """
     Publish one fresh measurement and run a leased feedback evaluation.
     """
     clock = datetime(2026, 9, 16, tzinfo=UTC) + timedelta(seconds=second)
     graph = await api.get("Graph", "test", "pipeline")
-    sample = ThroughputSample("pipeline", graph["metadata"]["uid"], graph["metadata"]["generation"], clock.isoformat(), "records", 200, 50)
+    sample = ThroughputSample(
+        "pipeline",
+        graph["metadata"]["uid"],
+        graph["metadata"]["generation"],
+        clock.isoformat(),
+        "records",
+        offered,
+        completed,
+        demand=demand,
+    )
     graph["metadata"].setdefault("annotations", {})[SAMPLE] = json.dumps(to_dict(sample))
     api.objects[("Graph", "test", "pipeline")] = graph
     changed = await reconcile_throughput(Controller(api), graph, now=clock)

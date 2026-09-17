@@ -6,18 +6,22 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Generic, Literal
+from typing import TYPE_CHECKING, Generic, Literal
 
 from attrs import field, frozen
 from cattrs.errors import CattrsError
 from typing_extensions import TypeVar
 
 from polyad_types.activation import ActivationPolicy
-from polyad_types.capacity import CapacityPlan
+from polyad_types.capacity import CapacityPlan, CapacityTuning
 from polyad_types.codec import converter
 from polyad_types.network import NetworkAccess, NetworkPort
 from polyad_types.rules import Cheeger, CheegerComputation
+from polyad_types.throughput import DemandSource
 from polyad_types.traffic import TrafficRoute, TrafficWeights
+
+if TYPE_CHECKING:
+    from polyad_types.throughput import ThroughputSample
 
 
 @frozen
@@ -81,12 +85,13 @@ class ThroughputTier:
     Associate measured application demand with an independently calibrated expansion target.
 
     Attributes:
-        offeredPerSecond (float): Inclusive demand threshold in the application's declared unit.
+        threshold (float): Inclusive threshold in the selected demand signal's unit; defaults to offered work per second.
         cheeger (Cheeger): Target range on the connections relation; never overrides GraphRules.
         trafficWeights (tuple[TrafficWeights, ...]): Optional calibrated request percentages for configured routes.
+        capacity (CapacityTuning | None): Approved forecast parameters; omitted retains the current capacity plan.
     """
 
-    offeredPerSecond: float = field(metadata={"schema": {"minimum": 0}})
+    threshold: float = field(metadata={"schema": {"minimum": 0}})
     cheeger: Cheeger = field(
         metadata={
             "schema": {
@@ -107,6 +112,7 @@ class ThroughputTier:
         }
     )
     trafficWeights: tuple[TrafficWeights, ...] = field(default=(), metadata={"schema": {"maxItems": 16}})
+    capacity: CapacityTuning | None = None
 
     def __attrs_post_init__(self) -> None:
         """
@@ -115,7 +121,7 @@ class ThroughputTier:
         Returns:
             None: No return value.
         """
-        if isinstance(self.offeredPerSecond, bool) or not math.isfinite(self.offeredPerSecond) or self.offeredPerSecond < 0:
+        if isinstance(self.threshold, bool) or not math.isfinite(self.threshold) or self.threshold < 0:
             raise ValueError("throughput demand thresholds must be finite and nonnegative")
         if self.cheeger.minimum is None and self.cheeger.maximum is None:
             raise ValueError("throughput tiers require a Cheeger target")
@@ -146,16 +152,19 @@ class ThroughputPolicy:
         unit (str): Application work unit shared by offered and completed rates, such as records.
         tiers (tuple[ThroughputTier, ...]): Strictly increasing demand thresholds; highest matching tier wins.
         layouts (tuple[ThroughputLayout, ...]): Approved alternatives, tried in declaration order.
-        mode (Literal['Observe', 'Adapt']): Observe reports recommendations; Adapt may replace connections.
+        mode (Literal['Observe', 'Adapt']): Observe reports recommendations; Adapt may apply approved parameters.
         sampleMaxAgeSeconds (int): Maximum age and gap between usable samples.
-        sustainedSeconds (int): Continuous shortfall duration required before selecting a layout.
-        minSamples (int): Distinct reports required during the sustained shortfall.
+        sustainedSeconds (int): Continuous trigger duration required before selecting a profile.
+        minSamples (int): Distinct reports required during the sustained trigger.
         shortfallRatio (float): Completed/offered ratio below which demanded throughput is unmet.
-        cooldownSeconds (int): Minimum time between successful topology changes.
+        cooldownSeconds (int): Minimum time between successful profile adjustments.
         maxChangesPerHour (int): Maximum successful changes in a rolling hour.
         cheegerComputation (CheegerComputation): Search priorities and budgets shared by current and candidate layouts.
         maxWeightStep (int): Maximum percentage-point change per destination in one automatic adjustment.
         trafficMode (Literal['Tiers', 'Headroom']): Use calibrated tier percentages or measured per-destination sustainable capacity.
+        trigger (Literal['Shortfall', 'Demand']): React to sustained shortfall or prepare on sustained positive selected demand.
+        capacityCeiling (CapacityTuning | None): Fixed administrator ceiling for all capacity profiles and the current plan.
+        demand (DemandSource | None): Named application signal used for thresholds; omitted uses offered work per second.
     """
 
     unit: str = field(metadata={"schema": {"minLength": 1, "maxLength": 64}})
@@ -171,6 +180,9 @@ class ThroughputPolicy:
     cheegerComputation: CheegerComputation = field(factory=CheegerComputation)
     maxWeightStep: int = field(default=10, metadata={"schema": {"minimum": 1, "maximum": 100}})
     trafficMode: Literal["Tiers", "Headroom"] = "Tiers"
+    trigger: Literal["Shortfall", "Demand"] = "Shortfall"
+    capacityCeiling: CapacityTuning | None = None
+    demand: DemandSource | None = None
 
     def __attrs_post_init__(self) -> None:
         """
@@ -181,7 +193,7 @@ class ThroughputPolicy:
         """
         if self.mode not in {"Observe", "Adapt"} or not self.unit.strip() or len(self.unit) > 64:
             raise ValueError("throughput requires a unit and Observe or Adapt mode")
-        thresholds = [tier.offeredPerSecond for tier in self.tiers]
+        thresholds = [tier.threshold for tier in self.tiers]
         if not 1 <= len(thresholds) <= 16 or thresholds != sorted(set(thresholds)):
             raise ValueError("throughput tiers require 1–16 strictly increasing demand thresholds")
         names = [layout.name for layout in self.layouts]
@@ -191,6 +203,15 @@ class ThroughputPolicy:
             raise ValueError("throughput layouts support at most 380 connections")
         if self.trafficMode not in {"Tiers", "Headroom"}:
             raise ValueError("trafficMode must be Tiers or Headroom")
+        if self.trigger not in {"Shortfall", "Demand"}:
+            raise ValueError("throughput trigger must be Shortfall or Demand")
+        for tier in self.tiers:
+            if tier.capacity is not None and (
+                self.capacityCeiling is None
+                or tier.capacity.lookaheadStages > self.capacityCeiling.lookaheadStages
+                or tier.capacity.maxPods > self.capacityCeiling.maxPods
+            ):
+                raise ValueError("capacity profiles must fit an explicit capacityCeiling")
         if self.trafficMode == "Headroom" and any(tier.trafficWeights for tier in self.tiers):
             raise ValueError("Headroom chooses percentages from measurements; tier trafficWeights require Tiers mode")
         if (
@@ -198,8 +219,9 @@ class ThroughputPolicy:
             and not self.layouts
             and self.trafficMode != "Headroom"
             and not any(tier.trafficWeights for tier in self.tiers)
+            and not any(tier.capacity for tier in self.tiers)
         ):
-            raise ValueError("Adapt requires administrator-approved layouts or traffic weights")
+            raise ValueError("Adapt requires administrator-approved layouts, traffic weights or capacity profiles")
         for value, minimum, maximum in (
             (self.sampleMaxAgeSeconds, 1, 3600),
             (self.sustainedSeconds, 1, 86400),
@@ -212,6 +234,24 @@ class ThroughputPolicy:
                 raise ValueError("throughput timing and change budgets must be bounded positive integers")
         if isinstance(self.shortfallRatio, bool) or not 0 < self.shortfallRatio <= 1:
             raise ValueError("shortfallRatio must be greater than zero and at most one")
+
+    def demand_value(self, sample: ThroughputSample) -> float:
+        """
+        Resolve the configured demand source without substituting another measurement.
+
+        Args:
+            sample (ThroughputSample): Authorized report for this policy's graph revision.
+
+        Returns:
+            float: Demand in the configured unit, or ValueError for a missing or mismatched signal.
+        """
+        if self.demand is None:
+            if sample.demand is not None:
+                raise ValueError("the policy does not configure a named demand signal")
+            return sample.offeredPerSecond
+        if sample.demand is None or (sample.demand.name, sample.demand.unit) != (self.demand.name, self.demand.unit):
+            raise ValueError("the demand report must match the configured signal name and unit")
+        return sample.demand.value
 
 
 @frozen
@@ -289,6 +329,11 @@ class Topology:
         names = {node.name for node in self.nodes}
         self._validate_traffic()
         if self.throughput is not None:
+            ceiling = self.throughput.capacityCeiling
+            if ceiling is not None and (
+                self.capacity is None or self.capacity.maxPods > ceiling.maxPods or self.capacity.lookaheadStages > ceiling.lookaheadStages
+            ):
+                raise ValueError("capacityCeiling requires an explicit capacity plan within its limits")
             for layout in self.throughput.layouts:
                 if any(edge.source not in names or edge.target not in names for edge in layout.connections):
                     raise ValueError("throughput layout connection endpoint is absent")

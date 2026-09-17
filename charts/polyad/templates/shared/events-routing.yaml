@@ -1,0 +1,18 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if .Values.events.istio.enabled }}
+{{- if not (and .Values.events.enabled .Values.events.rebalance.enabled .Values.mesh.operator.enabled (eq .Values.events.rebalance.routing "Service")) }}{{ fail "events.istio requires events, rebalancing, mesh.operator and Service routing" }}{{ end }}
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: {{ .Release.Name }}-polyad-events
+spec:
+  host: {{ printf "%s-polyad-events.%s.svc.cluster.local" .Release.Name .Release.Namespace | quote }}
+  exportTo: ["*"]
+  trafficPolicy:
+    loadBalancer:
+      simple: {{ .Values.events.istio.loadBalancer }}
+      warmup:
+        duration: {{ printf "%vs" .Values.events.istio.warmupSeconds | quote }}
+{{- end }}
+{{- end -}}

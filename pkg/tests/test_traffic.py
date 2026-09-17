@@ -44,7 +44,7 @@ def fixture(mode="Observe", traffic_mode="Tiers"):
     Route a producer to two copies of a Graph, each containing its own entrypoint.
     """
     destinations = [{"target": f"copies/replica-{index}", "weight": 50, "minWeight": 10, "maxWeight": 90} for index in range(2)]
-    tier = {"offeredPerSecond": 100, "cheeger": {"minimum": 1}}
+    tier = {"threshold": 100, "cheeger": {"minimum": 1}}
     if traffic_mode == "Tiers":
         tier["trafficWeights"] = [{"route": "work", "weights": {"copies/replica-0": 80, "copies/replica-1": 20}}]
     root = resource(

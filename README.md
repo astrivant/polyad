@@ -26,6 +26,8 @@ the Kubernetes Operators Framework for Python.
   or each replica's completed throughput and reported spare capacity. Fixed percentages
   also work without feedback. These routes can balance Workload, Daemon, Graph,
   PolyGraph or nested ReplicaGroup replicas through their service entrypoints.
+  Approved [load profiles](docs/graphs/load-profiles.md) can prepare upcoming stages
+  by adjusting capacity lookahead within fixed ceilings, independently of replica scaling.
 - **Make connectivity explicit.** Choose replica connection patterns, including
   custom edges, and enforce [network boundaries](docs/deployment/networking.md) with optional
   NetworkPolicy and Istio integration.

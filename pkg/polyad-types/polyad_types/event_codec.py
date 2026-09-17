@@ -75,7 +75,7 @@ def decode_event(document: dict[str, Any]) -> EventAST:
         raise ValueError("unsupported event type or cursor")
     if name in {"graph", "topology", "connection"} and not re.fullmatch(CURSOR_PATTERN, cursor):
         raise ValueError("observation requires a Redis stream cursor")
-    if name in {"reset", "unavailable", "heartbeat"} and cursor:
+    if name in {"reset", "unavailable", "heartbeat", "copulse"} and cursor:
         raise ValueError("control events cannot advance the cursor")
     # Also reject NaN, infinity and non-JSON values inside explicitly extensible policy objects.
     document = json.loads(json.dumps(document, allow_nan=False))

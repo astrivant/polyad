@@ -50,7 +50,16 @@ def test_authentication_registry_outage_is_unavailable(tmp_path, monkeypatch, ba
     assert app.test_client().get("/openapi.json", headers=header()).status_code == 503
 
 
-@pytest.mark.parametrize("change", [{"generation": True}, {"offeredPerSecond": True}, {"completedPerSecond": "50"}])
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"generation": True},
+        {"offeredPerSecond": True},
+        {"completedPerSecond": "50"},
+        *({"demand": {"name": "queueDepth", "unit": "jobs", "value": value}} for value in (True, "50", -1, float("inf"))),
+        {"demand": {"name": 5, "unit": "jobs", "value": 50}},
+    ],
+)
 def test_throughput_wire_types_are_validated(monkeypatch, change):
     """
     Measurements cannot acquire numeric meaning through lossy boolean or string coercion.

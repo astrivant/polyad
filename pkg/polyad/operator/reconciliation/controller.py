@@ -458,7 +458,7 @@ class Controller:
                 from polyad.operator.policies.throughput import reconcile_throughput
 
                 if await reconcile_throughput(self, obj):
-                    raise Pending("throughput layout applied; refresh before workload admission")
+                    raise Pending("throughput profile applied; refresh before workload admission")
                 refreshed = await self.api.get(kind, namespace, name)
                 if refreshed is None or refreshed["metadata"]["uid"] != obj["metadata"]["uid"]:
                     raise Pending("throughput graph changed; refresh before admission")

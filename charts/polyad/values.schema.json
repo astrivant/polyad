@@ -1529,6 +1529,94 @@
           "type": "number",
           "minimum": 0.05,
           "maximum": 5
+        },
+        "rebalance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "routing",
+            "refreshSeconds",
+            "automatic",
+            "batchPercent",
+            "intervalSeconds",
+            "cooldownSeconds",
+            "drainSeconds",
+            "maxConnectionSeconds"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable operator-controlled subscription rolls and endpoint discovery."
+            },
+            "routing": {
+              "type": "string",
+              "enum": [
+                "Service",
+                "Direct"
+              ],
+              "description": "Service uses mesh routing; Direct selects discovered Pod IPs with the original authority."
+            },
+            "refreshSeconds": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 60
+            },
+            "automatic": {
+              "type": "boolean"
+            },
+            "batchPercent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "intervalSeconds": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 30
+            },
+            "cooldownSeconds": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3600
+            },
+            "drainSeconds": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 300
+            },
+            "maxConnectionSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 86400
+            }
+          }
+        },
+        "istio": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "loadBalancer",
+            "warmupSeconds"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "loadBalancer": {
+              "type": "string",
+              "enum": [
+                "LEAST_REQUEST",
+                "ROUND_ROBIN"
+              ]
+            },
+            "warmupSeconds": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 300
+            }
+          }
         }
       }
     },
@@ -5240,6 +5328,105 @@
             "required": [
               "enabled"
             ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "events": {
+            "properties": {
+              "rebalance": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "rebalance"
+            ]
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "then": {
+        "properties": {
+          "events": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "events": {
+            "properties": {
+              "istio": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "istio"
+            ]
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "then": {
+        "properties": {
+          "events": {
+            "properties": {
+              "enabled": {
+                "const": true
+              },
+              "rebalance": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  },
+                  "routing": {
+                    "const": "Service"
+                  }
+                },
+                "required": [
+                  "enabled",
+                  "routing"
+                ]
+              }
+            }
+          },
+          "mesh": {
+            "properties": {
+              "operator": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              }
+            }
           }
         }
       }

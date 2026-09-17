@@ -295,6 +295,29 @@
       },
       "description": "Forecast missing execution nodes before their admission dependencies finish."
     },
+    "polyad_types.capacity.CapacityTuning": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lookaheadStages": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "description": "Missing dependency layers to prepare, bounded by the approved ceiling."
+        },
+        "maxPods": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "description": "Maximum outstanding forecast Pods, also bounded by operator configuration."
+        }
+      },
+      "description": "Select forecast depth and reservation budget without changing workload resource requests.",
+      "required": [
+        "lookaheadStages",
+        "maxPods"
+      ]
+    },
     "polyad_types.discovery.AtlasAccess": {
       "type": "object",
       "additionalProperties": false,
@@ -765,6 +788,60 @@
         }
       },
       "description": "End consumption without advancing the application checkpoint.",
+      "required": [
+        "id",
+        "event",
+        "data"
+      ]
+    },
+    "polyad_types.event_models.Copulse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Membership change, administrative roll, stream age or replica drain."
+        },
+        "revision": {
+          "type": "string",
+          "description": "Observed operator membership revision; never a graph revision."
+        },
+        "retryAfterSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30,
+          "description": "Bounded delay before rediscovery, spreading reconnect load."
+        }
+      },
+      "description": "Request transport rediscovery while preserving the last application checkpoint.",
+      "required": [
+        "reason",
+        "revision",
+        "retryAfterSeconds"
+      ]
+    },
+    "polyad_types.event_models.CopulseEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/polyad_types.event_models.Copulse",
+          "description": "Reconnection instruction without destinations or credentials."
+        },
+        "event": {
+          "enum": [
+            "copulse"
+          ],
+          "description": "Transport control discriminator."
+        },
+        "id": {
+          "enum": [
+            ""
+          ],
+          "description": "Reconnection never acknowledges an application event."
+        }
+      },
+      "description": "Carry an operator connection roll without publishing reserved graph observations.",
       "required": [
         "id",
         "event",
@@ -1286,7 +1363,7 @@
         },
         "event": {
           "type": "string",
-          "description": "Event type, including graph, topology, connection, reset or unavailable."
+          "description": "Event type, including graph, topology, connection, reset, unavailable or copulse."
         },
         "data": {
           "type": "object",
@@ -1300,6 +1377,64 @@
         "event",
         "data"
       ]
+    },
+    "polyad_types.events.EventRebalanceSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable endpoint discovery and rolling connection controls."
+        },
+        "routing": {
+          "enum": [
+            "Service",
+            "Direct"
+          ],
+          "description": "Delegate new connections to the Service/mesh or let clients choose Pod IPs."
+        },
+        "refreshSeconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Interval for refreshing ready operator membership."
+        },
+        "automatic": {
+          "type": "boolean",
+          "description": "Roll existing subscribers when ready membership changes."
+        },
+        "batchPercent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum percentage of the initial local subscribers scheduled per batch."
+        },
+        "intervalSeconds": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 30,
+          "description": "Delay between batches, also used to spread their reconnects."
+        },
+        "cooldownSeconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3600,
+          "description": "Minimum interval between ordinary rolls on each replica."
+        },
+        "drainSeconds": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 300,
+          "description": "Time reserved before process termination to evacuate subscriptions."
+        },
+        "maxConnectionSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400,
+          "description": "Optional maximum stream age; zero disables periodic rotation."
+        }
+      },
+      "description": "Pace operator-requested reconnections independently of graph mutations."
     },
     "polyad_types.events.EventStreamSettings": {
       "type": "object",
@@ -5999,6 +6134,58 @@
       },
       "description": "Mount an existing persistent claim using an explicitly selected StorageClass."
     },
+    "polyad_types.throughput.DemandSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Signal name matching the administrator's demand source."
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Measurement unit matching that source."
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Finite nonnegative measured demand; zero never activates a profile."
+        }
+      },
+      "description": "Report the selected signal under the enclosing throughput report's identity and timestamp.",
+      "required": [
+        "name",
+        "unit",
+        "value"
+      ]
+    },
+    "polyad_types.throughput.DemandSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Exact signal name the authorized reporter must supply."
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Exact measurement unit, such as jobs, sessions or bytes-per-second."
+        }
+      },
+      "description": "Identify an administrator-selected application signal for profile thresholds.",
+      "required": [
+        "name",
+        "unit"
+      ]
+    },
     "polyad_types.throughput.ThroughputSample": {
       "type": "object",
       "additionalProperties": false,
@@ -6045,6 +6232,17 @@
           },
           "maxItems": 256,
           "description": "Per-destination measurements from the same window for Headroom routing."
+        },
+        "demand": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.throughput.DemandSample"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional configured signal, measured under this report's clock and graph revision."
         }
       },
       "description": "Supply one aggregate measurement from a graph's designated application reporter.",
@@ -6494,7 +6692,7 @@
             "Observe",
             "Adapt"
           ],
-          "description": "Observe reports recommendations; Adapt may replace connections."
+          "description": "Observe reports recommendations; Adapt may apply approved parameters."
         },
         "sampleMaxAgeSeconds": {
           "type": "integer",
@@ -6506,13 +6704,13 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 86400,
-          "description": "Continuous shortfall duration required before selecting a layout."
+          "description": "Continuous trigger duration required before selecting a profile."
         },
         "minSamples": {
           "type": "integer",
           "minimum": 2,
           "maximum": 1000,
-          "description": "Distinct reports required during the sustained shortfall."
+          "description": "Distinct reports required during the sustained trigger."
         },
         "shortfallRatio": {
           "type": "number",
@@ -6524,7 +6722,7 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 86400,
-          "description": "Minimum time between successful topology changes."
+          "description": "Minimum time between successful profile adjustments."
         },
         "maxChangesPerHour": {
           "type": "integer",
@@ -6548,6 +6746,35 @@
             "Headroom"
           ],
           "description": "Use calibrated tier percentages or measured per-destination sustainable capacity."
+        },
+        "trigger": {
+          "enum": [
+            "Shortfall",
+            "Demand"
+          ],
+          "description": "React to sustained shortfall or prepare on sustained positive selected demand."
+        },
+        "capacityCeiling": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.capacity.CapacityTuning"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Fixed administrator ceiling for all capacity profiles and the current plan."
+        },
+        "demand": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.throughput.DemandSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Named application signal used for thresholds; omitted uses offered work per second."
         }
       },
       "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
@@ -6560,10 +6787,10 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "offeredPerSecond": {
+        "threshold": {
           "type": "number",
           "minimum": 0,
-          "description": "Inclusive demand threshold in the application's declared unit."
+          "description": "Inclusive threshold in the selected demand signal's unit; defaults to offered work per second."
         },
         "cheeger": {
           "$ref": "#/$defs/polyad_types.rules.Cheeger",
@@ -6586,11 +6813,22 @@
           },
           "maxItems": 16,
           "description": "Optional calibrated request percentages for configured routes."
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.capacity.CapacityTuning"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Approved forecast parameters; omitted retains the current capacity plan."
         }
       },
       "description": "Associate measured application demand with an independently calibrated expansion target.",
       "required": [
-        "offeredPerSecond",
+        "threshold",
         "cheeger"
       ]
     },

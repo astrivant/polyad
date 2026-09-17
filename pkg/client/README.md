@@ -174,8 +174,13 @@ subscription = events.subscribe(transport="websocket", cursor="0-0")
 Use an HTTP(S) base URL as usual; the client selects WS(S) for subscriptions.
 Credentials and replay cursors use handshake headers. Heartbeats are handled
 internally; events, filters, callbacks and checkpoint behavior match SSE.
-Reconnection is explicit: reuse the last processed cursor, or refresh topology
-after `reset`/HTTP 410. Neither transport automatically approves connections.
+Reconnection is explicit by default: reuse the last processed cursor, or refresh
+topology after `reset`/HTTP 410. If the operator enables event rebalancing, use
+`events.subscribe(transport="websocket", rebalance=True)` to rediscover ready
+replicas and resume automatically after copulses or transient transport errors.
+Call `subscription.stop()` during application shutdown. See
+[copulses, Istio and direct client routing](https://github.com/astrivant/polyad/blob/main/docs/operations/event-rebalancing.md).
+Neither transport automatically approves connections.
 Both share the operator's subscriber ceiling and API-key concurrency lanes.
 See [WebSocket enablement and protocol](https://github.com/astrivant/polyad/blob/main/docs/workloads/workload-events.md#websocket-subscriptions).
 

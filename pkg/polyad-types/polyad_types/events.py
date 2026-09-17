@@ -6,13 +6,11 @@ from __future__ import annotations
 
 import json
 import math
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from attrs import field, frozen
 
 if TYPE_CHECKING:
-    from typing import Literal
-
     from polyad_types.event_models import EventAST
 
 DEFAULT_MAX_EVENT_BYTES = 1024 * 1024
@@ -74,13 +72,65 @@ class EventTooLarge(ValueError):
 
 
 @frozen
+class EventRebalanceSettings:
+    """
+    Pace operator-requested reconnections independently of graph mutations.
+
+    Attributes:
+        enabled (bool): Enable endpoint discovery and rolling connection controls.
+        routing (Literal['Service', 'Direct']): Delegate new connections to the Service/mesh or let clients choose Pod IPs.
+        refreshSeconds (float): Interval for refreshing ready operator membership.
+        automatic (bool): Roll existing subscribers when ready membership changes.
+        batchPercent (int): Maximum percentage of the initial local subscribers scheduled per batch.
+        intervalSeconds (float): Delay between batches, also used to spread their reconnects.
+        cooldownSeconds (float): Minimum interval between ordinary rolls on each replica.
+        drainSeconds (float): Time reserved before process termination to evacuate subscriptions.
+        maxConnectionSeconds (float): Optional maximum stream age; zero disables periodic rotation.
+    """
+
+    enabled: bool = False
+    routing: Literal["Service", "Direct"] = "Service"
+    refreshSeconds: float = field(default=5, metadata={"schema": {"minimum": 1, "maximum": 60}})
+    automatic: bool = True
+    batchPercent: int = field(default=10, metadata={"schema": {"minimum": 1, "maximum": 100}})
+    intervalSeconds: float = field(default=2, metadata={"schema": {"minimum": 0.1, "maximum": 30}})
+    cooldownSeconds: float = field(default=60, metadata={"schema": {"minimum": 1, "maximum": 3600}})
+    drainSeconds: float = field(default=20, metadata={"schema": {"minimum": 5, "maximum": 300}})
+    maxConnectionSeconds: float = field(default=0, metadata={"schema": {"minimum": 0, "maximum": 86400}})
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject unsafe pacing values before starting listeners.
+
+        Returns:
+            None: Invalid settings raise ValueError.
+        """
+        if type(self.enabled) is not bool or type(self.automatic) is not bool or self.routing not in {"Service", "Direct"}:
+            raise ValueError("rebalance requires boolean switches and Service or Direct routing")
+        if type(self.batchPercent) is not int or not 1 <= self.batchPercent <= 100:
+            raise ValueError("rebalance batchPercent must be an integer from 1 through 100")
+        for name, minimum, maximum in (
+            ("refreshSeconds", 1, 60),
+            ("intervalSeconds", 0.1, 30),
+            ("cooldownSeconds", 1, 3600),
+            ("drainSeconds", 5, 300),
+            ("maxConnectionSeconds", 0, 86400),
+        ):
+            value = getattr(self, name)
+            if type(value) not in (int, float) or not math.isfinite(value) or not minimum <= value <= maximum:
+                raise ValueError(f"rebalance {name} must be finite and between {minimum} and {maximum}")
+        if 0 < self.maxConnectionSeconds < self.cooldownSeconds:
+            raise ValueError("maxConnectionSeconds must be zero or at least cooldownSeconds")
+
+
+@frozen
 class Event:
     """
     Carry a transport-neutral observation while retaining dictionary-based filters and callbacks.
 
     Attributes:
         id (str): Stream cursor to persist after processing.
-        event (str): Event type, including graph, topology, connection, reset or unavailable.
+        event (str): Event type, including graph, topology, connection, reset, unavailable or copulse.
         data (dict[str, Any]): Observation payload.
     """
 
@@ -93,7 +143,7 @@ class Event:
         Validate this envelope and decode its payload into the corresponding event syntax tree.
 
         Returns:
-            EventAST: GraphEvent, TopologyEvent, ConnectionEvent, ControlEvent or HeartbeatEvent.
+            EventAST: GraphEvent, TopologyEvent, ConnectionEvent, ControlEvent, CopulseEvent or HeartbeatEvent.
         """
         from polyad_types.event_codec import decode_event
 

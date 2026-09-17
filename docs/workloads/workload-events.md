@@ -33,6 +33,7 @@ operator PolyGraphs and their descendants remain private.
 - [Read current neighbors](#read-current-neighbors)
 - [Subscribe from a workload](#subscribe-from-a-workload)
 - [WebSocket subscriptions](#websocket-subscriptions)
+- [Rebalancing subscriptions](#rebalancing-subscriptions)
 - [Nested graphs](#nested-graphs)
 
 ## Application stream boundary
@@ -299,6 +300,16 @@ APIs and permissions. Service clients authenticate with headers; browser `Origin
 requests are rejected, and tokens are never accepted in the URL. Use HTTPS/WSS
 through the configured gateway for TLS. The chart includes the upgrade route in
 its Istio gateway and authorization policy when enabled.
+
+## Rebalancing subscriptions
+
+Administrators can enable [event copulses and endpoint discovery](../operations/event-rebalancing.md)
+to spread subscriptions after operator membership changes. Use
+`client.subscribe(transport="websocket", rebalance=True)` for automatic discovery,
+reconnection and checkpoint preservation; SSE supports the same option.
+Istio can select the new upstream replica, or reachable clients can round-robin
+the operator's advertised Pod IPs. Scale-down uses a bounded preStop drain.
+These controls move subscriptions without changing application graph structure.
 
 ## Nested graphs
 

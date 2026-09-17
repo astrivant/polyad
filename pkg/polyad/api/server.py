@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from threading import BoundedSemaphore, Event, Lock, Thread
 from typing import TYPE_CHECKING, TypeVar
 
@@ -66,6 +67,7 @@ class APIServer:
         self.lock = Lock()
         self.pending: set[Future[Any]] = set()
         self.closers: list[Callable[[], None]] = []
+        self.background: list[asyncio.Task[None]] = []
 
     def start(self, *, host: str = "0.0.0.0", ports: dict[str, int] | None = None) -> None:
         """
@@ -208,6 +210,10 @@ class APIServer:
         """
         if self.closed:
             return
+        for task in self.background:
+            task.cancel()
+        await asyncio.gather(*self.background, return_exceptions=True)
+        self.background.clear()
         self.closed = True
         self.stopping.set()
         if self.started:
@@ -316,12 +322,21 @@ class APIServer:
         """
         from polyad.events.builder import EventAPIBuilder
         from polyad.events.discovery import Directory
+        from polyad.events.rebalance import Rebalancer, configuration
         from polyad.events.settings import settings_from_environment
         from polyad.operator.clusters.federation import Federation
 
         federation = Federation(self.api)
         self.closers.append(federation.close)
         directory = Directory(self.api, namespace, federation, {federation.name: store, **(clusters or {})})
+        policy = configuration()
+        event_settings = settings_from_environment()
+        rebalance = Rebalancer(policy, poll_interval=event_settings.pollIntervalSeconds) if policy.enabled else None
+        if rebalance is not None:
+            service = os.environ.get("POLYAD_EVENTS_SERVICE", "")
+            if not service:
+                raise ValueError("event rebalancing requires POLYAD_EVENTS_SERVICE")
+            self.background.append(asyncio.create_task(rebalance.watch(self.api, namespace, service)))
 
         def selected() -> EventStore:
             cluster = request.args.get("cluster")
@@ -334,7 +349,8 @@ class APIServer:
 
         (
             EventAPIBuilder(
-                settings=settings_from_environment(),
+                settings=event_settings,
+                rebalance=rebalance,
                 websockets=websockets,
                 stopping=self.stopping,
                 max_connections=connections,

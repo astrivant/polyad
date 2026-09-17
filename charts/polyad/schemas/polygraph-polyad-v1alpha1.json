@@ -117,9 +117,9 @@
                 "type": "object",
                 "description": "Associate measured application demand with an independently calibrated expansion target.",
                 "properties": {
-                  "offeredPerSecond": {
+                  "threshold": {
                     "type": "number",
-                    "description": "Inclusive demand threshold in the application's declared unit.",
+                    "description": "Inclusive threshold in the selected demand signal's unit; defaults to offered work per second.",
                     "minimum": 0
                   },
                   "cheeger": {
@@ -191,10 +191,39 @@
                     },
                     "description": "Optional calibrated request percentages for configured routes.",
                     "maxItems": 16
+                  },
+                  "capacity": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "description": "Select forecast depth and reservation budget without changing workload resource requests.",
+                        "properties": {
+                          "lookaheadStages": {
+                            "type": "integer",
+                            "description": "Missing dependency layers to prepare, bounded by the approved ceiling.",
+                            "minimum": 1,
+                            "maximum": 32
+                          },
+                          "maxPods": {
+                            "type": "integer",
+                            "description": "Maximum outstanding forecast Pods, also bounded by operator configuration.",
+                            "minimum": 1,
+                            "maximum": 1024
+                          }
+                        },
+                        "required": [
+                          "lookaheadStages",
+                          "maxPods"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
-                  "offeredPerSecond",
+                  "threshold",
                   "cheeger"
                 ]
               },
@@ -280,7 +309,7 @@
                 "Observe",
                 "Adapt"
               ],
-              "description": "Observe reports recommendations; Adapt may replace connections."
+              "description": "Observe reports recommendations; Adapt may apply approved parameters."
             },
             "sampleMaxAgeSeconds": {
               "type": "integer",
@@ -290,13 +319,13 @@
             },
             "sustainedSeconds": {
               "type": "integer",
-              "description": "Continuous shortfall duration required before selecting a layout.",
+              "description": "Continuous trigger duration required before selecting a profile.",
               "minimum": 1,
               "maximum": 86400
             },
             "minSamples": {
               "type": "integer",
-              "description": "Distinct reports required during the sustained shortfall.",
+              "description": "Distinct reports required during the sustained trigger.",
               "minimum": 2,
               "maximum": 1000
             },
@@ -308,7 +337,7 @@
             },
             "cooldownSeconds": {
               "type": "integer",
-              "description": "Minimum time between successful topology changes.",
+              "description": "Minimum time between successful profile adjustments.",
               "minimum": 1,
               "maximum": 86400
             },
@@ -392,6 +421,72 @@
                 "Headroom"
               ],
               "description": "Use calibrated tier percentages or measured per-destination sustainable capacity."
+            },
+            "trigger": {
+              "type": "string",
+              "enum": [
+                "Shortfall",
+                "Demand"
+              ],
+              "description": "React to sustained shortfall or prepare on sustained positive selected demand."
+            },
+            "capacityCeiling": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Select forecast depth and reservation budget without changing workload resource requests.",
+                  "properties": {
+                    "lookaheadStages": {
+                      "type": "integer",
+                      "description": "Missing dependency layers to prepare, bounded by the approved ceiling.",
+                      "minimum": 1,
+                      "maximum": 32
+                    },
+                    "maxPods": {
+                      "type": "integer",
+                      "description": "Maximum outstanding forecast Pods, also bounded by operator configuration.",
+                      "minimum": 1,
+                      "maximum": 1024
+                    }
+                  },
+                  "required": [
+                    "lookaheadStages",
+                    "maxPods"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "demand": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Identify an administrator-selected application signal for profile thresholds.",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Exact signal name the authorized reporter must supply.",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "unit": {
+                      "type": "string",
+                      "description": "Exact measurement unit, such as jobs, sessions or bytes-per-second.",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "unit"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -1500,6 +1595,93 @@
                 ]
               }
             },
+            "currentCapacity": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Select forecast depth and reservation budget without changing workload resource requests.",
+                  "properties": {
+                    "lookaheadStages": {
+                      "type": "integer",
+                      "description": "Missing dependency layers to prepare, bounded by the approved ceiling.",
+                      "minimum": 1,
+                      "maximum": 32
+                    },
+                    "maxPods": {
+                      "type": "integer",
+                      "description": "Maximum outstanding forecast Pods, also bounded by operator configuration.",
+                      "minimum": 1,
+                      "maximum": 1024
+                    }
+                  },
+                  "required": [
+                    "lookaheadStages",
+                    "maxPods"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "targetCapacity": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Select forecast depth and reservation budget without changing workload resource requests.",
+                  "properties": {
+                    "lookaheadStages": {
+                      "type": "integer",
+                      "description": "Missing dependency layers to prepare, bounded by the approved ceiling.",
+                      "minimum": 1,
+                      "maximum": 32
+                    },
+                    "maxPods": {
+                      "type": "integer",
+                      "description": "Maximum outstanding forecast Pods, also bounded by operator configuration.",
+                      "minimum": 1,
+                      "maximum": 1024
+                    }
+                  },
+                  "required": [
+                    "lookaheadStages",
+                    "maxPods"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "proposedCapacity": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Select forecast depth and reservation budget without changing workload resource requests.",
+                  "properties": {
+                    "lookaheadStages": {
+                      "type": "integer",
+                      "description": "Missing dependency layers to prepare, bounded by the approved ceiling.",
+                      "minimum": 1,
+                      "maximum": 32
+                    },
+                    "maxPods": {
+                      "type": "integer",
+                      "description": "Maximum outstanding forecast Pods, also bounded by operator configuration.",
+                      "minimum": 1,
+                      "maximum": 1024
+                    }
+                  },
+                  "required": [
+                    "lookaheadStages",
+                    "maxPods"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "computation": {
               "anyOf": [
                 {
@@ -1580,6 +1762,26 @@
                 }
               ]
             },
+            "demandSignal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "demandUnit": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "currentCheeger": {
               "anyOf": [
                 {
@@ -1611,6 +1813,16 @@
               ]
             },
             "completedPerSecond": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "demandValue": {
               "anyOf": [
                 {
                   "type": "number"

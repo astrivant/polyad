@@ -13,21 +13,23 @@ if TYPE_CHECKING:
     from typing import Any
 
 logger = logging.getLogger(__name__)
-BLOCKED = {"Blocked", "Rejected", "Invalid", "Failed", "NoAllowedLayout", "ComputationLimited"}
+BLOCKED = {"Blocked", "Rejected", "Invalid", "Failed", "NoAllowedLayout", "ComputationLimited", "CapacityUnavailable"}
 THROUGHPUT_REASONS = {
     "WaitingForSample": "Waiting for a fresh application throughput report.",
+    "WaitingForDemandSignal": "Waiting for the administrator-selected demand signal with its exact configured name and unit.",
     "WaitingForTrafficSample": "Waiting for complete current replica measurements with usable capacity; traffic percentages are retained.",
-    "StaleSample": "The throughput report is stale or targets a different graph revision; no layout change is allowed.",
-    "Stabilizing": "Application demand must remain sustained before a layout change is considered.",
-    "Satisfied": "Application throughput meets the selected demand tier; connections are retained.",
-    "BelowDemandThreshold": "Demand is below the first configured tier; connections are retained.",
-    "ThroughputShortfall": "Cheeger and traffic targets are met despite the throughput shortfall; routing and connections are retained.",
+    "StaleSample": "The throughput report is stale or targets a different graph revision; no profile change is allowed.",
+    "Stabilizing": "Application demand must remain sustained before a profile change is considered.",
+    "Satisfied": "The current demand needs no approved parameter change.",
+    "BelowDemandThreshold": "Demand is below the first configured tier; current parameters are retained.",
+    "ThroughputShortfall": "The selected profile has no remaining approved adjustment; application throughput is still below demand.",
     "ComputationLimited": "Cheeger computation could not certify a layout within its configured budgets; no change is allowed.",
     "NoAllowedLayout": "No approved layout satisfies both the throughput target and the current graph constraints.",
-    "Recommended": "Approved connection or traffic changes meet the target; Observe mode leaves the graph unchanged.",
+    "Recommended": "An approved connection, traffic or capacity profile meets the target; Observe mode leaves the graph unchanged.",
+    "CapacityUnavailable": "The selected capacity profile requires enabled forecasting and must fit the operator's Pod ceiling.",
     "TemporaryConnectionsActive": "Active temporary connections defer the proposed layout change.",
     "CoolingDown": "The cooldown or rolling change budget defers the proposed layout change.",
-    "Applied": "Applied approved connection or traffic changes after fresh graph rules and adaptation checks passed.",
+    "Applied": "Applied an approved parameter profile after fresh graph rules and adaptation checks passed.",
 }
 decision_context: ContextVar[dict[str, Any] | None] = ContextVar("decision_context", default=None)
 
@@ -125,7 +127,7 @@ def status_decisions(obj: dict[str, Any], values: dict[str, Any]) -> None:
             if not state:
                 continue
             fields = (
-                ("phase", "recommendedLayout", "mode", "target", "proposedTraffic")
+                ("phase", "recommendedLayout", "mode", "target", "proposedTraffic", "proposedCapacity", "demandSignal", "demandUnit")
                 if section == "throughput"
                 else ("phase", "ready", "failed", "completed")
             )
@@ -133,11 +135,14 @@ def status_decisions(obj: dict[str, Any], values: dict[str, Any]) -> None:
                 continue
             phase = state.get("phase") or ("Failed" if state.get("failed") else "Ready" if state.get("ready") else "Waiting")
             attributes: dict[str, Any] = {"polyad.decision.section": section, "polyad.node.name": name, "polyad.status.phase": phase}
-            for field in ("mode", "recommendedLayout", "currentCheeger", "proposedCheeger"):
+            for field in ("mode", "recommendedLayout", "currentCheeger", "proposedCheeger", "demandSignal", "demandUnit", "demandValue"):
                 if state.get(field) is not None:
                     attributes[f"polyad.throughput.{field}"] = state[field]
             if section == "throughput":
                 attributes.update({f"polyad.throughput.target.{field}": value for field, value in (state.get("target") or {}).items()})
+                attributes.update(
+                    {f"polyad.throughput.capacity.{field}": value for field, value in (state.get("proposedCapacity") or {}).items()}
+                )
                 for route in state.get("proposedTraffic", []):
                     for destination in route["destinations"]:
                         attributes[f"polyad.traffic.{route['name']}.{destination['target']}.weight"] = destination["weight"]

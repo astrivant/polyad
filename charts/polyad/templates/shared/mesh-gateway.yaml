@@ -36,6 +36,10 @@ spec:
             exact: /v1/events/config
         - uri:
             exact: /v1/events/schema
+        {{- if .Values.events.rebalance.enabled }}
+        - uri:
+            exact: /v1/events/endpoints
+        {{- end }}
         {{- if .Values.events.websockets.enabled }}
         - uri:
             exact: /v1/events/ws

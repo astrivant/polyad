@@ -15,7 +15,7 @@ from attrs import NOTHING, fields, has
 
 from polyad_types.event_codec import CURSOR_PATTERN
 from polyad_types.event_models import EVENT_MODELS
-from polyad_types.events import EventStreamSettings
+from polyad_types.events import EventRebalanceSettings, EventStreamSettings
 
 if TYPE_CHECKING:
     from typing import Any
@@ -74,6 +74,7 @@ def event_schema() -> dict[str, Any]:
 
     variants = [lower(model) for model in dict.fromkeys(EVENT_MODELS.values())]
     lower(EventStreamSettings)
+    lower(EventRebalanceSettings)
     for name in ("GraphEvent", "TopologyEvent", "ConnectionEvent"):
         definitions[name]["properties"]["id"]["pattern"] = f"^{CURSOR_PATTERN}$"
     for model in EVENT_MODELS.values():

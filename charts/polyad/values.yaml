@@ -427,6 +427,34 @@ events:
   readBatchSize: 64
   ## @param events.pollIntervalSeconds [number] Empty-stream polling delay in seconds (0.05-5); lower values reduce idle delivery latency at the cost of more cache reads
   pollIntervalSeconds: 1
+  ## @param events.rebalance [object] Optional copulses move event subscriptions between operator replicas while retaining application replay checkpoints
+  rebalance:
+    ## @param events.rebalance.enabled [boolean] Enable authenticated endpoint discovery, rolling reconnect controls and preStop draining; clients opt in with subscribe(rebalance=True)
+    enabled: false
+    ## @param events.rebalance.routing [string] Service keeps the configured authority and delegates routing to Kubernetes or Istio; Direct lets reachable in-cluster clients round-robin discovered Pod IPs while retaining Host and TLS identity
+    routing: Service
+    ## @param events.rebalance.refreshSeconds [number] Refresh ready nonterminating event Pods every 1-60 seconds; discovery rejects membership older than three refresh intervals
+    refreshSeconds: 5
+    ## @param events.rebalance.automatic [boolean] Schedule a reconnect roll when the ready operator membership changes; manual Service annotation triggers remain available when false
+    automatic: true
+    ## @param events.rebalance.batchPercent [integer] Schedule at most this percentage of each replica's initial subscribers per batch (1-100, rounded up to one); this is a per-replica pacing limit
+    batchPercent: 10
+    ## @param events.rebalance.intervalSeconds [number] Separate ordinary batches by 0.1-30 seconds and jitter reconnections; termination compresses batches to fit drainSeconds
+    intervalSeconds: 2
+    ## @param events.rebalance.cooldownSeconds [number] Coalesce membership and manual triggers behind this per-replica cooldown (1-3600 seconds); termination drains take precedence
+    cooldownSeconds: 60
+    ## @param events.rebalance.drainSeconds [number] Keep the process alive for 5-300 seconds after preStop closes subscription admission; terminationGracePeriodSeconds must also allow 35 seconds for shutdown plus another drainSeconds when the native Istio sidecar is enabled
+    drainSeconds: 20
+    ## @param events.rebalance.maxConnectionSeconds [number] Optional connection age limit (0-86400 seconds); zero disables periodic rotation, otherwise use at least cooldownSeconds
+    maxConnectionSeconds: 0
+  ## @param events.istio [object] Optional mesh routing of new subscriptions; copulses remain responsible for moving established streams
+  istio:
+    ## @param events.istio.enabled [boolean] Render an events DestinationRule; requires mesh.operator.enabled, event rebalancing and Service routing
+    enabled: false
+    ## @param events.istio.loadBalancer [string] LEAST_REQUEST favors replicas with fewer outstanding requests; ROUND_ROBIN cycles through ready replicas when establishing new subscriptions
+    loadBalancer: LEAST_REQUEST
+    ## @param events.istio.warmupSeconds [number] Gradually introduce new ready endpoints over this many seconds (1-300); affects new requests, never moves an existing WebSocket
+    warmupSeconds: 30
 
 ## @section Scheduler metrics
 ## @param metrics [object] Settings for metrics.

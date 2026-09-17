@@ -469,6 +469,54 @@
         },
         "pollIntervalSeconds": {
           "$ref": "values.schema.json#/properties/events/properties/pollIntervalSeconds"
+        },
+        "rebalance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/enabled"
+            },
+            "routing": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/routing"
+            },
+            "refreshSeconds": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/refreshSeconds"
+            },
+            "automatic": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/automatic"
+            },
+            "batchPercent": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/batchPercent"
+            },
+            "intervalSeconds": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/intervalSeconds"
+            },
+            "cooldownSeconds": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/cooldownSeconds"
+            },
+            "drainSeconds": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/drainSeconds"
+            },
+            "maxConnectionSeconds": {
+              "$ref": "values.schema.json#/properties/events/properties/rebalance/properties/maxConnectionSeconds"
+            }
+          }
+        },
+        "istio": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/events/properties/istio/properties/enabled"
+            },
+            "loadBalancer": {
+              "$ref": "values.schema.json#/properties/events/properties/istio/properties/loadBalancer"
+            },
+            "warmupSeconds": {
+              "$ref": "values.schema.json#/properties/events/properties/istio/properties/warmupSeconds"
+            }
+          }
         }
       }
     },

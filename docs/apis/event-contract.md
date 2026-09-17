@@ -59,6 +59,7 @@ flowchart TD
     envelope --> connectionEvent["ConnectionEvent · connection"]
     envelope --> controlEvent["ControlEvent · reset or unavailable"]
     envelope --> heartbeatEvent["HeartbeatEvent · heartbeat"]
+    envelope --> copulseEvent["CopulseEvent · copulse<br/>Reconnect delay and membership revision<br/>Empty cursor"]
     graphEvent --> graphData["GraphObservation<br/>identity, lifecycle, owners, audit, resources"]
     topologyEvent --> topologyData["TopologyObservation<br/>identity, revision, snapshot, counts"]
     connectionEvent --> connectionData["ConnectionObservation<br/>graph, receipt, ancestry, optional participant"]
@@ -76,6 +77,11 @@ flowchart TD
 | `reset` | `ControlEvent` | Refresh current topology and its replay cursor | Empty |
 | `unavailable` | `ControlEvent` | Reconnect explicitly from the last processed cursor | Empty |
 | `heartbeat` | `HeartbeatEvent` | Empty keepalive object, WebSocket only | Empty |
+| `copulse` | `CopulseEvent` | Rediscover the configured operator, wait `retryAfterSeconds` and reconnect; `revision` identifies operator membership | Empty |
+
+Copulses are optional [connection rebalancing controls](../operations/event-rebalancing.md).
+They contain no destination URL and do not acknowledge an application observation.
+`EventRebalanceSettings` exposes the administrator's typed pacing policy.
 
 SSE carries `id`, `event` and JSON `data` fields. A WebSocket text frame carries
 one JSON object containing those same three properties. SSE comments and its

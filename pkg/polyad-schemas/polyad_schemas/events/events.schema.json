@@ -18,6 +18,9 @@
     },
     {
       "$ref": "#/$defs/HeartbeatEvent"
+    },
+    {
+      "$ref": "#/$defs/CopulseEvent"
     }
   ],
   "$defs": {
@@ -896,6 +899,60 @@
       "additionalProperties": false,
       "properties": {}
     },
+    "CopulseEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/Copulse",
+          "description": "Reconnection instruction without destinations or credentials."
+        },
+        "event": {
+          "type": "string",
+          "enum": [
+            "copulse"
+          ],
+          "description": "Transport control discriminator."
+        },
+        "id": {
+          "type": "string",
+          "enum": [
+            ""
+          ],
+          "description": "Reconnection never acknowledges an application event."
+        }
+      },
+      "required": [
+        "id",
+        "event",
+        "data"
+      ]
+    },
+    "Copulse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Membership change, administrative roll, stream age or replica drain."
+        },
+        "revision": {
+          "type": "string",
+          "description": "Observed operator membership revision; never a graph revision."
+        },
+        "retryAfterSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30,
+          "description": "Bounded delay before rediscovery, spreading reconnect load."
+        }
+      },
+      "required": [
+        "reason",
+        "revision",
+        "retryAfterSeconds"
+      ]
+    },
     "EventStreamSettings": {
       "type": "object",
       "additionalProperties": false,
@@ -917,6 +974,64 @@
           "minimum": 0.05,
           "maximum": 5,
           "description": "Delay before another empty-stream read; also bounds idle heartbeat cadence."
+        }
+      }
+    },
+    "EventRebalanceSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable endpoint discovery and rolling connection controls."
+        },
+        "routing": {
+          "type": "string",
+          "enum": [
+            "Service",
+            "Direct"
+          ],
+          "description": "Delegate new connections to the Service/mesh or let clients choose Pod IPs."
+        },
+        "refreshSeconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Interval for refreshing ready operator membership."
+        },
+        "automatic": {
+          "type": "boolean",
+          "description": "Roll existing subscribers when ready membership changes."
+        },
+        "batchPercent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum percentage of the initial local subscribers scheduled per batch."
+        },
+        "intervalSeconds": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 30,
+          "description": "Delay between batches, also used to spread their reconnects."
+        },
+        "cooldownSeconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3600,
+          "description": "Minimum interval between ordinary rolls on each replica."
+        },
+        "drainSeconds": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 300,
+          "description": "Time reserved before process termination to evacuate subscriptions."
+        },
+        "maxConnectionSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400,
+          "description": "Optional maximum stream age; zero disables periodic rotation."
         }
       }
     }

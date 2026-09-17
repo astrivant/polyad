@@ -9,6 +9,81 @@ from datetime import datetime
 from typing import Literal
 
 from attrs import field, frozen
+from cattrs.gen import make_dict_structure_fn, override
+
+from polyad_types.codec import converter
+
+
+@frozen
+class DemandSource:
+    """
+    Identify an administrator-selected application signal for profile thresholds.
+
+    Attributes:
+        name (str): Exact signal name the authorized reporter must supply.
+        unit (str): Exact measurement unit, such as jobs, sessions or bytes-per-second.
+    """
+
+    name: str = field(metadata={"schema": {"minLength": 1, "maxLength": 64}})
+    unit: str = field(metadata={"schema": {"minLength": 1, "maxLength": 64}})
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Require bounded explicit signal identities.
+
+        Returns:
+            None: No return value.
+        """
+        if any(not isinstance(value, str) or not value.strip() or len(value) > 64 for value in (self.name, self.unit)):
+            raise ValueError("demand signal name and unit must be nonempty strings of at most 64 characters")
+
+
+@frozen
+class DemandSample:
+    """
+    Report the selected signal under the enclosing throughput report's identity and timestamp.
+
+    Attributes:
+        name (str): Signal name matching the administrator's demand source.
+        unit (str): Measurement unit matching that source.
+        value (float): Finite nonnegative measured demand; zero never activates a profile.
+    """
+
+    name: str = field(metadata={"schema": {"minLength": 1, "maxLength": 64}})
+    unit: str = field(metadata={"schema": {"minLength": 1, "maxLength": 64}})
+    value: float = field(metadata={"schema": {"minimum": 0}})
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject ambiguous units and invalid measurement values.
+
+        Returns:
+            None: No return value.
+        """
+        DemandSource(self.name, self.unit)
+        if type(self.value) not in (int, float) or not math.isfinite(self.value) or self.value < 0:
+            raise ValueError("demand value must be a finite nonnegative number")
+
+
+converter.register_structure_hook(
+    DemandSample,
+    make_dict_structure_fn(
+        DemandSample,
+        converter,
+        name=override(struct_hook=lambda value, _: value),
+        unit=override(struct_hook=lambda value, _: value),
+        value=override(struct_hook=lambda value, _: value),
+    ),
+)
+converter.register_structure_hook(
+    DemandSource,
+    make_dict_structure_fn(
+        DemandSource,
+        converter,
+        name=override(struct_hook=lambda value, _: value),
+        unit=override(struct_hook=lambda value, _: value),
+    ),
+)
 
 
 @frozen
@@ -64,6 +139,7 @@ class ThroughputSample:
         completedPerSecond (float): Successfully completed work rate over the same window.
         kind (Literal['Graph', 'PolyGraph']): Target boundary kind.
         traffic (tuple[TrafficSample, ...]): Per-destination measurements from the same window for Headroom routing.
+        demand (DemandSample | None): Optional configured signal, measured under this report's clock and graph revision.
     """
 
     graph: str
@@ -75,6 +151,7 @@ class ThroughputSample:
     completedPerSecond: float
     kind: Literal["Graph", "PolyGraph"] = "Graph"
     traffic: tuple[TrafficSample, ...] = field(default=(), metadata={"schema": {"maxItems": 256}})
+    demand: DemandSample | None = None
 
     def __attrs_post_init__(self) -> None:
         """

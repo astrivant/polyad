@@ -5,6 +5,7 @@ Decode bounded WebSocket observations without importing the transport for SSE cl
 from __future__ import annotations
 
 import json
+import socket
 from typing import TYPE_CHECKING
 
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK, InvalidStatus
@@ -15,6 +16,7 @@ from polyad_types.events import Event, EventTooLarge
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from threading import Event as StopEvent
 
 
 class _NoRedirect(reconnect):
@@ -22,7 +24,15 @@ class _NoRedirect(reconnect):
         return exc
 
 
-def events(uri: str, headers: dict[str, str], timeout: float, max_bytes: int) -> Iterator[Event]:
+def events(
+    uri: str,
+    headers: dict[str, str],
+    timeout: float,
+    max_bytes: int,
+    *,
+    endpoint: tuple[str, int] | None = None,
+    stop_event: StopEvent | None = None,
+) -> Iterator[Event]:
     """
     Consume one read-only subscription, leaving reconnection and checkpointing to the caller.
 
@@ -31,13 +41,20 @@ def events(uri: str, headers: dict[str, str], timeout: float, max_bytes: int) ->
         headers (dict[str, str]): Fresh authorization, identity and optional replay cursor.
         timeout (float): Maximum wait for handshake or next event/heartbeat.
         max_bytes (int): Validated application receive budget for one complete JSON frame.
+        endpoint (tuple[str, int] | None): Validated discovery target; keeps the URI's authority and TLS server name.
+        stop_event (StopEvent | None): Optional subscription cancellation, checked on each heartbeat or frame.
 
     Yields:
         Event: Validated observation or recovery control, excluding transport heartbeats.
     """
+    connection_socket = None
     try:
+        if endpoint is not None:
+            connection_socket = socket.create_connection(endpoint, timeout=timeout)
         with _NoRedirect(
             uri,
+            sock=connection_socket,
+            proxy=None if connection_socket is not None else True,
             additional_headers=headers,
             open_timeout=timeout,
             close_timeout=5,
@@ -45,7 +62,7 @@ def events(uri: str, headers: dict[str, str], timeout: float, max_bytes: int) ->
             max_queue=1,
             compression=None,
         ) as connection:
-            while True:
+            while stop_event is None or not stop_event.is_set():
                 try:
                     raw = connection.recv(timeout=timeout)
                 except ConnectionClosedOK:
@@ -74,3 +91,6 @@ def events(uri: str, headers: dict[str, str], timeout: float, max_bytes: int) ->
         except (ValueError, UnicodeDecodeError):
             body = {"error": "non-JSON error response"}
         raise APIError(error.response.status_code, body if isinstance(body, dict) else {"error": body}) from None
+    finally:
+        if connection_socket is not None:
+            connection_socket.close()

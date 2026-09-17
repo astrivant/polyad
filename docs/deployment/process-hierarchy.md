@@ -185,6 +185,13 @@ SSE and WebSocket subscriptions retain an HTTP worker and repeatedly bridge read
 async event store. OpenTelemetry context follows the request bridge in-process;
 queued background reconciliation starts a separate trace.
 
+Optional [event rebalancing](../operations/event-rebalancing.md) adds one async
+membership poller on the existing operator loop. HTTP workers consult a bounded
+thread-safe schedule to emit copulses. The chart's preStop command briefly starts
+a Python process in the same container to signal draining and wait before
+SIGTERM; it starts no HTTP listener. Client subscriptions reconnect on the
+application's chosen thread.
+
 ## Deployment roles and remote workers
 
 | Deployment | Runtime responsibilities |
