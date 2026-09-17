@@ -43,7 +43,10 @@ class Application(Flask):
             active.set_attribute("http.route", route)
             active.set_attribute("polyad.api.family", request.blueprint or "unmatched")
             response = super().full_dispatch_request()
-            active.set_attribute("http.response.status_code", response.status_code)
+            active.set_attribute(
+                "http.response.status_code",
+                101 if request.environ.get("polyad.websocket") and response.status_code == 200 else response.status_code,
+            )
             if response.status_code >= 500:
                 active.set_status(StatusCode.ERROR)
             return response

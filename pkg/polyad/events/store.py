@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import os
 import re
 import time
 from typing import TYPE_CHECKING, cast
@@ -14,13 +16,17 @@ from urllib.parse import urlencode
 from redis.exceptions import ResponseError
 
 from polyad.cache import Cache
+from polyad.events.settings import settings_from_environment
 from polyad.events.topology import neighbors
 from polyad.lua import script
+from polyad_types.events import Event, EventTooLarge
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from typing import Any
+
+    from polyad_types.events import EventStreamSettings
 
 PUBLISH = script("events/publish.lua")
 
@@ -30,6 +36,7 @@ READ = script("events/read.lua")
 PUBLISH_TOPOLOGY = script("events/publish-topology.lua")
 
 SNAPSHOT = script("events/snapshot.lua")
+logger = logging.getLogger(__name__)
 
 
 class TopologyReplaced(ValueError):
@@ -55,10 +62,11 @@ class EventStore:
         namespace: str,
         *,
         visible: Callable[[dict[str, Any]], Awaitable[bool]],
-        retention: int = 10000,
+        retention: int | None = None,
         cluster: str | None = None,
         ancestry: Callable[[dict[str, Any]], Awaitable[list[dict[str, str]]]] | None = None,
         archive: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
+        settings: EventStreamSettings | None = None,
     ) -> None:
         """
         Configure the namespace stream and maximum retained event count.
@@ -67,12 +75,15 @@ class EventStore:
             url (str): Shared Redis or Dragonfly URL.
             namespace (str): Namespace visible to subscribers.
             visible (Callable[[dict[str, Any]], Awaitable[bool]]): Required graph-family visibility check before publication.
-            retention (int): Maximum retained observations and deduplication identities.
+            retention (int | None): Maximum retained observations; omitted uses the chart/environment setting.
             cluster (str | None): Remote stream identity when reports are held at the root.
             ancestry (Callable[[dict[str, Any]], Awaitable[list[dict[str, str]]]] | None): Verified graph ownership reader.
             archive (Callable[[dict[str, Any]], Awaitable[None]] | None): Optional durable archive of approved event payloads.
+            settings (EventStreamSettings | None): Event budgets; omitted uses the chart/environment settings.
         """
-        if not 100 <= retention <= 100000:
+        self.settings = settings if settings is not None else settings_from_environment()
+        retention = int(os.environ.get("POLYAD_EVENTS_RETENTION", "10000")) if retention is None else retention
+        if type(retention) is not int or not 100 <= retention <= 100000:
             raise ValueError("event retention must be between 100 and 100000")
         self.cache = Cache(url, namespace)
         # Separate approved public observations from older, unfiltered replay and
@@ -83,6 +94,26 @@ class EventStore:
         self.cluster = cluster
         self.ancestry = ancestry
         self.archive = archive
+
+    def _serialize(self, payload: dict[str, Any]) -> str:
+        kind = payload["type"] if payload["type"] in {"topology", "connection"} else "graph"
+        # Redis assigns the cursor after admission. Reserve its maximum supported width.
+        event = Event("9" * 20 + "-" + "9" * 20, kind, payload)
+        event.typed()
+        encoded = json.dumps(payload, separators=(",", ":"), allow_nan=False)
+        try:
+            event.encode("sse", self.settings.maxEventBytes, raw=encoded)
+            event.encode("websocket", self.settings.maxEventBytes)
+        except EventTooLarge:
+            logger.warning(
+                "Rejected oversized %s event for %s/%s; maximum serialized event size is %d bytes",
+                kind,
+                payload.get("kind", "graph"),
+                payload.get("name", payload.get("graph", {}).get("name", "unknown")),
+                self.settings.maxEventBytes,
+            )
+            raise
+        return encoded
 
     async def publish(self, obj: dict[str, Any], *, topology: dict[str, Any] | None = None) -> None:
         """
@@ -136,12 +167,13 @@ class EventStore:
                 "name": obj["spec"]["graph"],
                 "uid": obj["spec"]["graphUid"],
             }
+        encoded = self._serialize(payload)
         if self.archive is not None:
             await self.archive(payload)
         await cast(
             "Awaitable[Any]",
             self.cache.client.eval(
-                PUBLISH, 2, self.key, self.key + ":versions", meta["uid"], meta["resourceVersion"], json.dumps(payload), str(self.retention)
+                PUBLISH, 2, self.key, self.key + ":versions", meta["uid"], meta["resourceVersion"], encoded, str(self.retention)
             ),
         )
         if topology is not None:
@@ -160,6 +192,7 @@ class EventStore:
                 "nodeCount": len(topology["nodes"]),
                 "connectionCount": len(topology["connections"]),
             }
+            encoded = self._serialize(event)
             if self.archive is not None:
                 await self.archive(event)
             await cast(
@@ -172,7 +205,7 @@ class EventStore:
                     f"{obj['kind']}/{meta['name']}",
                     json.dumps(snapshot, separators=(",", ":")),
                     topology["revision"],
-                    json.dumps(event),
+                    encoded,
                     str(self.retention),
                 ),
             )
@@ -203,6 +236,7 @@ class EventStore:
             "ancestry": ancestry,
             "connection": ConnectionStore.receipt(receipt),
         }
+        encoded = self._serialize(payload)
         if self.archive is not None:
             await self.archive(payload)
         await cast(
@@ -214,7 +248,7 @@ class EventStore:
                 self.key + ":versions",
                 receipt["metadata"]["uid"] + ":" + participant,
                 receipt["metadata"]["resourceVersion"],
-                json.dumps(payload),
+                encoded,
                 str(self.retention),
             ),
         )
@@ -279,13 +313,13 @@ class EventStore:
         if not re.fullmatch(r"(?:0|[1-9][0-9]{0,19})-(?:0|[1-9][0-9]{0,19})", cursor):
             raise ValueError("invalid event cursor")
         try:
-            entries = await cast("Awaitable[Any]", self.cache.client.eval(READ, 1, self.key, cursor))
+            entries = await cast("Awaitable[Any]", self.cache.client.eval(READ, 1, self.key, cursor, str(self.settings.readBatchSize)))
         except ResponseError as error:
             if "CURSOR_EXPIRED" in str(error):
                 raise CursorExpired("event cursor expired") from error
             raise
         if not entries:
-            await asyncio.sleep(1)
+            await asyncio.sleep(self.settings.pollIntervalSeconds)
         return [(identity, fields[1]) for identity, fields in entries]
 
     async def close(self) -> None:

@@ -303,6 +303,12 @@
               "$ref": "values.schema.json#/properties/dragonfly/properties/ha/properties/topologyKey"
             }
           }
+        },
+        "nodeSelector": {
+          "$ref": "values.schema.json#/properties/dragonfly/properties/nodeSelector"
+        },
+        "tolerations": {
+          "$ref": "values.schema.json#/properties/dragonfly/properties/tolerations"
         }
       }
     },
@@ -328,6 +334,12 @@
           "properties": {
             "extraArgs": {
               "$ref": "values.schema.json#/properties/dragonflyOperator/properties/manager/properties/extraArgs"
+            },
+            "nodeSelector": {
+              "$ref": "values.schema.json#/properties/dragonflyOperator/properties/manager/properties/nodeSelector"
+            },
+            "tolerations": {
+              "$ref": "values.schema.json#/properties/dragonflyOperator/properties/manager/properties/tolerations"
             }
           }
         },
@@ -439,6 +451,24 @@
         },
         "maxConnections": {
           "$ref": "values.schema.json#/properties/events/properties/maxConnections"
+        },
+        "websockets": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/events/properties/websockets/properties/enabled"
+            }
+          }
+        },
+        "maxEventBytes": {
+          "$ref": "values.schema.json#/properties/events/properties/maxEventBytes"
+        },
+        "readBatchSize": {
+          "$ref": "values.schema.json#/properties/events/properties/readBatchSize"
+        },
+        "pollIntervalSeconds": {
+          "$ref": "values.schema.json#/properties/events/properties/pollIntervalSeconds"
         }
       }
     },
@@ -1419,6 +1449,12 @@
               "$ref": "values.schema.json#/properties/kedaOperator/properties/crds/properties/install"
             }
           }
+        },
+        "nodeSelector": {
+          "$ref": "values.schema.json#/properties/kedaOperator/properties/nodeSelector"
+        },
+        "tolerations": {
+          "$ref": "values.schema.json#/properties/kedaOperator/properties/tolerations"
         }
       }
     }

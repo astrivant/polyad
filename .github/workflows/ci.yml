@@ -11,6 +11,20 @@ on:
 permissions:
   contents: read
 jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.4
+      - run: terraform -chdir=terraform fmt -check -recursive
+      - run: terraform -chdir=terraform init -backend=false -lockfile=readonly
+      - run: terraform -chdir=terraform validate
+      - name: Test with mocked providers (no cloud credentials or resources)
+        run: terraform -chdir=terraform test
   python:
     runs-on: ubuntu-latest
     services:

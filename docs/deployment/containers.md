@@ -106,6 +106,7 @@ gateway or telemetry components.
 | Chart configuration | Runtime import behavior |
 | --- | --- |
 | `api.enabled`, `events.enabled`, `connections.enabled`, `metrics.enabled` | Load the HTTP transport only if this component serves a listener; import each endpoint builder only when registering that family. |
+| `events.websockets.enabled` with `events.enabled` | Import Hypercorn only when starting a component that serves WebSocket events; it replaces Waitress for all that process's listeners and retains the existing Flask application. The image includes `websockets` and Hypercorn dependencies. |
 | `events.enabled` or `postgresql.events.enabled` with PostgreSQL enabled | Enable executor event publication through `POLYAD_EVENT_PUBLICATION_ENABLED`, independently of which component serves streams. |
 | `postgresql.enabled` | Load the state store and PostgreSQL drivers when enabled. |
 | `authentication.storage.enabled` | The projected database credential enables the authentication store when named keys are configured. State storage can remain disabled. |

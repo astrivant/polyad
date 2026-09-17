@@ -11,6 +11,7 @@ Its only dependencies are attrs, cattrs and typing-extensions.
 - [Example](#example)
 - [Public models](#public-models)
 - [Serialization](#serialization)
+- [Event syntax trees and schemas](#event-syntax-trees-and-schemas)
 - [Client integration](#client-integration)
 - [Publishing](#publishing)
 
@@ -66,7 +67,7 @@ assert rule.cheeger == Cheeger(minimum=0.5)
 | `polyad_types.throughput` | Application throughput and per-destination capacity reports for Soul searching |
 | `polyad_types.activation`, `capacity`, `storage` | Activation, advance capacity and persistence configuration |
 | `polyad_types.requests` | Composition, activation and temporary connection requests |
-| `polyad_types.events` | Event stream observations |
+| `polyad_types.events`, `event_models` | Event envelopes, typed payload trees, stream settings and the packaged JSON Schema |
 
 Top-level `Graph`, `PolyGraph` and `Daemon` are Kubernetes resource envelopes.
 `Topology` describes a Graph's specification; `polyad_types.topology.PolyGraph`
@@ -86,6 +87,19 @@ preserving unmodeled native fields and checking kind and API version. Configurat
 and request decoding rejects unknown fields. These checks validate the supplied
 document; live graph admission, Cheeger computation and reconciliation run in the
 operator.
+
+## Event syntax trees and schemas
+
+Import `EventAST`, `GraphEvent`, `TopologyEvent`, `ConnectionEvent`, `ControlEvent`
+and `HeartbeatEvent` from `polyad_types`. `decode_event(document)` validates and
+constructs the matching AST; `Event.typed()` does the same for client observations.
+`to_dict(ast)` serializes it. Nested payload models live in `polyad_types.event_models`.
+
+`event_schema()` reads the shipped Draft 2020-12 JSON Schema without an operator
+import or a network request. `EventStreamSettings` defines configurable event byte,
+batch and polling budgets, and `EventTooLarge` identifies size rejection. See the
+[event contract and Helm tuning guide](https://github.com/astrivant/polyad/blob/main/docs/apis/event-contract.md)
+for each tree, validated examples and transport framing.
 
 ## Client integration
 

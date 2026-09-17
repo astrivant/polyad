@@ -17,7 +17,17 @@ from polyad_types.discovery import AccessMode as AccessMode
 from polyad_types.discovery import AtlasAccess as AtlasAccess
 from polyad_types.discovery import ServiceAccess as ServiceAccess
 from polyad_types.discovery import ServiceEndpoint as ServiceEndpoint
+from polyad_types.event_codec import decode_event as decode_event
+from polyad_types.event_models import ConnectionEvent as ConnectionEvent
+from polyad_types.event_models import ControlEvent as ControlEvent
+from polyad_types.event_models import EventAST as EventAST
+from polyad_types.event_models import GraphEvent as GraphEvent
+from polyad_types.event_models import HeartbeatEvent as HeartbeatEvent
+from polyad_types.event_models import TopologyEvent as TopologyEvent
 from polyad_types.events import Event as Event
+from polyad_types.events import EventStreamSettings as EventStreamSettings
+from polyad_types.events import EventTooLarge as EventTooLarge
+from polyad_types.events import event_schema as event_schema
 from polyad_types.network import MeshPeer as MeshPeer
 from polyad_types.network import NetworkAccess as NetworkAccess
 from polyad_types.network import NetworkPeer as NetworkPeer

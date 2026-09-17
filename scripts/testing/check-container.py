@@ -47,6 +47,9 @@ def main() -> None:
     assert "XPENDING" in script("coordination/backlog.lua")
     assert "ZREMRANGEBYSCORE" in script("authentication/acquire.lua")
     assert "CURSOR_EXPIRED" in script("events/read.lua")
+    from polyad_types.events import event_schema
+
+    assert "TopologyEvent" in event_schema()["$defs"]
     for dependency in (
         "kopf",
         "kubernetes",
@@ -57,6 +60,8 @@ def main() -> None:
         "flask",
         "numpy",
         "waitress",
+        "websockets",
+        "hypercorn",
         "psycopg",
         "psycopg-binary",
         "psycopg-pool",
@@ -74,6 +79,8 @@ def main() -> None:
     from polyad.operator.lifecycle import handlers  # noqa: F401
 
     for module in (
+        "hypercorn",
+        "websockets",
         "flask",
         "flask_httpauth",
         "flask_limiter",

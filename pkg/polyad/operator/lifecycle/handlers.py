@@ -154,6 +154,7 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
             namespace,
             credential_token("EVENTS"),
             connections=int(os.environ.get("POLYAD_EVENTS_CONNECTIONS", "16")),
+            websockets=os.environ.get("POLYAD_EVENTS_WEBSOCKETS_ENABLED", "false").lower() == "true",
             clusters={name: worker.events for name, worker in root_plane.workers.items()} if root_plane else None,
         )
     if serves("METRICS"):

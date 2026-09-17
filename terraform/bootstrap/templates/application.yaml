@@ -1,0 +1,91 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: polyad
+  namespace: {{ .Release.Namespace }}
+spec:
+  description: Polyad and its cluster-level operator dependencies in the load-test cluster
+  sourceRepos:
+    - https://github.com/astrivant/polyad.git
+  destinations:
+    - namespace: polyad
+      server: https://kubernetes.default.svc
+    # KEDA's aggregated metrics API needs the extension-apiserver reader binding.
+    - namespace: kube-system
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: polyad
+  namespace: {{ .Release.Namespace }}
+  # No deletion finalizer: Terraform can tear down this disposable cluster
+  # without blocking on graph finalizers after the operator is removed.
+spec:
+  project: polyad
+  source:
+    repoURL: https://github.com/astrivant/polyad.git
+    targetRevision: {{ .Values.revision | quote }}
+    path: charts/polyad
+    helm:
+      releaseName: polyad
+      skipTests: true
+      valueFiles: {{ .Values.valueFiles | toJson }}
+      values: |
+        {{- .Values.values | nindent 8 }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: polyad
+  # Ignore only counts controlled by the corresponding autoscaling resources.
+  # Git still owns images, resource requests, bounds, rules and graph structure.
+  ignoreDifferences:
+    - group: polyad.astrivant.com
+      kind: ReplicaGroup
+      name: polyad-gateway
+      namespace: polyad
+      jsonPointers: [/spec/replicas]
+    - group: polyad.astrivant.com
+      kind: ReplicaGroup
+      name: polyad-executor
+      namespace: polyad
+      jsonPointers: [/spec/replicas]
+    - group: polyad.astrivant.com
+      kind: ReplicaGroup
+      name: polyad-telemetry
+      namespace: polyad
+      jsonPointers: [/spec/replicas]
+    - group: polyad.astrivant.com
+      kind: DragonflyPool
+      name: polyad-queue
+      namespace: polyad
+      jsonPointers: [/spec/replicas]
+    - group: dragonflydb.io
+      kind: Dragonfly
+      name: polyad-queue
+      namespace: polyad
+      jsonPointers: [/spec/replicas]
+    - group: apps
+      kind: Deployment
+      name: polyad-polyad
+      namespace: polyad
+      managedFieldsManagers: [kube-controller-manager]
+  syncPolicy:
+    {{- if .Values.automatedSync }}
+    automated:
+      prune: true
+      selfHeal: true
+    {{- end }}
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

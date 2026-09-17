@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Overlay on your API-key/discovery configuration; this does not broaden grants.
+# Contract and tuning: ../../docs/apis/event-contract.md
+## @param events [object] Public observations, consent notifications and bounded replay; snapshots retain separate response limits.
+events:
+  ## @param events.enabled [boolean] Serve authenticated SSE and event schema/settings endpoints on port 8091.
+  enabled: true
+  ## @param events.maxEventBytes [integer] Serialized UTF-8 event budget, including framing, from 1024 to 16777216 bytes; keep client max_event_bytes at least this large when its memory budget permits.
+  maxEventBytes: 1048576
+  ## @param events.readBatchSize [integer] Records per replay read from 1 to 256; larger batches cost more memory per subscriber.
+  readBatchSize: 64
+  ## @param events.pollIntervalSeconds [number] Empty-stream delay from 0.05 to 5 seconds; shorter delays reduce latency and increase cache traffic.
+  pollIntervalSeconds: 1
+  ## @param events.retention [integer] Retained observation count from 100 to 100000; choose for your reconnect window and storage budget.
+  retention: 10000
+  ## @param events.maxConnections [integer] Combined active SSE/WebSocket subscriptions per replica from 1 to 128; each occupies an HTTP worker.
+  maxConnections: 16
+  ## @param events.websockets [object] Optional transport sharing the same observation schemas and byte budget.
+  websockets:
+    ## @param events.websockets.enabled [boolean] Enable WebSocket upgrades alongside SSE; keep false if subscribers only use SSE.
+    enabled: false

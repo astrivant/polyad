@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=../charts/polyad/values.reference.schema.json
+# Disposable, cluster-internal load-test baseline. Argo CD remains authenticated.
+# Separate component demand from GKE node capacity; no load is generated here.
+## @param ha [boolean] Keep two bootstrap replicas while the component Graph scales independently.
+ha: true
+## @param architecture [object] Operator component topology used for scaling experiments.
+architecture:
+  ## @param architecture.mode [string] Distributed puts gateway, executor and telemetry ReplicaGroups in the operator's own Graph.
+  mode: Distributed
+  ## @param architecture.autoscaling [boolean] Let KEDA request 2–8 copies of each component, subject to fresh GraphRules.
+  autoscaling: true
+## @param keda [object] Install the chart's pinned KEDA dependency in this cluster.
+keda:
+  ## @param keda.install [boolean] This is a new test cluster, so provide KEDA rather than expecting a separate installation.
+  install: true
+## @param kedaOperator [object] Place all bundled KEDA components on the experiment pool.
+kedaOperator:
+  ## @param kedaOperator.nodeSelector [object] Require the dedicated Polyad node pool, rather than merely permitting it.
+  nodeSelector:
+    ## @param kedaOperator.nodeSelector.cloud.google.com/gke-nodepool [string] Value for an individual key in nodeSelector.
+    cloud.google.com/gke-nodepool: polyad
+  ## @param kedaOperator.tolerations [array] Allow KEDA onto the dedicated pool; selectors prevent fallback onto the system pool.
+  tolerations:
+    ## @param kedaOperator.tolerations[].key [string] Taint key to match. An empty key requires operator Exists and matches all keys.
+    - key: dedicated
+      ## @param kedaOperator.tolerations[].operator [string] Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal.
+      operator: Equal
+      ## @param kedaOperator.tolerations[].value [string] Taint value to match when operator is Equal. Omit or leave empty when operator is Exists.
+      value: polyad
+      ## @param kedaOperator.tolerations[].effect [string] Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute.
+      effect: NoSchedule
+## @param dragonflyOperator [object] Placement for the bundled cache controller.
+dragonflyOperator:
+  ## @param dragonflyOperator.manager [object] Upstream controller Pod settings.
+  manager:
+    ## @param dragonflyOperator.manager.nodeSelector [object] Run the Dragonfly controller on the Polyad pool.
+    nodeSelector:
+      ## @param dragonflyOperator.manager.nodeSelector.cloud.google.com/gke-nodepool [string] Value for an individual key in nodeSelector.
+      cloud.google.com/gke-nodepool: polyad
+    ## @param dragonflyOperator.manager.tolerations [array] Tolerate that pool's dedicated scheduling taint.
+    tolerations:
+      ## @param dragonflyOperator.manager.tolerations[].key [string] Taint key to match. An empty key requires operator Exists and matches all keys.
+      - key: dedicated
+        ## @param dragonflyOperator.manager.tolerations[].operator [string] Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal.
+        operator: Equal
+        ## @param dragonflyOperator.manager.tolerations[].value [string] Taint value to match when operator is Equal. Omit or leave empty when operator is Exists.
+        value: polyad
+        ## @param dragonflyOperator.manager.tolerations[].effect [string] Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute.
+        effect: NoSchedule
+## @param dragonfly [object] Place cache instances, as well as their controller, on the experiment pool.
+dragonfly:
+  ## @param dragonfly.nodeSelector [object] Require bundled cache Pods to use the Polyad pool.
+  nodeSelector:
+    ## @param dragonfly.nodeSelector.cloud.google.com/gke-nodepool [string] Value for an individual key in nodeSelector.
+    cloud.google.com/gke-nodepool: polyad
+  ## @param dragonfly.tolerations [array] Allow cache Pods onto the dedicated pool.
+  tolerations:
+    ## @param dragonfly.tolerations[].key [string] Taint key to match. An empty key requires operator Exists and matches all keys.
+    - key: dedicated
+      ## @param dragonfly.tolerations[].operator [string] Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal.
+      operator: Equal
+      ## @param dragonfly.tolerations[].value [string] Taint value to match when operator is Equal. Omit or leave empty when operator is Exists.
+      value: polyad
+      ## @param dragonfly.tolerations[].effect [string] Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute.
+      effect: NoSchedule
+## @param authentication [object] Explicit demo authentication policy for internal Polyad endpoints.
+authentication:
+  ## @param authentication.mode [string] Disabled removes credentials and request quotas from the measured baseline; use Required and Secrets for shared environments.
+  mode: Disabled
+## @param api [object] Enable composition traffic for future load generators.
+api:
+  ## @param api.enabled [boolean] Serve the API through a ClusterIP Service only.
+  enabled: true
+## @param events [object] Enable event stream traffic for future load generators.
+events:
+  ## @param events.enabled [boolean] Serve graph observations through a ClusterIP Service only.
+  enabled: true
+## @param metrics [object] Expose live scaling signals for KEDA and external measurement.
+metrics:
+  ## @param metrics.enabled [boolean] Enable the internal metrics Service used by KEDA.
+  enabled: true
+  ## @param metrics.graphLabels [boolean] Include per-graph series for experiments; this adds cardinality and observation overhead.
+  graphLabels: true
+## @param operator [object] Initial measurement baseline; tune one dimension at a time using experiment overrides.
+operator:
+  ## @param operator.nodeSelector [object] Place bootstrap and generated component Daemons on the Polyad pool.
+  nodeSelector:
+    ## @param operator.nodeSelector.cloud.google.com/gke-nodepool [string] Value for an individual key in nodeSelector.
+    cloud.google.com/gke-nodepool: polyad
+  ## @param operator.tolerations [array] Allow bootstrap and component Pods onto the dedicated pool.
+  tolerations:
+    ## @param operator.tolerations[].key [string] Taint key to match. An empty key requires operator Exists and matches all keys.
+    - key: dedicated
+      ## @param operator.tolerations[].operator [string] Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal.
+      operator: Equal
+      ## @param operator.tolerations[].value [string] Taint value to match when operator is Equal. Omit or leave empty when operator is Exists.
+      value: polyad
+      ## @param operator.tolerations[].effect [string] Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute.
+      effect: NoSchedule
+  ## @param operator.serviceAccess [object] Limit discovery to this isolated cluster.
+  serviceAccess:
+    ## @param operator.serviceAccess.discovery [string] Cluster is usable by demo callers, which have no named-key home graph.
+    discovery: Cluster
+  ## @param operator.resources [object] Explicit requests let GKE reason about capacity as component copies grow.
+  resources:
+    ## @param operator.resources.requests [object] Reserved capacity per operator or component Pod.
+    requests:
+      ## @param operator.resources.requests.cpu [string] CPU request per Pod; increasing copies creates schedulable capacity demand.
+      cpu: 250m
+      ## @param operator.resources.requests.memory [string] Memory request per Pod, distinct from the container limit.
+      memory: 512Mi
+    ## @param operator.resources.limits [object] Bound memory without imposing a CPU throttle on this test baseline.
+    limits:
+      ## @param operator.resources.limits.memory [string] Maximum memory per Pod; record OOMs separately from scaling decisions.
+      memory: 1Gi

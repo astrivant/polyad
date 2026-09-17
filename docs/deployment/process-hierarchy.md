@@ -30,7 +30,7 @@ flowchart TB
         main["MainThread<br/>Startup, signals, join and trace shutdown"]
         kopf["polyad-kopf thread<br/>One asyncio event loop"]
         http["polyad-http thread · optional<br/>All enabled API listener sockets"]
-        wsgi["Waitress worker threads · optional<br/>One shared Flask application"]
+        wsgi["HTTP worker threads · optional<br/>One shared Flask application"]
         executor["Asyncio executor threads · on demand<br/>Blocking Kubernetes calls and computations"]
         helpers["Optional helper threads<br/>Credential lanes, trace/log exporters and database pool"]
         main -->|"Starts"| kopf
@@ -51,8 +51,8 @@ processes. Threads share the Python process's memory.
 | --- | --- |
 | `MainThread` | Parses configuration, initializes logging/tracing, installs signal handlers, starts and joins `OperatorThread` |
 | `polyad-kopf` | Non-daemon thread running `asyncio.run(...)` around embedded `kopf.operator`; owns async clients, queues and tasks |
-| `polyad-http` | One non-daemon Waitress socket-loop thread whenever this role serves an API; owns all enabled API listeners |
-| Waitress dispatcher pool | Synchronous Flask request handling, including streaming responses; shared by all API families |
+| `polyad-http` | One non-daemon serving thread owning all enabled API listeners; Waitress by default, or a Hypercorn asyncio loop for WebSockets |
+| HTTP worker pool | Synchronous Flask request handling, including streaming responses; shared by all API families |
 | Asyncio default executor | Workers created on demand by `asyncio.to_thread`, including synchronous Kubernetes transport, graph rule/Cheeger computations, credential-file reads and metrics serialization |
 | Kopf callback executor | Framework-managed execution of synchronous callbacks, including Polyad's health probe; async handlers stay on the event loop |
 | `polyad-credential-lanes` | Optional daemon thread renewing named API-key concurrency permits; the shared HTTP `Access` runtime owns one renewer |
@@ -69,7 +69,12 @@ HTTP worker capacity is `S + 8`, where `S` is `events.maxConnections` when event
 serving is enabled and zero otherwise. Thus the default event limit of 16 gives
 24 HTTP workers; without events there are eight. At most `S` event streams can
 occupy these workers, leaving capacity for ordinary requests. All listeners use
-this same pool:
+this same pool. With `events.websockets.enabled: true`, Hypercorn replaces
+Waitress across all listeners in this process. Its transport loop runs inside
+`polyad-http` and uses one bounded executor for the existing Flask application;
+Kopf retains its own operator loop. SSE and WebSockets share the same `S` slots,
+credentials and replay store. There is no second Flask application or additional
+events listener. Disabled WebSocket support leaves Hypercorn unloaded.
 
 | Port | Endpoint family |
 | --- | --- |
@@ -136,7 +141,7 @@ Ownership is always checked before transport. Ordinary reads bypass write admiss
 checks run on the same event loop and add no OS thread or queue service.
 
 Task pauses are described in [performance tuning](../operations/performance.md).
-Their settings do not change the number of Waitress threads or asyncio executor
+Their settings do not change the number of HTTP workers or asyncio executor
 workers. PostgreSQL persistence, topology observations and throughput adaptation
 run as parts of these tasks and request operations, rather than dedicated Python
 processes.
@@ -147,7 +152,7 @@ processes.
 sequenceDiagram
     participant Client
     participant HTTP as polyad-http sockets
-    participant WSGI as Waitress worker / Flask
+    participant WSGI as HTTP worker / Flask
     participant Operator as polyad-kopf event loop
     participant Pool as Asyncio executor worker
     participant K8s as Kubernetes API
@@ -176,7 +181,7 @@ adapter joins that transport before releasing mutation ownership.
 Cached `/metrics` and `/v1/metrics` responses read published bytes directly from
 the HTTP worker. Measurement collection does not execute on the scrape path;
 named-key authentication can still contact its configured shared admission stores.
-SSE subscriptions retain a Waitress worker and repeatedly bridge reads into the
+SSE and WebSocket subscriptions retain an HTTP worker and repeatedly bridge reads into the
 async event store. OpenTelemetry context follows the request bridge in-process;
 queued background reconciliation starts a separate trace.
 
@@ -244,8 +249,9 @@ The handler marks the process draining and sets the thread-safe Kopf stop event.
 Cleanup then runs on the Kopf event loop:
 
 1. Stop new HTTP intake, join the serving thread, and await retained operations.
-   Waitress is asked to shut down its dispatcher with a 35-second timeout; this
-   is not a total shutdown deadline for all retained work.
+   Waitress shuts down its dispatcher, or Hypercorn drains its listeners and joins
+   its worker pool. Both use a 35-second serving grace period; this is not a total
+   shutdown deadline for all retained work.
 2. Close HTTP-owned clients, request-limit storage and credential lanes.
 3. Cancel the local FIFO consumer and its waiters. Pending desired state is
    replayed from shared notifications and fresh scans, rather than fully draining
@@ -279,7 +285,7 @@ by responsibility and describes their import and feature-enablement boundaries.
 | [queue.py](../../pkg/polyad/operator/coordination/queue.py) | Local FIFO reconciliation |
 | [write_queue.py](../../pkg/polyad/operator/coordination/write_queue.py) | Pending Kubernetes intent conflicts within each API adapter |
 | [contracts.py](../../pkg/polyad/operator/coordination/contracts.py) / [validation.py](../../pkg/polyad/operator/coordination/validation.py) | Captured dependency hashes, targeted refresh and bounded validation ahead of dispatch |
-| [server.py](../../pkg/polyad/api/server.py) | Shared Flask/Waitress lifecycle and thread-to-loop bridge |
+| [server.py](../../pkg/polyad/api/server.py) | Shared Flask/HTTP lifecycle and thread-to-loop bridge |
 | [kubernetes.py](../../pkg/polyad/operator/adapters/kubernetes.py) | Kubernetes transport offloading and write fences |
 | [roles.py](../../pkg/polyad/operator/lifecycle/roles.py) / [root.py](../../pkg/polyad/operator/clusters/root.py) | Role selection and remote cluster tasks |
 | [observer.py](../../pkg/polyad/operator/observer.py) | Observer's main-thread event loop |

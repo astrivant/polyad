@@ -17,6 +17,9 @@ that make this possible.<sup>[\[1\]](https://argo-cd.readthedocs.io/en/stable/op
 
 ## Install into an existing Argo CD release
 
+For a new test cluster, the [Terraform GKE bootstrap](../../terraform/README.md)
+installs Argo CD, these health checks and a Polyad Application together.
+
 Run these commands from a Polyad checkout with its Python dependencies installed.
 For an Argo CD installation managed through the upstream `argo-cd` Helm chart,
 generate an additional values file:

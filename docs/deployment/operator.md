@@ -806,9 +806,11 @@ References: [Kopf embedding](https://docs.kopf.dev/en/stable/embedding/), [Kopf 
 structure, recursive size and spectra before admission. `Composition` records an
 immutable ID-addressed request, materializes reusable definitions and a root through
 the leased queues, and records generated manifest identities. The optional Flask
-routes join the process's single Flask application and Waitress runtime. Enabled
+routes join the process's single Flask application and shared HTTP runtime. Enabled
 API families retain separate listener ports and credentials while sharing workers
-and shutdown handling.
+and shutdown handling. Waitress serves HTTP/SSE by default; enabling WebSocket
+events selects Hypercorn for that same runtime. See the
+[process hierarchy](process-hierarchy.md#container-and-thread-hierarchy).
 See [graph rules and constraint diagrams](../graphs/graph-rules.md),
 [composition request format and audit semantics](../apis/composition-requests.md), and
 [composition service setup](../apis/composition-api.md).

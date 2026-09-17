@@ -295,6 +295,10 @@ dragonfly:
   enabled: true
   ## @param dragonfly.image [string] Bundled Dragonfly image
   image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0
+  ## @param dragonfly.nodeSelector [object] Node labels selecting bundled cache Pods, independently of controller placement
+  nodeSelector: {}
+  ## @param dragonfly.tolerations [array] Taints tolerated by bundled cache Pods; use with nodeSelector to require a dedicated pool
+  tolerations: []
   ## @param dragonfly.ha [object] Settings for dragonfly.ha.
   ha:
     ## @param dragonfly.ha.enabled [boolean] Enable primary/replica replication and automatic failover
@@ -403,8 +407,12 @@ connections:
 ## @section Event subscriptions
 ## @param events [object] Settings for events.
 events:
-  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate events Service on port 8091; SSE is always available when enabled
   enabled: false
+  ## @param events.websockets [object] Optional WebSocket subscriptions on the same events Service and shared operator HTTP runtime
+  websockets:
+    ## @param events.websockets.enabled [boolean] Enable /v1/events/ws alongside SSE; both transports share authentication, replay cursors and subscriber limits; requires events.enabled
+    enabled: false
   ## @param events.existingSecret [string] Existing Secret containing a token key for read-only event subscriptions
   existingSecret: polyad-events
   ## @param events.key [string] Inline subscriber token; creates a managed Secret and requires existingSecret to be empty
@@ -413,6 +421,12 @@ events:
   retention: 10000
   ## @param events.maxConnections [integer] Maximum simultaneous event subscribers per operator replica
   maxConnections: 16
+  ## @param events.maxEventBytes [integer] Maximum complete SSE record or WebSocket JSON frame in UTF-8 bytes (1024-16777216); oversized observations are rejected before replay/archive, and clients choose their own matching receive cap
+  maxEventBytes: 1048576
+  ## @param events.readBatchSize [integer] Maximum observations fetched per subscriber read (1-256); higher values catch up faster but increase memory and work per read
+  readBatchSize: 64
+  ## @param events.pollIntervalSeconds [number] Empty-stream polling delay in seconds (0.05-5); lower values reduce idle delivery latency at the cost of more cache reads
+  pollIntervalSeconds: 1
 
 ## @section Scheduler metrics
 ## @param metrics [object] Settings for metrics.

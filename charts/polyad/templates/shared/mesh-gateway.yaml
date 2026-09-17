@@ -33,6 +33,14 @@ spec:
         - uri:
             exact: /v1/events
         - uri:
+            exact: /v1/events/config
+        - uri:
+            exact: /v1/events/schema
+        {{- if .Values.events.websockets.enabled }}
+        - uri:
+            exact: /v1/events/ws
+        {{- end }}
+        - uri:
             exact: /v1/discovery
         - uri:
             prefix: /v1/graphs/

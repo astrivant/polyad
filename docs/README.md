@@ -53,6 +53,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Composition API service](apis/composition-api.md) | Service setup, authentication, gateway routing, shared shard rate limits and OpenAPI |
 | [Composition requests](apis/composition-requests.md) | Request format, ID references, admission, retries and resource audit |
 | [Atlas discovery and service connections](apis/discovery.md) | Inherited operator access modes, live service discovery, client filters and cross-cluster consent |
+| [Event syntax trees, schemas and limits](apis/event-contract.md) | Importable event ASTs, schema validation, byte budgets, replay tuning and client receive limits |
 | [Temporary connections](apis/temporary-connections.md) | Optional TTL-bound edges, caller and target scope, service-account authentication and cleanup |
 
 ## Deployment
@@ -67,6 +68,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Compiler objects](deployment/operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
 | [Health and backlog](deployment/operator.md#health) | Pod probes, inbound updates and API write pressure |
 | [Dense and distributed operator deployments](deployment/components.md) | Dense or split services, the operator's own Graph, bootstrap recovery and KEDA demand |
+| [GKE scaling test environment](../terraform/README.md) | Terraform, an isolated 2–10-node Ubuntu pool, Argo CD Git sync and the operator's self-managed component Graph |
 | [Local services in the root Graph](deployment/local-services.md) | Complete local chart inventory, bundled or existing KEDA, observation permissions and lifecycle ownership |
 | [Root control plane](deployment/root-control-plane.md) | One reserved PolyGraph containing the root and remote operator group Graphs, live membership, centralized reports and KEDA targets |
 | [Helm-installed downstream operators](deployment/helm-workers.md) | Administrator-owned installation, explicit root attachment, and a choice of root or local replica scaling |

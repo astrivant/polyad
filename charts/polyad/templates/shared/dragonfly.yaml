@@ -18,6 +18,14 @@ spec:
   image: {{ .Values.dragonfly.image | quote }}
   imagePullPolicy: IfNotPresent
   replicas: {{ ternary .Values.dragonfly.ha.replicas 1 .Values.dragonfly.ha.enabled }}
+  {{- with .Values.dragonfly.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.dragonfly.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   args:
     - --proactor_threads=1
     - --maxmemory=256mb

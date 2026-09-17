@@ -1126,6 +1126,21 @@
               "description": "Place HA instances on distinct values of this node label"
             }
           }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Value for an individual key in nodeSelector."
+          },
+          "description": "Node labels selecting these Pods; pair with tolerations for a dedicated node pool."
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/toleration"
+          },
+          "description": "Scheduling taints tolerated by these Pods; a nodeSelector also restricts their placement."
         }
       },
       "allOf": [
@@ -1192,6 +1207,21 @@
                 "pattern": "^--[^\\r\\n]+$"
               },
               "description": "Additional Dragonfly controller command arguments"
+            },
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "description": "Value for an individual key in nodeSelector."
+              },
+              "description": "Node labels selecting these Pods; pair with tolerations for a dedicated node pool."
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/toleration"
+              },
+              "description": "Scheduling taints tolerated by these Pods; a nodeSelector also restricts their placement."
             }
           }
         },
@@ -1471,6 +1501,34 @@
           "minimum": 1,
           "maximum": 128,
           "description": "Maximum simultaneous event subscribers per operator replica"
+        },
+        "websockets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable WebSocket subscriptions alongside SSE on the events Service; requires events.enabled."
+            }
+          }
+        },
+        "maxEventBytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 16777216
+        },
+        "readBatchSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "pollIntervalSeconds": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 5
         }
       }
     },
@@ -4334,6 +4392,21 @@
               "type": "boolean"
             }
           }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Value for an individual key in nodeSelector."
+          },
+          "description": "Node labels selecting these Pods; pair with tolerations for a dedicated node pool."
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/toleration"
+          },
+          "description": "Scheduling taints tolerated by these Pods; a nodeSelector also restricts their placement."
         }
       }
     }
@@ -5127,6 +5200,46 @@
                 "const": true
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "events": {
+            "properties": {
+              "websockets": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            },
+            "required": [
+              "websockets"
+            ]
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "then": {
+        "properties": {
+          "events": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "enabled"
+            ]
           }
         }
       }

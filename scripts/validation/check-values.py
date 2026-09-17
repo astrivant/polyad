@@ -148,6 +148,8 @@ def value_files() -> list[Path]:
             *(ROOT / "examples").rglob("*values.yaml"),
             *(ROOT / "examples/deployment-profiles").glob("*.yaml"),
             *(ROOT / "pkg/tests/data").rglob("*values.yaml"),
+            *(ROOT / "terraform").glob("*values.yaml"),
+            ROOT / "terraform/bootstrap/values.yaml",
         }
     )
 

@@ -304,6 +304,18 @@ feed; composition requests still use port 8090. The same events credential grant
 read access to `GET /v1/graphs/{kind}/{name}/topology`, optionally filtered by
 `uid` and `node`, for current neighbor and execution snapshots.
 
+Set `events.websockets.enabled: true` to add read-only WebSocket subscriptions at
+`/v1/events/ws` on this same Service. SSE remains available; both transports share
+authentication, graph visibility, replay cursors and subscriber limits. The client
+selects it with `events(transport="websocket")` or `subscribe(transport="websocket")`.
+See [WebSocket subscriptions](../workloads/workload-events.md#websocket-subscriptions)
+for Helm values, framing and recovery.
+
+`GET /v1/events/schema` returns the installed event JSON Schema, and
+`GET /v1/events/config` reports its byte, batch and polling limits. Both require
+event authorization. See [event syntax trees and tuning](../apis/event-contract.md)
+for importable types and matching client receive budgets.
+
 ```bash
 curl --no-buffer \
   -H "Authorization: Bearer $POLYAD_EVENTS_TOKEN" \

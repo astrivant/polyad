@@ -60,7 +60,8 @@ def test_shared_application_preserves_port_and_credential_isolation():
 
 
 @pytest.mark.parametrize("demo", [False, True])
-def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch, demo):
+@pytest.mark.parametrize("websockets", [False, True])
+def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch, demo, websockets):
     """
     One dispatcher serves every API and reserves workers even when demo event slots are full.
     """
@@ -87,7 +88,7 @@ def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch,
         runtime = APIServer(api)
         runtime.composition("test", "writer")
         runtime.connections(ConnectionSettings("test"))
-        runtime.events(store, "test", "reader", connections=1)
+        runtime.events(store, "test", "reader", connections=1, websockets=websockets)
         runtime.metrics(MetricsStore(), "scraper")
         assert application_factory.call_count == 1
         assert not server_factory.called
@@ -99,14 +100,18 @@ def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch,
         runtime.start(host="127.0.0.1", ports=ports)
         with pytest.raises(RuntimeError, match="only be started once"):
             runtime.start(host="127.0.0.1", ports=ports)
-        assert server_factory.call_count == 1
-        assert server_factory.call_args.kwargs["threads"] == 9
+        assert server_factory.call_count == (0 if websockets else 1)
+        if not websockets:
+            assert server_factory.call_args.kwargs["threads"] == 9
+        else:
+            assert runtime.server.workers == 9
 
-        def fetch(domain, path="/openapi.json"):
+        def fetch(domain, path="/openapi.json", method="GET"):
             token = {"composition": "writer", "connections": "projected", "events": "reader", "metrics": "scraper"}[domain]
             return urllib.request.urlopen(
                 urllib.request.Request(
                     f"http://127.0.0.1:{ports[domain]}{path}",
+                    method=method,
                     headers={} if demo else {"Authorization": f"Bearer {token}"},
                 ),
                 timeout=5,
@@ -114,6 +119,12 @@ def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch,
 
         response = None
         try:
+            for _ in range(100):
+                try:
+                    with await asyncio.to_thread(fetch, "metrics"):
+                        break
+                except urllib.error.URLError:
+                    await asyncio.sleep(0.02)
             response = await asyncio.to_thread(fetch, "events", "/v1/events")
             assert await asyncio.to_thread(response.readline) == b"retry: 3000\n"
             with pytest.raises(urllib.error.HTTPError) as error:
@@ -123,6 +134,9 @@ def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch,
                 with await asyncio.to_thread(fetch, domain) as result:
                     schema = json.loads(await asyncio.to_thread(result.read))
                     assert schema["openapi"].startswith("3.")
+                with await asyncio.to_thread(fetch, domain, method="HEAD") as result:
+                    assert result.status == 200
+                    assert await asyncio.to_thread(result.read) == b""
         finally:
             if response:
                 response.close()

@@ -12,6 +12,11 @@ bearer token requires explicit `Cluster` or `Atlas` mode.
 `POLYAD_EVENTS_URL` is injected when the listener is enabled. Subscribers do not
 need Kubernetes API credentials. See [event service setup](../deployment/networking.md#event-subscriptions).
 
+The [event contract](../apis/event-contract.md) documents importable ASTs and
+JSON Schemas for these observations, plus Helm byte/batch/polling limits and
+client receive budgets. `Event.typed()` validates and decodes an observation into
+its matching typed payload tree.
+
 Named API keys additionally need `events` or `topology` capabilities and explicit
 [graph-tree grants](../operations/api-keys.md#graph-access-and-workload-assignments)
 and an administrator-assigned `home` graph. The parent operator's
@@ -27,6 +32,7 @@ operator PolyGraphs and their descendants remain private.
 - [Proposed rollout events](#proposed-rollout-events)
 - [Read current neighbors](#read-current-neighbors)
 - [Subscribe from a workload](#subscribe-from-a-workload)
+- [WebSocket subscriptions](#websocket-subscriptions)
 - [Nested graphs](#nested-graphs)
 
 ## Application stream boundary
@@ -57,7 +63,7 @@ and its cursor; an expired old cursor requires the usual snapshot refresh.
 
 ## Changes that notify workloads
 
-An SSE `topology` event is published when the boundary's structural revision
+A `topology` event is published when the boundary's structural revision
 changes. This includes:
 
 - Adding or removing nodes, changing referenced definitions or lifecycle
@@ -232,6 +238,67 @@ Snapshots and selections are limited to 4 MiB. An oversized full snapshot is
 published with `valid: false` and an `error`, rather than partial neighbors. An
 oversized node selection returns HTTP 503. No subscription automatically changes
 application connections or restarts containers.
+
+## WebSocket subscriptions
+
+SSE is the default. Administrators can also enable WebSockets on the **same events
+Service and port**, using the typed
+[WebSocket reference values](../../charts/polyad/values-websockets.reference.yaml):
+
+```yaml
+events:
+  enabled: true
+  websockets:
+    enabled: true
+```
+
+The [client](../../pkg/client/README.md#websocket-subscriptions) includes the
+`websockets` dependency. Choose transport per subscription:
+
+```python
+for event in events.events(transport="websocket", last_event_id=cursor):
+    handle(event)
+    cursor = event.id  # Persist after successful handling.
+
+# Existing filters and hooks also work:
+subscription = events.subscribe(transport="websocket", cursor=cursor)
+```
+
+Keep the HTTP(S) events URL in `Client`; it derives WS(S) automatically. A direct
+protocol client upgrades `GET /v1/events/ws` with the usual `Authorization: Bearer`
+and optional `Last-Event-ID` headers. `?cluster=...` selects a registered remote
+stream just as it does for SSE. A cursor belongs to that selected stream and can
+be reused when switching transports.
+
+Each server text frame contains one JSON object:
+
+```json
+{"id":"1750000000000-0","event":"topology","data":{"kind":"Graph","name":"pipeline","uid":"graph-uid"}}
+```
+
+`graph`, `topology` and `connection` messages carry observations. `heartbeat`
+frames have empty IDs and are skipped by the Python client. `reset` and
+`unavailable` frames require the same recovery as SSE; the callback subscription
+raises `StreamInterrupted` without advancing its checkpoint. Authentication,
+permission, expired-cursor and capacity errors remain HTTP responses during the
+handshake. Normal HTTP requests to the enabled upgrade route receive HTTP 426;
+the route is unavailable when the feature is disabled.
+
+Both transports use the same graph-tree permissions, inherited access modes,
+reserved-operator isolation, replay stream and `events.maxConnections` ceiling.
+Named API-key concurrency permits remain held for the subscription's lifetime,
+and changing or revoking a key ends its stream. Active streams count toward the
+operator's existing HTTP in-flight metrics. Delivery applies backpressure, and
+the client bounds buffered frames and each complete event to 1 MiB by default.
+Set `Client(..., max_event_bytes=...)` when selecting a different receive budget;
+see [size limits and recovery](../apis/event-contract.md#client-receive-limits).
+
+This is a read-only service subscription. Client data frames close the connection
+with code 1008; requests, approvals and other mutations use their existing HTTP
+APIs and permissions. Service clients authenticate with headers; browser `Origin`
+requests are rejected, and tokens are never accepted in the URL. Use HTTPS/WSS
+through the configured gateway for TLS. The chart includes the upgrade route in
+its Istio gateway and authorization policy when enabled.
 
 ## Nested graphs
 

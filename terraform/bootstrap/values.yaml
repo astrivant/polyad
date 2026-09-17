@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=values.schema.json
+## @param revision [string] Public Polyad Git revision; main follows updates, a commit SHA freezes an experiment.
+revision: main
+## @param valueFiles [array] Values paths relative to charts/polyad in that Git revision, merged in order.
+valueFiles:
+  - ../../terraform/polyad-values.yaml
+## @param values [string] Final YAML mapping of experiment overrides; stored visibly in the Application, so exclude secrets.
+values: '{}'
+## @param automatedSync [boolean] Enable automatic sync, self-healing and pruning; false leaves sync under administrator control.
+automatedSync: true

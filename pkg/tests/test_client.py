@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import io
 import json
+from unittest.mock import MagicMock
 from urllib.error import HTTPError
 
 import pytest
@@ -13,6 +14,92 @@ import pytest
 from polyad.api import APIBuilder
 from polyad_client import APIError, Client
 from polyad_types import CompositionItem, CompositionRequest, Event, to_dict
+
+
+def test_websocket_client_headers_checkpoints_and_cleanup(monkeypatch):
+    """
+    Preserve cluster selection and rotating headers while callbacks checkpoint only observations.
+    """
+    from polyad_client import StreamInterrupted, websocket
+    from polyad_client.filters import event_type
+
+    connector = MagicMock()
+    connection = connector.return_value.__enter__.return_value
+    connection.recv.side_effect = [
+        '{"id":"","event":"heartbeat","data":{}}',
+        '{"id":"2-0","event":"topology","data":{"name":"root"}}',
+        '{"id":"","event":"reset","data":{"reason":"expired"}}',
+    ]
+    monkeypatch.setattr(websocket, "_NoRedirect", connector)
+    client = Client("https://events.example", "old", token_provider=lambda: "fresh", identity_cluster="east", timeout=7)
+    calls = []
+    subscription = client.subscribe(transport="websocket", cluster="west", cursor="1-0")
+    subscription.on(event_type("topology"), lambda event: calls.append(event.id))
+    with pytest.raises(StreamInterrupted):
+        subscription.run()
+    assert calls == ["2-0"] and subscription.cursor == "2-0"
+    assert connector.call_args.args == ("wss://events.example/v1/events/ws?cluster=west",)
+    kwargs = connector.call_args.kwargs
+    assert kwargs["additional_headers"] == {
+        "Authorization": "Bearer fresh",
+        "X-Polyad-Cluster": "east",
+        "Last-Event-ID": "1-0",
+        "Accept": "text/event-stream",
+    }
+    assert kwargs["max_queue"] == 1 and kwargs["max_size"] == 1024 * 1024
+    assert kwargs["open_timeout"] == 7 and kwargs["compression"] is None
+    connector.return_value.__exit__.assert_called_once()
+
+
+@pytest.mark.parametrize("frame", [b"binary", "[]", '{"event":"graph","data":{}}', '{"id":"1-0","event":"graph","data":[]}'])
+def test_websocket_client_rejects_invalid_frames_and_closes(monkeypatch, frame):
+    """
+    Binary frames and invalid envelopes cannot reach application callbacks.
+    """
+    from polyad_client import websocket
+
+    connector = MagicMock()
+    connector.return_value.__enter__.return_value.recv.return_value = frame
+    monkeypatch.setattr(websocket, "_NoRedirect", connector)
+    with pytest.raises(ValueError):
+        next(Client("http://events", "token").events(transport="websocket"))
+    connector.return_value.__exit__.assert_called_once()
+
+
+def test_websocket_handshake_errors_keep_http_status(monkeypatch):
+    """
+    Expired replay has the same APIError contract through either transport.
+    """
+    from websockets.datastructures import Headers
+    from websockets.exceptions import InvalidStatus
+    from websockets.http11 import Response
+
+    from polyad_client import websocket
+
+    connector = MagicMock(side_effect=InvalidStatus(Response(410, "Gone", Headers(), bytearray(b'{"error":"expired"}'))))
+    monkeypatch.setattr(websocket, "_NoRedirect", connector)
+    with pytest.raises(APIError) as error:
+        next(Client("http://events", "token").events(transport="websocket"))
+    assert error.value.status == 410 and error.value.body == {"error": "expired"}
+
+
+def test_websocket_redirects_cannot_move_an_authenticated_subscription(monkeypatch):
+    """
+    Subscription origins remain pinned even when a peer or proxy returns a redirect.
+    """
+    from websockets.datastructures import Headers
+    from websockets.exceptions import InvalidStatus
+    from websockets.http11 import Response
+
+    from polyad_client import websocket
+
+    redirect = InvalidStatus(Response(302, "Found", Headers({"Location": "wss://other.example/events"})))
+    attempt = MagicMock(side_effect=redirect)
+    monkeypatch.setattr(websocket._NoRedirect, "open_connection", attempt)
+    with pytest.raises(APIError) as error:
+        next(Client("https://events", "token").events(transport="websocket"))
+    assert error.value.status == 302
+    attempt.assert_called_once()
 
 
 class Adapter:

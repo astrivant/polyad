@@ -1,5 +1,5 @@
 """
-Own one Flask application, Waitress dispatcher and HTTP lifecycle per operator process.
+Own one Flask application and shared HTTP/event transport per operator process.
 """
 
 from __future__ import annotations
@@ -55,6 +55,8 @@ class APIServer:
         self.access = Access.from_environment()
         self.ports: dict[str, int] = {}
         self.stream_slots = 0
+        self.websockets = False
+        self.server: Any = None
         self.started = False
         self.closed = False
         self.loop = asyncio.get_running_loop()
@@ -88,6 +90,20 @@ class APIServer:
             if lifecycle.replacement.is_set() or lifecycle.draining.is_set():
                 return jsonify(error="replica is retiring; reconnect to a healthy replica"), 503
             return None
+
+        if self.websockets:
+            from polyad.api.websocket import WebSocketServer
+
+            self.server = WebSocketServer(self.app, host, selected, self.stream_slots, self.stopping)
+            port_domains = {str(port): name for name, port in selected.items() if port}
+            ephemeral = next((name for name, port in selected.items() if port == 0), "unavailable")
+            self.app.extensions["polyad.ports"] = {
+                str(port): port_domains.get(str(port), ephemeral) for _, port in self.server.effective_listen
+            }
+            self.started = True
+            self.thread = Thread(target=self.run, name="polyad-http", daemon=False)
+            self.thread.start()
+            return
 
         self.sockets: wasyncore._SocketMap = {}
         dispatcher = ThreadedTaskDispatcher()
@@ -173,6 +189,9 @@ class APIServer:
         Returns:
             None: No return value.
         """
+        if self.websockets:
+            self.server.run()
+            return
         try:
             while not self.stopping.is_set():
                 wasyncore.loop(timeout=0.5, count=1, map=self.sockets)
@@ -272,7 +291,14 @@ class APIServer:
         self.ports["connections"] = 8093
 
     def events(
-        self, store: EventStore, namespace: str, token: str, *, connections: int = 16, clusters: dict[str, EventStore] | None = None
+        self,
+        store: EventStore,
+        namespace: str,
+        token: str,
+        *,
+        connections: int = 16,
+        clusters: dict[str, EventStore] | None = None,
+        websockets: bool = False,
     ) -> None:
         """
         Register bounded streaming readers and reserve non-streaming HTTP worker capacity.
@@ -283,12 +309,14 @@ class APIServer:
             token (str): Subscriber credential or named-key enrollment marker.
             connections (int): Maximum active streams; enforced even in unauthenticated demos.
             clusters (dict[str, EventStore] | None): Root-held streams for registered clusters.
+            websockets (bool): Enable WebSocket subscriptions on the same events listener as SSE.
 
         Returns:
             None: Streaming routes use the same server and shutdown signal.
         """
         from polyad.events.builder import EventAPIBuilder
         from polyad.events.discovery import Directory
+        from polyad.events.settings import settings_from_environment
         from polyad.operator.clusters.federation import Federation
 
         federation = Federation(self.api)
@@ -306,6 +334,8 @@ class APIServer:
 
         (
             EventAPIBuilder(
+                settings=settings_from_environment(),
+                websockets=websockets,
                 stopping=self.stopping,
                 max_connections=connections,
                 limits=RateLimitPolicy.from_environment(namespace + ":events"),
@@ -327,6 +357,7 @@ class APIServer:
             .build(self.app)
         )
         self.stream_slots = connections
+        self.websockets = websockets
         self.ports["events"] = 8091
 
     def metrics(self, store: MetricsStore, token: str | None = None) -> None:

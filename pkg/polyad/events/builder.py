@@ -1,5 +1,5 @@
 """
-Register authenticated Server-Sent Events routes on the shared HTTP application.
+Register authenticated event subscriptions on the shared HTTP application.
 """
 
 from __future__ import annotations
@@ -21,6 +21,8 @@ from polyad.auth.policy import public_demo
 from polyad.events.store import CursorExpired, TopologyReplaced
 from polyad.events.visibility import permitted_observation
 from polyad_types.auth import APIKey, GraphAccess
+from polyad_types.events import Event as Observation
+from polyad_types.events import EventStreamSettings, EventTooLarge, event_schema
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
@@ -47,6 +49,8 @@ class EventAPIBuilder:
         authorize_stream (Callable[[APIKey | None, str | None], None] | None): Reject unsupported subscriptions before opening them.
         permits (Callable[[APIKey, dict[str, Any]], bool] | None): Fresh operator-mode and home-graph observation check.
         discover (Callable[[APIKey, GraphAccess | None, int, int], dict[str, Any]] | None): Live authorized service directory.
+        websockets (bool): Enable WebSocket subscriptions alongside Server-Sent Events.
+        settings (EventStreamSettings): Event serialization and replay budgets advertised to subscribers.
     """
 
     resolve: Callable[[str | None], str] | None = None
@@ -60,6 +64,8 @@ class EventAPIBuilder:
     authorize_stream: Callable[[APIKey | None, str | None], None] | None = None
     permits: Callable[[APIKey, dict[str, Any]], bool] | None = None
     discover: Callable[[APIKey, GraphAccess | None, int, int], dict[str, Any]] | None = None
+    websockets: bool = False
+    settings: EventStreamSettings = field(factory=EventStreamSettings)
 
     def with_handlers(self, resolve: Callable[[str | None], str], read: Callable[[str], list[tuple[str, str]]]) -> Self:
         """
@@ -193,8 +199,31 @@ class EventAPIBuilder:
             except Exception:
                 return jsonify(error="topology observation unavailable or stale"), 503
 
+        @app.get("/v1/events/config")
+        def configuration() -> Response:
+            return jsonify(
+                maxEventBytes=self.settings.maxEventBytes,
+                readBatchSize=self.settings.readBatchSize,
+                pollIntervalSeconds=self.settings.pollIntervalSeconds,
+            )
+
+        @app.get("/v1/events/schema")
+        def schema_document() -> Response:
+            response = jsonify(event_schema())
+            response.mimetype = "application/schema+json"
+            return response
+
+        @app.get("/v1/events/ws")
         @app.get("/v1/events")
         def events() -> Response | tuple[Response, int]:
+            websocket = request.path == "/v1/events/ws"
+            if websocket:
+                if not self.websockets:
+                    return jsonify(error="WebSocket subscriptions are disabled"), 404
+                if not request.environ.get("polyad.websocket"):
+                    return jsonify(error="a WebSocket upgrade is required"), 426
+                if request.headers.get("Origin"):
+                    return jsonify(error="use a service client with bearer headers; browser origins are unsupported"), 403
             if self.authorize_stream is not None:
                 try:
                     self.authorize_stream(getattr(g, "polyad_key", None), request.args.get("cluster"))
@@ -219,12 +248,20 @@ class EventAPIBuilder:
 
             def stream() -> Iterator[str]:
                 nonlocal cursor
-                yield "retry: 3000\n\n"
-                while not self.stopping.is_set():
+                disconnected = request.environ.get("polyad.disconnected")
+
+                def frame(event: str, data: dict[str, Any], identity: str = "", raw: str | None = None) -> str:
+                    return Observation(identity, event, data).encode(
+                        "websocket" if websocket else "sse", self.settings.maxEventBytes, raw=raw
+                    )
+
+                heartbeat = frame("heartbeat", {}) if websocket else ": heartbeat\n\n"
+                yield heartbeat if websocket else "retry: 3000\n\n"
+                while not self.stopping.is_set() and not (disconnected and disconnected.is_set()):
                     try:
                         batch = read(cursor)
                         if not batch:
-                            yield ": heartbeat\n\n"
+                            yield heartbeat
                         for identity, data in batch:
                             cursor = identity
                             payload = json.loads(data)
@@ -239,19 +276,22 @@ class EventAPIBuilder:
                                 if not scope or not self.permits(key, scope):
                                     continue
                             event_type = payload["type"] if payload.get("type") in {"topology", "connection"} else "graph"
-                            yield f"id: {identity}\nevent: {event_type}\ndata: {data}\n\n"
+                            yield frame(event_type, payload, identity, data)
                         if batch:
-                            yield ": heartbeat\n\n"
+                            yield heartbeat
+                    except EventTooLarge:
+                        yield frame("reset", {"reason": "event exceeds configured maxEventBytes; refresh topology and replay cursor"})
+                        return
                     except CursorExpired:
-                        yield 'event: reset\ndata: {"reason":"cursor expired; refresh graph status"}\n\n'
+                        yield frame("reset", {"reason": "cursor expired; refresh graph status"})
                         return
                     except Exception:
-                        yield 'event: unavailable\ndata: {"reason":"reconnect with Last-Event-ID"}\n\n'
+                        yield frame("unavailable", {"reason": "reconnect with Last-Event-ID"})
                         return
 
             response = Response(
                 stream_with_context(stream()),
-                mimetype="text/event-stream",
+                mimetype="application/x-polyad-events" if websocket else "text/event-stream",
                 headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
             )
             response.call_on_close(slots.release)
@@ -361,6 +401,29 @@ class EventAPIBuilder:
                     },
                 },
             }
+            for path, description in (
+                ("/v1/events/config", "EventStreamSettings: maximum serialized event bytes, replay batch size and idle polling interval."),
+                ("/v1/events/schema", "Draft 2020-12 JSON Schema for supported transport-neutral event ASTs."),
+            ):
+                schema["paths"][path] = {"get": {"responses": {"200": {"description": description}}}}
+            schema["x-polyad-event-schema"] = "/v1/events/schema"
+            if self.websockets:
+                schema["paths"]["/v1/events/ws"] = {
+                    "get": {
+                        "description": (
+                            "Optional WebSocket subscription on the events listener. Uses the same bearer header, "
+                            "Last-Event-ID, cluster selection, graph permissions and shared subscriber budget as SSE. "
+                            "Each text frame is a JSON object with id, event and data; heartbeat frames carry no cursor. "
+                            "Client data frames are rejected; mutations continue through their authenticated HTTP APIs."
+                        ),
+                        "parameters": schema["paths"]["/v1/events"]["get"]["parameters"],
+                        "responses": {
+                            **{key: value for key, value in schema["paths"]["/v1/events"]["get"]["responses"].items() if key != "200"},
+                            "101": {"description": "WebSocket event subscription accepted"},
+                            "426": {"description": "WebSocket upgrade required"},
+                        },
+                    }
+                }
             return Response(json.dumps(schema), mimetype="application/json")
 
         return app.finish()

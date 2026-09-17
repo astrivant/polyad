@@ -217,8 +217,18 @@ spec:
               value: {{ .Values.api.enabled | quote }}
             - name: POLYAD_EVENTS_ENABLED
               value: {{ .Values.events.enabled | quote }}
+            - name: POLYAD_EVENTS_WEBSOCKETS_ENABLED
+              value: {{ and .Values.events.enabled .Values.events.websockets.enabled | quote }}
             - name: POLYAD_EVENT_PUBLICATION_ENABLED
               value: {{ or .Values.events.enabled (and .Values.postgresql.enabled .Values.postgresql.events.enabled) | quote }}
+            - name: POLYAD_EVENTS_MAX_EVENT_BYTES
+              value: {{ .Values.events.maxEventBytes | int | quote }}
+            - name: POLYAD_EVENTS_READ_BATCH_SIZE
+              value: {{ .Values.events.readBatchSize | int | quote }}
+            - name: POLYAD_EVENTS_POLL_INTERVAL_SECONDS
+              value: {{ .Values.events.pollIntervalSeconds | quote }}
+            - name: POLYAD_EVENTS_RETENTION
+              value: {{ .Values.events.retention | int | quote }}
             - name: POLYAD_WORKLOAD_API_URL
               value: {{ default (ternary (printf "http://%s-polyad-api.%s.svc:8090" .Release.Name .Release.Namespace) "" .Values.api.enabled) .Values.rootControlPlane.endpoints.api | quote }}
             - name: POLYAD_WORKLOAD_EVENTS_URL
@@ -309,8 +319,6 @@ spec:
             {{- end }}
             {{- end }}
             {{- if .Values.events.enabled }}
-            - name: POLYAD_EVENTS_RETENTION
-              value: {{ .Values.events.retention | quote }}
             - name: POLYAD_EVENTS_CONNECTIONS
               value: {{ .Values.events.maxConnections | quote }}
             {{- if $eventToken }}

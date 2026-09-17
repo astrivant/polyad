@@ -1,0 +1,27 @@
+project_id = "your-billing-enabled-project"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+cluster_name = "polyad-load-test"
+machine_type = "c3-standard-4"
+default_node_count = 1 # Untainted system nodes, additional to the 2–10 Polyad nodes.
+
+# Supply TF_VAR_argocd_admin_password_hash in the environment; never commit it.
+# Update this timestamp whenever the admin password changes.
+argocd_admin_password_mtime = "2026-09-17T00:00:00Z"
+
+# main follows chart changes. Pin a published commit SHA for each measured run.
+polyad_revision       = "main"
+polyad_automated_sync = true
+
+# Optional final overrides (the image must already exist in its registry):
+# polyad_values_override = <<-YAML
+#   operator:
+#     image:
+#       repository: ghcr.io/astrivant/polyad
+#       tag: your-published-test-tag
+#   architecture:
+#     components:
+#       executor:
+#         backlog: 4
+# YAML

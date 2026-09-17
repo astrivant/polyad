@@ -1,0 +1,171 @@
+[
+  {
+    "id": "1-0",
+    "event": "graph",
+    "data": {
+      "kind": "Graph",
+      "namespace": "test",
+      "name": "pipeline",
+      "uid": "uid-pipeline",
+      "apiVersion": "polyad.astrivant.com/v1alpha1",
+      "resourceVersion": "8",
+      "generation": 2,
+      "type": "observation",
+      "owners": [],
+      "ancestry": [],
+      "audit": {},
+      "status": {
+        "phase": "Running",
+        "ready": true
+      },
+      "resources": {}
+    }
+  },
+  {
+    "id": "2-0",
+    "event": "topology",
+    "data": {
+      "kind": "Graph",
+      "namespace": "test",
+      "name": "pipeline",
+      "uid": "uid-pipeline",
+      "apiVersion": "polyad.astrivant.com/v1alpha1",
+      "resourceVersion": "8",
+      "generation": 2,
+      "type": "topology",
+      "ancestry": [],
+      "revision": "structural-digest",
+      "snapshot": "/v1/graphs/Graph/pipeline/topology",
+      "valid": true,
+      "nodeCount": 2,
+      "connectionCount": 1
+    }
+  },
+  {
+    "id": "3-0",
+    "event": "connection",
+    "data": {
+      "kind": "TemporaryConnection",
+      "namespace": "test",
+      "name": "connection-1",
+      "uid": "uid-connection",
+      "apiVersion": "polyad.astrivant.com/v1alpha1",
+      "resourceVersion": "8",
+      "generation": 2,
+      "type": "connection",
+      "owners": [],
+      "ancestry": [],
+      "audit": {},
+      "status": {
+        "phase": "Running",
+        "ready": true
+      },
+      "resources": {},
+      "graph": {
+        "kind": "Graph",
+        "namespace": "test",
+        "name": "pipeline",
+        "uid": "uid-pipeline"
+      },
+      "connection": {
+        "requestId": "join-1",
+        "name": "connection-1",
+        "namespace": "test",
+        "uid": "uid-connection",
+        "expiresAt": "2030-01-01T00:00:00+00:00",
+        "target": {
+          "kind": "Graph",
+          "graph": "pipeline",
+          "graphUid": "uid-pipeline",
+          "source": "source",
+          "target": "sink",
+          "ports": [
+            {
+              "port": 8080,
+              "protocol": "TCP"
+            }
+          ],
+          "bidirectional": false
+        },
+        "status": {
+          "phase": "Pending",
+          "awaitingApproval": [
+            "sink"
+          ]
+        },
+        "consent": {
+          "source": "Approve"
+        },
+        "peers": {},
+        "revokeRequested": false
+      }
+    }
+  },
+  {
+    "id": "4-0",
+    "event": "connection",
+    "data": {
+      "type": "connection",
+      "participant": "target",
+      "graph": {
+        "kind": "Graph",
+        "namespace": "test",
+        "name": "pipeline",
+        "uid": "uid-pipeline",
+        "cluster": "west"
+      },
+      "connection": {
+        "requestId": "join-1",
+        "name": "connection-1",
+        "namespace": "test",
+        "uid": "uid-connection",
+        "expiresAt": "2030-01-01T00:00:00+00:00",
+        "target": {
+          "kind": "Graph",
+          "graph": "pipeline",
+          "graphUid": "uid-pipeline",
+          "source": "source",
+          "target": "sink",
+          "ports": [
+            {
+              "port": 8080,
+              "protocol": "TCP"
+            }
+          ],
+          "bidirectional": false
+        },
+        "status": {
+          "phase": "Pending",
+          "awaitingApproval": [
+            "sink"
+          ]
+        },
+        "consent": {
+          "source": "Approve"
+        },
+        "peers": {},
+        "revokeRequested": false
+      },
+      "ancestry": []
+    }
+  },
+  {
+    "id": "",
+    "event": "reset",
+    "data": {
+      "reason": "refresh topology"
+    }
+  },
+  {
+    "id": "",
+    "event": "unavailable",
+    "data": {
+      "reason": "refresh topology"
+    }
+  },
+  {
+    "id": "",
+    "event": "heartbeat",
+    "data": {}
+  }
+]

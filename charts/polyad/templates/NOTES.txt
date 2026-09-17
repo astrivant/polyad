@@ -62,6 +62,9 @@ Istio HTTPS ingress (each API requires its own bearer credential)
 {{- if $.Values.events.enabled }}
   GET  https://{{ . }}/v1/discovery              (authorized service discovery)
   GET  https://{{ . }}/v1/events                 (Server-Sent Events)
+{{- if $.Values.events.websockets.enabled }}
+  GET  wss://{{ . }}/v1/events/ws                (WebSocket upgrade)
+{{- end }}
   GET  https://{{ . }}/v1/graphs/{kind}/{name}/topology (neighbor snapshot)
   GET  https://{{ . }}/events/openapi.json       (event API schema)
 {{- end }}
@@ -92,6 +95,9 @@ Composition and activation API (bearer authentication required):
 Event subscriptions (bearer authentication required):
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/discovery
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/events
+{{- if .Values.events.websockets.enabled }}
+  GET ws://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/events/ws (WebSocket upgrade)
+{{- end }}
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/v1/graphs/{kind}/{name}/topology
   GET http://{{ .Release.Name }}-polyad-events.{{ .Release.Namespace }}.svc:8091/openapi.json
   Local access: kubectl -n {{ .Release.Namespace }} port-forward service/{{ .Release.Name }}-polyad-events 8091:8091

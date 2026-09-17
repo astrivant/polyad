@@ -36,10 +36,48 @@ def render(*settings, values_files=()):
         command.extend(["--values", str(Path(__file__).parent / "data" / filename)])
     for setting in settings:
         flag = "--set-string" if setting.startswith(("dragonfly.existingSecret=", "istioEastWest.labels.")) else "--set"
-        if setting.startswith(("operator.tuning.", "tracing.samplingRatio=")):
+        if setting.startswith(("operator.tuning.", "tracing.samplingRatio=", "events.pollIntervalSeconds=")):
             flag = "--set-json"
         command.extend([flag, setting])
     return list(filter(None, yaml.safe_load_all(subprocess.check_output(command, text=True))))
+
+
+def test_websocket_chart_connects_values_runtime_gateway_and_policy():
+    """
+    The optional transport uses the existing events port and exposes only its enabled route.
+    """
+    objects = render(
+        "mesh.enabled=true",
+        "mesh.operator.enabled=true",
+        "mesh.ingress.enabled=true",
+        "mesh.ingress.hosts[0]=polyad.example",
+        "mesh.ingress.tlsSecret=gateway-tls",
+        "mesh.operator.eventPrincipals[0]=cluster.local/ns/test/sa/reader",
+        values_files=(CHART / "values-websockets.reference.yaml",),
+    )
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    env = {item["name"]: item.get("value") for item in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert env["POLYAD_EVENTS_WEBSOCKETS_ENABLED"] == "true"
+    service = next(obj for obj in objects if obj["kind"] == "Service" and obj["metadata"]["name"] == "test-polyad-events")
+    assert [port["port"] for port in service["spec"]["ports"]] == [8091]
+    routes = next(obj for obj in objects if obj["kind"] == "VirtualService")["spec"]["http"]
+    assert any(match.get("uri", {}).get("exact") == "/v1/events/ws" for route in routes for match in route["match"])
+    policies = [obj for obj in objects if obj["kind"] == "AuthorizationPolicy"]
+    assert any(
+        "/v1/events/ws" in target["operation"].get("paths", [])
+        for obj in policies
+        for rule in obj["spec"]["rules"]
+        for target in rule.get("to", [])
+    )
+    schema = json.loads((CHART / "values.schema.json").read_text())
+    defaults = yaml.safe_load((CHART / "values.yaml").read_text())
+    defaults["events"]["websockets"]["enabled"] = True
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(defaults, schema)
+    defaults["events"]["enabled"] = True
+    defaults["events"]["websockets"]["enabled"] = "true"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(defaults, schema)
 
 
 def test_operator_autoscaling_behavior_and_runtime_tuning():

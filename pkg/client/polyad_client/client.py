@@ -13,7 +13,7 @@ from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from polyad_types import ActivationRequest, to_dict
-from polyad_types.events import Event
+from polyad_types.events import DEFAULT_MAX_EVENT_BYTES, Event, EventStreamSettings, EventTooLarge, validate_event_limit
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -58,6 +58,7 @@ class Client:
         timeout: float = 30,
         identity_cluster: str = "",
         token_provider: Callable[[], str] | None = None,
+        max_event_bytes: int = DEFAULT_MAX_EVENT_BYTES,
     ) -> None:
         """
         Configure an API base address and bearer credential.
@@ -68,6 +69,7 @@ class Client:
             timeout (float): Finite socket timeout for requests and event reads.
             identity_cluster (str): Registered token issuer for service negotiation; empty uses the receiving operator cluster.
             token_provider (Callable[[], str] | None): Read a rotating projected token immediately before each HTTP request.
+            max_event_bytes (int): Maximum UTF-8 bytes per complete SSE record or WebSocket frame; 1024 through 16 MiB.
         """
         parsed = urlsplit(url)
         if (
@@ -82,6 +84,7 @@ class Client:
         if (token is not None and (not token or any(char in token for char in "\r\n"))) or not math.isfinite(timeout) or timeout <= 0:
             raise ValueError("a bearer token and positive finite timeout are required")
         self.url, self._token, self.timeout = url.rstrip("/"), token, timeout
+        self.max_event_bytes = validate_event_limit(max_event_bytes)
         if any(char in identity_cluster for char in "\r\n") or len(identity_cluster) > 63:
             raise ValueError("invalid identity cluster")
         self.identity_cluster, self._token_provider = identity_cluster, token_provider
@@ -176,18 +179,23 @@ class Client:
         """
         return self._request("POST", f"/v1/connections/{quote(namespace, safe='')}/{quote(name, safe='')}/response", to_dict(response))
 
-    def _open(self, method: str, path: str, body: dict[str, Any] | None = None, *, headers: dict[str, str] | None = None) -> Any:
-        data = json.dumps(body, allow_nan=False).encode() if body is not None else None
+    def _authorization_headers(self) -> dict[str, str]:
         token = self._token_provider() if self._token_provider else self._token
         if token is not None and (not token or any(char in token for char in "\r\n")):
             raise ValueError("invalid bearer token")
+        return {
+            **({"Authorization": f"Bearer {token}"} if token is not None else {}),
+            **({"X-Polyad-Cluster": self.identity_cluster} if self.identity_cluster else {}),
+        }
+
+    def _open(self, method: str, path: str, body: dict[str, Any] | None = None, *, headers: dict[str, str] | None = None) -> Any:
+        data = json.dumps(body, allow_nan=False).encode() if body is not None else None
         request = Request(
             self.url + path,
             data=data,
             method=method,
             headers={
-                **({"Authorization": f"Bearer {token}"} if token is not None else {}),
-                **({"X-Polyad-Cluster": self.identity_cluster} if self.identity_cluster else {}),
+                **self._authorization_headers(),
                 "Accept": "application/json",
                 "Content-Type": "application/json",
                 **(headers or {}),
@@ -371,37 +379,59 @@ class Client:
         path = f"/v1/graphs/{quote(kind, safe='')}/{quote(graph, safe='')}/topology"
         return self._request("GET", path + (f"?{query}" if query else ""))
 
-    def events(self, *, last_event_id: str | None = None, cluster: str | None = None) -> Iterator[Event]:
+    def event_settings(self) -> EventStreamSettings:
+        """
+        Read advertised operator event budgets without increasing this client's receive limit.
+
+        Returns:
+            EventStreamSettings: Active Helm-configured limits on the events Service.
+        """
+        return EventStreamSettings(**self._request("GET", "/v1/events/config"))
+
+    def events(
+        self, *, last_event_id: str | None = None, cluster: str | None = None, transport: Literal["sse", "websocket"] = "sse"
+    ) -> Iterator[Event]:
         """
         Stream observations using a client configured for the separate events Service.
 
         Args:
             last_event_id (str | None): Last processed cursor for explicit reconnection.
             cluster (str | None): Registered cluster stream; cursors belong to that selected stream.
+            transport (Literal['sse', 'websocket']): Subscription framing; WebSocket requires operator enablement.
 
         Yields:
             Event: One bounded JSON observation or stream control message.
         """
+        if transport not in {"sse", "websocket"}:
+            raise ValueError("event transport must be sse or websocket")
         headers = {"Accept": "text/event-stream"}
         if last_event_id is not None:
             if any(char in last_event_id for char in "\r\n"):
                 raise ValueError("event cursor must fit one HTTP header")
             headers["Last-Event-ID"] = last_event_id
-        path = "/v1/events" + ("?" + urlencode({"cluster": cluster}) if cluster is not None else "")
+        query = "?" + urlencode({"cluster": cluster}) if cluster is not None else ""
+        if transport == "websocket":
+            from polyad_client.websocket import events
+
+            address = urlsplit(self.url + "/v1/events/ws" + query)
+            uri = address._replace(scheme="wss" if address.scheme == "https" else "ws").geturl()
+            yield from events(uri, {**self._authorization_headers(), **headers}, self.timeout, self.max_event_bytes)
+            return
+        path = "/v1/events" + query
         with self._open("GET", path, headers=headers) as response:
             data: list[str] = []
             event_id, event_type, size = "", "message", 0
-            while raw := response.readline(1024 * 1024 + 1):
+            while raw := response.readline(self.max_event_bytes - size + 1):
                 size += len(raw)
-                if size > 1024 * 1024:
-                    raise ValueError("event exceeds 1 MiB")
+                if size > self.max_event_bytes:
+                    raise EventTooLarge(f"event exceeds {self.max_event_bytes} bytes")
                 line = raw.decode("utf-8").rstrip("\r\n")
                 if not line:
                     if data:
                         value = json.loads("\n".join(data))
                         if not isinstance(value, dict):
                             raise ValueError("expected a JSON event object")
-                        yield Event(event_id, event_type, value)
+                        yield Event("" if event_type in {"reset", "unavailable"} else event_id, event_type, value)
                     event_type, data, size = "message", [], 0
                 elif not line.startswith(":"):
                     field, _, value = line.partition(":")
@@ -413,7 +443,14 @@ class Client:
                     elif field == "data":
                         data.append(value)
 
-    def subscribe(self, *, cluster: str | None = None, cursor: str | None = None, history: int = 1024) -> Subscription:
+    def subscribe(
+        self,
+        *,
+        cluster: str | None = None,
+        cursor: str | None = None,
+        history: int = 1024,
+        transport: Literal["sse", "websocket"] = "sse",
+    ) -> Subscription:
         """
         Build a resumable subscription with explicit application event hooks.
 
@@ -421,13 +458,14 @@ class Client:
             cluster (str | None): Registered cluster stream.
             cursor (str | None): Previously committed stream cursor.
             history (int): Bounded count of successful event-handler calls remembered during retries.
+            transport (Literal['sse', 'websocket']): SSE by default, or an operator-enabled WebSocket subscription.
 
         Returns:
             Subscription: Register filters and callbacks, then call run on the application's chosen thread.
         """
         from polyad_client.subscriptions import Subscription
 
-        return Subscription(self, cluster=cluster, cursor=cursor, history=history)
+        return Subscription(self, cluster=cluster, cursor=cursor, history=history, transport=transport)
 
     def discover(
         self,

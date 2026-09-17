@@ -16,6 +16,8 @@ does not install the operator.
 - [Activation](#activation)
 - [Composition and request handling](#composition-and-request-handling)
 - [Events and topology](#events-and-topology)
+- [Event types and size limits](#event-types-and-size-limits)
+- [WebSocket subscriptions](#websocket-subscriptions)
 - [Discovery and hooks](#discovery-and-hooks)
 - [Temporary connection consent](#temporary-connection-consent)
 - [Remote clusters](#remote-clusters)
@@ -129,6 +131,52 @@ cross-namespace callers also need the corresponding network and identity grants.
 
 See the repository's [activation guide](https://github.com/astrivant/polyad/blob/main/docs/workloads/activation.md) and
 [networking guide](https://github.com/astrivant/polyad/blob/main/docs/deployment/networking.md) for policies and deployment settings.
+
+## Event types and size limits
+
+`Event.typed()` returns a validated `GraphEvent`, `TopologyEvent`,
+`ConnectionEvent`, `ControlEvent` or `HeartbeatEvent` from `polyad_types`.
+Existing callbacks can continue using the raw `data` dictionary. Import
+`decode_event` for independent documents and `event_schema` for the packaged JSON
+Schema, without installing the operator.
+
+Choose a maximum complete event size for either transport:
+
+```python
+events = Client("http://polyad-polyad-events:8091", token, max_event_bytes=2 * 1024 * 1024)
+settings = events.event_settings()
+assert settings.maxEventBytes <= events.max_event_bytes
+```
+
+The default is 1 MiB, with an allowed range of 1 KiB–16 MiB. The limit counts UTF-8
+bytes including the event envelope/framing. `EventTooLarge` is a `ValueError`
+subclass and closes the stream without checkpointing an oversized observation.
+Reading server settings never raises the client limit automatically. See the
+[event ASTs, schemas and Helm tuning](https://github.com/astrivant/polyad/blob/main/docs/apis/event-contract.md)
+for supported payloads, validation, replay tuning and recovery.
+
+## WebSocket subscriptions
+
+`polyad-client` includes the `websockets` dependency. SSE remains the default.
+When the operator enables `events.websockets.enabled`, select WebSocket transport
+on the same events Service:
+
+```python
+for event in events.events(transport="websocket", last_event_id="0-0"):
+    print(event.event, event.data)
+    # Persist event.id only after successful processing.
+
+# The same transport works with filtered callbacks:
+subscription = events.subscribe(transport="websocket", cursor="0-0")
+```
+
+Use an HTTP(S) base URL as usual; the client selects WS(S) for subscriptions.
+Credentials and replay cursors use handshake headers. Heartbeats are handled
+internally; events, filters, callbacks and checkpoint behavior match SSE.
+Reconnection is explicit: reuse the last processed cursor, or refresh topology
+after `reset`/HTTP 410. Neither transport automatically approves connections.
+Both share the operator's subscriber ceiling and API-key concurrency lanes.
+See [WebSocket enablement and protocol](https://github.com/astrivant/polyad/blob/main/docs/workloads/workload-events.md#websocket-subscriptions).
 
 ## Discovery and hooks
 

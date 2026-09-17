@@ -36,6 +36,7 @@ Changelog = "https://github.com/astrivant/polyad/releases"
 
 [tool.poetry]
 packages = [{include = "polyad_types"}]
+include = [{path = "polyad_types/schemas/*.json", format = ["sdist", "wheel"]}]
 
 [build-system]
 requires = ["poetry-core>=2.2,<3.0"]

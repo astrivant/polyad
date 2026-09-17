@@ -644,8 +644,8 @@ flowchart TB
     composition --> operator
     events --> operator
     operator <-->|"Coordination and observations"| cache
-    events -. "SSE observations" .-> local
-    events -. "SSE observations" .-> remote
+    events -. "SSE or WebSocket observations" .-> local
+    events -. "SSE or WebSocket observations" .-> remote
     operator -->|"Forecast before next stage"| demand
     demand -->|"Upcoming resource demand"| autoscaler
     autoscaler -->|"Provision nodes when supported"| machines
@@ -819,6 +819,12 @@ and independently enabled OTLP log export.
 [Argo CD](docs/operations/argocd.md) and [Flux health checks](docs/operations/fluxcd.md) report graph and leaf health across nested applications.
 
 ### The operator as a Graph
+
+This is also our starting point for load-testing Polyad's own algorithms and
+watching how it scales. The [Terraform GKE test environment](terraform/README.md)
+installs Argo CD and syncs the self-managed component Graph from this repository,
+with KEDA on a dedicated Ubuntu node pool bounded to 2–10 total nodes, separate
+from the default pool for GKE services.
 
 Polyad can run as a compact HA Deployment or manage its own service components
 in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemetry

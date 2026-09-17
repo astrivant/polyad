@@ -135,9 +135,14 @@ subscription.on(
 subscription.run()
 ```
 
+For operators with WebSocket subscriptions enabled, use
+`client.subscribe(transport="websocket", cluster="west")` with the same filters
+and hooks. See [transport configuration](../workloads/workload-events.md#websocket-subscriptions);
+the permissions and connection-consent workflow are identical for either transport.
+
 | Filter | Matches |
 | --- | --- |
-| `event_type("topology", "connection")` | Any supplied SSE event type |
+| `event_type("topology", "connection")` | Any supplied observation event type |
 | `graph(name=..., kind=..., namespace=..., cluster=...)` | All supplied graph identity fields |
 | `phase("Pending", "Active")` | Any supplied resource or connection phase |
 | `field("status.ready", equals=True)` | Exact typed value; `True` differs from `1` |

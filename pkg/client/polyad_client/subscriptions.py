@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+    from typing import Literal
 
     from polyad_client.client import Client
     from polyad_client.filters import Filter
@@ -37,7 +38,15 @@ class Subscription:
     Run ordered hooks on the caller's thread with explicit checkpoint and retry control.
     """
 
-    def __init__(self, client: Client, *, cluster: str | None = None, cursor: str | None = None, history: int = 1024) -> None:
+    def __init__(
+        self,
+        client: Client,
+        *,
+        cluster: str | None = None,
+        cursor: str | None = None,
+        history: int = 1024,
+        transport: Literal["sse", "websocket"] = "sse",
+    ) -> None:
         """
         Bind one authorized stream and a bounded in-process callback replay history.
 
@@ -46,9 +55,13 @@ class Subscription:
             cluster (str | None): Registered cluster stream; each stream needs its own subscription.
             cursor (str | None): Last completely handled event ID, restored by the application.
             history (int): Maximum remembered event-handler successes; not durable exactly-once delivery.
+            transport (Literal['sse', 'websocket']): Operator event transport, retaining the same callbacks and cursors.
         """
         if type(history) is not int or not 1 <= history <= 65536:
             raise ValueError("subscription history must be an integer from 1 through 65536")
+        if transport not in {"sse", "websocket"}:
+            raise ValueError("event transport must be sse or websocket")
+        self.transport = transport
         self.client, self.cluster, self.cursor, self.history = client, cluster, cursor, history
         self._hooks: list[tuple[Filter, Callable[[Event], None]]] = []
         self._handled: OrderedDict[tuple[str, int], None] = OrderedDict()
@@ -106,7 +119,7 @@ class Subscription:
         self._running = True
         stream: Iterator[Event] | None = None
         try:
-            stream = self.client.events(last_event_id=self.cursor, cluster=self.cluster)
+            stream = self.client.events(last_event_id=self.cursor, cluster=self.cluster, transport=self.transport)
             for event in stream:
                 self.dispatch(event)
         finally:

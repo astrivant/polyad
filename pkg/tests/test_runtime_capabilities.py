@@ -37,6 +37,7 @@ async def main():
     result = {
         'modules': sorted(sys.modules),
         'ports': handlers.http.ports if handlers.http else {},
+        'websockets': handlers.http.websockets if handlers.http else False,
         'publishes_events': handlers.events is not None,
         'controller': handlers.controller is not None,
         'postgres': handlers.state is not None,
@@ -103,6 +104,8 @@ def test_minimal_helm_startup_avoids_optional_services():
         result["modules"],
         "flask",
         "waitress",
+        "websockets",
+        "hypercorn",
         "flask_httpauth",
         "flask_limiter",
         "psycopg",
@@ -126,6 +129,7 @@ def test_split_helm_components_only_import_their_endpoint_families():
         "architecture.mode=Distributed",
         "api.enabled=true",
         "events.enabled=true",
+        "events.websockets.enabled=true",
         "metrics.enabled=true",
         "connections.enabled=true",
         "authentication.mode=Disabled",
@@ -137,6 +141,9 @@ def test_split_helm_components_only_import_their_endpoint_families():
         assert set(result["ports"]) == ports
         assert result["controller"] == (component == "executor")
         assert result["publishes_events"] == (component in {"gateway", "executor"})
+        assert result["websockets"] == (component == "gateway")
+        # The mocked start never serves sockets: imports remain lazy until transport startup.
+        assert_absent(result["modules"], "hypercorn", "websockets")
         assert_absent(result["modules"], "psycopg", "flask_limiter", "flask_httpauth", "opentelemetry.sdk")
         if component == "executor":
             assert_absent(result["modules"], "flask", "waitress", "prometheus_client")

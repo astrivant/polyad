@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["revision", "valueFiles", "values", "automatedSync"],
+  "properties": {
+    "revision": {"type": "string", "minLength": 1},
+    "valueFiles": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "values": {"type": "string"},
+    "automatedSync": {"type": "boolean"}
+  }
+}

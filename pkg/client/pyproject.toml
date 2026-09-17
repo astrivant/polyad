@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "polyad-types==0.0.1a3",
+    "websockets>=17.1,<18",
 ]
 
 [project.urls]

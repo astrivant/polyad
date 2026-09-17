@@ -158,6 +158,8 @@ default values. Schema checks keep annotations in all shipped values files in sy
 | [`values-postgresql.reference.yaml`](values-postgresql.reference.yaml) | Optional persistent state, database HA and connection-driven KEDA scaling in the release cluster | [PostgreSQL](../../docs/deployment/postgresql.md) |
 | [`values-authentication.reference.yaml`](values-authentication.reference.yaml) | Scoped service/operator keys, workload Secret assignments and optional dedicated authentication storage | [API keys](../../docs/operations/api-keys.md) |
 | [`values-connections.reference.yaml`](values-connections.reference.yaml) | Service consent events and separate connection/reconciliation pulse budgets | [Temporary connections](../../docs/apis/temporary-connections.md) |
+| [`values-websockets.reference.yaml`](values-websockets.reference.yaml) | Optional WebSocket subscriptions sharing the events Service, authorization and subscriber limits with SSE | [WebSocket subscriptions](../../docs/workloads/workload-events.md#websocket-subscriptions) |
+| [`values-events.reference.yaml`](values-events.reference.yaml) | Event byte budgets, replay batch size, polling, retention and subscriber capacity | [Event contract and tuning](../../docs/apis/event-contract.md) |
 | [`values-demo.reference.yaml`](values-demo.reference.yaml) | Public demonstration endpoints without authentication or HTTP quotas | [Demo mode](../../docs/operations/api-keys.md#demonstrations-without-authentication) |
 | [`values-tracing.reference.yaml`](values-tracing.reference.yaml) | OTLP/HTTP traces and independent decision logs, parent-based trace sampling and optional exporter credentials | [OpenTelemetry traces and logs](../../docs/operations/tracing.md) |
 | [`values-tuning.reference.yaml`](values-tuning.reference.yaml) | Work-graph worker and planner limits, validation cadence, polling intervals, Cheeger computation ceilings and metrics | [Write-pipeline configuration](../../docs/development/write-pipeline.md#configuration), [performance tuning](../../docs/operations/performance.md) |
@@ -361,6 +363,8 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | `architecture.components.telemetry.concurrentRequests` | **Type: integer.** Target concurrent metrics requests per copy                                                                                                          | `2` |
 | `dragonfly.enabled`                                    | **Type: boolean.** Deploy Dragonfly through the upstream operator Helm dependency                                                                                       | `true` |
 | `dragonfly.image`                                      | **Type: string.** Bundled Dragonfly image                                                                                                                               | `docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0` |
+| `dragonfly.nodeSelector`                               | **Type: object.** Node labels selecting bundled cache Pods, independently of controller placement                                                                       | `{}` |
+| `dragonfly.tolerations`                                | **Type: array.** Taints tolerated by bundled cache Pods; use with nodeSelector to require a dedicated pool                                                              | `[]` |
 | `dragonfly.ha.enabled`                                 | **Type: boolean.** Enable primary/replica replication and automatic failover                                                                                            | `false` |
 | `dragonfly.ha.replicas`                                | **Type: integer.** Initial Dragonfly instances in HA mode, including the primary; fixed when autoscaling is disabled                                                    | `2` |
 | `dragonfly.ha.topologyKey`                             | **Type: string.** Place HA instances on distinct values of this node label                                                                                              | `kubernetes.io/hostname` |
@@ -416,13 +420,17 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### Event subscriptions
 
-| Name                    | Description                                                                                                 | Value           |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------- | --------------- |
-| `events.enabled`        | **Type: boolean.** Serve namespace graph observations through a separate SSE Service on port 8091           | `false` |
-| `events.existingSecret` | **Type: string.** Existing Secret containing a token key for read-only event subscriptions                  | `polyad-events` |
-| `events.key`            | **Type: string.** Inline subscriber token; creates a managed Secret and requires existingSecret to be empty | `""` |
-| `events.retention`      | **Type: integer.** Maximum observations retained in the shared replay stream                                | `10000` |
-| `events.maxConnections` | **Type: integer.** Maximum simultaneous event subscribers per operator replica                              | `16` |
+| Name                         | Description                                                                                                                                                                                                         | Value           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `events.enabled`             | **Type: boolean.** Serve namespace graph observations through a separate events Service on port 8091; SSE is always available when enabled                                                                          | `false` |
+| `events.websockets.enabled`  | **Type: boolean.** Enable /v1/events/ws alongside SSE; both transports share authentication, replay cursors and subscriber limits; requires events.enabled                                                          | `false` |
+| `events.existingSecret`      | **Type: string.** Existing Secret containing a token key for read-only event subscriptions                                                                                                                          | `polyad-events` |
+| `events.key`                 | **Type: string.** Inline subscriber token; creates a managed Secret and requires existingSecret to be empty                                                                                                         | `""` |
+| `events.retention`           | **Type: integer.** Maximum observations retained in the shared replay stream                                                                                                                                        | `10000` |
+| `events.maxConnections`      | **Type: integer.** Maximum simultaneous event subscribers per operator replica                                                                                                                                      | `16` |
+| `events.maxEventBytes`       | **Type: integer.** Maximum complete SSE record or WebSocket JSON frame in UTF-8 bytes (1024-16777216); oversized observations are rejected before replay/archive, and clients choose their own matching receive cap | `1048576` |
+| `events.readBatchSize`       | **Type: integer.** Maximum observations fetched per subscriber read (1-256); higher values catch up faster but increase memory and work per read                                                                    | `64` |
+| `events.pollIntervalSeconds` | **Type: number.** Empty-stream polling delay in seconds (0.05-5); lower values reduce idle delivery latency at the cost of more cache reads                                                                         | `1` |
 
 ### Scheduler metrics
 
