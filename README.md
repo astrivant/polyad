@@ -2,6 +2,12 @@
 
 <img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoe logo" width="140" height="140">
 
+[![Build status](https://github.com/astrivant/polyad/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/astrivant/polyad/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/docs-read-brightgreen.svg)](https://github.com/astrivant/polyad/blob/main/docs/README.md)
+[![PyPI version](https://img.shields.io/pypi/v/polyad.svg)](https://pypi.org/project/polyad/)
+[![Python versions](https://img.shields.io/pypi/pyversions/polyad.svg)](https://pypi.org/project/polyad/)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](https://github.com/astrivant/polyad/blob/main/LICENSE)
+
 Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics) is a Kubernetes operator for deploying, connecting and scaling applications as graphs.
 Compose batch jobs, persistent services and supporting resources into reusable
 Graphs and PolyGraphs. Define how work starts, how components communicate and

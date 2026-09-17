@@ -9,8 +9,10 @@ repository:
   # A short description of the repository that will show up on GitHub
   description: Kubernetes operator for scheduling and securing workloads as composable graphs
 
-  # A URL with more information about the repository
-  homepage: https://github.com/astrivant/polyad
+  # GitHub supports one homepage URL; use the operator's published package.
+  # Client: https://pypi.org/project/polyad-client/
+  # Shared types: https://pypi.org/project/polyad-types/
+  homepage: https://pypi.org/project/polyad/
 
   # A comma-separated list of topics to set on the repository
   topics: Kubernetes, scheduler, operator, controller, api, orchestration, graphs
