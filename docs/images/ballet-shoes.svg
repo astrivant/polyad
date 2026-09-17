@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Polyad ballet shoes</title>
+  <desc id="desc">A simple pair of soft pink ballet shoes with crossed ribbons.</desc>
+  <g stroke="#c18496" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M49 43C51 28 72 31 72 18C72 11 62 10 58 16C54 22 63 32 78 40" fill="none" stroke="#dfa6b8" stroke-width="5"/>
+    <g transform="rotate(-18 83 77)">
+      <path d="M81 36C69 36 64 46 64 61L66 101C66 112 73 118 84 118H91C102 118 107 110 105 98L100 59C98 44 92 36 81 36Z" fill="#e6a7bb"/>
+      <path d="M81 44C74 44 71 51 72 61L74 76C75 84 79 88 85 87C92 86 95 81 94 73L92 60C91 49 88 44 81 44Z" fill="#fff0f3"/>
+      <path d="M72 57L93 73M74 74L91 57" fill="none" stroke="#cf8ca3" stroke-width="4"/>
+      <path d="M67 102Q86 109 105 102" fill="none"/>
+    </g>
+    <g transform="rotate(18 46 74)">
+      <path d="M47 30C36 30 29 40 28 54L24 96C23 108 29 114 39 114H47C58 114 64 107 64 95L65 55C66 39 58 30 47 30Z" fill="#f2c0d0"/>
+      <path d="M47 38C40 38 36 45 35 55L34 69C33 77 38 82 44 81C52 81 56 76 56 69L57 55C57 44 54 38 47 38Z" fill="#fff0f3"/>
+      <path d="M35 53L56 69M34 69L56 53" fill="none" stroke="#d99bb0" stroke-width="4"/>
+      <path d="M25 96Q44 103 64 96" fill="none"/>
+    </g>
+  </g>
+</svg>

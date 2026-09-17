@@ -1,5 +1,7 @@
 # Polyad
 
+<img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoe logo" width="120" height="120">
+
 Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29)) is a Kubernetes operator for deploying, connecting and scaling applications as graphs.
 Compose batch jobs, persistent services and supporting resources into reusable
 Graphs and PolyGraphs. Define how work starts, how components communicate and
@@ -35,23 +37,25 @@ in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deplo
 
 ## Table of contents
 
-- [Get started](#get-started)
-- [What Polyad abstracts](#what-polyad-abstracts)
-  - [Motivation](#motivation)
-  - [Graphs of graphs](#graphs-of-graphs)
-  - [Replica connections](#replica-connections)
-  - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
-  - [Constrained compositions](#constrained-compositions)
-  - [Network boundaries](#network-boundaries)
-  - [Graphs across clusters](#graphs-across-clusters)
-  - [Graphs across node groups](#graphs-across-node-groups)
-  - [Workloads calling the operator](#workloads-calling-the-operator)
-  - [Finite pipelines](#finite-pipelines)
-  - [Persistent services and recurrence](#persistent-services-and-recurrence)
-  - [The operator as a Graph](#the-operator-as-a-graph)
-- [What Polyad is not](#what-polyad-is-not)
-- [License](#license)
-- [References](#references)
+- [Polyad](#polyad)
+  - [Table of contents](#table-of-contents)
+  - [Get started](#get-started)
+  - [What Polyad abstracts](#what-polyad-abstracts)
+    - [Motivation](#motivation)
+    - [Graphs of graphs](#graphs-of-graphs)
+    - [Replica connections](#replica-connections)
+    - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
+    - [Constrained compositions](#constrained-compositions)
+    - [Network boundaries](#network-boundaries)
+    - [Graphs across clusters](#graphs-across-clusters)
+    - [Graphs across node groups](#graphs-across-node-groups)
+    - [Workloads calling the operator](#workloads-calling-the-operator)
+    - [Finite pipelines](#finite-pipelines)
+    - [Persistent services and recurrence](#persistent-services-and-recurrence)
+    - [The operator as a Graph](#the-operator-as-a-graph)
+  - [What Polyad is not](#what-polyad-is-not)
+  - [License](#license)
+  - [References](#references)
 
 ## Get started
 
