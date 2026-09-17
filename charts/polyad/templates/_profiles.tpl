@@ -4,6 +4,7 @@
 {{- $profile := ternary "ha" "singular" $values.ha -}}
 {{- $_ := set $values "_profile" $profile -}}
 {{- if $values.worker.enabled -}}
+{{- if $values.keda.install }}{{ fail "install KEDA at the root; worker releases must set keda.install=false" }}{{ end -}}
 {{- range $field := list "rootNamespace" "rootClusterName" "rootDeployment" "rootGraph" "poolName" -}}
 {{- if not (index $values.worker $field) }}{{ fail (printf "worker.enabled requires worker.%s" $field) }}{{ end -}}
 {{- end -}}

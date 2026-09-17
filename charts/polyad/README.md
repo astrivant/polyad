@@ -22,7 +22,7 @@ health metrics, and installation examples.
   - [Event subscriptions](#event-subscriptions)
   - [Scheduler metrics](#scheduler-metrics)
   - [Named operator API credentials](#named-operator-api-credentials)
-  - [KEDA credential integration](#keda-credential-integration)
+  - [KEDA installation, observation and credentials](#keda-installation-observation-and-credentials)
   - [Optional External Secrets Operator resources](#optional-external-secrets-operator-resources)
   - [Operator endpoint and cache isolation](#operator-endpoint-and-cache-isolation)
   - [Optional Istio integration](#optional-istio-integration)
@@ -55,7 +55,11 @@ Helm dependency, pinned in `Chart.lock`, and a managed Dragonfly cache. Defaults
 are one Polyad replica (`ha: false`), two leader-elected Dragonfly controller replicas, and one
 Dragonfly data instance with five-minute PVC snapshots and eviction disabled.
 
-Install KEDA, then enable HA with an initial primary and one replica:
+Install KEDA separately or set `keda.install=true` to enable the pinned upstream
+dependency. In root mode, KEDA and every enabled local service join the
+[root operator Graph](../../docs/deployment/local-services.md). The
+[KEDA reference values](values-keda.reference.yaml) describe bundled and existing
+installations. Then enable cache HA with an initial primary and one replica:
 
 ```sh
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
@@ -421,12 +425,18 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | `authentication.services`                 | Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits                    | `[]`                    |
 | `authentication.operators`                | Peer operator API keys; Inbound, Outbound or Bidirectional, with HA-wide per-key lanes                                                         | `[]`                    |
 
-### KEDA credential integration
+### KEDA installation, observation and credentials
 
-| Name                          | Description                                                                                             | Value   |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- | ------- |
-| `keda.authentication.enabled` | Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics | `false` |
-| `keda.authentication.name`    | TriggerAuthentication name; empty uses the release metrics name                                         | `""`    |
+| Name                           | Description                                                                                                                                                  | Value   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| `keda.install`                 | Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation                                        | `false` |
+| `keda.observation.enabled`     | Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA                     | `true`  |
+| `keda.observation.namespace`   | Namespace of an existing KEDA installation; bundled KEDA always uses the release namespace                                                                   | `keda`  |
+| `keda.observation.deployments` | Existing KEDA Deployment names to observe; remove disabled components or replace customized names; ignored for bundled KEDA                                  | `[]`    |
+| `keda.observation.services`    | Existing KEDA Service names to observe; match the installed KEDA chart; ignored for bundled KEDA                                                             | `[]`    |
+| `keda.authentication.enabled`  | Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics                                                      | `false` |
+| `keda.authentication.name`     | TriggerAuthentication name; empty uses the release metrics name                                                                                              | `""`    |
+| `kedaOperator`                 | Upstream KEDA chart overrides used only when keda.install is true; its rendered workloads and Services are automatically included in the reserved root Graph | `{}`    |
 
 ### Optional External Secrets Operator resources
 

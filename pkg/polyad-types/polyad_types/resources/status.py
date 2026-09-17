@@ -277,6 +277,8 @@ class ResourceCounts(AST):
         Deployment (int): Number of owned Deployment resources.
         StatefulSet (int): Number of owned StatefulSet resources.
         DaemonSet (int): Number of owned DaemonSet resources.
+        Dragonfly (int): Observed cache instances owned by the upstream Dragonfly operator.
+        Cluster (int): Observed PostgreSQL clusters owned by CloudNativePG.
         Service (int): Number of owned Service resources.
         ConfigMap (int): Number of owned ConfigMap resources.
         PersistentVolumeClaim (int): Number of owned PersistentVolumeClaim resources.
@@ -297,6 +299,8 @@ class ResourceCounts(AST):
     Deployment: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Deployment resources."}})
     StatefulSet: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned StatefulSet resources."}})
     DaemonSet: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned DaemonSet resources."}})
+    Dragonfly: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Observed upstream Dragonfly instances."}})
+    Cluster: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Observed CloudNativePG clusters."}})
     Service: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Service resources."}})
     ConfigMap: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned ConfigMap resources."}})
     PersistentVolumeClaim: int = field(

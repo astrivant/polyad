@@ -65,6 +65,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Compiler objects](deployment/operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
 | [Health and backlog](deployment/operator.md#health) | Pod probes, inbound updates and API write pressure |
 | [Component deployments](deployment/components.md) | Dense or split services, the operator's own Graph, bootstrap recovery and KEDA demand |
+| [Local services in the root Graph](deployment/local-services.md) | Complete local chart inventory, bundled or existing KEDA, observation permissions and lifecycle ownership |
 | [Root control plane](deployment/root-control-plane.md) | One reserved PolyGraph containing the root and remote operator group Graphs, live membership, centralized reports and KEDA targets |
 | [Helm-installed downstream operators](deployment/helm-workers.md) | Administrator-owned installation, explicit root attachment, and a choice of root or local replica scaling |
 | [Multicluster and observers](deployment/multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |

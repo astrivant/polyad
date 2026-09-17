@@ -1,0 +1,42 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if .Values.rootControlPlane.enabled -}}
+{{- $roleName := printf "%s-%s-service-observations" (.Release.Name | trunc 32 | trimSuffix "-") (printf "%s/%s" .Release.Namespace .Release.Name | sha256sum | trunc 8) -}}
+{{- $namespaces := dict -}}
+{{- range $targets := (include "polyad.localServices" . | fromJson) -}}
+{{- range $targets -}}
+{{- $_ := set $namespaces .namespace (append (default (list) (get $namespaces .namespace)) .) -}}
+{{- end -}}
+{{- end -}}
+{{- $apis := dict "Deployment" (list "apps" "deployments") "StatefulSet" (list "apps" "statefulsets") "DaemonSet" (list "apps" "daemonsets") "Service" (list "" "services") "Dragonfly" (list "dragonflydb.io" "dragonflies") "Cluster" (list "postgresql.cnpg.io" "clusters") -}}
+{{- range $namespace, $targets := $namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $roleName }}
+  namespace: {{ $namespace }}
+rules:
+  {{- range $targets }}
+  - apiGroups: [{{ index (get $apis .kind) 0 | quote }}]
+    resources: [{{ index (get $apis .kind) 1 | quote }}]
+    resourceNames: [{{ .name | quote }}]
+    verbs: [get]
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $roleName }}
+  namespace: {{ $namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $roleName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $.Release.Name }}-polyad
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
+{{- end -}}
+{{- end -}}

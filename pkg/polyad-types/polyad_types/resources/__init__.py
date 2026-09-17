@@ -63,6 +63,7 @@ from polyad_types.resources.resources import Pod as Pod
 from polyad_types.resources.resources import PodTemplate as PodTemplate
 from polyad_types.resources.resources import PodTemplateResource as PodTemplateResource
 from polyad_types.resources.resources import PolyGraph as PolyGraph
+from polyad_types.resources.resources import PostgreSQLCluster as PostgreSQLCluster
 from polyad_types.resources.resources import ProvisioningRequest as ProvisioningRequest
 from polyad_types.resources.resources import RemoteScale as RemoteScale
 from polyad_types.resources.resources import ReplicaGroup as ReplicaGroup

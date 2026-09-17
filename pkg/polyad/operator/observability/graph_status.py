@@ -100,6 +100,15 @@ def observed(obj: dict[str, Any]) -> dict[str, bool]:
     elif obj["kind"] == "PersistentVolumeClaim":
         ready = status.get("phase") == "Bound"
         failed = status.get("phase") == "Lost"
+    elif obj["kind"] == "Dragonfly":
+        ready = status.get("phase", "").lower() == "ready" and not status.get("isRollingUpdate", False)
+    elif obj["kind"] == "Cluster":
+        ready = conditions.get("Ready", False) and status.get("readyInstances", 0) == spec.get("instances", 1)
+        ready = ready and all(
+            condition.get("observedGeneration", obj["metadata"].get("generation", 1)) == obj["metadata"].get("generation", 1)
+            for condition in status.get("conditions", [])
+            if condition["type"] == "Ready"
+        )
     else:
         ready = True
     if obj["metadata"].get("deletionTimestamp"):
@@ -149,7 +158,7 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
         obj = {**obj, "spec": replica_topology(obj["spec"])}
     spec = obj["spec"]
     counts = Counter(child["kind"] for child in children)
-    by_kind: dict[str, Any] = {kind: counts[kind] for kind in sorted(GRAPH_OWNED_KINDS)}
+    by_kind: dict[str, Any] = {kind: counts[kind] for kind in sorted(GRAPH_OWNED_KINDS | {"Dragonfly", "Cluster"})}
     result = GraphMetrics(
         observedGeneration=obj["metadata"].get("generation", 1),
         resources=ResourceMetrics(

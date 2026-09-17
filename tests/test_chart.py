@@ -419,7 +419,9 @@ def test_vendored_crd_matches_locked_dependency(tmp_path):
     """
     Detect upstream API drift whenever the dependency version changes.
     """
-    dependency = yaml.safe_load((CHART / "Chart.lock").read_text())["dependencies"][0]
+    dependency = next(
+        entry for entry in yaml.safe_load((CHART / "Chart.lock").read_text())["dependencies"] if entry["name"] == "dragonfly-operator"
+    )
     archive = CHART / "charts" / f"dragonfly-operator-{dependency['version']}.tgz"
     with tarfile.open(archive) as package:
         package.extractall(tmp_path, filter="data")

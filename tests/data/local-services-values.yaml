@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# Combine with root-values.yaml to inventory every optional local service.
+keda:
+  install: true
+dragonfly:
+  enabled: true
+postgresql:
+  enabled: true
+observer:
+  enabled: true
+  existingSecret: observer-access
+api:
+  enabled: true
+events:
+  enabled: true
+connections:
+  enabled: true
+mesh:
+  enabled: true
+  install: true
+  ingress:
+    enabled: true
+    hosts: [polyad.example.test]
+    tlsSecret: polyad-tls
+  multicluster:
+    enabled: true
+    eastWest:
+      enabled: true
+global:
+  istioNamespace: test
+  meshID: shared
+  network: management-network
+istioEastWest:
+  networkGateway: management-network

@@ -51,6 +51,12 @@ Optional Istio and autoscaler types remain listed even when those APIs are absen
 from a particular cluster. Their existing feature and discovery checks still
 control their use.
 
+The reserved root Graph also counts explicitly observed `Dragonfly` and
+CloudNativePG `Cluster` objects. They are registered native kinds but are not
+graph-owned resources. `PostgreSQLCluster` is the shared Python model for `Cluster`;
+the operator's adapter permits only reads through that route. Observation does
+not install those APIs or take lifecycle ownership from their controllers.
+
 ## Extending the catalog
 
 Declare metadata on the AST class's `resource_type` in

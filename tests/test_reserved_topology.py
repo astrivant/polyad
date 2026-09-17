@@ -154,11 +154,15 @@ def test_component_recovery_and_scaling_stay_inside_the_root_operator_graph(monk
         "architecture.mode=Distributed",
         "api.enabled=true",
         "architecture.expandedNodes=9",
+        "keda.observation.enabled=false",
         values_files=("root-values.yaml",),
     )
+    deployment = next(obj for obj in rendered if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    environment = {entry["name"]: entry.get("value") for entry in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+    monkeypatch.setenv("POLYAD_LOCAL_SERVICES", environment["POLYAD_LOCAL_SERVICES"])
     definitions = []
     for obj in rendered:
-        if obj["apiVersion"] == f"{GROUP}/v1alpha1":
+        if obj["apiVersion"] == f"{GROUP}/v1alpha1" or obj["kind"] == "Service":
             definition = resource(obj["kind"], obj["metadata"]["name"], obj["spec"])
             definition["metadata"].update(obj["metadata"])
             definitions.append(definition)
@@ -192,17 +196,19 @@ def test_component_recovery_and_scaling_stay_inside_the_root_operator_graph(monk
         await settle()
         root_group = (await api.owned("test", boundary["metadata"]["uid"]))[0]
         members = {obj["metadata"]["labels"][f"{GROUP}/node"]: obj for obj in await api.owned("test", root_group["metadata"]["uid"])}
-        assert set(members) == {"bootstrap", "components"}
+        assert set(members) == {"bootstrap", "components", "endpoints"}
         assert members["bootstrap"]["metadata"]["annotations"][DEPLOYMENT] == "test-polyad"
         assert DEPLOYMENT not in root_group["metadata"]["annotations"]
         assert root_group["spec"]["connections"] == [
             {"source": "bootstrap", "target": "components"},
             {"source": "components", "target": "bootstrap"},
+            {"source": "bootstrap", "target": "endpoints"},
+            {"source": "endpoints", "target": "bootstrap"},
         ]
         assert members["components"]["status"]["structuralRules"][0]["measurements"]["cheeger"] == 1
         poly = api.objects["PolyGraph", "test", "test-operators"]
         assert poly["status"]["ready"]
-        assert poly["status"]["metrics"]["rollup"]["leafNodes"] == 7
+        assert poly["status"]["metrics"]["rollup"]["leafNodes"] == 9
         assert len(api.children("Deployment")) == 7
         for obj in (poly, root_group, *members.values()):
             assert not await public_observation(api, obj)

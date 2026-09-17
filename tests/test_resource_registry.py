@@ -95,12 +95,16 @@ def test_every_owned_kind_is_counted_in_typed_status():
     """
     New inventory kinds must remain representable in the published status schema.
     """
-    assert {field.name for field in fields(ResourceCounts)} - {"extra"} == GRAPH_OWNED_KINDS
+    observed_only = {"Cluster", "Dragonfly"}
+    assert observed_only.isdisjoint(GRAPH_OWNED_KINDS)
+    assert observed_only <= RESOURCE_TYPES.keys()
+    counted = GRAPH_OWNED_KINDS | observed_only
+    assert {field.name for field in fields(ResourceCounts)} - {"extra"} == counted
     parent = resource("Graph", "root", {"nodes": []})
-    children = [resource(kind, kind.lower(), {}) for kind in sorted(GRAPH_OWNED_KINDS)]
+    children = [resource(kind, kind.lower(), {}) for kind in sorted(counted)]
     metrics = instance_metrics(parent, children)
-    assert metrics["resources"]["total"] == len(GRAPH_OWNED_KINDS)
-    assert metrics["resources"]["byKind"] == dict.fromkeys(GRAPH_OWNED_KINDS, 1)
+    assert metrics["resources"]["total"] == len(counted)
+    assert metrics["resources"]["byKind"] == dict.fromkeys(counted, 1)
 
 
 @pytest.mark.parametrize("mesh,capacity", [(False, False), (False, True), (True, False), (True, True)])

@@ -144,6 +144,8 @@ class API:
             "TokenReview": ("/apis/authentication.k8s.io/v1", "tokenreviews"),
             "SubjectAccessReview": ("/apis/authorization.k8s.io/v1", "subjectaccessreviews"),
         }
+        if kind == "Cluster" and (method != "GET" or status):
+            raise ValueError("PostgreSQL infrastructure observations are read-only")
         prefix, plural = reviews.get(kind, BUILTINS.get(kind, (f"/apis/{GROUP}/{VERSION}", KINDS.get(kind, ""))))
         if not plural:
             raise ValueError(f"unsupported kind: {kind}")

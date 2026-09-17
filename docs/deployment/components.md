@@ -38,8 +38,9 @@ through graph admission at every copy boundary.
 
 ## Install
 
-Install KEDA and prepare the `polyad-api`, `polyad-events` and `polyad-metrics`
-token Secrets, or configure ESO to create them. Then:
+Install KEDA separately or enable the [optional chart dependency](local-services.md#install-keda-with-the-chart).
+Prepare the `polyad-api`, `polyad-events` and `polyad-metrics` token Secrets,
+or configure ESO to create them. Then:
 
 ```bash
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
@@ -63,8 +64,9 @@ reconciles it from outside the Graph.
 
 With `rootControlPlane.enabled`, the component Graph becomes a reusable
 definition instantiated **inside the root operator group's Graph**. A sibling
-bootstrap observation Graph tracks the existing Helm Deployment. Both branches
-belong to the same root operator group in the
+bootstrap observation Graph tracks the existing Helm Deployment. KEDA and all
+other enabled [local chart services](local-services.md) join as observation
+branches in the same root operator group in the
 [reserved root PolyGraph](root-control-plane.md#reserved-operator-hierarchy):
 
 ```mermaid
@@ -84,12 +86,15 @@ flowchart TB
             end
             observation -->|"reconcile and restore components"| plane
             plane -->|"observations"| observation
+            keda["KEDA observation Graph<br/>Autoscaling services"]
+            infrastructure["Local service observation Graphs<br/>Endpoints, cache, databases,<br/>observer and mesh when enabled"]
+            observation <-->|"use and observe"| infrastructure
         end
         remote["Remote operator group Graphs"]
         group <-->|"root coordination and observations"| remote
     end
     rule["GraphRule<br/>connected, Cheeger ≥ 1<br/>expandedNodes ≤ 27"] -. checks .-> plane
-    keda["KEDA"] -->|"read global demand"| telemetry
+    keda -->|"read global demand"| telemetry
     keda -->|"request group counts"| bootstrap
 ```
 
@@ -122,9 +127,10 @@ Services keep their existing names and ports while selecting the matching role.
 NetworkPolicy, Istio authorization and Secret mounts apply to component Pods.
 With ESO reloads enabled, generated Daemons also opt into Secret-change restart
 annotations. Credential file checks continue to request process replacement.
-The managed database and Dragonfly stay outside this component Graph. The
-bootstrap Deployment retains Helm ownership; in root mode its observation Graph
-and managed components share one operator group Graph within the reserved PolyGraph.
+The pipeline retains its own component boundary. In root mode, KEDA, Dragonfly,
+managed databases and other local services share the enclosing operator group
+Graph, with their existing lifecycle owners preserved. The bootstrap Deployment
+retains Helm ownership.
 
 ## Scaling and structural bounds
 
@@ -191,7 +197,7 @@ the root operator Graph's bootstrap and component branches. The bootstrap
 reconciles and restores missing managed components from within that modeled
 group, while Helm owns the bootstrap's lifecycle. Adding remote operator groups
 updates the enclosing PolyGraph. Dense root planners receive the same protection;
-their root Graph has only the bootstrap observation branch.
+their root Graph contains bootstrap and the enabled local service observations.
 
 The HA chart requires at least two bootstrap replicas. Deleting or
 suspending the managed Graph stops its components; bootstrap survives and can

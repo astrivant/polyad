@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Add to the root-control-plane reference to install KEDA in the management release.
+# Guide: ../../docs/deployment/local-services.md
+## @param keda [object] Choose bundled KEDA or observe an existing installation; avoid installing a second KEDA over the same cluster resources.
+keda:
+  ## @param keda.install [boolean] True installs the pinned upstream dependency in the release namespace; false uses existing KEDA.
+  install: true
+  ## @param keda.observation [object] Existing KEDA identities; bundled identities are derived from rendered templates instead.
+  observation:
+    ## @param keda.observation.enabled [boolean] Include existing KEDA in the reserved root Graph; disable for roots without KEDA. Bundled KEDA is always included.
+    enabled: true
+    ## @param keda.observation.namespace [string] Namespace containing existing KEDA; ignored when install is true.
+    namespace: keda
+    ## @param keda.observation.deployments [array] Existing Deployment names; adjust naming overrides and remove disabled components.
+    deployments: [keda-operator, keda-operator-metrics-apiserver, keda-admission-webhooks]
+    ## @param keda.observation.services [array] Existing Service names; these are read-only observations, not Services created by Polyad.
+    services: [keda-operator, keda-operator-metrics-apiserver, keda-admission-webhooks]
+
+## @param kedaOperator [object] Upstream KEDA settings used when install is true; extra replicas provide failover capacity.
+kedaOperator:
+  ## @param kedaOperator.operator [object] KEDA reconciler configuration; leader election still selects one active leader.
+  operator:
+    ## @param kedaOperator.operator.replicaCount [integer] Two operator Pods provide a standby; this does not double reconciliation throughput.
+    replicaCount: 2
+  ## @param kedaOperator.metricsServer [object] External metrics API configuration used by HPA.
+  metricsServer:
+    ## @param kedaOperator.metricsServer.replicaCount [integer] Two metrics-server Pods provide failover capacity.
+    replicaCount: 2
+  ## @param kedaOperator.webhooks [object] Admission validation for KEDA resources.
+  webhooks:
+    ## @param kedaOperator.webhooks.enabled [boolean] Keep admission validation enabled; disabling it also removes its observation targets.
+    enabled: true
+    ## @param kedaOperator.webhooks.replicaCount [integer] Two webhook Pods provide admission availability during a rollout.
+    replicaCount: 2

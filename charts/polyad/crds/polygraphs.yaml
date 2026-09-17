@@ -1496,6 +1496,14 @@ spec:
                             type: integer
                             description: Number of owned DaemonSet resources.
                             minimum: 0
+                          Dragonfly:
+                            type: integer
+                            description: Observed upstream Dragonfly instances.
+                            minimum: 0
+                          Cluster:
+                            type: integer
+                            description: Observed CloudNativePG clusters.
+                            minimum: 0
                           Service:
                             type: integer
                             description: Number of owned Service resources.

@@ -162,7 +162,9 @@ The root does not install Istio, KEDA, ESO, Reloader, CSI drivers or application
 source definitions into workload clusters. Install the optional dependencies
 needed by those workloads and place their reusable definitions in each registered
 namespace. The root owns execution of the resulting Graph instances. Install KEDA
-in the root cluster for this mode; do not run independent Polyad operators or
+in the root cluster separately or enable the chart's
+[optional KEDA dependency](local-services.md#install-keda-with-the-chart);
+do not run independent Polyad operators or
 competing local autoscalers for the same managed graph families.
 
 `federation.clusters` remains the bounded cluster registry (up to 32 remote
@@ -394,7 +396,9 @@ whole operator deployment. Each operator group has its own Graph: the root group
 in the management cluster and one group for each provisioned or attached remote OperatorPool.
 The root group's Graph contains a bootstrap observation Graph and, in Distributed
 mode, the local gateway/executor/telemetry component Graph. Component management
-and recovery therefore belong inside the root operator group. The root group
+and recovery therefore belong inside the root operator group. KEDA and all other
+enabled local chart services also join through
+[service observation Graphs](local-services.md). The root group
 exists even before the first remote pool is added.
 
 Register a downstream cluster under `federation.clusters`, then add its operator
@@ -415,6 +419,10 @@ flowchart TB
             components["Nested component Graph · Distributed mode<br/>Gateway → executor → telemetry"]
             bootstrap -->|"Reconcile and restore components"| components
             components -->|"Observations"| bootstrap
+            keda["KEDA Graph<br/>Bundled or existing installation"]
+            services["Other local service Graphs<br/>Endpoints, Dragonfly, PostgreSQL,<br/>observer and mesh when enabled"]
+            keda -->|"Scale requests"| bootstrap
+            bootstrap <-->|"Use and observe"| services
         end
         subgraph west["Graph · west operator group"]
             deployment["Deployment workers<br/>Root KEDA replica count"]

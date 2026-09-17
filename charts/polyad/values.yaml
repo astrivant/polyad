@@ -372,13 +372,27 @@ authentication:
   ## @param authentication.operators [array] Peer operator API keys; Inbound, Outbound or Bidirectional, with HA-wide per-key lanes
   operators: []
 
-## @section KEDA credential integration
+## @section KEDA installation, observation and credentials
 keda:
+  ## @param keda.install Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation
+  install: false
+  observation:
+    ## @param keda.observation.enabled Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA
+    enabled: true
+    ## @param keda.observation.namespace Namespace of an existing KEDA installation; bundled KEDA always uses the release namespace
+    namespace: keda
+    ## @param keda.observation.deployments [array] Existing KEDA Deployment names to observe; remove disabled components or replace customized names; ignored for bundled KEDA
+    deployments: [keda-operator, keda-operator-metrics-apiserver, keda-admission-webhooks]
+    ## @param keda.observation.services [array] Existing KEDA Service names to observe; match the installed KEDA chart; ignored for bundled KEDA
+    services: [keda-operator, keda-operator-metrics-apiserver, keda-admission-webhooks]
   authentication:
     ## @param keda.authentication.enabled Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics
     enabled: false
     ## @param keda.authentication.name TriggerAuthentication name; empty uses the release metrics name
     name: ''
+
+## @param kedaOperator [object] Upstream KEDA chart overrides used only when keda.install is true; its rendered workloads and Services are automatically included in the reserved root Graph
+kedaOperator: {}
 
 ## @section Optional External Secrets Operator resources
 externalSecrets:

@@ -154,6 +154,10 @@ spec:
               value: {{ printf "%s:%s" .Values.operator.image.repository .Values.operator.image.tag | quote }}
             - name: POLYAD_ROOT_ENABLED
               value: {{ or .Values.worker.enabled .Values.rootControlPlane.enabled | quote }}
+            {{- if .Values.rootControlPlane.enabled }}
+            - name: POLYAD_LOCAL_SERVICES
+              value: {{ include "polyad.localServices" . | quote }}
+            {{- end }}
             {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled }}
             - name: POLYAD_ROOT_MESH_PEERS
               value: {{ .Values.rootControlPlane.meshPeers | toJson | quote }}

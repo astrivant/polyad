@@ -701,6 +701,20 @@ class Dragonfly(SpecResource):
 
 
 @frozen(kw_only=True)
+class PostgreSQLCluster(SpecResource):
+    """
+    A CloudNativePG cluster observed without taking over its lifecycle.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Namespaced PostgreSQL observation API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "Cluster", "postgresql.cnpg.io/v1", "clusters", description="Read-only observation of a CloudNativePG database cluster."
+    )
+
+
+@frozen(kw_only=True)
 class OperatorPool(SpecResource):
     """
     Root-managed remote operator execution capacity.
@@ -763,6 +777,7 @@ class CustomResourceDefinition(SpecResource):
 
 
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
+    PostgreSQLCluster,
     Secret,
     CustomResourceDefinition,
     Dragonfly,

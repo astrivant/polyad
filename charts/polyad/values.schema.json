@@ -2456,10 +2456,60 @@
             "enabled",
             "name"
           ]
+        },
+        "install": {
+          "type": "boolean",
+          "description": "Install the pinned upstream KEDA dependency in the release namespace; false uses an existing installation."
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "namespace",
+            "deployments",
+            "services"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Observe existing KEDA inside the reserved root Graph. Bundled KEDA is always inventoried."
+            },
+            "namespace": {
+              "type": "string",
+              "maxLength": 63,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "description": "Existing KEDA namespace; ignored for bundled KEDA."
+            },
+            "deployments": {
+              "type": "array",
+              "uniqueItems": true,
+              "maxItems": 64,
+              "items": {
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+              },
+              "description": "Existing KEDA Deployment names; remove disabled components and include naming overrides."
+            },
+            "services": {
+              "type": "array",
+              "uniqueItems": true,
+              "maxItems": 64,
+              "items": {
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+              },
+              "description": "Existing KEDA Service names; match the installation names."
+            }
+          }
         }
       },
       "required": [
-        "authentication"
+        "authentication",
+        "install",
+        "observation"
       ]
     },
     "externalSecrets": {
@@ -4039,6 +4089,59 @@
             "Local"
           ],
           "description": "Root permits the approved OperatorPool to change replicas; Local keeps replica intent and optional HPA with the downstream administrator."
+        }
+      }
+    },
+    "kedaOperator": {
+      "type": "object",
+      "description": "Upstream KEDA overrides for the optional dependency. Rendered names are used for root observations.",
+      "properties": {
+        "operator": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "replicaCount": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "metricsServer": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "replicaCount": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "webhooks": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "replicaCount": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "crds": {
+          "type": "object",
+          "properties": {
+            "install": {
+              "type": "boolean"
+            }
+          }
         }
       }
     }

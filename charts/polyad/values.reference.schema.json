@@ -752,6 +752,27 @@
               "$ref": "values.schema.json#/properties/keda/properties/authentication/properties/name"
             }
           }
+        },
+        "install": {
+          "$ref": "values.schema.json#/properties/keda/properties/install"
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/keda/properties/observation/properties/enabled"
+            },
+            "namespace": {
+              "$ref": "values.schema.json#/properties/keda/properties/observation/properties/namespace"
+            },
+            "deployments": {
+              "$ref": "values.schema.json#/properties/keda/properties/observation/properties/deployments"
+            },
+            "services": {
+              "$ref": "values.schema.json#/properties/keda/properties/observation/properties/services"
+            }
+          }
         }
       }
     },
@@ -1280,6 +1301,56 @@
         },
         "scalingAuthority": {
           "$ref": "values.schema.json#/properties/worker/properties/scalingAuthority"
+        }
+      }
+    },
+    "kedaOperator": {
+      "type": "object",
+      "description": "Upstream KEDA overrides for the optional dependency. Rendered names are used for root observations.",
+      "properties": {
+        "operator": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/operator/properties/name"
+            },
+            "replicaCount": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/operator/properties/replicaCount"
+            }
+          }
+        },
+        "metricsServer": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/metricsServer/properties/enabled"
+            },
+            "replicaCount": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/metricsServer/properties/replicaCount"
+            }
+          }
+        },
+        "webhooks": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/webhooks/properties/enabled"
+            },
+            "name": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/webhooks/properties/name"
+            },
+            "replicaCount": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/webhooks/properties/replicaCount"
+            }
+          }
+        },
+        "crds": {
+          "type": "object",
+          "properties": {
+            "install": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/crds/properties/install"
+            }
+          }
         }
       }
     }

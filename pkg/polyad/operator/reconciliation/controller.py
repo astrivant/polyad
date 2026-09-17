@@ -333,7 +333,9 @@ class Controller:
             return
         try:
             children = await self.children(obj)
-            if f"{GROUP}/observed-operator-deployment" in obj["metadata"].get("annotations", {}):
+            if {f"{GROUP}/observed-operator-deployment", f"{GROUP}/observed-local-services"} & obj["metadata"].get(
+                "annotations", {}
+            ).keys():
                 from polyad.operator.clusters.reserved import members
 
                 children.extend(await members(self.api, obj))
@@ -417,7 +419,9 @@ class Controller:
         elif kind == "Rewrite":
             await self.rewrite(obj)
         elif kind in {"Graph", "PolyGraph"}:
-            if f"{GROUP}/observed-operator-deployment" in obj["metadata"].get("annotations", {}):
+            if {f"{GROUP}/observed-operator-deployment", f"{GROUP}/observed-local-services"} & obj["metadata"].get(
+                "annotations", {}
+            ).keys():
                 from polyad.operator.clusters.reserved import reconcile as reconcile_reserved
 
                 await reconcile_reserved(self, obj)
@@ -833,7 +837,11 @@ class Controller:
                 reference = f"{cluster or self.federation.name}/{node.kind}/{node.ref}"
                 if reference in lineage or len(lineage) >= 32:
                     raise ValueError("recursive boundary reference or nesting exceeds 32")
-                observation = definition["metadata"].get("annotations", {}).get(f"{GROUP}/observed-operator-deployment")
+                observation = {
+                    key: value
+                    for key, value in definition["metadata"].get("annotations", {}).items()
+                    if key in {f"{GROUP}/observed-operator-deployment", f"{GROUP}/observed-local-services"}
+                }
                 if observation and definition["metadata"].get("labels", {}).get(f"{GROUP}/internal") != "true":
                     raise ValueError("operator observations require an internal definition")
                 desired[node.name] = self.child(
@@ -841,7 +849,7 @@ class Controller:
                     node.name,
                     kind,
                     spec,
-                    annotations={f"{GROUP}/observed-operator-deployment": observation} if observation else None,
+                    annotations=observation or None,
                 )
                 compiled_child = desired[node.name]
                 desired[node.name] = evolve(

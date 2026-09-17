@@ -20,6 +20,7 @@ from polyad.events.visibility import INTERNAL, public_observation
 from polyad.metrics.workloads import current_observation
 from polyad.operator.clusters.remote_scaling import INTENT, remote_revision
 from polyad.operator.clusters.reserved import DEPLOYMENT
+from polyad.operator.clusters.services import graphs as service_graphs
 from polyad.operator.coordination.leases import NotOwner
 from polyad.operator.observability.decisions import decision, status_decisions
 from polyad.operator.observability.tracing import traced
@@ -136,6 +137,7 @@ class PoolManager:
         root_nodes = [{"name": "bootstrap", "kind": "Graph", "ref": name + "-root-bootstrap"}]
         if component_graph := os.environ.get("POLYAD_COMPONENT_GRAPH"):
             root_nodes.append({"name": "components", "kind": "Graph", "ref": component_graph})
+        root_nodes.extend(await service_graphs(self, name, owner))
         await self.apply(
             self.api,
             {

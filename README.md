@@ -806,8 +806,8 @@ in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemet
 ReplicaGroups scale independently through KEDA and fresh GraphRule checks. A
 root bootstrap Deployment retains planning and recovery responsibility. With
 root mode enabled, one reserved PolyGraph contains a Graph for each operator
-group. The root operator Graph contains both the bootstrap observation Graph and
-the optional service-component Graph; remote operator groups join as peers.
+group. The root operator Graph contains the bootstrap, managed component pipeline,
+KEDA and all enabled local chart services; remote operator groups join as peers.
 
 ```mermaid
 flowchart TB
@@ -825,6 +825,12 @@ flowchart TB
             end
             bootstrap -->|"reconcile and restore components"| self
             self -->|"observations"| bootstrap
+            keda["KEDA Graph<br/>Operator, metrics server and webhooks"]
+            cache["Dragonfly Graph<br/>Controller, cache and Services"]
+            pg["PostgreSQL Graph · optional<br/>State and authentication databases"]
+            support["Other local service Graphs<br/>Endpoints, observer and Istio"]
+            root <-->|"use and observe"| cache
+            root <-->|"observe"| support
         end
         subgraph west["Graph · west workload cluster"]
             workers["DaemonSet · execution workers<br/>One Pod per eligible node"]
@@ -838,9 +844,9 @@ flowchart TB
         pool -->|"observations"| root
     end
     rules["GraphRule<br/>Cheeger ≥ 1; recursive size bound"] -. constrains .-> self
-    keda["KEDA"] -->|"scrape demand"| telemetry
+    keda -->|"scrape demand"| telemetry
     keda -->|"request replica counts"| root
-    root -. "optional state storage" .-> pg["PostgreSQL<br/>single instance or HA"]
+    root -. "optional state storage" .-> pg
     telemetry -. "persist graph state and parameters" .-> pg
 ```
 
@@ -857,6 +863,12 @@ eligibility. The root Graph's bootstrap branch observes its existing Deployment,
 preserving Helm ownership and recovery. The nested component Graph retains its
 own Cheeger and replica-budget checks. Application event streams exclude this
 operator tree.
+
+The [local service inventory](docs/deployment/local-services.md) observes the
+chart's enabled infrastructure while Helm and upstream operators retain lifecycle
+ownership. Set `keda.install: true` to install the optional pinned KEDA dependency,
+or configure references to existing KEDA with the
+[typed KEDA values](charts/polyad/values-keda.reference.yaml).
 
 Administrators can also [install downstream workers with Helm](docs/deployment/helm-workers.md)
 and attach their existing Deployments. Helm retains installation and upgrades;

@@ -3,6 +3,9 @@
 # Install this release in the management cluster, namespace polyad.
 # Guide and access manifests: ../../docs/deployment/root-control-plane.md
 # Use alone, or add values-components.reference.yaml last to split the root.
+# Add values-keda.reference.yaml to install KEDA with this root, or configure
+# keda.observation for the existing installation. All local chart services join
+# the reserved root Graph; see ../../docs/deployment/local-services.md.
 # These are reference overrides; values.yaml contains all defaults.
 ## @param ha [boolean] Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
 ha: true
