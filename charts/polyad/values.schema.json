@@ -115,7 +115,8 @@
         "resources",
         "terminationGracePeriodSeconds",
         "autoscaling",
-        "tuning"
+        "tuning",
+        "writeQueue"
       ],
       "properties": {
         "replicaCount": {
@@ -766,6 +767,64 @@
               "minimum": 0.001,
               "maximum": 300,
               "description": "Cooperative runtime ceiling per calculation, checked between batches. Incomplete search is never an exact constant."
+            }
+          }
+        },
+        "writeQueue": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxPending",
+            "validationIntervalSeconds",
+            "validationWindowSeconds",
+            "validationBurst",
+            "maxInFlight",
+            "validationWorkers",
+            "reconciliationWorkers"
+          ],
+          "description": "Bound concrete Kubernetes writes separately from coalesced reconciliation hints.",
+          "properties": {
+            "maxPending": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 128,
+              "description": "Extra admitted writes beyond maxInFlight per adapter. One favors fresh decisions; zero removes extra capacity. Unproven independence can still cause admitted items to wait. Overflow requires fresh reconciliation."
+            },
+            "validationIntervalSeconds": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 60,
+              "description": "Maximum pause between validation passes; watch notifications wake the producer sooner. Must not exceed validationWindowSeconds."
+            },
+            "validationWindowSeconds": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 60,
+              "description": "Maximum reusable validation age measured from its start. Shorter windows add reads; longer windows tolerate more unobserved external drift. Events and relevant writes invalidate receipts immediately."
+            },
+            "validationBurst": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 128,
+              "description": "Maximum candidates validated per background pass; spare window time advances through later queued items without adding mutation concurrency."
+            },
+            "maxInFlight": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32,
+              "description": "Concurrent writer slots per API adapter. One preserves serial transport; higher values admit only independent writes approved by the same refreshed mutation batch. Unknown effects remain ordered."
+            },
+            "validationWorkers": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32,
+              "description": "Concurrent candidate validations per API adapter, shared by the background producer and dispatchers. Increasing this consumes Kubernetes read capacity."
+            },
+            "reconciliationWorkers": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32,
+              "description": "Concurrent local reconciliation attempts and remote deliveries per cluster. Same-key follow-ups and graph-family leases remain serialized; separate families can prepare decisions together."
             }
           }
         }

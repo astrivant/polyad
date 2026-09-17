@@ -15,6 +15,7 @@ from polyad.compiler.passes.traffic import step_weights
 from polyad.graph.cheeger import CheegerIncomplete
 from polyad.graph.rules import graph_cheeger, relation_graph
 from polyad.graph.temporary import active_entries
+from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.policies.cheeger import computation_limits
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.rules import RuleViolation
@@ -315,6 +316,7 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
             return False
         if clock - observed + time.monotonic() - started > policy.sampleMaxAgeSeconds:
             return False
+        expires_before(datetime.fromtimestamp(observed + policy.sampleMaxAgeSeconds, UTC))
         state.update(changes=[*changes, clock], lastChange=clock, since=0, count=0, generation=meta["generation"] + 1)
     if state != previous:
         body: dict[str, Any] = {

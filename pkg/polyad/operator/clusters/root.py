@@ -22,7 +22,9 @@ from polyad.metrics.inventory import inventory
 from polyad.operator.clusters.federation import Federation
 from polyad.operator.clusters.pools import PoolManager
 from polyad.operator.coordination.leases import SHARDS, NotOwner, active_shard
+from polyad.operator.coordination.queue import batches, reconciliation_workers
 from polyad.operator.coordination.shared_queue import SharedQueue
+from polyad.operator.coordination.validation import invalidate
 from polyad.operator.lifecycle.health import lifecycle
 from polyad.operator.lifecycle.roles import executes, role
 from polyad.operator.reconciliation.controller import Controller, Pending
@@ -59,6 +61,7 @@ class ClusterWorker:
         prefix = f"{root.coordinator.namespace}:clusters:{cluster}:{namespace}"
         self.shared = SharedQueue(cache_url(), prefix, root.coordinator.identity)
         self.controller = Controller(root.federation.target(cluster)[0])
+        self.controller.api.on_write_drift = self.publish_refresh
         self.events = EventStore(
             cache_url(),
             prefix,
@@ -72,6 +75,18 @@ class ClusterWorker:
         federation.resolver = root.resolve
         self.controller.federation = federation
         self.sample: dict[str, Any] = {"namespace": namespace, "inventory": {"fresh": False}}
+
+    async def publish_refresh(self, key: Key) -> None:
+        """
+        Route drift recovery through this cluster's root-coordinated work stream.
+
+        Args:
+            key (Key): Affected graph resource or owner in the remote namespace.
+
+        Returns:
+            None: Publishes a coalesced hint without recursively acquiring another duty.
+        """
+        await self.shared.publish(await self.shard_for(key), key)
 
     async def scan(self) -> None:
         """
@@ -90,11 +105,13 @@ class ClusterWorker:
         objects = []
         self.sample["inventory"]["fresh"] = False
         self.controller.api = self.root.federation.target(self.cluster)[0]
+        self.controller.api.on_write_drift = self.publish_refresh
         for kind in (*sorted(RECONCILED_KINDS), *DEFINITIONS):
             listing = await self.controller.api.request("GET", kind, self.namespace)
             if listing is None:
                 raise ValueError(f"remote {kind} API is unavailable; install the pool before executing workloads")
             for obj in (listing or {}).get("items", []):
+                invalidate(self.controller.api, (kind, self.namespace, obj["metadata"]["name"]))
                 obj.setdefault("kind", kind)
                 objects.append(obj)
                 if kind in RECONCILED_KINDS:
@@ -135,7 +152,17 @@ class ClusterWorker:
         Returns:
             None: Unacknowledged attempts remain recoverable after worker loss.
         """
-        for shard in sorted(self.root.coordinator.owned):
+
+        async def deliver(shard: int) -> None:
+            """
+            Reconcile one remote delivery while retaining root graph-family ownership.
+
+            Args:
+                shard (int): Root-owned delivery shard.
+
+            Returns:
+                None: Failed deliveries remain pending for refreshed retry.
+            """
             if lifecycle.draining.is_set() or lifecycle.replacement.is_set():
                 return
             token = active_shard.set(shard)
@@ -143,7 +170,7 @@ class ClusterWorker:
                 await self.root.coordinator.guard()
                 message = await self.shared.take(shard)
                 if message is None:
-                    continue
+                    return
                 message_id, key = message
                 routed = await self.shard_for(key)
                 if routed != shard:
@@ -177,6 +204,8 @@ class ClusterWorker:
                 logger.exception("Remote shard %s failed in cluster %s; keeping its delivery pending", shard, self.cluster)
             finally:
                 active_shard.reset(token)
+
+        await batches(sorted(self.root.coordinator.owned), deliver, reconciliation_workers())
 
     async def run(self, operation: str, interval: float) -> None:
         """

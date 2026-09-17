@@ -187,10 +187,27 @@ Outside Helm, set `POLYAD_LOGS_ENABLED=true` and
 | Throughput observation, stabilization, recommendation, cooldown and applied layout | INFO when the decision, target, mode or recommended layout changes |
 | GraphRule rejection, ownership collision, rewrite/remote-scale generation conflict | WARNING, with the rule or conflicting resource/request identities |
 | Kubernetes HTTP 409 | WARNING; refresh state before retrying, without logging the API error body |
+| Pending Kubernetes write conflict or stale queued target | WARNING via `polyad.kubernetes.write_deferred`; includes a stable reason and target identity, without request bodies or digests |
+| Identical pending write and dependency contract | DEBUG via `polyad.kubernetes.write_coalesced`; one queue entry and acknowledgement serve the callers |
+| Independent approved writes overlap | INFO via `polyad.kubernetes.write_parallel`; records occupied writer slots after planner and captured-dependency checks |
 | Root authority or shard lease lost during a write | WARNING; mutation is fenced until valid authority returns |
 | Another replica owns the work, dependency/delay/gate/capacity waits, successful rule checks | DEBUG for detailed reconciliation diagnostics |
 | Mutation ordering and dependency explanations | DEBUG with both request identities; changed preconditions or shared budgets are WARNING |
 | Unexpected reconciliation failure | ERROR with its exception type and resource identity |
+
+The [pending write check](../development/mutations.md#queued-kubernetes-write-conflicts)
+uses `overlapping_pending_writes` when incompatible changes are waiting for the
+same object. `queued_write_revision_changed` and `queued_write_uid_changed`
+distinguish changed state from object replacement after a queue delay. These
+decisions stop dispatch and require refreshed intent; they do not select a winning
+policy or roll back a completed write.
+
+`dependency_state_changed` identifies drift in the decision's captured read set.
+`write_target_disappeared` covers an update rejected with 404 after validation;
+`write_queue_full` identifies bounded admission backpressure. These failures
+request [targeted recovery](../development/write-pipeline.md#failure-and-cancellation),
+not automatic replay of old patches. Cached validations expire or are invalidated
+by relevant watches and known mutations.
 
 Repeated failed attempts can emit repeated warnings. These records are diagnostic
 observations, not an exactly-once audit journal. They neither bypass GraphRules nor

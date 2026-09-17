@@ -93,6 +93,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Supported resource registry](development/resource-registry.md) | Supported kinds, AST models, API identities and scheduling capabilities |
 | [Operator package layout](development/operator-layout.md) | Lifecycle, reconciliation, policies, coordination, clusters, observability and adapters |
 | [Mutation plans](development/mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |
+| [Kubernetes write pipeline](development/write-pipeline.md) | Bounded admission, dependency contracts, validation windows, watch invalidation, duplicate coalescing and targeted recovery |
 | [Mutation diagram patterns](development/mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
 | [Python types and serialization](development/toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |
 | [Development toolchain](development/toolchain.md) | Pinned tools, editor settings, formatting and generated documentation |

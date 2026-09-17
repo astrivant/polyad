@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from kubernetes.client.exceptions import ApiException
@@ -136,7 +136,7 @@ def test_cache_scaler_rechecks_lease_before_every_write(monkeypatch):
         closed = []
 
         def api_factory(before_write):
-            return SimpleNamespace(before_write=before_write, client=SimpleNamespace(close=lambda: closed.append(True)))
+            return Mock(before_write=before_write, client=SimpleNamespace(close=lambda: closed.append(True)))
 
         async def attempt(api, namespace, name):
             await api.before_write()
@@ -147,8 +147,9 @@ def test_cache_scaler_rechecks_lease_before_every_write(monkeypatch):
 
         monkeypatch.setattr(dragonfly, "API", api_factory)
         monkeypatch.setattr(dragonfly, "reconcile", attempt)
-        with pytest.raises(asyncio.CancelledError):
-            await dragonfly.run(coordinator, shared, "queue")
+        async with asyncio.timeout(2):
+            with pytest.raises(asyncio.CancelledError):
+                await dragonfly.run(coordinator, shared, "queue")
         assert closed == [True]
         assert shared.ping.await_count == 2
 

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.network import NetworkScope, policy_specs, scope_label
 from polyad.graph.temporary import active_entries, overlay
+from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.reconciliation.replication import effective_spec, replica_selector
 from polyad_types import resources as asts
 from polyad_types.codec import converter
@@ -145,6 +146,9 @@ async def ensure_policies(controller: Controller, obj: dict[str, Any], plans: di
     if root_mode:
         mesh_peers.pop(controller.federation.name, None)
     for node, scopes in plans.items():
+        for scope in scopes:
+            if scope.expires_at is not None:
+                expires_before(scope.expires_at)
         selector = {f"{asts.GROUP}/network-owner": uid, f"{asts.GROUP}/network-node": node}
         for kind, spec in policy_specs(
             selector, scopes, mesh_namespace=os.environ.get("POLYAD_ISTIO_NAMESPACE", "istio-system"), mesh_peers=mesh_peers

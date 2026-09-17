@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from polyad.compiler.passes.traffic import subset_name
 from polyad.graph.temporary import ANNOTATION, active_entries, overlay
 from polyad.operator.clusters.remote_scaling import approved_intent
+from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.policies.rules import RuleViolation, check_rules
 from polyad_types.codec import converter
 from polyad_types.replication import Replication, replica_topology
@@ -344,4 +345,6 @@ async def check_live_rules(
         raise Pending("GraphRules changed during structural rule evaluation")
     if any(value <= datetime.now(UTC) for value in deadlines):
         raise Pending("a temporary connection expired during structural rule evaluation")
+    if deadlines:
+        expires_before(min(deadlines))
     return reports

@@ -15,6 +15,7 @@ from cattrs.errors import CattrsError
 from polyad.api.connections.store import FINALIZER, ConnectionSettings
 from polyad.compiler.passes.network import NetworkScope
 from polyad.graph.temporary import ANNOTATION, CLEANUP, MAX_CONNECTIONS, active_entries, deadline, entries, overlay
+from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.network import context, ensure_policies
 from polyad.operator.policies.rule_state import check_live_rules
@@ -368,6 +369,7 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         refreshed = await controller.api.get("TemporaryConnection", meta["namespace"], meta["name"])
         if refreshed is None or refreshed["metadata"]["resourceVersion"] != meta["resourceVersion"] or datetime.now(UTC) >= expires:
             raise Pending("temporary connection intent or deadline changed before admission")
+        expires_before(expires)
         graph = await write_grants(controller, graph, grants)
     if terminal == "Active":
         return

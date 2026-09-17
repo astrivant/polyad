@@ -89,7 +89,11 @@ def test_api_debug_logs_do_not_include_payloads_or_exception_bodies(caplog, fail
         else:
             with pytest.raises(type(failure)) as error:
                 await operation
-            assert error.value is failure
+            if isinstance(failure, ApiException) and failure.status == 409:
+                assert error.value.status == 409
+                assert error.value.__cause__ is failure
+            else:
+                assert error.value is failure
 
     with caplog.at_level(logging.DEBUG, logger="polyad"):
         asyncio.run(scenario())

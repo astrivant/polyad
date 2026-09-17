@@ -200,6 +200,20 @@ By default, the operator publishes snapshots every five seconds. HTTP reads use 
 bytes and never contact Kubernetes or Dragonfly. API write gauges are sampled,
 so short bursts between samples may not appear.
 
+The adapter [checks pending write conflicts](../development/mutations.md#queued-kubernetes-write-conflicts)
+before dispatch. Rejected and cancelled requests leave the queued gauges when
+their callers exit the queue; they never enter the in-flight gauges. A dispatched
+request remains in flight until transport finishes, even after cancellation.
+Use the structured decision logs to distinguish conflicts from API latency;
+the gauges measure pressure, not conflict totals.
+
+[Write admission](../development/write-pipeline.md#configuration) defaults to one
+active validation/transport plus one waiter per adapter. Duplicate callers share
+that entry. Active validation remains counted as queued until HTTP dispatch, so
+`queued` can reach `maxPending + maxInFlight` with no in-flight mutation. Background dependency
+GETs are reads, not additional write entries; their intervals and burst limits
+are separate from KEDA metrics publication.
+
 Shared queues are sampled independently every five seconds by default. A failed sample or
 one older than fifteen seconds suppresses the actionable Prometheus backlog
 series. Inventory updates replace the previous snapshot only after a complete

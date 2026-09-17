@@ -9,6 +9,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.mutations import PreconditionFailed, advance_budgets, check_preconditions, compile_mutations
+from polyad.operator.coordination.dispatch import Admission, Batch, admission
 from polyad.operator.observability.decisions import decision
 
 if TYPE_CHECKING:
@@ -59,17 +60,22 @@ async def execute_mutations(
     indexed = {item.name: item for item in plan.mutations}
     usage = {budget.name: budget.current for budget in budgets}
 
-    async def dispatch(mutation: Mutation) -> None:
+    async def dispatch(mutation: Mutation, approval: Batch) -> None:
         """
         Capture failures raised before an adapter returns its awaitable.
 
         Args:
             mutation (Mutation): Operation to dispatch.
+            approval (Batch): Fresh shared-budget and precondition approval for this batch.
 
         Returns:
             None: No return value.
         """
-        await apply(mutation)
+        token = admission.set(Admission(approval, mutation))
+        try:
+            await apply(mutation)
+        finally:
+            admission.reset(token)
         decision(
             "polyad.mutation.applied",
             "The admitted mutation completed.",
@@ -108,13 +114,15 @@ async def execute_mutations(
 
         # A failed sibling or cancelled caller must not release coordination while
         # another callback is still completing a transport request.
-        pending = asyncio.gather(*(dispatch(mutation) for mutation in batch), return_exceptions=True)
+        approval = Batch()
+        pending = asyncio.gather(*(dispatch(mutation, approval) for mutation in batch), return_exceptions=True)
         cancelled = False
         while not pending.done():
             try:
                 await asyncio.shield(pending)
             except asyncio.CancelledError:
                 cancelled = True
+        approval.active = False
         if cancelled:
             raise asyncio.CancelledError
         failures = [result for result in pending.result() if isinstance(result, BaseException)]

@@ -29,6 +29,7 @@ def test_write_backlog_serialization_and_cancellation():
     async def scenario():
         started, release = threading.Event(), threading.Event()
         api = API.__new__(API)
+        api.max_pending_writes = 2  # Exercise the explicitly enabled burst allowance.
         api.client = Mock()
         calls = []
 

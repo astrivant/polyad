@@ -10,6 +10,7 @@ import time
 from typing import TYPE_CHECKING
 
 from polyad.operator.adapters.kubernetes import API
+from polyad.operator.coordination.contracts import capture_decision
 from polyad.operator.coordination.leases import WRITE_BUDGET, NotOwner
 
 if TYPE_CHECKING:
@@ -145,7 +146,8 @@ async def run(coordinator: Coordinator, shared: SharedQueue, name: str) -> None:
         while True:
             try:
                 if await coordinator.claim(lease_name):
-                    await reconcile(api, coordinator.namespace, name)
+                    with capture_decision(api, ("DragonflyPool", coordinator.namespace, name)):
+                        await reconcile(api, coordinator.namespace, name)
             except Exception:
                 logger.exception("Dragonfly scale reconciliation deferred")
             await asyncio.sleep(15)

@@ -21,7 +21,9 @@ from polyad.metrics.workloads import current_observation
 from polyad.operator.clusters.remote_scaling import INTENT, remote_revision
 from polyad.operator.clusters.reserved import DEPLOYMENT
 from polyad.operator.clusters.services import graphs as service_graphs
+from polyad.operator.coordination.contracts import capture_decision
 from polyad.operator.coordination.leases import NotOwner
+from polyad.operator.coordination.write_queue import WriteConflict
 from polyad.operator.observability.decisions import decision, status_decisions
 from polyad.operator.observability.tracing import traced
 from polyad.operator.policies.rule_state import check_live_rules
@@ -833,7 +835,8 @@ class PoolManager:
             topology_key = ("PolyGraph", self.namespace, self.topology_name)
             try:
                 async with self.root.coordinator.duty(topology_key):
-                    await self.topology()
+                    with capture_decision(self.api, topology_key):
+                        await self.topology()
             except NotOwner:
                 pass
             except Exception:
@@ -847,7 +850,12 @@ class PoolManager:
                             key = topology_key if kind == "OperatorPool" else (kind, self.namespace, obj["metadata"]["name"])
                             async with self.root.coordinator.duty(key):
                                 try:
-                                    await (self.pool(obj) if kind == "OperatorPool" else self.scale(obj))
+                                    with capture_decision(self.api, key) as contract:
+                                        contract.record(self.api, (kind, self.namespace, obj["metadata"]["name"]), None, obj)
+                                        await (self.pool(obj) if kind == "OperatorPool" else self.scale(obj))
+                                except WriteConflict:
+                                    # This periodic producer retries fresh intent on its next pass.
+                                    pass
                                 except Pending as error:
                                     await self.status(obj, phase="Pending", message=str(error))
                                 except ValueError as error:

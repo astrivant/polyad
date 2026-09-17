@@ -181,6 +181,34 @@
               "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/timeoutSeconds"
             }
           }
+        },
+        "writeQueue": {
+          "type": "object",
+          "description": "Bound concrete Kubernetes writes separately from coalesced reconciliation hints.",
+          "additionalProperties": false,
+          "properties": {
+            "maxPending": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/maxPending"
+            },
+            "validationIntervalSeconds": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/validationIntervalSeconds"
+            },
+            "validationWindowSeconds": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/validationWindowSeconds"
+            },
+            "validationBurst": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/validationBurst"
+            },
+            "maxInFlight": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/maxInFlight"
+            },
+            "validationWorkers": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/validationWorkers"
+            },
+            "reconciliationWorkers": {
+              "$ref": "values.schema.json#/properties/operator/properties/writeQueue/properties/reconciliationWorkers"
+            }
+          }
         }
       }
     },

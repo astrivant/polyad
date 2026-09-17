@@ -22,7 +22,7 @@ All paths below are relative to [`pkg/polyad/operator`](../../pkg/polyad/operato
 | `lifecycle/` | Kopf startup and shutdown, service ownership, health, roles and polling intervals | `handlers`, `health`, `roles`, `tuning` |
 | `reconciliation/` | Translate graph intent into owned workloads, execution instances and ordered mutations | `controller`, `activations`, `compositions`, `replication`, `mutations`, `identity`, `placement` |
 | `policies/` | Check live graph families and enforce structural, network, capacity, throughput and traffic decisions | `rules`, `rule_state`, `cheeger`, `throughput`, `traffic`, `capacity`, `network`, `connections` |
-| `coordination/` | Planner election, shard leases, local and shared queues, and scaling the shared Dragonfly service | `leases`, `queue`, `shared_queue`, `dragonfly` |
+| `coordination/` | Planner election, shard leases, local and shared queues, write contracts, validation, dependency dispatch and pending conflicts, and scaling the shared Dragonfly service | `leases`, `queue`, `shared_queue`, `write_queue`, `contracts`, `validation`, `dispatch`, `dragonfly` |
 | `clusters/` | Root orchestration, remote graph ownership, worker pools, remote scaling consent and reserved operator membership | `root`, `federation`, `pools`, `remote_scaling`, `reserved` |
 | `observability/` | Status trees, descendant summaries, write pressure, component demand, decision logs and traces | `graph_status`, `rollup`, `metrics`, `pressure`, `decisions`, `logging`, `tracing` |
 | `adapters/` | Fenced Kubernetes transport and optional PostgreSQL graph-state persistence | `kubernetes`, `postgresql` |

@@ -16,6 +16,7 @@ family, its scope and the feature required to publish it.
 
 - [Autoscaling response](#autoscaling-response)
 - [Worker cadence](#worker-cadence)
+- [Write admission and validation](#write-admission-and-validation)
 - [KEDA-managed targets](#keda-managed-targets)
 
 ## Autoscaling response
@@ -160,6 +161,30 @@ Trace batching is independent of polling and scraping. The Python SDK's
 the [tracing reference](../../charts/polyad/values-tracing.reference.yaml) covers
 export enablement, sampling and endpoint selection. The chart does not turn a
 trace sampling ratio into a workload or autoscaler metric.
+
+## Write admission and validation
+
+`operator.writeQueue` tunes concrete API work separately from reconciliation
+delivery and metrics publication:
+
+| Setting | Default | Tradeoff |
+| --- | --- | --- |
+| `maxInFlight` | 1 | Concurrent writer slots per adapter; only independent approved planner siblings overlap |
+| `maxPending` | 1 | Extra admissions beyond writer slots; larger values retain more potentially stale decisions |
+| `validationIntervalSeconds` | 1 | Maximum pause between look-ahead passes; watch notifications wake validation sooner |
+| `validationWindowSeconds` | 5 | Maximum age of a reusable receipt, including its read latency; shorter windows reduce unobserved drift and increase API reads |
+| `validationBurst` | 8 | Candidates examined per producer pass; lets spare time reach third, fourth and later entries without adding concurrent mutations |
+| `validationWorkers` | 1 | Concurrent candidate checks shared by producer and dispatchers; higher values add Kubernetes read pressure |
+| `reconciliationWorkers` | 1 | Concurrent local refresh attempts and remote deliveries per cluster; same-family ownership remains ordered |
+
+The interval cannot exceed the window. Admission allows 0–128 waiters, validation
+allows 0.01–60 second intervals/windows and a burst of 1–128. Overflow returns a
+retryable conflict with status 429. Identical pending decisions share one entry
+before admission is checked. Watches and known writes invalidate relevant receipts
+immediately; a fresh receipt never bypasses the ownership check or Kubernetes
+resource-version fence. See the [write pipeline](../development/write-pipeline.md)
+for contracts, failure recovery and ordering limits, and the typed
+[values reference](../../charts/polyad/values-tuning.reference.yaml) for the overlay.
 
 ## KEDA-managed targets
 

@@ -33,6 +33,8 @@ from polyad.graph.temporary import active_entries, overlay
 from polyad.metrics.workloads import current_observation, observation_time
 from polyad.operator.adapters.kubernetes import GROUP
 from polyad.operator.clusters.federation import REMOTE, Federation
+from polyad.operator.coordination.contracts import capture_decision
+from polyad.operator.coordination.write_queue import WriteConflict
 from polyad.operator.observability.decisions import decision, status_decisions
 from polyad.operator.observability.graph_status import instance_metrics
 from polyad.operator.observability.graph_status import observed as observed
@@ -265,6 +267,23 @@ class Controller:
     @traced("polyad.reconcile")
     async def reconcile(self, key: Key) -> None:
         """
+        Retain observed dependencies through dispatch and retry only from refreshed state.
+
+        Args:
+            key (Key): Resource identity to reconcile under its existing graph-family lease.
+
+        Returns:
+            None: Failed contracts publish targeted hints and leave delivery retryable.
+        """
+        with capture_decision(self.api, key) as contract:
+            try:
+                await self._observed_reconcile(key)
+            except WriteConflict:
+                await contract.refresh()
+                raise
+
+    async def _observed_reconcile(self, key: Key) -> None:
+        """
         Read current intent, fence deletion, then execute a single idempotent pass.
 
         Args:
@@ -295,6 +314,9 @@ class Controller:
             if latest is not None:
                 await CapacityManager(self, latest).cancel("graph validation failed")
             await self.report_metrics(key)
+            raise
+        except WriteConflict:
+            # The decision's observations are no longer usable for a status write either.
             raise
         except Exception as error:
             decision(

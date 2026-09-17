@@ -1,5 +1,8 @@
 {{/* Shared by the Dense operator, Distributed bootstrap and component Pod templates. */}}
 {{- define "polyad.operatorDeployment" -}}
+{{- if gt (float64 .Values.operator.writeQueue.validationIntervalSeconds) (float64 .Values.operator.writeQueue.validationWindowSeconds) -}}
+{{- fail "operator.writeQueue.validationIntervalSeconds must not exceed validationWindowSeconds" -}}
+{{- end -}}
 {{- $auth := or .Values.authentication.services .Values.authentication.operators -}}
 {{- $required := eq .Values.authentication.mode "Required" -}}
 {{- $apiToken := and $required .Values.api.enabled (not (hasKey .Values._authEndpoints "composition")) -}}
@@ -168,6 +171,20 @@ spec:
               value: {{ and .Values.externalSecrets.enabled .Values.externalSecrets.reloadOnChange | quote }}
             - name: POLYAD_LOG_LEVEL
               value: {{ .Values.operator.logLevel | quote }}
+            - name: POLYAD_WRITE_QUEUE_MAX_PENDING
+              value: {{ .Values.operator.writeQueue.maxPending | int | quote }}
+            - name: POLYAD_WRITE_MAX_IN_FLIGHT
+              value: {{ .Values.operator.writeQueue.maxInFlight | int | quote }}
+            - name: POLYAD_WRITE_VALIDATION_WORKERS
+              value: {{ .Values.operator.writeQueue.validationWorkers | int | quote }}
+            - name: POLYAD_RECONCILIATION_WORKERS
+              value: {{ .Values.operator.writeQueue.reconciliationWorkers | int | quote }}
+            - name: POLYAD_WRITE_VALIDATION_INTERVAL_SECONDS
+              value: {{ .Values.operator.writeQueue.validationIntervalSeconds | quote }}
+            - name: POLYAD_WRITE_VALIDATION_WINDOW_SECONDS
+              value: {{ .Values.operator.writeQueue.validationWindowSeconds | quote }}
+            - name: POLYAD_WRITE_VALIDATION_BURST
+              value: {{ .Values.operator.writeQueue.validationBurst | int | quote }}
             - name: POLYAD_CHEEGER_MAX_VERTICES
               value: {{ .Values.operator.cheeger.maxVertices | int | quote }}
             - name: POLYAD_CHEEGER_MAX_CUTS

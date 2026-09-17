@@ -17,13 +17,14 @@ from cattrs.errors import CattrsError
 from kubernetes.client.exceptions import ApiException
 
 from polyad.cache import cache_url
-from polyad.compiler.registry import RECONCILED_KINDS, RESOURCE_TYPES
+from polyad.compiler.registry import DEFINITION_KINDS, GRAPH_OWNED_KINDS, RECONCILED_KINDS, RESOURCE_TYPES
 from polyad.events.visibility import observation_ancestry, public_observation
 from polyad.metrics.inventory import inventory
 from polyad.operator.adapters.kubernetes import API, GROUP, VERSION
 from polyad.operator.coordination.leases import SHARDS, Coordinator, NotOwner, active_shard
-from polyad.operator.coordination.queue import RefreshQueue
+from polyad.operator.coordination.queue import RefreshQueue, batches
 from polyad.operator.coordination.shared_queue import SharedQueue
+from polyad.operator.coordination.validation import invalidate
 from polyad.operator.lifecycle.health import credential_token, lifecycle, watch_credentials
 from polyad.operator.lifecycle.roles import executes, role, serves
 from polyad.operator.lifecycle.tuning import OperatorTuning
@@ -98,6 +99,7 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
         from polyad.operator.reconciliation.controller import Controller
 
         controller = Controller(API(before_write=coordinator.guard))
+        controller.api.on_write_drift = publish
     shared = SharedQueue(cache_url(), namespace, coordinator.identity)
     if (pool := os.environ.get("POLYAD_DRAGONFLY_POOL")) and coordinator.planner:
         from polyad.operator.coordination.dragonfly import run as dragonfly_loop
@@ -437,7 +439,7 @@ async def publish(key: Key) -> None:
 
 async def consume_loop() -> None:
     """
-    Consume leased shards in order, acknowledging only after a refreshed attempt.
+    Consume leased shards in bounded batches, acknowledging only after a refreshed attempt.
 
     Returns:
         None: No return value.
@@ -445,34 +447,47 @@ async def consume_loop() -> None:
     from polyad.operator.reconciliation.controller import Pending
 
     assert coordinator is not None and shared is not None and queue is not None
+
+    async def deliver(shard: int) -> None:
+        """
+        Keep one shard delivery pending until its refreshed reconciliation acknowledges.
+
+        Args:
+            shard (int): Owned source shard.
+
+        Returns:
+            None: Failure retains the delivery for retry under its current owner.
+        """
+        assert coordinator is not None and shared is not None and queue is not None
+        if lifecycle.replacement.is_set() or lifecycle.draining.is_set():
+            return
+        token = active_shard.set(shard)
+        try:
+            await coordinator.guard()
+            message = await shared.take(shard)
+            if message is None:
+                return
+            message_id, key = message
+            if await coordinator.shard_for(key) != shard:
+                await publish(key)  # Ownership may have moved since the hint was queued.
+            else:
+                try:
+                    await queue.submit(key)
+                except Pending:
+                    pass  # Rescan will retry the intent after refreshed observations.
+            await coordinator.guard()
+            await shared.acknowledge(shard, message_id)
+        except NotOwner:
+            pass  # Keep pending messages for the next lease holder.
+        except Exception:
+            logger.exception("Shard %s delivery failed; keeping it pending", shard)
+        finally:
+            active_shard.reset(token)
+
     while True:
         try:
             await shared.ping()
-            for shard in sorted(coordinator.owned):
-                if lifecycle.replacement.is_set() or lifecycle.draining.is_set():
-                    break
-                token = active_shard.set(shard)
-                try:
-                    await coordinator.guard()
-                    message = await shared.take(shard)
-                    if message is None:
-                        continue
-                    message_id, key = message
-                    if await coordinator.shard_for(key) != shard:
-                        await publish(key)  # Ownership may have moved since the hint was queued.
-                    else:
-                        try:
-                            await queue.submit(key)
-                        except Pending:
-                            pass  # Rescan will retry the intent after refreshed observations.
-                    await coordinator.guard()
-                    await shared.acknowledge(shard, message_id)
-                except NotOwner:
-                    pass  # Keep pending messages for the next lease holder.
-                except Exception:
-                    logger.exception("Shard %s delivery failed; keeping it pending", shard)
-                finally:
-                    active_shard.reset(token)
+            await batches(sorted(coordinator.owned), deliver, queue.workers)
         except Exception:
             logger.exception("Dragonfly unavailable; queue consumption paused")
         await asyncio.sleep(tuning.consume)
@@ -492,16 +507,22 @@ async def handle(namespace: str | None, name: str, body: kopf.Body, **_: Any) ->
         None: No return value.
     """
     assert namespace is not None
+    if controller is not None:
+        invalidate(controller.api, (body["kind"], namespace, name))
     if role() not in {"dense", "bootstrap"}:
         return
-    await publish((body["kind"], namespace, name))
+    if body["kind"] in KINDS:
+        await publish((body["kind"], namespace, name))
     for owner in body.get("metadata", {}).get("ownerReferences", []):
         if owner.get("controller") and owner.get("apiVersion") == f"{GROUP}/{VERSION}" and owner.get("kind") in KINDS:
             await publish((owner["kind"], namespace, owner["name"]))
 
 
-for plural in (RESOURCE_TYPES[kind].plural for kind in KINDS):
-    kopf.on.event(GROUP, VERSION, plural)(handle)
+for watched_kind in sorted(set(KINDS) | GRAPH_OWNED_KINDS | DEFINITION_KINDS):
+    descriptor = RESOURCE_TYPES[watched_kind]
+    if descriptor.required_feature and os.environ.get(f"POLYAD_{descriptor.required_feature.upper()}_ENABLED", "false").lower() != "true":
+        continue
+    kopf.on.event(descriptor.api_group, descriptor.api_version.rsplit("/", 1)[-1], descriptor.plural)(handle)
 
 
 def write_backlog() -> dict[str, Any]:

@@ -93,25 +93,42 @@ every task on it. Startup registers these tasks according to the process role:
 | Task | When active | Purpose |
 | --- | --- | --- |
 | Kopf framework tasks | Every operator runtime | Kubernetes watches, callback dispatch, startup/cleanup and health serving |
-| `RefreshQueue.run` | Every operator runtime; used by executing roles | One FIFO consumer for local reconciliation, coalescing waiting keys |
+| `RefreshQueue.run` | Every operator runtime; used by executing roles | Supervisor for bounded local reconciliation workers, coalescing waiting keys and deferring same-key follow-ups |
+| `ValidationQueue.run` | While a Kubernetes adapter has pending writes | One producer scheduling bounded validation workers over pending candidates; stops and joins reads when drained |
 | `coordination_loop` | Every operator runtime | Maintain ownership or observe membership, and check API/cache connectivity |
 | `backlog_loop` | Every operator runtime | Sample local shared stream sizes |
 | `component_loop` | Every operator runtime | Publish process HTTP demand and, where applicable, worker reports to root storage |
 | `watch_credentials` | Every operator runtime | Detect changed mounted credentials and request process replacement |
 | `rescan_loop` | Dense, bootstrap and telemetry roles | Refresh local inventory and recover missed notifications |
-| `consume_loop` | Dense, bootstrap and executor roles | Read leased streams and await local FIFO reconciliation before acknowledgement |
+| `consume_loop` | Dense, bootstrap and executor roles | Read leased streams in bounded batches and await refreshed reconciliation before acknowledgement |
 | `metrics_loop` | Metrics-serving roles | Collect observations and publish immutable HTTP snapshots |
 | `connection_sweep_loop` | Temporary-connection serving enabled | Rediscover TTL receipts for cleanup through normal reconciliation |
 | Remote scan/consume tasks | Root mode, according to role | One scan task and/or one consume task per registered remote cluster |
 | Root pool manager | Executing roles in root mode | Reconcile remote execution pools and remote scale requests |
 | Dragonfly scaling task | Bundled HA pool configured on a planner-capable process | Reconcile cache scaling under its lease |
 
-There are 32 logical coordination shards, **not 32 worker threads**. The local
-consumer iterates owned shards and awaits a single local FIFO attempt at a time.
-Remote cluster consumers are separate async tasks and can overlap I/O with local
-work and other clusters. Lease checks and each API adapter's write lock still
-control mutation ownership and dispatch order. Increasing replicas distributes
-eligible duties; it does not split a single graph family into independent writers.
+There are 32 logical coordination shards, **not 32 worker threads**. By default,
+one local worker reconciles at a time. `operator.writeQueue.reconciliationWorkers`
+allows separate families to prepare decisions concurrently. Remote consumers use
+the same per-cluster limit. Same-key follow-ups and graph-family leases remain
+serialized. Increasing replicas distributes eligible duties; it does not split a
+single graph family into independent ownership boundaries.
+
+Each API adapter has a bounded dependency graph and `maxInFlight` writer slots.
+Only independent operations approved in the same mutation-planner batch can use
+multiple slots; unknown effects retain ordering. `validationWorkers` separately
+bounds candidate checks, including checks requested directly by dispatchers.
+These are Python runtime controls projected by Helm into environment variables.
+
+Before dispatch, each adapter also compares
+[pending changes to the same object](../development/mutations.md#queued-kubernetes-write-conflicts).
+Identical writes with identical dependency contracts share an entry; conflicting
+candidates return for fresh reconciliation. The
+[validation producer](../development/write-pipeline.md#validation-producer-and-dispatcher)
+checks dependencies and original target fences ahead of dispatch. The dispatcher
+can reuse a fresh receipt; watches, relevant writes and expiry invalidate it.
+Ownership is always checked before transport. Ordinary reads bypass write admission; these
+checks run on the same event loop and add no OS thread or queue service.
 
 Task pauses are described in [performance tuning](../operations/performance.md).
 Their settings do not change the number of Waitress threads or asyncio executor
@@ -255,6 +272,8 @@ by responsibility and describes their import and feature-enablement boundaries.
 | [runtime.py](../../pkg/polyad/operator/runtime.py) | Main-thread signals and the owned Kopf thread |
 | [handlers.py](../../pkg/polyad/operator/lifecycle/handlers.py) | Task startup, health and cleanup |
 | [queue.py](../../pkg/polyad/operator/coordination/queue.py) | Local FIFO reconciliation |
+| [write_queue.py](../../pkg/polyad/operator/coordination/write_queue.py) | Pending Kubernetes intent conflicts within each API adapter |
+| [contracts.py](../../pkg/polyad/operator/coordination/contracts.py) / [validation.py](../../pkg/polyad/operator/coordination/validation.py) | Captured dependency hashes, targeted refresh and bounded validation ahead of dispatch |
 | [server.py](../../pkg/polyad/api/server.py) | Shared Flask/Waitress lifecycle and thread-to-loop bridge |
 | [kubernetes.py](../../pkg/polyad/operator/adapters/kubernetes.py) | Kubernetes transport offloading and write fences |
 | [roles.py](../../pkg/polyad/operator/lifecycle/roles.py) / [root.py](../../pkg/polyad/operator/clusters/root.py) | Role selection and remote cluster tasks |

@@ -95,6 +95,21 @@ operator:
     maxCuts: 524287
     ## @param operator.cheeger.timeoutSeconds Cooperative time ceiling per calculation (0.001-300 seconds); checked between cut batches, never converts partial results into exact constants
     timeoutSeconds: 5
+  writeQueue:
+    ## @param operator.writeQueue.maxInFlight Maximum concurrent writer slots per adapter (integer 1-32); 1 serializes transport, larger values allow only planner-approved independent writes to overlap; shared dependencies remain ordered
+    maxInFlight: 1
+    ## @param operator.writeQueue.maxPending Extra admitted writes beyond writer slots (integer 0-128); 1 keeps decisions fresh, larger bursts add reads and may return more drift conflicts; overflow retries from fresh state
+    maxPending: 1
+    ## @param operator.writeQueue.validationIntervalSeconds Maximum pause between validator passes (0.01-60 seconds, no greater than validationWindowSeconds); watch notifications wake it sooner
+    validationIntervalSeconds: 1
+    ## @param operator.writeQueue.validationWindowSeconds Maximum age of a reusable dependency validation from its start (0.01-60 seconds); shorter windows add reads, longer windows tolerate more unobserved external drift
+    validationWindowSeconds: 5
+    ## @param operator.writeQueue.validationBurst Maximum pending candidates examined per validator pass (integer 1-128); later items use spare time before the oldest receipts expire
+    validationBurst: 8
+    ## @param operator.writeQueue.validationWorkers Maximum concurrent candidate validations per adapter (integer 1-32), shared by background and dispatch checks; raise only with Kubernetes read capacity available
+    validationWorkers: 1
+    ## @param operator.writeQueue.reconciliationWorkers Maximum concurrent local reconciliation attempts and remote deliveries per cluster (integer 1-32); same-key follow-ups and graph-family leases remain serialized, separate families can prepare decisions together
+    reconciliationWorkers: 1
   tuning:
     ## @param operator.tuning.rescanIntervalSeconds Pause after local and root-managed remote inventory scans (1-15s); watch polyad_inventory_sample_age_seconds and polyad_cluster_inventory_sample_fresh; lower values add Kubernetes and optional state writes
     rescanIntervalSeconds: 5

@@ -29,7 +29,7 @@ class WriteBacklog:
 
     def enqueue(self) -> int:
         """
-        Register a mutation before waiting for its serialized dispatch slot.
+        Register a mutation before waiting for an eligible dispatch slot.
 
         Returns:
             int: Unique token for subsequent dispatch and completion tracking.

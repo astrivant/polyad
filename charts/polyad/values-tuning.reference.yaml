@@ -2,6 +2,29 @@
 # Overlay for any architecture. Cadences pause AFTER a pass, not on a fixed clock.
 # Guide and full metric inventory: ../../docs/operations/performance.md and ../../docs/operations/metrics.md.
 operator:
+  writeQueue:
+    # [integer: 1-32] Raise to overlap independent approved mutations; unrelated
+    # object names alone are insufficient, and ordinary writes remain ordered.
+    maxInFlight: 1
+    # [integer: 1-32] Concurrent authoritative dependency checks share this cap.
+    validationWorkers: 1
+    # [integer: 1-32] Reconcile separate families concurrently under their leases.
+    # This prepares decisions in parallel without granting parallel write approval.
+    reconciliationWorkers: 1
+    # Integer, 0-128 extra admissions per adapter beyond maxInFlight writer slots.
+    # Default 1 bounds stale work; 0 adds no extra capacity. Overflow returns retryable 429.
+    # Increase for short bursts only: every contracted write requires a current validation before dispatch.
+    # Watches and shared queues retain desired-state hints, not rejected write payloads.
+    maxPending: 1
+    # Number, 0.01-60 seconds and no greater than the window below; events wake the producer sooner.
+    validationIntervalSeconds: 1
+    # Number, 0.01-60 seconds from validation START, including its reads.
+    # A fresh receipt avoids duplicate dispatch-time reads. Smaller values reduce unobserved drift.
+    # Known relevant writes or watch events always invalidate it immediately.
+    validationWindowSeconds: 5
+    # Integer, 1-128 candidates per background pass; spends spare window time on third/fourth/later items.
+    # Does not change mutation concurrency; maxInFlight sets that separate ceiling.
+    validationBurst: 8
   cheeger:
     # Integer, 2-4096. Each Graph/PolyGraph/ReplicaGroup boundary is measured separately.
     # Raising this alone does not make an exponential search affordable.

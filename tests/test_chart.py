@@ -666,7 +666,7 @@ def test_capacity_permissions_and_priority_are_opt_in():
     assert priority["metadata"]["name"] == "test-test-polyad-capacity"
     role = next(obj for obj in objects if obj["kind"] == "Role" and obj["metadata"]["name"] == "test-polyad")
     rule = next(rule for rule in role["rules"] if "provisioningrequests" in rule["resources"])
-    assert rule["verbs"] == ["get", "list", "create", "delete"]
+    assert rule["verbs"] == ["get", "list", "watch", "create", "delete"]
     operator = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     env = {entry["name"]: entry.get("value") for entry in operator["spec"]["template"]["spec"]["containers"][0]["env"]}
     assert env["POLYAD_CAPACITY_ENABLED"] == "true"
