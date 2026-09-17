@@ -4,9 +4,9 @@
 
 Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics) is a Kubernetes operator for deploying, connecting and scaling applications as graphs.
 Compose batch jobs, persistent services and supporting resources into reusable
-Graphs and PolyGraphs. Define how work starts, how components communicate and
-which structural constraints must hold as the application changes—from a workflow
-in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deployment/operator.md#api-and-python-abstractions)</sup>
+Graphs and PolyGraphs. Define how work starts, how components communicate, how
+they respond to application demand and which constraints must hold as the application
+changes—from a workflow in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deployment/operator.md#api-and-python-abstractions)</sup>
 The Kubernetes operator is built on [Kopf](https://docs.kopf.dev/en/stable/),
 the Kubernetes Operators Framework for Python.
 
@@ -19,24 +19,25 @@ the Kubernetes Operators Framework for Python.
   scale individual services, whole graphs or nested compositions. Polyad refreshes
   live graph state and enforces [GraphRules](docs/graphs/graph-rules.md), including size,
   shape and structural Cheeger bounds, before applying scaling changes.
-  Optional [Soul searching](docs/graphs/soul-searching.md), Polyad's topology optimizer,
-  uses application measurements to recommend or apply approved connection layouts
-  and bounded [Istio traffic splits](docs/graphs/traffic-balancing.md). Demand selects
-  a separate Cheeger target; routing percentages come from calibrated demand tiers
-  or each replica's completed throughput and reported spare capacity. Fixed percentages
-  also work without feedback. These routes can balance Workload, Daemon, Graph,
-  PolyGraph or nested ReplicaGroup replicas through their service entrypoints.
-  Approved [load profiles](docs/graphs/load-profiles.md) can prepare upcoming stages
-  by adjusting capacity lookahead within fixed ceilings, independently of replica scaling.
+- **Adapt to administrator-defined demand.** [Soul searching](docs/graphs/load-profiles.md)
+  uses offered throughput or a named signal, such as queued jobs, to select approved
+  Cheeger targets, connection layouts, traffic splits and capacity lookahead.
+  Observe recommendations or allow bounded adaptation, including preparation before
+  throughput falls behind. Hard rules and resource ceilings stay fixed.
 - **Make connectivity explicit.** Choose replica connection patterns, including
   custom edges, and enforce [network boundaries](docs/deployment/networking.md) with optional
-  NetworkPolicy and Istio integration.
+  NetworkPolicy and Istio integration. [Istio percentage routing](docs/graphs/traffic-balancing.md)
+  divides requests among workload or graph replicas using fixed splits, demand tiers
+  or measured spare capacity.
 - **Let services participate.** Through the [standalone Python client](pkg/client/README.md),
   workloads can submit compositions, activate work, request [TTL-bound connections](docs/apis/temporary-connections.md)
   and discover permitted services across the [atlas](docs/apis/discovery.md), with filtered
   event hooks and peer-approved connections.
   [Shared types](pkg/polyad-types/README.md) and [JSON Schemas](pkg/polyad-schemas/README.md)
   are also available separately from the operator.
+- **Rebalance event subscriptions.** Subscribe over SSE or WebSocket and opt into
+  [paced reconnections](docs/operations/event-rebalancing.md) as operator replicas change.
+  Clients resume from their checkpoints through Service/Istio routing or discovered Pod IPs.
 - **Coordinate across clusters.** A [root operator](docs/deployment/root-control-plane.md) can
   run in a dedicated management cluster, deploy graphs and execution replicas into
   registered workload clusters, and collect their observations centrally.
@@ -45,6 +46,10 @@ the Kubernetes Operators Framework for Python.
   [separate gateway, executor and telemetry components](docs/deployment/components.md)
   managed through the operator's own Graph. Optionally persist graph state and
   tracked measurements in [PostgreSQL](docs/deployment/postgresql.md).
+- **Observe and coordinate changes.** Inspect [Prometheus and JSON metrics](docs/operations/metrics.md) and
+  [OpenTelemetry traces and decision logs](docs/operations/tracing.md).
+  The [write pipeline](docs/development/write-pipeline.md) coalesces duplicate mutations,
+  checks dependencies before dispatch and returns stale decisions to reconciliation.
 
 ## Table of contents
 
@@ -52,11 +57,12 @@ the Kubernetes Operators Framework for Python.
   - [Table of contents](#table-of-contents)
   - [Get started](#get-started)
   - [What Polyad abstracts](#what-polyad-abstracts)
-    - [Motivation](#motivation)
+    - [Motivation and inspiration](#motivation-and-inspiration)
     - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
     - [Graphs of graphs](#graphs-of-graphs)
     - [Replica connections](#replica-connections)
     - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
+    - [Demand-driven adaptation and preparation](#demand-driven-adaptation-and-preparation)
     - [Constrained compositions](#constrained-compositions)
     - [Network boundaries](#network-boundaries)
     - [Graphs across clusters](#graphs-across-clusters)
@@ -75,6 +81,11 @@ Deploy the [Kubernetes operator](docs/introduction/getting-started.md#quick-star
 with the Helm chart, or try the [local Python scheduler](docs/introduction/getting-started.md#quick-start-local-work).
 The [examples](docs/introduction/getting-started.md#examples) cover pipelines, services,
 spot work, storage and nested graphs.
+
+For application feedback, start with the [approved load-profile example](examples/load-profiles.yaml)
+and its [Helm reference values](charts/polyad/values-soul-searching.reference.yaml).
+The [demand guide](docs/graphs/load-profiles.md#define-demand) explains signal names,
+units and thresholds; use `Observe` mode to inspect recommendations before enabling adaptation.
 
 Applications can install the [Python client](pkg/client/README.md) or just the
 [shared types](pkg/polyad-types/README.md) without installing the operator. From a
@@ -96,14 +107,14 @@ Its **nodes** can be tasks, services, resources or other graphs. A data pipeline
 might fetch records, process partitions in parallel, then publish the results;
 a service graph might keep consumers and their supporting resources running.<sup>[\[3\]](docs/introduction/concepts.md)</sup>
 
-### Motivation
+### Motivation and inspiration
 
 While at Klaviyo, I briefly worked alongside engineers who had come from Medium.
-They described a setup where clusters managed other clusters. That idea helped
+They were working on converting the company's cloud architecture to a setup where clusters managed other clusters, a concept they'd designed at Medium. That idea helped
 motivate Polyad's [root control plane](docs/deployment/root-control-plane.md) and
 nested PolyGraphs. Medium's
 [Kubernetes Infrastructure At Medium](https://medium.engineering/kubernetes-infrastructure-at-medium-d9e2444932ef)
-provides public background on its multi-cluster infrastructure, gradual rollouts
+provides public background on this strategy's multi-cluster infrastructure, gradual rollouts
 and capacity planning.
 
 Deploying a distributed application means deciding how its services connect,
@@ -128,11 +139,12 @@ across registered clusters, coordinating deployments and collecting observations
 
 For pipelines with idle workers behind busy stages, [Cheeger bounds](docs/graphs/cheeger-orchestration.md)
 constrain sparse connectivity, while [Soul searching](docs/graphs/soul-searching.md)
-uses application measurements to guide approved connection changes and
-[traffic balancing](docs/graphs/traffic-balancing.md) between replicas. This helps
-direct work toward available capacity. Structural bounds do not guarantee a data
-rate; throughput feedback ties adaptation to the application's observed demand
-and processing capacity.
+uses administrator-selected demand signals to guide approved connection changes,
+[traffic balancing](docs/graphs/traffic-balancing.md) and
+[preparation for upcoming stages](docs/graphs/load-profiles.md). This helps direct
+work toward available capacity and gives a node autoscaler notice of future
+scheduling demand. Structural bounds do not guarantee a data rate; application
+measurements and load tests determine useful targets and preparation budgets.
 
 The [Python client](pkg/client/README.md) lets services request new compositions,
 activate work and establish [temporary connections](docs/apis/temporary-connections.md)
@@ -329,6 +341,46 @@ A ReplicaGroup of PolyGraphs can also scale a complete cross-cluster composition
 Each destination can independently scale its own local groups. The
 [multicluster scaling diagram](docs/deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling)
 shows where each cluster refreshes live values and enforces its own rules.
+
+### Demand-driven adaptation and preparation
+
+[Soul searching](docs/graphs/soul-searching.md) lets a Graph or PolyGraph respond
+to application demand within administrator-approved profiles. Demand defaults to
+offered work per second. Administrators can instead select an exact signal name
+and unit—such as `queueDepth` in `jobs` or `activeSessions` in `sessions`—and define
+the thresholds that select each profile. An authorized application reporter
+supplies the measurements; configuring a signal does not automatically scrape it.
+
+A profile combines a separate application Cheeger target with optional
+[traffic percentages](docs/graphs/traffic-balancing.md) and capacity preparation
+settings. `Observe` reports recommendations; `Adapt` may apply approved changes.
+The default `Shortfall` trigger waits for completed throughput to fall behind.
+The optional `Demand` trigger allows preparation while throughput still keeps up,
+or while queued work awaits processing.
+
+For example, sustained growth past an approved queue-depth threshold can select
+a denser connection layout, rebalance traffic and prepare three dependency stages
+ahead instead of one. Fresh samples, stabilization, cooldowns and change budgets
+govern those adjustments. Every change must satisfy live GraphRules and the fixed
+graph and operator capacity ceilings.
+
+| Control | Responsibility |
+| --- | --- |
+| Soul searching | Select approved connection, traffic and preparation settings from demand |
+| KEDA/HPA | Request replica counts for the configured scaling target |
+| Polyad capacity planner | Prepare known upcoming execution nodes and coordinate workload admission |
+| Kubernetes and the node autoscaler | Schedule Pods and provision machines for scheduling demand |
+
+Soul searching works independently of KEDA and leaves replica counts to the
+existing scaling controller. Lookahead prepares upcoming work already described
+by the graph; it does not add spare application replicas to an entirely deployed
+service. Actual node provisioning still depends on the configured autoscaler.
+
+See [profile configuration and limits](docs/graphs/load-profiles.md#configure-approved-profiles),
+the [preparation sequence diagram](docs/graphs/load-profiles.md#from-incoming-demand-to-prepared-capacity),
+and the [runnable example](examples/load-profiles.yaml). For the distinction between
+hard structural bounds and application targets, see
+[comparing Cheeger controls](docs/graphs/cheeger-orchestration.md).
 
 ### Constrained compositions
 
@@ -596,6 +648,16 @@ namespaces.<sup>[\[15\]](docs/deployment/networking.md#workload-access-to-operat
 
 A running service can also pulse downstream workloads or daemon replica groups,
 with explicit concurrency and frequency policies.<sup>[\[17\]](docs/workloads/activation.md)</sup>
+
+The [Python client](pkg/client/README.md) supports filtered event hooks over SSE
+or WebSocket. With optional [connection rebalancing](docs/operations/event-rebalancing.md),
+operators send paced reconnect instructions, called **copulses**, when membership
+changes or an administrator starts a roll. Clients retain their last completed
+checkpoint, refresh ready endpoints and reconnect through Service/Istio routing
+or direct client-side round robin. Graceful shutdown gives subscriptions a bounded
+window to reconnect. See the [scale-out](docs/operations/event-rebalancing.md#scale-out-and-subscription-migration)
+and [scale-down](docs/operations/event-rebalancing.md#scale-down-and-shutdown)
+sequence diagrams and [typed Helm reference](charts/polyad/values-event-rebalancing.reference.yaml).
 
 With a capacity policy, Polyad forecasts upcoming stages while earlier work
 runs, giving a compatible node autoscaler advance notice. Dependencies and gates
@@ -952,8 +1014,9 @@ choices.
   (2006, Section 2.1). The edge-expansion definition used by Polyad's
   [hard Cheeger bounds](docs/graphs/graph-rules.md#cheeger-bottleneck-bounds) and
   [throughput-driven Cheeger targets](docs/graphs/cheeger-orchestration.md).
-  Application-reported demand selects a calibrated target; sustained completion
-  shortfalls can trigger connection changes within the hard bounds. Optional
+  Administrator-selected demand signals choose calibrated targets; sustained
+  shortfall or the optional [Demand trigger](docs/graphs/load-profiles.md#define-demand)
+  can select approved changes within the hard bounds. Optional
   [traffic balancing](docs/graphs/traffic-balancing.md) also uses calibrated splits
   or per-replica throughput and headroom to redistribute requests. Those routing
   weights are separate from the unweighted Cheeger value used by both bounds.
