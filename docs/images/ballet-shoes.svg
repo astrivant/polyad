@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
   <title id="title">Polyad ballet shoes</title>
   <desc id="desc">Two distinct pointe-shoe silhouettes, a black upright shoe on the left and a light pink angled shoe on the right, with crossed ankle ribbons and small motion marks.</desc>
-  <g fill="none" stroke="#222222" stroke-width="2.5" stroke-linecap="round">
+  <g fill="none" stroke="#C4C4C4" stroke-width="2.5" stroke-linecap="round">
     <path d="M8 58Q10 44 20 34M18 59Q19 50 24 44"/>
     <path d="M113 31Q122 38 124 47M112 44L117 51"/>
   </g>
