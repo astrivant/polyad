@@ -19,6 +19,9 @@ in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deplo
   shape and structural Cheeger bounds, before applying scaling changes.
   Optional [Soul searching](docs/graphs/throughput-feedback.md), Polyad's topology optimizer, maps application demand
   to separate Cheeger targets and recommends or applies approved connection layouts.
+  Optional [Istio traffic balancing](docs/graphs/traffic-balancing.md) splits incoming work
+  between workload, Daemon, Graph or PolyGraph replicas using configured percentages,
+  calibrated demand tiers or measured headroom.
 - **Make connectivity explicit.** Choose replica connection patterns, including
   custom edges, and enforce [network boundaries](docs/deployment/networking.md) with optional
   NetworkPolicy and Istio integration.

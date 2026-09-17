@@ -85,7 +85,12 @@ def test_inventory_and_reconciliation_roles():
     assert set(WATCHED_KINDS) == RECONCILED_KINDS == BOUNDARY_KINDS | {"Rewrite", "Composition", "Activation", "TemporaryConnection"}
     assert DEFINITION_KINDS.isdisjoint(RECONCILED_KINDS)
     assert COMPOSABLE_KINDS == BOUNDARY_KINDS | (DEFINITION_KINDS - {"GraphRule"})
-    assert AUXILIARY_KINDS == CAPACITY_KINDS | NETWORK_POLICY_KINDS | {"Activation", "TemporaryConnection"}
+    assert AUXILIARY_KINDS == CAPACITY_KINDS | NETWORK_POLICY_KINDS | {
+        "Activation",
+        "TemporaryConnection",
+        "VirtualService",
+        "DestinationRule",
+    }
     assert RESOURCE_TYPES["Lease"].graph_owned is False
     assert RESOURCE_TYPES["ConfigMap"].api_group == ""
     assert BUILTINS["Job"] == ("/apis/batch/v1", "jobs")
@@ -125,7 +130,7 @@ def test_inventory_respects_optional_api_features(monkeypatch, mesh, capacity):
     assert asyncio.run(api.owned("test", "owner")) == []
     expected = set(GRAPH_OWNED_KINDS)
     if not mesh:
-        expected -= {"AuthorizationPolicy", "PeerAuthentication"}
+        expected -= {"AuthorizationPolicy", "PeerAuthentication", "VirtualService", "DestinationRule"}
     if not capacity:
         expected -= {"Pod", "PodTemplate", "ProvisioningRequest"}
     assert set(requested) == expected

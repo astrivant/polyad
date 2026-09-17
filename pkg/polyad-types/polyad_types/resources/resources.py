@@ -631,6 +631,46 @@ class PeerAuthentication(SpecResource):
 
 
 @frozen(kw_only=True)
+class VirtualService(SpecResource):
+    """
+    Route HTTP requests among graph-owned destination subsets.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Optional Istio traffic routing API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "VirtualService",
+        "networking.istio.io/v1",
+        "virtualservices",
+        description="Optional percentage routing between connected graph nodes.",
+        graph_owned=True,
+        auxiliary="traffic",
+        required_feature="mesh",
+    )
+
+
+@frozen(kw_only=True)
+class DestinationRule(SpecResource):
+    """
+    Select downstream graph subtrees within a shared Service.
+
+    Attributes:
+        resource_type (ClassVar[ResourceType]): Optional Istio destination subset API identity.
+    """
+
+    resource_type: ClassVar[ResourceType] = ResourceType(
+        "DestinationRule",
+        "networking.istio.io/v1",
+        "destinationrules",
+        description="Optional downstream subsets scoped to the caller subtree.",
+        graph_owned=True,
+        auxiliary="traffic",
+        required_feature="mesh",
+    )
+
+
+@frozen(kw_only=True)
 class ProvisioningRequest(SpecResource):
     """
     A namespaced request for future workload capacity.
@@ -792,6 +832,8 @@ RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     NetworkPolicy,
     AuthorizationPolicy,
     PeerAuthentication,
+    VirtualService,
+    DestinationRule,
     GraphRule,
     Composition,
     Pod,

@@ -8,7 +8,45 @@ import math
 from datetime import datetime
 from typing import Literal
 
-from attrs import frozen
+from attrs import field, frozen
+
+
+@frozen
+class TrafficSample:
+    """
+    Report completed work and spare sustainable capacity for one routing destination.
+
+    Attributes:
+        route (str): Configured traffic route name.
+        target (str): Configured downstream path, including a graph replica ordinal where applicable.
+        targetUid (str): UID of the execution resource at that path, never the reusable definition.
+        generation (int): Generation of that execution resource when measured.
+        completedPerSecond (float): Successfully completed work over the aggregate report's window and unit.
+        headroomPerSecond (float): Estimated additional sustainable work per second, in that same unit.
+    """
+
+    route: str
+    target: str
+    targetUid: str
+    generation: int
+    completedPerSecond: float
+    headroomPerSecond: float
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Require an exact execution revision and finite nonnegative rates.
+
+        Returns:
+            None: No return value.
+        """
+        if not self.route or not self.target or not self.targetUid or type(self.generation) is not int or self.generation < 1:
+            raise ValueError("traffic reports require route, target execution UID and positive generation")
+        if any(
+            isinstance(value, bool) or not math.isfinite(value) or value < 0 for value in (self.completedPerSecond, self.headroomPerSecond)
+        ):
+            raise ValueError("traffic throughput and headroom must be finite and nonnegative")
+        if not math.isfinite(self.completedPerSecond + self.headroomPerSecond):
+            raise ValueError("traffic sustainable capacity must be finite")
 
 
 @frozen
@@ -25,6 +63,7 @@ class ThroughputSample:
         offeredPerSecond (float): Aggregate arrival or demanded work rate over that window.
         completedPerSecond (float): Successfully completed work rate over the same window.
         kind (Literal['Graph', 'PolyGraph']): Target boundary kind.
+        traffic (tuple[TrafficSample, ...]): Per-destination measurements from the same window for Headroom routing.
     """
 
     graph: str
@@ -35,6 +74,7 @@ class ThroughputSample:
     offeredPerSecond: float
     completedPerSecond: float
     kind: Literal["Graph", "PolyGraph"] = "Graph"
+    traffic: tuple[TrafficSample, ...] = field(default=(), metadata={"schema": {"maxItems": 256}})
 
     def __attrs_post_init__(self) -> None:
         """
@@ -52,3 +92,5 @@ class ThroughputSample:
         for value in (self.offeredPerSecond, self.completedPerSecond):
             if isinstance(value, bool) or not math.isfinite(value) or value < 0:
                 raise ValueError("throughput rates must be finite and nonnegative")
+        if len(self.traffic) > 256 or len({(item.route, item.target) for item in self.traffic}) != len(self.traffic):
+            raise ValueError("traffic samples require at most 256 unique route and target pairs")

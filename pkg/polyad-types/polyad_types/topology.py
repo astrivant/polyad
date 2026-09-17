@@ -17,6 +17,7 @@ from polyad_types.capacity import CapacityPlan
 from polyad_types.codec import converter
 from polyad_types.network import NetworkAccess, NetworkPort
 from polyad_types.rules import Cheeger, CheegerComputation
+from polyad_types.traffic import TrafficRoute, TrafficWeights
 
 
 @frozen
@@ -82,6 +83,7 @@ class ThroughputTier:
     Attributes:
         offeredPerSecond (float): Inclusive demand threshold in the application's declared unit.
         cheeger (Cheeger): Target range on the connections relation; never overrides GraphRules.
+        trafficWeights (tuple[TrafficWeights, ...]): Optional calibrated request percentages for configured routes.
     """
 
     offeredPerSecond: float = field(metadata={"schema": {"minimum": 0}})
@@ -104,6 +106,7 @@ class ThroughputTier:
             }
         }
     )
+    trafficWeights: tuple[TrafficWeights, ...] = field(default=(), metadata={"schema": {"maxItems": 16}})
 
     def __attrs_post_init__(self) -> None:
         """
@@ -116,6 +119,8 @@ class ThroughputTier:
             raise ValueError("throughput demand thresholds must be finite and nonnegative")
         if self.cheeger.minimum is None and self.cheeger.maximum is None:
             raise ValueError("throughput tiers require a Cheeger target")
+        if len(self.trafficWeights) > 16 or len({item.route for item in self.trafficWeights}) != len(self.trafficWeights):
+            raise ValueError("throughput tiers support at most 16 unique traffic routes")
 
 
 @frozen
@@ -149,6 +154,8 @@ class ThroughputPolicy:
         cooldownSeconds (int): Minimum time between successful topology changes.
         maxChangesPerHour (int): Maximum successful changes in a rolling hour.
         cheegerComputation (CheegerComputation): Search priorities and budgets shared by current and candidate layouts.
+        maxWeightStep (int): Maximum percentage-point change per destination in one automatic adjustment.
+        trafficMode (Literal['Tiers', 'Headroom']): Use calibrated tier percentages or measured per-destination sustainable capacity.
     """
 
     unit: str = field(metadata={"schema": {"minLength": 1, "maxLength": 64}})
@@ -162,6 +169,8 @@ class ThroughputPolicy:
     cooldownSeconds: int = field(default=300, metadata={"schema": {"minimum": 1, "maximum": 86400}})
     maxChangesPerHour: int = field(default=2, metadata={"schema": {"minimum": 1, "maximum": 60}})
     cheegerComputation: CheegerComputation = field(factory=CheegerComputation)
+    maxWeightStep: int = field(default=10, metadata={"schema": {"minimum": 1, "maximum": 100}})
+    trafficMode: Literal["Tiers", "Headroom"] = "Tiers"
 
     def __attrs_post_init__(self) -> None:
         """
@@ -180,14 +189,24 @@ class ThroughputPolicy:
             raise ValueError("throughput layouts require unique names and at most eight alternatives")
         if any(len(layout.connections) > 380 for layout in self.layouts):
             raise ValueError("throughput layouts support at most 380 connections")
-        if self.mode == "Adapt" and not self.layouts:
-            raise ValueError("Adapt requires administrator-approved layouts")
+        if self.trafficMode not in {"Tiers", "Headroom"}:
+            raise ValueError("trafficMode must be Tiers or Headroom")
+        if self.trafficMode == "Headroom" and any(tier.trafficWeights for tier in self.tiers):
+            raise ValueError("Headroom chooses percentages from measurements; tier trafficWeights require Tiers mode")
+        if (
+            self.mode == "Adapt"
+            and not self.layouts
+            and self.trafficMode != "Headroom"
+            and not any(tier.trafficWeights for tier in self.tiers)
+        ):
+            raise ValueError("Adapt requires administrator-approved layouts or traffic weights")
         for value, minimum, maximum in (
             (self.sampleMaxAgeSeconds, 1, 3600),
             (self.sustainedSeconds, 1, 86400),
             (self.minSamples, 2, 1000),
             (self.cooldownSeconds, 1, 86400),
             (self.maxChangesPerHour, 1, 60),
+            (self.maxWeightStep, 1, 100),
         ):
             if type(value) is not int or not minimum <= value <= maximum:
                 raise ValueError("throughput timing and change budgets must be bounded positive integers")
@@ -242,6 +261,7 @@ class Topology:
         network (NetworkAccess | None): Optional traffic restrictions inherited by descendant workloads.
         activation (ActivationPolicy | None): Optional pulse policy when this graph is referenced as a downstream node.
         throughput (ThroughputPolicy | None): Optional application feedback with separate Cheeger targets and approved layouts.
+        traffic (tuple[TrafficRoute, ...]): Optional Istio percentage routes between connected local node subtrees.
     """
 
     nodes: tuple[Node, ...]
@@ -257,6 +277,7 @@ class Topology:
     network: NetworkAccess | None = field(default=None, kw_only=True)
     activation: ActivationPolicy | None = field(default=None, kw_only=True)
     throughput: ThroughputPolicy | None = field(default=None, kw_only=True)
+    traffic: tuple[TrafficRoute, ...] = field(default=(), kw_only=True, metadata={"schema": {"maxItems": 16}})
 
     def __attrs_post_init__(self) -> None:
         """
@@ -266,6 +287,7 @@ class Topology:
             None: No return value.
         """
         names = {node.name for node in self.nodes}
+        self._validate_traffic()
         if self.throughput is not None:
             for layout in self.throughput.layouts:
                 if any(edge.source not in names or edge.target not in names for edge in layout.connections):
@@ -297,6 +319,38 @@ class Topology:
             resolved.update(ready)
         if any(edge.source not in names or edge.target not in names for edge in self.connections):
             raise ValueError("connection endpoint is absent")
+
+    def _validate_traffic(self) -> None:
+        by_name = {node.name: node for node in self.nodes}
+        routes = {route.name: route for route in self.traffic}
+        if len(routes) > 16 or len(routes) != len(self.traffic) or len({route.service for route in self.traffic}) != len(routes):
+            raise ValueError("traffic requires at most 16 uniquely named routes with distinct Services")
+        if routes and (not self.network or not self.network.mesh or self.network.scope != "Subtree"):
+            raise ValueError("traffic routing requires network.mesh with Subtree scope")
+        connections = {(edge.source, edge.target) for edge in self.connections}
+        for route in self.traffic:
+            endpoints = [route.source, *(destination.target.split("/")[0] for destination in route.destinations)]
+            if any(name not in by_name or getattr(by_name[name], "cluster", None) for name in endpoints):
+                raise ValueError("traffic endpoints must be local graph nodes")
+            if by_name[route.source].kind == "Resource":
+                raise ValueError("traffic sources must contain executable workloads")
+            if any((route.source, target) not in connections or target == route.source for target in endpoints[1:]):
+                raise ValueError("every traffic destination requires a declared downstream connection")
+        if self.throughput:
+            if self.throughput.trafficMode == "Headroom" and not routes:
+                raise ValueError("Headroom requires configured traffic routes")
+            for tier in self.throughput.tiers:
+                for target in tier.trafficWeights:
+                    if target.route not in routes:
+                        raise ValueError("traffic target refers to an absent route")
+                    destinations = routes[target.route].destinations
+                    if set(target.weights) != {destination.target for destination in destinations}:
+                        raise ValueError("traffic target must include every route destination")
+                    if any(
+                        not destination.minWeight <= target.weights[destination.target] <= destination.maxWeight
+                        for destination in destinations
+                    ):
+                        raise ValueError("traffic target exceeds destination weight bounds")
 
 
 def topology(spec: dict[str, object], kind: str = "Graph") -> Topology:

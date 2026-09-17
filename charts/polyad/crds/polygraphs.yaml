@@ -56,6 +56,71 @@ spec:
           spec:
             type: object
             properties:
+              traffic:
+                type: array
+                maxItems: 16
+                items:
+                  type: object
+                  description: Split mesh HTTP requests to one Service among downstream node subtrees.
+                  properties:
+                    name:
+                      type: string
+                      description: Unique route name within this graph.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    source:
+                      type: string
+                      description: Local caller node; selects its descendant mesh pods.
+                    service:
+                      type: string
+                      description: Existing Service in the graph namespace covering all destination pods.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    port:
+                      type: integer
+                      description: Service port carrying HTTP, HTTP/2 or gRPC traffic.
+                      minimum: 1
+                      maximum: 65535
+                    destinations:
+                      type: array
+                      items:
+                        type: object
+                        description: Select a downstream node subtree and bound its share of requests.
+                        properties:
+                          target:
+                            type: string
+                            description: Downstream node path, such as workers/replica-0/entrypoint, whose pods form
+                              a subset.
+                            minLength: 1
+                            maxLength: 2047
+                            pattern: ^[a-z0-9-]+(/[a-z0-9-]+)*$
+                          weight:
+                            type: integer
+                            description: Configured percentage of new HTTP requests.
+                            minimum: 0
+                            maximum: 100
+                          minWeight:
+                            type: integer
+                            description: Smallest percentage allowed by automatic adjustment.
+                            minimum: 0
+                            maximum: 100
+                          maxWeight:
+                            type: integer
+                            description: Largest percentage allowed by automatic adjustment.
+                            minimum: 0
+                            maximum: 100
+                        required:
+                        - target
+                        - weight
+                      description: Distinct downstream subsets whose percentages sum to 100.
+                      minItems: 2
+                      maxItems: 16
+                  required:
+                  - name
+                  - source
+                  - service
+                  - port
+                  - destinations
               throughput:
                 type: object
                 description: Observe or adapt topology using empirical throughput targets within hard structural rules.
@@ -103,6 +168,29 @@ spec:
                           - rule: '!has(self.minimum) || self.minimum == null || !has(self.maximum) || self.maximum
                               == null || self.minimum <= self.maximum'
                             message: Cheeger minimum must not exceed maximum.
+                        trafficWeights:
+                          type: array
+                          items:
+                            type: object
+                            description: Approve a calibrated traffic distribution for one application demand tier.
+                            properties:
+                              route:
+                                type: string
+                                description: Name of the configured traffic route.
+                              weights:
+                                type: object
+                                additionalProperties:
+                                  type: integer
+                                  minimum: 0
+                                  maximum: 100
+                                description: Complete target-to-percentage mapping for that route.
+                                minProperties: 2
+                                maxProperties: 16
+                            required:
+                            - route
+                            - weights
+                          description: Optional calibrated request percentages for configured routes.
+                          maxItems: 16
                       required:
                       - offeredPerSecond
                       - cheeger
@@ -235,6 +323,17 @@ spec:
                           uniqueItems: true
                         description: Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
                         maxItems: 64
+                  maxWeightStep:
+                    type: integer
+                    description: Maximum percentage-point change per destination in one automatic adjustment.
+                    minimum: 1
+                    maximum: 100
+                  trafficMode:
+                    type: string
+                    enum:
+                    - Tiers
+                    - Headroom
+                    description: Use calibrated tier percentages or measured per-destination sustainable capacity.
                 required:
                 - unit
                 - tiers
@@ -931,6 +1030,155 @@ spec:
               throughput:
                 type: object
                 properties:
+                  currentTraffic:
+                    type: array
+                    items:
+                      type: object
+                      description: Split mesh HTTP requests to one Service among downstream node subtrees.
+                      properties:
+                        name:
+                          type: string
+                          description: Unique route name within this graph.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        source:
+                          type: string
+                          description: Local caller node; selects its descendant mesh pods.
+                        service:
+                          type: string
+                          description: Existing Service in the graph namespace covering all destination pods.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        port:
+                          type: integer
+                          description: Service port carrying HTTP, HTTP/2 or gRPC traffic.
+                          minimum: 1
+                          maximum: 65535
+                        destinations:
+                          type: array
+                          items:
+                            type: object
+                            description: Select a downstream node subtree and bound its share of requests.
+                            properties:
+                              target:
+                                type: string
+                                description: Downstream node path, such as workers/replica-0/entrypoint, whose pods
+                                  form a subset.
+                                minLength: 1
+                                maxLength: 2047
+                                pattern: ^[a-z0-9-]+(/[a-z0-9-]+)*$
+                              weight:
+                                type: integer
+                                description: Configured percentage of new HTTP requests.
+                                minimum: 0
+                                maximum: 100
+                              minWeight:
+                                type: integer
+                                description: Smallest percentage allowed by automatic adjustment.
+                                minimum: 0
+                                maximum: 100
+                              maxWeight:
+                                type: integer
+                                description: Largest percentage allowed by automatic adjustment.
+                                minimum: 0
+                                maximum: 100
+                            required:
+                            - target
+                            - weight
+                          description: Distinct downstream subsets whose percentages sum to 100.
+                          minItems: 2
+                          maxItems: 16
+                      required:
+                      - name
+                      - source
+                      - service
+                      - port
+                      - destinations
+                  proposedTraffic:
+                    type: array
+                    items:
+                      type: object
+                      description: Split mesh HTTP requests to one Service among downstream node subtrees.
+                      properties:
+                        name:
+                          type: string
+                          description: Unique route name within this graph.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        source:
+                          type: string
+                          description: Local caller node; selects its descendant mesh pods.
+                        service:
+                          type: string
+                          description: Existing Service in the graph namespace covering all destination pods.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        port:
+                          type: integer
+                          description: Service port carrying HTTP, HTTP/2 or gRPC traffic.
+                          minimum: 1
+                          maximum: 65535
+                        destinations:
+                          type: array
+                          items:
+                            type: object
+                            description: Select a downstream node subtree and bound its share of requests.
+                            properties:
+                              target:
+                                type: string
+                                description: Downstream node path, such as workers/replica-0/entrypoint, whose pods
+                                  form a subset.
+                                minLength: 1
+                                maxLength: 2047
+                                pattern: ^[a-z0-9-]+(/[a-z0-9-]+)*$
+                              weight:
+                                type: integer
+                                description: Configured percentage of new HTTP requests.
+                                minimum: 0
+                                maximum: 100
+                              minWeight:
+                                type: integer
+                                description: Smallest percentage allowed by automatic adjustment.
+                                minimum: 0
+                                maximum: 100
+                              maxWeight:
+                                type: integer
+                                description: Largest percentage allowed by automatic adjustment.
+                                minimum: 0
+                                maximum: 100
+                            required:
+                            - target
+                            - weight
+                          description: Distinct downstream subsets whose percentages sum to 100.
+                          minItems: 2
+                          maxItems: 16
+                      required:
+                      - name
+                      - source
+                      - service
+                      - port
+                      - destinations
+                  targetTraffic:
+                    type: array
+                    items:
+                      type: object
+                      description: Approve a calibrated traffic distribution for one application demand tier.
+                      properties:
+                        route:
+                          type: string
+                          description: Name of the configured traffic route.
+                        weights:
+                          type: object
+                          additionalProperties:
+                            type: integer
+                            minimum: 0
+                            maximum: 100
+                          description: Complete target-to-percentage mapping for that route.
+                          minProperties: 2
+                          maxProperties: 16
+                      required:
+                      - route
+                      - weights
                   computation:
                     type: object
                     nullable: true
@@ -1479,6 +1727,14 @@ spec:
                           PeerAuthentication:
                             type: integer
                             description: Owned mutual TLS policies.
+                            minimum: 0
+                          VirtualService:
+                            type: integer
+                            description: Owned percentage routes.
+                            minimum: 0
+                          DestinationRule:
+                            type: integer
+                            description: Owned destination subset policies.
                             minimum: 0
                           Job:
                             type: integer

@@ -54,6 +54,8 @@ async def report_throughput(api: API, namespace: str, sample: ThroughputSample, 
     if not 0 <= (datetime.now(UTC) - observed).total_seconds() <= policy.sampleMaxAgeSeconds:
         raise ValueError("throughput sample is stale or from the future")
     value = to_dict(sample)
+    if len(json.dumps(value, allow_nan=False).encode()) > 64 * 1024:
+        raise ValueError("throughput reports must fit within 64 KiB")
     previous = json.loads(meta.get("annotations", {}).get(SAMPLE, "null"))
     if previous and datetime.fromisoformat(previous["observedAt"].replace("Z", "+00:00")) >= observed:
         if previous != value:

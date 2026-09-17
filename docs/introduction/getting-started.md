@@ -114,6 +114,7 @@ See [deployment and lifecycle checks](../deployment/operator.md#build-install-an
 | [Spot work](../../examples/spot-workload.yaml) | Run ordinary Workloads with explicit spot placement |
 | [Advance capacity](../../examples/capacity.yaml) | Prewarm capacity for downstream work while preparation runs |
 | [Graph composition](../../examples/polygraph.yaml) | Compose nested graph types and inspect root status rollups |
+| [Traffic balancing](../../examples/traffic-balancing.yaml) | Split incoming requests between two graph replicas using optional Istio routing |
 
 Apply examples after installing the operator. Spot examples require node labels
 and tolerations that match your cluster; update their placement before applying.<sup>[\[13\]](../deployment/operator.md#interruptible-execution)</sup><sup>[\[8\]](../deployment/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup>

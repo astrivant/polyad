@@ -255,7 +255,7 @@ class Activations:
         # Network guards are compiled from logical names before this scheduling
         # projection. All executions retain those labels; runtime aliases must
         # never become new network identities or widen the original contract.
-        return evolve(graph, nodes=tuple(nodes), connections=connections, network=None, throughput=None), desired
+        return evolve(graph, nodes=tuple(nodes), connections=connections, network=None, throughput=None, traffic=()), desired
 
     def key(self, node: str, receipt: dict[str, Any]) -> str:
         """

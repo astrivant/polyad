@@ -880,6 +880,14 @@ class Controller:
             rule_candidate = converter.unstructure(graph)
             await refresh_rules()
         await ensure_policies(self, obj, network_plans)
+        route_pending = None
+        if os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true" or graph.traffic:
+            from polyad.operator.policies.traffic import ensure_routes
+
+            try:
+                await ensure_routes(self, obj)
+            except Pending as error:
+                route_pending = error
         children = [child for child in await self.children(obj) if child["kind"] not in asts.AUXILIARY_KINDS]
         remote_snapshot = {
             (item["metadata"]["uid"], item["metadata"]["resourceVersion"])
@@ -939,6 +947,8 @@ class Controller:
         for node in graph.nodes:
             if node.name in states or node.name in activations.blocked:
                 continue
+            if route_pending and node.name in {route.source for route in topology(obj["spec"], obj["kind"]).traffic}:
+                continue
             if not all(states.get(edge.node, {}).get(edge.condition, False) for edge in node.requires):
                 logger.debug("Node admission deferred graph=%s/%s node=%s reason=dependencies", namespace, meta["name"], node.name)
                 continue
@@ -992,6 +1002,8 @@ class Controller:
                 continue
             await self.ensure(admitted, before_create=refresh_rules)
             used += node.slots
+        if route_pending:
+            raise route_pending
         failed = any(state["failed"] for state in states.values()) or any(value["overdue"] for value in activations.summary.values())
         complete = (
             graph.mode == "finite"

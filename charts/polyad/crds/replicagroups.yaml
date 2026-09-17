@@ -665,6 +665,14 @@ spec:
                               type: integer
                               description: Owned mutual TLS policies.
                               minimum: 0
+                            VirtualService:
+                              type: integer
+                              description: Owned percentage routes.
+                              minimum: 0
+                            DestinationRule:
+                              type: integer
+                              description: Owned destination subset policies.
+                              minimum: 0
                             Job:
                               type: integer
                               description: Number of owned Job resources.

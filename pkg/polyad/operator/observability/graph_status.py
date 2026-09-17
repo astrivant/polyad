@@ -149,7 +149,17 @@ def observe_graph(obj: dict[str, Any], children: list[dict[str, Any]]) -> GraphM
             from polyad_types.replication import replica_topology
 
             base_spec = replica_topology(base_spec)
-        obj = {**obj, "spec": {**base_spec, "nodes": runtime["nodes"], "connections": runtime["connections"], "network": None}}
+        obj = {
+            **obj,
+            "spec": {
+                **base_spec,
+                "nodes": runtime["nodes"],
+                "connections": runtime["connections"],
+                "network": None,
+                "throughput": None,
+                "traffic": [],
+            },
+        }
     else:
         runtime = {}
     if obj["kind"] == "ReplicaGroup" and "template" in obj["spec"]:

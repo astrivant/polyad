@@ -22,6 +22,10 @@ For every `GraphRule` field, default, validation constraint and configuration
 diagram, see the [graph rules guide](../graphs/graph-rules.md#network-contracts). This guide
 covers how traffic contracts are compiled, enforced and operated.
 
+For optional percentage routing **between graph replicas**, see
+[traffic balancing](../graphs/traffic-balancing.md). It compiles source-scoped
+Istio routes independently of these network permissions and the structural Cheeger bounds.
+
 ## Table of contents
 
 - [Selection, scope and inheritance](#selection-scope-and-inheritance)

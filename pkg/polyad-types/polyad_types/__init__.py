@@ -70,6 +70,7 @@ from polyad_types.resources.resources import DaemonSetSpec as DaemonSetSpec
 from polyad_types.resources.resources import Deployment as Deployment
 from polyad_types.resources.resources import DeploymentSpec as DeploymentSpec
 from polyad_types.resources.resources import DeploymentStrategy as DeploymentStrategy
+from polyad_types.resources.resources import DestinationRule as DestinationRule
 from polyad_types.resources.resources import Gate as Gate
 from polyad_types.resources.resources import Graph as Graph
 from polyad_types.resources.resources import GraphRule as GraphRule
@@ -96,6 +97,7 @@ from polyad_types.resources.resources import ShutdownPolicy as ShutdownPolicy
 from polyad_types.resources.resources import StatefulSet as StatefulSet
 from polyad_types.resources.resources import StatefulSetSpec as StatefulSetSpec
 from polyad_types.resources.resources import TemporaryConnection as TemporaryConnection
+from polyad_types.resources.resources import VirtualService as VirtualService
 from polyad_types.resources.resources import Workload as Workload
 from polyad_types.resources.status import AdmissionMetrics as AdmissionMetrics
 from polyad_types.resources.status import ConnectionMetrics as ConnectionMetrics
@@ -115,6 +117,7 @@ from polyad_types.rules import Spectrum as Spectrum
 from polyad_types.rules import StructuralRule as StructuralRule
 from polyad_types.storage import Persistence as Persistence
 from polyad_types.throughput import ThroughputSample as ThroughputSample
+from polyad_types.throughput import TrafficSample as TrafficSample
 from polyad_types.topology import Connection as Connection
 from polyad_types.topology import Dependency as Dependency
 from polyad_types.topology import GraphNode as GraphNode
@@ -124,3 +127,6 @@ from polyad_types.topology import ThroughputLayout as ThroughputLayout
 from polyad_types.topology import ThroughputPolicy as ThroughputPolicy
 from polyad_types.topology import ThroughputTier as ThroughputTier
 from polyad_types.topology import Topology as Topology
+from polyad_types.traffic import TrafficDestination as TrafficDestination
+from polyad_types.traffic import TrafficRoute as TrafficRoute
+from polyad_types.traffic import TrafficWeights as TrafficWeights

@@ -273,6 +273,8 @@ class ResourceCounts(AST):
         NetworkPolicy (int): Number of owned transport policies.
         AuthorizationPolicy (int): Number of owned Istio authorization policies.
         PeerAuthentication (int): Number of owned mutual TLS policies.
+        VirtualService (int): Number of owned percentage routes.
+        DestinationRule (int): Number of owned destination subset policies.
         Job (int): Number of owned Job resources.
         Deployment (int): Number of owned Deployment resources.
         StatefulSet (int): Number of owned StatefulSet resources.
@@ -295,6 +297,8 @@ class ResourceCounts(AST):
     NetworkPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned transport policies."}})
     AuthorizationPolicy: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned Istio authorization policies."}})
     PeerAuthentication: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned mutual TLS policies."}})
+    VirtualService: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned percentage routes."}})
+    DestinationRule: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Owned destination subset policies."}})
     Job: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Job resources."}})
     Deployment: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned Deployment resources."}})
     StatefulSet: int = field(default=0, metadata={"schema": {"minimum": 0, "description": "Number of owned StatefulSet resources."}})

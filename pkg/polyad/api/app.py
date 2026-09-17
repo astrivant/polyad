@@ -147,6 +147,14 @@ def _build_app(
             raise ValueError("throughput generation must be an integer")
         if any(type(body.get(name)) not in (int, float) for name in ("offeredPerSecond", "completedPerSecond")):
             raise ValueError("throughput rates must be numbers")
+        traffic = body.get("traffic", [])
+        if not isinstance(traffic, list) or any(
+            not isinstance(item, dict)
+            or type(item.get("generation")) is not int
+            or any(type(item.get(name)) not in (int, float) for name in ("completedPerSecond", "headroomPerSecond"))
+            for item in traffic
+        ):
+            raise ValueError("traffic observations require integer generations and numeric rates")
         return jsonify(throughput(converter.structure(body, ThroughputSample))), 202
 
     schema = openapi_document(title, version)

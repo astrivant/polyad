@@ -45,6 +45,7 @@ from polyad_types.resources.resources import DaemonSetSpec as DaemonSetSpec
 from polyad_types.resources.resources import Deployment as Deployment
 from polyad_types.resources.resources import DeploymentSpec as DeploymentSpec
 from polyad_types.resources.resources import DeploymentStrategy as DeploymentStrategy
+from polyad_types.resources.resources import DestinationRule as DestinationRule
 from polyad_types.resources.resources import Dragonfly as Dragonfly
 from polyad_types.resources.resources import DragonflyPool as DragonflyPool
 from polyad_types.resources.resources import Gate as Gate
@@ -76,6 +77,7 @@ from polyad_types.resources.resources import ShutdownPolicy as ShutdownPolicy
 from polyad_types.resources.resources import StatefulSet as StatefulSet
 from polyad_types.resources.resources import StatefulSetSpec as StatefulSetSpec
 from polyad_types.resources.resources import TemporaryConnection as TemporaryConnection
+from polyad_types.resources.resources import VirtualService as VirtualService
 from polyad_types.resources.resources import Workload as Workload
 from polyad_types.resources.status import AdmissionMetrics as AdmissionMetrics
 from polyad_types.resources.status import ConnectionMetrics as ConnectionMetrics

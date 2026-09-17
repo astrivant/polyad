@@ -8,6 +8,7 @@ import copy
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from polyad.compiler.passes.traffic import subset_name
 from polyad.graph.temporary import ANNOTATION, active_entries, overlay
 from polyad.operator.clusters.remote_scaling import approved_intent
 from polyad.operator.policies.rules import RuleViolation, check_rules
@@ -75,6 +76,7 @@ def _activation_topology(raw: dict[str, Any], children: list[dict[str, Any]]) ->
         # projection expands runtime aliases, as in Activations.prepare.
         "network": None,
         "throughput": None,
+        "traffic": [],
         "nodes": [
             {
                 **node,
@@ -243,7 +245,7 @@ async def check_live_rules(
         if instance is not None:
             deadlines.extend(datetime.fromisoformat(grant["expiresAt"]) for grant in active_entries(instance).values())
             body = overlay(instance, body)
-        topology(body, kind)
+        traffic_routes = topology(body, kind).traffic
         if not is_target or candidate is None or candidate_is_logical:
             body = _activation_topology(body, live_children)
         graph = topology(body, kind)
@@ -280,6 +282,34 @@ async def check_live_rules(
             key = child_kind, selected_child["metadata"]["name"] if selected_child else f"{node['name']}-{boundaries}"
             definitions[key] = {"spec": await expand(child_kind, child_body, selected_child, (*path, key), (*references, reference))}
             node["kind"], node["ref"] = key
+        for route in traffic_routes:
+            for destination in route.destinations:
+                target_body = body
+                parts = destination.target.split("/")
+                for index, part in enumerate(parts):
+                    endpoint = next((node for node in target_body["nodes"] if node["name"] == part), None)
+                    if endpoint is None and destination.weight == 0:
+                        if instance is not None and not is_target:
+                            from polyad.operator.reconciliation.controller import child_name
+
+                            persisted = await api.get("VirtualService", namespace, child_name(instance, f"traffic-{route.name}"))
+                            if persisted:
+                                actual = persisted.get("spec", {}).get("http", [{}])[0].get("route", [])
+                                if any(
+                                    item.get("destination", {}).get("subset") == subset_name(destination.target)
+                                    and item.get("weight", 0) > 0
+                                    for item in actual
+                                ):
+                                    raise Pending("persist zero traffic weight before removing its graph replica")
+                        break
+                    if endpoint is None or endpoint.get("cluster") or endpoint["kind"] == "Resource":
+                        raise RuleViolation(
+                            "a positive traffic weight requires a present local downstream execution; drain its weight before scale-in"
+                        )
+                    if index < len(parts) - 1:
+                        if endpoint["kind"] not in BOUNDARY_KINDS:
+                            raise RuleViolation("traffic destination paths can traverse only graph boundaries")
+                        target_body = definitions[(endpoint["kind"], endpoint["ref"])]["spec"]
         return body
 
     spec = await expand(root["kind"], root["spec"], root, (), ())

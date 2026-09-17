@@ -16,17 +16,18 @@ logger = logging.getLogger(__name__)
 BLOCKED = {"Blocked", "Rejected", "Invalid", "Failed", "NoAllowedLayout", "ComputationLimited"}
 THROUGHPUT_REASONS = {
     "WaitingForSample": "Waiting for a fresh application throughput report.",
+    "WaitingForTrafficSample": "Waiting for complete current replica measurements with usable capacity; traffic percentages are retained.",
     "StaleSample": "The throughput report is stale or targets a different graph revision; no layout change is allowed.",
     "Stabilizing": "Application demand must remain sustained before a layout change is considered.",
     "Satisfied": "Application throughput meets the selected demand tier; connections are retained.",
     "BelowDemandThreshold": "Demand is below the first configured tier; connections are retained.",
-    "ThroughputShortfall": "The Cheeger target is already met despite the throughput shortfall; connections are retained.",
+    "ThroughputShortfall": "Cheeger and traffic targets are met despite the throughput shortfall; routing and connections are retained.",
     "ComputationLimited": "Cheeger computation could not certify a layout within its configured budgets; no change is allowed.",
     "NoAllowedLayout": "No approved layout satisfies both the throughput target and the current graph constraints.",
-    "Recommended": "An approved layout meets the target; Observe mode leaves connections unchanged.",
+    "Recommended": "Approved connection or traffic changes meet the target; Observe mode leaves the graph unchanged.",
     "TemporaryConnectionsActive": "Active temporary connections defer the proposed layout change.",
     "CoolingDown": "The cooldown or rolling change budget defers the proposed layout change.",
-    "Applied": "Applied an approved layout after fresh graph rules and adaptation checks passed.",
+    "Applied": "Applied approved connection or traffic changes after fresh graph rules and adaptation checks passed.",
 }
 decision_context: ContextVar[dict[str, Any] | None] = ContextVar("decision_context", default=None)
 
@@ -124,7 +125,9 @@ def status_decisions(obj: dict[str, Any], values: dict[str, Any]) -> None:
             if not state:
                 continue
             fields = (
-                ("phase", "recommendedLayout", "mode", "target") if section == "throughput" else ("phase", "ready", "failed", "completed")
+                ("phase", "recommendedLayout", "mode", "target", "proposedTraffic")
+                if section == "throughput"
+                else ("phase", "ready", "failed", "completed")
             )
             if all(old.get(field) == state.get(field) for field in fields):
                 continue
@@ -135,6 +138,9 @@ def status_decisions(obj: dict[str, Any], values: dict[str, Any]) -> None:
                     attributes[f"polyad.throughput.{field}"] = state[field]
             if section == "throughput":
                 attributes.update({f"polyad.throughput.target.{field}": value for field, value in (state.get("target") or {}).items()})
+                for route in state.get("proposedTraffic", []):
+                    for destination in route["destinations"]:
+                        attributes[f"polyad.traffic.{route['name']}.{destination['target']}.weight"] = destination["weight"]
             decision(
                 "polyad.policy.transition",
                 THROUGHPUT_REASONS.get(phase, f"Throughput policy: {phase}.")

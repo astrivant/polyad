@@ -20,6 +20,7 @@ from polyad_types.requests import ConnectionRequest
 from polyad_types.resources import CapacityStatus
 from polyad_types.rules import CheegerComputation
 from polyad_types.topology import GraphNode, ThroughputPolicy
+from polyad_types.traffic import TrafficRoute, TrafficWeights
 
 if TYPE_CHECKING:
     from typing import Any
@@ -96,6 +97,7 @@ def main() -> int:
             updated = refresh(updated, (*props, "nodes", "items", "properties"), "cluster", cluster_schema)
             updated = refresh(updated, props, "capacity", structural_schema(CapacityPlan))
             updated = refresh(updated, props, "throughput", structural_schema(ThroughputPolicy))
+            updated = refresh(updated, props, "traffic", {"type": "array", "maxItems": 16, "items": structural_schema(TrafficRoute)})
             if kind != "rewrites":
                 status_props = ROOT[:-2] + ("status", "properties")
                 updated = refresh(updated, status_props, "capacity", structural_schema(CapacityStatus))
@@ -106,6 +108,9 @@ def main() -> int:
                     {
                         "type": "object",
                         "properties": {
+                            "currentTraffic": {"type": "array", "items": structural_schema(TrafficRoute)},
+                            "proposedTraffic": {"type": "array", "items": structural_schema(TrafficRoute)},
+                            "targetTraffic": {"type": "array", "items": structural_schema(TrafficWeights)},
                             "computation": {
                                 "type": "object",
                                 "nullable": True,

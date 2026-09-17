@@ -73,6 +73,7 @@ async def service_members(api: API, obj: dict[str, Any]) -> list[dict[str, Any]]
         or DEPLOYMENT in meta["annotations"]
         or graph.mode != "persistent"
         or graph.throughput is not None
+        or graph.traffic
         or spec.get("network")
         or spec.get("activation")
         or {node.name for node in graph.nodes} != bindings.keys()
@@ -113,6 +114,7 @@ async def members(api: API, obj: dict[str, Any]) -> list[dict[str, Any]]:
         or graph.nodes[0].kind != "Daemon"
         or graph.mode != "persistent"
         or graph.throughput is not None
+        or graph.traffic
     ):
         raise ValueError("operator Deployment observations require an internal persistent single-Daemon Graph")
     deployment = await api.get("Deployment", meta["namespace"], name)

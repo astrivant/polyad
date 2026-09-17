@@ -34,6 +34,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Comparing Cheeger policies](graphs/cheeger-orchestration.md) | Hard bounds versus throughput targets, nested parent/child measurements, subgraph replication and Observe/Adapt diagrams |
 | [Replication and KEDA](graphs/replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |
 | [Soul searching](graphs/throughput-feedback.md) | Topology optimization through application throughput feedback, separate Cheeger targets and bounded Observe/Adapt modes |
+| [Traffic balancing](graphs/traffic-balancing.md) | Optional Istio percentage routing to workload and graph replicas, calibrated splits and bounded adjustment from measured headroom |
 | [Advance capacity](graphs/capacity.md) | Forecast upcoming demand, request node capacity and observe handoff |
 
 ## Workloads

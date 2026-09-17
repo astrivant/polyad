@@ -1,0 +1,128 @@
+# Requires mesh.enabled=true and a ready Istio control plane with native sidecars.
+# Apply in the operator's namespace. Guide: ../docs/graphs/traffic-balancing.md
+apiVersion: v1
+kind: Service
+metadata:
+  name: pipeline-entry
+spec:
+  selector:
+    app: balanced-pipeline-entry
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: balanced-entry
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: balanced-pipeline-entry
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: entry
+          image: busybox:1.37
+          command: [sh, -c, 'mkdir -p /tmp/www; hostname > /tmp/www/index.html; httpd -f -p 8080 -h /tmp/www']
+          startupProbe:
+            httpGet: {path: /, port: 8080}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /, port: 8080}
+          livenessProbe:
+            httpGet: {path: /, port: 8080}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Daemon
+metadata:
+  name: balanced-producer
+spec:
+  replicas: 1
+  template:
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: producer
+          image: busybox:1.37
+          command: [sh, -c, 'while true; do wget -qO- http://pipeline-entry:8080/; sleep 1; done']
+          startupProbe:
+            exec: {command: [sh, -c, 'true']}
+          readinessProbe:
+            exec: {command: [sh, -c, 'true']}
+          livenessProbe:
+            exec: {command: [sh, -c, 'true']}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: balanced-worker
+spec:
+  templateOnly: true
+  mode: persistent
+  nodes:
+    - {name: entry, kind: Daemon, ref: balanced-entry}
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: ReplicaGroup
+metadata:
+  name: balanced-workers
+spec:
+  templateOnly: true
+  template: {kind: Graph, ref: balanced-worker}
+  replicas: 2
+  minReplicas: 2
+  maxReplicas: 2
+  connectivity:
+    mode: Independent
+---
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Graph
+metadata:
+  name: balanced-pipeline
+spec:
+  mode: persistent
+  network:
+    mesh: true
+    scope: Subtree
+  nodes:
+    - {name: workers, kind: ReplicaGroup, ref: balanced-workers}
+    - name: producer
+      kind: Daemon
+      ref: balanced-producer
+      requires: [{node: workers, condition: ready}]
+  connections:
+    - source: producer
+      target: workers
+      ports: [{port: 8080}]
+  traffic:
+    - name: pipeline
+      source: producer
+      service: pipeline-entry
+      port: 8080
+      destinations:
+        - {target: workers/replica-0, weight: 60, minWeight: 10, maxWeight: 90}
+        - {target: workers/replica-1, weight: 40, minWeight: 10, maxWeight: 90}
+  # Observe recommends changes but keeps the initial 60/40 distribution.
+  # Switch to Adapt and submit application measurements to permit bounded updates.
+  throughput:
+    mode: Observe
+    trafficMode: Tiers
+    unit: requests
+    maxWeightStep: 10
+    tiers:
+      - offeredPerSecond: 100
+        cheeger: {minimum: 1}
+        trafficWeights:
+          - route: pipeline
+            weights:
+              workers/replica-0: 80
+              workers/replica-1: 20

@@ -1,7 +1,8 @@
 # Soul searching: application throughput and graph structure
 
 **Soul searching** is Polyad's bounded topology optimizer. It uses application
-throughput reports to recommend or apply administrator-approved connection layouts.
+throughput reports to recommend or apply administrator-approved connection layouts
+and optional [traffic percentages between graph replicas](traffic-balancing.md).
 
 Polyad keeps **hard structural Cheeger bounds** in GraphRules and a separate
 **application-driven Cheeger target** in `Graph.spec.throughput` or
@@ -19,6 +20,7 @@ For policies active in both a parent and child, see
 | GraphRule `cheeger.minimum` / `maximum` | Hard limits on permitted topology | Administrator-managed rules |
 | Throughput policy `tiers[].cheeger` | Empirically calibrated target range for a demand tier | Recommendations, or approved connections in Adapt mode |
 | KEDA / HPA | Workload or ReplicaGroup capacity | Replica counts through the selected scaling target |
+| Optional Istio percentage routing | Divide incoming work among approved downstream targets | Bounded percentages from demand tiers or per-replica throughput/headroom |
 
 The topology controller never changes replica counts or rewrites GraphRules.
 An adaptation must satisfy **both** its application target and every applicable
@@ -69,15 +71,18 @@ targets and layouts for your application's routing and partitioning contracts.
 Report **offered demand and successfully completed work over the same measurement
 window**, in the configured unit. Use one aggregate reporter per graph rather than
 letting individual replicas overwrite one another's partial measurements. Low
-traffic alone is not a throughput shortfall. The controller considers a change
+traffic alone is not a throughput shortfall. For connection changes and Tiers routing, the controller considers a change
 only when offered demand is positive and completed work is below
 `offeredPerSecond * shortfallRatio` for the required duration and sample count.
 
 The highest tier whose `offeredPerSecond` threshold is met supplies the target.
 Below the first tier, no target applies. This implementation adapts in response to
 sustained shortfall; it does not automatically remove connections when demand falls.
-When Cheeger already meets the target but application throughput remains low,
-`ThroughputShortfall` reports the unresolved problem without adding more edges.
+When Cheeger already meets the target, configured traffic balancing can still
+redistribute work among its connected destinations. Without a remaining approved
+connection or traffic adjustment, `ThroughputShortfall` reports the unresolved problem.
+Headroom routing can also rebalance under positive demand before aggregate
+throughput falls; see its [mode and reporting guide](traffic-balancing.md#choose-an-automatic-balancing-mode).
 
 ## Configure a bounded policy
 
