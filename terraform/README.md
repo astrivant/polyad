@@ -3,8 +3,10 @@
 Create an isolated GKE cluster, install Argo CD, and let it sync Polyad from this
 public repository. This is the foundation for future load tests of
 [the operator's own Graph](../README.md#the-operator-as-a-graph): it provisions
-the services and exposes their scaling signals. It does not generate load or
-install a metrics retention/dashboard stack.
+the services and exposes their scaling signals. Install the separate
+[benchmark fixture chart and load study](../studies/load/README.md) to generate
+repeatable activation traffic. Metrics retention/dashboard infrastructure is
+supplied separately.
 
 ## Table of contents
 
@@ -46,8 +48,9 @@ See the [upstream chart release](https://github.com/argoproj/argo-helm/releases/
 
 The `polyad` Application follows `https://github.com/astrivant/polyad.git`,
 revision `main`, path `charts/polyad`. Terraform registers that public Git source
-and the Argo, KEDA, Istio and Dragonfly OCI Helm repositories. Dependencies come
-from Polyad's committed `Chart.lock`; remote optional dependencies are registered
+and the Argo, KEDA, Istio, Dragonfly OCI, Stakater, Prometheus Community,
+Grafana Community and OpenTelemetry Helm repositories. The operator and benchmark
+charts use their committed `Chart.lock` files; remote optional dependencies are registered
 even when disabled. Local `file://` dependencies, including `polyad-crds`, come
 from the Git checkout and need no Argo repository entry. No Git credentials are
 needed. Polyad's existing
@@ -256,7 +259,7 @@ All Terraform inputs have explicit types and descriptions in
 The `polyad` pool's requested **2–10 total** range is fixed in the GKE module;
 `default_node_count` controls additional untainted system capacity.
 Application namespaces are `argocd` and `polyad`. Chart repositories are derived
-from the local `Chart.yaml`; apply Terraform again when new dependency
+from both charts’ local `Chart.yaml` files; apply Terraform again when new dependency
 repositories are added upstream. Provider selections are committed in
 `.terraform.lock.hcl`; use `terraform init -upgrade` only for an intentional update.
 

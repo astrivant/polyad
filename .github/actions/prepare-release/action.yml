@@ -26,3 +26,5 @@ runs:
         python -m pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
         poetry lock
         poetry check --lock
+        poetry -C pkg/polyad-benchmarks lock
+        poetry -C pkg/polyad-benchmarks check --lock

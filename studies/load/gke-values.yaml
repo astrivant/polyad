@@ -1,0 +1,131 @@
+# yaml-language-server: $schema=../../charts/polyad-benchmarks/values.schema.json
+## @param polyadResources [object] Settings for polyadResources.
+polyadResources:
+  ## @param polyadResources.variables [object] Benchmark images, bounded arrivals and graph-managed Pod settings.
+  variables:
+    ## @param polyadResources.variables.reloadOnPlanChange [boolean] Roll the fixture Deployment when the plan changes; change plans between runs.
+    reloadOnPlanChange: true
+    ## @param polyadResources.variables.placement [object] Settings for polyadResources.variables.placement.
+    placement:
+      ## @param polyadResources.variables.placement.nodeSelector [object] Node labels required by every fixture, batch and runner Pod. Empty uses normal scheduling.
+      nodeSelector:
+        ## @param polyadResources.variables.placement.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for polyadResources.variables.placement.nodeSelector.cloud.google.com/gke-nodepool.
+        cloud.google.com/gke-nodepool: polyad
+      ## @param polyadResources.variables.placement.tolerations [array] Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.
+      tolerations:
+      - key: dedicated
+        operator: Equal
+        value: polyad
+        effect: NoSchedule
+## @param reloader [object] Settings for reloader.
+reloader:
+  ## @param reloader.enabled [boolean] Install the pinned reloader dependency; disable to use an administrator-managed installation.
+  enabled: true
+  ## @param reloader.reloader [object] Settings for reloader.reloader.
+  reloader:
+    ## @param reloader.reloader.deployment [object] Settings for reloader.reloader.deployment.
+    deployment: &deployment
+      ## @param reloader.reloader.deployment.nodeSelector [object] Settings for reloader.reloader.deployment.nodeSelector.
+      ## @param monitoring.prometheusOperator.admissionWebhooks.patch.nodeSelector [object] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.nodeSelector.
+      ## @param monitoring.prometheus.prometheusSpec.nodeSelector [object] Settings for monitoring.prometheus.prometheusSpec.nodeSelector.
+      ## @param monitoring.grafana.nodeSelector [object] Settings for monitoring.grafana.nodeSelector.
+      ## @param monitoring.kube-state-metrics.nodeSelector [object] Settings for monitoring.kube-state-metrics.nodeSelector.
+      ## @param monitoring.prometheus-node-exporter.nodeSelector [object] Settings for monitoring.prometheus-node-exporter.nodeSelector.
+      nodeSelector: &nodeSelector
+        ## @param reloader.reloader.deployment.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for reloader.reloader.deployment.nodeSelector.cloud.google.com/gke-nodepool.
+        ## @param monitoring.prometheusOperator.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for monitoring.prometheusOperator.nodeSelector.cloud.google.com/gke-nodepool.
+        ## @param monitoring.prometheusOperator.admissionWebhooks.patch.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.nodeSelector.cloud.google.com/gke-nodepool.
+        ## @param monitoring.prometheus.prometheusSpec.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for monitoring.prometheus.prometheusSpec.nodeSelector.cloud.google.com/gke-nodepool.
+        ## @param monitoring.grafana.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for monitoring.grafana.nodeSelector.cloud.google.com/gke-nodepool.
+        ## @param monitoring.kube-state-metrics.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for monitoring.kube-state-metrics.nodeSelector.cloud.google.com/gke-nodepool.
+        ## @param monitoring.prometheus-node-exporter.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for monitoring.prometheus-node-exporter.nodeSelector.cloud.google.com/gke-nodepool.
+        ## @param tempo.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for tempo.nodeSelector.cloud.google.com/gke-nodepool.
+        ## @param collector.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for collector.nodeSelector.cloud.google.com/gke-nodepool.
+        cloud.google.com/gke-nodepool: polyad
+      ## @param reloader.reloader.deployment.tolerations [array] Settings for reloader.reloader.deployment.tolerations.
+      ## @param monitoring.prometheusOperator.admissionWebhooks.patch.tolerations [array] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.tolerations.
+      ## @param monitoring.prometheus.prometheusSpec.tolerations [array] Settings for monitoring.prometheus.prometheusSpec.tolerations.
+      ## @param monitoring.grafana.tolerations [array] Settings for monitoring.grafana.tolerations.
+      ## @param monitoring.kube-state-metrics.tolerations [array] Settings for monitoring.kube-state-metrics.tolerations.
+      ## @param monitoring.prometheus-node-exporter.tolerations [array] Settings for monitoring.prometheus-node-exporter.tolerations.
+      tolerations: &tolerations
+      ## @param monitoring.prometheusOperator.tolerations[].key [string] Settings for monitoring.prometheusOperator.tolerations[].key.
+      ## @param monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].key [string] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].key.
+      ## @param monitoring.prometheus.prometheusSpec.tolerations[].key [string] Settings for monitoring.prometheus.prometheusSpec.tolerations[].key.
+      ## @param monitoring.grafana.tolerations[].key [string] Settings for monitoring.grafana.tolerations[].key.
+      ## @param monitoring.kube-state-metrics.tolerations[].key [string] Settings for monitoring.kube-state-metrics.tolerations[].key.
+      ## @param monitoring.prometheus-node-exporter.tolerations[].key [string] Settings for monitoring.prometheus-node-exporter.tolerations[].key.
+      ## @param tempo.tolerations[].key [string] Settings for tempo.tolerations[].key.
+      ## @param collector.tolerations[].key [string] Settings for collector.tolerations[].key.
+      - key: dedicated
+        ## @param monitoring.prometheusOperator.tolerations[].operator [string] Settings for monitoring.prometheusOperator.tolerations[].operator.
+        ## @param monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].operator [string] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].operator.
+        ## @param monitoring.prometheus.prometheusSpec.tolerations[].operator [string] Settings for monitoring.prometheus.prometheusSpec.tolerations[].operator.
+        ## @param monitoring.grafana.tolerations[].operator [string] Settings for monitoring.grafana.tolerations[].operator.
+        ## @param monitoring.kube-state-metrics.tolerations[].operator [string] Settings for monitoring.kube-state-metrics.tolerations[].operator.
+        ## @param monitoring.prometheus-node-exporter.tolerations[].operator [string] Settings for monitoring.prometheus-node-exporter.tolerations[].operator.
+        ## @param tempo.tolerations[].operator [string] Settings for tempo.tolerations[].operator.
+        ## @param collector.tolerations[].operator [string] Settings for collector.tolerations[].operator.
+        operator: Equal
+        ## @param monitoring.prometheusOperator.tolerations[].value [string] Settings for monitoring.prometheusOperator.tolerations[].value.
+        ## @param monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].value [string] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].value.
+        ## @param monitoring.prometheus.prometheusSpec.tolerations[].value [string] Settings for monitoring.prometheus.prometheusSpec.tolerations[].value.
+        ## @param monitoring.grafana.tolerations[].value [string] Settings for monitoring.grafana.tolerations[].value.
+        ## @param monitoring.kube-state-metrics.tolerations[].value [string] Settings for monitoring.kube-state-metrics.tolerations[].value.
+        ## @param monitoring.prometheus-node-exporter.tolerations[].value [string] Settings for monitoring.prometheus-node-exporter.tolerations[].value.
+        ## @param tempo.tolerations[].value [string] Settings for tempo.tolerations[].value.
+        ## @param collector.tolerations[].value [string] Settings for collector.tolerations[].value.
+        value: polyad
+        ## @param monitoring.prometheusOperator.tolerations[].effect [string] Settings for monitoring.prometheusOperator.tolerations[].effect.
+        ## @param monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].effect [string] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].effect.
+        ## @param monitoring.prometheus.prometheusSpec.tolerations[].effect [string] Settings for monitoring.prometheus.prometheusSpec.tolerations[].effect.
+        ## @param monitoring.grafana.tolerations[].effect [string] Settings for monitoring.grafana.tolerations[].effect.
+        ## @param monitoring.kube-state-metrics.tolerations[].effect [string] Settings for monitoring.kube-state-metrics.tolerations[].effect.
+        ## @param monitoring.prometheus-node-exporter.tolerations[].effect [string] Settings for monitoring.prometheus-node-exporter.tolerations[].effect.
+        ## @param tempo.tolerations[].effect [string] Settings for tempo.tolerations[].effect.
+        ## @param collector.tolerations[].effect [string] Settings for collector.tolerations[].effect.
+        effect: NoSchedule
+## @param observability [object] Operator metric scraping and the study dashboard. Requires Prometheus Operator CRDs when enabled.
+observability:
+  ## @param observability.enabled [boolean] Settings for observability.enabled.
+  enabled: true
+## @param monitoring [object] Settings for monitoring.
+monitoring:
+  ## @param monitoring.enabled [boolean] Install the pinned monitoring dependency; disable to use an administrator-managed installation.
+  enabled: true
+  ## @param monitoring.prometheusOperator [object] Settings for monitoring.prometheusOperator.
+  prometheusOperator:
+    ## @param monitoring.prometheusOperator.nodeSelector [object] Settings for monitoring.prometheusOperator.nodeSelector.
+    nodeSelector: *nodeSelector
+    ## @param monitoring.prometheusOperator.tolerations [array] Settings for monitoring.prometheusOperator.tolerations.
+    tolerations: *tolerations
+    ## @param monitoring.prometheusOperator.admissionWebhooks [object] Settings for monitoring.prometheusOperator.admissionWebhooks.
+    admissionWebhooks:
+      ## @param monitoring.prometheusOperator.admissionWebhooks.patch [object] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.
+      patch: *deployment
+  ## @param monitoring.prometheus [object] Settings for monitoring.prometheus.
+  prometheus:
+    ## @param monitoring.prometheus.prometheusSpec [object] Settings for monitoring.prometheus.prometheusSpec.
+    prometheusSpec: *deployment
+  ## @param monitoring.grafana [object] Settings for monitoring.grafana.
+  grafana: *deployment
+  ## @param monitoring.kube-state-metrics [object] Settings for monitoring.kube-state-metrics.
+  kube-state-metrics: *deployment
+  ## @param monitoring.prometheus-node-exporter [object] Settings for monitoring.prometheus-node-exporter.
+  prometheus-node-exporter: *deployment
+## @param tempo [object] Settings for tempo.
+tempo:
+  ## @param tempo.enabled [boolean] Install the pinned tempo dependency; disable to use an administrator-managed installation.
+  enabled: true
+  ## @param tempo.nodeSelector [object] Settings for tempo.nodeSelector.
+  nodeSelector: *nodeSelector
+  ## @param tempo.tolerations [array] Settings for tempo.tolerations.
+  tolerations: *tolerations
+## @param collector [object] Settings for collector.
+collector:
+  ## @param collector.enabled [boolean] Install the pinned collector dependency; disable to use an administrator-managed installation.
+  enabled: true
+  ## @param collector.nodeSelector [object] Settings for collector.nodeSelector.
+  nodeSelector: *nodeSelector
+  ## @param collector.tolerations [array] Settings for collector.tolerations.
+  tolerations: *tolerations

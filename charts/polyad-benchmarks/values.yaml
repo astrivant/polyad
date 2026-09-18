@@ -1,0 +1,258 @@
+# yaml-language-server: $schema=values.schema.json
+## @section Benchmark selection
+## @param benchmark [object] Choose a packaged plan; values-smoke, values-steady and values-burst select independent experiments.
+benchmark:
+  ## @param benchmark.planFile [string] Chart-relative JSON client plan; its variables supply defaults before explicit polyadResources.variables overrides.
+  planFile: plans/smoke.json
+
+## @section Shared fixture settings
+## @param polyadResources [object] Settings for polyadResources.
+polyadResources:
+  ## @param polyadResources.enabled [boolean] Keep false; the benchmark parent renders the shared CRD templates after merging the selected JSON plan.
+  enabled: false
+  ## @param polyadResources.variables [object] Benchmark images, bounded arrivals and graph-managed Pod settings.
+  variables:
+    ## @param polyadResources.variables.images [object] Settings for polyadResources.variables.images.
+    images:
+      ## @param polyadResources.variables.images.runner [string] Repository of the runner image built from services/runner/Dockerfile.
+      runner: ghcr.io/astrivant/polyad-benchmarks-runner
+      ## @param polyadResources.variables.images.fixture [string] Repository of the fixture image built from services/fixture/Dockerfile; also runs finite batch Jobs.
+      fixture: ghcr.io/astrivant/polyad-benchmarks-fixture
+      ## @param polyadResources.variables.images.tag [string] Published immutable image tag shared by the runner and fixture images; build and push both before running.
+      tag: 0.0.1-alpha3
+      ## @param polyadResources.variables.images.pullPolicy [string] Settings for polyadResources.variables.images.pullPolicy.
+      pullPolicy: IfNotPresent
+    ## @param polyadResources.variables.run [object] Settings for polyadResources.variables.run.
+    run: {}
+    ## @param polyadResources.variables.placement [object] Settings for polyadResources.variables.placement.
+    placement:
+      ## @param polyadResources.variables.placement.nodeSelector [object] Node labels required by every fixture, batch and runner Pod. Empty uses normal scheduling.
+      nodeSelector: {}
+      ## @param polyadResources.variables.placement.tolerations [array] Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.
+      tolerations: []
+    ## @param polyadResources.variables.resources [object] Per-container requests and limits for the runner, fixture and batch. Hold constant when comparing operator settings.
+    resources:
+      ## @param polyadResources.variables.resources.requests [object] Settings for polyadResources.variables.resources.requests.
+      requests:
+        ## @param polyadResources.variables.resources.requests.cpu [string] Settings for polyadResources.variables.resources.requests.cpu.
+        cpu: 100m
+        ## @param polyadResources.variables.resources.requests.memory [string] Settings for polyadResources.variables.resources.requests.memory.
+        memory: 64Mi
+      ## @param polyadResources.variables.resources.limits [object] Settings for polyadResources.variables.resources.limits.
+      limits:
+        ## @param polyadResources.variables.resources.limits.cpu [string] Settings for polyadResources.variables.resources.limits.cpu.
+        cpu: 500m
+        ## @param polyadResources.variables.resources.limits.memory [string] Settings for polyadResources.variables.resources.limits.memory.
+        memory: 128Mi
+    ## @param polyadResources.variables.secretName [string] Existing Secret in the graph namespace with separate operator and fixture tokens. Empty is only for a private operator with authentication disabled.
+    secretName: ''
+    ## @param polyadResources.variables.operatorTokenKey [string] Secret key holding a Polyad credential permitted to submit and read activations in this graph tree.
+    operatorTokenKey: operator-token
+    ## @param polyadResources.variables.fixtureTokenKey [string] Secret key holding a separate token authenticating the runner to the fixture; never reuse the operator credential.
+    fixtureTokenKey: fixture-token
+    ## @param polyadResources.variables.replicas [object] Desired fixture Pods and concurrent batch Jobs, independently of operator replica settings.
+    replicas: {}
+    ## @param polyadResources.variables.reloadOnPlanChange [boolean] Opt the fixture Deployment into ConfigMap-triggered Reloader restarts. Requires bundled or existing Reloader; apply plan changes between runs.
+    reloadOnPlanChange: false
+## @section Plan reloads
+## @param reloader [object] Settings for reloader.
+reloader:
+  ## @param reloader.enabled [boolean] Install the pinned reloader dependency; disable to use an administrator-managed installation.
+  enabled: false
+  ## @param reloader.reloader [object] Settings for reloader.reloader.
+  reloader:
+    ## @param reloader.reloader.watchGlobally [boolean] Settings for reloader.reloader.watchGlobally.
+    watchGlobally: false
+    ## @param reloader.reloader.ignoreJobs [boolean] Settings for reloader.reloader.ignoreJobs.
+    ignoreJobs: true
+    ## @param reloader.reloader.ignoreCronJobs [boolean] Settings for reloader.reloader.ignoreCronJobs.
+    ignoreCronJobs: true
+    ## @param reloader.reloader.reloadStrategy [string] Settings for reloader.reloader.reloadStrategy.
+    reloadStrategy: annotations
+    ## @param reloader.reloader.deployment [object] Settings for reloader.reloader.deployment.
+    deployment:
+      ## @param reloader.reloader.deployment.nodeSelector [object] Settings for reloader.reloader.deployment.nodeSelector.
+      nodeSelector: {}
+      ## @param reloader.reloader.deployment.tolerations [array] Settings for reloader.reloader.deployment.tolerations.
+      tolerations: []
+## @section Operator observations
+## @param observability [object] Operator metric scraping and the study dashboard. Requires Prometheus Operator CRDs when enabled.
+observability:
+  ## @param observability.scrapeOperator [boolean] Scrape directly with a ServiceMonitor; disable when an agent already writes operator series.
+  scrapeOperator: true
+  ## @param observability.enabled [boolean] Settings for observability.enabled.
+  enabled: false
+  ## @param observability.operatorNamespace [string] Namespace containing the operator metrics Service.
+  operatorNamespace: polyad
+  ## @param observability.operatorRelease [string] Helm release owning the operator metrics Service.
+  operatorRelease: polyad
+  ## @param observability.scrapeInterval [string] Prometheus scrape interval; 5s resolves short benchmark bursts.
+  scrapeInterval: 5s
+  ## @param observability.metricsSecret [string] Optional existing bearer credential Secret in this chart namespace; empty for the private demo.
+  metricsSecret: ''
+  ## @param observability.metricsSecretKey [string] Key containing the bearer token when metricsSecret is set.
+  metricsSecretKey: token
+## @section Prometheus and Grafana
+## @param monitoring [object] Settings for monitoring.
+monitoring:
+  ## @param monitoring.enabled [boolean] Install the pinned monitoring dependency; disable to use an administrator-managed installation.
+  enabled: false
+  ## @param monitoring.fullnameOverride [string] Settings for monitoring.fullnameOverride.
+  fullnameOverride: benchmarks-monitoring
+  ## @param monitoring.alertmanager [object] Settings for monitoring.alertmanager.
+  alertmanager:
+    ## @param monitoring.alertmanager.enabled [boolean] Settings for monitoring.alertmanager.enabled.
+    enabled: false
+  ## @param monitoring.grafana [object] Settings for monitoring.grafana.
+  grafana:
+    ## @param monitoring.grafana.fullnameOverride [string] Settings for monitoring.grafana.fullnameOverride.
+    fullnameOverride: benchmarks-grafana
+    ## @param monitoring.grafana.service [object] Settings for monitoring.grafana.service.
+    service:
+      ## @param monitoring.grafana.service.type [string] Settings for monitoring.grafana.service.type.
+      type: ClusterIP
+    ## @param monitoring.grafana.persistence [object] Settings for monitoring.grafana.persistence.
+    persistence:
+      ## @param monitoring.grafana.persistence.enabled [boolean] Settings for monitoring.grafana.persistence.enabled.
+      enabled: true
+      ## @param monitoring.grafana.persistence.size [string] Settings for monitoring.grafana.persistence.size.
+      size: 5Gi
+    ## @param monitoring.grafana.additionalDataSources [array] Settings for monitoring.grafana.additionalDataSources.
+    additionalDataSources:
+    ## @param monitoring.grafana.additionalDataSources[].name [string] Settings for monitoring.grafana.additionalDataSources[].name.
+      - name: Tempo
+      ## @param monitoring.grafana.additionalDataSources[].type [string] Settings for monitoring.grafana.additionalDataSources[].type.
+        type: tempo
+      ## @param monitoring.grafana.additionalDataSources[].uid [string] Settings for monitoring.grafana.additionalDataSources[].uid.
+        uid: tempo
+      ## @param monitoring.grafana.additionalDataSources[].url [string] Settings for monitoring.grafana.additionalDataSources[].url.
+        url: http://benchmarks-tempo:3200
+      ## @param monitoring.grafana.additionalDataSources[].access [string] Settings for monitoring.grafana.additionalDataSources[].access.
+        access: proxy
+      ## @param monitoring.grafana.additionalDataSources[].editable [boolean] Settings for monitoring.grafana.additionalDataSources[].editable.
+        editable: false
+  ## @param monitoring.prometheus [object] Settings for monitoring.prometheus.
+  prometheus:
+    ## @param monitoring.prometheus.prometheusSpec [object] Settings for monitoring.prometheus.prometheusSpec.
+    prometheusSpec:
+      ## @param monitoring.prometheus.prometheusSpec.retention [string] Settings for monitoring.prometheus.prometheusSpec.retention.
+      retention: 7d
+      ## @param monitoring.prometheus.prometheusSpec.storageSpec [object] Settings for monitoring.prometheus.prometheusSpec.storageSpec.
+      storageSpec:
+        ## @param monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate [object] Settings for monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.
+        volumeClaimTemplate:
+          ## @param monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec [object] Settings for monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.
+          spec:
+            ## @param monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.accessModes [array] Settings for monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.accessModes.
+            accessModes:
+              - ReadWriteOnce
+            ## @param monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources [object] Settings for monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.
+            resources:
+              ## @param monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests [object] Settings for monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.
+              requests:
+                ## @param monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage [string] Settings for monitoring.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage.
+                storage: 10Gi
+  ## @param monitoring.kubeControllerManager [object] Settings for monitoring.kubeControllerManager.
+  kubeControllerManager:
+    ## @param monitoring.kubeControllerManager.enabled [boolean] Settings for monitoring.kubeControllerManager.enabled.
+    enabled: false
+  ## @param monitoring.kubeScheduler [object] Settings for monitoring.kubeScheduler.
+  kubeScheduler:
+    ## @param monitoring.kubeScheduler.enabled [boolean] Settings for monitoring.kubeScheduler.enabled.
+    enabled: false
+  ## @param monitoring.kubeEtcd [object] Settings for monitoring.kubeEtcd.
+  kubeEtcd:
+    ## @param monitoring.kubeEtcd.enabled [boolean] Settings for monitoring.kubeEtcd.enabled.
+    enabled: false
+  ## @param monitoring.kubeProxy [object] Settings for monitoring.kubeProxy.
+  kubeProxy:
+    ## @param monitoring.kubeProxy.enabled [boolean] Settings for monitoring.kubeProxy.enabled.
+    enabled: false
+## @section Trace storage
+## @param tempo [object] Settings for tempo.
+tempo:
+  ## @param tempo.enabled [boolean] Install the pinned tempo dependency; disable to use an administrator-managed installation.
+  enabled: false
+  ## @param tempo.fullnameOverride [string] Settings for tempo.fullnameOverride.
+  fullnameOverride: benchmarks-tempo
+  ## @param tempo.persistence [object] Settings for tempo.persistence.
+  persistence:
+    ## @param tempo.persistence.enabled [boolean] Settings for tempo.persistence.enabled.
+    enabled: true
+    ## @param tempo.persistence.size [string] Settings for tempo.persistence.size.
+    size: 10Gi
+  ## @param tempo.tempo [object] Settings for tempo.tempo.
+  tempo:
+    ## @param tempo.tempo.retention [string] Settings for tempo.tempo.retention.
+    retention: 72h
+## @section Trace collection
+## @param collector [object] Settings for collector.
+collector:
+  ## @param collector.enabled [boolean] Install the pinned collector dependency; disable to use an administrator-managed installation.
+  enabled: false
+  ## @param collector.fullnameOverride [string] Settings for collector.fullnameOverride.
+  fullnameOverride: benchmarks-otel
+  ## @param collector.mode [string] Settings for collector.mode.
+  mode: deployment
+  ## @param collector.replicaCount [integer] Settings for collector.replicaCount.
+  replicaCount: 1
+  ## @param collector.image [object] Settings for collector.image.
+  image:
+    ## @param collector.image.repository [string] Settings for collector.image.repository.
+    repository: otel/opentelemetry-collector-contrib
+    ## @param collector.image.tag [string] Settings for collector.image.tag.
+    tag: 0.160.0
+  ## @param collector.command [object] Settings for collector.command.
+  command:
+    ## @param collector.command.name [string] Settings for collector.command.name.
+    name: otelcol-contrib
+  ## @param collector.config [object] Settings for collector.config.
+  config:
+    ## @param collector.config.exporters [object] Settings for collector.config.exporters.
+    exporters:
+      ## @param collector.config.exporters.otlp/tempo [object] Settings for collector.config.exporters.otlp/tempo.
+      otlp/tempo:
+        ## @param collector.config.exporters.otlp/tempo.endpoint [string] Settings for collector.config.exporters.otlp/tempo.endpoint.
+        endpoint: benchmarks-tempo:4317
+        ## @param collector.config.exporters.otlp/tempo.tls [object] Settings for collector.config.exporters.otlp/tempo.tls.
+        tls:
+          ## @param collector.config.exporters.otlp/tempo.tls.insecure [boolean] Settings for collector.config.exporters.otlp/tempo.tls.insecure.
+          insecure: true
+    ## @param collector.config.service [object] Settings for collector.config.service.
+    service:
+      ## @param collector.config.service.pipelines [object] Settings for collector.config.service.pipelines.
+      pipelines:
+        ## @param collector.config.service.pipelines.logs [nullable] Settings for collector.config.service.pipelines.logs.
+        logs:
+        ## @param collector.config.service.pipelines.metrics [nullable] Settings for collector.config.service.pipelines.metrics.
+        metrics:
+        ## @param collector.config.service.pipelines.traces [object] Settings for collector.config.service.pipelines.traces.
+        traces:
+          ## @param collector.config.service.pipelines.traces.receivers [array] Settings for collector.config.service.pipelines.traces.receivers.
+          receivers:
+            - otlp
+          ## @param collector.config.service.pipelines.traces.processors [array] Settings for collector.config.service.pipelines.traces.processors.
+          processors:
+            - memory_limiter
+            - batch
+          ## @param collector.config.service.pipelines.traces.exporters [array] Settings for collector.config.service.pipelines.traces.exporters.
+          exporters:
+            - otlp/tempo
+  ## @param collector.ports [object] Settings for collector.ports.
+  ports:
+    ## @param collector.ports.jaeger-compact [object] Settings for collector.ports.jaeger-compact.
+    jaeger-compact:
+      ## @param collector.ports.jaeger-compact.enabled [boolean] Settings for collector.ports.jaeger-compact.enabled.
+      enabled: false
+    ## @param collector.ports.jaeger-thrift [object] Settings for collector.ports.jaeger-thrift.
+    jaeger-thrift:
+      ## @param collector.ports.jaeger-thrift.enabled [boolean] Settings for collector.ports.jaeger-thrift.enabled.
+      enabled: false
+    ## @param collector.ports.jaeger-grpc [object] Settings for collector.ports.jaeger-grpc.
+    jaeger-grpc:
+      ## @param collector.ports.jaeger-grpc.enabled [boolean] Settings for collector.ports.jaeger-grpc.enabled.
+      enabled: false
+    ## @param collector.ports.zipkin [object] Settings for collector.ports.zipkin.
+    zipkin:
+      ## @param collector.ports.zipkin.enabled [boolean] Settings for collector.ports.zipkin.enabled.
+      enabled: false

@@ -1,0 +1,251 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- $t := .Values.telemetry -}}
+{{- if $t.enabled -}}
+{{- $alloy := eq $t.mode "Alloy" -}}
+{{- if not $t.remoteWrite.url }}{{ fail "telemetry.remoteWrite.url is required" }}{{ end -}}
+{{- if gt (int $t.scrapeTimeoutSeconds) (int $t.scrapeIntervalSeconds) }}{{ fail "telemetry scrape timeout must not exceed its interval" }}{{ end -}}
+{{- if and (not $alloy) (or $t.logs.enabled $t.traces.enabled (ne (int $t.replicas) 1)) }}{{ fail "PrometheusAgent requires one replica and logs.enabled=false, traces.enabled=false" }}{{ end -}}
+{{- if and $t.logs.enabled (not $t.logs.url) }}{{ fail "telemetry.logs.url is required when log collection is enabled" }}{{ end -}}
+{{- if and $t.traces.enabled (not $t.traces.endpoint) }}{{ fail "telemetry.traces.endpoint is required when trace collection is enabled" }}{{ end -}}
+{{- if and $t.traces.routeOperator (not (and $t.traces.enabled .Values.tracing.enabled)) }}{{ fail "routing operator traces requires telemetry.traces.enabled and tracing.enabled" }}{{ end -}}
+{{- $targets := include "polyad.telemetry.targets" . | fromJsonArray -}}
+{{- $namespaces := list .Release.Namespace -}}
+{{- $proxy := false -}}
+{{- range $targets }}{{ $namespaces = append $namespaces .namespace }}{{ if .proxy }}{{ $proxy = true }}{{ end }}{{ end -}}
+{{- $name := printf "%s-telemetry" .Release.Name -}}
+{{- $secrets := dict -}}
+{{- range $group, $backend := dict "metrics" $t.remoteWrite "logs" $t.logs "traces" $t.traces -}}
+{{- if and (or (eq $group "metrics") $backend.enabled) $backend.credentials.secretName -}}
+{{- $_ := set $secrets $group (dict "name" $backend.credentials.secretName "key" $backend.credentials.secretKey) -}}
+{{- end -}}
+{{- end -}}
+{{- $metricSecret := include "polyad.telemetry.metricSecret" . | fromJson -}}
+{{- if and .Values.metrics.enabled $metricSecret.name }}{{ $_ := set $secrets "operator" $metricSecret }}{{ end -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+{{ range uniq $namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-{{ $.Release.Namespace }}
+  namespace: {{ . }}
+rules:
+  - apiGroups: ['']
+    resources: [pods, services]
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+  {{- if $t.logs.enabled }}
+  - apiGroups: ['']
+    resources: [pods/log]
+    verbs: [get]
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}-{{ $.Release.Namespace }}
+  namespace: {{ . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}-{{ $.Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
+{{ if $proxy }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $name }}-{{ .Release.Namespace }}-metrics
+rules:
+  - nonResourceURLs: [/metrics]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}-{{ .Release.Namespace }}-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $name }}-{{ .Release.Namespace }}-metrics
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+data:
+  {{ ternary "config.alloy" "prometheus.yaml" $alloy }}: |
+    {{- include "polyad.telemetry.config" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    polyad.astrivant.com/internal: "true"
+spec:
+  serviceName: {{ $name }}
+  replicas: {{ $t.replicas }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad-telemetry
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: polyad-telemetry
+        polyad.astrivant.com/internal: "true"
+        sidecar.istio.io/inject: {{ .Values.mesh.operator.enabled | quote }}
+      annotations:
+        checksum/config: {{ include "polyad.telemetry.config" . | sha256sum }}
+        {{- if .Values.mesh.operator.enabled }}
+        traffic.sidecar.istio.io/excludeInboundPorts: "12345,9090"
+        {{- end }}
+    spec:
+      serviceAccountName: {{ $name }}
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      {{- with default .Values.operator.nodeSelector $t.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with default .Values.operator.tolerations $t.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: agent
+          image: {{ ternary $t.alloyImage $t.prometheusImage $alloy | quote }}
+          imagePullPolicy: IfNotPresent
+          args:
+            {{- if $alloy }}
+            - run
+            - /etc/telemetry/config.alloy
+            - --storage.path=/var/lib/telemetry
+            - --server.http.listen-addr=[$(POD_IP)]:12345
+            - --cluster.enabled=true
+            - --cluster.node-name=$(POD_NAME)
+            - --cluster.advertise-address=[$(POD_IP)]:12345
+            - --cluster.join-addresses={{ $name }}.{{ .Release.Namespace }}.svc:12345
+            {{- else }}
+            - --agent
+            - --config.file=/etc/telemetry/prometheus.yaml
+            - --storage.agent.path=/var/lib/telemetry
+            - --web.listen-address=[$(POD_IP)]:9090
+            {{- end }}
+          env:
+            - name: POD_IP
+              valueFrom: {fieldRef: {fieldPath: status.podIP}}
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+          ports:
+            - name: http
+              containerPort: {{ ternary 12345 9090 $alloy }}
+            {{- if $t.traces.enabled }}
+            - {name: otlp-grpc, containerPort: 4317}
+            - {name: otlp-http, containerPort: 4318}
+            {{- end }}
+          startupProbe:
+            httpGet: {path: /-/ready, port: http}
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: {path: /-/ready, port: http}
+          livenessProbe:
+            httpGet: {path: /-/healthy, port: http}
+          resources:
+            {{- toYaml $t.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: config, mountPath: /etc/telemetry, readOnly: true}
+            - {name: data, mountPath: /var/lib/telemetry}
+            - {name: tmp, mountPath: /tmp}
+            {{- range $group, $secret := $secrets }}
+            - {name: {{ $group }}-credentials, mountPath: /etc/credentials/{{ $group }}, readOnly: true}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap: {name: {{ $name }}}
+        - name: tmp
+          emptyDir: {}
+        {{- if not $t.storage.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        {{- range $group, $secret := $secrets }}
+        - name: {{ $group }}-credentials
+          secret:
+            secretName: {{ $secret.name | quote }}
+            items: [{key: {{ $secret.key | quote }}, path: token}]
+        {{- end }}
+  {{- if $t.storage.enabled }}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- if $t.storage.storageClass }}
+        storageClassName: {{ $t.storage.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $t.storage.size | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: polyad-telemetry
+  ports:
+    - {name: http, port: {{ ternary 12345 9090 $alloy }}, targetPort: http}
+{{ if $t.traces.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "polyad.telemetry.serviceName" (dict "root" $ "target" "otlp") }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: polyad-telemetry
+  ports:
+    - {name: otlp-grpc, port: 4317, targetPort: otlp-grpc}
+    - {name: otlp-http, port: 4318, targetPort: otlp-http}
+{{- end }}
+{{- end }}
+{{- end -}}

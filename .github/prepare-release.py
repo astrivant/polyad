@@ -57,8 +57,10 @@ def prepare(tag: str) -> None:
     replace("pkg/client/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
     replace("pkg/polyad-types/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
     replace("pkg/polyad-schemas/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
+    replace("pkg/polyad-benchmarks/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
+    replace("pkg/polyad-benchmarks/pyproject.toml", r'"polyad-client==[^"\n]+"', f'"polyad-client=={package}"')
     replace("pyproject.toml", r'^schemas = \["polyad-schemas==[^"\n]+"\]$', f'schemas = ["polyad-schemas=={package}"]')
-    for path in ("pyproject.toml", "pkg/client/pyproject.toml"):
+    for path in ("pyproject.toml", "pkg/client/pyproject.toml", "pkg/polyad-benchmarks/pyproject.toml"):
         replace(path, r'^(\s*)"polyad-types==[^"\n]+",?$', rf'\g<1>"polyad-types=={package}",')
     # The local path dependency's version and the root dependency metadata change
     # together. Refresh this entry; the composite action refreshes the lock before builds.
@@ -71,13 +73,19 @@ def prepare(tag: str) -> None:
     replace("charts/polyad/Chart.yaml", r"^version: .+$", f"version: {chart}")
     replace("charts/polyad/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
     replace("charts/polyad/values.yaml", r"^    tag: .+$", f"    tag: '{chart}'")
-    readme = Path("charts/polyad/README.md")
-    source = readme.read_text()
-    row = re.search(r"^(\| `operator\.image\.tag`[^\n]*\|)([^|]+)(\|)$", source, re.MULTILINE)
-    if row is None:
-        raise ValueError("Missing operator.image.tag in the generated chart README")
-    cell = f" `{chart}`".ljust(len(row[2]) - 1) + " "
-    edits[readme] = source[: row.start(2)] + cell + source[row.end(2) :]
+    replace("charts/polyad-benchmarks/Chart.yaml", r"^version: .+$", f"version: {chart}")
+    replace("charts/polyad-benchmarks/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
+    replace("charts/polyad-benchmarks/values.yaml", r"^      tag: .+$", f"      tag: '{chart}'")
+    for dependency in ("polyad-types", "polyad-client"):
+        replace("pkg/polyad-benchmarks/poetry.lock", rf'(^name = "{dependency}"\nversion = )"[^"\n]+"', rf'\g<1>"{package}"')
+    for chart_name, parameter in (("polyad", "operator.image.tag"), ("polyad-benchmarks", "polyadResources.variables.images.tag")):
+        readme = Path(f"charts/{chart_name}/README.md")
+        source = readme.read_text()
+        row = re.search(rf"^(\| `{re.escape(parameter)}`[^\n]*\|)([^|]+)(\|)$", source, re.MULTILINE)
+        if row is None:
+            raise ValueError(f"Missing {parameter} in the generated chart README")
+        cell = f" `{chart}`".ljust(len(row[2]) - 1) + " "
+        edits[readme] = source[: row.start(2)] + cell + source[row.end(2) :]
     for path, content in edits.items():
         path.write_text(content)
     print(f"Prepared {tag}: package={package}, chart/image={chart}")

@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: polyad-benchmarks
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/astrivant/polyad.git
+    targetRevision: main # Pin to the exact commit used for a measured run.
+    path: charts/polyad-benchmarks
+    helm:
+      skipCrds: true
+      valueFiles:
+        - values-smoke.yaml
+        - ../../studies/load/gke-values.yaml
+      parameters:
+        - name: polyadResources.variables.images.runner
+          value: YOUR_REGISTRY/polyad-benchmarks-runner
+        - name: polyadResources.variables.images.fixture
+          value: YOUR_REGISTRY/polyad-benchmarks-fixture
+        - name: polyadResources.variables.images.tag
+          value: RUN
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: polyad
+  syncPolicy:
+    syncOptions: [ServerSideApply=true]

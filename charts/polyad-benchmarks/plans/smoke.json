@@ -1,0 +1,19 @@
+{
+  "requestId": "load-smoke-001",
+  "variables": {
+    "run": {
+      "rate": 0.2,
+      "duration": 60,
+      "max_requests": 12,
+      "concurrency": 4,
+      "timeout": 120,
+      "request_timeout": 5,
+      "poll_interval": 1
+    },
+    "replicas": {
+      "fixture": 1,
+      "batch": 2
+    },
+    "batchDelaySeconds": 0.1
+  }
+}

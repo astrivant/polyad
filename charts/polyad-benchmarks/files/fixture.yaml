@@ -1,0 +1,221 @@
+resources:
+  load-service:
+    spec:
+      manifest:
+        apiVersion: v1
+        kind: Service
+        spec:
+          selector:
+            polyad.astrivant.com/benchmark-role: fixture
+            polyad.astrivant.com/benchmark-release: '{{ .Release.Name }}'
+          ports:
+            - name: http
+              port: 8080
+              targetPort: http
+  load-plan:
+    spec:
+      manifest:
+        apiVersion: v1
+        kind: ConfigMap
+        data:
+          plan.json: '{{ dict "run" .Values.variables.run "replicas" .Values.variables.replicas | toJson }}'
+daemons:
+  load-fixture:
+    spec:
+      replicas: '{{ .Values.variables.replicas.fixture }}'
+      template:
+        metadata:
+          labels:
+            polyad.astrivant.com/benchmark: load
+            polyad.astrivant.com/benchmark-role: fixture
+            polyad.astrivant.com/benchmark-release: '{{ .Release.Name }}'
+        spec:
+          automountServiceAccountToken: false
+          securityContext: &podSecurityContext
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          nodeSelector: '{{ .Values.variables.placement.nodeSelector | toJson }}'
+          tolerations: '{{ .Values.variables.placement.tolerations | toJson }}'
+          containers:
+            - name: fixture
+              image: '{{ .Values.variables.images.fixture }}:{{ .Values.variables.images.tag }}'
+              imagePullPolicy: '{{ .Values.variables.images.pullPolicy }}'
+              securityContext: &containerSecurityContext
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              resources: '{{ .Values.variables.resources | toJson }}'
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: plan
+                  mountPath: /etc/polyad-benchmarks
+                  readOnly: true
+              env: '{{ if .Values.variables.secretName }}{{ list (dict "name" "POLYAD_API_TOKEN" "valueFrom" (dict "secretKeyRef" (dict "name"
+                .Values.variables.secretName "key" .Values.variables.operatorTokenKey))) (dict "name" "POLYAD_BENCHMARK_FIXTURE_TOKEN" "valueFrom"
+                (dict "secretKeyRef" (dict "name" .Values.variables.secretName "key" .Values.variables.fixtureTokenKey))) | toJson }}{{ else
+                }}[]{{ end }}'
+              ports:
+                - name: http
+                  containerPort: 8080
+              startupProbe:
+                httpGet:
+                  path: /healthz
+                  port: http
+                periodSeconds: 2
+                failureThreshold: 30
+              readinessProbe:
+                httpGet:
+                  path: /healthz
+                  port: http
+              livenessProbe:
+                httpGet:
+                  path: /healthz
+                  port: http
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: plan
+              configMap:
+                name: ${nodes.plan.name}
+    metadata:
+      annotations:
+        configmap.reloader.stakater.com/auto: '{{ .Values.variables.reloadOnPlanChange | toString }}'
+workloads:
+  load-batch:
+    spec:
+      backoffLimit: 0
+      activation:
+        mode: Parallel
+        maxConcurrent: '{{ .Values.variables.replicas.batch }}'
+        maxPending: 32
+      template:
+        metadata:
+          labels:
+            polyad.astrivant.com/benchmark: load
+            polyad.astrivant.com/benchmark-role: batch
+            polyad.astrivant.com/benchmark-release: '{{ .Release.Name }}'
+        spec:
+          automountServiceAccountToken: false
+          securityContext: *podSecurityContext
+          nodeSelector: '{{ .Values.variables.placement.nodeSelector | toJson }}'
+          tolerations: '{{ .Values.variables.placement.tolerations | toJson }}'
+          containers:
+            - name: batch
+              image: '{{ .Values.variables.images.fixture }}:{{ .Values.variables.images.tag }}'
+              imagePullPolicy: '{{ .Values.variables.images.pullPolicy }}'
+              securityContext: *containerSecurityContext
+              resources: '{{ .Values.variables.resources | toJson }}'
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+              args:
+                - --once
+                - --delay
+                - '{{ .Values.variables.batchDelaySeconds }}'
+          volumes:
+            - name: tmp
+              emptyDir: {}
+  load-runner:
+    spec:
+      backoffLimit: 0
+      activation:
+        mode: Reject
+        maxPending: 1
+      template:
+        metadata:
+          labels:
+            polyad.astrivant.com/benchmark: load
+            polyad.astrivant.com/benchmark-role: runner
+            polyad.astrivant.com/benchmark-release: '{{ .Release.Name }}'
+        spec:
+          automountServiceAccountToken: false
+          securityContext: *podSecurityContext
+          nodeSelector: '{{ .Values.variables.placement.nodeSelector | toJson }}'
+          tolerations: '{{ .Values.variables.placement.tolerations | toJson }}'
+          containers:
+            - name: runner
+              image: '{{ .Values.variables.images.runner }}:{{ .Values.variables.images.tag }}'
+              imagePullPolicy: '{{ .Values.variables.images.pullPolicy }}'
+              securityContext: *containerSecurityContext
+              resources: '{{ .Values.variables.resources | toJson }}'
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: plan
+                  mountPath: /etc/polyad-benchmarks
+                  readOnly: true
+              args:
+                - run
+                - --plan
+                - /etc/polyad-benchmarks/plan.json
+              env: '{{ $env := list (dict "name" "POLYAD_BENCHMARK_FIXTURE_URL" "value" "http://${nodes.discovery.name}:8080") }}{{ if .Values.variables.secretName
+                }}{{ $env = concat $env (list (dict "name" "POLYAD_API_TOKEN" "valueFrom" (dict "secretKeyRef" (dict "name" .Values.variables.secretName
+                "key" .Values.variables.operatorTokenKey))) (dict "name" "POLYAD_BENCHMARK_FIXTURE_TOKEN" "valueFrom" (dict "secretKeyRef" (dict
+                "name" .Values.variables.secretName "key" .Values.variables.fixtureTokenKey)))) }}{{ end }}{{ $env | toJson }}'
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: plan
+              configMap:
+                name: ${nodes.plan.name}
+graphRules:
+  load-envelope:
+    spec:
+      enforcement: Referenced
+      scope: Boundary
+      relation: connections
+      cheeger:
+        minimum: 0.5
+      limits:
+        nodes: 16
+        edges: 64
+graphs:
+  load-study:
+    spec:
+      mode: persistent
+      rules:
+        - '{{ (index .Values.graphRules "load-envelope").metadata.name }}'
+      nodes:
+        - name: plan
+          kind: Resource
+          ref: '{{ (index .Values.resources "load-plan").metadata.name }}'
+        - name: discovery
+          kind: Resource
+          ref: '{{ (index .Values.resources "load-service").metadata.name }}'
+        - name: fixture
+          kind: Daemon
+          ref: '{{ (index .Values.daemons "load-fixture").metadata.name }}'
+          requires:
+            - node: discovery
+              condition: ready
+            - node: plan
+              condition: ready
+        - name: batch
+          kind: Workload
+          ref: '{{ (index .Values.workloads "load-batch").metadata.name }}'
+          requires:
+            - node: fixture
+              condition: ready
+        - name: runner
+          kind: Workload
+          ref: '{{ (index .Values.workloads "load-runner").metadata.name }}'
+          requires:
+            - node: fixture
+              condition: ready
+            - node: plan
+              condition: ready
+      connections:
+        - source: discovery
+          target: fixture
+        - source: fixture
+          target: batch
+        - source: runner
+          target: fixture
+        - source: plan
+          target: fixture

@@ -36,6 +36,8 @@ jobs:
       matrix:
         chart: [polyad, polyad-crds]
         shard: [1, 2, 3]
+        include:
+          - {chart: polyad-benchmarks, shard: 1}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,10 +51,20 @@ jobs:
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
           helm dependency build charts/polyad
+          helm dependency build charts/polyad-benchmarks
+      - name: Prepare monitoring CRD schemas from the locked chart
+        if: matrix.chart == 'polyad-benchmarks'
+        run: |
+          python -m venv "$RUNNER_TEMP/polyad-schema-tools"
+          "$RUNNER_TEMP/polyad-schema-tools/bin/pip" install PyYAML==6.0.3
+          "$RUNNER_TEMP/polyad-schema-tools/bin/python" scripts/validation/benchmark-schemas.py
       - name: Permit the resource chart's intentionally empty instance defaults
         if: matrix.chart == 'polyad-crds'
         run: cp charts/polyad-crds/.hypothesis-helm.yaml .hypothesis-helm.yaml
       - name: Validate chart with hypothesis-helm
+        # The benchmark dependency merge currently trips the upstream YAML round-trip parser.
+        # Its default and full monitoring profiles have strict render/schema checks below.
+        if: matrix.chart != 'polyad-benchmarks'
         uses: astrivant/hypothesis-helm@main
         with:
           chart: charts/${{ matrix.chart }}
@@ -63,6 +75,17 @@ jobs:
           kubeconform: 'true'
           kubeconform-binary: scripts/validation/kubeconform.sh
           schema-version: '1.35.0'
+      - name: Validate benchmark profiles against locked CRD schemas
+        if: matrix.chart == 'polyad-benchmarks'
+        run: |
+          helm lint charts/polyad-benchmarks
+          helm template study charts/polyad-benchmarks > "$RUNNER_TEMP/benchmark-default.yaml"
+          for profile in smoke steady burst; do
+            helm lint charts/polyad-benchmarks -f "charts/polyad-benchmarks/values-$profile.yaml"
+            helm template study charts/polyad-benchmarks -f "charts/polyad-benchmarks/values-$profile.yaml" > "$RUNNER_TEMP/benchmark-$profile.yaml"
+          done
+          helm template study charts/polyad-benchmarks -n polyad -f studies/load/gke-values.yaml > "$RUNNER_TEMP/benchmark-monitoring.yaml"
+          bash scripts/validation/kubeconform.sh -strict -summary -kubernetes-version 1.35.0 "$RUNNER_TEMP"/benchmark-*.yaml
   package:
     needs: [source, chart]
     if: inputs.release-tag != ''
@@ -81,6 +104,7 @@ jobs:
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
           helm dependency build charts/polyad
+          helm dependency build charts/polyad-benchmarks
       - name: Package validated chart
         id: package
         env:
@@ -90,6 +114,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
           helm package charts/polyad --destination dist/chart
           helm package charts/polyad-crds --destination dist/chart
+          helm package charts/polyad-benchmarks --destination dist/chart
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Upload tagged Helm chart
         uses: actions/upload-artifact@v4

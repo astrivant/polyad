@@ -563,7 +563,21 @@ keda:
     name: ''
 
 ## @param kedaOperator [object] Upstream KEDA chart overrides used only when keda.install is true; its rendered workloads and Services are automatically included in the reserved root Graph
-kedaOperator: {}
+kedaOperator:
+  ## @param kedaOperator.prometheus [object] Settings for kedaOperator.prometheus.
+  prometheus:
+    ## @param kedaOperator.prometheus.operator [object] Settings for kedaOperator.prometheus.operator.
+    operator:
+      ## @param kedaOperator.prometheus.operator.enabled [boolean] Expose this bundled KEDA component metrics for collection.
+      enabled: true
+    ## @param kedaOperator.prometheus.metricServer [object] Settings for kedaOperator.prometheus.metricServer.
+    metricServer:
+      ## @param kedaOperator.prometheus.metricServer.enabled [boolean] Expose this bundled KEDA component metrics for collection.
+      enabled: true
+    ## @param kedaOperator.prometheus.webhooks [object] Settings for kedaOperator.prometheus.webhooks.
+    webhooks:
+      ## @param kedaOperator.prometheus.webhooks.enabled [boolean] Expose this bundled KEDA component metrics for collection.
+      enabled: true
 
 ## @section Optional External Secrets Operator resources
 ## @param externalSecrets [object] Settings for externalSecrets.
@@ -785,3 +799,101 @@ rootControlPlane:
     events: ''
     ## @param rootControlPlane.endpoints.metrics [string] Externally reachable root metrics URL advertised to workloads
     metrics: ''
+
+## @section Telemetry collectors
+## @param telemetry [object] Optional namespace-scoped metrics, log and trace collectors with explicit backend destinations.
+telemetry:
+  ## @param telemetry.enabled [boolean] Install a release-scoped collector; backends are supplied separately.
+  enabled: false
+  ## @param telemetry.mode [string] Alloy collects metrics, container logs and traces; PrometheusAgent collects metrics only.
+  mode: Alloy
+  ## @param telemetry.replicas [integer] Alloy distributes scrape and log targets across these replicas; PrometheusAgent requires one.
+  replicas: 1
+  ## @param telemetry.alloyImage [string] Pinned Grafana Alloy image.
+  alloyImage: docker.io/grafana/alloy:v1.19.2
+  ## @param telemetry.prometheusImage [string] Pinned Prometheus image, launched with --agent.
+  prometheusImage: quay.io/prometheus/prometheus:v3.14.0
+  ## @param telemetry.clusterName [string] Stable cluster label attached to collected signals; empty uses global.multiCluster.clusterName or the release namespace.
+  clusterName: ''
+  ## @param telemetry.scrapeIntervalSeconds [integer] Seconds between exporter scrapes.
+  scrapeIntervalSeconds: 15
+  ## @param telemetry.scrapeTimeoutSeconds [integer] Exporter timeout, no greater than the scrape interval.
+  scrapeTimeoutSeconds: 10
+  ## @param telemetry.sampleLimit [integer] Maximum samples accepted per scrape; protects collectors from accidental cardinality growth.
+  sampleLimit: 100000
+  ## @param telemetry.remoteWrite [object] Prometheus-compatible metric destination and authentication.
+  remoteWrite:
+    ## @param telemetry.remoteWrite.url [string] Prometheus-compatible remote-write URL, including its write path.
+    url: ''
+    ## @param telemetry.remoteWrite.credentials [object] Existing backend credential; set username for basic auth or leave it empty for a bearer token.
+    credentials:
+      ## @param telemetry.remoteWrite.credentials.secretName [string] Existing Secret in the release namespace; never copied into a ConfigMap or cache.
+      secretName: ''
+      ## @param telemetry.remoteWrite.credentials.secretKey [string] Key containing the bearer token or basic-auth password.
+      secretKey: token
+      ## @param telemetry.remoteWrite.credentials.username [string] Basic-auth username; empty selects bearer authentication.
+      username: ''
+  ## @param telemetry.logs [object] Optional Alloy container-log collection and Loki destination.
+  logs:
+    ## @param telemetry.logs.enabled [boolean] Alloy tails selected containers through the Kubernetes API without host mounts.
+    enabled: true
+    ## @param telemetry.logs.url [string] Loki push URL including /loki/api/v1/push.
+    url: ''
+    ## @param telemetry.logs.credentials [object] Existing backend credential; set username for basic auth or leave it empty for a bearer token.
+    credentials:
+      ## @param telemetry.logs.credentials.secretName [string] Existing Secret in the release namespace; never copied into a ConfigMap or cache.
+      secretName: ''
+      ## @param telemetry.logs.credentials.secretKey [string] Key containing the bearer token or basic-auth password.
+      secretKey: token
+      ## @param telemetry.logs.credentials.username [string] Basic-auth username; empty selects bearer authentication.
+      username: ''
+  ## @param telemetry.traces [object] Optional Alloy trace receiver and OTLP/HTTP destination.
+  traces:
+    ## @param telemetry.traces.enabled [boolean] Alloy accepts OTLP/gRPC and OTLP/HTTP traces on Pod IPs and forwards them over OTLP/HTTP.
+    enabled: true
+    ## @param telemetry.traces.endpoint [string] Destination OTLP/HTTP base URL, without /v1/traces.
+    endpoint: ''
+    ## @param telemetry.traces.routeOperator [boolean] Route Helm-installed operator and observer traces through local Alloy; tracing.enabled must also be true. Use false for root-provisioned cross-cluster workers requiring a shared endpoint.
+    routeOperator: false
+    ## @param telemetry.traces.credentials [object] Existing backend credential; set username for basic auth or leave it empty for a bearer token.
+    credentials:
+      ## @param telemetry.traces.credentials.secretName [string] Existing Secret in the release namespace; never copied into a ConfigMap or cache.
+      secretName: ''
+      ## @param telemetry.traces.credentials.secretKey [string] Key containing the bearer token or basic-auth password.
+      secretKey: token
+      ## @param telemetry.traces.credentials.username [string] Basic-auth username; empty selects bearer authentication.
+      username: ''
+  ## @param telemetry.operatorMetricsSecret [object] Existing operator metrics credential override.
+  operatorMetricsSecret:
+    ## @param telemetry.operatorMetricsSecret.name [string] Override with a named API-key Secret authorized for metrics; empty inherits metrics.authentication.
+    name: ''
+    ## @param telemetry.operatorMetricsSecret.key [string] Secret key containing the metrics bearer token.
+    key: token
+  ## @param telemetry.storage [object] Metric WAL persistence for each collector replica.
+  storage:
+    ## @param telemetry.storage.enabled [boolean] Keep the metric WAL on a per-replica PVC; false uses disposable emptyDir storage.
+    enabled: true
+    ## @param telemetry.storage.size [string] WAL volume size.
+    size: 2Gi
+    ## @param telemetry.storage.storageClass [string] StorageClass name; empty uses the cluster default.
+    storageClass: ''
+  ## @param telemetry.resources [object] Settings for telemetry.resources.
+  resources:
+    ## @param telemetry.resources.requests [object] Settings for telemetry.resources.requests.
+    requests:
+      ## @param telemetry.resources.requests.cpu [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
+      cpu: 100m
+      ## @param telemetry.resources.requests.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
+      memory: 128Mi
+    ## @param telemetry.resources.limits [object] Settings for telemetry.resources.limits.
+    limits:
+      ## @param telemetry.resources.limits.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
+      memory: 512Mi
+  ## @param telemetry.nodeSelector [object] Collector placement; empty inherits operator.nodeSelector.
+  nodeSelector: {}
+  ## @param telemetry.tolerations [array] Collector tolerations; empty inherits operator.tolerations.
+  tolerations: []
+  ## @param telemetry.extraTargets [array] Additional namespace-local exporters and log selectors, for separately installed components. Each namespace receives read-only discovery RBAC.
+  extraTargets: []
+  ## @param telemetry.traceNamespaces [array] Additional namespaces allowed to send traces when networkPolicy.enabled; the release namespace is always allowed.
+  traceNamespaces: []

@@ -1,0 +1,174 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runner": {
+          "type": "string",
+          "description": "Repository of the runner image built from services/runner/Dockerfile."
+        },
+        "fixture": {
+          "type": "string",
+          "description": "Repository of the fixture image built from services/fixture/Dockerfile; also runs finite batch Jobs."
+        },
+        "tag": {
+          "type": "string",
+          "description": "Published immutable image tag shared by the runner and fixture images; build and push both before running."
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rate": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1000,
+          "description": "Offered activations per second; independent of response completion. Excess arrivals are counted as skipped."
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 86400,
+          "description": "Arrival window in seconds; outstanding requests drain afterwards."
+        },
+        "max_requests": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "Total arrival cap per run, including skipped arrivals; bounds retained receipt growth."
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128,
+          "description": "Maximum in-flight requests including completion polling; distinct from batch activation parallelism."
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 3600,
+          "description": "Deadline in seconds for observing a terminal activation state; timeouts do not cancel executions."
+        },
+        "request_timeout": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 60,
+          "description": "Socket timeout in seconds for each fixture or operator call; must not exceed timeout."
+        },
+        "poll_interval": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 3600,
+          "description": "Seconds between receipt reads; a smaller interval also increases read load."
+        }
+      }
+    },
+    "batchDelaySeconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 3600,
+      "description": "Simulated processing time in each real Kubernetes batch Job; does not simulate CPU consumption."
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Node labels required by every fixture, batch and runner Pod. Empty uses normal scheduling."
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-polyad-freeform": true
+          },
+          "description": "Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool."
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requests": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "description": "Per-container requests and limits for the runner, fixture and batch. Hold constant when comparing operator settings."
+    },
+    "secretName": {
+      "type": "string",
+      "description": "Existing Secret in the graph namespace with separate operator and fixture tokens. Empty is only for a private operator with authentication disabled."
+    },
+    "operatorTokenKey": {
+      "type": "string",
+      "description": "Secret key holding a Polyad credential permitted to submit and read activations in this graph tree."
+    },
+    "fixtureTokenKey": {
+      "type": "string",
+      "description": "Secret key holding a separate token authenticating the runner to the fixture; never reuse the operator credential."
+    },
+    "replicas": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Desired fixture Pods and concurrent batch Jobs, independently of operator replica settings.",
+      "properties": {
+        "fixture": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "Desired fixture service replicas."
+        },
+        "batch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "description": "Maximum concurrent operator-created batch Jobs; keep expanded graphs within the study GraphRule."
+        }
+      }
+    },
+    "reloadOnPlanChange": {
+      "type": "boolean",
+      "description": "Opt the fixture Deployment into ConfigMap-triggered Reloader restarts. Requires bundled or existing Reloader; apply plan changes between runs."
+    }
+  },
+  "description": "Benchmark images, bounded arrivals and graph-managed Pod settings."
+}

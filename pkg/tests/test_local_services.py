@@ -84,6 +84,7 @@ def test_local_services_roll_up_health_without_native_writes_or_public_events(mo
         "keda": [{"kind": "Deployment", "namespace": "scaling", "name": "keda"}],
         "endpoints": [{"kind": "Service", "namespace": "test", "name": "metrics"}],
         "postgresql": [{"kind": "Cluster", "namespace": "test", "name": "state"}],
+        "collectors": [{"kind": "Service", "namespace": "test", "name": "telemetry"}],
     }
     monkeypatch.setenv("POLYAD_LOCAL_SERVICES", json.dumps(targets))
 
@@ -93,7 +94,7 @@ def test_local_services_roll_up_health_without_native_writes_or_public_events(mo
         service = resource("Service", "metrics")
         database = resource("Cluster", "state", {"instances": 3})
         database["status"] = {"instances": 3, "readyInstances": 3, "conditions": [{"type": "Ready", "status": "True"}]}
-        natives = [operator_deployment("root"), keda, service, database]
+        natives = [operator_deployment("root"), keda, service, database, resource("Service", "telemetry")]
         api = ManagementAPI(*natives)
         pools = manager(api, ManagementAPI())
         controller = Controller(api)

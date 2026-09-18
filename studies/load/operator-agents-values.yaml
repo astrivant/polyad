@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# Layer on the operator release, not the benchmark release.
+# The study stack has no log backend: configure logs.url and enabled=true to add an existing Loki.
+## @param telemetry [object] Optional namespace-scoped metrics, log and trace collectors with explicit backend destinations.
+telemetry:
+  ## @param telemetry.enabled [boolean] Install a release-scoped collector; backends are supplied separately.
+  enabled: true
+  ## @param telemetry.mode [string] Alloy collects metrics, container logs and traces; PrometheusAgent collects metrics only.
+  mode: Alloy
+  ## @param telemetry.remoteWrite [object] Prometheus-compatible metric destination and authentication.
+  remoteWrite:
+    ## @param telemetry.remoteWrite.url [string] Prometheus-compatible remote-write URL, including its write path.
+    url: http://benchmarks-monitoring-prometheus.polyad.svc:9090/api/v1/write
+  ## @param telemetry.logs [object] Optional Alloy container-log collection and Loki destination.
+  logs:
+    ## @param telemetry.logs.enabled [boolean] Alloy tails selected containers through the Kubernetes API without host mounts.
+    enabled: false
+  ## @param telemetry.traces [object] Optional Alloy trace receiver and OTLP/HTTP destination.
+  traces:
+    ## @param telemetry.traces.enabled [boolean] Alloy accepts OTLP/gRPC and OTLP/HTTP traces on Pod IPs and forwards them over OTLP/HTTP.
+    enabled: true
+    ## @param telemetry.traces.endpoint [string] Destination OTLP/HTTP base URL, without /v1/traces.
+    endpoint: http://benchmarks-otel.polyad.svc:4318
+    ## @param telemetry.traces.routeOperator [boolean] Route Helm-installed operator and observer traces through local Alloy; tracing.enabled must also be true. Use false for root-provisioned cross-cluster workers requiring a shared endpoint.
+    routeOperator: true
+## @param tracing [object] Opt-in OTLP/HTTP traces and independently enabled logs for operators and observers.
+tracing:
+  ## @param tracing.enabled [boolean] Create a batched trace exporter only when enabled.
+  enabled: true

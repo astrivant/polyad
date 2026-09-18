@@ -1,0 +1,41 @@
+{{- if .Values.observability.enabled }}
+{{- if .Values.observability.scrapeOperator }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-polyad
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Release.Name }}
+spec:
+  namespaceSelector:
+    matchNames: [{{ .Values.observability.operatorNamespace | quote }}]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: polyad
+      app.kubernetes.io/instance: {{ .Values.observability.operatorRelease }}
+      app.kubernetes.io/component: metrics
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.observability.scrapeInterval }}
+      {{- if .Values.observability.metricsSecret }}
+      authorization:
+        type: Bearer
+        credentials:
+          name: {{ .Values.observability.metricsSecret }}
+          key: {{ .Values.observability.metricsSecretKey }}
+      {{- end }}
+---
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  polyad-study.json: |
+{{ .Files.Get "files/dashboard.json" | indent 4 }}
+{{- end }}

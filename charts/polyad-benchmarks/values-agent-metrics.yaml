@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=values.schema.json
+# Layer after a test profile and monitoring deployment overlay when using operator collectors.
+## @param observability [object] Operator metric scraping and the study dashboard. Requires Prometheus Operator CRDs when enabled.
+observability:
+  ## @param observability.scrapeOperator [boolean] Create a ServiceMonitor for direct operator scrapes; false when an agent already remote-writes these series.
+  scrapeOperator: false
+## @param monitoring [object] Settings for monitoring.
+monitoring:
+  ## @param monitoring.prometheus [object] Settings for monitoring.prometheus.
+  prometheus:
+    ## @param monitoring.prometheus.prometheusSpec [object] Settings for monitoring.prometheus.prometheusSpec.
+    prometheusSpec:
+      ## @param monitoring.prometheus.prometheusSpec.enableRemoteWriteReceiver [boolean] Accept remote-write from collectors on the private Prometheus Service.
+      enableRemoteWriteReceiver: true

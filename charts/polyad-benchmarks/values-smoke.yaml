@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=values.schema.json
+## @section Smoke experiment
+## @param benchmark [object] Select the smoke test; installation stages its fixture but does not start traffic.
+benchmark:
+  ## @param benchmark.planFile [string] Packaged JSON plan with arrival bounds, fixture replicas and batch concurrency for this experiment.
+  planFile: plans/smoke.json

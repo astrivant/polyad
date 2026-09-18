@@ -1,0 +1,10 @@
+{{- if .Values.polyadResources.enabled }}{{ fail "polyadResources.enabled must remain false: benchmark fixtures use the dependency renderer after loading their JSON plan" }}{{ end -}}
+{{- $raw := required "benchmark.planFile must name a JSON plan packaged in this chart" (.Files.Get .Values.benchmark.planFile) -}}
+{{- $plan := mustFromJson $raw -}}
+{{- if or (not (hasKey $plan "requestId")) (not (kindIs "map" $plan.variables)) }}{{ fail "benchmark plan requires requestId and variables" }}{{ end -}}
+{{- $fixture := .Files.Get "files/fixture.yaml" | fromYaml -}}
+{{- $values := mergeOverwrite (deepCopy .Subcharts.polyadResources.Values) $fixture (deepCopy .Values.polyadResources) -}}
+{{- $_ := set $values "variables" (mergeOverwrite (deepCopy $plan.variables) (deepCopy .Values.polyadResources.variables)) -}}
+{{- $_ := set $values "enabled" true -}}
+{{- $context := merge (dict "Values" $values) (omit .Subcharts.polyadResources "Values") -}}
+{{- include "polyad.resources.render" $context -}}

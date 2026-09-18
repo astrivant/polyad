@@ -86,7 +86,7 @@ Build and publish an image to a registry your cluster can pull from. Replace
 to prepare a builder for AMD64 and ARM64:
 
 ```sh
-docker buildx build --target production --platform linux/amd64,linux/arm64 \
+docker buildx build -f services/operator/Dockerfile --target production --platform linux/amd64,linux/arm64 \
   -t YOUR_REGISTRY/polyad:dev --push .
 helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
 helm dependency build charts/polyad

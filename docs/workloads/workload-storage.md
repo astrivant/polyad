@@ -12,6 +12,14 @@ the executing operator's `externalSecrets.enabled` and
 `externalSecrets.reloadOnChange` settings and an installed Stakater Reloader.
 See [Secret rotation and workload opt-in](../operations/authentication.md#restart-consumers-after-rotation).
 
+For projected ConfigMaps, a Daemon definition can set
+`metadata.annotations["configmap.reloader.stakater.com/auto"]: "true"`. Polyad
+copies this opt-in (or an explicit `configmap.reloader.stakater.com/reload` list)
+to the generated native controller. It requires Reloader, independently of ESO.
+Finite Workload Jobs do not inherit these annotations. The
+[benchmark plan](../../studies/load/README.md#plans-and-replica-counts) demonstrates
+ConfigMap projection and a namespace-scoped Reloader installation.
+
 ```mermaid
 flowchart LR
     definition["Daemon definition"] --> choice{"spec.controller"}

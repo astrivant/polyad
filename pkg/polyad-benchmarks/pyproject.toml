@@ -1,0 +1,50 @@
+[project]
+name = "polyad-benchmarks"
+version = "0.0.1a3"
+description = "Bounded, repeatable activation load studies for Polyad"
+authors = [{name = "Emma Doyle"}]
+readme = {file = "README.md", content-type = "text/markdown"}
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+requires-python = ">=3.13,<4"
+keywords = ["polyad", "kubernetes", "load-testing", "graphs"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "polyad-client==0.0.1a3",
+    "polyad-types==0.0.1a3",
+    "PyYAML>=6,<7",
+]
+
+[project.urls]
+Repository = "https://github.com/astrivant/polyad"
+Documentation = "https://github.com/astrivant/polyad/tree/main/studies/load"
+Issues = "https://github.com/astrivant/polyad/issues"
+
+[project.scripts]
+polyad-benchmarks = "polyad_benchmarks.runner:main"
+polyad-benchmarks-fixture = "polyad_benchmarks.fixture:main"
+polyad-benchmarks-refresh = "polyad_benchmarks.refresh:main"
+polyad-benchmarks-plan = "polyad_benchmarks.plan:main"
+
+[tool.poetry]
+packages = [{include = "polyad_benchmarks"}]
+include = [{path = "polyad_benchmarks/*.json", format = ["sdist", "wheel"]}]
+
+[tool.poetry.dependencies]
+polyad-client = {path = "../client"}
+polyad-types = {path = "../polyad-types"}
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=9.0.3,<10"
+PyYAML = ">=6,<7"
+jsonschema = ">=4.26,<5"
+
+[build-system]
+requires = ["poetry-core>=2.2,<3"]
+build-backend = "poetry.core.masonry.api"

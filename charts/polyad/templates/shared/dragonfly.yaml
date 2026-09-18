@@ -31,6 +31,9 @@ spec:
     - --maxmemory=256mb
     - --cache_mode=false
     - --dbfilename=dump
+    {{- if .Values.telemetry.enabled }}
+    - --admin_port=9999
+    {{- end }}
   resources:
     requests:
       cpu: 100m

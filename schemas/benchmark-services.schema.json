@@ -1,0 +1,734 @@
+{
+  "type": "object",
+  "properties": {
+    "reloader": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Install the pinned reloader dependency; disable to use an administrator-managed installation."
+        },
+        "reloader": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "watchGlobally": {
+              "type": "boolean"
+            },
+            "ignoreJobs": {
+              "type": "boolean"
+            },
+            "ignoreCronJobs": {
+              "type": "boolean"
+            },
+            "reloadStrategy": {
+              "type": "string"
+            },
+            "deployment": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "nodeSelector": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "cloud.google.com/gke-nodepool": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "tolerations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "x-polyad-freeform": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "operatorNamespace": {
+          "type": "string",
+          "description": "Namespace containing the operator metrics Service."
+        },
+        "operatorRelease": {
+          "type": "string",
+          "description": "Helm release owning the operator metrics Service."
+        },
+        "scrapeInterval": {
+          "type": "string",
+          "description": "Prometheus scrape interval; 5s resolves short benchmark bursts."
+        },
+        "metricsSecret": {
+          "type": "string",
+          "description": "Optional existing bearer credential Secret in this chart namespace; empty for the private demo."
+        },
+        "metricsSecretKey": {
+          "type": "string",
+          "description": "Key containing the bearer token when metricsSecret is set."
+        },
+        "scrapeOperator": {
+          "type": "boolean",
+          "description": "Create a ServiceMonitor for direct operator scrapes; false when an agent already remote-writes these series."
+        }
+      },
+      "description": "Operator metric scraping and the study dashboard. Requires Prometheus Operator CRDs when enabled."
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Install the pinned monitoring dependency; disable to use an administrator-managed installation."
+        },
+        "fullnameOverride": {
+          "type": "string"
+        },
+        "alertmanager": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "grafana": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "fullnameOverride": {
+              "type": "string"
+            },
+            "service": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              }
+            },
+            "persistence": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "size": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalDataSources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "uid": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "access": {
+                    "type": "string"
+                  },
+                  "editable": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "cloud.google.com/gke-nodepool": {
+                  "type": "string"
+                }
+              }
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "effect": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "prometheus": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "prometheusSpec": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "retention": {
+                  "type": "string"
+                },
+                "storageSpec": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "volumeClaimTemplate": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "spec": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "properties": {
+                            "accessModes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "resources": {
+                              "type": "object",
+                              "additionalProperties": true,
+                              "properties": {
+                                "requests": {
+                                  "type": "object",
+                                  "additionalProperties": true,
+                                  "properties": {
+                                    "storage": {
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "nodeSelector": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "cloud.google.com/gke-nodepool": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "tolerations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "operator": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      },
+                      "effect": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "enableRemoteWriteReceiver": {
+                  "type": "boolean",
+                  "description": "Accept remote-write from collectors on the private Prometheus Service."
+                }
+              }
+            }
+          }
+        },
+        "kubeControllerManager": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "kubeScheduler": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "kubeEtcd": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "kubeProxy": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "prometheusOperator": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "cloud.google.com/gke-nodepool": {
+                  "type": "string"
+                }
+              }
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "effect": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "admissionWebhooks": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "patch": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "nodeSelector": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "cloud.google.com/gke-nodepool": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "tolerations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "operator": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          },
+                          "effect": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "kube-state-metrics": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "cloud.google.com/gke-nodepool": {
+                  "type": "string"
+                }
+              }
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "effect": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "prometheus-node-exporter": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "cloud.google.com/gke-nodepool": {
+                  "type": "string"
+                }
+              }
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "effect": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tempo": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Install the pinned tempo dependency; disable to use an administrator-managed installation."
+        },
+        "fullnameOverride": {
+          "type": "string"
+        },
+        "persistence": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "size": {
+              "type": "string"
+            }
+          }
+        },
+        "tempo": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "retention": {
+              "type": "string"
+            }
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "cloud.google.com/gke-nodepool": {
+              "type": "string"
+            }
+          }
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "operator": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "effect": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "collector": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Install the pinned collector dependency; disable to use an administrator-managed installation."
+        },
+        "fullnameOverride": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "replicaCount": {
+          "type": "integer"
+        },
+        "image": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          }
+        },
+        "command": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "exporters": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "otlp/tempo": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "endpoint": {
+                      "type": "string"
+                    },
+                    "tls": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "insecure": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "service": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "pipelines": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "logs": {
+                      "type": "null"
+                    },
+                    "metrics": {
+                      "type": "null"
+                    },
+                    "traces": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "receivers": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "processors": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "exporters": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ports": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "jaeger-compact": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "jaeger-thrift": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "jaeger-grpc": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "zipkin": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "cloud.google.com/gke-nodepool": {
+              "type": "string"
+            }
+          }
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "operator": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "effect": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planFile"
+      ],
+      "properties": {
+        "planFile": {
+          "type": "string",
+          "pattern": "^plans/[a-z][a-z0-9-]*\\.json$",
+          "description": "Packaged JSON plan supplying run and replica defaults; explicit fixture variables override it."
+        }
+      }
+    }
+  }
+}

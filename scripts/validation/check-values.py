@@ -188,6 +188,8 @@ def value_files() -> list[Path]:
         {
             CHART / "values.yaml",
             ROOT / "charts/polyad-crds/values.yaml",
+            *(ROOT / "charts/polyad-benchmarks").glob("values*.yaml"),
+            *(ROOT / "studies").rglob("*values.yaml"),
             *(ROOT / "charts/polyad-crds").glob("values-*.reference.yaml"),
             *CHART.glob("values-*.reference.yaml"),
             *(ROOT / "examples").rglob("*values.yaml"),

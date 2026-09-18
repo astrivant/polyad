@@ -317,3 +317,42 @@ def test_daemon_schema_accepts_stateful_storage():
     assert schema["properties"]["statefulSet"]["properties"]["volumeClaimTemplates"]["items"]["properties"]["spec"][
         "x-kubernetes-preserve-unknown-fields"
     ]
+
+
+def test_daemon_configmap_reload_is_preserved_on_native_controller():
+    """
+    ConfigMap plans can roll opted-in Daemons without restarting finite workloads.
+    """
+
+    async def run():
+        annotation = {"configmap.reloader.stakater.com/auto": "true"}
+        daemon = resource("Daemon", "fixture", {"template": template(True)})
+        daemon["metadata"]["annotations"] = annotation
+        job = resource("Workload", "runner", {"template": template()})
+        job["metadata"]["annotations"] = annotation
+        graph = resource(
+            "Graph",
+            "study",
+            {
+                "mode": "persistent",
+                "nodes": [
+                    {"name": "fixture", "kind": "Daemon", "ref": "fixture"},
+                    {"name": "runner", "kind": "Workload", "ref": "runner"},
+                ],
+            },
+        )
+        api = FakeAPI(graph, daemon, job)
+        controller = Controller(api)
+        await controller.reconcile(("Graph", "test", "study"))
+        child = api.children("Deployment")[0]
+        assert annotation.items() <= child["metadata"]["annotations"].items()
+        assert "configmap.reloader.stakater.com/auto" not in api.children("Job")[0]["metadata"]["annotations"]
+        child["spec"]["template"].setdefault("metadata", {}).setdefault("annotations", {})["reloader.stakater.com/last-reloaded-from"] = (
+            "plan"
+        )
+        api.calls.clear()
+        await controller.reconcile(("Graph", "test", "study"))
+        assert api.children("Deployment")[0] is child
+        assert not any(call[0] in {"POST", "DELETE"} and call[1] == "Deployment" for call in api.calls)
+
+    asyncio.run(run())

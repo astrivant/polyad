@@ -30,7 +30,8 @@ async def graphs(manager: PoolManager, name: str, owner: str) -> list[dict[str, 
         list[dict[str, str]]: Local group nodes referencing internal observation Graphs.
     """
     inventory = json.loads(os.environ.get("POLYAD_LOCAL_SERVICES", "{}"))
-    if not isinstance(inventory, dict) or inventory.keys() - {"endpoints", "keda", "dragonfly", "postgresql", "mesh", "observer"}:
+    allowed = {"endpoints", "keda", "dragonfly", "postgresql", "mesh", "observer", "collectors"}
+    if not isinstance(inventory, dict) or inventory.keys() - allowed:
         raise ValueError("unsupported local service inventory group")
     nodes = []
     for group, targets in sorted(inventory.items()):

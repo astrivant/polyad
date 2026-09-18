@@ -1,0 +1,19 @@
+{
+  "requestId": "load-burst-001",
+  "variables": {
+    "run": {
+      "rate": 10,
+      "duration": 30,
+      "max_requests": 300,
+      "concurrency": 32,
+      "timeout": 120,
+      "request_timeout": 5,
+      "poll_interval": 1
+    },
+    "replicas": {
+      "fixture": 4,
+      "batch": 8
+    },
+    "batchDelaySeconds": 1
+  }
+}

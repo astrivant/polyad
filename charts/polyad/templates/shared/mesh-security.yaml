@@ -45,6 +45,16 @@ spec:
             paths: [/v1/compositions, /v1/compositions/*, /v1/activations, /v1/activations/*, /v1/throughput, /openapi.json]
     {{- end }}
     {{- if .Values.metrics.enabled }}
+    {{- if .Values.telemetry.enabled }}
+    - from:
+        - source:
+            principals: [{{ printf "%s/ns/%s/sa/%s-telemetry" (dig "meshConfig" "trustDomain" "cluster.local" .Values.istiod) .Release.Namespace .Release.Name | quote }}]
+      to:
+        - operation:
+            ports: ['8092']
+            methods: [GET]
+            paths: [/metrics]
+    {{- end }}
     {{- with .Values.mesh.operator.metricsPrincipals }}
     - from:
         - source:

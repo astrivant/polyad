@@ -1,0 +1,158 @@
+name: Benchmarks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full-refresh:
+        description: Run the installed cloud fixture after offline smoke checks
+        type: boolean
+        default: false
+      context:
+        description: Explicit kubeconfig context on the administrator-provided benchmark runner
+        type: string
+        default: ''
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync
+      - run: bash scripts/tooling/install-helm-tools.sh helm
+      - run: helm dependency build charts/polyad-benchmarks
+      - run: poetry --project pkg/polyad-benchmarks run python scripts/validation/benchmark-schemas.py
+      - name: Exercise harness and refresh barriers offline
+        run: |
+          mkdir -p .cache/benchmarks/smoke
+          poetry --project pkg/polyad-benchmarks run python -m pytest -c pyproject.toml -o addopts='' pkg/tests/test_benchmarks.py --junitxml=.cache/benchmarks/smoke/pytest.xml
+          helm lint charts/polyad-benchmarks
+          helm template study charts/polyad-benchmarks -f studies/load/gke-values.yaml > .cache/benchmarks/smoke/fixture.yaml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-smoke-${{ matrix.python }}
+          path: .cache/benchmarks/smoke/
+          include-hidden-files: true
+          retention-days: 30
+  images:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [runner, fixture]
+        platform:
+          - {runner: ubuntu-latest, name: linux/amd64, arch: amd64}
+          - {runner: ubuntu-24.04-arm, name: linux/arm64, arch: arm64}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          platforms: ${{ matrix.platform.name }}
+          load: true
+          push: false
+          tags: polyad-benchmarks:check
+          cache-from: type=gha,scope=benchmarks-${{ matrix.service }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,mode=max,scope=benchmarks-${{ matrix.service }}-${{ matrix.platform.arch }}
+      - run: docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges polyad-benchmarks:check --help
+  refresh-prepare:
+    if: github.event_name == 'workflow_dispatch' && inputs.full-refresh
+    needs: [smoke, images]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+      revision: ${{ steps.prepare.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - id: prepare
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase prepare --root .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-prepared
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+          include-hidden-files: true
+          retention-days: 30
+  refresh-study:
+    needs: refresh-prepare
+    environment: benchmarks
+    runs-on: ${{ vars.POLYAD_BENCHMARK_RUNNER || 'polyad-benchmarks' }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.refresh-prepare.outputs.matrix) }}
+    env:
+      BENCHMARK_CONTEXT: ${{ inputs.context }}
+      BENCHMARK_STUDY: ${{ matrix.study }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.refresh-prepare.outputs.revision }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-prepared
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+      - name: Run installed fixture in the selected cluster
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase study --root .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }} --study "$BENCHMARK_STUDY" --context "$BENCHMARK_CONTEXT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-study-${{ matrix.study }}
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+          include-hidden-files: true
+          retention-days: 30
+  refresh-finish:
+    if: always() && needs.refresh-prepare.result == 'success'
+    needs: [refresh-prepare, refresh-study]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.refresh-prepare.outputs.revision }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-prepared
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-study-*
+          merge-multiple: true
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+      - name: Verify complete matrix and refresh study results
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }} --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-refresh
+          path: |
+            .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+            studies/load/results.json
+          include-hidden-files: true
+          retention-days: 30

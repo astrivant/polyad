@@ -1,0 +1,24 @@
+{
+  "requestId": "load-client-run-001",
+  "variables": {
+    "replicas": {"fixture": 2, "batch": 4},
+    "run": {
+      "rate": 0.2,
+      "duration": 60,
+      "max_requests": 12,
+      "concurrency": 4,
+      "timeout": 120,
+      "request_timeout": 5,
+      "poll_interval": 1
+    },
+    "images": {
+      "runner": "YOUR_REGISTRY/polyad-benchmarks-runner",
+      "fixture": "YOUR_REGISTRY/polyad-benchmarks-fixture",
+      "tag": "RUN"
+    },
+    "placement": {
+      "nodeSelector": {"cloud.google.com/gke-nodepool": "polyad"},
+      "tolerations": [{"key": "dedicated", "operator": "Equal", "value": "polyad", "effect": "NoSchedule"}]
+    }
+  }
+}

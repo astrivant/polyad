@@ -28,6 +28,7 @@ gateway/executor/telemetry pipeline retain their existing branches.
 | `postgresql` | Managed state and separate authentication Cluster resources and their read/write Services | Helm and CloudNativePG |
 | `mesh` | Bundled Istiod and enabled ingress/east-west gateway workloads and Services | Their Helm dependencies |
 | `observer` | Optional local observer Deployment and Service | Helm |
+| `collectors` | Optional Alloy or Prometheus Agent StatefulSet, OTLP Service and exporter discovery Services | Helm |
 
 ```mermaid
 flowchart TB
@@ -41,6 +42,7 @@ flowchart TB
             databases["PostgreSQL observation Graph<br/>State and optional authentication storage"]
             mesh["Mesh observation Graph<br/>Istiod and gateways"]
             observer["Observer observation Graph<br/>Local observer and Service"]
+            collectors["Collector observation Graph<br/>Alloy or Prometheus Agent"]
             bootstrap -->|"reconcile and recover"| pipeline
             keda -->|"request scale"| bootstrap
             pipeline -->|"serve demand metrics"| keda
@@ -49,6 +51,7 @@ flowchart TB
             bootstrap <-->|"use and observe"| databases
             bootstrap <-->|"use and observe"| mesh
             bootstrap <-->|"use and observe"| observer
+            bootstrap -->|"metrics, logs and optional traces"| collectors
         end
         remote["Remote operator group Graphs"]
         root <-->|"coordination and observations"| remote
@@ -65,6 +68,9 @@ outside this chart's Kubernetes inventory. Likewise, an independently installed
 CloudNativePG or External Secrets controller is not a local chart workload. The
 database instances this chart declares are included. KEDA has explicit existing
 installation references because it drives this operator's scaling.
+
+The [collector configuration](../operations/telemetry-agents.md) discovers enabled
+exporters and forwards observations to administrator-supplied monitoring backends.
 
 ## Install KEDA with the chart
 

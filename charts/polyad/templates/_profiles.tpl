@@ -23,6 +23,7 @@
 {{- if and $values.postgresql.enabled (not $values.postgresql.scope) }}{{ fail "workers using PostgreSQL must set the same postgresql.scope as the root" }}{{ end -}}
 {{- end -}}
 {{- $authEndpoints := dict -}}
+{{- if and $values.telemetry.enabled (not $values.worker.enabled) }}{{ $_ := set $values.metrics "enabled" true }}{{ end -}}
 {{- range $group, $keys := pick $values.authentication "services" "operators" -}}
 {{- $names := dict -}}
 {{- range $keys -}}

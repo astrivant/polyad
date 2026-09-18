@@ -1,0 +1,32 @@
+{{- if and .Values.telemetry.enabled .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-telemetry
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad-telemetry
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/name: polyad-telemetry
+      ports:
+        - {protocol: TCP, port: {{ ternary 12345 9090 (eq .Values.telemetry.mode "Alloy") }}}
+    {{- if .Values.telemetry.traces.enabled }}
+    - from:
+        {{- range uniq (prepend .Values.telemetry.traceNamespaces .Release.Namespace) }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . | quote }}
+        {{- end }}
+      ports:
+        - {protocol: TCP, port: 4317}
+        - {protocol: TCP, port: 4318}
+    {{- end }}
+{{- end }}

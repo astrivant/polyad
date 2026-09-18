@@ -1,0 +1,22 @@
+{
+  "namespace": "polyad",
+  "graph": "load-study",
+  "fixtureSelector": "polyad.astrivant.com/benchmark=load,polyad.astrivant.com/benchmark-role=fixture",
+  "timeoutSeconds": 600,
+  "pollIntervalSeconds": 2,
+  "definitions": {
+    "daemon": [
+      "load-fixture"
+    ],
+    "workload": [
+      "load-runner",
+      "load-batch"
+    ],
+    "graphrule": [
+      "load-envelope"
+    ],
+    "resource": [
+      "load-plan"
+    ]
+  }
+}

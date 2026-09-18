@@ -288,6 +288,15 @@ spec:
     {{- toYaml . | nindent 4 }}
     {{- end }}
     {{- end }}
+    {{- if and .Values.telemetry.enabled .Values.telemetry.traces.enabled .Values.telemetry.traces.routeOperator }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/name: polyad-telemetry
+      ports:
+        - {protocol: TCP, port: 4318}
+    {{- end }}
     - to:
         - namespaceSelector:
             matchLabels:

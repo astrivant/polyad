@@ -1,0 +1,234 @@
+# Load: activation acceptance and completion
+
+Measure how the real operator responds to a bounded stream of activation requests
+inside one application Graph. Each request produces an Activation receipt and,
+if admitted, a short-lived Kubernetes Job. This initial study measures control
+plane reconciliation and Job lifecycle; it does not claim application-throughput
+capacity or exercise temporary-connection negotiation yet.
+
+## Table of contents
+
+- [Fixture graph](#fixture-graph)
+- [Deploy](#deploy)
+- [Plans and replica counts](#plans-and-replica-counts)
+- [Monitoring and traces](#monitoring-and-traces)
+- [Repeat an experiment](#repeat-an-experiment)
+- [Read measurements](#read-measurements)
+- [Cleanup](#cleanup)
+
+## Fixture graph
+
+```mermaid
+flowchart LR
+    plan["Resource · projected plan ConfigMap"] --> fixture
+    service["Resource · private Service"] --> fixture["Daemon · fixture API"]
+    runner["Workload · pulsed runner"] -->|"Synthetic arrivals"| fixture
+    fixture -->|"Real activation API calls"| operator["Polyad operator"]
+    operator -->|"Admit and create"| batch["Workload · pulsed batch Jobs"]
+    runner -->|"Poll receipts"| operator
+    batch -->|"Kubernetes observations"| operator
+```
+
+The Graph's declared connections form a star around the fixture. Its referenced
+GraphRule requires structural Cheeger expansion of at least 0.5 and bounds expanded
+vertices/edges. The batch policy permits two concurrent Jobs and 32 pending pulses.
+The runner policy rejects simultaneous runs. Neither Workload starts on install;
+only the fixture, discovery Service and plan ConfigMap start automatically. Their definitions
+come from the [CRD template chart](../../charts/polyad-crds/README.md).
+
+## Deploy
+
+First provision the [GKE experiment environment](../../terraform/README.md) and
+[build/publish both images](../../services/README.md). Install into the operator's
+namespace after its CRDs and API are ready:
+
+```sh
+helm dependency build charts/polyad-benchmarks
+helm upgrade --install benchmark charts/polyad-benchmarks -n polyad \
+  -f studies/load/gke-values.yaml \
+  --set polyadResources.variables.images.runner=YOUR_REGISTRY/polyad-benchmarks-runner \
+  --set polyadResources.variables.images.fixture=YOUR_REGISTRY/polyad-benchmarks-fixture \
+  --set polyadResources.variables.images.tag=RUN
+```
+
+The GKE overlay puts fixture, runner and batch Pods on the dedicated `polyad`
+pool, with its matching toleration. The monitoring stack and Reloader use the same placement. That baseline includes resource contention
+and node provisioning time. Use a separate generator pool in later studies that
+isolate operator capacity; placement is configurable in the chart.
+
+An optional [Argo Application](application.yaml) installs the same chart from
+Git without automatically synchronizing it. Set its revision and image parameters
+to published artifacts before applying it. Argo owns only the definitions; dynamic
+Jobs and receipts are operator-owned. Unrelated syncs do not issue activations.
+The sample Application skips CRDs to avoid owning the operator's existing Polyad
+CRDs: install the pinned Prometheus Operator CRDs before its first sync. A first
+Helm install above supplies missing dependency CRDs. Future CRD upgrades need
+administrator coordination; Helm does not upgrade existing CRDs automatically.
+
+The current private GKE profile disables operator authentication. For a shared
+environment set `polyadResources.variables.secretName` to an existing Secret with
+`operator-token` and `fixture-token` keys. Grant the operator token activation
+access for this graph tree and allow fixture/runner traffic through any Istio
+AuthorizationPolicy and NetworkPolicy. No cluster-admin token is mounted in Pods.
+
+## Plans and replica counts
+
+Choose a [test profile](../../charts/polyad-benchmarks/README.md#test-profiles):
+[smoke](../../charts/polyad-benchmarks/values-smoke.yaml),
+[steady](../../charts/polyad-benchmarks/values-steady.yaml), or
+[burst](../../charts/polyad-benchmarks/values-burst.yaml). Each selects its matching
+JSON plan under `charts/polyad-benchmarks/plans/`. Add that values file before
+the GKE placement overlay in the install command. Smoke remains the default.
+
+The chart merges that plan with explicit `polyadResources.variables` overrides,
+then projects the resolved `run` and `replicas` as `plan.json`
+in a Graph-owned ConfigMap, mounted at `/etc/polyad-benchmarks/plan.json`. The
+runner loads it once when starting and saves that exact snapshot with results.
+`replicas.fixture` sets the fixture Deployment's Pod count; `replicas.batch` sets
+the batch Workload's maximum concurrent executions. These do not change operator
+replicas or bypass the GraphRule and activation policies.
+
+Update Helm values between experiments. The GKE overlay enables the Reloader
+dependency and `polyadResources.variables.reloadOnPlanChange`. Polyad copies the
+Daemon's ConfigMap reload annotation onto its native Deployment. Reloader watches
+only the namespace, ignores Jobs, and rolls the fixture after ConfigMap changes.
+Do not edit plans mid-run: rollouts can interrupt arrivals, and the refresh rejects
+changed definitions. When using an existing Reloader, disable `reloader.enabled`
+but retain the fixture opt-in.
+
+A client can instead create an isolated run without Kubernetes write credentials.
+Edit [plan.json](plan.json), including published images and a fresh request ID:
+
+```sh
+export POLYAD_API_URL=http://YOUR_OPERATOR_API:8080
+polyad-benchmarks-plan --plan studies/load/plan.json --namespace polyad --render-only > /tmp/load-composition.json
+polyad-benchmarks-plan --plan studies/load/plan.json --namespace polyad
+```
+
+The first command renders a reviewable composition from the same Helm templates;
+the second submits it through `polyad_client.Client.compose`. An authorized token
+must permit composition and activation in the resulting tree. Each new composition
+creates an immutable plan ConfigMap and runs its runner once after dependencies
+are ready. `load-envelope` must already exist in the receiving namespace; the
+client cannot create or weaken that administrator rule. Track the composition
+receipt and collect its runner Job logs. The refresh commands below target the
+reusable Helm fixture; they do not automatically collect these separate composed
+runs. Delete a completed composition through the client when evidence is saved.
+
+## Monitoring and traces
+
+For metrics from all enabled operator-chart components, use the optional
+[Alloy or Prometheus Agent setup](../../docs/operations/telemetry-agents.md#benchmark-deployment).
+It includes a benchmark overlay that disables duplicate direct operator scraping.
+
+The GKE overlay enables four optional, pinned chart dependencies: Reloader,
+`kube-prometheus-stack` (Prometheus, Grafana and cluster exporters), Tempo for
+trace storage, and the OpenTelemetry Collector. All are disabled in the base
+chart so an existing monitoring installation can be used. Prometheus retains
+seven days on a 10 GiB PVC, Tempo retains 72 hours on 10 GiB, and Grafana has a
+5 GiB PVC. These test defaults share the experiment pool and contribute to its
+resource usage. Adjust storage, retention and placement in the dependency values.
+
+Apply [operator-values.yaml](operator-values.yaml) to the operator's existing
+Helm/GitOps configuration as an additional overlay. It enables metrics, graph
+labels and OTLP/HTTP export to `benchmarks-otel.polyad.svc:4318/v1/traces`; adapt the
+namespace when needed. It deliberately samples every operator trace for the study.
+Keep sampling fixed across comparisons. The Collector batches traces into Tempo;
+Grafana gets Prometheus and Tempo data sources automatically. This instruments
+the operator's existing spans, not every Python statement or fixture request.
+
+A ServiceMonitor selects the operator metrics Service by namespace/release.
+Configure `observability.operatorNamespace`, `operatorRelease` and optional
+`metricsSecret`/`metricsSecretKey` for another installation or authenticated
+scrapes. With an existing stack, leave the dependency disabled and arrange its
+ServiceMonitor selector and Grafana sidecar to discover the supplied objects.
+The Collector may be enabled independently; point an external Grafana at Tempo
+when its bundled Grafana is disabled.
+
+Access Grafana privately:
+
+```sh
+kubectl -n polyad port-forward service/benchmarks-grafana 3000:80
+kubectl -n polyad get secret benchmarks-grafana -o jsonpath='{.data.admin-password}' | base64 --decode
+```
+
+Log in locally as `admin`, then open **Polyad load study**. The runner's result
+includes `startedAt`, `finishedAt` and a `grafanaPath` with its exact time range.
+The dashboard covers API arrival rate, reporting replicas, write backlog/age,
+inbound updates, graph observations, tracked objects and operator memory. Select
+the operator namespace; shared state uses maximums across replicas to avoid
+counting the same state repeatedly. Use Grafana Explore's Tempo source for
+operator traces within the same interval. Export panel CSV/PNG files and relevant
+trace IDs into the run's output directory before retention expires; they remain
+study evidence alongside measurements. The refresh archives its JSON/logs
+without claiming that screenshots or Prometheus snapshots were automatically taken.
+
+## Repeat an experiment
+
+Install the package as described in [its README](../../pkg/polyad-benchmarks/README.md).
+Edit [scenario.json](scenario.json) for the namespace, graph, fixture selector and
+overall deadline. It never contains credentials. Set arrival rate and other
+experiment inputs through `polyadResources.variables.run` in the Helm values;
+the snapshot includes the Graph, definitions and plan used by the cluster.
+
+Run from the repository root with an explicit kubeconfig context:
+
+```sh
+polyad-benchmarks-refresh --ci-phase prepare --root .cache/benchmarks/refresh-RUN
+polyad-benchmarks-refresh --ci-phase study --root .cache/benchmarks/refresh-RUN \
+  --study load --context YOUR_GKE_CONTEXT
+polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/refresh-RUN --publish
+```
+
+The study starts the runner by executing its installed CLI inside the ready
+fixture Pod, using that Pod's graph-scoped credential. Multiple fixture replicas
+are supported; one ready Pod initiates the run and all ready replica identities
+are recorded. It polls the resulting
+Activation and collects the runner's Job logs. Use a fresh `RUN` directory for
+each experiment. A missing fixture, changed source/recipe, changed Graph generation or fixture definition,
+failed activation or timeout fails the run and retains diagnostics.
+
+The [Benchmarks workflow](../../.github/workflows/benchmarks.yml) uses these same
+phases. Its manual `full-refresh` requires an administrator-configured runner
+inside the private cluster network, the `benchmarks` environment and an explicit
+context. It does not run against the cloud on pull requests.
+
+## Read measurements
+
+Results contain scheduled, submitted and skipped arrivals, per-request phases,
+API acceptance latency and completion latency measured from initial submission.
+The scheduler does not accumulate an unbounded executor backlog: it skips arrivals
+when observation concurrency is exhausted or the generator misses an arrival slot.
+Skipped work is reported explicitly, and the runner exits nonzero if any requests
+fail, time out, are skipped or are interrupted. These overload observations remain
+in raw artifacts; they cannot be published as a fully successful run.
+
+The runner emits JSON to stdout and `/tmp/results.json`. Collect stdout before
+another runner activation replaces its completed Job. The refresh saves results,
+raw logs, Graph snapshots, definition snapshots, fixture image IDs/node placement,
+receipt status, source hashes and timestamps. No cloud results are checked in until
+an actual run is performed. `summary.json` retains provenance; `--publish` updates
+`studies/load/results.json` only after the whole declared matrix succeeds.
+
+Record several runs at each rate. Keep images, processing delay, resource requests
+and batch policy fixed while changing operator worker/replica settings. Correlate
+results with [per-Pod operator metrics](../../docs/operations/metrics.md), write
+queue age, rejected proposals, KEDA desired/ready replicas and node readiness.
+Use the [bundled monitoring stack](#monitoring-and-traces) or an existing Prometheus.
+Polling itself adds operator read traffic. Acceptance is not completion, sleeping
+batches do not model CPU work, and mock transport tests are not cloud benchmarks.
+
+## Cleanup
+
+Export artifacts first, then uninstall the fixture chart:
+
+```sh
+helm uninstall benchmark -n polyad
+kubectl -n polyad wait --for=delete graph/load-study --timeout=300s
+```
+
+Graph deletion triggers normal operator cleanup of its Jobs, Deployment, Service
+and receipts. Monitoring PVCs may remain under their chart retention policies;
+remove them explicitly only after exporting evidence. Timeouts or interrupted refreshes do not silently delete evidence or
+cancel active work. If Argo installed the fixture, delete its Application/resources
+through Argo so it cannot restore the fixture while cleanup is running.

@@ -1,0 +1,50 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if .Values.telemetry.enabled -}}
+{{- range (include "polyad.telemetry.targets" . | fromJsonArray) -}}
+{{- if .metrics }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "polyad.telemetry.serviceName" (dict "root" $ "target" .name) }}
+  namespace: {{ .namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/component: telemetry-target
+spec:
+  selector:
+    {{- default .podSelector .metricSelector | toYaml | nindent 4 }}
+  ports:
+    - name: metrics
+      port: {{ .port }}
+      targetPort: {{ .port }}
+{{/* Add scrape access only to Pods already isolated by Polyad's policies. */}}
+{{- if and $.Values.networkPolicy.enabled (has .name (list "operator" "cache" "operator-proxy")) }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "polyad.telemetry.serviceName" (dict "root" $ "target" .name) }}
+  namespace: {{ .namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- default .podSelector .metricSelector | toYaml | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $.Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+              app.kubernetes.io/name: polyad-telemetry
+      ports:
+        - {protocol: TCP, port: {{ .port }}}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}

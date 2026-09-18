@@ -78,7 +78,7 @@ run "gitops_bootstrap" {
 
   assert {
     condition = (
-      length(local.repositories) == 5 &&
+      length(local.repositories) == 9 &&
       alltrue([for repo in values(local.repositories) : !startswith(repo.url, "oci://") && !startswith(repo.url, "file://")]) &&
       length([for repo in values(local.repositories) : repo if try(repo.enableOCI, "false") == "true"]) == 1
     )

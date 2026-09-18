@@ -36,9 +36,14 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
         "pkg/client/pyproject.toml",
         "pkg/polyad-types/pyproject.toml",
         "pkg/polyad-schemas/pyproject.toml",
+        "pkg/polyad-benchmarks/pyproject.toml",
+        "pkg/polyad-benchmarks/poetry.lock",
         "poetry.lock",
         "charts/polyad/Chart.yaml",
         "charts/polyad-crds/Chart.yaml",
+        "charts/polyad-benchmarks/Chart.yaml",
+        "charts/polyad-benchmarks/values.yaml",
+        "charts/polyad-benchmarks/README.md",
         "charts/polyad/values.yaml",
         "charts/polyad/README.md",
     ):
@@ -59,6 +64,10 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
     assert tomllib.loads((tmp_path / "pkg/client/pyproject.toml").read_text())["project"]["version"] == package
     assert tomllib.loads((tmp_path / "pkg/polyad-types/pyproject.toml").read_text())["project"]["version"] == package
     assert tomllib.loads((tmp_path / "pkg/polyad-schemas/pyproject.toml").read_text())["project"]["version"] == package
+    benchmark = tomllib.loads((tmp_path / "pkg/polyad-benchmarks/pyproject.toml").read_text())["project"]
+    assert benchmark["version"] == package
+    assert f"polyad-client=={package}" in benchmark["dependencies"]
+    assert f"polyad-types=={package}" in benchmark["dependencies"]
     assert actual["project"]["optional-dependencies"]["schemas"] == [f"polyad-schemas=={package}"]
     for filename in ("pyproject.toml", "pkg/client/pyproject.toml"):
         metadata = tomllib.loads((tmp_path / filename).read_text())
@@ -253,7 +262,14 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     workflow = yaml.load((ROOT / ".github/workflows/chart.yml").read_text(), Loader=yaml.BaseLoader)
     chart = workflow["jobs"]["chart"]
     assert chart["needs"] == "source"
-    assert chart["strategy"] == {"fail-fast": "false", "matrix": {"chart": ["polyad", "polyad-crds"], "shard": ["1", "2", "3"]}}
+    assert chart["strategy"] == {
+        "fail-fast": "false",
+        "matrix": {
+            "chart": ["polyad", "polyad-crds"],
+            "shard": ["1", "2", "3"],
+            "include": [{"chart": "polyad-benchmarks", "shard": "1"}],
+        },
+    }
     action = next(step for step in chart["steps"] if step.get("uses") == "astrivant/hypothesis-helm@main")
     inputs = action["with"]
     assert inputs["chart"] == "charts/${{ matrix.chart }}"

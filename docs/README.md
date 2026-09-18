@@ -88,6 +88,7 @@ then [run your first workload](introduction/getting-started.md).
 | --- | --- |
 | [Scheduler metrics API](operations/metrics.md) | Prometheus and JSON queues, object inventories, hierarchies and KEDA query guidance |
 | [OpenTelemetry traces and decision logs](operations/tracing.md) | Readable decisions and conflicts, trace correlation, independent OTLP log export, sampling and collector configuration |
+| [Telemetry collectors](operations/telemetry-agents.md) | Alloy metrics, logs and traces; Prometheus Agent alternative; chart-wide discovery, backend credentials and benchmark integration |
 | [Operator performance and autoscaling](operations/performance.md) | Autoscaling stabilization, rate policies, queue polling and observation intervals |
 | [Event connection rebalancing and copulses](operations/event-rebalancing.md) | Istio or client routing, rolling subscription resets, ready endpoint discovery and scale-down draining |
 | [Authentication and external credentials](operations/authentication.md) | KEDA bearer credentials, ExternalSecrets, namespace boundaries and rotation |
@@ -106,6 +107,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Mutation diagram patterns](development/mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
 | [Python types and serialization](development/toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |
 | [Development toolchain](development/toolchain.md) | Pinned tools, editor settings, formatting and generated documentation |
+| [Benchmark studies](../studies/README.md) | Repeatable load experiments, fixture images, pytest smoke checks and CI refresh phases |
 
 ## Proposals
 

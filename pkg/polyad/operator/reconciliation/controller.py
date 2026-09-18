@@ -829,6 +829,12 @@ class Controller:
                     and os.environ.get("POLYAD_ESO_RELOAD_ENABLED", "false").lower() == "true"
                 ):
                     annotations = {"reloader.stakater.com/search": "true"}
+                if node.kind == "Daemon":
+                    # ConfigMap reloads are an explicit definition opt-in, independent of ESO.
+                    configured = definition.get("metadata", {}).get("annotations", {})
+                    for key in ("configmap.reloader.stakater.com/auto", "configmap.reloader.stakater.com/reload"):
+                        if key in configured:
+                            annotations = {**(annotations or {}), key: configured[key]}
                 desired[node.name] = self.child(obj, node.name, kind, runtime, annotations=annotations)
             elif node.kind == "Resource":
                 manifest = spec["manifest"]

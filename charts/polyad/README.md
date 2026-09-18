@@ -32,6 +32,7 @@ health metrics, and installation examples.
   - [Optional shared graph observers](#optional-shared-graph-observers)
   - [Advance graph capacity](#advance-graph-capacity)
   - [Root control plane](#root-control-plane)
+  - [Telemetry collectors](#telemetry-collectors)
 
 ## Installation
 
@@ -44,6 +45,11 @@ Use Helm `operator.nodeSelector` and `operator.tolerations` to select the operat
 Graph CR placement controls workload pods independently; enforced graph placement
 is copied into their native templates. The Python `polyad.cache` package connects
 replicas using `POLYAD_CACHE_URL`, including external Redis-compatible endpoints.
+
+Optional [Alloy and Prometheus Agent collectors](../../docs/operations/telemetry-agents.md)
+discover exporters from enabled chart components. Use the
+[all-signals reference](values-telemetry.reference.yaml) or
+[metrics-only reference](values-prometheus-agent.reference.yaml) with your existing backends.
 
 ```sh
 helm dependency build charts/polyad
@@ -503,16 +509,18 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### KEDA installation, observation and credentials
 
-| Name                           | Description                                                                                                                                                                    | Value   |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| `keda.install`                 | **Type: boolean.** Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation                                       | `false` |
-| `keda.observation.enabled`     | **Type: boolean.** Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA                    | `true` |
-| `keda.observation.namespace`   | **Type: string.** Namespace of an existing KEDA installation; bundled KEDA always uses the release namespace                                                                   | `keda` |
-| `keda.observation.deployments` | **Type: array.** Existing KEDA Deployment names to observe; remove disabled components or replace customized names; ignored for bundled KEDA                                   | `["keda-operator", "keda-operator-metrics-apiserver", "keda-admission-webhooks"]` |
-| `keda.observation.services`    | **Type: array.** Existing KEDA Service names to observe; match the installed KEDA chart; ignored for bundled KEDA                                                              | `["keda-operator", "keda-operator-metrics-apiserver", "keda-admission-webhooks"]` |
-| `keda.authentication.enabled`  | **Type: boolean.** Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics                                                     | `false` |
-| `keda.authentication.name`     | **Type: string.** TriggerAuthentication name; empty uses the release metrics name                                                                                              | `""` |
-| `kedaOperator`                 | **Type: object.** Upstream KEDA chart overrides used only when keda.install is true; its rendered workloads and Services are automatically included in the reserved root Graph | `{}` |
+| Name                                           | Description                                                                                                                                                 | Value   |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `keda.install`                                 | **Type: boolean.** Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation                    | `false` |
+| `keda.observation.enabled`                     | **Type: boolean.** Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA | `true` |
+| `keda.observation.namespace`                   | **Type: string.** Namespace of an existing KEDA installation; bundled KEDA always uses the release namespace                                                | `keda` |
+| `keda.observation.deployments`                 | **Type: array.** Existing KEDA Deployment names to observe; remove disabled components or replace customized names; ignored for bundled KEDA                | `["keda-operator", "keda-operator-metrics-apiserver", "keda-admission-webhooks"]` |
+| `keda.observation.services`                    | **Type: array.** Existing KEDA Service names to observe; match the installed KEDA chart; ignored for bundled KEDA                                           | `["keda-operator", "keda-operator-metrics-apiserver", "keda-admission-webhooks"]` |
+| `keda.authentication.enabled`                  | **Type: boolean.** Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics                                  | `false` |
+| `keda.authentication.name`                     | **Type: string.** TriggerAuthentication name; empty uses the release metrics name                                                                           | `""` |
+| `kedaOperator.prometheus.operator.enabled`     | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
+| `kedaOperator.prometheus.metricServer.enabled` | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
+| `kedaOperator.prometheus.webhooks.enabled`     | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
 
 ### Optional External Secrets Operator resources
 
@@ -624,5 +632,46 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | `rootControlPlane.endpoints.api`     | **Type: string.** Externally reachable root composition API URL advertised to workloads                                                                              | `""` |
 | `rootControlPlane.endpoints.events`  | **Type: string.** Externally reachable root events URL advertised to workloads                                                                                       | `""` |
 | `rootControlPlane.endpoints.metrics` | **Type: string.** Externally reachable root metrics URL advertised to workloads                                                                                      | `""` |
+
+### Telemetry collectors
+
+| Name                                           | Description                                                                                                                                                                                                    | Value                                   |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `telemetry.enabled`                            | **Type: boolean.** Install a release-scoped collector; backends are supplied separately.                                                                                                                       | `false` |
+| `telemetry.mode`                               | **Type: string.** Alloy collects metrics, container logs and traces; PrometheusAgent collects metrics only.                                                                                                    | `Alloy` |
+| `telemetry.replicas`                           | **Type: integer.** Alloy distributes scrape and log targets across these replicas; PrometheusAgent requires one.                                                                                               | `1` |
+| `telemetry.alloyImage`                         | **Type: string.** Pinned Grafana Alloy image.                                                                                                                                                                  | `docker.io/grafana/alloy:v1.19.2` |
+| `telemetry.prometheusImage`                    | **Type: string.** Pinned Prometheus image, launched with --agent.                                                                                                                                              | `quay.io/prometheus/prometheus:v3.14.0` |
+| `telemetry.clusterName`                        | **Type: string.** Stable cluster label attached to collected signals; empty uses global.multiCluster.clusterName or the release namespace.                                                                     | `""` |
+| `telemetry.scrapeIntervalSeconds`              | **Type: integer.** Seconds between exporter scrapes.                                                                                                                                                           | `15` |
+| `telemetry.scrapeTimeoutSeconds`               | **Type: integer.** Exporter timeout, no greater than the scrape interval.                                                                                                                                      | `10` |
+| `telemetry.sampleLimit`                        | **Type: integer.** Maximum samples accepted per scrape; protects collectors from accidental cardinality growth.                                                                                                | `100000` |
+| `telemetry.remoteWrite.url`                    | **Type: string.** Prometheus-compatible remote-write URL, including its write path.                                                                                                                            | `""` |
+| `telemetry.remoteWrite.credentials.secretName` | **Type: string.** Existing Secret in the release namespace; never copied into a ConfigMap or cache.                                                                                                            | `""` |
+| `telemetry.remoteWrite.credentials.secretKey`  | **Type: string.** Key containing the bearer token or basic-auth password.                                                                                                                                      | `token` |
+| `telemetry.remoteWrite.credentials.username`   | **Type: string.** Basic-auth username; empty selects bearer authentication.                                                                                                                                    | `""` |
+| `telemetry.logs.enabled`                       | **Type: boolean.** Alloy tails selected containers through the Kubernetes API without host mounts.                                                                                                             | `true` |
+| `telemetry.logs.url`                           | **Type: string.** Loki push URL including /loki/api/v1/push.                                                                                                                                                   | `""` |
+| `telemetry.logs.credentials.secretName`        | **Type: string.** Existing Secret in the release namespace; never copied into a ConfigMap or cache.                                                                                                            | `""` |
+| `telemetry.logs.credentials.secretKey`         | **Type: string.** Key containing the bearer token or basic-auth password.                                                                                                                                      | `token` |
+| `telemetry.logs.credentials.username`          | **Type: string.** Basic-auth username; empty selects bearer authentication.                                                                                                                                    | `""` |
+| `telemetry.traces.enabled`                     | **Type: boolean.** Alloy accepts OTLP/gRPC and OTLP/HTTP traces on Pod IPs and forwards them over OTLP/HTTP.                                                                                                   | `true` |
+| `telemetry.traces.endpoint`                    | **Type: string.** Destination OTLP/HTTP base URL, without /v1/traces.                                                                                                                                          | `""` |
+| `telemetry.traces.routeOperator`               | **Type: boolean.** Route Helm-installed operator and observer traces through local Alloy; tracing.enabled must also be true. Use false for root-provisioned cross-cluster workers requiring a shared endpoint. | `false` |
+| `telemetry.traces.credentials.secretName`      | **Type: string.** Existing Secret in the release namespace; never copied into a ConfigMap or cache.                                                                                                            | `""` |
+| `telemetry.traces.credentials.secretKey`       | **Type: string.** Key containing the bearer token or basic-auth password.                                                                                                                                      | `token` |
+| `telemetry.traces.credentials.username`        | **Type: string.** Basic-auth username; empty selects bearer authentication.                                                                                                                                    | `""` |
+| `telemetry.operatorMetricsSecret.name`         | **Type: string.** Override with a named API-key Secret authorized for metrics; empty inherits metrics.authentication.                                                                                          | `""` |
+| `telemetry.operatorMetricsSecret.key`          | **Type: string.** Secret key containing the metrics bearer token.                                                                                                                                              | `token` |
+| `telemetry.storage.enabled`                    | **Type: boolean.** Keep the metric WAL on a per-replica PVC; false uses disposable emptyDir storage.                                                                                                           | `true` |
+| `telemetry.storage.size`                       | **Type: string.** WAL volume size.                                                                                                                                                                             | `2Gi` |
+| `telemetry.storage.storageClass`               | **Type: string.** StorageClass name; empty uses the cluster default.                                                                                                                                           | `""` |
+| `telemetry.resources.requests.cpu`             | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.                                                                       | `100m` |
+| `telemetry.resources.requests.memory`          | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.                                                                       | `128Mi` |
+| `telemetry.resources.limits.memory`            | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.                                                                       | `512Mi` |
+| `telemetry.nodeSelector`                       | **Type: object.** Collector placement; empty inherits operator.nodeSelector.                                                                                                                                   | `{}` |
+| `telemetry.tolerations`                        | **Type: array.** Collector tolerations; empty inherits operator.tolerations.                                                                                                                                   | `[]` |
+| `telemetry.extraTargets`                       | **Type: array.** Additional namespace-local exporters and log selectors, for separately installed components. Each namespace receives read-only discovery RBAC.                                                | `[]` |
+| `telemetry.traceNamespaces`                    | **Type: array.** Additional namespaces allowed to send traces when networkPolicy.enabled; the release namespace is always allowed.                                                                             | `[]` |
 
 <!-- The parameters table is maintained by the helm-readme-generator pre-commit hook. -->

@@ -13,7 +13,11 @@
 - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
   value: http/protobuf
 - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+  {{- if and .Values.telemetry.enabled .Values.telemetry.traces.enabled .Values.telemetry.traces.routeOperator }}
+  value: {{ printf "http://%s.%s.svc:4318/v1/traces" (include "polyad.telemetry.serviceName" (dict "root" . "target" "otlp")) .Release.Namespace | quote }}
+  {{- else }}
   value: {{ .Values.tracing.endpoint | quote }}
+  {{- end }}
 - name: OTEL_TRACES_SAMPLER
   value: parentbased_traceidratio
 - name: OTEL_TRACES_SAMPLER_ARG

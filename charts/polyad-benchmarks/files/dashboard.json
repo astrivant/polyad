@@ -1,0 +1,214 @@
+{
+  "uid": "polyad-study",
+  "title": "Polyad load study",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "polyad",
+    "benchmarks"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "API arrival rate",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (component) (polyad_component_requests_per_second{namespace=\"$namespace\"})",
+          "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Operator replicas reporting",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (component) (polyad_component_reporting_replicas{namespace=\"$namespace\"})",
+          "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Pending Kubernetes writes",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (writer) (polyad_kubernetes_writes_queued{namespace=\"$namespace\"})",
+          "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Oldest queued write",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (writer) (polyad_kubernetes_writes_oldest_queued_seconds{namespace=\"$namespace\"})",
+          "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Shared inbound backlog",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(max by (shard, state) (polyad_inbound_updates{namespace=\"$namespace\"}))",
+          "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Current graph observations",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (state) (polyad_graph_status_observations{namespace=\"$namespace\"})",
+          "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Tracked objects",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (kind, role) (polyad_tracked_objects{namespace=\"$namespace\"})",
+          "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Operator container memory",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container=\"operator\"})",
+          "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "title": "Trace search (Tempo)",
+      "type": "link",
+      "url": "/explore",
+      "targetBlank": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "namespace",
+        "type": "textbox",
+        "current": {
+          "text": "polyad",
+          "value": "polyad"
+        },
+        "label": "Operator namespace"
+      }
+    ]
+  }
+}

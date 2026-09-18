@@ -1,0 +1,30 @@
+apiVersion: v2
+name: polyad-benchmarks
+description: Repeatable Polyad activation benchmarks using graph-managed fixtures
+type: application
+version: 0.0.1-alpha3
+appVersion: 0.0.1-alpha3
+kubeVersion: '>=1.30.0-0'
+dependencies:
+- name: polyad-crds
+  alias: polyadResources
+  version: 0.0.1-alpha3
+  repository: file://../polyad-crds
+- name: reloader
+  version: 2.2.17
+  repository: https://stakater.github.io/stakater-charts
+  condition: reloader.enabled
+- name: kube-prometheus-stack
+  alias: monitoring
+  version: 91.4.1
+  repository: https://prometheus-community.github.io/helm-charts
+  condition: monitoring.enabled
+- name: tempo
+  version: 2.4.0
+  repository: https://grafana-community.github.io/helm-charts
+  condition: tempo.enabled
+- name: opentelemetry-collector
+  alias: collector
+  version: 0.173.1
+  repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+  condition: collector.enabled

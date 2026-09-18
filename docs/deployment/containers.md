@@ -30,7 +30,7 @@ on standalone Linux, use native builder nodes or configure QEMU first. See
 ```sh
 docker buildx create --name polyad --driver docker-container --use
 docker buildx inspect --bootstrap
-docker buildx build --target production \
+docker buildx build -f services/operator/Dockerfile --target production \
     --platform linux/amd64,linux/arm64 \
     --tag YOUR_REGISTRY/polyad:VERSION --push .
 ```
@@ -41,7 +41,7 @@ For local testing, build one platform and use `--load` to make the image availab
 to `docker run` or `kind load docker-image`:
 
 ```sh
-docker buildx build --target production --load --tag polyad:production .
+docker buildx build -f services/operator/Dockerfile --target production --load --tag polyad:production .
 ```
 
 Without `--platform`, the builder uses its default platform. Use an explicit
@@ -127,7 +127,7 @@ are not dynamically unloaded within a running process.
 ## Development
 
 ```sh
-docker buildx build --target development --load -t polyad:dev .
+docker buildx build -f services/operator/Dockerfile --target development --load -t polyad:dev .
 docker run --rm -it --entrypoint /usr/bin/tini \
     --mount type=bind,source="$PWD/pkg",target=/app/pkg \
     polyad:dev -- /bin/sh
@@ -163,7 +163,7 @@ CI also records the package version, checked-out Git revision and RFC 3339 build
 timestamp. Supply the same metadata when building images locally:
 
 ```sh
-docker buildx build --target production --load \
+docker buildx build -f services/operator/Dockerfile --target production --load \
     --build-arg VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')" \
     --build-arg VCS_REF="$(git rev-parse HEAD)" \
     --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \

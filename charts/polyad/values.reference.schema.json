@@ -648,6 +648,9 @@
                   "$ref": "values.schema.json#/properties/istiod/properties/meshConfig/properties/defaultConfig/properties/holdApplicationUntilProxyStarts"
                 }
               }
+            },
+            "trustDomain": {
+              "$ref": "values.schema.json#/properties/istiod/properties/meshConfig/properties/trustDomain"
             }
           }
         }
@@ -1561,6 +1564,44 @@
         },
         "tolerations": {
           "$ref": "values.schema.json#/properties/kedaOperator/properties/tolerations"
+        },
+        "prometheus": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/kedaOperator/properties/prometheus/properties/operator/properties/enabled"
+                },
+                "port": {
+                  "$ref": "values.schema.json#/properties/kedaOperator/properties/prometheus/properties/operator/properties/port"
+                }
+              }
+            },
+            "metricServer": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/kedaOperator/properties/prometheus/properties/metricServer/properties/enabled"
+                },
+                "port": {
+                  "$ref": "values.schema.json#/properties/kedaOperator/properties/prometheus/properties/metricServer/properties/port"
+                }
+              }
+            },
+            "webhooks": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/kedaOperator/properties/prometheus/properties/webhooks/properties/enabled"
+                },
+                "port": {
+                  "$ref": "values.schema.json#/properties/kedaOperator/properties/prometheus/properties/webhooks/properties/port"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -9624,6 +9665,171 @@
               }
             }
           }
+        }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "description": "Optional namespace-scoped metrics, log and trace collectors with explicit backend destinations.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/enabled"
+        },
+        "mode": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/mode"
+        },
+        "replicas": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/replicas"
+        },
+        "alloyImage": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/alloyImage"
+        },
+        "prometheusImage": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/prometheusImage"
+        },
+        "clusterName": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/clusterName"
+        },
+        "scrapeIntervalSeconds": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/scrapeIntervalSeconds"
+        },
+        "scrapeTimeoutSeconds": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/scrapeTimeoutSeconds"
+        },
+        "sampleLimit": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/sampleLimit"
+        },
+        "remoteWrite": {
+          "type": "object",
+          "description": "Prometheus-compatible metric destination and authentication.",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/remoteWrite/properties/url"
+            },
+            "credentials": {
+              "type": "object",
+              "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token.",
+              "additionalProperties": false,
+              "properties": {
+                "secretName": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/remoteWrite/properties/credentials/properties/secretName"
+                },
+                "secretKey": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/remoteWrite/properties/credentials/properties/secretKey"
+                },
+                "username": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/remoteWrite/properties/credentials/properties/username"
+                }
+              }
+            }
+          }
+        },
+        "logs": {
+          "type": "object",
+          "description": "Optional Alloy container-log collection and Loki destination.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/logs/properties/enabled"
+            },
+            "url": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/logs/properties/url"
+            },
+            "credentials": {
+              "type": "object",
+              "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token.",
+              "additionalProperties": false,
+              "properties": {
+                "secretName": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/logs/properties/credentials/properties/secretName"
+                },
+                "secretKey": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/logs/properties/credentials/properties/secretKey"
+                },
+                "username": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/logs/properties/credentials/properties/username"
+                }
+              }
+            }
+          }
+        },
+        "traces": {
+          "type": "object",
+          "description": "Optional Alloy trace receiver and OTLP/HTTP destination.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/traces/properties/enabled"
+            },
+            "endpoint": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/traces/properties/endpoint"
+            },
+            "routeOperator": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/traces/properties/routeOperator"
+            },
+            "credentials": {
+              "type": "object",
+              "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token.",
+              "additionalProperties": false,
+              "properties": {
+                "secretName": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/traces/properties/credentials/properties/secretName"
+                },
+                "secretKey": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/traces/properties/credentials/properties/secretKey"
+                },
+                "username": {
+                  "$ref": "values.schema.json#/properties/telemetry/properties/traces/properties/credentials/properties/username"
+                }
+              }
+            }
+          }
+        },
+        "operatorMetricsSecret": {
+          "type": "object",
+          "description": "Existing operator metrics credential override.",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/operatorMetricsSecret/properties/name"
+            },
+            "key": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/operatorMetricsSecret/properties/key"
+            }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "description": "Metric WAL persistence for each collector replica.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/storage/properties/enabled"
+            },
+            "size": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/storage/properties/size"
+            },
+            "storageClass": {
+              "$ref": "values.schema.json#/properties/telemetry/properties/storage/properties/storageClass"
+            }
+          }
+        },
+        "resources": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/resources"
+        },
+        "nodeSelector": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/nodeSelector"
+        },
+        "tolerations": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/tolerations"
+        },
+        "extraTargets": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/extraTargets"
+        },
+        "traceNamespaces": {
+          "$ref": "values.schema.json#/properties/telemetry/properties/traceNamespaces"
         }
       }
     }

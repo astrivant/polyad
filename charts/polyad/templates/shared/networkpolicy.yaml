@@ -70,6 +70,15 @@ spec:
         - {protocol: TCP, port: 8091}
     {{- end }}
   egress:
+    {{- if and .Values.telemetry.enabled .Values.telemetry.traces.enabled .Values.telemetry.traces.routeOperator }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/name: polyad-telemetry
+      ports:
+        - {protocol: TCP, port: 4318}
+    {{- end }}
     {{- if and .Values.authentication.storage.enabled .Values.authentication.storage.separateDatabase .Values.authentication.storage.managed }}
     - to:
         - podSelector:

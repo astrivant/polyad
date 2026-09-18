@@ -1,0 +1,3 @@
+The load-study Graph starts its fixture; the runner waits for an explicit activation.
+Build and publish services/runner/Dockerfile and services/fixture/Dockerfile before running.
+See studies/load/README.md for repeatable experiments, results and cleanup.

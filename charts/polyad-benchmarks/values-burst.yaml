@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=values.schema.json
+## @section Burst experiment
+## @param benchmark [object] Select the burst test; installation stages its fixture but does not start traffic.
+benchmark:
+  ## @param benchmark.planFile [string] Packaged JSON plan with arrival bounds, fixture replicas and batch concurrency for this experiment.
+  planFile: plans/burst.json

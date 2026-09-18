@@ -109,8 +109,8 @@ a service graph might keep consumers and their supporting resources running.<sup
 
 ### Motivation and inspiration
 
-While at Klaviyo, I briefly worked alongside engineers from Medium.
-They were working on converting the company's cloud architecture to a setup where clusters managed other clusters, a concept they'd designed at Medium. That idea helped
+While at Klaviyo, I briefly crossed paths with engineers from Medium.
+They were working on a project converting the company's cloud architecture to a setup where clusters managed other clusters, a concept they'd designed at Medium. That idea helped
 motivate Polyad's [root control plane](docs/deployment/root-control-plane.md) and
 nested PolyGraphs. Medium's
 [Kubernetes Infrastructure At Medium](https://medium.engineering/kubernetes-infrastructure-at-medium-d9e2444932ef)
@@ -878,6 +878,8 @@ Queue pressure and graph hierarchies are available through the optional
 Optional [OpenTelemetry tracing](docs/operations/tracing.md) exports API request,
 reconciliation and Kubernetes operation spans to an OTLP/HTTP collector, with
 configurable sampling and Secret-backed exporter credentials.
+The Helm chart can add [Grafana Alloy or Prometheus Agent](docs/operations/telemetry-agents.md)
+to collect component metrics, with Alloy also forwarding container logs and traces.
 [Decision logs](docs/operations/tracing.md#decision-and-conflict-logs) explain
 admissions, scaling, topology membership and conflicts, with trace correlation
 and independently enabled OTLP log export.
@@ -893,6 +895,14 @@ watching how it scales. The [Terraform GKE test environment](terraform/README.md
 installs Argo CD and syncs the self-managed component Graph from this repository,
 with KEDA on a dedicated Ubuntu node pool bounded to 2–10 total nodes, separate
 from the default pool for GKE services.
+
+The [load study](studies/load/README.md) installs a separate fixture Graph through
+the CRD template chart. Its [`polyad-benchmarks`](pkg/polyad-benchmarks/README.md)
+runner measures API acceptance and Job completion under bounded arrivals, with
+repeatable input snapshots and retained results. [Client plans](studies/load/README.md#plans-and-replica-counts)
+set fixture replicas and run parameters; an optional [monitoring stack](studies/load/README.md#monitoring-and-traces)
+provides Prometheus, Grafana dashboards and operator traces for each study window.
+See [all studies](studies/README.md).
 
 Polyad can run as a compact HA Deployment or manage its own service components
 in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemetry

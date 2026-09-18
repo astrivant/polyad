@@ -35,6 +35,15 @@ repos:
           - --readme=charts/polyad-crds/README.md
           - --values=charts/polyad-crds/values.yaml
         pass_filenames: false
+      - id: helm-readme-generator
+        name: Benchmark chart README generator
+        entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-helm-readme.py
+        files: ^(charts/polyad-benchmarks/|scripts/schemas/generate-helm-readme\.py$|\.pre-commit-config\.yaml$)
+        language_version: 24.14.0
+        args:
+          - --readme=charts/polyad-benchmarks/README.md
+          - --values=charts/polyad-benchmarks/values.yaml
+        pass_filenames: false
   - repo: local
     hooks:
       - id: helm-values-types
@@ -42,13 +51,13 @@ repos:
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-values.py
         language: system
         pass_filenames: false
-        files: '^(charts/polyad(-crds)?/values.*\.(yaml|json)|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|pkg/tests/data/.*values\.yaml|terraform/.*values.*\.(yaml|json)|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
+        files: '^(charts/polyad(-crds|-benchmarks)?/values.*\.(yaml|json)|studies/.*values.*\.yaml|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|pkg/tests/data/.*values\.yaml|terraform/.*values.*\.(yaml|json)|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
       - id: schema-artifacts
         name: Generated chart and Python schema artifacts
         entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-all.py --check
         language: system
         pass_filenames: false
-        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-(types|schemas)/|schemas/|charts/polyad(-crds)?/(crds/|files/resource-catalog\.json|schemas/|values.*\.(json|yaml)|Chart\.(yaml|lock)|LICENSE.*)|scripts/schemas/|\.pre-commit-config\.yaml$)'
+        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-(types|schemas|benchmarks)/|schemas/|charts/polyad(-crds|-benchmarks)?/(crds/|files/resource-catalog\.json|schemas/|values.*\.(json|yaml)|Chart\.(yaml|lock)|LICENSE.*)|scripts/schemas/|\.pre-commit-config\.yaml$)'
       - id: docstring-layout
         name: Multiline docstring layout
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-docstrings.py

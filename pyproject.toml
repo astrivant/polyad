@@ -89,11 +89,11 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["pkg/tests"]
-pythonpath = ["pkg", "pkg/client", "pkg/polyad-types", "pkg/polyad-schemas"]
+pythonpath = ["pkg", "pkg/client", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
 addopts = "-n auto --maxprocesses=8 --dist=worksteal"
 
 [tool.ruff]
-src = [".", "pkg", "pkg/client", "pkg/polyad-types", "pkg/polyad-schemas"]
+src = [".", "pkg", "pkg/client", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
 line-length = 140
 target-version = "py313"
 

@@ -648,6 +648,9 @@
                   "$ref": "#/definitions/helmValues/properties/istiod/properties/meshConfig/properties/defaultConfig/properties/holdApplicationUntilProxyStarts"
                 }
               }
+            },
+            "trustDomain": {
+              "$ref": "#/definitions/helmValues/properties/istiod/properties/meshConfig/properties/trustDomain"
             }
           }
         }
@@ -1561,6 +1564,44 @@
         },
         "tolerations": {
           "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/tolerations"
+        },
+        "prometheus": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/prometheus/properties/operator/properties/enabled"
+                },
+                "port": {
+                  "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/prometheus/properties/operator/properties/port"
+                }
+              }
+            },
+            "metricServer": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/prometheus/properties/metricServer/properties/enabled"
+                },
+                "port": {
+                  "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/prometheus/properties/metricServer/properties/port"
+                }
+              }
+            },
+            "webhooks": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/prometheus/properties/webhooks/properties/enabled"
+                },
+                "port": {
+                  "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/prometheus/properties/webhooks/properties/port"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -9626,6 +9667,171 @@
           }
         }
       }
+    },
+    "telemetry": {
+      "type": "object",
+      "description": "Optional namespace-scoped metrics, log and trace collectors with explicit backend destinations.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/enabled"
+        },
+        "mode": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/mode"
+        },
+        "replicas": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/replicas"
+        },
+        "alloyImage": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/alloyImage"
+        },
+        "prometheusImage": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/prometheusImage"
+        },
+        "clusterName": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/clusterName"
+        },
+        "scrapeIntervalSeconds": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/scrapeIntervalSeconds"
+        },
+        "scrapeTimeoutSeconds": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/scrapeTimeoutSeconds"
+        },
+        "sampleLimit": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/sampleLimit"
+        },
+        "remoteWrite": {
+          "type": "object",
+          "description": "Prometheus-compatible metric destination and authentication.",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/remoteWrite/properties/url"
+            },
+            "credentials": {
+              "type": "object",
+              "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token.",
+              "additionalProperties": false,
+              "properties": {
+                "secretName": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/remoteWrite/properties/credentials/properties/secretName"
+                },
+                "secretKey": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/remoteWrite/properties/credentials/properties/secretKey"
+                },
+                "username": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/remoteWrite/properties/credentials/properties/username"
+                }
+              }
+            }
+          }
+        },
+        "logs": {
+          "type": "object",
+          "description": "Optional Alloy container-log collection and Loki destination.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/logs/properties/enabled"
+            },
+            "url": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/logs/properties/url"
+            },
+            "credentials": {
+              "type": "object",
+              "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token.",
+              "additionalProperties": false,
+              "properties": {
+                "secretName": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/logs/properties/credentials/properties/secretName"
+                },
+                "secretKey": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/logs/properties/credentials/properties/secretKey"
+                },
+                "username": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/logs/properties/credentials/properties/username"
+                }
+              }
+            }
+          }
+        },
+        "traces": {
+          "type": "object",
+          "description": "Optional Alloy trace receiver and OTLP/HTTP destination.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/traces/properties/enabled"
+            },
+            "endpoint": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/traces/properties/endpoint"
+            },
+            "routeOperator": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/traces/properties/routeOperator"
+            },
+            "credentials": {
+              "type": "object",
+              "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token.",
+              "additionalProperties": false,
+              "properties": {
+                "secretName": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/traces/properties/credentials/properties/secretName"
+                },
+                "secretKey": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/traces/properties/credentials/properties/secretKey"
+                },
+                "username": {
+                  "$ref": "#/definitions/helmValues/properties/telemetry/properties/traces/properties/credentials/properties/username"
+                }
+              }
+            }
+          }
+        },
+        "operatorMetricsSecret": {
+          "type": "object",
+          "description": "Existing operator metrics credential override.",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/operatorMetricsSecret/properties/name"
+            },
+            "key": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/operatorMetricsSecret/properties/key"
+            }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "description": "Metric WAL persistence for each collector replica.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/storage/properties/enabled"
+            },
+            "size": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/storage/properties/size"
+            },
+            "storageClass": {
+              "$ref": "#/definitions/helmValues/properties/telemetry/properties/storage/properties/storageClass"
+            }
+          }
+        },
+        "resources": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/resources"
+        },
+        "nodeSelector": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/nodeSelector"
+        },
+        "tolerations": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/tolerations"
+        },
+        "extraTargets": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/extraTargets"
+        },
+        "traceNamespaces": {
+          "$ref": "#/definitions/helmValues/properties/telemetry/properties/traceNamespaces"
+        }
+      }
     }
   },
   "definitions": {
@@ -11701,6 +11907,10 @@
                       "type": "boolean"
                     }
                   }
+                },
+                "trustDomain": {
+                  "type": "string",
+                  "description": "Mesh identity trust domain; collectors use it when authorizing operator metric scrapes."
                 }
               }
             }
@@ -14304,6 +14514,53 @@
                 "$ref": "#/definitions/helmValues/definitions/toleration"
               },
               "description": "Scheduling taints tolerated by these Pods; a nodeSelector also restricts their placement."
+            },
+            "prometheus": {
+              "type": "object",
+              "properties": {
+                "operator": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose this bundled KEDA component metrics for collection."
+                    },
+                    "port": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65535
+                    }
+                  }
+                },
+                "metricServer": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose this bundled KEDA component metrics for collection."
+                    },
+                    "port": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65535
+                    }
+                  }
+                },
+                "webhooks": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Expose this bundled KEDA component metrics for collection."
+                    },
+                    "port": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65535
+                    }
+                  }
+                }
+              }
             }
           }
         },
@@ -49311,6 +49568,345 @@
             }
           },
           "description": "Generated dependency contract from charts/polyad-crds; edit the CRDs and regenerate."
+        },
+        "telemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Install a release-scoped collector; backends are supplied separately."
+            },
+            "mode": {
+              "type": "string",
+              "description": "Alloy collects metrics, container logs and traces; PrometheusAgent collects metrics only.",
+              "enum": [
+                "Alloy",
+                "PrometheusAgent"
+              ]
+            },
+            "replicas": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16,
+              "description": "Alloy distributes scrape and log targets across these replicas; PrometheusAgent requires one."
+            },
+            "alloyImage": {
+              "type": "string",
+              "description": "Pinned Grafana Alloy image."
+            },
+            "prometheusImage": {
+              "type": "string",
+              "description": "Pinned Prometheus image, launched with --agent."
+            },
+            "clusterName": {
+              "type": "string",
+              "description": "Stable cluster label attached to collected signals; empty uses global.multiCluster.clusterName or the release namespace."
+            },
+            "scrapeIntervalSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600,
+              "description": "Seconds between exporter scrapes."
+            },
+            "scrapeTimeoutSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "Exporter timeout, no greater than the scrape interval."
+            },
+            "sampleLimit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000000,
+              "description": "Maximum samples accepted per scrape; protects collectors from accidental cardinality growth."
+            },
+            "remoteWrite": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "Prometheus-compatible remote-write URL, including its write path.",
+                  "pattern": "^$|^https?://[^ /]+"
+                },
+                "credentials": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "secretName": {
+                      "type": "string",
+                      "description": "Existing Secret in the release namespace; never copied into a ConfigMap or cache."
+                    },
+                    "secretKey": {
+                      "type": "string",
+                      "description": "Key containing the bearer token or basic-auth password.",
+                      "minLength": 1
+                    },
+                    "username": {
+                      "type": "string",
+                      "description": "Basic-auth username; empty selects bearer authentication."
+                    }
+                  },
+                  "required": [
+                    "secretName",
+                    "secretKey",
+                    "username"
+                  ],
+                  "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token."
+                }
+              },
+              "required": [
+                "url",
+                "credentials"
+              ],
+              "description": "Prometheus-compatible metric destination and authentication."
+            },
+            "logs": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Alloy tails selected containers through the Kubernetes API without host mounts."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Loki push URL including /loki/api/v1/push.",
+                  "pattern": "^$|^https?://[^ /]+"
+                },
+                "credentials": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "secretName": {
+                      "type": "string",
+                      "description": "Existing Secret in the release namespace; never copied into a ConfigMap or cache."
+                    },
+                    "secretKey": {
+                      "type": "string",
+                      "description": "Key containing the bearer token or basic-auth password.",
+                      "minLength": 1
+                    },
+                    "username": {
+                      "type": "string",
+                      "description": "Basic-auth username; empty selects bearer authentication."
+                    }
+                  },
+                  "required": [
+                    "secretName",
+                    "secretKey",
+                    "username"
+                  ],
+                  "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token."
+                }
+              },
+              "required": [
+                "enabled",
+                "url",
+                "credentials"
+              ],
+              "description": "Optional Alloy container-log collection and Loki destination."
+            },
+            "traces": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Alloy accepts OTLP/gRPC and OTLP/HTTP traces on Pod IPs and forwards them over OTLP/HTTP."
+                },
+                "endpoint": {
+                  "type": "string",
+                  "description": "Destination OTLP/HTTP base URL, without /v1/traces.",
+                  "pattern": "^$|^https?://[^ /]+"
+                },
+                "routeOperator": {
+                  "type": "boolean",
+                  "description": "Route Helm-installed operator and observer traces through local Alloy; tracing.enabled must also be true. Use false for root-provisioned cross-cluster workers requiring a shared endpoint."
+                },
+                "credentials": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "secretName": {
+                      "type": "string",
+                      "description": "Existing Secret in the release namespace; never copied into a ConfigMap or cache."
+                    },
+                    "secretKey": {
+                      "type": "string",
+                      "description": "Key containing the bearer token or basic-auth password.",
+                      "minLength": 1
+                    },
+                    "username": {
+                      "type": "string",
+                      "description": "Basic-auth username; empty selects bearer authentication."
+                    }
+                  },
+                  "required": [
+                    "secretName",
+                    "secretKey",
+                    "username"
+                  ],
+                  "description": "Existing backend credential; set username for basic auth or leave it empty for a bearer token."
+                }
+              },
+              "required": [
+                "enabled",
+                "endpoint",
+                "routeOperator",
+                "credentials"
+              ],
+              "description": "Optional Alloy trace receiver and OTLP/HTTP destination."
+            },
+            "operatorMetricsSecret": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Override with a named API-key Secret authorized for metrics; empty inherits metrics.authentication."
+                },
+                "key": {
+                  "type": "string",
+                  "description": "Secret key containing the metrics bearer token.",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "name",
+                "key"
+              ],
+              "description": "Existing operator metrics credential override."
+            },
+            "storage": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Keep the metric WAL on a per-replica PVC; false uses disposable emptyDir storage."
+                },
+                "size": {
+                  "type": "string",
+                  "description": "WAL volume size.",
+                  "minLength": 1
+                },
+                "storageClass": {
+                  "type": "string",
+                  "description": "StorageClass name; empty uses the cluster default."
+                }
+              },
+              "required": [
+                "enabled",
+                "size",
+                "storageClass"
+              ],
+              "description": "Metric WAL persistence for each collector replica."
+            },
+            "resources": {
+              "$ref": "#/definitions/helmValues/definitions/resourceRequirements"
+            },
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Collector placement; empty inherits operator.nodeSelector."
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-polyad-freeform": true
+              },
+              "description": "Collector tolerations; empty inherits operator.tolerations."
+            },
+            "extraTargets": {
+              "type": "array",
+              "description": "Additional namespace-local exporters and log selectors, for separately installed components. Each namespace receives read-only discovery RBAC.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Unique exporter name, prefixed with extra- in target Services.",
+                    "pattern": "^[a-z][a-z0-9-]{0,23}$"
+                  },
+                  "namespace": {
+                    "type": "string",
+                    "description": "Existing namespace containing these Pods.",
+                    "minLength": 1
+                  },
+                  "podSelector": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Exact Pod labels for this exporter and its container logs."
+                  },
+                  "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "HTTP Prometheus exporter port."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Prometheus metrics path.",
+                    "pattern": "^/"
+                  },
+                  "logs": {
+                    "type": "boolean",
+                    "description": "Include logs from Pods matching this selector when Alloy logs are enabled."
+                  }
+                },
+                "required": [
+                  "name",
+                  "namespace",
+                  "podSelector",
+                  "port",
+                  "path",
+                  "logs"
+                ],
+                "description": "An explicitly selected HTTP exporter and optional Pod logs."
+              },
+              "maxItems": 64
+            },
+            "traceNamespaces": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Additional namespaces allowed to send traces when networkPolicy.enabled; the release namespace is always allowed."
+            }
+          },
+          "required": [
+            "enabled",
+            "mode",
+            "replicas",
+            "alloyImage",
+            "prometheusImage",
+            "clusterName",
+            "scrapeIntervalSeconds",
+            "scrapeTimeoutSeconds",
+            "sampleLimit",
+            "remoteWrite",
+            "logs",
+            "traces",
+            "operatorMetricsSecret",
+            "storage",
+            "resources",
+            "nodeSelector",
+            "tolerations",
+            "extraTargets",
+            "traceNamespaces"
+          ],
+          "description": "Optional namespace-scoped metrics, log and trace collectors with explicit backend destinations."
         }
       },
       "definitions": {
@@ -49608,6 +50204,31 @@
                           "const": true
                         }
                       }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "required": [
+                "telemetry",
+                "worker"
+              ],
+              "properties": {
+                "telemetry": {
+                  "required": [
+                    "enabled"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "const": true
+                    }
+                  }
+                },
+                "worker": {
+                  "properties": {
+                    "enabled": {
+                      "const": false
                     }
                   }
                 }

@@ -56,5 +56,17 @@
 {{- if not $targets }}{{ fail "KEDA observation requires at least one Deployment or Service" }}{{ end -}}
 {{- $_ := set $inventory "keda" $targets -}}
 {{- end -}}
+{{- if .Values.telemetry.enabled -}}
+{{- $targets := list (dict "kind" "StatefulSet" "namespace" .Release.Namespace "name" (printf "%s-telemetry" .Release.Name)) (dict "kind" "Service" "namespace" .Release.Namespace "name" (printf "%s-telemetry" .Release.Name)) -}}
+{{- if .Values.telemetry.traces.enabled -}}
+{{- $targets = append $targets (dict "kind" "Service" "namespace" .Release.Namespace "name" (include "polyad.telemetry.serviceName" (dict "root" . "target" "otlp"))) -}}
+{{- end -}}
+{{- range (include "polyad.telemetry.targets" . | fromJsonArray) -}}
+{{- if .metrics -}}
+{{- $targets = append $targets (dict "kind" "Service" "namespace" .namespace "name" (include "polyad.telemetry.serviceName" (dict "root" $ "target" .name))) -}}
+{{- end -}}
+{{- end -}}
+{{- $_ := set $inventory "collectors" $targets -}}
+{{- end -}}
 {{- toJson $inventory -}}
 {{- end -}}

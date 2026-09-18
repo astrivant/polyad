@@ -1,0 +1,19 @@
+{
+  "requestId": "load-steady-001",
+  "variables": {
+    "run": {
+      "rate": 2,
+      "duration": 180,
+      "max_requests": 360,
+      "concurrency": 16,
+      "timeout": 120,
+      "request_timeout": 5,
+      "poll_interval": 1
+    },
+    "replicas": {
+      "fixture": 2,
+      "batch": 4
+    },
+    "batchDelaySeconds": 0.5
+  }
+}
