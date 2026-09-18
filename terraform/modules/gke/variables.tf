@@ -9,7 +9,7 @@ variable "region" {
 }
 
 variable "zone" {
-  description = "Zone for the control plane and both node pools."
+  description = "Zone for the control plane and all four node pools."
   type        = string
 }
 
@@ -24,7 +24,7 @@ variable "name" {
 }
 
 variable "machine_type" {
-  description = "Machine type for every node in the dedicated polyad pool."
+  description = "Shared machine type for the polyad operator, fixtures consumers/support and copolyad load-generator pools."
   type        = string
   default     = "c3-standard-4"
 }
@@ -44,4 +44,48 @@ variable "deletion_protection" {
   description = "Prevent accidental cluster deletion when true."
   type        = bool
   default     = false
+}
+
+variable "fixtures_min_nodes" {
+  description = "Minimum and initial nodes for fixture consumers and benchmark support services; independent of the operator pool."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.fixtures_min_nodes >= 1 && floor(var.fixtures_min_nodes) == var.fixtures_min_nodes
+    error_message = "fixtures_min_nodes must be a positive integer."
+  }
+}
+
+variable "fixtures_max_nodes" {
+  description = "Autoscaler ceiling for fixture consumers and benchmark support services; must be at least the minimum."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.fixtures_max_nodes >= var.fixtures_min_nodes && floor(var.fixtures_max_nodes) == var.fixtures_max_nodes
+    error_message = "fixtures_max_nodes must be an integer at least fixtures_min_nodes."
+  }
+}
+
+variable "copolyad_min_nodes" {
+  description = "Minimum and initial nodes for load generators, isolated from fixture consumers; independent of the operator pool."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.copolyad_min_nodes >= 1 && floor(var.copolyad_min_nodes) == var.copolyad_min_nodes
+    error_message = "copolyad_min_nodes must be a positive integer."
+  }
+}
+
+variable "copolyad_max_nodes" {
+  description = "Autoscaler ceiling for load generators, isolated from fixture consumers; must be at least the minimum."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.copolyad_max_nodes >= var.copolyad_min_nodes && floor(var.copolyad_max_nodes) == var.copolyad_max_nodes
+    error_message = "copolyad_max_nodes must be an integer at least copolyad_min_nodes."
+  }
 }

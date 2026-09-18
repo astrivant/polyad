@@ -480,14 +480,15 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### Scheduler metrics
 
-| Name                                    | Description                                                                                                                                                                       | Value            |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `metrics.enabled`                       | **Type: boolean.** Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement      | `false` |
-| `metrics.graphLabels`                   | **Type: boolean.** Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes | `false` |
-| `metrics.authentication.enabled`        | **Type: boolean.** Require a dedicated bearer token on all metrics endpoints                                                                                                      | `false` |
-| `metrics.authentication.existingSecret` | **Type: string.** Existing or ESO-managed Secret containing the metrics token                                                                                                     | `polyad-metrics` |
-| `metrics.authentication.secretKey`      | **Type: string.** Key containing the metrics bearer token                                                                                                                         | `token` |
-| `metrics.authentication.key`            | **Type: string.** Inline metrics token; requires existingSecret to be empty                                                                                                       | `""` |
+| Name                                    | Description                                                                                                                                                                     | Value            |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `metrics.enabled`                       | **Type: boolean.** Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement    | `false` |
+| `metrics.graphLabels`                   | **Type: boolean.** Expose per-graph topology, policy, Cheeger, spectrum, throughput and workload-signal series; increases cardinality, does not gate JSON or KEDA scalar routes | `false` |
+| `metrics.graphSpectra`                  | **Type: boolean.** Retain already-calculated eigenvalues for graph diagnostics; adds per-rule storage and time series when graphLabels is enabled.                              | `false` |
+| `metrics.authentication.enabled`        | **Type: boolean.** Require a dedicated bearer token on all metrics endpoints                                                                                                    | `false` |
+| `metrics.authentication.existingSecret` | **Type: string.** Existing or ESO-managed Secret containing the metrics token                                                                                                   | `polyad-metrics` |
+| `metrics.authentication.secretKey`      | **Type: string.** Key containing the metrics bearer token                                                                                                                       | `token` |
+| `metrics.authentication.key`            | **Type: string.** Inline metrics token; requires existingSecret to be empty                                                                                                     | `""` |
 
 ### Named operator API credentials
 

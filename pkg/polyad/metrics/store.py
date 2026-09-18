@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 from prometheus_client import CollectorRegistry, Gauge, generate_latest
 
+from polyad.metrics.graphs import HELP as GRAPH_HELP
+from polyad.metrics.graphs import graph_rows
 from polyad.metrics.workloads import GROUP_SIGNALS, workload_metric
 
 if TYPE_CHECKING:
@@ -285,6 +287,9 @@ class MetricsStore:
                             )
                         )
         gauge("cluster_workload_signal", "Fresh remote workload signals observed by the root.", remote_signals)
+        if graph_labels:
+            for family, rows in graph_rows(snapshot).items():
+                gauge(family, GRAPH_HELP[family], rows)
         rendered = generate_latest(registry)
         document = json.dumps(snapshot, allow_nan=False).encode()
         with self.lock:

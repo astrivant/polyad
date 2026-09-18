@@ -122,6 +122,23 @@ def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, 
                 "resources": metrics.get("resources") if observed else None,
                 "execution": metrics.get("execution") if observed else None,
                 "topology": metrics.get("topology") if observed else None,
+                "observedTopology": metrics.get("observedTopology") if observed else None,
+                "structuralRules": [
+                    {
+                        **report,
+                        "current": observed
+                        and report.get("boundary", {}).get("generation") == generation
+                        and report.get("boundary", {}).get("uid") == meta["uid"]
+                        and (rule := indexed.get(("GraphRule", report["name"]))) is not None
+                        and rule["metadata"]["uid"] == report.get("uid")
+                        and rule["metadata"].get("generation", 1) == report.get("generation")
+                        and not rule["metadata"].get("deletionTimestamp"),
+                    }
+                    for report in status.get("structuralRules", [])
+                ],
+                "throughput": status.get("throughput")
+                if (status.get("throughput") or {}).get("observedGeneration") == generation
+                else None,
                 "rollup": metrics.get("rollup") if observed else None,
                 "uses": uses,
                 "workloads": {name: entry for name, entry in (status.get("workloads") or {}).items() if entry is not None},

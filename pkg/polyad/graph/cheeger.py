@@ -8,7 +8,7 @@ import time
 from typing import TYPE_CHECKING
 
 import networkx as nx
-from attrs import asdict, frozen
+from attrs import asdict, evolve, field, frozen
 
 from polyad_types.rules import CheegerComputation
 
@@ -28,6 +28,8 @@ class CheegerResult:
         evaluatedCuts (int): Number of distinct partitions evaluated.
         reason (str): Completion, witnessed violation, or exhausted resource budget.
         skippedPriorityCuts (int): Configured subsets absent from or equal to the whole boundary.
+        durationSeconds (float): Elapsed wall time for this calculation, including projection.
+        inputs (dict[str, int | float]): Effective budgets, operator ceilings and projected graph dimensions.
     """
 
     exact: bool
@@ -36,6 +38,8 @@ class CheegerResult:
     evaluatedCuts: int
     reason: str
     skippedPriorityCuts: int = 0
+    durationSeconds: float = 0.0
+    inputs: dict[str, int | float] = field(factory=dict)
 
     def report(self) -> dict[str, Any]:
         """
@@ -82,6 +86,7 @@ def compute_cheeger(
     Returns:
         CheegerResult: Exact constant, a certified violation, or an explicitly incomplete search.
     """
+    timed = time.perf_counter()
     started = time.monotonic()
     options = computation or CheegerComputation()
     ceilings = limits or CheegerComputation()
@@ -92,17 +97,33 @@ def compute_cheeger(
         if limits is not None and requested is not None and requested > ceiling:
             raise ValueError(f"Cheeger {name}={requested} exceeds operator ceiling {ceiling}")
         budgets[name] = ceiling if requested is None else requested
+    inputs = {
+        **budgets,
+        **{
+            "operator" + name[0].upper() + name[1:]: getattr(ceilings, name) or default
+            for name, default in (("maxVertices", 20), ("maxCuts", 524287), ("timeoutSeconds", 5.0))
+            if limits is not None
+        },
+        "vertices": len(graph),
+        "priorityCuts": len(options.priorityCuts),
+        "priorityVertices": sum(map(len, options.priorityCuts)),
+    }
+
+    def finish(value: CheegerResult) -> CheegerResult:
+        return evolve(value, durationSeconds=time.perf_counter() - timed, inputs=dict(inputs))
+
     if len(graph) > budgets["maxVertices"]:
-        return CheegerResult(False, None, (), 0, f"VertexLimit: at most {budgets['maxVertices']} vertices per boundary")
+        return finish(CheegerResult(False, None, (), 0, f"VertexLimit: at most {budgets['maxVertices']} vertices per boundary"))
     simple: nx.Graph[str] = nx.Graph()
     simple.add_nodes_from(graph)
     simple.add_edges_from(graph.edges())
     simple.remove_edges_from(nx.selfloop_edges(simple))
+    inputs["edges"] = simple.number_of_edges()
     n = len(simple)
     if n < 2:
-        return CheegerResult(True, 0.0, (), 0, "Complete")
+        return finish(CheegerResult(True, 0.0, (), 0, "Complete"))
     if not nx.is_connected(simple):
-        return CheegerResult(True, 0.0, tuple(next(iter(nx.connected_components(simple)))), 0, "Complete")
+        return finish(CheegerResult(True, 0.0, tuple(next(iter(nx.connected_components(simple)))), 0, "Complete"))
     nodes = list(simple)
     indices = {node: index for index, node in enumerate(nodes)}
     neighbors = [sum(1 << indices[neighbor] for neighbor in simple[node]) for node in nodes]
@@ -114,8 +135,15 @@ def compute_cheeger(
     priorities: set[int] = set()
 
     def result(reason: str) -> CheegerResult:
-        return CheegerResult(
-            reason == "Complete", best, tuple(node for i, node in enumerate(nodes) if best_subset & (1 << i)), evaluated, reason, skipped
+        return finish(
+            CheegerResult(
+                reason == "Complete",
+                best,
+                tuple(node for i, node in enumerate(nodes) if best_subset & (1 << i)),
+                evaluated,
+                reason,
+                skipped,
+            )
         )
 
     def exhausted() -> str | None:

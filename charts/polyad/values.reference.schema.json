@@ -878,6 +878,9 @@
               "$ref": "values.schema.json#/properties/metrics/properties/authentication/properties/key"
             }
           }
+        },
+        "graphSpectra": {
+          "$ref": "values.schema.json#/properties/metrics/properties/graphSpectra"
         }
       }
     },

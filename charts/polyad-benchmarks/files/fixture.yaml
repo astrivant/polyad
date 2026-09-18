@@ -136,8 +136,8 @@ workloads:
         spec:
           automountServiceAccountToken: false
           securityContext: *podSecurityContext
-          nodeSelector: '{{ .Values.variables.placement.nodeSelector | toJson }}'
-          tolerations: '{{ .Values.variables.placement.tolerations | toJson }}'
+          nodeSelector: '{{ .Values.variables.runnerPlacement.nodeSelector | toJson }}'
+          tolerations: '{{ .Values.variables.runnerPlacement.tolerations | toJson }}'
           containers:
             - name: runner
               image: '{{ .Values.variables.images.runner }}:{{ .Values.variables.images.tag }}'
@@ -170,6 +170,7 @@ graphRules:
       enforcement: Referenced
       scope: Boundary
       relation: connections
+      spectrum: {} # Measure spectra for the benchmark without imposing additional bounds.
       cheeger:
         minimum: 0.5
       limits:

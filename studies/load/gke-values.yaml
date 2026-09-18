@@ -7,16 +7,28 @@ polyadResources:
     reloadOnPlanChange: true
     ## @param polyadResources.variables.placement [object] Settings for polyadResources.variables.placement.
     placement:
-      ## @param polyadResources.variables.placement.nodeSelector [object] Node labels required by every fixture, batch and runner Pod. Empty uses normal scheduling.
+      ## @param polyadResources.variables.placement.nodeSelector [object] Required node labels for fixture and batch Pods. Empty uses normal scheduling.
       nodeSelector:
         ## @param polyadResources.variables.placement.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for polyadResources.variables.placement.nodeSelector.cloud.google.com/gke-nodepool.
-        cloud.google.com/gke-nodepool: polyad
+        cloud.google.com/gke-nodepool: fixtures
       ## @param polyadResources.variables.placement.tolerations [array] Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.
       tolerations:
       - key: dedicated
         operator: Equal
-        value: polyad
+        value: fixtures
         effect: NoSchedule
+    ## @param polyadResources.variables.runnerPlacement [object] Run load producers on copolyad, independently of fixture and batch consumers.
+    runnerPlacement:
+      ## @param polyadResources.variables.runnerPlacement.nodeSelector [object] Required node labels for the runner Pod. Empty uses normal scheduling independently of consumer placement.
+      nodeSelector:
+        ## @param polyadResources.variables.runnerPlacement.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for polyadResources.variables.runnerPlacement.nodeSelector.cloud.google.com/gke-nodepool.
+        cloud.google.com/gke-nodepool: copolyad
+      ## @param polyadResources.variables.runnerPlacement.tolerations [array] Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: copolyad
+          effect: NoSchedule
 ## @param reloader [object] Settings for reloader.
 reloader:
   ## @param reloader.enabled [boolean] Install the pinned reloader dependency; disable to use an administrator-managed installation.
@@ -41,7 +53,7 @@ reloader:
         ## @param monitoring.prometheus-node-exporter.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for monitoring.prometheus-node-exporter.nodeSelector.cloud.google.com/gke-nodepool.
         ## @param tempo.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for tempo.nodeSelector.cloud.google.com/gke-nodepool.
         ## @param collector.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for collector.nodeSelector.cloud.google.com/gke-nodepool.
-        cloud.google.com/gke-nodepool: polyad
+        cloud.google.com/gke-nodepool: fixtures
       ## @param reloader.reloader.deployment.tolerations [array] Settings for reloader.reloader.deployment.tolerations.
       ## @param monitoring.prometheusOperator.admissionWebhooks.patch.tolerations [array] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.tolerations.
       ## @param monitoring.prometheus.prometheusSpec.tolerations [array] Settings for monitoring.prometheus.prometheusSpec.tolerations.
@@ -75,7 +87,7 @@ reloader:
         ## @param monitoring.prometheus-node-exporter.tolerations[].value [string] Settings for monitoring.prometheus-node-exporter.tolerations[].value.
         ## @param tempo.tolerations[].value [string] Settings for tempo.tolerations[].value.
         ## @param collector.tolerations[].value [string] Settings for collector.tolerations[].value.
-        value: polyad
+        value: fixtures
         ## @param monitoring.prometheusOperator.tolerations[].effect [string] Settings for monitoring.prometheusOperator.tolerations[].effect.
         ## @param monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].effect [string] Settings for monitoring.prometheusOperator.admissionWebhooks.patch.tolerations[].effect.
         ## @param monitoring.prometheus.prometheusSpec.tolerations[].effect [string] Settings for monitoring.prometheus.prometheusSpec.tolerations[].effect.

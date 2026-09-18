@@ -10,6 +10,8 @@ spec:
     targetRevision: main # Pin to the exact commit used for a measured run.
     path: charts/polyad-benchmarks
     helm:
+      releaseName: benchmarks
+      skipTests: true
       skipCrds: true
       valueFiles:
         - values-smoke.yaml

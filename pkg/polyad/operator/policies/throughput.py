@@ -13,8 +13,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.traffic import step_weights
-from polyad.graph.cheeger import CheegerIncomplete
-from polyad.graph.rules import graph_cheeger, relation_graph
+from polyad.graph.cheeger import CheegerIncomplete, compute_cheeger
+from polyad.graph.rules import relation_graph
 from polyad.graph.temporary import active_entries
 from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.policies.cheeger import computation_limits
@@ -52,22 +52,29 @@ def within(value: float, bounds: Cheeger) -> bool:
     return (bounds.minimum is None or value + 1e-9 >= bounds.minimum) and (bounds.maximum is None or value - 1e-9 <= bounds.maximum)
 
 
-async def expansion(graph: Topology) -> float:
+async def expansion(graph: Topology, reports: list[dict[str, Any]] | None = None) -> float:
     """
     Keep exact cut enumeration off the operator's event loop.
 
     Args:
         graph (Topology): Current or proposed boundary topology.
+        reports (list[dict[str, Any]] | None): Optional destination for the calculation certificate.
 
     Returns:
         float: Exact Cheeger constant of its connections projection.
     """
-    return await asyncio.to_thread(
-        graph_cheeger,
+    result = await asyncio.to_thread(
+        compute_cheeger,
         relation_graph(graph, "connections"),
         graph.throughput.cheegerComputation if graph.throughput else None,
         limits=computation_limits(),
     )
+    if reports is not None:
+        reports.append(result.report())
+    if not result.exact:
+        raise CheegerIncomplete(result)
+    assert result.upperBound is not None
+    return result.upperBound
 
 
 async def capacity_revision(api: API, obj: dict[str, Any]) -> str:
@@ -128,14 +135,18 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
     if policy is None or graph.suspend or graph.templateOnly or obj.get("status", {}).get("phase") in {"Stopped", "Completed"}:
         return False
     started = time.monotonic()
+    calculations: list[dict[str, Any]] = []
     try:
-        current = await expansion(graph)
+        current = await expansion(graph, calculations)
     except ValueError as error:
         diagnostic = error.result.report() if isinstance(error, CheegerIncomplete) else {"reason": str(error)}
         await controller.status(
             obj,
             {
                 "throughput": {
+                    "observedGeneration": obj["metadata"]["generation"],
+                    "currentComputation": diagnostic,
+                    "candidateComputations": [],
                     "mode": policy.mode,
                     "phase": "ComputationLimited",
                     "currentCheeger": None,
@@ -180,6 +191,9 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
     status: dict[str, Any] = {
         "mode": policy.mode,
         "phase": "WaitingForSample",
+        "observedGeneration": meta["generation"],
+        "currentComputation": calculations[0],
+        "candidateComputations": [],
         "currentCheeger": current,
         "computation": None,
         "observedAt": None,
@@ -289,14 +303,17 @@ async def reconcile_throughput(controller: Controller, obj: dict[str, Any], *, n
                     if (shortfall or demand) and not within(status["currentCheeger"], tier.cheeger):
                         for layout in policy.layouts:
                             proposal = {**obj["spec"], "connections": converter.unstructure(layout.connections)}
+                            candidate_reports: list[dict[str, Any]] = []
                             try:
-                                value = await expansion(topology(proposal, obj["kind"]))
+                                value = await expansion(topology(proposal, obj["kind"]), candidate_reports)
                             except ValueError as error:
                                 status.update(
                                     phase="ComputationLimited",
                                     computation=error.result.report() if isinstance(error, CheegerIncomplete) else {"reason": str(error)},
                                 )
                                 continue
+                            finally:
+                                status["candidateComputations"].extend({"layout": layout.name, **report} for report in candidate_reports)
                             if not within(value, tier.cheeger):
                                 continue
                             try:

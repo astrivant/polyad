@@ -1295,6 +1295,9 @@ spec:
                     - lookaheadStages
                     - maxPods
                     nullable: true
+                  observedGeneration:
+                    type: integer
+                    minimum: 1
                   computation:
                     type: object
                     nullable: true
@@ -1310,10 +1313,78 @@ spec:
                           type: string
                       evaluatedCuts:
                         type: integer
+                        minimum: 0
                       reason:
                         type: string
                       skippedPriorityCuts:
                         type: integer
+                        minimum: 0
+                      durationSeconds:
+                        type: number
+                        minimum: 0
+                      inputs:
+                        type: object
+                        additionalProperties:
+                          type: number
+                  currentComputation:
+                    type: object
+                    nullable: true
+                    properties:
+                      exact:
+                        type: boolean
+                      upperBound:
+                        type: number
+                        nullable: true
+                      cut:
+                        type: array
+                        items:
+                          type: string
+                      evaluatedCuts:
+                        type: integer
+                        minimum: 0
+                      reason:
+                        type: string
+                      skippedPriorityCuts:
+                        type: integer
+                        minimum: 0
+                      durationSeconds:
+                        type: number
+                        minimum: 0
+                      inputs:
+                        type: object
+                        additionalProperties:
+                          type: number
+                  candidateComputations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        exact:
+                          type: boolean
+                        upperBound:
+                          type: number
+                          nullable: true
+                        cut:
+                          type: array
+                          items:
+                            type: string
+                        evaluatedCuts:
+                          type: integer
+                          minimum: 0
+                        reason:
+                          type: string
+                        skippedPriorityCuts:
+                          type: integer
+                          minimum: 0
+                        durationSeconds:
+                          type: number
+                          minimum: 0
+                        inputs:
+                          type: object
+                          additionalProperties:
+                            type: number
+                        layout:
+                          type: string
                   mode:
                     type: string
                     nullable: true
@@ -1422,7 +1493,7 @@ spec:
               structuralRules:
                 type: array
                 description: Most recent successful admission policy observations, including rule UID and generation,
-                  structural measurements and compact spectral summaries. Check phase and observedGeneration for
+                  structural measurements, calculation budgets/results and optional full spectra. Check phase and observedGeneration for
                   current validity.
                 items:
                   type: object

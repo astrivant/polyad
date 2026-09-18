@@ -1,7 +1,10 @@
 {
   "requestId": "load-client-run-001",
   "variables": {
-    "replicas": {"fixture": 2, "batch": 4},
+    "replicas": {
+      "fixture": 2,
+      "batch": 4
+    },
     "run": {
       "rate": 0.2,
       "duration": 60,
@@ -17,8 +20,30 @@
       "tag": "RUN"
     },
     "placement": {
-      "nodeSelector": {"cloud.google.com/gke-nodepool": "polyad"},
-      "tolerations": [{"key": "dedicated", "operator": "Equal", "value": "polyad", "effect": "NoSchedule"}]
+      "nodeSelector": {
+        "cloud.google.com/gke-nodepool": "fixtures"
+      },
+      "tolerations": [
+        {
+          "key": "dedicated",
+          "operator": "Equal",
+          "value": "fixtures",
+          "effect": "NoSchedule"
+        }
+      ]
+    },
+    "runnerPlacement": {
+      "nodeSelector": {
+        "cloud.google.com/gke-nodepool": "copolyad"
+      },
+      "tolerations": [
+        {
+          "key": "dedicated",
+          "operator": "Equal",
+          "value": "copolyad",
+          "effect": "NoSchedule"
+        }
+      ]
     }
   }
 }

@@ -26,9 +26,15 @@ polyadResources:
     run: {}
     ## @param polyadResources.variables.placement [object] Settings for polyadResources.variables.placement.
     placement:
-      ## @param polyadResources.variables.placement.nodeSelector [object] Node labels required by every fixture, batch and runner Pod. Empty uses normal scheduling.
+      ## @param polyadResources.variables.placement.nodeSelector [object] Required node labels for fixture and batch Pods. Empty uses normal scheduling.
       nodeSelector: {}
       ## @param polyadResources.variables.placement.tolerations [array] Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.
+      tolerations: []
+    ## @param polyadResources.variables.runnerPlacement [object] Independent load-generator placement; use a separate pool to isolate producers from consumers.
+    runnerPlacement:
+      ## @param polyadResources.variables.runnerPlacement.nodeSelector [object] Required node labels for the runner Pod. Empty uses normal scheduling independently of consumer placement.
+      nodeSelector: {}
+      ## @param polyadResources.variables.runnerPlacement.tolerations [array] Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.
       tolerations: []
     ## @param polyadResources.variables.resources [object] Per-container requests and limits for the runner, fixture and batch. Hold constant when comparing operator settings.
     resources:

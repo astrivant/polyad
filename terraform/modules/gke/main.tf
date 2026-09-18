@@ -81,7 +81,7 @@ resource "google_container_cluster" "cluster" {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
   cluster_autoscaling {
-    enabled = false # Keep the two explicitly managed pools; no auto-provisioning.
+    enabled = false # Keep the explicitly managed pools; no auto-provisioning.
   }
 
   depends_on = [google_project_iam_member.nodes]
@@ -145,6 +145,98 @@ resource "google_container_node_pool" "polyad" {
     taint {
       key    = "dedicated"
       value  = "polyad"
+      effect = "NO_SCHEDULE"
+    }
+  }
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+  upgrade_settings {
+    max_surge       = 0
+    max_unavailable = 1
+  }
+  lifecycle {
+    # GKE owns capacity once created; later applies must preserve autoscaling.
+    ignore_changes = [initial_node_count]
+  }
+}
+
+resource "google_container_node_pool" "fixtures" {
+  project            = var.project_id
+  name               = "fixtures"
+  location           = var.zone
+  cluster            = google_container_cluster.cluster.name
+  node_locations     = [var.zone]
+  initial_node_count = var.fixtures_min_nodes
+
+  autoscaling {
+    total_min_node_count = var.fixtures_min_nodes
+    total_max_node_count = var.fixtures_max_nodes
+    location_policy      = "BALANCED"
+  }
+  node_config {
+    machine_type    = var.machine_type
+    disk_type       = "pd-balanced"
+    disk_size_gb    = 50
+    image_type      = "UBUNTU_CONTAINERD"
+    service_account = google_service_account.nodes.email
+    oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+    shielded_instance_config {
+      enable_secure_boot = true
+    }
+    taint {
+      key    = "dedicated"
+      value  = "fixtures"
+      effect = "NO_SCHEDULE"
+    }
+  }
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+  upgrade_settings {
+    max_surge       = 0
+    max_unavailable = 1
+  }
+  lifecycle {
+    # GKE owns capacity once created; later applies must preserve autoscaling.
+    ignore_changes = [initial_node_count]
+  }
+}
+
+resource "google_container_node_pool" "copolyad" {
+  project            = var.project_id
+  name               = "copolyad"
+  location           = var.zone
+  cluster            = google_container_cluster.cluster.name
+  node_locations     = [var.zone]
+  initial_node_count = var.copolyad_min_nodes
+
+  autoscaling {
+    total_min_node_count = var.copolyad_min_nodes
+    total_max_node_count = var.copolyad_max_nodes
+    location_policy      = "BALANCED"
+  }
+  node_config {
+    machine_type    = var.machine_type
+    disk_type       = "pd-balanced"
+    disk_size_gb    = 50
+    image_type      = "UBUNTU_CONTAINERD"
+    service_account = google_service_account.nodes.email
+    oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+    shielded_instance_config {
+      enable_secure_boot = true
+    }
+    taint {
+      key    = "dedicated"
+      value  = "copolyad"
       effect = "NO_SCHEDULE"
     }
   }

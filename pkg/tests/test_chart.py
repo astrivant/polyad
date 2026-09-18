@@ -739,6 +739,7 @@ def test_optional_metrics_service_and_access_policies():
     objects = render(
         "metrics.enabled=true",
         "metrics.graphLabels=true",
+        "metrics.graphSpectra=true",
         "networkPolicy.enabled=true",
         "networkPolicy.apiServerCIDRs[0]=10.0.0.1/32",
         "networkPolicy.metricsPeers[0].namespaceSelector.matchLabels.name=monitoring",
@@ -753,6 +754,7 @@ def test_optional_metrics_service_and_access_policies():
     container = deployment["spec"]["template"]["spec"]["containers"][0]
     assert {"name": "metrics", "containerPort": 8092} in container["ports"]
     assert {"name": "POLYAD_METRICS_GRAPH_LABELS", "value": "true"} in container["env"]
+    assert {"name": "POLYAD_METRICS_GRAPH_SPECTRA", "value": "true"} in container["env"]
     assert {"name": "POLYAD_WORKLOAD_METRICS_URL", "value": "http://test-polyad-metrics.test.svc:8092"} in container["env"]
     network = next(obj for obj in objects if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "test-polyad")
     assert any(rule["ports"] == [{"protocol": "TCP", "port": 8092}] for rule in network["spec"]["ingress"])

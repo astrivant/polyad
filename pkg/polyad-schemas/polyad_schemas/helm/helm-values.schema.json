@@ -2678,7 +2678,7 @@
         },
         "graphLabels": {
           "type": "boolean",
-          "description": "Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes"
+          "description": "Expose per-graph topology, policy, Cheeger, spectrum, throughput and workload-signal series; increases cardinality, does not gate JSON or KEDA scalar routes"
         },
         "authentication": {
           "type": "object",
@@ -2749,6 +2749,10 @@
               }
             }
           ]
+        },
+        "graphSpectra": {
+          "type": "boolean",
+          "description": "Retain full eigenvalue arrays from enabled spectral rules for JSON and per-graph Prometheus diagnostics; does not initiate extra computations. Enable graphLabels for Prometheus eigenvalues."
         }
       }
     },

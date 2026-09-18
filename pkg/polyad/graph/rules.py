@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
+from attrs import asdict
 
 from polyad.graph.cheeger import compute_cheeger
 from polyad.graph.cheeger import graph_cheeger as graph_cheeger
@@ -152,6 +153,15 @@ def evaluate_rule(
         "allowed": not violations,
         "relation": rule.relation,
         "measurements": measured,
+        "parameters": {
+            "limits": rule.limits,
+            "cheeger": asdict(rule.cheeger) if rule.cheeger is not None else None,
+            "spectrum": asdict(rule.spectrum) if rule.spectrum is not None else None,
+            "scope": rule.scope,
+            "enforcement": rule.enforcement,
+            "shapes": rule.shapes,
+        },
+        "shapes": shapes,
         "spectrum": spectrum,
         "violations": violations,
         "cheegerComputation": computation,

@@ -3,8 +3,12 @@ region     = "us-central1"
 zone       = "us-central1-a"
 
 cluster_name = "polyad-load-test"
-machine_type = "c3-standard-4"
-default_node_count = 1 # Untainted system nodes, additional to the 2–10 Polyad nodes.
+machine_type = "c3-standard-4" # Shared by polyad, fixtures and copolyad.
+default_node_count = 1 # Untainted system nodes, separate from all experiment pools.
+fixtures_min_nodes = 1 # Consumers, monitoring and standalone Argo CD.
+fixtures_max_nodes = 10
+copolyad_min_nodes = 1 # Load generators, isolated from consumers.
+copolyad_max_nodes = 10
 
 # Supply TF_VAR_argocd_admin_password_hash in the environment; never commit it.
 # Update this timestamp whenever the admin password changes.
@@ -24,4 +28,18 @@ polyad_automated_sync = true
 #     components:
 #       executor:
 #         backlog: 4
+# YAML
+
+# Register fixtures for inspection; first install monitoring CRDs as documented.
+# Keep manual sync while setting published images. Sync never starts load traffic.
+benchmarks_enabled = true
+benchmarks_automated_sync = false
+# benchmarks_values_files = ["values-steady.yaml", "../../studies/load/gke-values.yaml"]
+# benchmarks_values_override = <<-YAML
+#   polyadResources:
+#     variables:
+#       images:
+#         runner: YOUR_REGISTRY/polyad-benchmarks-runner
+#         fixture: YOUR_REGISTRY/polyad-benchmarks-fixture
+#         tag: your-published-test-tag
 # YAML

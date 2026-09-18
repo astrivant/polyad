@@ -2,7 +2,7 @@
   "uid": "polyad-study",
   "title": "Polyad load study",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "5s",
   "time": {
     "from": "now-30m",
@@ -186,6 +186,143 @@
           "refId": "A",
           "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container=\"operator\"})",
           "legendFormat": "{{ component }}{{ writer }}{{ kind }}{{ role }}{{ state }}{{ pod }}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Graph boundary dimensions",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (cluster, graph_namespace, kind, name, view, dimension) (polyad_graph_topology{namespace=\"$namespace\",view=\"declared\",dimension=~\"nodeCount|admission.edgeCount|connections.edgeCount|admission.depth|admission.breadth\"})",
+          "legendFormat": "{{ cluster }} {{ kind }}/{{ name }} {{ dimension }}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Cheeger exact values and witnessed bounds",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (cluster, graph_namespace, kind, name, rule, relation, source, stage, layout, statistic) (polyad_graph_cheeger_result{namespace=\"$namespace\",statistic=~\"constant|upperBound\"})",
+          "legendFormat": "{{ cluster }} {{ name }} {{ source }} {{ layout }} {{ statistic }}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Cheeger search work and limits",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (cluster, graph_namespace, kind, name, rule, relation, source, stage, layout, statistic) (polyad_graph_cheeger_result{namespace=\"$namespace\",statistic=~\"evaluatedCuts|skippedPriorityCuts\"})",
+          "legendFormat": "{{ cluster }} {{ name }} {{ source }} {{ statistic }}"
+        },
+        {
+          "refId": "B",
+          "expr": "max by (cluster, graph_namespace, kind, name, rule, relation, source, stage, layout, parameter) (polyad_graph_cheeger_input{namespace=\"$namespace\",parameter=\"maxCuts\"})",
+          "legendFormat": "{{ cluster }} {{ name }} {{ source }} {{ parameter }}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Cheeger calculation time",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (cluster, graph_namespace, kind, name, rule, relation, source, stage, layout) (polyad_graph_cheeger_result{namespace=\"$namespace\",statistic=\"durationSeconds\"})",
+          "legendFormat": "{{ cluster }} {{ name }} {{ source }} {{ layout }}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Spectral summaries",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (cluster, graph_namespace, kind, name, rule, relation, statistic) (polyad_graph_spectrum{namespace=\"$namespace\"})",
+          "legendFormat": "{{ cluster }} {{ name }} {{ rule }} {{ statistic }}"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Application Cheeger targets and measurements",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (cluster, graph_namespace, kind, name, parameter) (polyad_graph_throughput{namespace=\"$namespace\",parameter=~\"currentCheeger|proposedCheeger|target.minimum|target.maximum\"})",
+          "legendFormat": "{{ cluster }} {{ name }} {{ parameter }}"
         }
       ]
     }

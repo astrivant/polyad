@@ -146,7 +146,9 @@ def test_chart_uses_crd_templates_and_explicit_pulses():
 
     for kind, name in (("Workload", "load-runner"), ("Workload", "load-batch"), ("Daemon", "load-fixture")):
         pod = objects[kind, name]["spec"]["template"]["spec"]
-        assert pod["nodeSelector"]["cloud.google.com/gke-nodepool"] == "polyad"
+        assert pod["nodeSelector"]["cloud.google.com/gke-nodepool"] == ("copolyad" if name == "load-runner" else "fixtures")
+        pool = "copolyad" if name == "load-runner" else "fixtures"
+        assert {"key": "dedicated", "operator": "Equal", "value": pool, "effect": "NoSchedule"} in pod["tolerations"]
         assert pod["automountServiceAccountToken"] is False
     env = {item["name"]: item for item in objects["Workload", "load-runner"]["spec"]["template"]["spec"]["containers"][0]["env"]}
     projected = objects["Resource", "load-plan"]["spec"]["manifest"]
@@ -252,6 +254,10 @@ def test_client_plan_uses_canonical_graph_with_immutable_per_run_settings():
     objects = {item["id"]: item for item in document["objects"]}
     assert document["requestId"] == configured["requestId"]
     assert objects["load-fixture"]["spec"]["replicas"] == 2
+    for name, pool in (("load-fixture", "fixtures"), ("load-batch", "fixtures"), ("load-runner", "copolyad")):
+        pod = objects[name]["spec"]["template"]["spec"]
+        assert pod["nodeSelector"]["cloud.google.com/gke-nodepool"] == pool
+        assert {"key": "dedicated", "operator": "Equal", "value": pool, "effect": "NoSchedule"} in pod["tolerations"]
     assert objects["load-batch"]["spec"]["activation"]["maxConcurrent"] == 4
     assert "activation" not in objects["load-runner"]["spec"]
     assert objects["load-runner"]["spec"]["template"]["spec"]["containers"][0]["args"][-2:] == ["--run-id", configured["requestId"]]
@@ -264,7 +270,7 @@ def test_client_plan_uses_canonical_graph_with_immutable_per_run_settings():
     assert json.loads(projected["data"]["plan.json"])["replicas"] == {"fixture": 2, "batch": 4}
 
 
-def test_monitoring_and_reloader_target_the_operator_and_experiment_pool():
+def test_monitoring_and_reloader_target_the_operator_from_fixtures_pool():
     """
     Verify actual dependency manifests, endpoints, controller discovery and scheduling.
     """
@@ -294,10 +300,10 @@ def test_monitoring_and_reloader_target_the_operator_and_experiment_pool():
     exporter = otel["service"]["pipelines"]["traces"]["exporters"][0]
     assert otel["exporters"][exporter]["endpoint"] == "benchmarks-tempo:4317"
     for (kind, _), item in objects.items():
-        if kind in {"Deployment", "StatefulSet", "DaemonSet", "Job"}:
-            pod = item["spec"]["template"]["spec"]
-            assert pod["nodeSelector"]["cloud.google.com/gke-nodepool"] == "polyad"
-            assert any(value.get("key") == "dedicated" and value.get("value") == "polyad" for value in pod["tolerations"])
+        if kind in {"Deployment", "StatefulSet", "DaemonSet", "Job", "Prometheus"}:
+            pod = item["spec"] if kind == "Prometheus" else item["spec"]["template"]["spec"]
+            assert pod["nodeSelector"]["cloud.google.com/gke-nodepool"] == "fixtures"
+            assert any(value.get("key") == "dedicated" and value.get("value") == "fixtures" for value in pod["tolerations"])
     assert objects["Daemon", "load-fixture"]["metadata"]["annotations"]["configmap.reloader.stakater.com/auto"] == "true"
     for name in ("load-batch", "load-runner"):
         assert "configmap.reloader.stakater.com/auto" not in objects["Workload", name]["metadata"].get("annotations", {})

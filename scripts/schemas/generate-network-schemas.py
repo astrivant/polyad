@@ -60,6 +60,29 @@ def refresh(source: str, path: tuple[str | int, ...], name: str, schema: dict[st
     return source[:start] + rendered + source[end:]
 
 
+def cheeger_result_schema() -> dict[str, Any]:
+    """
+    Keep current, failed and candidate calculation certificates identical in persisted status.
+
+    Returns:
+        dict[str, Any]: OpenAPI schema retaining every numeric solver diagnostic and its cut witness.
+    """
+    return {
+        "type": "object",
+        "nullable": True,
+        "properties": {
+            "exact": {"type": "boolean"},
+            "upperBound": {"type": "number", "nullable": True},
+            "cut": {"type": "array", "items": {"type": "string"}},
+            "evaluatedCuts": {"type": "integer", "minimum": 0},
+            "reason": {"type": "string"},
+            "skippedPriorityCuts": {"type": "integer", "minimum": 0},
+            "durationSeconds": {"type": "number", "minimum": 0},
+            "inputs": {"type": "object", "additionalProperties": {"type": "number"}},
+        },
+    }
+
+
 def main() -> int:
     """
     Regenerate schemas or report model drift without modifying files.
@@ -115,16 +138,17 @@ def main() -> int:
                                 name: {**structural_schema(CapacityTuning), "nullable": True}
                                 for name in ("currentCapacity", "targetCapacity", "proposedCapacity")
                             },
-                            "computation": {
-                                "type": "object",
-                                "nullable": True,
-                                "properties": {
-                                    "exact": {"type": "boolean"},
-                                    "upperBound": {"type": "number", "nullable": True},
-                                    "cut": {"type": "array", "items": {"type": "string"}},
-                                    "evaluatedCuts": {"type": "integer"},
-                                    "reason": {"type": "string"},
-                                    "skippedPriorityCuts": {"type": "integer"},
+                            "observedGeneration": {"type": "integer", "minimum": 1},
+                            "computation": cheeger_result_schema(),
+                            "currentComputation": cheeger_result_schema(),
+                            "candidateComputations": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        **cheeger_result_schema()["properties"],
+                                        "layout": {"type": "string"},
+                                    },
                                 },
                             },
                             **{

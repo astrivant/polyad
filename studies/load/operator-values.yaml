@@ -3,8 +3,10 @@
 metrics:
   ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
   enabled: true
-  ## @param metrics.graphLabels [boolean] Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes
+  ## @param metrics.graphLabels [boolean] Expose per-graph topology, policy, Cheeger, spectrum, throughput and workload-signal series; increases cardinality, does not gate JSON or KEDA scalar routes
   graphLabels: true
+  ## @param metrics.graphSpectra [boolean] Retain already-calculated eigenvalues for graph diagnostics; adds per-rule storage and time series when graphLabels is enabled.
+  graphSpectra: true
 ## @param tracing [object] Opt-in OTLP/HTTP traces and independently enabled logs for operators and observers.
 tracing:
   ## @param tracing.enabled [boolean] Create a batched trace exporter only when enabled.

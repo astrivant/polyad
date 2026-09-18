@@ -1,0 +1,174 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "global": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Required node labels for Argo CD components and hook jobs."
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Node taint key."
+              },
+              "operator": {
+                "type": "string",
+                "description": "Match the taint value exactly with Equal."
+              },
+              "value": {
+                "type": "string",
+                "description": "Dedicated support pool name."
+              },
+              "effect": {
+                "type": "string",
+                "description": "Allow scheduling on the NoSchedule-tainted pool."
+              }
+            }
+          },
+          "description": "Tolerate the dedicated fixtures taint."
+        }
+      }
+    },
+    "controller": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Desired replicas; one keeps this test component non-HA."
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Desired replicas; one keeps this test component non-HA."
+        },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable this component or autoscaler."
+            }
+          }
+        },
+        "service": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "ClusterIP"
+              ],
+              "description": "Keep the benchmark UI private; access it with port-forward."
+            }
+          }
+        }
+      }
+    },
+    "repoServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Desired replicas; one keeps this test component non-HA."
+        },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable this component or autoscaler."
+            }
+          }
+        }
+      }
+    },
+    "applicationSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Desired replicas; one keeps this test component non-HA."
+        }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this component or autoscaler."
+        }
+      }
+    },
+    "redis-ha": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this component or autoscaler."
+        }
+      }
+    },
+    "redisSecretInit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this component or autoscaler."
+        }
+      }
+    },
+    "dex": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this component or autoscaler."
+        }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this component or autoscaler."
+        }
+      }
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Typed standalone Argo CD test profile; dynamic Helm values are supplied by Terraform."
+}

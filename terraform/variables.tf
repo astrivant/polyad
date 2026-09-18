@@ -10,7 +10,7 @@ variable "region" {
 }
 
 variable "zone" {
-  description = "One zone for the test cluster and its two node pools. This is a zonal, not a regional HA, control plane."
+  description = "One zone for the test cluster and its four node pools. This is a zonal, not a regional HA, control plane."
   type        = string
   default     = "us-central1-a"
 
@@ -32,7 +32,7 @@ variable "cluster_name" {
 }
 
 variable "machine_type" {
-  description = "Dedicated Polyad pool machine type; change it between experiments to compare scheduling capacity."
+  description = "Shared machine type for polyad, fixtures and copolyad; holds node size constant while isolating producers, consumers and the operator."
   type        = string
   default     = "c3-standard-4"
 }
@@ -104,4 +104,77 @@ variable "polyad_automated_sync" {
   description = "Automatically sync, prune and self-heal Polyad from Git. Disable while freezing an experiment or performing ordered teardown."
   type        = bool
   default     = true
+}
+
+variable "fixtures_min_nodes" {
+  description = "Minimum and initial nodes for fixture consumers and benchmark support services; independent of the operator pool."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.fixtures_min_nodes >= 1 && floor(var.fixtures_min_nodes) == var.fixtures_min_nodes
+    error_message = "fixtures_min_nodes must be a positive integer."
+  }
+}
+
+variable "fixtures_max_nodes" {
+  description = "Autoscaler ceiling for fixture consumers and benchmark support services; must be at least the minimum."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.fixtures_max_nodes >= var.fixtures_min_nodes && floor(var.fixtures_max_nodes) == var.fixtures_max_nodes
+    error_message = "fixtures_max_nodes must be an integer at least fixtures_min_nodes."
+  }
+}
+
+variable "copolyad_min_nodes" {
+  description = "Minimum and initial nodes for load generators, isolated from fixture consumers; independent of the operator pool."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.copolyad_min_nodes >= 1 && floor(var.copolyad_min_nodes) == var.copolyad_min_nodes
+    error_message = "copolyad_min_nodes must be a positive integer."
+  }
+}
+
+variable "copolyad_max_nodes" {
+  description = "Autoscaler ceiling for load generators, isolated from fixture consumers; must be at least the minimum."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.copolyad_max_nodes >= var.copolyad_min_nodes && floor(var.copolyad_max_nodes) == var.copolyad_max_nodes
+    error_message = "copolyad_max_nodes must be an integer at least copolyad_min_nodes."
+  }
+}
+
+variable "benchmarks_enabled" {
+  description = "Register the benchmark Application in Argo CD. Manual sync by default; registration and sync do not start load generation."
+  type        = bool
+  default     = true
+}
+
+variable "benchmarks_values_files" {
+  description = "Ordered values paths relative to charts/polyad-benchmarks in polyad_revision; choose a test profile before the GKE placement overlay."
+  type        = list(string)
+  default     = ["values-smoke.yaml", "../../studies/load/gke-values.yaml"]
+}
+
+variable "benchmarks_values_override" {
+  description = "Final benchmark YAML mapping, for published fixture/runner images or run settings. Stored in the Application; exclude secrets."
+  type        = string
+  default     = "{}"
+
+  validation {
+    condition     = can(keys(yamldecode(var.benchmarks_values_override)))
+    error_message = "benchmarks_values_override must be a YAML mapping."
+  }
+}
+
+variable "benchmarks_automated_sync" {
+  description = "Allow automatic fixture sync and pruning; false lets administrators prepare images and monitoring CRDs before manually syncing. Neither mode activates load tests."
+  type        = bool
+  default     = false
 }

@@ -91,7 +91,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Node labels required by every fixture, batch and runner Pod. Empty uses normal scheduling."
+          "description": "Required node labels for fixture and batch Pods. Empty uses normal scheduling."
         },
         "tolerations": {
           "type": "array",
@@ -101,7 +101,8 @@
           },
           "description": "Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool."
         }
-      }
+      },
+      "description": "Placement of fixture service and batch consumers; independent of the load generator."
     },
     "resources": {
       "type": "object",
@@ -168,6 +169,28 @@
     "reloadOnPlanChange": {
       "type": "boolean",
       "description": "Opt the fixture Deployment into ConfigMap-triggered Reloader restarts. Requires bundled or existing Reloader; apply plan changes between runs."
+    },
+    "runnerPlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Required node labels for the runner Pod. Empty uses normal scheduling independently of consumer placement."
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-polyad-freeform": true
+          },
+          "description": "Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool."
+        }
+      },
+      "description": "Independent load-generator placement; use a separate pool to isolate producers from consumers."
     }
   },
   "description": "Benchmark images, bounded arrivals and graph-managed Pod settings."

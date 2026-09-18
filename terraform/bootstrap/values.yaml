@@ -8,3 +8,15 @@ valueFiles:
 values: '{}'
 ## @param automatedSync [boolean] Enable automatic sync, self-healing and pruning; false leaves sync under administrator control.
 automatedSync: true
+## @param benchmarks [object] Optional benchmark Application; it shares the operator's Git revision and never activates runners during sync.
+benchmarks:
+  ## @param benchmarks.enabled [boolean] Register the fixture and monitoring chart in the same Argo CD UI.
+  enabled: true
+  ## @param benchmarks.valueFiles [array] Profile and placement overlays relative to charts/polyad-benchmarks; order matters.
+  valueFiles:
+    - values-smoke.yaml
+    - ../../studies/load/gke-values.yaml
+  ## @param benchmarks.values [string] Final YAML mapping; set published image tags and exclude secrets.
+  values: '{}'
+  ## @param benchmarks.automatedSync [boolean] False requires manual sync after images and monitoring CRDs are ready; sync never starts traffic.
+  automatedSync: false

@@ -1,5 +1,5 @@
 apiVersion: v2
 name: polyad-bootstrap
-description: Argo CD project and Git-backed Polyad Application for the GKE test environment
+description: Argo CD project and Git-backed operator and benchmark Applications for the GKE test environment
 type: application
 version: 0.1.0

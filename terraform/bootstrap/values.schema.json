@@ -2,11 +2,58 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": false,
-  "required": ["revision", "valueFiles", "values", "automatedSync"],
+  "required": [
+    "revision",
+    "valueFiles",
+    "values",
+    "automatedSync",
+    "benchmarks"
+  ],
   "properties": {
-    "revision": {"type": "string", "minLength": 1},
-    "valueFiles": {"type": "array", "items": {"type": "string", "minLength": 1}},
-    "values": {"type": "string"},
-    "automatedSync": {"type": "boolean"}
+    "revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "valueFiles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "values": {
+      "type": "string"
+    },
+    "automatedSync": {
+      "type": "boolean"
+    },
+    "benchmarks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "valueFiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "values": {
+          "type": "string"
+        },
+        "automatedSync": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled",
+        "valueFiles",
+        "values",
+        "automatedSync"
+      ]
+    }
   }
 }

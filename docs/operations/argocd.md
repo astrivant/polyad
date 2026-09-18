@@ -18,7 +18,10 @@ that make this possible.<sup>[\[1\]](https://argo-cd.readthedocs.io/en/stable/op
 ## Install into an existing Argo CD release
 
 For a new test cluster, the [Terraform GKE bootstrap](../../terraform/README.md)
-installs Argo CD, these health checks and a Polyad Application together.
+installs standalone, non-HA Argo CD and these health checks on the `fixtures` pool.
+Its UI contains the operator Application and an optional manual-sync benchmark
+Application. See [benchmark inspection and CRD setup](../../terraform/README.md#inspect-the-benchmark-application)
+before syncing the fixtures; load generation still requires an explicit activation.
 
 Run these commands from a Polyad checkout with its Python dependencies installed.
 For an Argo CD installation managed through the upstream `argo-cd` Helm chart,

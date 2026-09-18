@@ -209,7 +209,13 @@ async def check_live_rules(
         if boundaries > 256 or len(path) >= 32:
             raise RuleViolation("graph expansion exceeds 32 nesting levels or 256 boundaries")
         identity = instance["metadata"] if instance else {}
-        identities[path] = {"kind": kind, "name": identity.get("name"), "uid": identity.get("uid"), "path": [name for _, name in path]}
+        identities[path] = {
+            "kind": kind,
+            "name": identity.get("name"),
+            "uid": identity.get("uid"),
+            "generation": identity.get("generation"),
+            "path": [name for _, name in path],
+        }
         body = copy.deepcopy(body)
         live_children = await children(instance)
         is_target = identity.get("uid") == target_uid

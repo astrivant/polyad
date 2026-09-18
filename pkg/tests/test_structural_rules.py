@@ -211,3 +211,18 @@ def test_cheeger_matches_exhaustive_cuts():
         graph = nx.gnp_random_graph(7, 0.5, seed=seed)
         expected = min(nx.cut_size(graph, subset) / size for size in range(1, 4) for subset in combinations(graph, size))
         assert graph_cheeger(graph) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_benchmark_spectrum_retention_does_not_change_admission(enabled, monkeypatch):
+    """
+    Preserve computed eigenvalues across replicas only when the administrator enables their retention.
+    """
+    monkeypatch.setenv("POLYAD_METRICS_GRAPH_SPECTRA", str(enabled).lower())
+    rule = resource("GraphRule", "spectrum", {"spectrum": {}})
+    graph = {"nodes": [{"name": "a", "kind": "Workload", "ref": "work"}]}
+    report = asyncio.run(check_rules(FakeAPI(rule), "test", "Graph", graph))[0]
+    assert report["allowed"]
+    assert report["spectrum"]["radius"] == 0
+    assert ("adjacency" in report["spectrum"]) is enabled
+    assert ("laplacian" in report["spectrum"]) is enabled

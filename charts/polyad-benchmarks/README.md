@@ -48,9 +48,11 @@ GKE demo with operator authentication disabled. NetworkPolicy and Istio must
 permit graph workloads to call the operator API. No Kubernetes API RBAC or service
 account token is granted to the fixture or runner.
 
-CPU/memory settings and placement apply to all three execution roles. Keep the
-runner workload fixed when measuring operator autoscaling; using the same pool
-also measures contention and node scale-up effects.
+CPU/memory settings apply to all three execution roles. Consumer `placement`
+applies to fixture and batch Pods; `runnerPlacement` independently places load
+generators. Both default to normal scheduling. The GKE study uses `fixtures` for
+consumers/support and `copolyad` for producers, with Polyad on `polyad`. Keep the
+runner workload fixed when measuring operator autoscaling.
 
 ## Test profiles
 
@@ -95,7 +97,9 @@ use these same templates to create isolated compositions with immutable plans.
 Optional dependencies provide Prometheus/Grafana, Tempo, and an OpenTelemetry
 Collector, with a ServiceMonitor and a starter dashboard. All are disabled by
 default; [the GKE overlay](../../studies/load/gke-values.yaml) enables them and
-places every component on the experiment pool. Read the
+separates producers, consumers and the operator across dedicated pools. The
+[standalone Argo CD UI](../../terraform/README.md#inspect-the-benchmark-application)
+can inspect the fixture Graph and its generated resources. Read the
 [monitoring instructions](../../studies/load/README.md#monitoring-and-traces) for
 operator trace export, private Grafana access, retained data and existing stacks.
 The full dependency values remain available under their chart aliases; upstream
@@ -116,25 +120,27 @@ operator scrapes; it can be paired with any of the test profiles above.
 
 ### Shared fixture settings
 
-| Name                                                  | Description                                                                                                                                                            | Value                                         |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `polyadResources.enabled`                             | **Type: boolean.** Keep false; the benchmark parent renders the shared CRD templates after merging the selected JSON plan.                                             | `false` |
-| `polyadResources.variables.images.runner`             | **Type: string.** Repository of the runner image built from services/runner/Dockerfile.                                                                                | `ghcr.io/astrivant/polyad-benchmarks-runner` |
-| `polyadResources.variables.images.fixture`            | **Type: string.** Repository of the fixture image built from services/fixture/Dockerfile; also runs finite batch Jobs.                                                 | `ghcr.io/astrivant/polyad-benchmarks-fixture` |
-| `polyadResources.variables.images.tag`                | **Type: string.** Published immutable image tag shared by the runner and fixture images; build and push both before running.                                           | `0.0.1-alpha3` |
-| `polyadResources.variables.images.pullPolicy`         | **Type: string.** Settings for polyadResources.variables.images.pullPolicy.                                                                                            | `IfNotPresent` |
-| `polyadResources.variables.run`                       | **Type: object.** Settings for polyadResources.variables.run.                                                                                                          | `{}` |
-| `polyadResources.variables.placement.nodeSelector`    | **Type: object.** Node labels required by every fixture, batch and runner Pod. Empty uses normal scheduling.                                                           | `{}` |
-| `polyadResources.variables.placement.tolerations`     | **Type: array.** Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.                                                              | `[]` |
-| `polyadResources.variables.resources.requests.cpu`    | **Type: string.** Settings for polyadResources.variables.resources.requests.cpu.                                                                                       | `100m` |
-| `polyadResources.variables.resources.requests.memory` | **Type: string.** Settings for polyadResources.variables.resources.requests.memory.                                                                                    | `64Mi` |
-| `polyadResources.variables.resources.limits.cpu`      | **Type: string.** Settings for polyadResources.variables.resources.limits.cpu.                                                                                         | `500m` |
-| `polyadResources.variables.resources.limits.memory`   | **Type: string.** Settings for polyadResources.variables.resources.limits.memory.                                                                                      | `128Mi` |
-| `polyadResources.variables.secretName`                | **Type: string.** Existing Secret in the graph namespace with separate operator and fixture tokens. Empty is only for a private operator with authentication disabled. | `""` |
-| `polyadResources.variables.operatorTokenKey`          | **Type: string.** Secret key holding a Polyad credential permitted to submit and read activations in this graph tree.                                                  | `operator-token` |
-| `polyadResources.variables.fixtureTokenKey`           | **Type: string.** Secret key holding a separate token authenticating the runner to the fixture; never reuse the operator credential.                                   | `fixture-token` |
-| `polyadResources.variables.replicas`                  | **Type: object.** Desired fixture Pods and concurrent batch Jobs, independently of operator replica settings.                                                          | `{}` |
-| `polyadResources.variables.reloadOnPlanChange`        | **Type: boolean.** Opt the fixture Deployment into ConfigMap-triggered Reloader restarts. Requires bundled or existing Reloader; apply plan changes between runs.      | `false` |
+| Name                                                     | Description                                                                                                                                                            | Value                                         |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `polyadResources.enabled`                                | **Type: boolean.** Keep false; the benchmark parent renders the shared CRD templates after merging the selected JSON plan.                                             | `false` |
+| `polyadResources.variables.images.runner`                | **Type: string.** Repository of the runner image built from services/runner/Dockerfile.                                                                                | `ghcr.io/astrivant/polyad-benchmarks-runner` |
+| `polyadResources.variables.images.fixture`               | **Type: string.** Repository of the fixture image built from services/fixture/Dockerfile; also runs finite batch Jobs.                                                 | `ghcr.io/astrivant/polyad-benchmarks-fixture` |
+| `polyadResources.variables.images.tag`                   | **Type: string.** Published immutable image tag shared by the runner and fixture images; build and push both before running.                                           | `0.0.1-alpha3` |
+| `polyadResources.variables.images.pullPolicy`            | **Type: string.** Settings for polyadResources.variables.images.pullPolicy.                                                                                            | `IfNotPresent` |
+| `polyadResources.variables.run`                          | **Type: object.** Settings for polyadResources.variables.run.                                                                                                          | `{}` |
+| `polyadResources.variables.placement.nodeSelector`       | **Type: object.** Required node labels for fixture and batch Pods. Empty uses normal scheduling.                                                                       | `{}` |
+| `polyadResources.variables.placement.tolerations`        | **Type: array.** Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.                                                              | `[]` |
+| `polyadResources.variables.runnerPlacement.nodeSelector` | **Type: object.** Required node labels for the runner Pod. Empty uses normal scheduling independently of consumer placement.                                           | `{}` |
+| `polyadResources.variables.runnerPlacement.tolerations`  | **Type: array.** Taints these Pods may tolerate; combine with nodeSelector to choose the experiment pool.                                                              | `[]` |
+| `polyadResources.variables.resources.requests.cpu`       | **Type: string.** Settings for polyadResources.variables.resources.requests.cpu.                                                                                       | `100m` |
+| `polyadResources.variables.resources.requests.memory`    | **Type: string.** Settings for polyadResources.variables.resources.requests.memory.                                                                                    | `64Mi` |
+| `polyadResources.variables.resources.limits.cpu`         | **Type: string.** Settings for polyadResources.variables.resources.limits.cpu.                                                                                         | `500m` |
+| `polyadResources.variables.resources.limits.memory`      | **Type: string.** Settings for polyadResources.variables.resources.limits.memory.                                                                                      | `128Mi` |
+| `polyadResources.variables.secretName`                   | **Type: string.** Existing Secret in the graph namespace with separate operator and fixture tokens. Empty is only for a private operator with authentication disabled. | `""` |
+| `polyadResources.variables.operatorTokenKey`             | **Type: string.** Secret key holding a Polyad credential permitted to submit and read activations in this graph tree.                                                  | `operator-token` |
+| `polyadResources.variables.fixtureTokenKey`              | **Type: string.** Secret key holding a separate token authenticating the runner to the fixture; never reuse the operator credential.                                   | `fixture-token` |
+| `polyadResources.variables.replicas`                     | **Type: object.** Desired fixture Pods and concurrent batch Jobs, independently of operator replica settings.                                                          | `{}` |
+| `polyadResources.variables.reloadOnPlanChange`           | **Type: boolean.** Opt the fixture Deployment into ConfigMap-triggered Reloader restarts. Requires bundled or existing Reloader; apply plan changes between runs.      | `false` |
 
 ### Plan reloads
 

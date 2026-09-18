@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from polyad.graph.rules import evaluate_rule
@@ -113,8 +114,8 @@ async def check_rules(
                 evaluate_rule, rules[name], graph, expanded_nodes=expanded, nesting_depth=depth, cheeger_limits=computation_limits()
             )
             meta = documents[name]["metadata"]
-            # Full spectra remain available through the Python API; status retains compact summaries.
-            if report["spectrum"] is not None:
+            # Keep full eigenvalue arrays only when benchmark diagnostics are enabled.
+            if report["spectrum"] is not None and os.getenv("POLYAD_METRICS_GRAPH_SPECTRA", "false").lower() != "true":
                 report["spectrum"] = {key: value for key, value in report["spectrum"].items() if key not in {"adjacency", "laplacian"}}
             reports.append({"name": name, "uid": meta["uid"], "generation": meta.get("generation", 1), **report})
             if observations is not None:

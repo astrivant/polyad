@@ -17,3 +17,8 @@ output "polyad_application" {
   description = "Argo CD Application that follows the public Polyad repository."
   value       = "argocd/polyad"
 }
+
+output "benchmarks_application" {
+  description = "Manual-sync benchmark Application in the Argo CD UI; null when registration is disabled."
+  value       = var.benchmarks_enabled ? "argocd/polyad-benchmarks" : null
+}

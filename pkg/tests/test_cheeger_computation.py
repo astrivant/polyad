@@ -43,6 +43,9 @@ def test_priority_cuts_disprove_minima_without_claiming_an_exact_constant():
     assert not result.exact and result.reason == "MinimumViolated"
     assert result.evaluatedCuts == 1 and result.upperBound == pytest.approx(1 / 3)
     assert set(result.cut) == set("abc")
+    assert result.inputs["vertices"] == 6 and result.inputs["edges"] == 5
+    assert result.inputs["maxCuts"] == 1 and result.inputs["priorityCuts"] == 1
+    assert result.durationSeconds >= 0
     ordinary = compute_cheeger(graph, CheegerComputation(maxCuts=1), minimum=0.5)
     assert ordinary.reason == "CutBudget" and ordinary.upperBound == 1
 
@@ -163,3 +166,26 @@ def test_tuning_reference_and_generated_schemas_share_computation_types():
         assert validator.is_valid({"maxVertices": 22, "maxCuts": 2097151, "timeoutSeconds": 15, "priorityCuts": [["a", "b"]]})
         for invalid in ({"maxVertices": True}, {"maxCuts": 0}, {"timeoutSeconds": "5"}, {"priorityCuts": [["a", "a"]]}):
             assert not validator.is_valid(invalid)
+
+
+def test_solver_diagnostics_survive_kubernetes_status_schema_pruning():
+    """
+    Every certificate field must be declared in the persisted status schema, not silently pruned by Kubernetes.
+    """
+    root = Path(__file__).parents[2]
+    report = compute_cheeger(nx.path_graph(list("abc")), CheegerComputation(maxCuts=1)).report()
+    # JSON serialization converts attrs tuples into the arrays expected by OpenAPI.
+    import json
+
+    report = json.loads(json.dumps(report))
+    for kind in ("graphs", "polygraphs"):
+        crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{kind}.yaml").read_text())
+        schema = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]["status"]["properties"]["throughput"]
+        for field in ("computation", "currentComputation"):
+            certificate = schema["properties"][field]
+            assert report.keys() <= certificate["properties"].keys()
+            jsonschema.Draft4Validator(certificate).validate(report)
+        candidate = schema["properties"]["candidateComputations"]["items"]
+        assert {*report, "layout"} <= candidate["properties"].keys()
+        jsonschema.Draft4Validator(candidate).validate({"layout": "chain", **report})
+        assert "observedGeneration" in schema["properties"]

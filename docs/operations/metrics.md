@@ -10,6 +10,7 @@ parent/root identities and graph status. `/openapi.json` describes the HTTP API.
 
 - [Enable and scrape](#enable-and-scrape)
 - [Metric inventory and scope](#metric-inventory-and-scope)
+- [Graph diagnostics for benchmarks](#graph-diagnostics-for-benchmarks)
 - [Freshness and failures](#freshness-and-failures)
 - [Operator scaling with KEDA](#operator-scaling-with-keda)
 - [Central reports across clusters](#central-reports-across-clusters)
@@ -194,11 +195,95 @@ The scalar routes are available independently of `metrics.graphLabels`:
 | `/v1/dragonfly/connections` | Bundled HA Dragonfly primary connection sampler |
 
 CPU and memory utilization for the operator HPA come from Kubernetes resource
-metrics, not this exporter. Application throughput reports and Cheeger policy
-decisions currently remain in `status.throughput` / `status.structuralRules` and
-their APIs; they are not additional Prometheus metric families. OpenTelemetry
-exports [traces and decision logs](tracing.md); these exports do not duplicate
-the Prometheus metrics.
+metrics. Graph calculations and Soul searching observations are exported from
+`status.structuralRules` and `status.throughput`, as described below. OpenTelemetry
+also exports [traces and decision logs](tracing.md).
+
+## Graph diagnostics for benchmarks
+
+Enable the following on the **operator chart**. The Terraform and load-study
+operator profiles already do this:
+
+```yaml
+metrics:
+  enabled: true
+  graphLabels: true
+  graphSpectra: true
+```
+
+Every metrics-serving operator replica publishes the same families from its
+cached namespace inventory. Roots also export their fresh remote inventories
+with a `cluster` label; local observations use `cluster=""`. Other labels identify
+`graph_namespace`, `kind`, `name`, parent and root. These cover **Graph, PolyGraph
+and ReplicaGroup** boundaries. Separate replicas may briefly observe different
+revisions: deduplicate equivalent observations with `max by (...)`, rather than
+summing copies of the same graph. Preserve `cluster`, graph identity and the
+family's rule/relation/stage labels when doing so.
+
+| Metric | Calculated values and inputs |
+| --- | --- |
+| `polyad_graph_topology` | All numeric topology fields by `view` (`declared` or `observed`) and `dimension`: node/kind/subgraph counts, admission edges/depth/breadth/layer widths/fan-in/fan-out/roots/leaves, connection components and condensation layers |
+| `polyad_graph_execution` | Numeric execution and recursive rollup fields by `scope` and `dimension`; do not add direct counts to rollups |
+| `polyad_graph_rule_current` | Whether the saved admission report matches graph generation plus current rule UID/generation; zero suppresses its measured-value series |
+| `polyad_graph_rule_allowed` | Verdict of the most recent successful admission report, by `rule` and `relation`; rejected attempts remain decision logs, not newly admitted state |
+| `polyad_graph_rule_measurement` | Every calculated structural dimension: vertices, edges, depth, breadth, fan-in/out, cycle rank, largest strong component, expanded nodes, nesting depth and exact Cheeger when available |
+| `polyad_graph_rule_parameter` | Numeric configured size limits, hard Cheeger bounds and spectral bounds; unset bounds are omitted |
+| `polyad_graph_rule_shape` | Calculated acyclic/connected/tree predicates, and planarity when requested |
+| `polyad_graph_spectrum` | Adjacency radius, algebraic connectivity and largest Laplacian eigenvalue by `statistic` |
+| `polyad_graph_eigenvalue` | Full sorted adjacency/Laplacian eigenvalues by `matrix` and zero-based `index`, when `graphSpectra` retained them |
+| `polyad_graph_cheeger_input` | Effective `maxVertices`, `maxCuts`, `timeoutSeconds`, operator ceilings, projected vertices/edges and configured priority-cut/vertex counts, by `parameter` |
+| `polyad_graph_cheeger_result` | `exact`, `constant` (exact only), witnessed `upperBound`, `evaluatedCuts`, `skippedPriorityCuts`, `durationSeconds` and witness `cutSize`, by `statistic` |
+| `polyad_graph_cheeger_calculation_info` | Completion reason and projection; `Complete`, `MinimumViolated`, `VertexLimit`, `CutBudget` or `TimeBudget` |
+| `polyad_graph_throughput` | Soul searching numeric observations, application Cheeger targets, proposed Cheeger, demand/throughput, traffic weights and capacity preparation values |
+| `polyad_graph_throughput_info` | Soul searching `mode`, `phase`, demand signal and unit |
+
+Cheeger families distinguish `source="rule"` (hard policy) from
+`source="throughput"` (Soul searching), plus `stage="current"` or `"candidate"`
+and candidate `layout`. The [two bounds guide](../graphs/cheeger-orchestration.md)
+explains their different roles. An incomplete calculation **never** emits an
+exact `constant`: its best observed cut only proves an upper bound. Vertex-limit
+rejections may have no measured edges, cut or upper bound. Duration measures the
+latest calculation's wall time, not a cumulative latency histogram.
+
+These endpoints expose **already calculated** observations. HTTP reads do not
+run eigensolvers or enumerate cuts, and `graphSpectra` does not turn spectral
+rules on. To calculate spectra, configure `spectrum: {}` on a selected
+[GraphRule](../graphs/graph-rules.md#spectral-bounds); this requests measurement
+without adding a spectral bound. The load fixture's `load-envelope` rule includes
+it. Spectral calculations retain the existing 256-vertex limit. Full eigenvalues
+add two series per vertex per spectral rule and increase status/snapshot size;
+disable `graphSpectra` when summary values suffice.
+
+Admission measurements describe the last successfully checked live boundary;
+`declared`/`observed` topology counts come from ordinary lifecycle observations.
+They need not describe identical vertices while activation instances are changing.
+A fresh inventory and matching generations do not make measurements an atomic
+cluster snapshot. Stale/missing inventory, changed rule identity or graph
+generation suppress applicable series instead of inventing zeros. Soul searching
+carries its own evaluated generation; expired application samples are cleared by
+its existing reconciliation policy. Older operator versions' reports without
+these fences are withheld until recomputed.
+
+`/v1/metrics` includes the complete precomputed reports under
+`inventory.objects[].structuralRules`, plus `throughput` and `observedTopology`.
+Reports include rule identities, selected parameters, witness vertex names and,
+when retained, eigenvalue arrays. Detailed names and witness cuts stay in JSON,
+not Prometheus labels. Array-valued numeric paths use zero-based indices; consult
+JSON for the corresponding named traffic destinations. Remote copies appear under
+`clusters[cluster].inventory.objects`. Existing metrics authentication and network
+policies protect both endpoints.
+
+For example, chart exact structural Cheeger values without combining replicas:
+
+```promql
+max by (cluster, graph_namespace, kind, name, rule, relation) (
+  polyad_graph_cheeger_result{source="rule",stage="current",statistic="constant"}
+)
+```
+
+The [benchmark dashboard](../../studies/load/README.md#monitoring-and-traces)
+includes topology, Cheeger values/bounds, search work and spectra. Missing series
+mean uncalculated, unavailable or stale; do not substitute zero for them.
 
 ## Freshness and failures
 

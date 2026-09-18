@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=argocd-values.schema.json
+# Standalone testing installation; dynamic repositories, health checks and password come from Terraform.
+## @param global [object] Place Argo CD and its installation jobs with benchmark support services.
+global:
+  ## @param global.nodeSelector [object] Required node labels for Argo CD components and hook jobs.
+  nodeSelector:
+    ## @param global.nodeSelector.cloud.google.com/gke-nodepool [string] Settings for global.nodeSelector.cloud.google.com/gke-nodepool.
+    cloud.google.com/gke-nodepool: fixtures
+  ## @param global.tolerations [array] Tolerate the dedicated fixtures taint.
+  tolerations:
+    ## @param global.tolerations[].key [string] Node taint key.
+    - key: dedicated
+      ## @param global.tolerations[].operator [string] Match the taint value exactly with Equal.
+      operator: Equal
+      ## @param global.tolerations[].value [string] Dedicated support pool name.
+      value: fixtures
+      ## @param global.tolerations[].effect [string] Allow scheduling on the NoSchedule-tainted pool.
+      effect: NoSchedule
+## @param controller [object] One application controller for this single-cluster benchmark environment.
+controller:
+  ## @param controller.replicas [integer] Desired replicas; one keeps this test component non-HA.
+  replicas: 1
+## @param server [object] One private UI/API server; use kubectl port-forward to inspect resources.
+server:
+  ## @param server.replicas [integer] Desired replicas; one keeps this test component non-HA.
+  replicas: 1
+  ## @param server.autoscaling [object] Settings for server.autoscaling.
+  autoscaling:
+    ## @param server.autoscaling.enabled [boolean] Enable this component or autoscaler.
+    enabled: false
+  ## @param server.service [object] Settings for server.service.
+  service:
+    ## @param server.service.type [string] Keep the benchmark UI private; access it with port-forward.
+    type: ClusterIP
+## @param repoServer [object] One repository server; do not autoscale benchmark support components implicitly.
+repoServer:
+  ## @param repoServer.replicas [integer] Desired replicas; one keeps this test component non-HA.
+  replicas: 1
+  ## @param repoServer.autoscaling [object] Settings for repoServer.autoscaling.
+  autoscaling:
+    ## @param repoServer.autoscaling.enabled [boolean] Enable this component or autoscaler.
+    enabled: false
+## @param applicationSet [object] Keep the ApplicationSet controller at one replica as well.
+applicationSet:
+  ## @param applicationSet.replicas [integer] Desired replicas; one keeps this test component non-HA.
+  replicas: 1
+## @param redis [object] Use standalone Redis for Argo CD's own cache.
+redis:
+  ## @param redis.enabled [boolean] Enable this component or autoscaler.
+  enabled: true
+## @param redis-ha [object] Disable the HA Redis dependency for this test installation.
+redis-ha:
+  ## @param redis-ha.enabled [boolean] Enable this component or autoscaler.
+  enabled: false
+## @param redisSecretInit [object] Initialize the Redis credential using a job with the same fixtures placement.
+redisSecretInit:
+  ## @param redisSecretInit.enabled [boolean] Enable this component or autoscaler.
+  enabled: true
+## @param dex [object] Use the supplied local admin password; no external identity service is needed for this test UI.
+dex:
+  ## @param dex.enabled [boolean] Enable this component or autoscaler.
+  enabled: false
+## @param notifications [object] Omit the notification controller in the standalone test installation.
+notifications:
+  ## @param notifications.enabled [boolean] Enable this component or autoscaler.
+  enabled: false

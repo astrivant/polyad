@@ -1,0 +1,35 @@
+{{- if .Values.benchmarks.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: polyad-benchmarks
+  namespace: {{ .Release.Namespace }}
+  # Deliberately no cascading deletion finalizer, as with the operator Application.
+spec:
+  project: polyad
+  source:
+    repoURL: https://github.com/astrivant/polyad.git
+    targetRevision: {{ .Values.revision | quote }}
+    path: charts/polyad-benchmarks
+    helm:
+      releaseName: benchmarks
+      # Polyad owns its CRDs. Install monitoring CRDs separately before first sync.
+      skipCrds: true
+      skipTests: true
+      valueFiles: {{ .Values.benchmarks.valueFiles | toJson }}
+      values: |
+        {{- .Values.benchmarks.values | nindent 8 }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: polyad
+  syncPolicy:
+    {{- if .Values.benchmarks.automatedSync }}
+    automated:
+      prune: true
+      selfHeal: true
+    {{- end }}
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+{{- end }}

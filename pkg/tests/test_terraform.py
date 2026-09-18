@@ -55,7 +55,8 @@ def test_git_application_preserves_autoscaling(installation):
     """
     Every component autoscaler target must retain its live count during sync.
     """
-    project, application = bootstrap()
+    resources = {(obj["kind"], obj["metadata"]["name"]): obj for obj in bootstrap()}
+    project, application = resources["AppProject", "polyad"], resources["Application", "polyad"]
     spec = application["spec"]
     assert spec["source"]["repoURL"] == "https://github.com/astrivant/polyad.git"
     assert spec["source"]["path"] == "charts/polyad"
@@ -85,7 +86,11 @@ def test_freezing_automatic_sync():
     """
     Frozen experiments keep a manual sync policy and the requested Git revision.
     """
-    _, application = bootstrap("automatedSync=false", "revision=test-run")
+    application = next(
+        obj
+        for obj in bootstrap("automatedSync=false", "revision=test-run")
+        if obj["metadata"]["name"] == "polyad" and obj["kind"] == "Application"
+    )
     assert "automated" not in application["spec"]["syncPolicy"]
     assert application["spec"]["source"]["targetRevision"] == "test-run"
 
@@ -152,3 +157,40 @@ def test_every_operator_component_stays_on_dedicated_pool(installation):
         "keda-operator-metrics-apiserver",
         "keda-admission-webhooks",
     } <= checked
+
+
+@pytest.mark.parametrize("automatic", [False, True])
+def test_benchmark_application_inspects_fixtures_without_starting_load(automatic):
+    """
+    Track the fixture graph in the same UI without claiming shared CRDs or pulsing jobs.
+    """
+    objects = bootstrap(f"benchmarks.automatedSync={str(automatic).lower()}", "revision=test-run")
+    application = next(obj for obj in objects if obj["metadata"]["name"] == "polyad-benchmarks")
+    spec = application["spec"]
+    assert spec["project"] == "polyad"
+    assert spec["destination"]["namespace"] == "polyad"
+    assert spec["source"]["targetRevision"] == "test-run"
+    assert spec["source"]["path"] == "charts/polyad-benchmarks"
+    helm = spec["source"]["helm"]
+    assert helm["releaseName"] == "benchmarks"
+    assert helm["skipCrds"] is True
+    assert helm["skipTests"] is True
+    assert ("automated" in spec["syncPolicy"]) is automatic
+    assert not application["metadata"].get("finalizers")
+    command = ["helm", "template", "benchmarks", str(ROOT / spec["source"]["path"]), "-n", "polyad", "--skip-tests"]
+    for path in helm["valueFiles"]:
+        command.extend(["-f", str(ROOT / spec["source"]["path"] / path)])
+    rendered = list(filter(None, yaml.safe_load_all(subprocess.check_output(command, text=True))))
+    assert not any(obj["kind"] in {"Activation", "CustomResourceDefinition"} for obj in rendered)
+    runner = next(obj for obj in rendered if obj["kind"] == "Workload" and obj["metadata"]["name"] == "load-runner")
+    assert runner["spec"]["activation"]["mode"] == "Reject"
+    assert runner["spec"]["template"]["spec"]["nodeSelector"]["cloud.google.com/gke-nodepool"] == "copolyad"
+
+
+def test_benchmark_registration_is_optional_and_manual_by_default():
+    """
+    Registration does not immediately install fixtures or duplicate an existing administrator release.
+    """
+    application = next(obj for obj in bootstrap() if obj["metadata"]["name"] == "polyad-benchmarks")
+    assert "automated" not in application["spec"]["syncPolicy"]
+    assert not any(obj["metadata"]["name"] == "polyad-benchmarks" for obj in bootstrap("benchmarks.enabled=false"))

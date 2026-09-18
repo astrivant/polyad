@@ -94,8 +94,10 @@ metrics:
   enabled: true
   # Boolean. Adds hierarchy/shape/resource/workload-signal labels, including object names.
   # Keep false for aggregate monitoring; scalar KEDA routes and JSON remain available.
-  ## @param metrics.graphLabels [boolean] Add per-object hierarchy, resources, shape and local/remote workload-signal Prometheus series; increases cardinality, does not gate JSON or KEDA scalar routes
+  ## @param metrics.graphLabels [boolean] Expose per-graph topology, policy, Cheeger, spectrum, throughput and workload-signal series; increases cardinality, does not gate JSON or KEDA scalar routes
   graphLabels: false
+  ## @param metrics.graphSpectra [boolean] Retain already-calculated eigenvalues for graph diagnostics; adds per-rule storage and time series when graphLabels is enabled.
+  graphSpectra: false
   ## @param metrics.authentication [object] Settings for metrics.authentication.
   authentication:
     # Boolean. Provision this Secret separately and configure scraper credentials.

@@ -81,6 +81,8 @@ metrics:
   enabled: true
   ## @param metrics.graphLabels [boolean] Include per-graph series for experiments; this adds cardinality and observation overhead.
   graphLabels: true
+  ## @param metrics.graphSpectra [boolean] Retain already-calculated eigenvalues for graph diagnostics; adds per-rule storage and time series when graphLabels is enabled.
+  graphSpectra: true
 ## @param operator [object] Initial measurement baseline; tune one dimension at a time using experiment overrides.
 operator:
   ## @param operator.nodeSelector [object] Place bootstrap and generated component Daemons on the Polyad pool.

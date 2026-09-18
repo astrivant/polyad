@@ -13,6 +13,10 @@ module "gke" {
   name                = var.cluster_name
   machine_type        = var.machine_type
   default_node_count  = var.default_node_count
+  fixtures_min_nodes  = var.fixtures_min_nodes
+  fixtures_max_nodes  = var.fixtures_max_nodes
+  copolyad_min_nodes  = var.copolyad_min_nodes
+  copolyad_max_nodes  = var.copolyad_max_nodes
   deletion_protection = var.deletion_protection
 }
 
@@ -40,14 +44,7 @@ resource "helm_release" "argocd" {
   atomic           = true
   timeout          = 900
 
-  values = [yamlencode({
-    global = {
-      nodeSelector = { "cloud.google.com/gke-nodepool" = "polyad" }
-      tolerations  = [{ key = "dedicated", operator = "Equal", value = "polyad", effect = "NoSchedule" }]
-    }
-    dex           = { enabled = false }
-    notifications = { enabled = false }
-    server        = { service = { type = "ClusterIP" } }
+  values = [yamlencode(merge(yamldecode(file("${path.module}/argocd-values.yaml")), {
     configs = {
       cm = merge(local.polyad_health, {
         "admin.enabled"                      = true
@@ -56,7 +53,7 @@ resource "helm_release" "argocd" {
       repositories = local.repositories
       secret       = { argocdServerAdminPasswordMtime = var.argocd_admin_password_mtime }
     }
-  })]
+  }))]
 
   set_sensitive = [{
     name  = "configs.secret.argocdServerAdminPassword"
@@ -80,6 +77,12 @@ resource "helm_release" "bootstrap" {
     valueFiles    = var.polyad_values_files
     values        = var.polyad_values_override
     automatedSync = var.polyad_automated_sync
+    benchmarks = {
+      enabled       = var.benchmarks_enabled
+      valueFiles    = var.benchmarks_values_files
+      values        = var.benchmarks_values_override
+      automatedSync = var.benchmarks_automated_sync
+    }
   })]
 
   depends_on = [helm_release.argocd]

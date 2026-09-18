@@ -44,26 +44,34 @@ namespace after its CRDs and API are ready:
 
 ```sh
 helm dependency build charts/polyad-benchmarks
-helm upgrade --install benchmark charts/polyad-benchmarks -n polyad \
+helm upgrade --install benchmarks charts/polyad-benchmarks -n polyad \
   -f studies/load/gke-values.yaml \
   --set polyadResources.variables.images.runner=YOUR_REGISTRY/polyad-benchmarks-runner \
   --set polyadResources.variables.images.fixture=YOUR_REGISTRY/polyad-benchmarks-fixture \
   --set polyadResources.variables.images.tag=RUN
 ```
 
-The GKE overlay puts fixture, runner and batch Pods on the dedicated `polyad`
-pool, with its matching toleration. The monitoring stack and Reloader use the same placement. That baseline includes resource contention
-and node provisioning time. Use a separate generator pool in later studies that
-isolate operator capacity; placement is configurable in the chart.
+The GKE overlay puts fixture services and batch consumers on `fixtures`, along
+with monitoring and Reloader. Runner Jobs produce load on the separate `copolyad`
+pool. Polyad's chart remains on `polyad`; all three pools use the same machine
+type but autoscale independently. `polyadResources.variables.placement` controls
+consumers, while `runnerPlacement` controls generators. Both require a selector
+and the matching dedicated-pool toleration. The client [plan.json](plan.json)
+uses the same separation. Record node-provisioning time separately for each pool.
 
-An optional [Argo Application](application.yaml) installs the same chart from
-Git without automatically synchronizing it. Set its revision and image parameters
-to published artifacts before applying it. Argo owns only the definitions; dynamic
-Jobs and receipts are operator-owned. Unrelated syncs do not issue activations.
-The sample Application skips CRDs to avoid owning the operator's existing Polyad
-CRDs: install the pinned Prometheus Operator CRDs before its first sync. A first
-Helm install above supplies missing dependency CRDs. Future CRD upgrades need
-administrator coordination; Helm does not upgrade existing CRDs automatically.
+Terraform also registers a manual-sync `polyad-benchmarks` Application in its
+[standalone Argo CD UI](../../terraform/README.md#inspect-the-benchmark-application).
+Choose either that Application or the Helm installation above to own the fixture.
+For an existing Argo installation without Terraform registration, use the
+[standalone Application example](application.yaml). Set its revision and published
+image parameters before applying it; do not apply it over Terraform's Application.
+Argo owns definitions, while dynamic Jobs and receipts remain operator-owned.
+Unrelated syncs do not issue activations.
+
+Both Applications skip shared CRDs. Follow the [monitoring CRD setup](../../terraform/README.md#inspect-the-benchmark-application)
+before the first Argo sync. A first Helm install above instead supplies missing
+dependency CRDs. Coordinate future CRD upgrades separately; Helm does not upgrade
+existing CRDs automatically.
 
 The current private GKE profile disables operator authentication. For a shared
 environment set `polyadResources.variables.secretName` to an existing Secret with
@@ -126,14 +134,22 @@ The GKE overlay enables four optional, pinned chart dependencies: Reloader,
 trace storage, and the OpenTelemetry Collector. All are disabled in the base
 chart so an existing monitoring installation can be used. Prometheus retains
 seven days on a 10 GiB PVC, Tempo retains 72 hours on 10 GiB, and Grafana has a
-5 GiB PVC. These test defaults share the experiment pool and contribute to its
-resource usage. Adjust storage, retention and placement in the dependency values.
+5 GiB PVC. These backends run on `fixtures`, away from the Polyad operator and
+`copolyad` producers. Adjust storage, retention and placement in the dependency
+values, and record their overhead on the consumer pool.
 
 Apply [operator-values.yaml](operator-values.yaml) to the operator's existing
 Helm/GitOps configuration as an additional overlay. It enables metrics, graph
 labels and OTLP/HTTP export to `benchmarks-otel.polyad.svc:4318/v1/traces`; adapt the
 namespace when needed. It deliberately samples every operator trace for the study.
-Keep sampling fixed across comparisons. The Collector batches traces into Tempo;
+The operator overlays enable full [graph diagnostics](../../docs/operations/metrics.md#graph-diagnostics-for-benchmarks),
+including retained eigenvalues. The fixture rule requests `spectrum: {}` alongside
+its existing Cheeger bound, so spectra are calculated during rule evaluation.
+The dashboard separates exact Cheeger from witnessed upper bounds and shows cut
+work, budgets, topology dimensions, spectral summaries and application targets.
+These measurements describe graph boundaries; they do not imply application
+throughput guarantees. Keep graph diagnostics and spectral calculation settings
+fixed across comparisons, along with trace sampling. The Collector batches traces into Tempo;
 Grafana gets Prometheus and Tempo data sources automatically. This instruments
 the operator's existing spans, not every Python statement or fixture request.
 
@@ -223,7 +239,7 @@ batches do not model CPU work, and mock transport tests are not cloud benchmarks
 Export artifacts first, then uninstall the fixture chart:
 
 ```sh
-helm uninstall benchmark -n polyad
+helm uninstall benchmarks -n polyad
 kubectl -n polyad wait --for=delete graph/load-study --timeout=300s
 ```
 

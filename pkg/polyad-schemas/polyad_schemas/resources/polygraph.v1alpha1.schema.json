@@ -1682,6 +1682,10 @@
                 }
               ]
             },
+            "observedGeneration": {
+              "type": "integer",
+              "minimum": 1
+            },
             "computation": {
               "anyOf": [
                 {
@@ -1707,13 +1711,25 @@
                       }
                     },
                     "evaluatedCuts": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 0
                     },
                     "reason": {
                       "type": "string"
                     },
                     "skippedPriorityCuts": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "durationSeconds": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "inputs": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "number"
+                      }
                     }
                   }
                 },
@@ -1721,6 +1737,109 @@
                   "type": "null"
                 }
               ]
+            },
+            "currentComputation": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "exact": {
+                      "type": "boolean"
+                    },
+                    "upperBound": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "cut": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "evaluatedCuts": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "skippedPriorityCuts": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "durationSeconds": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "inputs": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "candidateComputations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "exact": {
+                    "type": "boolean"
+                  },
+                  "upperBound": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cut": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "evaluatedCuts": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "skippedPriorityCuts": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "durationSeconds": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "inputs": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "layout": {
+                    "type": "string"
+                  }
+                }
+              }
             },
             "mode": {
               "anyOf": [
@@ -1949,7 +2068,7 @@
         },
         "structuralRules": {
           "type": "array",
-          "description": "Most recent successful admission policy observations, including rule UID and generation, structural measurements and compact spectral summaries. Check phase and observedGeneration for current validity.",
+          "description": "Most recent successful admission policy observations, including rule UID and generation, structural measurements, calculation budgets/results and optional full spectra. Check phase and observedGeneration for current validity.",
           "items": {
             "type": "object",
             "description": "One evaluated policy verdict; live family checks include the measured boundary identity.",

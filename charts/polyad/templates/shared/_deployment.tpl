@@ -267,6 +267,8 @@ spec:
             - name: POLYAD_METRICS_TOKEN_FILE
               value: /var/run/polyad/metrics/token
             {{- end }}
+            - name: POLYAD_METRICS_GRAPH_SPECTRA
+              value: {{ .Values.metrics.graphSpectra | quote }}
             - name: POLYAD_METRICS_GRAPH_LABELS
               value: {{ .Values.metrics.graphLabels | quote }}
             - name: POLYAD_CAPACITY_ENABLED

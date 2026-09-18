@@ -3,15 +3,16 @@
 Create an isolated GKE cluster, install Argo CD, and let it sync Polyad from this
 public repository. This is the foundation for future load tests of
 [the operator's own Graph](../README.md#the-operator-as-a-graph): it provisions
-the services and exposes their scaling signals. Install the separate
-[benchmark fixture chart and load study](../studies/load/README.md) to generate
-repeatable activation traffic. Metrics retention/dashboard infrastructure is
-supplied separately.
+the services and exposes their scaling signals. The same standalone Argo CD UI
+includes a manually synced [benchmark fixture chart and load study](../studies/load/README.md),
+with monitoring and tracing. Producers, consumers and the operator have separate node pools.
 
 ## Table of contents
 
 - [What runs](#what-runs)
 - [Create the environment](#create-the-environment)
+- [Inspect the benchmark Application](#inspect-the-benchmark-application)
+- [Migrate existing experiments](#migrate-existing-experiments)
 - [Observe scaling](#observe-scaling)
 - [Run repeatable experiments](#run-repeatable-experiments)
 - [Configuration](#configuration)
@@ -21,30 +22,41 @@ supplied separately.
 ## What runs
 
 The root module calls [`modules/gke`](modules/gke/README.md). That module creates
-a dedicated VPC, a **zonal GKE Standard cluster**, and two Ubuntu pools:
+a dedicated VPC, a **zonal GKE Standard cluster**, and four Ubuntu pools:
 
 | Pool | Capacity | Placement |
 | --- | --- | --- |
 | `default` | One fixed `e2-highcpu-2` node; configurable with `default_node_count` | Untainted, for GKE-managed services |
-| `polyad` | Two initial `c3-standard-4` nodes; autoscaling **2–10 total** | Tainted `dedicated=polyad:NoSchedule`, for the experiment |
+| `polyad` | Two initial nodes; autoscaling **2–10 total** | Polyad chart: operator, component Daemons, KEDA, Dragonfly and enabled collectors |
+| `fixtures` | One initial node; autoscaling **1–10 total**, configurable | Argo CD, fixture services, batch consumers, Reloader, Prometheus/Grafana, Tempo and the Collector |
+| `copolyad` | One initial node; autoscaling **1–10 total**, configurable | Runner Jobs that produce the load |
 
-Both use `UBUNTU_CONTAINERD`. Polyad, its generated component Daemons, KEDA,
-Dragonfly's controller and cache, and all Argo CD components require
-`cloud.google.com/gke-nodepool: polyad` and tolerate the dedicated taint. The
-selector keeps these services off the default pool; the taint keeps ordinary
-system workloads off the experiment pool. GKE agents that must run on each node
-can still tolerate taints, so measure their overhead rather than assuming zero
-system activity on Polyad nodes.
+The three experiment pools share `machine_type`, defaulting to `c3-standard-4`,
+and all four use `UBUNTU_CONTAINERD`. Each experiment pool has a matching
+`dedicated=<pool>:NoSchedule` taint; its workloads require
+`cloud.google.com/gke-nodepool: <pool>` and tolerate that exact taint. Separate
+runner placement keeps producers off consumer nodes. Polyad's own Alloy or
+Prometheus Agent remains with the operator chart on `polyad`; monitoring backends
+run on `fixtures`. Namespaces remain `argocd` and `polyad`, independently of pools.
 
-The **2–10 range applies only to `polyad`**: with the default one system node,
-steady-state cluster capacity is 3–11 nodes. Node auto-provisioning is disabled.
-Polyad pool upgrades have no surge nodes and may take one node unavailable.
-The untainted default pool retains GKE's normal surge upgrade behavior.
+With default settings, steady-state capacity is **5–31 nodes** across the cluster.
+Each experiment pool scales independently; node auto-provisioning is disabled.
+Experiment pool upgrades use zero surge and may take one node unavailable; the
+system pool retains GKE's normal surge behavior. GKE's necessary per-node agents
+can still tolerate these taints, so record their overhead during measurements.
 
 Terraform installs Argo CD chart **10.9.2**, running Argo CD **v3.5.3**: the latest
 published chart verified on September 17, 2026. The explicit version makes the
 environment reproducible; `argocd_chart_version` allows a deliberate upgrade.
 See the [upstream chart release](https://github.com/argoproj/argo-helm/releases/tag/argo-cd-10.9.2).
+
+The typed [Argo CD values](argocd-values.yaml) explicitly select **non-HA** mode:
+one application controller, API/UI server, repository server, ApplicationSet
+controller and standalone Redis. Server/repository autoscaling, Redis HA, Dex and
+notifications are disabled. All components and the Redis initialization job select
+`fixtures`. Terraform adds repositories, graph health checks and the supplied
+admin password hash to this profile; there is only one Argo installation.
+
 
 The `polyad` Application follows `https://github.com/astrivant/polyad.git`,
 revision `main`, path `charts/polyad`. Terraform registers that public Git source
@@ -65,24 +77,36 @@ its optional CPU/memory HPA can be enabled for a separate experiment.
 
 ```mermaid
 flowchart TB
-    tf["Terraform root module"] --> system["default pool · Ubuntu<br/>GKE-managed services"]
-    tf --> isolated["polyad pool · Ubuntu<br/>2–10 total nodes; dedicated taint"]
-    subgraph project["All project services select and tolerate the polyad pool"]
-        argo["Argo CD<br/>Authenticated, internal Service"]
-        bootstrap["Two Polyad bootstrap replicas"]
+    tf["Terraform root module"] --> system["default pool · e2-highcpu-2<br/>GKE-managed services"]
+    tf --> op
+    tf --> support
+    tf --> producers
+    subgraph op["polyad pool · 2–10 c3-standard-4 nodes"]
+        bootstrap["Polyad bootstrap replicas"]
         pipeline["Component Graph<br/>Gateway → Executor → Telemetry"]
-        keda["Bundled KEDA"]
+        keda["KEDA"]
         cache["Dragonfly controller and cache"]
-        argo --> bootstrap
-        argo --> pipeline
-        argo --> keda
-        argo --> cache
+        agents["Optional operator collectors"]
         bootstrap -->|"enforce GraphRules"| pipeline
         pipeline -->|"demand metrics"| keda
         keda -->|"request replicas"| pipeline
+        pipeline --> cache
     end
-    isolated --- project
-    git["Public Polyad repository<br/>Chart, lockfile and experiment values"] --> argo
+    subgraph support["fixtures pool · 1–10 c3-standard-4 nodes"]
+        argo["Standalone Argo CD<br/>Private UI"]
+        fixture["Fixture API and batch consumers"]
+        monitoring["Prometheus · Grafana · Tempo<br/>Collector · Reloader"]
+    end
+    subgraph producers["copolyad pool · 1–10 c3-standard-4 nodes"]
+        runner["Load-generator Jobs"]
+    end
+    git["Public Polyad repository"] --> argo
+    argo -->|"Sync operator Application"| bootstrap
+    argo -->|"Manual benchmark sync"| fixture
+    argo --> monitoring
+    runner -->|"Synthetic arrivals"| fixture
+    fixture -->|"Activation requests"| pipeline
+    agents -->|"Observations"| monitoring
 ```
 
 This single-cluster baseline uses the component Graph without enabling root
@@ -94,7 +118,7 @@ experiment with additional credentials and clusters.
 
 Install Terraform **1.9+**, Google Cloud CLI, `gke-gcloud-auth-plugin`, `kubectl`
 and the Argo CD CLI. Use a billing-enabled Google Cloud project with sufficient
-CPU and disk quota for ten experiment nodes plus the default system pool. The provisioning identity needs permission to
+CPU and disk quota for the configured limits across all four pools. The provisioning identity needs permission to
 enable APIs, create GKE/network/service-account resources, and grant the node
 service account its project role. Authenticate with Application Default Credentials:
 
@@ -136,14 +160,14 @@ After apply:
 ```sh
 terraform output -raw get_credentials_command
 # Run the printed gcloud command, then:
-kubectl -n argocd get application polyad
+kubectl -n argocd get applications polyad polyad-benchmarks
 kubectl -n argocd port-forward service/argocd-server 8080:443
 ```
 
 Open `https://localhost:8080`, accept this test installation's self-signed
 certificate, and sign in as `admin` with your password. Argo CD retries sync while
 dependency CRDs and admission webhooks become available. Terraform waits for
-Argo CD, then creates the Application; a successful apply does **not** mean the
+Argo CD, then creates the Applications; a successful apply does **not** mean the
 asynchronously synced Polyad application is already healthy. Check the Application
 conditions and resource tree before testing.
 
@@ -154,6 +178,50 @@ credentials. Polyad's test profile explicitly disables HTTP authentication and
 request quotas on its **internal** APIs to avoid introducing those limits into
 the initial experiment. For a shared cluster, replace that policy with
 [authenticated API keys](../docs/operations/api-keys.md) and network restrictions.
+
+## Inspect the benchmark Application
+
+The UI contains `polyad` and, by default, `polyad-benchmarks`. The latter uses
+`charts/polyad-benchmarks`, the smoke profile and the GKE placement overlay from
+`polyad_revision`. It is **manual sync** by default. Set
+`benchmarks_values_override` to published runner and fixture images before syncing;
+see [terraform.tfvars.example](terraform.tfvars.example). Select another profile
+with `benchmarks_values_files`. Set `benchmarks_enabled = false` when an existing
+administrator release owns these fixtures; do not install a second copy over it.
+
+Argo skips CRDs for the benchmark Application because Polyad's Application already
+owns the shared resource definitions. Before its first sync, install the pinned
+monitoring CRDs from the same checkout (review them before applying):
+
+```sh
+helm dependency build charts/polyad-benchmarks
+helm show crds charts/polyad-benchmarks/charts/kube-prometheus-stack-91.4.1.tgz > /tmp/polyad-monitoring-crds.yaml
+kubectl apply --server-side -f /tmp/polyad-monitoring-crds.yaml
+```
+
+These commands run from the repository root. Existing monitoring administrators
+may already supply these definitions. Manage subsequent CRD upgrades deliberately;
+the benchmark Application will not claim them. Wait for the operator Application
+to become healthy, then sync `polyad-benchmarks` in the UI. Open its `load-study`
+Graph to inspect the fixture Deployment and, after an explicit run, runner and
+batch Jobs through their owner references. The supplied [graph health checks](../docs/operations/argocd.md)
+roll up descendants. **Syncing does not start load**; use the
+[study commands](../studies/load/README.md#repeat-an-experiment) to activate a run.
+
+## Migrate existing experiments
+
+Apply the updated Terraform configuration to create `fixtures` and `copolyad`;
+existing `default` and `polyad` pools retain their resource identities. The Argo
+Helm upgrade moves its components to `fixtures`. Publish the updated chart and
+study overlay at the selected Git revision before syncing benchmark changes.
+For a Helm-owned fixture, upgrade that existing release with the overlay instead.
+
+Finish active runs and retain results before changing placement. Fixture and
+monitoring controllers replace Pods according to their rollout policies; existing
+finite Jobs retain their original placement until they finish. New runner Jobs
+use `copolyad`; new fixture/batch Pods use `fixtures`. Retain monitoring PVCs.
+Check `kubectl get pods -n polyad -o wide` alongside node-pool labels before the
+next run, and record this isolation change as a new experiment baseline.
 
 ## Observe scaling
 
@@ -231,9 +299,9 @@ replica bounds while holding workload shape and offered load constant. See
 [component scaling](../docs/deployment/components.md). Turning on traffic
 balancing, cache HA, PostgreSQL or additional tracing changes the experiment;
 their [typed chart references](../charts/polyad/README.md) expose those choices.
-Apply the same selector and toleration to optional services and any future load
-generator/workload Pods that should consume the experiment pool; arbitrary user
-workloads do not inherit the operator's own placement.
+Keep optional Polyad-chart services on `polyad`, supporting services and consumers
+on `fixtures`, and generators on `copolyad`. The study overlay and client plan
+include these selectors and tolerations; arbitrary user workloads do not inherit them.
 
 ## Configuration
 
@@ -245,8 +313,10 @@ All Terraform inputs have explicit types and descriptions in
 | `project_id` | string | Required existing project |
 | `region`, `zone` | string | `us-central1`, `us-central1-a` |
 | `cluster_name` | string | `polyad-load-test` |
-| `machine_type` | string | `c3-standard-4` for the Polyad pool |
+| `machine_type` | string | `c3-standard-4` shared by `polyad`, `fixtures` and `copolyad` |
 | `default_node_count` | number (integer) | `1` untainted system node, additional to Polyad capacity |
+| `fixtures_min_nodes`, `fixtures_max_nodes` | number (integer) | `1`, `10`; support/consumer pool bounds |
+| `copolyad_min_nodes`, `copolyad_max_nodes` | number (integer) | `1`, `10`; load-generator pool bounds |
 | `deletion_protection` | bool | `false` for disposable tests |
 | `argocd_chart_version` | string | `10.9.2` |
 | `argocd_admin_password_hash` | sensitive string | Required bcrypt hash |
@@ -255,6 +325,10 @@ All Terraform inputs have explicit types and descriptions in
 | `polyad_values_files` | list(string) | `../../terraform/polyad-values.yaml`, relative to `charts/polyad` in Git |
 | `polyad_values_override` | string | Final YAML mapping, initially `{}`; no secrets |
 | `polyad_automated_sync` | bool | `true`; sync, prune and self-heal |
+| `benchmarks_enabled` | bool | `true`; register the fixture Application |
+| `benchmarks_values_files` | list(string) | Smoke and GKE overlays, relative to `charts/polyad-benchmarks` |
+| `benchmarks_values_override` | string | Final benchmark YAML mapping, initially `{}`; published images and run settings |
+| `benchmarks_automated_sync` | bool | `false`; manually install/update fixtures without starting traffic |
 
 The `polyad` pool's requested **2–10 total** range is fixed in the GKE module;
 `default_node_count` controls additional untainted system capacity.
@@ -283,7 +357,7 @@ developer platforms. See [Terraform's provider locking command](https://develope
 ## Ownership and teardown
 
 Terraform owns GKE, Argo CD, repository configuration, health customizations, the
-AppProject and Application. Argo owns Polyad's chart resources. Polyad owns the
+AppProject and Applications. Argo owns the operator and synced benchmark chart resources. Polyad owns the
 component instances it creates; KEDA owns the requested replica counts of their
 three definitions. Argo ignores those count fields and respects that exception
 during sync, so self-healing cannot reset a scaled group to its initial two copies.
@@ -304,7 +378,7 @@ unset TF_VAR_argocd_admin_password_hash
 ```
 
 If deletion protection was enabled, first apply with it set to `false`. The
-Application deliberately has no cascading deletion finalizer: deleting only the
+Applications deliberately have no cascading deletion finalizers: deleting only the
 bootstrap release leaves Polyad running, and destroying the entire environment
 does not wait for graph cleanup after removing the controller. Before retaining a
 cluster but uninstalling Polyad, drain application graphs while the operator is
