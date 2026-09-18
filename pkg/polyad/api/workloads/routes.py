@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from flask import jsonify, request
 
 from polyad.api.http.errors import Unavailable
+from polyad.operator.observability.tracing import identify_request
 from polyad_types.codec import converter
 from polyad_types.requests import ActivationRequest, identity
 from polyad_types.throughput import ThroughputSample
@@ -46,6 +47,7 @@ def register_routes(
     @app.post("/v1/activations")
     def activation_submit() -> tuple[Response, int]:
         value = converter.structure(request.get_json(), ActivationRequest)
+        identify_request(value.requestId)
         if activate is None:
             raise Unavailable("activation service is not configured")
         return jsonify(activate(value)), 202
@@ -54,14 +56,18 @@ def register_routes(
     def activation_status(request_id: str) -> tuple[Response, int]:
         if activation_lookup is None:
             raise Unavailable("activation service is not configured")
-        value = activation_lookup(identity(request_id))
+        request_id = identity(request_id)
+        identify_request(request_id)
+        value = activation_lookup(request_id)
         return (jsonify(value), 200) if value else (jsonify(error="activation not found"), 404)
 
     @app.post("/v1/activations/<request_id>/stop")
     def activation_cancel(request_id: str) -> tuple[Response, int]:
         if activation_stop is None:
             raise Unavailable("activation service is not configured")
-        value = activation_stop(identity(request_id))
+        request_id = identity(request_id)
+        identify_request(request_id)
+        value = activation_stop(request_id)
         return (jsonify(value), 202) if value else (jsonify(error="activation not found"), 404)
 
     @app.post("/v1/throughput")

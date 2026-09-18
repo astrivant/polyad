@@ -8,7 +8,10 @@ import json
 import subprocess
 import threading
 import time
+import uuid
 from pathlib import Path
+from unittest.mock import Mock
+from urllib.parse import parse_qs, urlsplit
 
 import jsonschema
 import pytest
@@ -16,6 +19,7 @@ import yaml
 
 from polyad_benchmarks import fixture, plan, refresh, runner
 from polyad_benchmarks.config import RunConfig
+from polyad_benchmarks.identity import new_run_id, plan_hash
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -67,7 +71,7 @@ def test_stop_does_not_schedule_more_work():
     assert result["interrupted"]
 
 
-def test_fixture_uses_real_http_and_pins_graph_context(monkeypatch):
+def test_fixture_uses_real_http_and_pins_graph_context(monkeypatch, capsys):
     """
     Callers cannot redirect the fixture's authority to an arbitrary graph or vertex.
     """
@@ -92,6 +96,10 @@ def test_fixture_uses_real_http_and_pins_graph_context(monkeypatch):
         try:
             result = runner.exercise(f"http://127.0.0.1:{server.server_port}", "sample-00001", RunConfig(), threading.Event())
             assert result["phase"] == "Completed"
+            logs = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+            assert {record["event"] for record in logs} == {"benchmark.request.submitted", "benchmark.request.finished"}
+            assert all(record["runId"] == "sample" and record["requestId"] == "sample-00001" for record in logs)
+            assert "fixture-token" not in json.dumps(logs)
             assert result["acceptanceSeconds"] <= result["elapsedSeconds"]
             assert calls == [{"request_id": "sample-00001", "graph": "actual-graph", "graph_uid": "actual-uid", "node": "batch"}]
             monkeypatch.delenv("POLYAD_BENCHMARK_FIXTURE_TOKEN")
@@ -201,7 +209,7 @@ def test_refresh_rejects_input_drift_before_cluster_mutation(prepared, monkeypat
     assert status["success"] is False
 
 
-@pytest.mark.parametrize("damage", [None, "missing", "failed", "mislabeled", "unexpected", "skipped"])
+@pytest.mark.parametrize("damage", [None, "missing", "failed", "mislabeled", "unexpected", "skipped", "wrong-run"])
 def test_refresh_publication_barrier(prepared, damage):
     """
     Partial, failed or ambiguous matrices retain artifacts without publishing success.
@@ -214,6 +222,7 @@ def test_refresh_publication_barrier(prepared, damage):
     refresh.write_json(
         prepared / "outputs/load/results.json",
         {
+            "runId": "wrong" if damage == "wrong-run" else json.loads((prepared / "inputs/load.json").read_text())["runId"],
             "submitted": 2,
             "phases": {"Completed": 2},
             "skipped": int(damage == "skipped"),
@@ -252,7 +261,7 @@ def test_client_plan_uses_canonical_graph_with_immutable_per_run_settings():
     configured = json.loads((ROOT / "studies/load/fixtures/plan.json").read_text())
     document = plan.composition_plan(configured, ROOT / "charts/polyad-benchmarks", "polyad")
     objects = {item["id"]: item for item in document["objects"]}
-    assert document["requestId"] == configured["requestId"]
+    assert uuid.UUID(document["requestId"].removeprefix("load-")).version == 4
     assert objects["load-fixture"]["spec"]["replicas"] == 2
     for name, pool in (("load-fixture", "fixtures"), ("load-batch", "fixtures"), ("load-runner", "copolyad")):
         pod = objects[name]["spec"]["template"]["spec"]
@@ -260,7 +269,7 @@ def test_client_plan_uses_canonical_graph_with_immutable_per_run_settings():
         assert {"key": "dedicated", "operator": "Equal", "value": pool, "effect": "NoSchedule"} in pod["tolerations"]
     assert objects["load-batch"]["spec"]["activation"]["maxConcurrent"] == 4
     assert "activation" not in objects["load-runner"]["spec"]
-    assert objects["load-runner"]["spec"]["template"]["spec"]["containers"][0]["args"][-2:] == ["--run-id", configured["requestId"]]
+    assert objects["load-runner"]["spec"]["template"]["spec"]["containers"][0]["args"][-2:] == ["--run-id", document["requestId"]]
     assert not any(item["kind"] == "GraphRule" for item in document["objects"])
     assert objects["load-study"]["spec"]["rules"]
     graph = objects["load-study"]["spec"]
@@ -335,9 +344,18 @@ def test_cluster_study_accepts_multiple_fixture_replicas_and_rejects_plan_drift(
             }
         elif args[0] == "exec":
             assert args[1] == "fixture-a"
+            assert args[-1] == json.loads((prepared / "inputs/load.json").read_text())["runId"]
             value = {"name": "receipt"}
         elif args[0] == "logs":
-            value = {"submitted": 1, "skipped": 0, "interrupted": False, "phases": {"Completed": 1}}
+            value = {
+                "runId": json.loads((prepared / "inputs/load.json").read_text())["runId"],
+                "submitted": 1,
+                "skipped": 0,
+                "interrupted": False,
+                "phases": {"Completed": 1},
+            }
+            late_event = {"event": "benchmark.run.finished", "runId": value["runId"]}
+            return subprocess.CompletedProcess(command, 0, json.dumps(value) + "\n" + json.dumps(late_event), "")
         elif args[:2] == ["get", "activation"]:
             value = {"status": {"phase": "Completed", "execution": {"kind": "Job", "name": "runner"}}}
         else:
@@ -356,3 +374,153 @@ def test_cluster_study_accepts_multiple_fixture_replicas_and_rejects_plan_drift(
         assert refresh.cluster_study(prepared, "load", "context")["submitted"] == 1
     fixtures = json.loads((prepared / "outputs/load/fixture.json").read_text())
     assert [item["name"] for item in fixtures] == ["fixture-a", "fixture-b"]
+
+
+def test_new_submissions_generate_keys_and_explicit_retries_keep_them(monkeypatch, capsys):
+    """
+    Start commands announce a UUID before submission and reuse it only for explicit retries.
+    """
+    client = Mock()
+    client.activate.side_effect = lambda **kwargs: {"requestId": kwargs["request_id"], "namespace": "study", "name": "receipt"}
+    monkeypatch.setattr(runner, "operator_client", lambda _: client)
+    base = ["polyad-benchmarks", "start", "--graph-uid", "graph-uid"]
+    keys = []
+    for retry in (None, None, "retry"):
+        monkeypatch.setattr("sys.argv", base + (["--run-id", keys[0]] if retry else []))
+        runner.main()
+        output = capsys.readouterr()
+        receipt = json.loads(output.out)
+        key = receipt["runId"]
+        assert receipt["requestId"] == key
+        assert uuid.UUID(key.removeprefix("load-")).version == 4
+        assert parse_qs(urlsplit(receipt["grafanaPath"]).query)["var-run_id"] == [key]
+        assert all(json.loads(line)["runId"] == key for line in output.err.splitlines())
+        keys.append(key)
+    assert keys[0] != keys[1] and keys[0] == keys[2]
+    client.activate.side_effect = TimeoutError("uncertain acknowledgement")
+    monkeypatch.setattr("sys.argv", base)
+    with pytest.raises(SystemExit):
+        runner.main()
+    lines = capsys.readouterr().err.splitlines()
+    assert json.loads(lines[0])["runId"] == client.activate.call_args.kwargs["request_id"]
+
+
+def test_composition_submissions_generate_distinct_keys_with_retry_support():
+    """
+    The key sent to composition is also passed to its runner and returned with monitoring context.
+    """
+    client = Mock()
+    client.compose.side_effect = lambda doc: {"requestId": doc["requestId"]}
+    first = plan.submit_plan(client, {"variables": {}}, ROOT / "charts/polyad-benchmarks", "study")
+    second = plan.submit_plan(client, {"variables": {}}, ROOT / "charts/polyad-benchmarks", "study")
+    assert first["runId"] != second["runId"]
+    retry = plan.submit_plan(client, {"requestId": first["runId"], "variables": {}}, ROOT / "charts/polyad-benchmarks", "study")
+    assert retry == first
+    for call in client.compose.call_args_list:
+        document = call.args[0]
+        node = next(obj for obj in document["objects"] if obj["id"] == "load-runner")
+        assert node["spec"]["template"]["spec"]["containers"][0]["args"][-1] == document["requestId"]
+
+
+def test_notes_report_the_resolved_projected_plan_and_actual_submission_model():
+    """
+    Client-only Helm output describes overrides and monitoring without claiming it launched work.
+    """
+    output = subprocess.check_output(
+        [
+            "helm",
+            "install",
+            "notes",
+            str(ROOT / "charts/polyad-benchmarks"),
+            "--namespace",
+            "study",
+            "--dry-run=client",
+            "-f",
+            str(ROOT / "charts/polyad-benchmarks/values-burst.yaml"),
+            "--set",
+            "polyadResources.variables.run.max_requests=17",
+            "--set",
+            "polyadResources.variables.replicas.fixture=3",
+        ],
+        text=True,
+    )
+    notes = output.split("NOTES:\n", 1)[1]
+    documents = list(yaml.safe_load_all(output.split("MANIFEST:\n", 1)[1].split("NOTES:\n", 1)[0]))
+    projected = next(obj for obj in documents if obj and obj["kind"] == "Resource" and obj["metadata"]["name"] == "load-plan")
+    configured = json.loads(projected["spec"]["manifest"]["data"]["plan.json"])
+    assert configured["run"]["max_requests"] == 17 and configured["replicas"]["fixture"] == 3
+    assert plan_hash(projected["spec"]["manifest"]["data"]["plan.json"]) in notes
+    assert '"max_requests": 17' in notes and '"fixture": 3' in notes
+    assert "plans/burst.json" in notes and "waiting for an explicit submission" in notes
+    assert "polyad-benchmarks start" in notes and "polyad.request.id" in notes
+    assert not any(obj and obj["kind"] == "Activation" for obj in documents)
+
+
+def test_run_results_and_dashboard_share_the_trace_filter():
+    """
+    A run-specific URL sets the same variable used to find API and background decision spans.
+    """
+    run_id = new_run_id()
+    stop = threading.Event()
+    stop.set()
+    result = runner.run(RunConfig(), run_id, Mock(), stop)
+    query = parse_qs(urlsplit(result["grafanaPath"]).query)
+    assert query["var-run_id"] == [run_id]
+    assert int(query["from"][0]) <= int(query["to"][0])
+    dashboard = json.loads((ROOT / "charts/polyad-benchmarks/files/dashboard.json").read_text())
+    assert any(variable["name"] == "run_id" for variable in dashboard["templating"]["list"])
+    panel = next(panel for panel in dashboard["panels"] if panel["title"] == "Run traces")
+    assert panel["datasource"]["uid"] == "tempo"
+    assert "span.polyad.request.id" in panel["targets"][0]["query"]
+    assert "${run_id:regex}" in panel["targets"][0]["query"]
+
+
+def test_refresh_prepares_distinct_ids_before_cloud_submission(tmp_path):
+    """
+    Independently prepared runs never collide, and each prepared snapshot retains its run key.
+    """
+    keys = []
+    for name in ("first", "second"):
+        directory = tmp_path / name
+        refresh.prepare(ROOT, directory)
+        key = json.loads((directory / "inputs/load.json").read_text())["runId"]
+        assert uuid.UUID(key.removeprefix("load-")).version == 4
+        refresh.verify_inputs(ROOT, directory)
+        keys.append(key)
+    assert keys[0] != keys[1]
+
+
+def test_runner_logs_and_results_preserve_the_exact_projected_plan_hash(tmp_path, monkeypatch, capsys):
+    """
+    Preserve Helm's JSON bytes even when exponent formatting differs from Python serialization.
+    """
+    plan_source = '{"run":{"rate":1e-7,"duration":1,"max_requests":1},"replicas":{"fixture":1,"batch":2}}'
+    mounted, output = tmp_path / "plan.json", tmp_path / "result.json"
+    mounted.write_text(plan_source)
+    run_id = new_run_id()
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "polyad-benchmarks",
+            "run",
+            "--run-id",
+            run_id,
+            "--fixture-url",
+            "http://fixture",
+            "--plan",
+            str(mounted),
+            "--output",
+            str(output),
+        ],
+    )
+    monkeypatch.setattr(runner.signal, "signal", Mock())
+    monkeypatch.setattr(
+        runner, "run", lambda *args: {"runId": args[1], "submitted": 1, "skipped": 0, "interrupted": False, "phases": {"Completed": 1}}
+    )
+    runner.main()
+    result = json.loads(output.read_text())
+    assert result["runId"] == run_id and result["planHash"] == plan_hash(plan_source)
+    assert result["configuration"]["concurrency"] == RunConfig().concurrency
+    recorded = capsys.readouterr()
+    assert json.loads(recorded.out) == result
+    assert all(json.loads(line)["runId"] == run_id for line in recorded.err.splitlines())

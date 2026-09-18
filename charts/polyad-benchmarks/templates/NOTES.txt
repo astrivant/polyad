@@ -1,3 +1,53 @@
-The load-study Graph starts its fixture; the runner waits for an explicit activation.
-Build and publish services/runner/Dockerfile and services/fixture/Dockerfile before running.
-See studies/load/README.md for repeatable experiments, results and cleanup.
+{{- $values := include "polyad.benchmarks.values" . | fromJson -}}
+{{- $variables := $values.variables -}}
+{{- $plan := dict "run" $variables.run "replicas" $variables.replicas -}}
+Polyad benchmark fixture prepared
+
+Release: {{ .Release.Name }} (revision {{ .Release.Revision }})
+Namespace: {{ .Release.Namespace }}
+Graph: load-study
+Selected plan: {{ .Values.benchmark.planFile }}
+Resolved plan SHA-256: {{ $plan | toJson | sha256sum }}
+Status: waiting for an explicit submission; this Helm operation does not start load.
+
+Resolved run configuration (including values overrides):
+{{ $plan | toPrettyJson | indent 2 }}
+Batch processing delay: {{ $variables.batchDelaySeconds }} seconds
+Runner image: {{ $variables.images.runner }}:{{ $variables.images.tag }}
+Fixture/batch image: {{ $variables.images.fixture }}:{{ $variables.images.tag }}
+Generator placement:
+{{ $variables.runnerPlacement | toYaml | indent 2 }}
+Consumer placement:
+{{ $variables.placement | toYaml | indent 2 }}
+Per-container resources:
+{{ $variables.resources | toYaml | indent 2 }}
+
+After the fixture Pod is ready, submit a run using its graph-scoped credential:
+  GRAPH_UID=$(kubectl -n {{ .Release.Namespace }} get graph load-study -o jsonpath='{.metadata.uid}')
+  FIXTURE_POD=$(kubectl -n {{ .Release.Namespace }} get pods -l 'polyad.astrivant.com/benchmark-role=fixture,polyad.astrivant.com/benchmark-release={{ .Release.Name }}' -o jsonpath='{.items[0].metadata.name}')
+  kubectl -n {{ .Release.Namespace }} exec "$FIXTURE_POD" -c fixture -- polyad-benchmarks start --graph load-study --graph-uid "$GRAPH_UID"
+
+Every new submission generates a UUID-backed runId and prints the receipt and
+Grafana path. Save that output. Only retry the SAME run with --run-id SAVED_RUN_ID;
+repeating the command above without --run-id submits a NEW run.
+Batch requestIds are RUN_ID-00000, RUN_ID-00001, ... . Search logs for the runId;
+operator traces and decision logs carry the full polyad.request.id.
+
+{{ if .Values.monitoring.enabled -}}
+Grafana (private):
+  kubectl -n {{ .Release.Namespace }} port-forward service/{{ .Values.monitoring.grafana.fullnameOverride }} 3000:80
+  Open http://localhost:3000 plus the returned grafanaPath.
+{{ else -}}
+Use your Grafana host plus the returned grafanaPath (/d/polyad-study).
+{{ end -}}
+{{ if not .Values.observability.enabled -}}
+The study dashboard is disabled; enable observability.enabled or import files/dashboard.json.
+{{ end -}}
+Set the dashboard's Run ID to the returned runId. Run traces require operator
+tracing and Tempo; aggregate metrics show namespace activity in the selected
+window and may include concurrent runs. Benchmark logs are JSON; Grafana log
+search requires your configured log collector/backend.
+
+Save runner Job logs and the refresh output directory for the run's final
+configuration, planHash, time range, outcomes and Grafana link.
+See studies/load/README.md for repeatable experiments, monitoring and cleanup.

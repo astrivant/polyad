@@ -52,6 +52,19 @@ def telemetry_resource() -> Resource:
     return Resource.create(attributes)
 
 
+def identify_request(request_id: str) -> None:
+    """
+    Attach an already validated idempotency key to the active API span.
+
+    Args:
+        request_id (str): Composition or activation identity, never a credential or arbitrary body.
+
+    Returns:
+        None: Disabled tracing leaves the request unchanged.
+    """
+    trace.get_current_span().set_attribute("polyad.request.id", request_id)
+
+
 def configure_tracing() -> None:
     """
     Initialize one process-owned provider before starting operator threads.

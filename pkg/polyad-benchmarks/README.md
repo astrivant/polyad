@@ -23,7 +23,7 @@ pip install ./pkg/polyad-types ./pkg/client ./pkg/polyad-benchmarks
 - `polyad-benchmarks-plan --plan studies/load/fixtures/plan.json --render-only`: render a
   composition from a plan using the canonical Helm fixture templates. Omit
   `--render-only` to submit it through the client. Requires Helm and chart dependencies.
-- `polyad-benchmarks start --graph-uid UID --run-id RUN`: explicitly activate the
+- `polyad-benchmarks start --graph-uid UID`: explicitly activate the
   installed study runner, using `POLYAD_API_URL` and optional `POLYAD_API_TOKEN`.
 - `polyad-benchmarks run --plan /etc/polyad-benchmarks/plan.json`: execute bounded
   arrivals inside a managed runner Job. Requires the injected graph context and
@@ -35,13 +35,21 @@ pip install ./pkg/polyad-types ./pkg/client ./pkg/polyad-benchmarks
 
 ## Plans and replicas
 
-The [example plan](../../studies/load/fixtures/plan.json) specifies a unique `requestId`,
-fixture replicas, batch execution concurrency, images, placement and arrival
-parameters. `composition_plan` renders the versioned chart into a typed
+The [example plan](../../studies/load/fixtures/plan.json) specifies fixture replicas,
+batch execution concurrency, images, placement and arrival parameters. Each new
+submission generates a UUID-backed `runId`, submitted as its `requestId`. `composition_plan` renders the versioned chart into a typed
 `CompositionRequest`; `submit_plan(client, plan, chart, namespace)` submits it.
 The referenced administrator GraphRule must already exist. Each composed run has
 its own graph, immutable ConfigMap and runner Job. Reusing its request ID is an
-idempotent retry, not a new experiment.
+idempotent retry, not a new experiment. Use `--run-id SAVED_RUN_ID` or an explicit
+plan `requestId` only for that retry; leave them unset for a new run. Rendering
+with `--render-only` also generates an ID: pass that ID with `--run-id` when
+submitting the reviewed plan.
+
+Start/plan submissions print the run key and a `grafanaPath` in their receipt.
+An initial JSON stderr record retains the key even if the response is lost.
+Numbered arrivals, fixture and batch logs, runner output and operator traces
+carry the same run identity; see [run correlation](../../studies/load/README.md#run-identity-and-correlation).
 
 For the reusable Helm-installed fixture, `polyadResources.variables.run` and
 `replicas` become a projected ConfigMap. The runner reads one snapshot at startup

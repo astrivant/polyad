@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from polyad_benchmarks.identity import new_run_id
 from polyad_benchmarks.runner import TERMINAL
 
 if TYPE_CHECKING:
@@ -86,6 +87,7 @@ def prepare(project: Path, root: Path) -> dict[str, Any]:
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=project, text=True).strip()
     for study in STUDIES:
         config = json.loads((project / "studies" / study / "fixtures" / "scenario.json").read_text())
+        config["runId"] = new_run_id()
         write_json(root / "inputs" / f"{study}.json", config)
     provenance = {
         "revision": revision,
@@ -178,7 +180,8 @@ def cluster_study(root: Path, study: str, context: str) -> dict[str, Any]:
             for pod in pods
         ],
     )
-    run_id = "study-" + hashlib.sha256((str(root) + study).encode()).hexdigest()[:24]
+    run_id = config["runId"]
+    write_json(output / "submission.json", {"runId": run_id, "graph": graph_name, "namespace": namespace})
     response = command(
         "exec",
         pods[0]["metadata"]["name"],
@@ -207,8 +210,22 @@ def cluster_study(root: Path, study: str, context: str) -> dict[str, Any]:
                 raise ValueError("runner reached a terminal phase without a Job")
             text = command("logs", "job/" + execution["name"], "-c", "runner")
             (output / "runner.log").write_text(text)
-            result = json.loads(text.strip().splitlines()[-1])
+            result = None
+            for line in reversed(text.splitlines()):
+                try:
+                    candidate = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                # Container logs merge stdout/stderr: a late structured event
+                # must not replace the final measurement document.
+                if isinstance(candidate, dict) and {"submitted", "skipped", "interrupted", "phases"} <= candidate.keys():
+                    result = candidate
+                    break
+            if result is None:
+                raise ValueError("runner logs contain no complete measurement document")
             write_json(output / "results.json", result)
+            if result.get("runId") != run_id:
+                raise ValueError("runner results belong to a different run identity")
             after = get("graph", graph_name)
             write_json(output / "graph-after.json", after)
             if (after["metadata"]["uid"], after["metadata"]["generation"]) != (graph["metadata"]["uid"], graph["metadata"]["generation"]):
@@ -220,7 +237,7 @@ def cluster_study(root: Path, study: str, context: str) -> dict[str, Any]:
                     raise ValueError("fixture definition or plan changed during the study")
             if status["phase"] != "Completed":
                 raise ValueError("runner did not complete successfully; measurements retained")
-            return result  # type: ignore[no-any-return]
+            return result
         time.sleep(config["pollIntervalSeconds"])
     raise TimeoutError("study timed out; live work is retained for inspection and explicit cleanup")
 
@@ -274,6 +291,9 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
         if status.get("study") != path.stem or status.get("success") is not True:
             raise ValueError("failed or mislabeled study cannot be published")
         result = json.loads((root / "outputs" / path.stem / "results.json").read_text())
+        expected = json.loads((root / "inputs" / f"{path.stem}.json").read_text())["runId"]
+        if result.get("runId") != expected:
+            raise ValueError("results from a different run identity cannot be published")
         if not result["submitted"] or result["skipped"] or result["interrupted"] or result["phases"] != {"Completed": result["submitted"]}:
             raise ValueError("incomplete measurements cannot be published as a successful benchmark")
         results[path.stem] = result

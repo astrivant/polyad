@@ -12,6 +12,7 @@ capacity or exercise temporary-connection negotiation yet.
 - [Fixture graph](#fixture-graph)
 - [Deploy](#deploy)
 - [Plans and replica counts](#plans-and-replica-counts)
+- [Run identity and correlation](#run-identity-and-correlation)
 - [Monitoring and traces](#monitoring-and-traces)
 - [Repeat an experiment](#repeat-an-experiment)
 - [Read measurements](#read-measurements)
@@ -124,12 +125,14 @@ changed definitions. When using an existing Reloader, disable `reloader.enabled`
 but retain the fixture opt-in.
 
 A client can instead create an isolated run without Kubernetes write credentials.
-Edit [plan.json](fixtures/plan.json), including published images and a fresh request ID:
+Edit [plan.json](fixtures/plan.json), including published images. Generate a
+reviewable composition, then reuse its generated ID when submitting it:
 
 ```sh
 export POLYAD_API_URL=http://YOUR_OPERATOR_API:8080
 polyad-benchmarks-plan --plan studies/load/fixtures/plan.json --namespace polyad --render-only > /tmp/load-composition.json
-polyad-benchmarks-plan --plan studies/load/fixtures/plan.json --namespace polyad
+RUN_ID=$(python3 -c 'import json; print(json.load(open("/tmp/load-composition.json"))["requestId"])')
+polyad-benchmarks-plan --plan studies/load/fixtures/plan.json --namespace polyad --run-id "$RUN_ID"
 ```
 
 The first command renders a reviewable composition from the same Helm templates;
@@ -141,6 +144,49 @@ client cannot create or weaken that administrator rule. Track the composition
 receipt and collect its runner Job logs. The refresh commands below target the
 reusable Helm fixture; they do not automatically collect these separate composed
 runs. Delete a completed composition through the client when evidence is saved.
+
+## Run identity and correlation
+
+Every new start or client-plan submission gets a UUID-backed key such as
+`load-f4c91743be224b62ba5801dd73ba92b9`. The CLI emits it **before** contacting the
+operator, then includes `runId` and `grafanaPath` in the returned receipt. This
+makes an uncertain response traceable. Save the receipt and stderr alongside the
+run artifacts. Omit `--run-id` for a new experiment; supply the saved ID only to
+retry the same intent. An explicit plan `requestId` has the same retry semantics.
+The refresh workflow generates an ID during preparation, snapshots it with the
+scenario and verifies that collected/published results belong to that ID.
+
+The runner submission uses the run ID as its composition or activation
+`requestId`. Arrivals use `RUN_ID-00000`, `RUN_ID-00001`, and so on. Those IDs are
+persisted in Activation receipts and injected into Jobs as `POLYAD_ACTIVATION_ID`.
+Fixture, runner and batch JSON logs include `runId`; operator receipt decisions
+include `polyad.request.id`. HTTP submission/read spans and asynchronous activation
+decision spans carry that same request attribute. A run can therefore span many
+traces; it is not forced into one long-lived trace.
+
+Open the returned `grafanaPath` on your Grafana host. It fills the dashboard's
+**Run ID** and namespace variables; completed results also set the exact time
+window. The **Run traces** panel queries Tempo for the run and its numbered
+arrivals. In Grafana Explore, an equivalent [TraceQL search](https://grafana.com/docs/tempo/latest/traceql/construct-traceql-queries/)
+is:
+
+```traceql
+{ span.polyad.request.id =~ "load-f4c91743be224b62ba5801dd73ba92b9(-[0-9]{5})?" }
+```
+
+Tracing must be enabled and sampling/retention determine which spans are available.
+Aggregate metrics describe the selected namespace and time window, including any
+concurrent runs; the run filter applies to traces. Unique IDs are not Prometheus
+labels. Search collected logs for the key or inspect the corresponding runner and
+batch Pod logs. Grafana log searches require a configured log backend, such as
+Loki; the bundled study stack supplies Tempo and Prometheus but no log backend.
+
+`planHash` separately identifies the projected `run` and `replicas` configuration.
+The Helm notes show the same SHA-256 hash and resolved settings. Two runs of the
+same plan have different run IDs but the same plan hash. Helm notes describe the
+prepared fixture and how to submit it; the submission receipt and final runner
+result describe the actual run. Retain image and placement snapshots as well when
+comparing experiments.
 
 ## Monitoring and traces
 
@@ -188,7 +234,8 @@ kubectl -n polyad get secret benchmarks-grafana -o jsonpath='{.data.admin-passwo
 ```
 
 Log in locally as `admin`, then open **Polyad load study**. The runner's result
-includes `startedAt`, `finishedAt` and a `grafanaPath` with its exact time range.
+includes `runId`, `planHash`, `startedAt`, `finishedAt` and a `grafanaPath`
+with its exact time range and run filter.
 The dashboard covers API arrival rate, reporting replicas, write backlog/age,
 inbound updates, graph observations, tracked objects and operator memory. Select
 the operator namespace; shared state uses maximums across replicas to avoid

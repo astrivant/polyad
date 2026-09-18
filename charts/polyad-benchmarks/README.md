@@ -80,10 +80,16 @@ the dependency from rendering the same definitions separately. The parent loads
 the selected JSON plan, merges explicit `polyadResources.variables` overrides,
 then resolves and validates the fixture through that renderer.
 
-Plan JSON contains the same `requestId` and `variables` accepted by
-`polyad-benchmarks-plan --plan`. Copy a plan and change its request ID for each new
-client-composed run. The packaged request ID is not used to activate a Helm
-installation; installing or switching profiles never starts traffic.
+Plan JSON contains the same `variables` and optional retry `requestId` accepted by
+`polyad-benchmarks-plan --plan`. Leave the request ID unset to generate a fresh
+UUID for each client-composed run. Supply it only to retry that same run.
+Installing or switching Helm profiles never starts traffic.
+
+Helm release notes print the **resolved** run settings after values overrides,
+replica counts, images, placement and a SHA-256 fingerprint of the projected plan.
+They also show the submission command and Grafana instructions. A submission
+returns its UUID-backed run key and dashboard path; see
+[run correlation](../../studies/load/README.md#run-identity-and-correlation).
 
 ## Plans and observability
 

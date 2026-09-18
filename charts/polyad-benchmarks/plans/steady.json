@@ -1,5 +1,4 @@
 {
-  "requestId": "load-steady-001",
   "variables": {
     "run": {
       "rate": 2,

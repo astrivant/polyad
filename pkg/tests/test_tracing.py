@@ -233,3 +233,44 @@ def test_chart_tracing_reaches_components_and_observers(ha, mode):
             "name": "trace-credentials",
             "key": "headers",
         }
+
+
+def test_activation_api_and_lifecycle_decisions_share_the_request_key(spans, caplog):
+    """
+    Background receipt transitions remain traceable after the original HTTP span has ended.
+    """
+    import logging
+
+    from polyad.api import APIBuilder
+    from polyad.operator.observability.decisions import status_decisions
+
+    identity = "load-1234567890abcdef1234567890abcdef-00001"
+    app = (
+        APIBuilder()
+        .with_handlers(Mock(), Mock())
+        .with_bearer_token("credential")
+        .with_activation_handlers(lambda value: {"requestId": value.requestId}, lambda key: {"requestId": key}, Mock())
+        .build()
+    )
+    with app.test_client() as client:
+        response = client.post(
+            "/v1/activations",
+            headers={"Authorization": "Bearer credential"},
+            json={
+                "requestId": identity,
+                "graph": "pipeline",
+                "graphUid": "uid",
+                "node": "batch",
+            },
+        )
+        assert response.status_code == 202
+        assert client.get(f"/v1/activations/{identity}", headers={"Authorization": "Bearer credential"}).status_code == 200
+    obj = {"kind": "Activation", "metadata": {"name": "receipt", "namespace": "test"}, "spec": {"requestId": identity}}
+    with caplog.at_level(logging.INFO):
+        status_decisions(obj, {"phase": "Completed"})
+    recorded = spans.get_finished_spans()
+    assert len(recorded) == 3
+    assert all(item.attributes["polyad.request.id"] == identity for item in recorded)
+    assert recorded[-1].name == "polyad.request.decision"
+    assert caplog.records[-1].polyad_attributes["polyad.request.id"] == identity
+    assert all("credential" not in item.to_json() for item in recorded)

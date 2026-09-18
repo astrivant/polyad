@@ -20,6 +20,7 @@ from polyad.api.workloads.routes import register_routes
 from polyad.auth.http import install
 from polyad.auth.policy import public_demo
 from polyad.compiler.passes.composition import compile_composition
+from polyad.operator.observability.tracing import identify_request
 from polyad_types.codec import converter
 from polyad_types.requests import CompositionRequest, identity
 
@@ -105,18 +106,23 @@ def _build_app(
     @app.post("/v1/compositions")
     def compose() -> tuple[Response, int]:
         value = converter.structure(request.get_json(), CompositionRequest)
+        identify_request(value.requestId)
         compile_composition(value, "preview")
         result = submit(value)
         return jsonify(result), 202
 
     @app.get("/v1/compositions/<request_id>")
     def status(request_id: str) -> tuple[Response, int]:
-        result = lookup(identity(request_id), False)
+        request_id = identity(request_id)
+        identify_request(request_id)
+        result = lookup(request_id, False)
         return (jsonify(result), 200) if result is not None else (jsonify(error="composition not found"), 404)
 
     @app.get("/v1/compositions/<request_id>/resources")
     def resources(request_id: str) -> tuple[Response, int]:
-        result = lookup(identity(request_id), True)
+        request_id = identity(request_id)
+        identify_request(request_id)
+        result = lookup(request_id, True)
         return (jsonify(result), 200) if result is not None else (jsonify(error="composition not found"), 404)
 
     register_routes(app, activate, activation_lookup, activation_stop, throughput)

@@ -9,13 +9,15 @@ import hmac
 import json
 import math
 import os
+import re
 import socket
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING
 
-from polyad_benchmarks.config import operator_client, request_prefix
+from polyad_benchmarks.config import operator_client
+from polyad_benchmarks.identity import log_event, parent_run_id
 from polyad_client import APIError
 
 if TYPE_CHECKING:
@@ -133,29 +135,34 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if token and not hmac.compare_digest(self.headers.get("Authorization", ""), "Bearer " + token):
             self.reply(401, {"error": "fixture credential required"})
             return
+        run_id = None
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if self.headers.get("Transfer-Encoding") or not 0 < length <= 4096:
                 self.reply(413, {"error": "use a JSON body of at most 4096 bytes"})
                 return
             document = json.loads(self.rfile.read(length))
-            identity = str(document["requestId"])
-            # Runner IDs add a numeric suffix to the validated, bounded run identity.
-            request_prefix(identity.rsplit("-", 1)[0])
-            if len(identity) > 112:
-                raise ValueError("request ID too long")
+            identity = document["requestId"]
+            if not isinstance(identity, str) or not re.fullmatch(r".+-[0-9]{5}", identity) or len(identity) > 112:
+                raise ValueError("request ID requires a run identity and numbered arrival")
+            run_id = parent_run_id(identity)
             receipt = operator_client(5).activate(
                 request_id=identity,
                 graph=os.environ["POLYAD_GRAPH_NAME"],
                 graph_uid=os.environ["POLYAD_GRAPH_UID"],
                 node="batch",
             )
+            log_event("benchmark.request.submitted", run_id, requestId=identity, receiptName=receipt.get("name"))
             self.reply(202, receipt)
         except APIError as error:
+            if run_id is not None:
+                log_event("benchmark.request.rejected", run_id, requestId=identity, httpStatus=error.status)
             self.reply(error.status, {"error": "operator rejected submission"})
         except (ValueError, TypeError, KeyError):
             self.reply(400, {"error": "invalid request or missing graph context"})
         except OSError:
+            if run_id is not None:
+                log_event("benchmark.request.uncertain", run_id, requestId=identity)
             self.reply(502, {"error": "operator unavailable; reuse requestId when retrying"})
 
     def log_message(self, format: str, *args: Any) -> None:
@@ -187,7 +194,8 @@ def main() -> None:
         parser.error("delay must be finite and between 0 and 3600 seconds")
     if args.once:
         time.sleep(args.delay)
-        print(json.dumps({"completed": True, "activation": os.environ.get("POLYAD_ACTIVATION_ID", "")}))
+        activation = os.environ.get("POLYAD_ACTIVATION_ID", "")
+        print(json.dumps({"completed": True, "activation": activation, "runId": parent_run_id(activation) if activation else None}))
         return
     # This is a private benchmark fixture, not an externally exposed application server.
     with FixtureServer((os.environ.get("POLYAD_POD_IP", "127.0.0.1"), args.port)) as server:

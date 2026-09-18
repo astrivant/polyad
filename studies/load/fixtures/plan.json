@@ -1,5 +1,4 @@
 {
-  "requestId": "load-client-run-001",
   "variables": {
     "replicas": {
       "fixture": 2,

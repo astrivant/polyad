@@ -6,8 +6,11 @@ from __future__ import annotations
 
 import logging
 import os
+from contextlib import nullcontext
 from contextvars import ContextVar
 from typing import TYPE_CHECKING
+
+from polyad.operator.observability.tracing import span
 
 if TYPE_CHECKING:
     from typing import Any
@@ -76,16 +79,26 @@ def decision(
         for field in ("uid", "generation"):
             if field in meta:
                 details[f"polyad.resource.{field}"] = meta[field]
+        if obj["kind"] == "Activation" and (request_id := obj.get("spec", {}).get("requestId")):
+            details["polyad.request.id"] = request_id
         if cluster := obj.get("spec", {}).get("cluster"):
             details["polyad.target.cluster"] = cluster
     if key is not None:
         details.update({"polyad.resource.kind": key[0], "k8s.namespace.name": key[1], "polyad.resource.name": key[2]})
-    logger.log(
-        level,
-        message,
-        extra={"event_name": event, "polyad_attributes": {key: value for key, value in details.items() if value is not None}},
-        stacklevel=2,
-    )
+    # A graph reconciliation can advance multiple receipts; keep their identities
+    # on separate decision spans instead of overwriting the enclosing graph span.
+    context = span("polyad.request.decision") if "polyad.request.id" in details else nullcontext()
+    with context as active:
+        if active is not None:
+            active.set_attribute("polyad.request.id", details["polyad.request.id"])
+            active.set_attribute("polyad.decision.outcome", outcome)
+            active.set_attribute("polyad.decision.reason", reason)
+        logger.log(
+            level,
+            message,
+            extra={"event_name": event, "polyad_attributes": {key: value for key, value in details.items() if value is not None}},
+            stacklevel=2,
+        )
 
 
 def status_decisions(obj: dict[str, Any], values: dict[str, Any]) -> None:

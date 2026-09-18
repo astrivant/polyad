@@ -92,9 +92,15 @@ queue reconciliation starts a new trace: trace context is not persisted in the
 queue, database or Kubernetes resources, nor injected into outbound HTTP calls.
 
 HTTP attributes include the method, route template, endpoint family and returned
-status. Kubernetes spans identify the method and resource kind. Unhandled errors
+status. Composition and activation submission/read/stop spans also include the
+validated, nonsecret idempotency key as `polyad.request.id`. Activation lifecycle
+decisions record this key on their own `polyad.request.decision` spans and decision
+logs, allowing correlation after queue handoff without persisting trace context.
+See [benchmark run correlation](../../studies/load/README.md#run-identity-and-correlation).
+Kubernetes spans identify the method and resource kind. Unhandled errors
 record their type and an error status without exception messages or stack traces.
-No bodies, credentials, query strings or actual route parameter values are added.
+No bodies, credentials or query strings are added; idempotency IDs are the explicit
+exception to excluding actual route parameter values. Keep secrets out of IDs.
 Resource attributes supplied by administrators are exported as configured.
 
 `/metrics`, `/healthz` and `/readyz` requests are excluded. A streaming response's

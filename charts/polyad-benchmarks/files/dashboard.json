@@ -2,7 +2,7 @@
   "uid": "polyad-study",
   "title": "Polyad load study",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "5s",
   "time": {
     "from": "now-30m",
@@ -325,6 +325,31 @@
           "legendFormat": "{{ cluster }} {{ name }} {{ parameter }}"
         }
       ]
+    },
+    {
+      "id": 15,
+      "title": "Run traces",
+      "description": "API submissions, receipt reads and asynchronous activation decisions for this run. Requires enabled operator tracing and Tempo. Metrics in the other panels are namespace aggregates.",
+      "type": "table",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{ span.polyad.request.id =~ `${run_id:regex}(-[0-9]{5})?` }",
+          "limit": 100,
+          "tableType": "traces"
+        }
+      ]
     }
   ],
   "links": [
@@ -345,6 +370,15 @@
           "value": "polyad"
         },
         "label": "Operator namespace"
+      },
+      {
+        "name": "run_id",
+        "type": "textbox",
+        "current": {
+          "text": "unset",
+          "value": "unset"
+        },
+        "label": "Run ID"
       }
     ]
   }

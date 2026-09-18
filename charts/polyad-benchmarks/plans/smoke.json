@@ -1,5 +1,4 @@
 {
-  "requestId": "load-smoke-001",
   "variables": {
     "run": {
       "rate": 0.2,
