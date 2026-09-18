@@ -92,7 +92,7 @@ their uses, so a request can be traced to the Kubernetes resources it creates.<s
 
 A **GraphRule** describes which graph structures an engineer will allow users to
 schedule. Rules can limit size, nesting, or branching, require a shape such as a
-tree, or constrain the graph's spectrum—the eigenvalues of a matrix representing
+tree, or constrain the graph's spectrum: the eigenvalues of a matrix representing
 its connections. Namespace-wide rules apply to every graph in that namespace;
 graphs can also reference additional rules. Recursive size limits count each
 subgraph instance, including repeated uses of the same definition.<sup>[\[10\]](../graphs/graph-rules.md#structural-limits)</sup>

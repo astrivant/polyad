@@ -426,7 +426,7 @@ still apply.
 Creates no connections between copies.
 
 <details open>
-<summary>Daemon replicas — one desired Pod per copy</summary>
+<summary>Daemon replicas: one desired Pod per copy</summary>
 
 ```mermaid
 ---
@@ -459,7 +459,7 @@ flowchart LR
 </details>
 
 <details>
-<summary>Graph replicas — two workloads inside each copy</summary>
+<summary>Graph replicas: two workloads inside each copy</summary>
 
 ```mermaid
 ---
@@ -505,7 +505,7 @@ flowchart TB
 </details>
 
 <details>
-<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+<summary>PolyGraph replicas: two child graphs inside each copy</summary>
 
 ```mermaid
 ---
@@ -573,7 +573,7 @@ flowchart TB
 Connects each ordinal to the next one, in ascending order.
 
 <details open>
-<summary>Daemon replicas — one desired Pod per copy</summary>
+<summary>Daemon replicas: one desired Pod per copy</summary>
 
 ```mermaid
 ---
@@ -608,7 +608,7 @@ flowchart LR
 </details>
 
 <details>
-<summary>Graph replicas — two workloads inside each copy</summary>
+<summary>Graph replicas: two workloads inside each copy</summary>
 
 ```mermaid
 ---
@@ -653,7 +653,7 @@ flowchart TB
 </details>
 
 <details>
-<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+<summary>PolyGraph replicas: two child graphs inside each copy</summary>
 
 ```mermaid
 ---
@@ -720,7 +720,7 @@ flowchart TB
 Connects each ordinal to the next and adds an edge from the last back to the first.
 
 <details open>
-<summary>Daemon replicas — one desired Pod per copy</summary>
+<summary>Daemon replicas: one desired Pod per copy</summary>
 
 ```mermaid
 ---
@@ -756,7 +756,7 @@ flowchart LR
 </details>
 
 <details>
-<summary>Graph replicas — two workloads inside each copy</summary>
+<summary>Graph replicas: two workloads inside each copy</summary>
 
 ```mermaid
 ---
@@ -802,7 +802,7 @@ flowchart TB
 </details>
 
 <details>
-<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+<summary>PolyGraph replicas: two child graphs inside each copy</summary>
 
 ```mermaid
 ---
@@ -870,7 +870,7 @@ flowchart TB
 Sends from `replica-0` to every other copy.
 
 <details open>
-<summary>Daemon replicas — one desired Pod per copy</summary>
+<summary>Daemon replicas: one desired Pod per copy</summary>
 
 ```mermaid
 ---
@@ -905,7 +905,7 @@ flowchart LR
 </details>
 
 <details>
-<summary>Graph replicas — two workloads inside each copy</summary>
+<summary>Graph replicas: two workloads inside each copy</summary>
 
 ```mermaid
 ---
@@ -950,7 +950,7 @@ flowchart TB
 </details>
 
 <details>
-<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+<summary>PolyGraph replicas: two child graphs inside each copy</summary>
 
 ```mermaid
 ---
@@ -1018,7 +1018,7 @@ Connects every distinct pair in both directions, even when
 `bidirectional` is false.
 
 <details open>
-<summary>Daemon replicas — one desired Pod per copy</summary>
+<summary>Daemon replicas: one desired Pod per copy</summary>
 
 ```mermaid
 ---
@@ -1054,7 +1054,7 @@ flowchart LR
 </details>
 
 <details>
-<summary>Graph replicas — two workloads inside each copy</summary>
+<summary>Graph replicas: two workloads inside each copy</summary>
 
 ```mermaid
 ---
@@ -1100,7 +1100,7 @@ flowchart TB
 </details>
 
 <details>
-<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+<summary>PolyGraph replicas: two child graphs inside each copy</summary>
 
 ```mermaid
 ---
@@ -1192,7 +1192,7 @@ connectivity:
 With `replicas: 3` and `maxReplicas: 4`:
 
 <details open>
-<summary>Daemon replicas — one desired Pod per copy</summary>
+<summary>Daemon replicas: one desired Pod per copy</summary>
 
 ```mermaid
 ---
@@ -1230,7 +1230,7 @@ flowchart LR
 </details>
 
 <details>
-<summary>Graph replicas — two workloads inside each copy</summary>
+<summary>Graph replicas: two workloads inside each copy</summary>
 
 ```mermaid
 ---
@@ -1278,7 +1278,7 @@ flowchart TB
 </details>
 
 <details>
-<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+<summary>PolyGraph replicas: two child graphs inside each copy</summary>
 
 ```mermaid
 ---
@@ -1350,7 +1350,7 @@ Each reverse edge grants the same ports at its new destination. Identical
 connections are deduplicated; distinct port grants are retained.
 
 <details open>
-<summary>Daemon replicas — one desired Pod per copy</summary>
+<summary>Daemon replicas: one desired Pod per copy</summary>
 
 ```mermaid
 ---
@@ -1385,7 +1385,7 @@ flowchart LR
 </details>
 
 <details>
-<summary>Graph replicas — two workloads inside each copy</summary>
+<summary>Graph replicas: two workloads inside each copy</summary>
 
 ```mermaid
 ---
@@ -1430,7 +1430,7 @@ flowchart TB
 </details>
 
 <details>
-<summary>PolyGraph replicas — two child graphs inside each copy</summary>
+<summary>PolyGraph replicas: two child graphs inside each copy</summary>
 
 ```mermaid
 ---

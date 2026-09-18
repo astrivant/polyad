@@ -6,7 +6,7 @@ Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathemat
 Compose batch jobs, persistent services and supporting resources into reusable
 Graphs and PolyGraphs. Define how work starts, how components communicate, how
 they respond to application demand and which constraints must hold as the application
-changes—from a workflow in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deployment/operator.md#api-and-python-abstractions)</sup>
+changes, from a workflow in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deployment/operator.md#api-and-python-abstractions)</sup>
 The Kubernetes operator is built on [Kopf](https://docs.kopf.dev/en/stable/),
 the Kubernetes Operators Framework for Python.
 
@@ -346,8 +346,8 @@ shows where each cluster refreshes live values and enforces its own rules.
 [Soul searching](docs/graphs/soul-searching.md) lets a Graph or PolyGraph respond
 to application demand within administrator-approved profiles. Demand defaults to
 offered work per second. Administrators can instead
-[select an exact signal name and unit](docs/graphs/load-profiles.md#define-demand)—such
-as `queueDepth` in `jobs` or `activeSessions` in `sessions`—and define the thresholds
+[select an exact signal name and unit](docs/graphs/load-profiles.md#define-demand) (such
+as `queueDepth` in `jobs` or `activeSessions` in `sessions`) and define the thresholds
 that select each profile. The [complete resource example](examples/load-profiles.yaml)
 includes the Graph, its GraphRule and its Workload/Daemon definitions. An authorized
 application reporter supplies the measurements; configuring a signal does not
@@ -1024,7 +1024,7 @@ Polyad coordinates application graphs alongside existing cluster components.
 Selected background reading for Polyad's architecture and less common design
 choices.
 
-- **Operator framework:** [Kopf — Kubernetes Operators Framework](https://docs.kopf.dev/en/stable/).
+- **Operator framework:** [Kopf: Kubernetes Operators Framework](https://docs.kopf.dev/en/stable/).
   The Python framework behind Polyad's Kubernetes watches, startup and shutdown
   hooks, and health probes. Polyad builds graph reconciliation and coordinated
   mutations on top of it; see the [operator runtime](docs/deployment/process-hierarchy.md).
