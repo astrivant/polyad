@@ -9,7 +9,7 @@
 {{- if and .Values.operator.autoscaling.enabled .Values.operator.autoscaling.targetMemoryUtilizationPercentage (not (dig "requests" "memory" "" .Values.operator.resources)) }}
 {{- fail "Memory autoscaling requires operator.resources.requests.memory" }}
 {{- end }}
-{{- if .Values.operator.autoscaling.enabled }}
+{{- if and .Values.operator.autoscaling.enabled (not .Values.operator.autoscaling.connections.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from attrs import field, frozen
 from flask import g, jsonify, request
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from flask import Flask, Response
     from flask_limiter import Limiter, RequestLimit
+    from limits.storage.redis import RedisStorage
 
 
 @frozen(kw_only=True)
@@ -92,9 +93,9 @@ def install_limits(app: Flask | Routes, policy: RateLimitPolicy) -> Limiter | No
         return None
     from flask_limiter import Limiter
     from limits.errors import StorageError
-    from redis.backoff import NoBackoff
     from redis.exceptions import RedisError
-    from redis.retry import Retry
+
+    from polyad.transport.redis import pool
 
     def key() -> str:
         endpoint = (request.endpoint or "").rsplit(".", 1)[-1]
@@ -110,12 +111,7 @@ def install_limits(app: Flask | Routes, policy: RateLimitPolicy) -> Limiter | No
         # Schema discovery has a separate bounded namespace budget.
         return "discovery"
 
-    options: dict[str, Any] = {
-        "socket_connect_timeout": 5,
-        "socket_timeout": 5,
-        "max_connections": 32,
-        "retry": Retry(NoBackoff(), 0),
-    }
+    options: dict[str, Any] = {"connection_pool": pool(policy.storage_uri, "rateLimits")}
 
     def capture_headers(limit: RequestLimit) -> None:
         # Read quota metadata before invoking the durable submission callback. A
@@ -143,6 +139,9 @@ def install_limits(app: Flask | Routes, policy: RateLimitPolicy) -> Limiter | No
         in_memory_fallback_enabled=False,
         enabled=policy.enabled and not public_demo(),
     )
+
+    # This consumer owns the supplied pool, just as Redis.from_url did.
+    cast("RedisStorage", limiter.storage).storage.auto_close_connection_pool = True
 
     @limiter.request_filter
     def named_credential() -> bool:

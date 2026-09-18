@@ -5,10 +5,14 @@ Measure component HTTP demand and aggregate short-lived reports at the root.
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 from collections import deque
 from typing import TYPE_CHECKING
+
+from polyad.transport.pools import pressure as connection_pressure
+from polyad.transport.pools import snapshot as connection_snapshot
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -90,8 +94,14 @@ async def report(shared: SharedQueue, component: str) -> None:
     prefix = f"{shared.prefix}:components"
     seconds, microseconds = await shared.client.time()
     observed = seconds + microseconds / 1_000_000
+    entry = {
+        "component": component,
+        **pressure.snapshot(),
+        "connectionPools": connection_snapshot(),
+        "remoteWorker": os.environ.get("POLYAD_ROOT_WORKER", "false").lower() == "true",
+    }
     async with shared.client.pipeline(transaction=True) as transaction:
-        transaction.set(prefix + ":" + shared.consumer, json.dumps({"component": component, **pressure.snapshot()}), ex=15)
+        transaction.set(prefix + ":" + shared.consumer, json.dumps(entry), ex=15)
         transaction.zadd(prefix, {shared.consumer: observed})
         transaction.zremrangebyscore(prefix, "-inf", observed - 90)
         await transaction.execute()
@@ -120,6 +130,17 @@ async def collect(shared: SharedQueue) -> dict[str, Any]:
             group["replicas"] += 1
             for field in ("requestsPerSecond", "inFlight"):
                 group[field] += entry[field]
+            # Remote workers have separate scaling authority and must not inflate
+            # the root's local Deployment or component ReplicaGroup demand.
+            if not entry.get("remoteWorker", False):
+                group.setdefault("connectionPressure", 0.0)
+                group.setdefault("connectionFresh", True)
+                group["connectionFresh"] &= "connectionPools" in entry
+                group["connectionPressure"] += connection_pressure(entry.get("connectionPools", {}))
+                for name, sample in entry.get("connectionPools", {}).items():
+                    totals = group.setdefault("connectionPools", {}).setdefault(name, {"inUse": 0, "limit": 0, "waiting": 0})
+                    for field in totals:
+                        totals[field] += sample[field]
         return result
     except Exception:
         return {"fresh": False, "roles": {}}
@@ -131,12 +152,18 @@ def demand(snapshot: dict[str, Any], component: str, metric: str) -> float:
 
     Args:
         snapshot (dict[str, Any]): Cached root metrics snapshot.
-        component (str): Executor, gateway or telemetry component.
-        metric (str): backlog, requestsPerSecond or inFlight.
+        component (str): Dense, bootstrap, executor, gateway or telemetry component.
+        metric (str): backlog, requestsPerSecond, inFlight or connectionPressure.
 
     Returns:
         float: Global measured demand; unavailable samples raise instead of returning zero.
     """
+    if metric == "connectionPressure" and component in {"dense", "bootstrap", "executor", "gateway", "telemetry"}:
+        components = snapshot.get("components", {})
+        group = components.get("roles", {}).get(component, {})
+        if not components.get("fresh") or not group.get("connectionFresh"):
+            raise ValueError("connection demand is stale")
+        return float(group["connectionPressure"])
     if component == "executor" and metric == "backlog":
         samples = [snapshot, *snapshot.get("clusters", {}).values()]
         if any(not sample.get("inbound", {}).get("fresh") for sample in samples):

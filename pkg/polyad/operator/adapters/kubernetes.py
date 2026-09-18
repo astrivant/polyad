@@ -26,6 +26,7 @@ from polyad.operator.coordination.write_queue import PendingWrites, WriteConflic
 from polyad.operator.observability.decisions import decision
 from polyad.operator.observability.metrics import WriteBacklog
 from polyad.operator.observability.tracing import traced
+from polyad.transport.settings import settings
 from polyad_types.resources import GROUP as GROUP
 from polyad_types.resources import VERSION as VERSION
 from polyad_types.resources import DeleteOptions, UIDPreconditions, encode_body
@@ -75,6 +76,8 @@ class API:
                 config.load_incluster_config()
             except config.ConfigException:
                 config.load_kube_config()
+        configuration = copy.deepcopy(configuration) if configuration is not None else client.Configuration.get_default_copy()
+        configuration.connection_pool_maxsize = self.connection_settings["poolSize"]
         self.writes = WriteBacklog()
         self.client = client.ApiClient(configuration=configuration)
         self.before_write = before_write
@@ -83,6 +86,16 @@ class API:
         _ = self.max_pending_writes  # Validate the process setting at startup.
         _ = self.write_lock
         _ = self.validations.settings
+
+    @cached_property
+    def connection_settings(self) -> dict[str, Any]:
+        """
+        Retain finite request timeouts and the HTTP keepalive pool size.
+
+        Returns:
+            dict[str, Any]: Validated transport settings, separate from write admission.
+        """
+        return settings("kubernetes")
 
     @cached_property
     def work_graph(self) -> WorkGraphSettings:
@@ -433,7 +446,10 @@ class API:
                         auth_settings=["BearerToken"],
                         header_params={"Content-Type": "application/merge-patch+json" if method == "PATCH" else "application/json"},
                         _return_http_data_only=True,
-                        _request_timeout=(5, 20),
+                        _request_timeout=(
+                            self.connection_settings["connectTimeoutSeconds"],
+                            self.connection_settings["readTimeoutSeconds"],
+                        ),
                     )
                 )
                 try:

@@ -66,6 +66,68 @@ operator:
     # Rule/throughput cheegerComputation settings may only reduce these ceilings.
     ## @param operator.cheeger.timeoutSeconds [number] Cooperative runtime ceiling per calculation, checked between batches. Incomplete search is never an exact constant.
     timeoutSeconds: 5
+  ## @param operator.connections [object] Per-process transport budgets; inherited by split components, observers and root-provisioned workers. Upgrade the owning release to apply changes.
+  connections:
+    ## @param operator.connections.cache [object] Shared asynchronous Redis/Dragonfly cache and coordination pool; bounded to 128 connections by default.
+    cache:
+      ## @param operator.connections.cache.maxConnections [integer] Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity.
+      maxConnections: 128
+      ## @param operator.connections.cache.connectTimeoutSeconds [number] Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 0.1-60; fractional seconds allowed.
+      connectTimeoutSeconds: 5
+      ## @param operator.connections.cache.socketTimeoutSeconds [number] Redis socket read/write timeout in seconds (0.1-60); requests fail closed and uncertain writes are not replayed.
+      socketTimeoutSeconds: 5
+    ## @param operator.connections.lanes [object] Synchronous Redis/Dragonfly pool enforcing API-key rate and concurrency lanes.
+    lanes:
+      ## @param operator.connections.lanes.maxConnections [integer] Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity.
+      maxConnections: 32
+      ## @param operator.connections.lanes.connectTimeoutSeconds [number] Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 0.1-60; fractional seconds allowed.
+      connectTimeoutSeconds: 2
+      ## @param operator.connections.lanes.socketTimeoutSeconds [number] Redis socket read/write timeout in seconds (0.1-60); requests fail closed and uncertain writes are not replayed.
+      socketTimeoutSeconds: 2
+    ## @param operator.connections.rateLimits [object] Synchronous Redis/Dragonfly pool for composition request quotas.
+    rateLimits:
+      ## @param operator.connections.rateLimits.maxConnections [integer] Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity.
+      maxConnections: 32
+      ## @param operator.connections.rateLimits.connectTimeoutSeconds [number] Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 0.1-60; fractional seconds allowed.
+      connectTimeoutSeconds: 5
+      ## @param operator.connections.rateLimits.socketTimeoutSeconds [number] Redis socket read/write timeout in seconds (0.1-60); requests fail closed and uncertain writes are not replayed.
+      socketTimeoutSeconds: 5
+    ## @param operator.connections.state [object] Optional PostgreSQL graph-state pool; opened only when storage is enabled.
+    state:
+      ## @param operator.connections.state.minConnections [integer] Minimum PostgreSQL connections per pool (0-4096, no greater than maxConnections); zero opens lazily.
+      minConnections: 0
+      ## @param operator.connections.state.maxConnections [integer] Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity.
+      maxConnections: 2
+      ## @param operator.connections.state.poolTimeoutSeconds [number] PostgreSQL connection checkout timeout in seconds (0.1-60); includes waiting for a free pool slot.
+      poolTimeoutSeconds: 5
+      ## @param operator.connections.state.connectTimeoutSeconds [integer] Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 1-60; whole seconds.
+      connectTimeoutSeconds: 5
+      ## @param operator.connections.state.statementTimeoutMilliseconds [integer] PostgreSQL statement timeout in milliseconds (1-300000); bounds each database statement.
+      statementTimeoutMilliseconds: 5000
+      ## @param operator.connections.state.lockTimeoutMilliseconds [integer] PostgreSQL lock acquisition timeout in milliseconds (1-300000); bounds contention independently of checkout.
+      lockTimeoutMilliseconds: 4000
+    ## @param operator.connections.authentication [object] Optional PostgreSQL credential-verification pool; independent from graph-state storage.
+    authentication:
+      ## @param operator.connections.authentication.minConnections [integer] Minimum PostgreSQL connections per pool (0-4096, no greater than maxConnections); zero opens lazily.
+      minConnections: 0
+      ## @param operator.connections.authentication.maxConnections [integer] Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity.
+      maxConnections: 2
+      ## @param operator.connections.authentication.poolTimeoutSeconds [number] PostgreSQL connection checkout timeout in seconds (0.1-60); includes waiting for a free pool slot.
+      poolTimeoutSeconds: 5
+      ## @param operator.connections.authentication.connectTimeoutSeconds [integer] Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 1-60; whole seconds.
+      connectTimeoutSeconds: 5
+      ## @param operator.connections.authentication.statementTimeoutMilliseconds [integer] PostgreSQL statement timeout in milliseconds (1-300000); bounds each database statement.
+      statementTimeoutMilliseconds: 5000
+      ## @param operator.connections.authentication.lockTimeoutMilliseconds [integer] PostgreSQL lock acquisition timeout in milliseconds (1-300000); bounds contention independently of checkout.
+      lockTimeoutMilliseconds: 4000
+    ## @param operator.connections.kubernetes [object] Kubernetes HTTP transport per API adapter; poolSize retains keepalive connections and does not change write concurrency.
+    kubernetes:
+      ## @param operator.connections.kubernetes.poolSize [integer] Retained HTTP connections per Kubernetes API adapter (1-4096); this is a keepalive cache, not a concurrent-request ceiling.
+      poolSize: 32
+      ## @param operator.connections.kubernetes.connectTimeoutSeconds [number] Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 0.1-60; fractional seconds allowed.
+      connectTimeoutSeconds: 5
+      ## @param operator.connections.kubernetes.readTimeoutSeconds [number] Kubernetes response timeout in seconds (0.1-60); timed-out mutations require fresh reconciliation.
+      readTimeoutSeconds: 20
   ## @param operator.tuning [object] Settings for operator.tuning.
   tuning:
     # Number, 1-15 seconds. Refreshes local/remote inventory and remote backlog.

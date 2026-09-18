@@ -1,0 +1,35 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if and .Values.operator.autoscaling.enabled .Values.operator.autoscaling.connections.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-polyad
+  minReplicaCount: {{ .Values.operator.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.operator.autoscaling.maxReplicas }}
+  pollingInterval: {{ .Values.operator.autoscaling.connections.pollingInterval }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      {{/* Keep KEDA's default HPA name distinct from the Helm HPA so deleting
+           this ScaledObject cannot garbage-collect the restored Helm HPA. */}}
+      behavior:
+        {{- toYaml .Values.operator.autoscaling.behavior | nindent 8 }}
+  triggers:
+    {{- include "polyad.connectionTrigger" (dict "root" . "component" (ternary "dense" "bootstrap" (eq .Values.architecture.mode "Dense"))) | nindent 4 }}
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: {{ .Values.operator.autoscaling.targetCPUUtilizationPercentage | quote }}
+    {{- if .Values.operator.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: memory
+      metricType: Utilization
+      metadata:
+        value: {{ .Values.operator.autoscaling.targetMemoryUtilizationPercentage | quote }}
+    {{- end }}
+{{- end }}
+{{- end -}}

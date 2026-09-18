@@ -209,7 +209,7 @@ KEDA can target custom resources that expose Kubernetes `/scale`.
 
 | What changes | KEDA target in the root cluster | What the root changes |
 | --- | --- | --- |
-| Root operator capacity | Root Deployment | Native Deployment replicas; preserve the HA minimum of two and disable the chart operator HPA when KEDA owns this target. |
+| Root operator capacity | Root Deployment | Native Deployment replicas; the [connection-pressure option](../operations/performance.md#connection-pools-and-keda) combines KEDA, CPU and memory on one HPA. Disable the chart operator HPA for separately supplied KEDA scalers. |
 | Remote execution capacity | `OperatorPool` | The pool's remote Deployment, preserving root coordination and draining leases. |
 | Remote application topology | `RemoteScale` | An approved intent for a remote ReplicaGroup; the destination's normal rule admission creates or retires copies. Local `spec.replicas` remains the fallback. |
 | Root-local graph topology | `ReplicaGroup` | Existing graph-family admission and reconciliation. |

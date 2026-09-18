@@ -82,6 +82,12 @@ class MetricsStore:
                     "All primary sessions from this control plane; deduplicate scrape replicas.",
                     [({}, postgres["connections"])],
                 )
+        for field, suffix in (("inUse", "in_use"), ("limit", "limit"), ("waiting", "waiting")):
+            gauge(
+                "connection_pool_" + suffix,
+                "Process-local connection pool occupancy or configured capacity; idle sockets are not demand.",
+                [({"pool": name}, entry[field]) for name, entry in snapshot.get("connectionPools", {}).items()],
+            )
         components = snapshot.get("components", {})
         cache = snapshot.get("dragonfly", {})
         if cache.get("enabled"):
@@ -94,6 +100,26 @@ class MetricsStore:
             [({}, int(components.get("fresh", False)))],
         )
         if components.get("fresh"):
+            for field, suffix in (("inUse", "in_use"), ("limit", "limit"), ("waiting", "waiting")):
+                gauge(
+                    "component_connection_pool_" + suffix,
+                    "Global local-component pool observations; deduplicate scrape replicas.",
+                    [
+                        ({"component": component, "pool": name}, entry[field])
+                        for component, group in components["roles"].items()
+                        if group.get("connectionFresh")
+                        for name, entry in group.get("connectionPools", {}).items()
+                    ],
+                )
+            gauge(
+                "component_connection_pressure",
+                "Sum of busiest pool fractions per local component process; deduplicate scrape replicas.",
+                [
+                    ({"component": name}, entry["connectionPressure"])
+                    for name, entry in components["roles"].items()
+                    if entry.get("connectionFresh")
+                ],
+            )
             gauge(
                 "component_reporting_replicas",
                 "Fresh process reports per component; deduplicate scrape replicas.",

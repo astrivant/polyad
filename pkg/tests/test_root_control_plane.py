@@ -277,6 +277,7 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
                                 "command": ["/usr/bin/tini", "--", "python", "-m", "polyad.operator.runtime"],
                                 "env": [
                                     *({"name": name, "value": str(CONFIGURATION[key])} for key, name in ENVIRONMENT.items()),
+                                    {"name": "POLYAD_CONNECTION_SETTINGS", "value": '{"cache":{"maxConnections":47}}'},
                                     {"name": "POLYAD_ROOT_ENABLED", "value": "true"},
                                     {"name": "POLYAD_POSTGRES_ENABLED", "value": str(database).lower()},
                                     {"name": "POLYAD_POSTGRES_RECORD_ENCRYPTION_ENABLED", "value": "true"},
@@ -334,6 +335,7 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
         assert pod["metadata"]["labels"] != root_deployment["spec"]["template"]["metadata"]["labels"]
         env = {item["name"]: item for item in pod["spec"]["containers"][0]["env"]}
         assert env["POLYAD_ROOT_WORKER"]["value"] == "true"
+        assert json.loads(env["POLYAD_CONNECTION_SETTINGS"]["value"]) == {"cache": {"maxConnections": 47}}
         assert {key: env[name]["value"] for key, name in ENVIRONMENT.items()} == {key: str(value) for key, value in CONFIGURATION.items()}
         assert env["KUBECONFIG"]["value"] == "/var/run/polyad/root/config"
         assert env["POLYAD_API_ENABLED"]["value"] == "false"

@@ -121,6 +121,21 @@
                   }
                 }
               }
+            },
+            "connections": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/autoscaling/properties/connections/properties/enabled"
+                },
+                "targetUtilizationPercentage": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/autoscaling/properties/connections/properties/targetUtilizationPercentage"
+                },
+                "pollingInterval": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/autoscaling/properties/connections/properties/pollingInterval"
+                }
+              }
             }
           }
         },
@@ -235,6 +250,120 @@
             },
             "trustDomains": {
               "$ref": "#/definitions/helmValues/properties/operator/properties/serviceAccess/properties/trustDomains"
+            }
+          }
+        },
+        "connections": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cache": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxConnections": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/cache/properties/maxConnections"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/cache/properties/connectTimeoutSeconds"
+                },
+                "socketTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/cache/properties/socketTimeoutSeconds"
+                }
+              }
+            },
+            "lanes": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxConnections": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/lanes/properties/maxConnections"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/lanes/properties/connectTimeoutSeconds"
+                },
+                "socketTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/lanes/properties/socketTimeoutSeconds"
+                }
+              }
+            },
+            "rateLimits": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxConnections": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/rateLimits/properties/maxConnections"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/rateLimits/properties/connectTimeoutSeconds"
+                },
+                "socketTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/rateLimits/properties/socketTimeoutSeconds"
+                }
+              }
+            },
+            "state": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minConnections": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/state/properties/minConnections"
+                },
+                "maxConnections": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/state/properties/maxConnections"
+                },
+                "poolTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/state/properties/poolTimeoutSeconds"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/state/properties/connectTimeoutSeconds"
+                },
+                "statementTimeoutMilliseconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/state/properties/statementTimeoutMilliseconds"
+                },
+                "lockTimeoutMilliseconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/state/properties/lockTimeoutMilliseconds"
+                }
+              }
+            },
+            "authentication": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minConnections": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/authentication/properties/minConnections"
+                },
+                "maxConnections": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/authentication/properties/maxConnections"
+                },
+                "poolTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/authentication/properties/poolTimeoutSeconds"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/authentication/properties/connectTimeoutSeconds"
+                },
+                "statementTimeoutMilliseconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/authentication/properties/statementTimeoutMilliseconds"
+                },
+                "lockTimeoutMilliseconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/authentication/properties/lockTimeoutMilliseconds"
+                }
+              }
+            },
+            "kubernetes": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "poolSize": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/kubernetes/properties/poolSize"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/kubernetes/properties/connectTimeoutSeconds"
+                },
+                "readTimeoutSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/connections/properties/kubernetes/properties/readTimeoutSeconds"
+                }
+              }
             }
           }
         }
@@ -10269,6 +10398,36 @@
                       }
                     }
                   }
+                },
+                "connections": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Add KEDA connection-pressure scaling alongside CPU/memory for operator autoscaling, or to existing Distributed component scalers. Requires HA and KEDA."
+                    },
+                    "targetUtilizationPercentage": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100,
+                      "default": 70,
+                      "description": "Target busy-plus-waiting connections as a percentage of configured pool capacity per process (1-100); idle retained sockets are excluded."
+                    },
+                    "pollingInterval": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 60,
+                      "default": 15,
+                      "description": "KEDA polling interval in seconds for the dense/bootstrap operator; HPA polling also follows the cluster sync period."
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "targetUtilizationPercentage",
+                    "pollingInterval"
+                  ]
                 }
               },
               "allOf": [
@@ -10892,6 +11051,260 @@
                   "description": "Explicit cluster-to-Istio trust-domain map required for cross-cluster service negotiation; no inferred identity domains."
                 }
               }
+            },
+            "connections": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "cache": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "maxConnections": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 128,
+                      "description": "Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity."
+                    },
+                    "connectTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 0.1-60; fractional seconds allowed."
+                    },
+                    "socketTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "Redis socket read/write timeout in seconds (0.1-60); requests fail closed and uncertain writes are not replayed."
+                    }
+                  },
+                  "required": [
+                    "maxConnections",
+                    "connectTimeoutSeconds",
+                    "socketTimeoutSeconds"
+                  ]
+                },
+                "lanes": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "maxConnections": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 32,
+                      "description": "Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity."
+                    },
+                    "connectTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 2,
+                      "description": "Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 0.1-60; fractional seconds allowed."
+                    },
+                    "socketTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 2,
+                      "description": "Redis socket read/write timeout in seconds (0.1-60); requests fail closed and uncertain writes are not replayed."
+                    }
+                  },
+                  "required": [
+                    "maxConnections",
+                    "connectTimeoutSeconds",
+                    "socketTimeoutSeconds"
+                  ]
+                },
+                "rateLimits": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "maxConnections": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 32,
+                      "description": "Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity."
+                    },
+                    "connectTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 0.1-60; fractional seconds allowed."
+                    },
+                    "socketTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "Redis socket read/write timeout in seconds (0.1-60); requests fail closed and uncertain writes are not replayed."
+                    }
+                  },
+                  "required": [
+                    "maxConnections",
+                    "connectTimeoutSeconds",
+                    "socketTimeoutSeconds"
+                  ]
+                },
+                "state": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "minConnections": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 4096,
+                      "default": 0,
+                      "description": "Minimum PostgreSQL connections per pool (0-4096, no greater than maxConnections); zero opens lazily."
+                    },
+                    "maxConnections": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 2,
+                      "description": "Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity."
+                    },
+                    "poolTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "PostgreSQL connection checkout timeout in seconds (0.1-60); includes waiting for a free pool slot."
+                    },
+                    "connectTimeoutSeconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 1-60; whole seconds."
+                    },
+                    "statementTimeoutMilliseconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 300000,
+                      "default": 5000,
+                      "description": "PostgreSQL statement timeout in milliseconds (1-300000); bounds each database statement."
+                    },
+                    "lockTimeoutMilliseconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 300000,
+                      "default": 4000,
+                      "description": "PostgreSQL lock acquisition timeout in milliseconds (1-300000); bounds contention independently of checkout."
+                    }
+                  },
+                  "required": [
+                    "minConnections",
+                    "maxConnections",
+                    "poolTimeoutSeconds",
+                    "connectTimeoutSeconds",
+                    "statementTimeoutMilliseconds",
+                    "lockTimeoutMilliseconds"
+                  ]
+                },
+                "authentication": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "minConnections": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 4096,
+                      "default": 0,
+                      "description": "Minimum PostgreSQL connections per pool (0-4096, no greater than maxConnections); zero opens lazily."
+                    },
+                    "maxConnections": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 2,
+                      "description": "Maximum connections per pool per process (1-4096); multiply by maximum replicas and pool instances when budgeting backend capacity."
+                    },
+                    "poolTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "PostgreSQL connection checkout timeout in seconds (0.1-60); includes waiting for a free pool slot."
+                    },
+                    "connectTimeoutSeconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 1-60; whole seconds."
+                    },
+                    "statementTimeoutMilliseconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 300000,
+                      "default": 5000,
+                      "description": "PostgreSQL statement timeout in milliseconds (1-300000); bounds each database statement."
+                    },
+                    "lockTimeoutMilliseconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 300000,
+                      "default": 4000,
+                      "description": "PostgreSQL lock acquisition timeout in milliseconds (1-300000); bounds contention independently of checkout."
+                    }
+                  },
+                  "required": [
+                    "minConnections",
+                    "maxConnections",
+                    "poolTimeoutSeconds",
+                    "connectTimeoutSeconds",
+                    "statementTimeoutMilliseconds",
+                    "lockTimeoutMilliseconds"
+                  ]
+                },
+                "kubernetes": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "poolSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "default": 32,
+                      "description": "Retained HTTP connections per Kubernetes API adapter (1-4096); this is a keepalive cache, not a concurrent-request ceiling."
+                    },
+                    "connectTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 5,
+                      "description": "Connection establishment timeout in seconds; shorter values fail faster during backend outages. Range: 0.1-60; fractional seconds allowed."
+                    },
+                    "readTimeoutSeconds": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 60,
+                      "default": 20,
+                      "description": "Kubernetes response timeout in seconds (0.1-60); timed-out mutations require fresh reconciliation."
+                    }
+                  },
+                  "required": [
+                    "poolSize",
+                    "connectTimeoutSeconds",
+                    "readTimeoutSeconds"
+                  ]
+                }
+              },
+              "required": [
+                "cache",
+                "lanes",
+                "rateLimits",
+                "state",
+                "authentication",
+                "kubernetes"
+              ]
             }
           },
           "allOf": [
@@ -50605,6 +51018,37 @@
                   "properties": {
                     "enabled": {
                       "const": false
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "required": [
+                "operator"
+              ],
+              "properties": {
+                "operator": {
+                  "required": [
+                    "autoscaling"
+                  ],
+                  "properties": {
+                    "autoscaling": {
+                      "required": [
+                        "connections"
+                      ],
+                      "properties": {
+                        "connections": {
+                          "required": [
+                            "enabled"
+                          ],
+                          "properties": {
+                            "enabled": {
+                              "const": true
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }

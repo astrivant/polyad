@@ -102,6 +102,7 @@ spec:
           args:
             - --namespace={{ ternary .Values.worker.rootNamespace .Release.Namespace .Values.worker.enabled }}
           env:
+            {{- include "polyad.connectionEnvironment" . | nindent 12 }}
             {{- include "polyad.podContextEnv" . | nindent 12 }}
             {{- include "polyad.tracingEnv" . | nindent 12 }}
             {{- include "polyad.postgresql.recordEncryptionEnv" . | nindent 12 }}

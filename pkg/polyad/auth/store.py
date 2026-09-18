@@ -15,6 +15,8 @@ from psycopg_pool import ConnectionPool
 
 from polyad.operator.lifecycle.health import credential_token
 from polyad.sql import record_cipher, statement
+from polyad.transport.pools import register
+from polyad.transport.settings import postgres_options
 from polyad_types.codec import to_dict
 
 if TYPE_CHECKING:
@@ -38,17 +40,13 @@ class CredentialStore:
         self.cipher = record_cipher()
         self.lock = Lock()
         self.initialized = False
+        options = postgres_options("authentication")
+        options["kwargs"]["application_name"] = "polyad-" + hashlib.sha256(scope.encode()).hexdigest()[:24]
         self.pool = ConnectionPool(
             dsn,
-            min_size=0,
-            max_size=2,
-            timeout=5,
-            kwargs={
-                "connect_timeout": 5,
-                "options": "-c statement_timeout=5000 -c lock_timeout=4000",
-                "application_name": "polyad-" + hashlib.sha256(scope.encode()).hexdigest()[:24],
-            },
+            **options,
         )
+        register(self.pool, "authentication", "postgresql")
 
     @classmethod
     def from_environment(cls) -> CredentialStore | None:

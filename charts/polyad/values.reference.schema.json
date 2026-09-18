@@ -121,6 +121,21 @@
                   }
                 }
               }
+            },
+            "connections": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/connections/properties/enabled"
+                },
+                "targetUtilizationPercentage": {
+                  "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/connections/properties/targetUtilizationPercentage"
+                },
+                "pollingInterval": {
+                  "$ref": "values.schema.json#/properties/operator/properties/autoscaling/properties/connections/properties/pollingInterval"
+                }
+              }
             }
           }
         },
@@ -235,6 +250,120 @@
             },
             "trustDomains": {
               "$ref": "values.schema.json#/properties/operator/properties/serviceAccess/properties/trustDomains"
+            }
+          }
+        },
+        "connections": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cache": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxConnections": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/cache/properties/maxConnections"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/cache/properties/connectTimeoutSeconds"
+                },
+                "socketTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/cache/properties/socketTimeoutSeconds"
+                }
+              }
+            },
+            "lanes": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxConnections": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/lanes/properties/maxConnections"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/lanes/properties/connectTimeoutSeconds"
+                },
+                "socketTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/lanes/properties/socketTimeoutSeconds"
+                }
+              }
+            },
+            "rateLimits": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxConnections": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/rateLimits/properties/maxConnections"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/rateLimits/properties/connectTimeoutSeconds"
+                },
+                "socketTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/rateLimits/properties/socketTimeoutSeconds"
+                }
+              }
+            },
+            "state": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minConnections": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/state/properties/minConnections"
+                },
+                "maxConnections": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/state/properties/maxConnections"
+                },
+                "poolTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/state/properties/poolTimeoutSeconds"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/state/properties/connectTimeoutSeconds"
+                },
+                "statementTimeoutMilliseconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/state/properties/statementTimeoutMilliseconds"
+                },
+                "lockTimeoutMilliseconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/state/properties/lockTimeoutMilliseconds"
+                }
+              }
+            },
+            "authentication": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minConnections": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/authentication/properties/minConnections"
+                },
+                "maxConnections": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/authentication/properties/maxConnections"
+                },
+                "poolTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/authentication/properties/poolTimeoutSeconds"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/authentication/properties/connectTimeoutSeconds"
+                },
+                "statementTimeoutMilliseconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/authentication/properties/statementTimeoutMilliseconds"
+                },
+                "lockTimeoutMilliseconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/authentication/properties/lockTimeoutMilliseconds"
+                }
+              }
+            },
+            "kubernetes": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "poolSize": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/kubernetes/properties/poolSize"
+                },
+                "connectTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/kubernetes/properties/connectTimeoutSeconds"
+                },
+                "readTimeoutSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/connections/properties/kubernetes/properties/readTimeoutSeconds"
+                }
+              }
             }
           }
         }

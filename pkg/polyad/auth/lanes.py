@@ -11,10 +11,9 @@ from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 from redis import Redis
-from redis.backoff import NoBackoff
-from redis.retry import Retry
 
 from polyad.lua import script
+from polyad.transport.redis import pool
 
 if TYPE_CHECKING:
     from polyad_types.auth import APIKey
@@ -81,13 +80,7 @@ class Lanes:
             namespace (str): Root namespace shared by the HA operator replicas.
         """
         self.namespace = namespace
-        self.client = Redis.from_url(
-            url,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-            max_connections=32,
-            retry=Retry(NoBackoff(), 0),
-        )
+        self.client = Redis.from_pool(pool(url, "lanes"))
         self.lock = Lock()
         self.active: dict[str, Permit] = {}
         self.stopping = Event()

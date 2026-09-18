@@ -9,9 +9,9 @@ import os
 from typing import TYPE_CHECKING
 
 from redis.asyncio import Redis
-from redis.asyncio.retry import Retry
-from redis.backoff import NoBackoff
 from redis.exceptions import ReadOnlyError
+
+from polyad.transport.redis import pool
 
 if TYPE_CHECKING:
     from typing import Any
@@ -40,14 +40,7 @@ class Cache:
             url (str): Redis-compatible server URL, including optional authentication and TLS.
             namespace (str): Operator namespace isolating cache entries.
         """
-        self.client: Redis = Redis.from_url(
-            url,
-            decode_responses=True,
-            socket_connect_timeout=5,
-            socket_timeout=5,
-            retry=Retry(NoBackoff(), 0),
-            retry_on_error=[ReadOnlyError],
-        )
+        self.client: Redis = Redis.from_pool(pool(url, "cache", asynchronous=True, decode_responses=True, retry_on_error=[ReadOnlyError]))
         self.prefix = f"polyad:{namespace}:cache:"
 
     async def get(self, key: str) -> Any:

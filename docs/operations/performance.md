@@ -16,6 +16,7 @@ family, its scope and the feature required to publish it.
 
 - [Resource baseline and right-sizing](#resource-baseline-and-right-sizing)
 - [Autoscaling response](#autoscaling-response)
+- [Connection pools and KEDA](#connection-pools-and-keda)
 - [Worker cadence](#worker-cadence)
 - [Write admission and validation](#write-admission-and-validation)
 - [KEDA-managed targets](#keda-managed-targets)
@@ -122,6 +123,94 @@ per minute. Helm replaces policy arrays when overridden.
 The cluster controls the HPA synchronization interval and availability of resource
 metrics. Resource requests, replica bounds, memory limits and termination grace are
 also available under `operator`; see the [Helm parameters](../../charts/polyad/README.md).
+
+## Connection pools and KEDA
+
+`operator.connections` configures transport budgets per pool, per Python process.
+The [tuning reference](../../charts/polyad/values-tuning.reference.yaml) documents
+all fields and ranges. Helm projects these settings through
+`POLYAD_CONNECTION_SETTINGS` into dense operators, split components and observers.
+Root-provisioned workers inherit the root Pod template; Helm-installed workers
+use their own release values. Upgrading the owning release rolls changed settings
+into its Pods. Configuring a pool does not enable its optional feature or import
+its database driver.
+
+| Consumer | Default maximum | Default timeouts |
+| --- | ---: | --- |
+| `cache` | 128 | Connect 5s; socket 5s |
+| `lanes` | 32 | Connect 2s; socket 2s |
+| `rateLimits` | 32 | Connect 5s; socket 5s |
+| `state` | 2 | Checkout 5s; connect 5s; statement 5000ms; lock 4000ms |
+| `authentication` | 2 | Checkout 5s; connect 5s; statement 5000ms; lock 4000ms |
+| `kubernetes` | 32 retained connections per adapter | Connect 5s; read 20s |
+
+Redis limits are hard per-pool ceilings. PostgreSQL pools start with zero
+connections by default; `minConnections` can pre-open connections, up to
+`maxConnections`. Timeout values stay finite, and Redis URL query parameters
+cannot override the administrator's connection budgets. Kubernetes `poolSize`
+controls retained keepalive connections; write concurrency still comes from
+`operator.writeQueue`. These settings cover Polyad's API adapters, while Kopf
+owns its watches and their transport lifecycle.
+
+For connection-driven scaling, apply the
+[connection scaling reference](../../charts/polyad/values-connection-pools.reference.yaml):
+
+```yaml
+ha: true
+operator:
+  connections:
+    lanes:
+      maxConnections: 32
+      connectTimeoutSeconds: 2
+      socketTimeoutSeconds: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    connections:
+      enabled: true
+      targetUtilizationPercentage: 70
+      pollingInterval: 15
+```
+
+This requires KEDA, installed separately or through `keda.install: true`.
+The chart enables metrics and uses one KEDA ScaledObject for the local operator
+Deployment, retaining its CPU target, optional memory target, replica bounds and
+scaling behavior. It replaces the chart's standalone HPA. With
+`architecture.autoscaling: true`, the same option adds a connection trigger to
+each existing component ReplicaGroup scaler, so graph constraints still govern
+those replica changes. Remote workers retain their OperatorPool scaling
+authority; their connections do not increase the root's local replica target.
+
+Each process samples Redis checkouts and PostgreSQL checkouts plus waiting
+requests. For each pool category it divides demand by configured capacity, then
+reports the largest fraction. The root sums these fractions once per reporting
+process of that component. KEDA's
+[Metrics API scaler](https://keda.sh/docs/2.20/scalers/metrics-api/) uses an
+`AverageValue` target: two processes at `0.9` pressure produce `1.8`, which at a
+`0.7` target requests `ceil(1.8 / 0.7) = 3` replicas. Idle retained connections
+contribute zero demand. Missing, stale or pre-upgrade reports without connection
+observations make this metric unavailable instead of reporting zero.
+
+Sampling follows `operator.tuning.metricsIntervalSeconds`; short bursts between
+samples may not appear. The
+[pool metrics](metrics.md#metric-inventory-and-scope) expose local occupancy,
+limits and PostgreSQL waiters. The component pressure metric and
+`/v1/components/{component}/connectionPressure` expose aggregated scaling demand.
+Authentication uses the existing metrics credentials and KEDA authentication
+configuration. Shared lane request/concurrency budgets stay fixed when replicas
+increase; horizontal scaling adds transport capacity, not permission to exceed
+those budgets.
+
+Budget backend capacity for the maximum possible processes, including rollout
+surge, observers, remote workers and multiple adapter pools. For example, eight
+processes with all three Redis pools enabled can allow up to
+`8 × (128 + 32 + 32) = 1536` connections before those additions. PostgreSQL's
+`postgresql.maxConnections` is a separate server limit. Increasing client
+replicas or pool sizes increases the connection budget required on the backend.
+The existing Dragonfly and PostgreSQL connection-count scalers govern their own
+instances; they do not rewrite these client limits or increase primary write
+capacity by adding replicas.
 
 ## Worker cadence
 

@@ -64,5 +64,11 @@
 {{- end -}}
 {{- if and $values.architecture.autoscaling (ne $values.architecture.mode "Distributed") }}{{ fail "component autoscaling requires architecture.mode=Distributed" }}{{ end -}}
 {{- if and $values.rootControlPlane.pools (not $values.rootControlPlane.enabled) }}{{ fail "rootControlPlane.pools requires rootControlPlane.enabled=true" }}{{ end -}}
+{{- if $values.operator.autoscaling.connections.enabled -}}
+{{- if or (not $values.ha) $values.worker.enabled }}{{ fail "connection-pressure autoscaling requires ha and a local operator/component target; remote workers retain their pool scaling authority" }}{{ end -}}
+{{- if not (or $values.operator.autoscaling.enabled $values.architecture.autoscaling) }}{{ fail "connection-pressure autoscaling requires operator.autoscaling.enabled or architecture.autoscaling" }}{{ end -}}
+{{- $_ := set $values.metrics "enabled" true -}}
+{{- if and $values.metrics.authentication.enabled (not $values.keda.authentication.enabled) }}{{ fail "authenticated connection-pressure autoscaling requires keda.authentication.enabled" }}{{ end -}}
+{{- end -}}
 {{- toJson $values -}}
 {{- end -}}

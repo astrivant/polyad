@@ -116,6 +116,9 @@ for values and the signals to watch when changing them.
 | `polyad_observed_resources` | Sum of direct owned resources in current-generation graph status, by `kind` |
 | `polyad_graph_status_observations` | Instance graphs with `current` or `unknown` status observations |
 | `polyad_owned_shards` / `polyad_leader` | Local shard assignment count and planner leadership flag |
+| `polyad_connection_pool_in_use` / `polyad_connection_pool_limit` / `polyad_connection_pool_waiting` | Local process pool checkouts, configured capacity and PostgreSQL waiters, labeled by fixed `pool` category; idle sockets excluded from demand |
+| `polyad_component_connection_pool_in_use` / `polyad_component_connection_pool_limit` / `polyad_component_connection_pool_waiting` | Fresh pool totals across local processes by `component` and `pool`; includes split components, excludes remote workers; deduplicate scrape replicas |
+| `polyad_component_connection_pressure` | Sum of each local component process's busiest pool fraction; fresh reports only, deduplicate scrape replicas; remote workers excluded from local scaling |
 | `polyad_postgresql_connections` | Global primary connections from this operator state scope; available when optional PostgreSQL storage is enabled |
 | `polyad_dragonfly_connections` / `polyad_dragonfly_sample_fresh` | Primary connected clients and sample freshness for bundled HA cache autoscaling; deduplicate metrics replicas |
 | `polyad_postgresql_sample_fresh` / `polyad_postgresql_state_fresh` | Freshness of the connection sample and this process's persisted inventory |
@@ -191,6 +194,7 @@ The scalar routes are available independently of `metrics.graphLabels`:
 | `/v1/workloads/{kind}/{name}/{metric}` | Fresh controller workload or replica observations; `?node=` selects a logical node, `?cluster=` selects a root-held remote inventory |
 | `/v1/components/executor/backlog` | Fresh local and registered remote inbound queues |
 | `/v1/components/{component}/{metric}` | Fresh gateway/telemetry `requestsPerSecond` or `inFlight` reports |
+| `/v1/components/{component}/connectionPressure` | Sum of fresh local process pool-pressure fractions for dense/bootstrap/gateway/executor/telemetry; KEDA uses a fractional per-replica target |
 | `/v1/postgresql/connections` | Optional state database connection sampler |
 | `/v1/dragonfly/connections` | Bundled HA Dragonfly primary connection sampler |
 

@@ -68,6 +68,9 @@ spec:
           stabilizationWindowSeconds: 300
           policies: [{type: Pods, value: 1, periodSeconds: 60}]
   triggers:
+    {{- if $.Values.operator.autoscaling.connections.enabled }}
+    {{- include "polyad.connectionTrigger" (dict "root" $ "component" $component) | nindent 4 }}
+    {{- end }}
     {{- $signals := dict "requestsPerSecond" $settings.requestsPerSecond "inFlight" $settings.concurrentRequests }}
     {{- if eq $component "executor" }}{{ $signals = dict "backlog" $settings.backlog }}{{ end }}
     {{- range $metric, $target := $signals }}

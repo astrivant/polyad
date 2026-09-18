@@ -16,6 +16,8 @@ from psycopg_pool import AsyncConnectionPool
 
 from polyad.operator.lifecycle.health import credential_token
 from polyad.sql import record_cipher, statement
+from polyad.transport.pools import register
+from polyad.transport.settings import postgres_options
 
 if TYPE_CHECKING:
     from typing import Any
@@ -65,19 +67,15 @@ class StateStore:
         self.scope = scope
         self.cipher = record_cipher()
         self.application = "polyad-" + hashlib.sha256(scope.encode()).hexdigest()[:24]
+        options = postgres_options("state")
+        options["kwargs"]["application_name"] = self.application
         self.pool = AsyncConnectionPool(
             dsn,
-            min_size=0,
-            max_size=2,
-            timeout=5,
             open=False,
-            kwargs={
-                "connect_timeout": 5,
-                "application_name": self.application,
-                "options": "-c statement_timeout=5000 -c lock_timeout=4000",
-            },
             check=AsyncConnectionPool.check_connection,
+            **options,
         )
+        register(self.pool, "state", "postgresql")
         self.lock = asyncio.Lock()
         self.initialized = False
         self.last_success = 0.0

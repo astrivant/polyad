@@ -31,6 +31,7 @@ from polyad.operator.lifecycle.health import credential_token, lifecycle, watch_
 from polyad.operator.lifecycle.roles import executes, role, serves
 from polyad.operator.lifecycle.tuning import OperatorTuning
 from polyad.operator.observability.pressure import collect, report
+from polyad.transport.pools import snapshot as connection_snapshot
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
@@ -343,6 +344,7 @@ async def metrics_loop() -> None:
             "shards": sorted(coordinator.owned),
             "pending": queue.queue.qsize(),
             "tuning": asdict(tuning),
+            "connectionPools": connection_snapshot(),
             "workGraph": work_graph.document(),
             "writes": write_backlog(),
             "inbound": shared.backlog(tuple(coordinator.owned)),
