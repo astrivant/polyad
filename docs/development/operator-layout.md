@@ -50,7 +50,7 @@ flowchart TD
     observations -. "Optional durable graph observations" .-> postgres["adapters.postgresql"]
 ```
 
-This diagram describes control flow, not a strict Python import layering rule.
+This diagram describes control flow between the operator's components.
 The controller and individual reconcilers cooperate through type-only and local
 imports where needed. [Mutation plans](mutations.md) and
 [live GraphRules](../graphs/graph-rules.md) continue to govern writes.

@@ -243,7 +243,7 @@ One-way token fingerprints, policy digests and revocation flags remain queryable
 | `storage.separateDatabase: false` | Reuse enabled `postgresql` state storage and its login; separate-role isolation is not provided |
 
 Verification records contain a SHA-256 token fingerprint and nonsecret policy
-metadata. Use randomly generated, high-entropy API tokens rather than passwords.
+metadata. Use randomly generated, high-entropy API tokens.
 Mounted Secrets and policy still authorize the current token: the database does
 not recover a missing Secret or authenticate an old revision after rotation.
 Set `polyad_auth_lanes.disabled = true` for the appropriate scope, key group and
@@ -259,7 +259,7 @@ Use [values-demo.reference.yaml](../../charts/polyad/values-demo.reference.yaml)
 set `authentication.mode: Disabled`. Enabled HTTP listeners then omit credential
 checks and configured request/concurrency quotas, including named-key lanes and
 Flask-Limiter. Event stream slots still reserve shared HTTP workers for other APIs;
-they are a transport capacity bound rather than a per-credential quota. If temporary connections are enabled,
+these slots bound transport capacity across callers. If temporary connections are enabled,
 TokenReview and SubjectAccessReview are bypassed using one demonstration identity.
 Namespace scope, graph rules, TTL bounds, body-size bounds and finite server
 capacity still apply. This option does not make an infinite-capacity server or

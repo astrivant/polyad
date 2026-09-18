@@ -81,7 +81,7 @@ relevant. The default is `False`, which orders the operation against all others.
 - **Shared counters:** integer deltas must fit declared bounds for every possible
   completion order within a batch. A concurrent release cannot fund an increase;
   put the release in an earlier batch with an explicit dependency. The planner
-  rejects unsafe batches rather than inventing a migration order.
+  rejects batches whose declared order violates those limits.
 - **Audit:** `plan.orderings` explains required sequencing; `plan.independences`
   records assumptions for every concurrent pair. Serialize plans with
   `polyad_types.resources.converter.unstructure(plan)` and restore them with
@@ -121,9 +121,10 @@ timeouts. There is no automatic rollback or retry: refresh state and use durable
 receipts to recover partially applied plans.
 
 The caller must retain coordination covering **all shared scopes and counters** for
-the execution, and callbacks must use optimistic server-side fences. An observation
-is not a lock. This executor does not reserve cluster quota, coordinate independent
-callers, or grant permission to bypass Polyad's existing write queue.
+the execution, reserve any required quota and coordinate competing callers.
+Callbacks must use optimistic server-side fences and submit Kubernetes changes
+through Polyad's write queue. Observations supply the state used to validate those
+changes; the caller's coordination and fences govern execution authority.
 
 ## Queued Kubernetes write conflicts
 

@@ -221,7 +221,7 @@ Inline Secret edits also
 change the Pod template checksum during a Helm upgrade.
 
 KEDA's credential reads, Secret projection and Pod replacement are asynchronous.
-Rotation can temporarily produce 401 or 503 responses; it is not an atomic
-credential switch. Health probes retain their separate endpoint and do not
+Rotation can temporarily produce 401 or 503 responses while consumers adopt
+the new credentials. Health probes retain their separate endpoint and do not
 require the metrics token. Missing or stale metrics remain unavailable rather
 than being reported as zero demand.

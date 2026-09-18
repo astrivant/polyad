@@ -33,7 +33,7 @@ operator would not execute the author's Python.
 | --- | --- | --- |
 | Authoring documents | Named outcomes, capabilities, typed ports, requirements, effects, limits and preferences | Contract compiler |
 | Contract IR | Resolved types, semantic prerequisites, approved implementations, policy references and source locations | Natural Selection |
-| Plan IR | Selected capability instances, port bindings, placement, evidence, outstanding obligations and state dependencies | Plan reviewer and Polyad lowering adapter |
+| Plan IR | Selected capability instances, port bindings, placement, controlled boundaries, delegated settings, evidence, state dependencies and plan revision | Plan reviewer and Polyad lowering adapter |
 | Polyad artifacts | Supported composition resources and requests, plus separately checked connection or mutation requests where needed | Polyad admission and execution |
 
 ```mermaid
@@ -53,9 +53,8 @@ The IR should be versioned independently of its YAML formatting and authoring
 library. Prefer shared typed models and generated JSON Schemas, following
 Polyad's [existing schema pipeline](../apis/json-schemas.md). The initial
 location could be a dedicated Copolyad submodule in `polyad-types` and
-`polyad-schemas`; package ownership remains a design choice. Each schema must
-have one canonical definition rather than separate handwritten copies for
-Python, client validation and Helm.
+`polyad-schemas`; package ownership remains a design choice. Generate Python,
+client-validation and Helm artifacts from one canonical schema definition.
 
 ## Typed ports and semantic contracts
 
@@ -71,8 +70,8 @@ Three initial port shapes would be sufficient:
 
 Type names such as `example.EnrichedRecord@1` would resolve through an approved
 registry to a schema and immutable revision. Initially, require exact type
-identity or an explicitly registered adapter. Do not assume schema inclusion,
-unit conversion or semantic equivalence from similar names.
+identity or an explicitly registered adapter. Schema conversions, unit
+conversions and semantic mappings require explicit definitions.
 
 Semantic facts express meaning beyond payload shape. In this example,
 `example.enriched@1` means the required enrichment fields have been produced;
@@ -85,9 +84,9 @@ does not satisfy “the records in this request are searchable.” The examples 
 `recordId` within the request's dataset as their correlation key. Intermediate
 stages must preserve that identity or declare an approved lineage mapping.
 
-These contracts describe promised behavior, not evidence that arbitrary code
-implements it correctly. Administrator approval, conformance tests and runtime
-observations would establish how much trust to place in each implementation.
+Contracts specify required behavior. Conformance tests and runtime observations
+provide evidence that an implementation fulfills its contract; administrator
+approval determines whether the planner may use it.
 
 ## Example outcome request
 
@@ -134,9 +133,8 @@ planningPolicy: reviewed-pipelines@1
 
 This request describes the desired result without naming normalization,
 enrichment or indexing stages. `constraints` are hard admission conditions.
-`objectives` are measured acceptance criteria, not quantities the planner may
-weaken to obtain a cheaper plan. `preferences` rank otherwise eligible plans;
-their list order defines priority.
+`objectives` are fixed, measured acceptance criteria. `preferences` rank plans
+that satisfy the constraints and objectives; their list order defines priority.
 
 `coverage: EveryAcceptedItem` requires each accepted input to have a correlated
 result or an explicit failure, which counts against outcome acceptance.
@@ -190,16 +188,17 @@ evidence:
   profile: example.indexer-benchmark@4
 ```
 
-All inputs are required together. A matching record stream alone cannot satisfy
-this capability without an authorized storage binding. `template` references
-an approved workload definition and port-to-service binding information; it
-does not let an arbitrary caller supply an executable image. `evidence.profile`
+All inputs are required together: this capability needs both a matching record
+stream and an authorized storage binding. `template` must resolve to an approved
+workload definition and port-to-service binding information. `evidence.profile`
 references observed behavior with its input distribution, resource allocation,
-timestamp and provenance; it is not a hard-coded throughput guarantee.
+timestamp and provenance. Performance assessments must account for those
+measurement conditions.
 
 `IdempotentByKey` is an implementation contract. Here, the storage binding must
 scope `recordId` to the dataset and the upsert operation must preserve the
-declared semantics on retry. A type checker cannot manufacture that property.
+declared semantics on retry. Implementation conformance tests must verify that
+retry behavior.
 Two writers to the same storage and keys are potentially conflicting even when
 their data-flow paths have no edge between them.
 
@@ -282,8 +281,9 @@ The host would declare `region` as a string, `regions` as a list of strings and
 the two rate fields as numbers already normalized to the same unit. It would
 also supply the evidence's timestamp, subject, provenance and workload profile
 outside the expression for freshness and applicability checks. Evaluating this
-condition says whether that snapshot passes the filter; it does not prove
-future throughput or logical implication between arbitrary CEL programs.
+condition determines whether the supplied snapshot passes the filter.
+Performance verification uses the declared measurement contract; implication
+between policies requires a separate proof method.
 
 Follow the [decision-gate expression boundaries](decision-gates.md#language-and-compiler-direction):
 compile and type-check per pinned policy revision; bound input and evaluation
@@ -300,14 +300,14 @@ adequate evidence or an explicitly authorized, bounded evaluation run.
 ## Plan IR and Polyad lowering
 
 The Plan IR would contain selected operation instances, named port bindings,
-proposed placement, effects, objective verdicts and the complete state on
+proposed placement, effects, objective verdicts, authority scope and the complete state on
 which the decision depends. This abbreviated view illustrates a selected
-chain; `$...` values denote bindings and subplans omitted from this example,
-so it is not a complete executable plan:
+chain; `$...` values denote bindings and subplans to resolve before execution:
 
 ```yaml
 ir: copolyad.plan/v0
 intent: {id: searchable-records, revision: 7}
+selectionRevision: 12
 catalogRevision: catalog-42
 steps:
   normalize: {capability: normalize-records@2}
@@ -325,6 +325,15 @@ verdicts:
   performance: Unverified
   admission: Pending
 ```
+
+`selectionRevision` orders Natural Selection's plans for one outcome, including
+replanning under the same outcome revision. The complete IR identifies each
+controlled graph boundary and the settings delegated to Soul searching.
+Natural Selection has [precedence over conflicting adaptations](copolyad.md#natural-selection-takes-precedence).
+Every subordinate mutation carries the expected selection revision; admitting
+a replacement invalidates conflicting pending decisions. The dispatcher settles
+in-flight writes and refreshes state before applying the replacement. Soul
+searching then resumes within the new delegation.
 
 An executable revision would replace every placeholder with a supplied input,
 authorized existing binding or fully resolved provisioning step. It would also
@@ -374,10 +383,12 @@ IR for equivalent inputs. Only then add authorized Polyad lowering and feedback.
 Acceptance tests should include same-shaped data with incompatible meaning,
 matching facts from the wrong dataset, a missing second input, stale capacity
 evidence, conflicting storage effects, an unsupported cycle and a changed
-resource between selection and admission. A valid example should demonstrate
+resource between selection and admission. Verify that an admitted Natural
+Selection revision supersedes conflicting pending Soul searching decisions
+and fences stale adaptations during handoff. A valid example should demonstrate
 the full normalization/enrichment/indexing chain, including lookup and storage
-bindings. These tests would validate planning semantics rather than merely
-round-tripping YAML.
+bindings. These tests validate planning semantics across compilation, selection
+and admission.
 
 ## References
 

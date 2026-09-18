@@ -24,7 +24,7 @@ The transistor analogy names three parts of that interaction:
 | Term | Meaning in Polyad | Publication example |
 | --- | --- | --- |
 | **Source** | The node sending a [pulse](../workloads/activation.md#terms-used-in-this-guide): one identified request to start work. | The ingestion service requests publication of batch 42. |
-| **Control** | A [predicate](../introduction/concepts.md#conditions-and-admission): a condition evaluated as true or false. If required observations are missing or stale, the gate waits instead of guessing. | “Did this batch pass validation, and is its risk score at most 20?” |
+| **Control** | A [predicate](../introduction/concepts.md#conditions-and-admission): a condition evaluated as true or false. The gate waits for fresh observations before evaluating the condition. | “Did this batch pass validation, and is its risk score at most 20?” |
 | **Drain** | The [activation target](../workloads/activation.md#terms-used-in-this-guide): the workload, service or subgraph that the request asks Polyad to start. The configuration calls this `target`. | The publication task. |
 
 These are roles in deciding what runs next. Application data, such as the batch
@@ -65,7 +65,7 @@ See the [current Gate implementation](../../pkg/polyad/graph/gates.py),
 [activation contract](../workloads/activation.md), [composition requests](../apis/composition-requests.md)
 and [mutation plans](../development/mutations.md). A reusable Gate definition currently has
 exactly one of `expression` or `delaySeconds`. The proposal adds a third variant,
-`transistor`, rather than introducing a separate transistor resource kind.
+`transistor`, within the existing Gate resource kind.
 
 ## Three ports and one durable decision
 
@@ -230,8 +230,8 @@ Possessing a services API key alone must not authorize facts for every source.
 Reuse [key groups and request lanes](../operations/api-keys.md), with additional decision scopes
 and source bindings, or verified workload identity. Direct activation and
 composition access must also be restricted for targets intended to be reachable
-only through decisions. A convenience routing predicate is not an authorization
-boundary unless every alternative mutation path enforces that policy.
+only through decisions. Every mutation path reaching those targets must enforce
+the same authorization policy.
 
 ## Composing decisions into a program
 
@@ -297,7 +297,7 @@ or serialized executable code. Keep shared IR types in `pkg/polyad-types` and
 client submission support in `pkg/client`; an authoring package must not require
 installing the operator.
 
-Illustrative Python syntax for the later authoring layer, **not an available API**:
+Proposed Python syntax for the later authoring layer:
 
 ```python
 program = DecisionProgram("batch-release")
@@ -451,8 +451,8 @@ Propose a `decision` SSE event alongside graph and topology events. Emit on
 meaningful transitions: `DecisionPending`, `DecisionSelected`, `DecisionBlocked`,
 `DecisionForwarded`, `DecisionRejected`, `DecisionExpired`, `DecisionInvalidated`
 and `DecisionFailed`. Reconciliation ticks and unchanged unknown values emit no
-new event. A decision alone is not a topology change; resulting replica or edge
-changes still produce their existing notifications.
+new event. Resulting replica or edge changes produce their existing topology
+notifications.
 
 Include stable transition and decision IDs, graph identity, binding, case ID,
 phase, reason, policy/input revision references, selected target and activation

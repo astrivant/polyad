@@ -118,7 +118,7 @@ The runnable configuration lives in
 3. Provide `root-cache` with key `url`: a credentialed Dragonfly URL reachable
    from the root and every remote worker. Use the same endpoint for all replicas,
    with TLS when crossing untrusted networks. The root chart requires an existing
-   Secret rather than implicitly advertising a cluster-local cache address.
+   Secret containing the shared, reachable cache address.
 4. Supply the endpoint credentials named in
    [`values.yaml`](../../examples/root-control-plane/values.yaml), or use the chart's
    existing [ESO configuration](../operations/authentication.md). Replace `polyad.example.com`
@@ -270,8 +270,8 @@ scaleTargetRef:
 
 For root-provided workload metrics, add `?cluster=west` to the selected root metrics
 URL, for example `/v1/workloads/ReplicaGroup/consumers/replicas?cluster=west`.
-Choose a demand signal appropriate to the application; replica count itself is
-an observation, not a throughput target. External KEDA scalers can also supply
+Choose a demand signal appropriate to the application and track replica count
+as the resulting capacity setting. External KEDA scalers can also supply
 demand. Remote targets have no root-local Pods, so use external metrics with
 `metricType: AverageValue`, not root-cluster CPU or memory Pod metrics. Their
 scale status supplies a unique, nonempty root-local selector as required by
@@ -365,8 +365,8 @@ planner heartbeat. An unreachable root API/cache prevents new dispatches; if onl
 the root Deployment disappears while its API and cache remain reachable, workers
 pause when the heartbeat becomes overdue (55 seconds after its last locally
 observed revision). Requests already dispatched may finish within the bounded
-transport timeout. This is lease-based fencing, not an instantaneous distributed
-transaction or a wall-clock-synchronized failure detector.
+transport timeout. Lease checks fence new writes using locally observed heartbeat
+revisions and the configured lease deadline.
 
 Existing workloads keep running during disconnection. Native Kubernetes
 controllers can replace failed Pods to maintain their existing desired count;
@@ -381,7 +381,7 @@ instead pauses its workers and removes the observation definitions, preserving
 the administrator-owned Deployment and Secrets. The pool finalizer waits for
 remote deletion observations. Application
 workloads, namespaces, storage and shared CRDs remain. An unreachable cluster
-keeps cleanup pending rather than forgetting potentially live replicas.
+keeps cleanup pending until the operator can verify the remaining replicas.
 
 ## Reserved operator hierarchy
 

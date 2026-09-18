@@ -1,8 +1,7 @@
 # Kubernetes write pipeline
 
 Polyad queues decisions with their observed dependencies, validates them ahead of
-dispatch, and returns stale decisions to reconciliation. A request is not a durable
-instruction to replay an old patch until it succeeds. Desired state and the existing
+dispatch, and returns stale decisions to reconciliation. Desired state and the existing
 shared reconciliation streams remain the source of recoverable work.
 
 ## Table of contents
@@ -74,7 +73,8 @@ The first observation establishes the expectation. A later read cannot silently
 replace it. Only acknowledged effects of the same reconciliation advance its own
 contract, including changes to observed collection members. Deletion receipts and
 unsupported collection selectors require another refreshed pass before further
-effects; a DELETE acknowledgement does not prove garbage collection completed.
+effects. After a DELETE acknowledgement, verify garbage collection before
+dispatching operations that require the resource to be absent.
 
 Root pool management and the Dragonfly scaling loop also capture decision inputs.
 Python extensions making decisions directly through `API` can use
@@ -117,8 +117,8 @@ optional mesh and capacity kinds follow their capability flags. Native-resource
 events publish their graph-owner keys, not requests for Polyad to reconcile the
 native resource independently. Chart RBAC includes the necessary watch permissions.
 
-These are Kubernetes API resource-watch notifications, rather than Kubernetes
-`Event` objects. They are hints to reread authoritative state; an event payload
+These Kubernetes API resource-watch notifications are hints to reread
+authoritative state; an event payload
 never grants mutation authority. Repeated hints are coalesced by the existing
 shared reconciliation streams. They do not bypass reserved-graph filtering in
 downstream application event streams.
@@ -144,8 +144,8 @@ reconciliation. They are not summed or merged by field.
 New observations can change the required action. For example, a queued change from
 three to four replicas may no longer be appropriate after demand falls. The old
 contract becomes stale; reconciliation computes and submits the newly appropriate
-target. This replacement is a **new validated decision**, rather than an edit to
-an old queued payload. Arrival order alone does not override local scaling consent,
+target. Submit the replacement as a **new validated decision** and retire the
+stale queued payload. Arrival order alone does not override local scaling consent,
 root authority, GraphRules or competing policies.
 
 ## Dependencies and ordering
@@ -155,8 +155,8 @@ effects, preconditions, explicit `after` dependencies and shared budgets. Concre
 writes enter a bounded NetworkX directed acyclic graph. Its edges order dependent
 work; ready independent vertices may occupy separate writer slots.
 
-The decomposition concerns **planned changes**, including their shared constraints,
-not merely disconnected parts of the application's network. Even a connected work
+The decomposition concerns **planned changes**, their effects and shared constraints.
+Even a connected work
 graph can expose independent branches:
 
 ```mermaid
@@ -187,7 +187,7 @@ Independent ready writes can bypass a waiting sibling whose predecessors are
 unfinished. The compiler handles explicit ordering before transport admission;
 the dispatcher does not infer precedence from patch bodies or reorder a stale
 patch to make its old assumptions appear valid. Planner callbacks still own their
-graph-family coordination and shared-budget boundary; an approval is not a lease.
+graph-family coordination, execution leases and shared-budget boundary.
 
 If A changes state that B depends on, B needs renewed reasoning against A's result.
 The subsequent plan may order A before a revised B. Creation followed by readiness,
@@ -259,8 +259,8 @@ Reconciliation workers prepare decisions and invoke the mutation planner as part
 of each attempt; the planner is not another independent writer. Validation workers
 check immutable contracts in bounded batches and writers consume their receipts.
 Raising one limit does not implicitly raise the others. Same-key notifications
-received during reconciliation coalesce into a later pass rather than overlapping
-that resource's current attempt.
+received during reconciliation coalesce into a later pass after that resource's
+current attempt.
 
 For example, this overlay allows four reconciliation attempts, two mutation
 callbacks per approved batch, two writer slots and two validators:
@@ -357,8 +357,8 @@ Validation receipts are local, bounded freshness evidence, not multi-resource
 transactions. An external change may arrive after validation but before its watch
 notification. The configurable window explicitly limits reuse; original
 server-side target preconditions and existing graph-family leases still apply.
-Cross-operator coordination continues through those leases and Kubernetes fences,
-not a shared cache of validation receipts.
+Cross-operator coordination uses those leases and Kubernetes fences. Validation
+receipts remain local to the process that produced them.
 
 Decision hashes cover observed Kubernetes state. They cannot establish arbitrary
 application side effects or prove future readiness. Known temporary-connection
@@ -369,4 +369,4 @@ inside the transport queue; that work belongs to refreshed reconciliation.
 [Decision logs](../operations/tracing.md#decision-and-conflict-logs) distinguish
 `write_coalesced`, `write_deferred`, dependency drift and capacity rejection without
 logging bodies or private digests. [Write gauges](../operations/metrics.md) continue
-to report actual admitted work rather than duplicate callers.
+to count admitted work once after duplicate callers are coalesced.

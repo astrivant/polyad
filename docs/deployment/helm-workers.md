@@ -87,9 +87,9 @@ cluster and namespace. Root settings identify the existing management release:
 | Helm `--namespace` | `workloads` | Worker Deployment and mounted Secrets live here |
 | `federation.clusters` | `west` mapped to `workloads` | Same complete destination registry used by the root |
 
-Workers can execute assigned graph families in **any registered cluster**. Their
-hosting cluster is not a scheduling restriction. They need the root's complete
-registry and credentials, not just credentials for their own cluster.
+Workers can execute assigned graph families in **any registered cluster**.
+Provision the root's complete destination registry and credentials in every
+worker's hosting namespace.
 
 Prepare the [registered namespaces and bootstrap permissions](root-control-plane.md#install-and-register-clusters).
 In the downstream release namespace, provision these Secrets yourself or through

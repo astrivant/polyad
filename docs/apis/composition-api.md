@@ -8,8 +8,8 @@ See [Composition requests](composition-requests.md) for the request format, ID
 references, retries and audit semantics. See [Graph rules](../graphs/graph-rules.md) for the
 constraints applied before admission. The HTTP API cannot create or modify rules.
 Its bearer credential authorizes workload creation and audit reads in the operator
-namespace; it is not a per-user identity or tenant isolation mechanism. Apply
-normal workload RBAC, Pod Security and resource quotas as well.
+namespace. Configure per-user access and tenant isolation through workload RBAC,
+Pod Security and resource quotas.
 
 ## Table of contents
 

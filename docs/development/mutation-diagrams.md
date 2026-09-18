@@ -22,10 +22,10 @@ most are not Python classes or automatically verified relations in Polyad.
 - [Joinability diamond](#joinability-diamond)
 - [Commuting cube](#commuting-cube)
 - [Compiler-preservation square](#compiler-preservation-square)
-- [When a commuting diagram does not apply](#when-a-commuting-diagram-does-not-apply)
+- [Ordering and recovery constraints](#ordering-and-recovery-constraints)
   - [Required order](#required-order)
   - [Capacity makes one path inadmissible](#capacity-makes-one-path-inadmissible)
-  - [Compensation is not an inverse](#compensation-is-not-an-inverse)
+  - [Compensation and retained effects](#compensation-and-retained-effects)
 - [Map diagrams to the library](#map-diagrams-to-the-library)
 
 ## Choose what counts as equivalent
@@ -112,8 +112,8 @@ separately to show the retry step. For Polyad's `Rewrite`, the topology replacem
 and receipt annotation are committed together. A retry that still observes that
 receipt can publish status without repeating the replacement.
 
-**In Polyad:** this describes the existing receipt-recovery path, not a guarantee
-for arbitrary callbacks or an indefinitely retained deduplication history. Setting
+**In Polyad:** receipt recovery deduplicates a replacement while its receipt is
+retained. Callbacks require their own retry contracts. Setting
 a replica target may be idempotent in desired-state terms; adding two replicas or
 starting another workload is not inherently idempotent. The mutation executor does
 not retry callbacks automatically.
@@ -136,8 +136,8 @@ flowchart LR
     class T result
 ```
 
-The direct arrow is a specification, not a Kubernetes command to skip the rollout.
-Its contract might require uninterrupted availability and preserved storage. The
+The direct arrow specifies the replacement's contract, such as uninterrupted
+availability and preserved storage. The
 detailed plan must establish those properties to count as a valid refinement.
 
 **In Polyad:** `Mutation.after` and refreshed preconditions encode dependencies.
@@ -249,11 +249,11 @@ whether reviewed at graph level or through its compiled resource changes. Compar
 relevant fields after the required reconciliation, with identity and lifecycle
 assumptions stated explicitly.
 
-**In Polyad:** this is a test design for compiler adapters. It does not authorize
-editing owned resources outside the operator or bypassing inherited policy. There
-is no generic graph-to-resource equivalence checker.
+**In Polyad:** adapter-specific tests check compiler preservation. Resource
+changes follow operator ownership and inherited policy throughout compilation
+and execution.
 
-## When a commuting diagram does not apply
+## Ordering and recovery constraints
 
 ### Required order
 
@@ -265,10 +265,10 @@ readiness precondition. A shared final configuration does not justify a square.
 
 At a replica limit of eight with eight in use, releasing two replicas and then
 acquiring two can fit. Acquiring first would require ten. The final count agrees,
-but one path is forbidden; this is an ordered plan, not an admissible independence
-square. Polyad checks the worst increase and decrease within each batch.
+but the capacity limit requires release before acquisition. Polyad checks the
+worst increase and decrease within each batch.
 
-### Compensation is not an inverse
+### Compensation and retained effects
 
 Creating a worker and later deleting it may restore the object inventory while
 leaving emitted events or modified storage. A compensation can restore selected
@@ -287,6 +287,5 @@ rollback callbacks or inverse mutations.
 | `Independence` | Records assumptions for swapping two operations in an admitted batch |
 | `MutationPlan` | Collects operations, ordering evidence, independence records and batches |
 
-No model currently stores a full configuration diagram or a higher-dimensional
-proof. Use these patterns to explain adapter contracts and write focused tests;
+Use these diagram patterns to explain adapter contracts and write focused tests;
 use [mutation plans](mutations.md) to enforce the modeled constraints at execution.

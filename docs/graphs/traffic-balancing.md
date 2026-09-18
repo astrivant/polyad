@@ -311,7 +311,7 @@ Percentages describe expected request shares over time, not exact quotas, work
 cost, connection counts, or bytes. Existing streaming RPCs and in-flight work are
 not migrated when weights change. An empty or unhealthy subset may fail requests;
 Polyad does not silently override its weights for failover. Istio's propagation
-is asynchronous: a persisted policy is not an acknowledgement from every proxy.
+is asynchronous: proxies adopt a persisted policy over time.
 Drain existing work and allow that propagation before removing a replica.
 See the [VirtualService](https://istio.io/latest/docs/reference/config/networking/virtual-service/)
 and [DestinationRule](https://istio.io/latest/docs/reference/config/networking/destination-rule/)

@@ -178,16 +178,16 @@ events:
 | `maxConnections` | 16 | 1–128 subscriptions per replica | Both transports share this ceiling and occupy HTTP workers |
 
 The byte limit counts the **complete serialized UTF-8 event**, including SSE
-field names/newlines or the WebSocket JSON envelope. It is not a character count,
-a `data`-only limit, or a limit on topology/discovery HTTP responses. Publication
+field names/newlines or the WebSocket JSON envelope. Topology and discovery HTTP
+responses have their own limits. Publication
 reserves space for the longest supported replay cursor and verifies that both
 transport encodings fit. WebSocket protocol headers and SSE comments are outside
 the observation itself; the client's SSE parser also bounds each metadata record.
 
 Helm passes these settings into local publishers, API-serving components and
 root-held remote-cluster streams. Separately installed operators use their own
-release values. Polling delay is not a strict heartbeat deadline: storage reads,
-authorization and backpressure also affect delivery. Keep the client read timeout
+release values. Storage reads, authorization and backpressure contribute to
+delivery time alongside polling delay. Keep the client read timeout
 comfortably above it.
 
 Tune batch size and event size together: a subscriber may fetch up to

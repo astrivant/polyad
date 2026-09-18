@@ -13,8 +13,8 @@ cluster, with either Dense or Distributed operator deployments.
 
 The initial scope should adopt already provisioned credential revisions.
 Creating and revoking credentials in an external provider requires a separate,
-explicit integration; synchronizing a Kubernetes Secret is not equivalent to
-changing a database password or revoking a certificate.
+explicit integration that changes the provider's password or revokes its
+certificate. Secret synchronization distributes the resulting credentials.
 
 ## Table of contents
 
@@ -56,7 +56,7 @@ These are selectable policies, not universally safe deployment orders. A client
 and server protocol determines which component must accept a revision first.
 Child policies may tighten inherited limits. They cannot skip a parent's wave
 barrier, widen its target scope or relax its availability budget. Conflicting
-constraints block planning with an explanation rather than silently choosing one.
+constraints block planning and produce an explanation of the conflict.
 
 The following YAML illustrates the proposed policy and binding syntax only:
 
@@ -152,8 +152,7 @@ flowchart TB
 | Forward depth first | `R` → `A` → `A1` → `A2` → `B` → `B1` |
 | Reverse depth first | `A1` → `A2` → `A` → `B1` → `B` → `R` |
 
-Reverse breadth first reverses the forward depth levels; it is not a global
-reverse of a depth-first walk. In an uneven tree, a shallow leaf can therefore
+Reverse breadth first reverses the forward depth levels. In an uneven tree, a shallow leaf can
 share a later wave with an internal boundary. Dependency waves use topological
 levels instead of shortest-path distance, so a longer dependency path cannot be
 skipped by a shortcut edge.
@@ -222,8 +221,8 @@ The proposed execution phases are:
 
 Hooks are references to typed operations or finite Graphs with an explicit
 completion contract, not arbitrary callbacks submitted to the operator. A
-readiness probe alone does not prove a remote dependency accepts a new credential.
-Such rotations need an application check or revision acknowledgement. Systems
+rotation verifies that the remote dependency accepts the new credential through
+an application check or revision acknowledgement. Systems
 that cannot accept overlapping credentials need a declared disruption window;
 changing traversal cannot make that switch seamless.
 
@@ -297,9 +296,9 @@ the source of execution authority.
 
 Persist the request, resolved policy revision, target UIDs, plan revision, current
 wave, operation IDs and per-target receipts in Kubernetes. Large plans need
-bounded child records rather than an unbounded status field on one object.
+bounded child records.
 PostgreSQL, when enabled, may mirror nonsensitive rollout observations. An HA
-handoff resumes from fresh Kubernetes observations and receipts instead of
+handoff resumes from fresh Kubernetes observations and receipts, replacing
 repeating already adopted changes. Retries provide idempotent reconciliation,
 not exactly-once external side effects; hooks need the same operation identity.
 
@@ -330,8 +329,8 @@ root Deployment. Operator rotation is a separate opt-in scope encompassing
 execution pools, component workloads and the Helm-owned bootstrap Deployment.
 That bootstrap appears as an observed member of its own Graph within the
 [reserved root PolyGraph](../deployment/root-control-plane.md#reserved-operator-hierarchy).
-Helm retains its lifecycle ownership, so rotation still needs an explicit
-coordination adapter rather than treating it as a graph-owned workload.
+Helm retains lifecycle ownership; an explicit coordination adapter performs
+the rotation within that ownership model.
 
 A leaves-first operator upgrade can update remote execution replicas, then
 selected root components, then bootstrap replicas. Protocol compatibility can
@@ -349,9 +348,9 @@ can wait for their health but must not take over their internal update strategy.
 ## Implementation boundaries
 
 The existing [mutation planner](../development/mutations.md) supplies effect declarations,
-preconditions and bounded batches. It can underpin step execution, but HTTP
-write completion is not a rollout barrier. Adoption receipts and refreshed
-readiness must gate subsequent waves across reconciliation turns.
+preconditions and bounded batches. It can underpin step execution. Adoption
+receipts and refreshed readiness gate subsequent waves across reconciliation
+turns after the API writes complete.
 
 Implementation needs public types in `polyad_types`, CRDs and status schemas,
 root planning and reservations, local fenced execution adapters, and integration

@@ -66,8 +66,8 @@ network access or operator RBAC is required.<sup>[\[2\]](https://argo-cd.readthe
 Graph messages include observed graph and leaf counts, pending leaves, ready
 leaves, completed leaves and failures. A ready parent cannot hide a failing
 subgraph. Both lifecycle and metrics must match the current generation before a
-graph can report success. Suspension is reported after cleanup, rather than as
-soon as `spec.suspend` is requested.
+graph can report success. After `spec.suspend` is requested, suspension is
+reported when cleanup completes.
 
 Health reflects the latest operator observation; it does not actively probe
 services or replace the application's readiness checks. A Deployment that exceeds

@@ -43,7 +43,7 @@ separately.
 
 ## Daemons change the graph's contract
 
-A job produces a terminal result. A daemon maintains a capability over time. Its success condition is a temporal invariant, such as “accept requests while healthy,” with an explicit stop condition. A persistent graph is therefore a supervised system rather than a computation with an expected return value.
+A job produces a terminal result. A daemon maintains a capability over time. Its success condition is a temporal invariant, such as “accept requests while healthy,” with an explicit stop condition. A persistent graph supervises those capabilities throughout their lifetime.
 
 Use two relations over the same vertices:
 
@@ -59,7 +59,7 @@ There are two useful interpretations of a cycle:
 
 For a recurrence `x[t+1] = F(x[t], input[t])`, a fixed point satisfies `F(x*, input*) = x*`. Existence does not imply convergence. A contraction provides convergence; a linear autonomous recurrence converges to zero when its matrix has spectral radius below one. Stream stability instead depends on arrival/service rates, queues, and feedback gain. These mathematical properties are application contracts, not conclusions the operator can draw from connectivity alone.
 
-Useful temporal properties include “a stopped boundary never admits new work,” “an admitted request eventually receives service,” and “ownership is released only after cleanup.” Readiness may become false again; completion is a terminal observation for a particular execution. Daemon scheduling therefore needs reservations and fairness, not an artificial infinite duration fed into shortest-remaining-work scheduling.
+Useful temporal properties include “a stopped boundary never admits new work,” “an admitted request eventually receives service,” and “ownership is released only after cleanup.” Readiness may become false again; completion is a terminal observation for a particular execution. Daemon scheduling uses reservations and fairness to govern continuing work.
 
 ## API and Python abstractions
 
@@ -147,19 +147,17 @@ Omitting a child placement retains the defaults. An enforced ancestor cannot be
 relaxed by a child setting `enforce: false`. General placement does not change a
 graph's lifecycle type or change the selected workload's storage contract.
 
-Tolerations on CRDs define fields that Polyad reads; Kubernetes does not schedule
-custom resources themselves. The guard is in the compiler: it merges and validates
+Polyad's compiler reads tolerations from graph resources, merges and validates
 the inherited placement before creating native pod templates, including required
 tolerations. Tolerations allow matching taints; selectors and required affinity
-choose eligible nodes. They do not reserve nodes, ensure scheduling, or prevent
-node failure. Polyad's compilation policy is not an admission webhook policing
-arbitrary edits by other Kubernetes clients.
+choose eligible nodes. Kubernetes schedules the resulting Pods against available
+resources. Cluster admission controllers govern edits by other Kubernetes clients.
 
 Operator placement is separate: set Helm `operator.nodeSelector` and `operator.tolerations` to run
 operator replicas on a control node group. Workload graph placement has no effect
 on the operator pods.
 
-This is a **shared placement boundary**, not gang scheduling or an atomic capacity reservation. Pods can occupy different nodes in the selected slice, and different allowed zones; setting one zone label targets one zone. Kubernetes still checks each pod's CPU, memory, GPU requests and constraints individually. A graph may be partially admitted while waiting for capacity. Co-starting an entire graph or choosing one common pool dynamically from several alternatives would require a separate group-admission/reservation mechanism. PVC/resource selection remains in Resource manifests (`storageClassName`, volume selectors, etc.); node placement applies to pod execution.
+This **shared placement boundary** lets Pods occupy different nodes in the selected slice and different allowed zones; setting one zone label targets one zone. Kubernetes checks each Pod's CPU, memory, GPU requests and constraints individually. A graph may be partially admitted while waiting for capacity. Co-starting an entire graph or choosing one common pool dynamically from several alternatives requires a group-admission/reservation mechanism. PVC/resource selection belongs in Resource manifests (`storageClassName`, volume selectors, etc.); node placement applies to Pod execution.
 
 For advance capacity requests, see [capacity planning](../graphs/capacity.md).
 
@@ -223,7 +221,7 @@ checkpointing. Kubernetes suspension currently drains execution, and clearing
 suspension starts containers again. Applications must handle signals, persist
 consistent state, and load that state themselves. Local cooperative workloads
 can checkpoint when their implementation supports it and a durable journal is
-configured; this capability is not a general scheduler guarantee.
+configured. Each workload implements its own checkpoint and restore contract.
 
 ## Delay gates
 
@@ -251,8 +249,8 @@ Each gate selects exactly one of
 
 Locally, use `routes={"next": DelayGate(30)}` with `polyad.graph.DelayGate`.
 The local scheduler uses a monotonic timer after dependencies complete. Local
-timer progress is process-local and starts again when constructing a scheduler;
-it is not an application checkpoint.
+timer progress is process-local and starts again when constructing a scheduler.
+Persist application progress through the workload's checkpoint contract.
 
 ## Resource compiler objects
 
@@ -311,8 +309,8 @@ extensions cannot override modeled fields. Optional absent fields are omitted,
 while explicit `False`, zero and empty mappings are preserved. ConfigMap data stays
 at the document root. Pod settings and CR specs remain extensible dictionaries;
 the existing graph library and CRD schemas validate graph semantics. These models
-cover the operator's generated execution specs rather than the complete Kubernetes
-schema. Desired-resource hashes retain their existing format across this refactor.
+cover the operator's generated execution specs. Kubernetes validates the full
+native resource schema. Desired-resource hashes retain their existing format.
 
 ### Graph observation objects
 
@@ -378,8 +376,8 @@ requests; parallel mode permits bounded concurrency. Timer-driven requests use
 `maxIntervalSeconds` with `onDeadline: Activate`.
 
 Applications own iteration counts, termination conditions and state shared
-between runs. A timer bounds admission frequency; it is not a delay measured
-from completion. See [activation policies](../workloads/activation.md) and the
+between runs. A timer measures admission frequency from its configured schedule.
+See [activation policies](../workloads/activation.md) and the
 [repeated graph example](../../examples/repeated-graph.yaml).
 
 ## Reconciliation and shutdown
@@ -470,7 +468,7 @@ Observed inventory includes terminating or superseded execution until the API
 confirms removal. Removed nodes disappear from topology while their resources
 remain in cleanup counts. Lifecycle counters overlap: a completed Job may also
 be ready. Active nodes are admitted resources without terminal state or deletion;
-they are not a count of running Pods. Pending means no observed resource and
+the count covers graph resources. Pending means no observed resource and
 includes dependency, gate and capacity waits. Slot reservations follow the
 scheduler's observed non-completed nodes, including failed or terminating ones.
 
@@ -693,12 +691,11 @@ refreshed attempt. Pending graph conditions are retried by the next API scan.
 Failed API writes leave their notification pending. Events carry resource keys,
 never precomputed mutations, so an old notification cannot replay an old spec.
 Finalizer changes, rewrites and status updates pass through the same guarded queue.
-A stopped or disconnected replica cannot keep starting writes once its renewal
-budget expires. Leases are cooperative coordination, not an atomic transaction
-across Kubernetes objects: an arbitrarily delayed server-side write or a process
-paused between its ownership check and request cannot be absolutely fenced by a
-Lease alone. Resource versions, UID preconditions and deterministic child names
-limit stale mutations; this is not an exactly-once execution guarantee.
+A stopped or disconnected replica stops starting writes when its renewal budget
+expires. Lease checks coordinate dispatch; a request already sent or delayed
+after its ownership check can still reach the API. Resource versions, UID
+preconditions and deterministic child names constrain stale mutations at the
+server. Applications handle retries and duplicate side effects.
 
 Dragonfly also caches duplicate notifications. The Helm chart depends on the
 [upstream Dragonfly operator](https://github.com/dragonflydb/dragonfly-operator),
@@ -806,7 +803,7 @@ kubectl -n polyad delete graph persistent
 
 See [Buildx setup and local image loading](containers.md#production) for builder
 requirements and the single-platform `--load` alternative used with Kind.
-The default image name is a publication target, not an assertion that an image is published. Build and supply an image first. Helm installs CRDs from `crds/` but does not upgrade or remove them automatically; review and apply CRD schema changes separately before a chart upgrade. Removing the operator while graphs still have finalizers prevents their cleanup until the operator returns.
+Build and publish the operator image, then configure the chart to use it. Helm installs CRDs from `crds/`; review and apply CRD schema changes separately before a chart upgrade. Drain graph finalizers before removing the operator so cleanup can complete.
 
 CI runs Python checks, uses `astrivant/hypothesis-helm` to property-test the Helm chart, and exercises real lifecycle behavior in a disposable kind cluster. The operator does not require hypothesis-helm at runtime.
 

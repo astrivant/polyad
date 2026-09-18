@@ -165,13 +165,13 @@ kubectl -n polyad get pvc -l cnpg.io/cluster=polyad-state \
 
 Repeat the PVC check for `cnpg.io/cluster=polyad-authentication` when enabled.
 For GKE, resolve each PV's `spec.csi.volumeHandle` to its disk and verify the
-disk's `diskEncryptionKey.kmsKeyName` with Compute Engine. A selected class in
-desired configuration alone does not prove that an existing volume uses it.
+disk's `diskEncryptionKey.kmsKeyName` with Compute Engine. Verify the existing
+volume's actual encryption settings as part of this check.
 
 **Enabling this setting does not encrypt or move existing PVCs.** Plan a
 CloudNativePG migration or restore onto newly provisioned encrypted volumes.
-Changing a StorageClass's immutable parameters is not a rotation mechanism;
-create a new class for a changed provisioning policy. Disabling this chart option
+Create a new StorageClass for a changed provisioning policy, then migrate or
+restore onto volumes provisioned with it. Disabling this chart option
 does not decrypt retained disks and may let future instances use other storage.
 Check every primary and standby after migration before retiring old volumes.
 
@@ -250,7 +250,7 @@ transaction replaces state only if its scan began at least as recently as the
 last committed scan. A slower HA replica cannot overwrite a later observation.
 Failed or partial scans leave the previous transaction intact. Successful scans
 remove rows for resources that no longer exist, including an empty namespace.
-This is durable **current state**, not an append-only audit archive.
+The database persists the latest successfully observed **current state**.
 
 For example, inspect persisted graph constraints and workload measurements with:
 
@@ -324,8 +324,7 @@ the target is approximately `ceil(61 / 20) = 4` instances, subject to HPA
 tolerance, stabilization and bounds. The metric is already global: do not sum
 copies from multiple operator metrics endpoints. The corresponding Prometheus
 series is `polyad_postgresql_connections`, with explicit sample and state
-freshness gauges. Disabled, failed or stale samples return HTTP 503, rather than
-zero connections.
+freshness gauges. Disabled, failed or stale samples return HTTP 503.
 
 The minimum is always at least one instance, and at least three when HA is
 enabled. Scale-up allows one instance per 120 seconds after a 60-second
@@ -384,9 +383,9 @@ live delivery. Records are deduplicated and retain graph identity, verified ance
 tracked status and throughput decisions. Workload manifests and bearer tokens are
 excluded. `postgresql.events.retentionDays` defaults to 30; each archive write
 prunes up to 1,000 expired rows. Idle databases require administrator retention
-maintenance if exact-time deletion is required. This is an observation archive,
-not a complete transactional log of every Kubernetes transition or a replay API.
-Dragonfly still provides bounded live SSE replay. An unavailable archive defers
+maintenance if exact-time deletion is required. The archive retains the public
+observations emitted by Polyad. Kubernetes audit logging records API operations;
+Dragonfly provides bounded live SSE replay. An unavailable archive defers
 publication until reconciliation retries; it does not undo graph mutations.
 
 `postgresql.database` and `postgresql.username` choose the managed state database

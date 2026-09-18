@@ -144,8 +144,8 @@ exist only for reported workers and registered clusters. Root-held worker pressu
 duplicates that worker's local gauges: use one view for aggregation.
 
 The effective interval series describes the **metrics-serving process**. In split
-deployments it describes the telemetry component, not an inferred setting for every
-worker. The JSON snapshot exposes the same values in `tuning`. Readiness and
+deployments it describes the telemetry component. Each worker uses its own
+configured intervals. The JSON snapshot exposes the same values in `tuning`. Readiness and
 ownership cadence, Prometheus scrape intervals, HPA synchronization and trace
 batching are separate controls.
 
@@ -164,8 +164,8 @@ The metrics-serving inventory includes Graph, PolyGraph, ReplicaGroup, Rewrite,
 Composition, Activation, TemporaryConnection, Workload, Daemon, Resource, Gate,
 ShutdownPolicy and GraphRule CRs. Root mode also scans OperatorPool and RemoteScale.
 Reusable definitions count separately from instances. Definition
-references are not ownership links. Direct resources come from graph status,
-not a cluster-wide Pod or workload census; they include graph child CRs and
+references are not ownership links. Direct resources come from graph status
+and include graph child CRs and
 operator-owned helpers. Do not add these to the CR inventory or to recursive
 subtree resource totals.
 
@@ -216,8 +216,8 @@ cached namespace inventory. Roots also export their fresh remote inventories
 with a `cluster` label; local observations use `cluster=""`. Other labels identify
 `graph_namespace`, `kind`, `name`, parent and root. These cover **Graph, PolyGraph
 and ReplicaGroup** boundaries. Separate replicas may briefly observe different
-revisions: deduplicate equivalent observations with `max by (...)`, rather than
-summing copies of the same graph. Preserve `cluster`, graph identity and the
+revisions: deduplicate equivalent observations with `max by (...)` so each graph
+contributes once. Preserve `cluster`, graph identity and the
 family's rule/relation/stage labels when doing so.
 
 | Metric | Calculated values and inputs |
@@ -243,7 +243,7 @@ and candidate `layout`. The [two bounds guide](../graphs/cheeger-orchestration.m
 explains their different roles. An incomplete calculation **never** emits an
 exact `constant`: its best observed cut only proves an upper bound. Vertex-limit
 rejections may have no measured edges, cut or upper bound. Duration measures the
-latest calculation's wall time, not a cumulative latency histogram.
+latest calculation's wall time.
 
 These endpoints expose **already calculated** observations. HTTP reads do not
 run eigensolvers or enumerate cuts, and `graphSpectra` does not turn spectral
@@ -259,7 +259,7 @@ Admission measurements describe the last successfully checked live boundary;
 They need not describe identical vertices while activation instances are changing.
 A fresh inventory and matching generations do not make measurements an atomic
 cluster snapshot. Stale/missing inventory, changed rule identity or graph
-generation suppress applicable series instead of inventing zeros. Soul searching
+generation suppress applicable series until fresh data is available. Soul searching
 carries its own evaluated generation; expired application samples are cleared by
 its existing reconciliation policy. Older operator versions' reports without
 these fences are withheld until recomputed.
@@ -311,7 +311,7 @@ series. Inventory updates replace the previous snapshot only after a complete
 namespace scan; failed scans or samples older than thirty seconds (measured
 from the start of the scan) suppress
 inventory-derived Prometheus series. Lists across kinds are eventually
-consistent, not a transactional snapshot of the whole namespace.
+consistent and can reflect different observation times within the namespace.
 
 Tune publication, backlog sampling and inventory rescans through
 [`operator.tuning`](performance.md#worker-cadence). Changing the intervals does

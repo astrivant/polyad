@@ -72,8 +72,8 @@ The compiler caps intersections at 1,024 candidate pairs and 256 effective terms
 per direction to bound policy expansion.
 
 Kubernetes policies themselves are additive. Polyad emits a separate effective
-policy selecting each direct workload's pods, rather than overlapping parent and
-child policies. Only trusted policy administrators should modify NetworkPolicies,
+policy selecting each direct workload's pods, incorporating the applicable parent
+and child constraints. Only trusted policy administrators should modify NetworkPolicies,
 Istio policies, membership labels, service accounts or injection configuration.
 Other administrators' policies can widen the allowances. This is not isolation
 against a Kubernetes principal that can change the enforcement infrastructure.
@@ -201,7 +201,7 @@ propagation. Policy changes are eventually enforced, and existing connections ca
 outlive a policy update depending on the CNI. Adding isolation to running work
 also requires replacement of pods that lack the generated membership labels.
 For a planned isolation cutover, drain the graph before changing and restarting it.
-Policies are not an application-level transactional traffic switch.
+Resume traffic after the network implementation has applied the updated policies.
 
 ## Optional chart networking
 
@@ -283,11 +283,11 @@ route through a gateway. In-cluster clients can reach the Services directly.
 A workload can submit a composition containing a graph `capacity` policy before
 its next phase of work. After admission, Polyad looks ahead through that graph
 and publishes demand through ProvisioningRequests or placeholder Pods. The
-configured node autoscaler provisions capacity; this is not a direct scale-node
-API or a guarantee that nodes will be available. See
+configured node autoscaler provisions capacity, subject to provider availability
+and configured limits. See
 [advance capacity planning](../graphs/capacity.md) for enablement, budgets and admission.
-Event subscriptions report graph observations, rather than predictions of future
-application actions. Subscribers can react by submitting another composition.
+Event subscriptions report observed graph state. Subscribers can react by
+submitting another composition.
 
 ## Event subscriptions
 
@@ -328,8 +328,8 @@ Each `graph` event has a Redis stream ID and JSON containing graph kind, namespa
 name, UID, resource version, owner references, audit labels, lifecycle fields and
 resource counts. It omits workload specs and credentials. Streams come from
 refreshed owning-shard observations, not every underlying Kubernetes watch event.
-Deletion may appear as a `deleting` observation; this is not a complete deletion
-ledger. Use the Kubernetes/API status and composition audit endpoints as the source
+Deletion may appear as a `deleting` observation. Verify completed deletion through
+the Kubernetes/API status and composition audit endpoints as the source
 of truth.
 
 The stream also emits `topology` events when a boundary's structure or execution

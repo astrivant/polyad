@@ -13,13 +13,12 @@ proposal and project concept; Natural Selection names the algorithm.
 Polyad starts with an application graph and its rules, then coordinates how it
 is deployed, connected and adapted. Copolyad would start with the result an
 application needs and work backward to discover which graph could produce it.
-This is an architectural inversion of inputs and outputs, rather than a claim
-of a formal mathematical dual of Polyad.
 
 ## Table of contents
 
 - [What changes when the starting point is an outcome](#what-changes-when-the-starting-point-is-an-outcome)
 - [Relationship to existing Polyad capabilities](#relationship-to-existing-polyad-capabilities)
+- [Natural Selection takes precedence](#natural-selection-takes-precedence)
 - [Example: make incoming records searchable](#example-make-incoming-records-searchable)
 - [Outcome requests and capability contracts](#outcome-requests-and-capability-contracts)
 - [Natural Selection, admission and feedback](#natural-selection-admission-and-feedback)
@@ -35,8 +34,9 @@ of a formal mathematical dual of Polyad.
 - **Copolyad:** “Here are the conditions for survival. Determine what organism
   could satisfy them.”
 
-**Soul searching** adapts the existing structure. **Natural Selection** would
-choose a composition capable of meeting the requirements.
+**Soul searching** adapts the existing structure. **Natural Selection** chooses
+the composition that meets the requirements and can replace the existing
+structure. When their decisions conflict, **Natural Selection takes precedence**.
 
 More formally, Polyad asks: “Given this application graph and its rules, how
 should we deploy, connect and adapt it?” Copolyad would ask: “Given this desired
@@ -69,10 +69,9 @@ flowchart TB
     end
 ```
 
-Working backward concerns planning dependencies. Application records still
-flow in the direction required by the selected services. Reversing every edge
-of an existing graph would not supply the missing capability contracts or
-explain whether the resulting graph could perform useful work.
+Natural Selection traces prerequisites backward from the desired result.
+Application records flow through the selected services according to their
+declared input and output contracts.
 
 ## Relationship to existing Polyad capabilities
 
@@ -88,8 +87,8 @@ Natural Selection would derive a composition from requirements and explicit
 capability descriptions expressed in a [typed contract language and planning
 IR](copolyad-language.md). Discovery provides permitted identities and
 locations; the proposed capability catalog would describe what those services
-can do and what they require. Soul searching could then adapt an admitted
-composition within its approved settings.
+can do and what they require. Soul searching adapts the admitted composition
+within the choices and settings delegated by Natural Selection.
 
 The recommended boundary is a planner above Polyad. Copolyad would submit
 proposals through authorized Polyad interfaces. Polyad would retain graph
@@ -100,6 +99,34 @@ The separate [decision-gate proposal](decision-gates.md) could eventually select
 between approved plans or request human review. Copolyad's initial planning
 mode should work without that proposed extension.
 
+## Natural Selection takes precedence
+
+Natural Selection owns composition decisions for each boundary assigned to it.
+It can replace stages, implementations and connections, overriding the existing
+structure and conflicting Soul searching decisions. Soul searching optimizes
+within the active plan's delegated settings and supplies observations that can
+trigger the next composition decision.
+
+Each selected plan carries a revision and identifies the graph boundaries and
+settings it controls. Polyad admits that revision against configured GraphRules,
+local authority, permissions and resource budgets. Once admitted, the revision
+governs subsequent decisions for those boundaries.
+
+The handoff must fence queued work against the active plan revision:
+
+1. Revoke conflicting pending Soul searching decisions from the previous plan.
+2. Settle writes already dispatched and refresh the affected resources.
+3. Revalidate and apply the replacement through the mutation pipeline, including
+   any required readiness, traffic migration, state transfer and drain steps.
+4. Resume Soul searching within the new plan's delegated choices.
+
+For example, if Soul searching queues a denser layout for an enrichment stage
+and Natural Selection selects a replacement pipeline that removes that stage,
+the old layout change is superseded. Subsequent demand measurements inform
+adaptation of the replacement pipeline. A failed handoff leaves an explicit
+blocked or recovery state under the admitted revision; resuming the previous
+composition requires an explicit recovery decision.
+
 ## Example: make incoming records searchable
 
 An outcome request could say:
@@ -108,9 +135,9 @@ An outcome request could say:
 > sustain 1,000 records per second, keep processing in the permitted regions,
 > and stay within the administrator's resource budget.
 
-The requester would specify where timing starts and ends, how throughput is
-counted, the measurement window and the permitted error rate. Without those
-definitions, the planner cannot compare alternatives or verify the outcome.
+The requester specifies where timing starts and ends, how throughput is
+counted, the measurement window and the permitted error rate. The planner uses
+these definitions to compare alternatives and verify the outcome.
 
 Suppose the authorized capability catalog contains these entries:
 
@@ -143,12 +170,12 @@ flowchart LR
 Several implementations might satisfy the same requirements. An administrator
 could prefer lower resource cost, lower latency or greater resilience. The
 planner would explain its choice and distinguish measured evidence from
-estimates. If no candidate fits, it would report which obligations remain
-unsatisfied rather than relax a region restriction or silently omit enrichment.
+estimates. If no candidate fits, it reports the unsatisfied obligations and
+preserves the request's region restrictions and required enrichment.
 
 ## Outcome requests and capability contracts
 
-The following are proposed contract contents, not finalized field names.
+The contract model comprises five artifacts:
 The [language and IR proposal](copolyad-language.md) provides concrete outcome
 and capability examples, type and semantic matching rules, and the boundary
 between Natural Selection's Contract IR and its selected Plan IR. Versioned,
@@ -162,15 +189,14 @@ importable types and schemas should precede executable configuration.
 | Planning policy | Allowed implementations and transformations, ranked objectives, candidate/time budgets, freshness requirements and approval mode |
 | Plan receipt | Outcome revision, pinned capability versions, dependency snapshot, proposed resources and connections, assumptions, rejected alternatives and admission result |
 
-Matching schemas is necessary but insufficient: two services can accept the
-same JSON shape while interpreting its fields differently. Initial composition
-should therefore use administrator-approved semantic operations and explicit
-transformations. It should not infer arbitrary service behavior from names,
-documentation or observed traffic.
+Two services can accept the same JSON shape while interpreting its fields
+differently. Composition therefore requires both schema compatibility and
+administrator-approved semantic operations with explicit transformations.
 
 Capability advertisements would be scoped and authenticated through the
-operator tree. A service's self-reported capacity would be evidence with an
-identified source and expiry, not a reservation or an execution guarantee.
+operator tree. A service's self-reported capacity carries an identified source
+and expiry. Capacity reservations require a separate admission and ownership
+contract.
 Plans would reference authorized credential bindings without copying secret
 values into the capability catalog or receipts.
 
@@ -223,8 +249,7 @@ no candidate within its budget has not proved that none exists.
 The planner must use the existing [mutation planning](../development/mutations.md)
 and [write pipeline](../development/write-pipeline.md) boundaries. A plan is a
 proposal against a particular state snapshot. Admission rejection, downstream
-deletion or changed evidence requires refreshed planning, not blind replay of
-the old writes.
+deletion or changed evidence requires refreshed planning before resubmission.
 
 Retries of one submission should reuse its idempotency identity. A changed
 composition should carry a new revision linked to the request it supersedes.
@@ -258,14 +283,14 @@ throughput-derived targets](../graphs/cheeger-orchestration.md) would keep their
 existing meanings: structural bounds constrain connectivity, and application
 signals guide separate targets within those hard limits.
 
-Natural Selection could compare the connectivity of candidate compositions and use
-benchmarked capacity evidence to rank them. A Cheeger value alone does not
-prove an end-to-end throughput or latency objective. Resource capacity, service
-semantics, contention and the input workload still matter. Unknown evidence
-must remain visible in the plan rather than becoming an assumed guarantee.
+Natural Selection compares the connectivity of candidate compositions and uses
+benchmarked capacity evidence to rank them. Cheeger bounds constrain structure;
+end-to-end throughput and latency require application measurements that account
+for resource capacity, service semantics, contention and the input workload.
+Plans must identify missing evidence and leave the affected objectives unverified.
 
 The initial goal should be a feasible, explainable composition from a bounded
-catalog. More ambitious search methods, reductions and performance models can
+catalog. Search methods, reductions and performance models can
 be developed through repeatable [benchmark studies](../../studies/README.md).
 
 ## Delivery stages and acceptance criteria
@@ -275,7 +300,7 @@ be developed through repeatable [benchmark studies](../../studies/README.md).
 | Contract modeling | Versioned Contract IR, Plan IR and receipt schemas | Reject ambiguous units, incompatible schemas and missing semantic prerequisites; preserve provenance |
 | Offline planning | Deterministic planning over a small approved catalog | Produce inspectable candidates; explain unresolved requirements; distinguish infeasibility from exhausted search budgets |
 | Polyad integration | Authorized proposal submission and outcome correlation | Enforce live rules and local authority; preserve idempotency; reject stale plans and recover through targeted replanning |
-| Bounded feedback | Administrator-approved revisions after measured deviations | Respect cooldowns and search/change budgets; avoid oscillation, duplicate work and competing capacity assignments |
+| Bounded feedback | Administrator-approved revisions after measured deviations | Respect Natural Selection precedence, plan revisions, cooldowns and search/change budgets; prevent stale Soul searching writes, oscillation and competing capacity assignments |
 
 An initial study could compare a manually declared pipeline, that pipeline with
 Soul searching enabled, and a composition chosen by Natural Selection under the same

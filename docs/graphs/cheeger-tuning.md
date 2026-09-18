@@ -35,7 +35,7 @@ and [composition requests](../apis/composition-requests.md).
 | Field under `GraphRule.spec` | Choice and consequence |
 | --- | --- |
 | `cheeger.minimum` | Nonnegative inclusive lower bound; raise it to reject sparse bottlenecks. Omit for no lower bound. |
-| `cheeger.maximum` | Nonnegative inclusive upper bound; requires some sufficiently sparse cut. Omit for no upper bound. This is not a total-edge or traffic limit. |
+| `cheeger.maximum` | Nonnegative inclusive upper bound on edge expansion; requires some sufficiently sparse cut. Omit for no upper bound. |
 | `cheeger: {}` | Measure and report expansion without imposing a threshold; the computation cap still applies. |
 | Omit `cheeger` | Disable this rule's Cheeger calculation. Other selected rules and throughput policies may still compute it. |
 | `relation: connections` | Measure declared communication links; matches the throughput policy's projection. |
@@ -107,7 +107,7 @@ Use the namespace watched by your operator. Creating the example's GraphRule
 requires policy-administrator access. The included workers serve health responses;
 replace them with your application and
 [report its measured rates to Soul searching](soul-searching.md#report-measurements).
-The thresholds are illustrative, not a prediction of what those workers can process.
+Calibrate these example thresholds against the workers' measured capacity.
 Connections describe data flow; applications must implement the approved routing.
 
 Inspect `status.structuralRules[].measurements.cheeger` for hard-rule measurements
@@ -200,10 +200,10 @@ operator:
 This permits a complete 22-vertex enumeration if it also finishes within the time
 budget. Raising the vertex cap alone does not raise the cut or time budgets.
 Benchmark representative boundaries before increasing these ceilings. They are
-per calculation, not a whole-reconciliation deadline: multiple rules, descendants
-and up to eight candidate layouts each consume work. Time checks are cooperative,
+per calculation: multiple rules, descendants and up to eight candidate layouts
+each consume work during reconciliation. Time checks are cooperative,
 between priority cuts and batches of up to 256 exhaustive cuts; preprocessing and
-scheduler delays mean this is not a hard wall-clock cancellation guarantee.
+scheduler delays can extend the elapsed time beyond the configured budget.
 
 | `cheegerComputation` field | Default | Allowed values and choice |
 | --- | --- | --- |

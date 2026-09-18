@@ -218,10 +218,10 @@ request [targeted recovery](../development/write-pipeline.md#failure-and-cancell
 not automatic replay of old patches. Cached validations expire or are invalidated
 by relevant watches and known mutations.
 
-Repeated failed attempts can emit repeated warnings. These records are diagnostic
-observations, not an exactly-once audit journal. They neither bypass GraphRules nor
-change conflict resolution. Logs are independent of downstream workload event
-subscriptions: logging an internal operator graph does not expose it through those
+Repeated failed attempts can emit repeated warnings. These diagnostic records
+explain each attempt under the existing GraphRules and conflict-resolution policy.
+Logs and downstream workload event subscriptions have separate delivery paths.
+Internal operator graphs remain excluded from application
 [event streams](../workloads/workload-events.md).
 
 Structured decisions select identities and bounded scalar details; they do not

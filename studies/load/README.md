@@ -2,9 +2,8 @@
 
 Measure how the real operator responds to a bounded stream of activation requests
 inside one application Graph. Each request produces an Activation receipt and,
-if admitted, a short-lived Kubernetes Job. This initial study measures control
-plane reconciliation and Job lifecycle; it does not claim application-throughput
-capacity or exercise temporary-connection negotiation yet.
+if admitted, a short-lived Kubernetes Job. This study measures control-plane
+reconciliation, activation acceptance and Job completion under increasing load.
 
 ## Table of contents
 

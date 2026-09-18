@@ -21,8 +21,8 @@ poetry run python scripts/gitops/flux-health.py > polyad-flux-health.yaml
 
 Merge the generated `spec.healthCheckExprs` into the **Flux Kustomization** that
 applies your graph manifests. Retain any existing expressions for other kinds.
-The output is a spec fragment, not a standalone Kubernetes resource or Helm
-values file. It does not select resources or enable waiting on its own.
+The output is a `Kustomization.spec` fragment. Configure the Kustomization's
+resource selection and waiting behavior alongside it.
 
 Enable `spec.wait: true` to check all resources applied by that Kustomization, or
 select your root explicitly:
@@ -73,7 +73,8 @@ and startup to finish.<sup>[\[1\]](https://fluxcd.io/flux/components/kustomize/k
 
 Flux has no separate suspended health result. Paused execution keeps dependent
 Kustomizations waiting. Suspending a Flux Kustomization itself is a different
-operation: it stops Flux reconciliation, rather than pausing Polyad workloads.
+operation: it stops Flux reconciliation. Use Polyad's suspension settings to
+pause graph workloads.
 
 Failures are checked before success. The `inProgress` expression only handles
 deletion, because Flux evaluates it before `failed`; a broad “not ready” expression

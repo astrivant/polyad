@@ -90,7 +90,6 @@ deterministic tie-breaker. Selected executions retain their place across replica
 handoffs. Coalescing never replaces running work. Excess pending receipts become
 `Rejected`; an HTTP 202 acknowledges receipt, so read its status for the decision.
 
-This serialization is **not a transaction around application side effects**.
 Kubernetes Job retries can repeat application work. Applications must provide
 their own idempotency or transactional storage where required.
 
@@ -122,8 +121,8 @@ that target until an explicit stop or graph cleanup. A stop does not release its
 slot until foreground deletion and custom finalizers finish. Node resource slots
 also bound parallel activations independently of replica counts.
 
-Names differ between pulses. Use a Service with application labels for network
-discovery, rather than `${nodes.NAME.name}` references to an activated vertex.
+Names differ between pulses. Use a Service with application labels for stable
+network discovery across activations.
 Each execution retains the logical node's network scope and inherited placement.
 Structural rules are also checked against the expanded execution topology.
 Boolean gates can continue to reference `NAME.ready`, `NAME.started` and
@@ -202,8 +201,8 @@ queue. HTTP threads create receipts and stop signals; leased workers create and
 delete execution resources through the ordered API adapter.
 
 Each receipt pins the graph UID/generation and definition UID/generation. Changed
-intent invalidates outstanding activations instead of silently switching their
-meaning. Completed receipts retain idempotency and audit identities; deleting a
+intent invalidates outstanding activations. Submit new activations against the
+updated intent. Completed receipts retain idempotency and audit identities; deleting a
 receipt loses that history. Graph deletion removes its receipts and executions.
 Suspending or stopping a graph drains executions and retains stopped receipts;
 resuming requires new pulse IDs.

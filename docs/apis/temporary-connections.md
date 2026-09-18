@@ -193,8 +193,8 @@ HTTP 202 acknowledges a durable receipt. Poll
 `GET /v1/connections/analytics/handoff-42` for `status.phase`: `Pending`, `Active`,
 `Rejected`, `Expired` or `Revoked`. The response includes `expiresAt`, graph identity,
 endpoint details, and `revokeRequested`. `Active` means the requested policies
-have been observed in Kubernetes; it does not prove application readiness or CNI
-convergence. Rejections include `status.message`.
+have been observed in Kubernetes. Applications check readiness and network
+convergence before exchanging work. Rejections include `status.message`.
 
 `DELETE /v1/connections/analytics/handoff-42` requests early revocation and returns
 202. Poll until `Revoked` or `Expired`; an accepted delete is not synchronous
@@ -449,7 +449,8 @@ workload outage as a request to change the topology.
 **Network enforcement is asynchronous.** Queue backlog, unavailable operators,
 Kubernetes API outages and CNI/mesh propagation can delay actual traffic removal.
 Existing sessions follow the network implementation's policy-update behavior.
-TTL is not a hard real-time socket cutoff. Disabling intake still permits ordinary
+TTL starts policy cleanup; the network implementation determines when existing
+sockets close. Disabling intake still permits ordinary
 reconciliation to clean up existing receipts; keep the operator running until
 cleanup completes.
 

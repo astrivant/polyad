@@ -10,8 +10,9 @@ as `Graph` and `ReplicaGroup` do.
 
 Only policy administrators should have write access to `graphrules`. The operator's
 Role grants read access, and the composition HTTP API cannot create or modify rules.
-These are scheduler admission and graph networking policies, rather than a
-validating webhook for arbitrary native Pods.
+The operator enforces these policies during graph admission and when compiling
+workload networking resources. Cluster admission controllers govern direct Pod
+requests from other clients.
 
 ## Table of contents
 
@@ -207,8 +208,8 @@ flowchart LR
 ### Depth
 
 With `limits.depth: 2`, a three-stage chain fails. An SCC collapses to one vertex
-before layering, so a directed cycle alone has depth one rather than its original
-vertex count. Use `strongComponent` or `acyclic` to constrain cycles.
+before layering, so a directed cycle alone has depth one. Use `strongComponent`
+or `acyclic` to constrain cycles.
 
 ```mermaid
 flowchart LR
@@ -223,8 +224,8 @@ flowchart LR
 ### Breadth
 
 With `limits.breadth: 2`, three SCCs in the same earliest layer fail. Each vertex
-below is its own SCC. Breadth is not a maximum antichain or the number of tasks
-that will actually run concurrently.
+below is its own SCC. Breadth counts SCCs assigned to the same earliest layer;
+execution concurrency is governed by admission and capacity settings.
 
 ```mermaid
 flowchart LR
@@ -587,10 +588,10 @@ See [practical tuning](cheeger-tuning.md) for every field's range, application
 feedback tradeoffs and [cut-priority examples](cheeger-tuning.md#prioritize-important-cuts).
 
 The projection ignores direction, bandwidth, task duration and resource demand.
-Passing a Cheeger rule does not guarantee throughput or eliminate execution
-bottlenecks. `relation: connections` measures declared communication links;
+Measure throughput and execution bottlenecks separately at runtime.
+`relation: connections` measures declared communication links;
 `relation: admission` measures dependency links. Nested boundaries are measured
-separately, rather than flattened into one workload graph.
+separately at their configured scopes.
 
 ## Network contracts
 
@@ -1033,7 +1034,7 @@ bound lifetime work submitted through repeated activation requests.
 Structural rule updates block further admission on subsequent reconciliations;
 they do not evict running workloads. Network contract updates have their own
 [enforcement lifecycle](../deployment/networking.md#enforcement-and-lifecycle). Kubernetes reads
-across objects are not an atomic snapshot.
+across objects can observe different moments during a concurrent update.
 
 ## Application throughput targets
 

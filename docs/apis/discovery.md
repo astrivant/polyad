@@ -63,9 +63,8 @@ flowchart TB
     east --> denied
 ```
 
-These modes are ceilings, not promises that every request inside the scope is
-executable. A child rejects an operation it cannot fulfill rather than accepting
-it into an indefinitely pending queue. A permitted connection still needs a
+These modes set the maximum permitted scope. A child rejects operations it
+cannot fulfill. A permitted connection also needs a
 common application graph boundary owned by the receiving operator, endpoint
 consent, current GraphRules and compatible network contracts.
 
@@ -276,7 +275,8 @@ requested application port. Existing restrictive contracts can reject the propos
 | Receipt `Pending` | Durable proposal is waiting for consent or policy acknowledgement within its original TTL |
 | Receipt `Rejected` | Reconciliation found a conflicting mode, rule, capability or endpoint; outstanding grants are removed before terminal completion |
 
-Acceptance acknowledges durable intent, not a working connection. Fresh ownership,
+Acceptance acknowledges durable intent. Connection activation follows admission
+and policy reconciliation. Fresh ownership,
 access ceilings and graph rules are checked again before writes. A participant
 removal, replacement, explicit refusal or narrowed mode triggers cleanup of both
 policy grants. A missing target is never recreated by negotiation. A remote

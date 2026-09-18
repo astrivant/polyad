@@ -157,8 +157,8 @@ and [Cluster Autoscaler priority handling](https://github.com/kubernetes/autosca
 All placeholders must be observed Ready before handoff. Once dependencies and
 gates permit admission, Polyad persists the release decision, deletes the
 placeholders, waits for their disappearance, then creates the real workload.
-There is a scheduling gap during this exchange: it is not an exclusive
-reservation or an atomic whole-graph scheduling operation.
+Other workloads can consume capacity during the scheduling gap between
+placeholder deletion and admission of the real workload.
 
 Placeholder forecasts reject PVCs and ephemeral claim templates, Pod affinity
 or anti-affinity, topology spread, dynamic resource claims, host ports and

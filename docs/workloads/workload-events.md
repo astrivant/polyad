@@ -106,8 +106,8 @@ flowchart LR
 ```
 
 Notifications follow owning-shard reconciliation and periodic rescans. They are
-observations, not a synchronous barrier or a complete log of every intermediate
-Kubernetes change. Several changes can be coalesced before an observation.
+observations of state at reconciliation time. Several Kubernetes changes can be
+coalesced before an observation.
 GraphRules control admission independently of event delivery.
 
 ## Connection consent events
@@ -158,7 +158,7 @@ Every response includes:
 | `observedAt` | Publication time as Unix seconds |
 | `cursor` | Stream position read atomically with the snapshot; use as `Last-Event-ID` |
 | `valid` | Whether requested topology could be resolved and represented |
-| `templateOnly` | Whether this is a reusable definition rather than an executable instance |
+| `templateOnly` | True for a reusable definition; false for an executable instance |
 | `terminating` | Whether graph deletion has started |
 
 Full snapshots contain `nodes` and `connections`. Nodes include their logical
@@ -236,7 +236,7 @@ refresh. Cache failover or bounded snapshot eviction can require waiting for the
 owning shard to republish.
 
 Snapshots and selections are limited to 4 MiB. An oversized full snapshot is
-published with `valid: false` and an `error`, rather than partial neighbors. An
+published with `valid: false` and an `error`. An
 oversized node selection returns HTTP 503. No subscription automatically changes
 application connections or restarts containers.
 

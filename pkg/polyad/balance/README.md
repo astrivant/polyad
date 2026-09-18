@@ -94,10 +94,10 @@ workload adapters for external binaries, and implement safe cancellation boundar
 
 Checkpoint files use explicit JSON, SHA-256 integrity checks, input fingerprints and atomic replacement after flushing the file.
 `restore=True` loads compatible checkpoints into new workload instances. Changed fingerprints and corrupted files fail loudly.
-Completed work removes its checkpoint. This restores paused units, not an entire previous dynamic graph: callers must reconstruct
-that graph and account for already completed external work. Each scheduler requires its own directory; `scheduler.lock` prevents
+Completed work removes its checkpoint. Restoring a checkpoint resumes its paused unit. Callers reconstruct the dynamic graph
+and account for already completed external work. Each scheduler requires its own directory; `scheduler.lock` prevents
 concurrent coordinators from writing the same journal. After a hard crash, verify the old coordinator has stopped before removing
-a stale lock. This is a single-host scheduler, not a distributed lease service.
+a stale lock. Each scheduler coordinates execution on one host.
 
 ## Logs and diagrams
 
@@ -184,11 +184,11 @@ boundary. Cooperative scheduling pauses skip finalization so resumable state rem
 
 The callback receives `ShutdownState` and returns `True` only after durable cleanup. Returning `False` or raising an ordinary
 exception keeps it pending and schedules another attempt. Completed finalizers are not retried within that activation.
-Callbacks must be idempotent, quick and nonblocking; their order is not a dependency mechanism. Events record pending,
+Callbacks must be idempotent, quick and nonblocking; model dependencies in the graph. Events record pending,
 failed and completed finalizers. A grace deadline does not bypass them. If finalization is interrupted, the scheduler lock
-remains for operator recovery; it is not a distributed lease or an automatic restart protocol.
+remains for operator recovery on that host.
 
-This is cooperative termination, not a proof that arbitrary Python or external processes terminate. Workloads must observe
+Termination is cooperative. Workloads must observe
 cancellation and own the shutdown and joining of their children. A worker that ignores cancellation, or a finalizer that never
 acknowledges cleanup, can prevent shutdown from completing. Enforce a hard external process deadline where that guarantee is needed.
 
@@ -237,7 +237,7 @@ The command prints its output directory under `.cache/balance/`. Override it wit
 You get a PNG for the initial graph and every structural rewrite, Mermaid lifecycle snapshots, and an ordered
 `events.jsonl` journal. PNGs show prerequisite edges; routing decisions and their observations are recorded in the journal.
 Enable this on your own `Scheduler` or composed `Graph` with `plots=True`; matplotlib is imported only when plotting is requested.
-These snapshots describe each local scheduling boundary, not a flattened view of all nested graphs.
+Each snapshot describes one local scheduling boundary. Inspect child boundaries separately.
 
 ### What the rewrites produce
 
@@ -337,7 +337,7 @@ Polyad never guesses which prerequisite should be bypassed.
 Only unstarted units without checkpoints may be removed, replaced or rewired. Unaffected running work retains ownership and
 continues. Rewrites do not silently discard progress or cancel active workers.
 
-Registry definitions live in application code, rather than serialized callbacks. Graph checkpoints retain the resulting
+Registry definitions live in application code. Graph checkpoints retain the resulting
 membership and removal records. Reconstruct registry definitions when restarting a process and provide a resolver for
 new or replaced implementations. Repeated application is not implicitly idempotent.
 
@@ -359,11 +359,11 @@ flowchart BT
 
 Changing a child changes its ancestor hashes when read. Running coordinators observe descendant changes on their next
 scheduling pass, log before/after hashes and export another revision plot when plotting is enabled. Local shape snapshots
-publish atomically; this is not a globally locked snapshot across independently changing graph boundaries.
+publish atomically within each boundary; independently changing boundaries are observed at different times.
 
 Submission order, statuses, runtime measurements, resource estimates and workload fingerprints do not affect the shape hash.
-Node names, edges and the syntax of routing expressions do. This is identity for a **labeled structure**, not a graph-isomorphism
-test, semantic equivalence proof, cache key for results, or checkpoint-integrity replacement. Commutative Boolean expressions
+Node names, edges and the syntax of routing expressions do. The hash identifies a **labeled structure**.
+Result caches and checkpoints use their own identities and integrity checks. Commutative Boolean expressions
 written in different operand orders can have different hashes.
 
 Containment must remain acyclic. A shape hash describes the currently represented hierarchy;

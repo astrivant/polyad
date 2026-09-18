@@ -133,14 +133,15 @@ externally installed mesh too.
 ## Replicas and storage
 
 Alloy clustering distributes metric scrapes and log targets among replicas.
-Membership changes can briefly overlap ownership; this is not an exactly-once
-delivery guarantee. Prometheus Agent is restricted to one replica because this
+Membership changes can briefly overlap ownership and produce duplicate samples.
+Prometheus Agent is restricted to one replica because this
 chart does not configure Prometheus sharding or a backend deduplication scheme.
 Do not run a separate ServiceMonitor over the same targets at the same time.
 
 Both modes use a StatefulSet and a per-replica PVC for their metric WAL. Set
 `storage.enabled: false` only when losing buffered samples after a restart is
-acceptable. The PVC is not a durable guarantee for trace queues or container logs.
+acceptable. The PVC persists the metric WAL. Trace queues and container logs
+require their own retention and delivery configuration.
 Retain or explicitly retire scaled-down PVCs after exported data is verified.
 
 Tune `replicas`, `resources`, `scrapeIntervalSeconds`, `scrapeTimeoutSeconds`,
@@ -187,8 +188,8 @@ Install collectors in each workload cluster; a root collector does not discover
 remote cluster Pods. Give each release a distinct `clusterName` or configure
 `global.multiCluster.clusterName`, then send data to shared backends. For
 root-provisioned remote workers, keep `routeOperator: false` and use a shared,
-reachable `tracing.endpoint`: root-cluster Service DNS is not a cross-cluster
-collector address. Helm-installed workers may use their own local collector.
+reachable `tracing.endpoint` that resolves from every worker cluster.
+Helm-installed workers may use their own local collector.
 
 ## References
 

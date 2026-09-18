@@ -92,7 +92,7 @@ The group exposes the Kubernetes scale subresource:
 - `.status.readyReplicas`: copies observed ready or successfully completed.
 
 A group stays alive at zero copies. Completed finite copies remain completed;
-replica count is not a repeated-job trigger. Use [activation pulses](../workloads/activation.md)
+replica count controls the number of copies. Use [activation pulses](../workloads/activation.md)
 when work must repeat. Replicating a Daemon copies its selected
 Deployment or StatefulSet controller; each copy retains that definition's own replica setting. Bounds count copies of
 the selected abstraction, not the total Pods in their descendant graphs.
@@ -1551,7 +1551,7 @@ inherits the reusable group's requested count. Scaling that definition scales
 Each instance retains its own connectivity configuration. Shared count changes
 regenerate that instance's edges using its effective count. Editing other fields
 of a reusable definition, including connectivity, follows the normal definition
-replacement lifecycle rather than the count-only scaling path.
+replacement lifecycle. Replica-count edits use the scaling path.
 
 The generated `spec.replicaSource` pins the reusable group's name and UID. The
 operator rejects a missing or recreated source. On a generated instance, set
@@ -1562,8 +1562,8 @@ plus `instanceCount` and `totalReplicas`; requested replicas remain **per use**.
 
 Existing references directly to a Workload or Graph continue their normal
 semantics. To replicate those uses together, route them through the shared
-ReplicaGroup definition. Replication is explicit rather than a namespace-wide
-mutation of every reference to a library object.
+ReplicaGroup definition. The group's explicit membership determines which uses
+receive the replica intent.
 
 ## Connect KEDA
 
@@ -1645,7 +1645,7 @@ with the same ReplicaGroup target.
 Allow KEDA through `networkPolicy.metricsPeers` and, with Istio,
 `mesh.operator.metricsPrincipals`. `/v1/workloads/*` is covered by the metrics
 listener's authorization policy. Each operator replica observes namespace-wide
-demand: use the Service address, or **max**, rather than summing replica samples.
+demand: use the Service address, or **max**, to count each observation once.
 No application secrets or arbitrary Pod labels are exposed by the metrics API.
 
 ## Metric scopes and freshness
@@ -1683,8 +1683,8 @@ with `kind`, `name`, `node` and `signal` labels.
 KEDA supplies a requested count through `/scale`; Polyad decides whether the
 resulting execution topology satisfies [GraphRules](graph-rules.md#polygraphs-and-autoscaling).
 The rule check runs again before each execution creation and scale-in deletion,
-using fresh graph specifications and owned children, rather than cached status
-measurements. PolyGraph rules participate in these checks, including a parent's
+using fresh graph specifications and owned children. PolyGraph rules participate
+in these checks, including a parent's
 recursive limits declared with `scope: Boundary`.
 
 ```mermaid
@@ -1711,7 +1711,7 @@ ReplicaGroup edges follow its [connectivity mode](#connections-between-copies).
 The default Independent mode has Cheeger constant zero; connected modes and
 Custom edges can satisfy positive bounds. Select `relation: connections` to
 evaluate them. The enclosing PolyGraph's Cheeger value still describes its
-declared inter-graph connections, not a flattened Pod network.
+declared inter-graph connections at that boundary.
 Place a Cheeger bound on the intended boundary with `scope: Boundary` when it
 should not propagate to the replica groups. Other subtree and namespace rules
 continue to apply.

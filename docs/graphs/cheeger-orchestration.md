@@ -11,7 +11,7 @@ alongside `currentCheeger` and the selected `target` in `status.throughput`.
 The selected demand signal (offered rate by default) selects an administrator-calibrated Cheeger target; a sustained
 completion shortfall can trigger a recommendation or an admitted layout change.
 The target remains a structural range, while the reported rates measure
-application throughput. Meeting that range does not guarantee a completion rate.
+application throughput. Evaluate completion rate against application measurements.
 Soul searching can also rebalance [traffic percentages](traffic-balancing.md)
 within the same bounds, including Headroom adjustments before an aggregate shortfall.
 With [`trigger: Demand`](load-profiles.md), approved profiles can change connections,
@@ -323,7 +323,7 @@ place. It does not weaken another boundary's bound to make the count fit. See
 Each Graph may also have its own application throughput policy. Reports identify
 one Graph instance by name, UID and generation; a parent report does not become
 a child report. Calibrate each policy against that boundary's actual workload.
-Passing every structural bound still does not guarantee application throughput.
+Measure application throughput at each boundary alongside its structural checks.
 
 Parent `Adapt` can replace connections between the parent's vertices. Child
 `Adapt` can replace connections between the child's stages. Neither changes

@@ -77,14 +77,13 @@ flowchart TB
 
 Cheeger is an unweighted structural measurement of the simple undirected
 connections projection. It ignores edge direction, bandwidth, processing cost,
-latency and hardware capacity. A high value does not guarantee records per second,
-and adding edges can increase coordination overhead. Use load tests to choose
+latency and hardware capacity. Measure records per second and the coordination
+overhead of added edges through load tests. Use those measurements to choose
 targets and layouts for your application's routing and partitioning contracts.
 
 Report **offered demand and successfully completed work over the same measurement
-window**, in the configured unit. Use one aggregate reporter per graph rather than
-letting individual replicas overwrite one another's partial measurements. Low
-traffic alone is not a throughput shortfall. With the default `trigger: Shortfall`,
+window**, in the configured unit. Use one aggregate reporter per graph to combine
+replica measurements into a complete sample. With the default `trigger: Shortfall`,
 the controller considers connection changes and Tiers routing when offered demand is positive
 and completed work is below
 `offeredPerSecond * shortfallRatio` for the required duration and sample count.
@@ -165,8 +164,8 @@ neighbors and routing.
 
 For PolyGraphs, these connections join child graph boundaries; their Cheeger
 measurement describes those boundary vertices. Each child Graph may configure
-its own independently calibrated feedback policy. This is not a single global
-throughput guarantee across clusters.
+its own independently calibrated feedback policy and measures throughput at its
+own boundary.
 
 To configure percentage routing instead of, or alongside, connection layouts,
 see [fixed splits and automatic Tiers or Headroom balancing](traffic-balancing.md#choose-an-automatic-balancing-mode).

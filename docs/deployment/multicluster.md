@@ -107,7 +107,7 @@ through its destination operator when it places children in another cluster.
 Source operators read remote status directly; the
 [optional observer read path](#optional-shared-observers) serves services and
 monitoring separately. [Application traffic](#istio-across-different-networks)
-uses the configured network rather than passing through these operators.
+flows directly over the configured application network.
 
 ## Placement and ownership
 
@@ -187,8 +187,8 @@ owner references are used within a cluster; remote ownership is handled by
 Polyad's inventory and finalizers. Lost creation acknowledgements are retried
 without adopting foreign objects. Changing placement drains the old child before
 creating its replacement. Parent deletion waits until remote deletion and the
-destination's workload cleanup are observed. An unreachable API blocks progress;
-it does not prove a child is absent.
+destination's workload cleanup are observed. An unreachable API blocks progress
+until the operator can verify the child's state.
 
 Keep destination registrations, credentials and operators available until their
 children finish draining. Removing these first blocks cleanup. Graph removal does

@@ -43,10 +43,10 @@ for kind in sorted(GRAPH_OWNED_KINDS):
 The module also exports immutable sets named `BOUNDARY_KINDS`,
 `GRAPH_OWNED_KINDS`, `DEFINITION_KINDS`, `RECONCILED_KINDS`, `COMPOSABLE_KINDS`,
 `POLYAD_KINDS`, `NETWORK_POLICY_KINDS`, `CAPACITY_KINDS` and `AUXILIARY_KINDS`.
-These are derived from metadata, rather than maintained as separate lists.
+These are derived from the shared resource metadata.
 
 All currently supported resource endpoints are namespaced. Kind names are unique
-within this catalog; it is not a generic Kubernetes API discovery service.
+within this catalog. Use Kubernetes API discovery for resources outside it.
 Optional Istio and autoscaler types remain listed even when those APIs are absent
 from a particular cluster. Their existing feature and discovery checks still
 control their use.

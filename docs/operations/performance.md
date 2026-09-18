@@ -108,8 +108,8 @@ Deployment. Gateway, executor and telemetry groups retain their separate
 
 The chart passes `behavior` directly into the HPA. Stabilization windows accept
 0–3600 seconds, including an explicit zero. The window considers recent scaling
-recommendations to reduce oscillation; it is not a fixed sleep before every
-change. Rate policies separately limit changes over `periodSeconds` (1–1800).
+recommendations to reduce oscillation. Rate policies separately limit changes
+over `periodSeconds` (1–1800).
 `Pods` uses an absolute count and `Percent` uses a percentage. `Max` chooses the
 largest permitted change, `Min` the smallest, and `Disabled` prevents scaling
 in that direction. See [Kubernetes scaling behavior](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/#configurable-scaling-behavior).

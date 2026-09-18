@@ -154,8 +154,8 @@ and resource envelopes contain `apiVersion` and `kind`. Configuration models
 reject extra fields; native resource ASTs preserve unmodeled fields.
 
 Resource envelopes intentionally accept arbitrary `spec` dictionaries. Use
-`resource_schema("Graph")` to check the complete manifest contract, rather than
-`schema_for(Graph)`. The CRD conversion translates nullable fields and exclusive
+`resource_schema("Graph")` to check the complete manifest contract.
+`schema_for(Graph)` checks the typed resource envelope. The CRD conversion translates nullable fields and exclusive
 bounds to JSON Schema while retaining `x-kubernetes-*` annotations. A standard
 JSON Schema validator does not execute Kubernetes CEL rules, defaulting,
 pruning, admission webhooks or live graph checks.
@@ -168,8 +168,8 @@ validating a partial overlay does not establish that the eventual merged
 configuration satisfies every feature dependency.
 
 Use the schema artifacts from the same release as the target operator and chart.
-The installed package pins the document content; an identifier containing
-`main` is not a request to replace it with the latest repository version.
+The installed package pins the document content, including documents whose
+identifiers contain `main`. Updating the package updates those artifacts.
 
 ## Regenerate artifacts
 

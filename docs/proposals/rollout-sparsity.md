@@ -102,9 +102,9 @@ conservatively waiting or rebuilding that evidence.
 
 Compute each scope's earliest time allowed by its interval, settled cooldown,
 debounce and sliding-window quota, then take the latest of those times. Expose
-it as `notBefore`, not a promise that execution will begin then. An active
+it as `notBefore`, the earliest eligible admission time. An active
 conflict, readiness or GraphRules may still block it. Unresolved cooldowns have
-no known deadline; report their condition instead of inventing a timestamp.
+no known deadline; report the condition that blocks them.
 Eligibility uses the root's time authority, never a remote worker's independent
 clock. Uncertain clock or history observations block admission.
 
@@ -134,7 +134,7 @@ Restart requests can merge only when their caller contract permits it; image and
 configuration revisions require an adapter that confirms intermediate versions
 may be skipped. Credential preparation, revocation, migrations and required
 intermediate steps are not automatically supersedable. Reject an incompatible
-`CoalesceLatest` setting rather than silently dropping work. Queue mode uses a
+`CoalesceLatest` setting with an explanation of the required intermediate steps. Queue mode uses a
 fixed debounce batch bounded by `maxDebounceSeconds`; unrelated requests cannot
 extend that batch or delay its head indefinitely.
 

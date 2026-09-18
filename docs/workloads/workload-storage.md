@@ -173,8 +173,8 @@ controller. `updateStrategy` is passed to the native set but does not change
 that graph replacement behavior. Choose retention with this in mind:
 `whenDeleted: Delete` can delete data during suspension, graph cleanup or
 replacement, even if `whenScaled` is `Retain`. Retained claims keep their
-previous configuration; changing a claim template is not a PVC resize or data
-migration operation.
+previous configuration. Resize existing PVCs or migrate their data through
+separate storage operations.
 
 Within the same graph UID and node name, generated controller names remain
 stable. A new graph incarnation or activation receipt creates a different
@@ -214,7 +214,7 @@ metadata, and graph resource counts include `StatefulSet`.
 Set `Daemon.spec.controller: DaemonSet` to run one Pod on every eligible node.
 Use `template.spec.nodeSelector` and tolerations, or inherited graph placement,
 to select those nodes. Omit `replicas` or leave it at `1`: this value is a
-validation sentinel, not a desired Pod count. DaemonSets do not support
+validation sentinel. Eligible nodes determine the Pod count. DaemonSets do not support
 StatefulSet claim templates, activation pulses or advance capacity reservations. Native Pod volumes and existing
 PVC references still work, subject to their access modes across nodes.
 

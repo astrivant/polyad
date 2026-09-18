@@ -128,7 +128,7 @@ requested.
 
 ## Tasks on the operator event loop
 
-An async task is a coroutine scheduled on the event loop, not an OS thread.
+An async task is a coroutine scheduled on the event loop.
 Tasks can make progress while other tasks await I/O, but blocking the loop delays
 every task on it. Startup registers these tasks according to the process role:
 
@@ -165,7 +165,7 @@ bounds candidate checks, including checks requested directly by dispatchers.
 These are Python runtime controls projected by Helm into environment variables.
 See [work-graph configuration](../development/write-pipeline.md#configuration)
 for all limits, their scope, and how root-managed and Helm-installed workers
-receive them. They bound async work rather than allocating dedicated thread pools.
+receive them. They bound concurrent async work on the existing event loop.
 
 Before dispatch, each adapter also compares
 [pending changes to the same object](../development/mutations.md#queued-kubernetes-write-conflicts).
@@ -180,8 +180,7 @@ checks run on the same event loop and add no OS thread or queue service.
 Task pauses are described in [performance tuning](../operations/performance.md).
 Their settings do not change the number of HTTP workers or asyncio executor
 workers. PostgreSQL persistence, topology observations and throughput adaptation
-run as parts of these tasks and request operations, rather than dedicated Python
-processes.
+run as parts of these tasks and request operations within the process.
 
 ## How an HTTP request reaches Kubernetes
 
@@ -294,12 +293,11 @@ Cleanup then runs on the Kopf event loop:
 
 1. Stop new HTTP intake, join the serving thread, and await retained operations.
    Waitress shuts down its dispatcher, or Hypercorn drains its listeners and joins
-   its worker pool. Both use a 35-second serving grace period; this is not a total
-   shutdown deadline for all retained work.
+   its worker pool. Both use a 35-second serving grace period. Remaining work
+   follows the shutdown steps below.
 2. Close HTTP-owned clients, request-limit storage and credential lanes.
 3. Cancel the local FIFO consumer and its waiters. Pending desired state is
-   replayed from shared notifications and fresh scans, rather than fully draining
-   every queued key before exit.
+   recovered from shared notifications and fresh scans after restart.
 4. Cancel and join background tasks, then close remote/event/cache/state clients.
    In-flight Kubernetes transports retain their acknowledgement discipline.
 5. Let `asyncio.run` finish loop/executor teardown, join `polyad-kopf` from the main

@@ -39,7 +39,7 @@ or the gateway group in a [split deployment](../deployment/components.md).
 An ordinary roll schedules the subscriptions present when it starts. Connections
 opened afterward stay out of that roll. Repeated membership or administrative
 changes coalesce behind the cooldown and the already scheduled batches. An age
-limit starts a paced roll of eligible connections; it is not a hard socket deadline.
+limit starts a paced roll of eligible connections according to the configured budgets.
 These budgets apply **per operator replica**, with jitter to spread simultaneous
 rolls across the group. Termination takes precedence over ordinary cooldowns.
 
@@ -84,8 +84,7 @@ sequenceDiagram
     Note over Old,Client: Repeat for remaining scheduled batches
 ```
 
-Routing may choose any eligible replica; a copulse does not guarantee that one
-particular client lands on the newly added Pod. Each subscription refreshes its
+Routing may choose any eligible replica. Each subscription refreshes its
 endpoint list independently, and membership changes arriving during a roll are
 coalesced. The [scale-down sequence](#scale-down-and-shutdown) describes evacuation
 of a departing replica before process exit.
