@@ -28,7 +28,7 @@ def main() -> None:
     assert "site-packages" in package.parts, package
     assert (package / "py.typed").is_file()
     assert not requires("polyad-schemas")
-    for name in ("polyad", "polyad_types", "polyad_client", "jsonschema", "attrs", "yaml"):
+    for name in ("polyad", "polyad_types", "polyad_sdk", "jsonschema", "attrs", "yaml"):
         assert importlib.util.find_spec(name) is None, name
     for name in available_schemas():
         assert "$schema" in load_schema(name), name

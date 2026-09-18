@@ -3,7 +3,7 @@
 Polyad uses pre-commit checks and four-space indentation for Python and shell
 scripts. `.tool-versions` pins the local and CI tools; `.python-version` keeps
 the Python 3.13 interpreter selected for development. The operator supports
-Python 3.13 and 3.14; the standalone client, types and schemas packages support Python
+Python 3.13 and 3.14; the standalone SDK, types and schemas packages support Python
 3.11 through 3.14. CI runs operator tests on both supported versions and checks
 the standalone wheels on each supported version. `.editorconfig` supplies
 editor indentation.
@@ -209,7 +209,7 @@ example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the ch
 README's image-tag default. Alpha, beta and release-candidate spellings are
 normalized; malformed tags fail before metadata changes.
 
-The standalone `polyad-client`, [`polyad-types`](../../pkg/polyad-types/README.md)
+The standalone `polyad-sdk`, [`polyad-types`](../../pkg/polyad-types/README.md)
 and [`polyad-schemas`](../../pkg/polyad-schemas/README.md) packages receive the same
 release version. The operator's `schemas` extra pins the matching schema package. The client and operator pin the matching
 types release; Poetry resolves that dependency from `pkg/polyad-types` in a checkout,
@@ -251,12 +251,12 @@ project's Python 3.13 interpreter selected:
 ```sh
 poetry -C pkg/polyad-types check --strict
 poetry -C pkg/polyad-schemas check --strict
-poetry -C pkg/client check --strict
+poetry -C pkg/polyad-sdk check --strict
 poetry check --strict
 
 poetry -C pkg/polyad-types publish --build
 poetry -C pkg/polyad-schemas publish --build
-poetry -C pkg/client publish --build
+poetry -C pkg/polyad-sdk publish --build
 poetry publish --build
 ```
 

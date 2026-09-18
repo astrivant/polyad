@@ -9,7 +9,7 @@ from cattrs.errors import ForbiddenExtraKeysError
 
 from polyad import graph
 from polyad.compiler.registry import RESOURCE_MODELS
-from polyad_client import Event as ClientEvent
+from polyad_sdk import Event as ClientEvent
 from polyad_types import (
     ActivationRequest,
     Cheeger,

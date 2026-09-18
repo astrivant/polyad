@@ -202,13 +202,13 @@ network teardown. Requests outside caller/target scope or without `connect`
 permission return 403. Invalid authentication returns 401; conflicting request
 identity returns 409. The authenticated schema is at `/openapi.json`.
 
-The [standalone Python client](../../pkg/client/README.md) supports these
+The [standalone Python SDK](../../pkg/polyad-sdk/README.md) supports these
 operations without installing the operator package:
 
 ```python
 import os
 from pathlib import Path
-from polyad_client import Client
+from polyad_sdk import Client
 
 
 def connections():
@@ -274,7 +274,7 @@ Content-Type: application/json
 
 `decision` is `Approve` or `Reject`. The caller cannot select the endpoint it
 approves for; the operator derives it from its live Pod ownership. A named API
-key that can read events does not grant approval authority. The standalone client
+key that can read events does not grant approval authority. The standalone SDK
 provides the same operation:
 
 ```python

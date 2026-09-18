@@ -54,13 +54,13 @@ def prepare(tag: str) -> None:
     project = Path("pyproject.toml")
     old_version = tomllib.loads(project.read_text())["project"]["version"]
     replace("pyproject.toml", rf'^(version\s*=\s*)"{re.escape(old_version)}"\s*$', rf'\g<1>"{package}"')
-    replace("pkg/client/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
+    replace("pkg/polyad-sdk/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
     replace("pkg/polyad-types/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
     replace("pkg/polyad-schemas/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
     replace("pkg/polyad-benchmarks/pyproject.toml", r'^(version\s*=\s*)"[^"\n]+"\s*$', rf'\g<1>"{package}"')
-    replace("pkg/polyad-benchmarks/pyproject.toml", r'"polyad-client==[^"\n]+"', f'"polyad-client=={package}"')
+    replace("pkg/polyad-benchmarks/pyproject.toml", r'"polyad-sdk==[^"\n]+"', f'"polyad-sdk=={package}"')
     replace("pyproject.toml", r'^schemas = \["polyad-schemas==[^"\n]+"\]$', f'schemas = ["polyad-schemas=={package}"]')
-    for path in ("pyproject.toml", "pkg/client/pyproject.toml", "pkg/polyad-benchmarks/pyproject.toml"):
+    for path in ("pyproject.toml", "pkg/polyad-sdk/pyproject.toml", "pkg/polyad-benchmarks/pyproject.toml"):
         replace(path, r'^(\s*)"polyad-types==[^"\n]+",?$', rf'\g<1>"polyad-types=={package}",')
     # The local path dependency's version and the root dependency metadata change
     # together. Refresh this entry; the composite action refreshes the lock before builds.
@@ -76,7 +76,7 @@ def prepare(tag: str) -> None:
     replace("charts/polyad-benchmarks/Chart.yaml", r"^version: .+$", f"version: {chart}")
     replace("charts/polyad-benchmarks/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
     replace("charts/polyad-benchmarks/values.yaml", r"^      tag: .+$", f"      tag: '{chart}'")
-    for dependency in ("polyad-types", "polyad-client"):
+    for dependency in ("polyad-types", "polyad-sdk"):
         replace("pkg/polyad-benchmarks/poetry.lock", rf'(^name = "{dependency}"\nversion = )"[^"\n]+"', rf'\g<1>"{package}"')
     for chart_name, parameter in (("polyad", "operator.image.tag"), ("polyad-benchmarks", "polyadResources.variables.images.tag")):
         readme = Path(f"charts/{chart_name}/README.md")

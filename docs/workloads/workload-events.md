@@ -17,6 +17,10 @@ JSON Schemas for these observations, plus Helm byte/batch/polling limits and
 client receive budgets. `Event.typed()` validates and decodes an observation into
 its matching typed payload tree.
 
+Use these observations to maintain eligibility and drain retiring peers as
+described in [Service Symbiosis: writing adaptive microservices](adaptive-microservices.md).
+That guide connects event hooks to producer/consumer cooperation and backpressure.
+
 Named API keys additionally need `events` or `topology` capabilities and explicit
 [graph-tree grants](../operations/api-keys.md#graph-access-and-workload-assignments)
 and an administrator-assigned `home` graph. The parent operator's
@@ -182,11 +186,11 @@ responsibility; snapshots do not expose Pod IPs or EndpointSlices.
 
 ## Subscribe from a workload
 
-Configure the [Python client](../../pkg/client/README.md) for the events Service:
+Configure the [Python SDK](../../pkg/polyad-sdk/README.md) for the events Service:
 
 ```python
 import os
-from polyad_client import Client
+from polyad_sdk import Client
 
 events = Client(os.environ["POLYAD_EVENTS_URL"], os.environ["POLYAD_EVENTS_TOKEN"], timeout=60)
 identity = {
@@ -253,7 +257,7 @@ events:
     enabled: true
 ```
 
-The [client](../../pkg/client/README.md#websocket-subscriptions) includes the
+The [SDK](../../pkg/polyad-sdk/README.md#websocket-subscriptions) includes the
 `websockets` dependency. Choose transport per subscription:
 
 ```python
@@ -278,7 +282,9 @@ Each server text frame contains one JSON object:
 ```
 
 `graph`, `topology` and `connection` messages carry observations. `heartbeat`
-frames have empty IDs and are skipped by the Python client. `reset` and
+frames have empty IDs. The SDK's adaptive interface uses them to refresh
+topology and expire observations; raw subscriptions can filter them with
+`event_type(...)`. `reset` and
 `unavailable` frames require the same recovery as SSE; the callback subscription
 raises `StreamInterrupted` without advancing its checkpoint. Authentication,
 permission, expired-cursor and capacity errors remain HTTP responses during the

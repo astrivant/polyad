@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from threading import Event as StopEvent
     from typing import Any, Literal
 
-    from polyad_client.subscriptions import Subscription
+    from polyad_sdk.subscriptions import Subscription
     from polyad_types import CompositionRequest, ConnectionRequest, ConnectionResponse, ServiceConnectionRequest, ThroughputSample
 
 
@@ -213,7 +213,7 @@ class Client:
         try:
             transport = self._opener
             if endpoint is not None:
-                from polyad_client.routing import opener
+                from polyad_sdk.routing import opener
 
                 transport = opener(endpoint)
             return transport.open(request, timeout=self.timeout)
@@ -410,6 +410,7 @@ class Client:
         transport: Literal["sse", "websocket"] = "sse",
         endpoint: tuple[str, int] | None = None,
         stop_event: StopEvent | None = None,
+        heartbeats: bool = False,
     ) -> Iterator[Event]:
         """
         Stream observations using a client configured for the separate events Service.
@@ -420,12 +421,15 @@ class Client:
             transport (Literal['sse', 'websocket']): Subscription framing; WebSocket requires operator enablement.
             endpoint (tuple[str, int] | None): Explicit trusted socket target; normally selected by a rebalancing subscription.
             stop_event (StopEvent | None): Optional cancellation, checked on heartbeats and observations.
+            heartbeats (bool): Also emit empty SSE heartbeat observations for application refresh scheduling.
 
         Yields:
             Event: One bounded JSON observation or stream control message.
         """
         if transport not in {"sse", "websocket"}:
             raise ValueError("event transport must be sse or websocket")
+        if type(heartbeats) is not bool:
+            raise ValueError("heartbeats must be a boolean")
         headers = {"Accept": "text/event-stream"}
         if last_event_id is not None:
             if any(char in last_event_id for char in "\r\n"):
@@ -433,7 +437,7 @@ class Client:
             headers["Last-Event-ID"] = last_event_id
         query = "?" + urlencode({"cluster": cluster}) if cluster is not None else ""
         if transport == "websocket":
-            from polyad_client.websocket import events
+            from polyad_sdk.websocket import events
 
             address = urlsplit(self.url + "/v1/events/ws" + query)
             uri = address._replace(scheme="wss" if address.scheme == "https" else "ws").geturl()
@@ -450,6 +454,7 @@ class Client:
         with self._open("GET", path, headers=headers, endpoint=endpoint) as response:
             data: list[str] = []
             event_id, event_type, size = "", "message", 0
+            comment = False
             while raw := response.readline(self.max_event_bytes - size + 1):
                 if stop_event is not None and stop_event.is_set():
                     return
@@ -463,8 +468,12 @@ class Client:
                         if not isinstance(value, dict):
                             raise ValueError("expected a JSON event object")
                         yield Event("" if event_type in {"reset", "unavailable", "copulse"} else event_id, event_type, value)
-                    event_type, data, size = "message", [], 0
-                elif not line.startswith(":"):
+                    elif heartbeats and comment:
+                        yield Event("", "heartbeat", {})
+                    event_type, data, size, comment = "message", [], 0, False
+                elif line.startswith(":"):
+                    comment = True
+                else:
                     field, _, value = line.partition(":")
                     value = value.removeprefix(" ")
                     if field == "id" and "\x00" not in value:
@@ -482,6 +491,7 @@ class Client:
         history: int = 1024,
         transport: Literal["sse", "websocket"] = "sse",
         rebalance: bool = False,
+        heartbeats: bool = False,
     ) -> Subscription:
         """
         Build a resumable subscription with explicit application event hooks.
@@ -492,13 +502,16 @@ class Client:
             history (int): Bounded count of successful event-handler calls remembered during retries.
             transport (Literal['sse', 'websocket']): SSE by default, or an operator-enabled WebSocket subscription.
             rebalance (bool): Rediscover and reconnect on copulses or transient transport failures, preserving completed checkpoints.
+            heartbeats (bool): Deliver SSE heartbeats to hooks that maintain periodic application observations.
 
         Returns:
             Subscription: Register filters and callbacks, then call run on the application's chosen thread.
         """
-        from polyad_client.subscriptions import Subscription
+        from polyad_sdk.subscriptions import Subscription
 
-        return Subscription(self, cluster=cluster, cursor=cursor, history=history, transport=transport, rebalance=rebalance)
+        return Subscription(
+            self, cluster=cluster, cursor=cursor, history=history, transport=transport, rebalance=rebalance, heartbeats=heartbeats
+        )
 
     def event_endpoints(self, *, cluster: str | None = None) -> dict[str, Any]:
         """

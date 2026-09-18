@@ -17,7 +17,7 @@ from polyad.events.store import EventStore, TopologyReplaced
 from polyad.events.topology import neighbors, topology_snapshot
 from polyad.operator.lifecycle import handlers
 from polyad.operator.reconciliation.controller import Controller
-from polyad_client import APIError, Client
+from polyad_sdk import APIError, Client
 from polyad_types.resources import GROUP
 from tests.test_client import Adapter
 from tests.test_operator import FakeAPI, resource, template

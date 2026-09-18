@@ -7,6 +7,9 @@ and optional [traffic percentages between workload and graph replicas](traffic-b
 Approved [load profiles](load-profiles.md) can also adjust capacity lookahead before
 completed throughput falls behind, independently of KEDA/HPA replica scaling.
 
+For the implementation, start with the
+[central decision pipeline and code map](../development/operator-layout.md#soul-searching-entry-point).
+
 Polyad keeps **hard structural Cheeger bounds** in GraphRules and a separate
 **application-driven Cheeger target** in `Graph.spec.throughput` or
 `PolyGraph.spec.throughput`. Configure `mode: Observe` (the default) to report
@@ -163,7 +166,11 @@ Layouts replace `connections` completely; they cannot add nodes, change admissio
 dependencies, change placement or grant new API permissions. Transport grants
 require explicit `ports` and the graph's [network policy](../deployment/networking.md).
 Applications consume [topology events](../workloads/workload-events.md) to update their own
-neighbors and routing.
+neighbors and routing. [Service Symbiosis](../workloads/adaptive-microservices.md)
+is the application model for producers and consumers that cooperate over those
+paths through bounded admission, shared capacity and backpressure. Soul searching
+adapts the graph; participating applications use SDK deltas to adjust how they
+work with their peers across its boundaries.
 
 For PolyGraphs, these connections join child graph boundaries; their Cheeger
 measurement describes those boundary vertices. Each child Graph may configure
@@ -214,7 +221,7 @@ application reporting targets.
 
 ```python
 from datetime import datetime, timezone
-from polyad_client import Client
+from polyad_sdk import Client
 from polyad_types import ThroughputSample
 
 client = Client("http://polyad-api:8090", token)

@@ -81,7 +81,7 @@ When named inbound keys cover an endpoint, they replace its single shared
 token and the old token Secret is no longer mounted. Endpoints without named
 keys retain their existing configuration. Clients send
 `Authorization: Bearer <token>`; group identity comes from the registered key.
-The existing Python client's bearer-token option accepts these keys.
+The existing Python SDK's bearer-token option accepts these keys.
 
 ## Shared admission and rotation
 
@@ -263,7 +263,7 @@ these slots bound transport capacity across callers. If temporary connections ar
 TokenReview and SubjectAccessReview are bypassed using one demonstration identity.
 Namespace scope, graph rules, TTL bounds, body-size bounds and finite server
 capacity still apply. This option does not make an infinite-capacity server or
-remove workload safety constraints. The Python client accepts `token=None` for
+remove workload safety constraints. The Python SDK accepts `token=None` for
 this explicit public mode. `Required` remains the production default.
 
 ## Optional Flask authentication adapter

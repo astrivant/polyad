@@ -19,8 +19,8 @@ from attrs import fields
 
 from polyad.api.events.builder import EventAPIBuilder
 from polyad.events.store import EventStore
-from polyad_client import Client
 from polyad_schemas import event_schema
+from polyad_sdk import Client
 from polyad_types import Event, EventStreamSettings, EventTooLarge, decode_event, to_dict
 from tests.test_chart import CHART, render
 from tests.test_client import Adapter
@@ -219,7 +219,7 @@ def test_client_size_limit_counts_complete_utf8_records_and_closes(monkeypatch, 
     """
     Exactly-at-limit frames work, while larger Unicode frames cannot escape the receive cap.
     """
-    from polyad_client import websocket
+    from polyad_sdk import websocket
 
     event = Event("1-0", "graph", {"value": "é" * 600})
     raw = (

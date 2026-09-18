@@ -16,7 +16,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "polyad-client==0.0.1a3",
+    "polyad-sdk==0.0.1a3",
     "polyad-types==0.0.1a3",
     "PyYAML>=6,<7",
 ]
@@ -37,7 +37,7 @@ packages = [{include = "polyad_benchmarks"}]
 include = [{path = "polyad_benchmarks/*.json", format = ["sdist", "wheel"]}]
 
 [tool.poetry.dependencies]
-polyad-client = {path = "../client"}
+polyad-sdk = {path = "../polyad-sdk"}
 polyad-types = {path = "../polyad-types"}
 
 [tool.poetry.group.dev.dependencies]

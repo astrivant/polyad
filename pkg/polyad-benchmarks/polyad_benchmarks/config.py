@@ -9,7 +9,7 @@ import os
 import re
 from dataclasses import dataclass
 
-from polyad_client import Client
+from polyad_sdk import Client
 
 
 def operator_client(timeout: float) -> Client:

@@ -33,7 +33,7 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
     """
     for name in (
         "pyproject.toml",
-        "pkg/client/pyproject.toml",
+        "pkg/polyad-sdk/pyproject.toml",
         "pkg/polyad-types/pyproject.toml",
         "pkg/polyad-schemas/pyproject.toml",
         "pkg/polyad-benchmarks/pyproject.toml",
@@ -61,15 +61,15 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
     assert all(path.read_bytes() == content for path, content in first.items())
     actual = tomllib.loads(project.read_text())
     assert actual["project"]["version"] == package
-    assert tomllib.loads((tmp_path / "pkg/client/pyproject.toml").read_text())["project"]["version"] == package
+    assert tomllib.loads((tmp_path / "pkg/polyad-sdk/pyproject.toml").read_text())["project"]["version"] == package
     assert tomllib.loads((tmp_path / "pkg/polyad-types/pyproject.toml").read_text())["project"]["version"] == package
     assert tomllib.loads((tmp_path / "pkg/polyad-schemas/pyproject.toml").read_text())["project"]["version"] == package
     benchmark = tomllib.loads((tmp_path / "pkg/polyad-benchmarks/pyproject.toml").read_text())["project"]
     assert benchmark["version"] == package
-    assert f"polyad-client=={package}" in benchmark["dependencies"]
+    assert f"polyad-sdk=={package}" in benchmark["dependencies"]
     assert f"polyad-types=={package}" in benchmark["dependencies"]
     assert actual["project"]["optional-dependencies"]["schemas"] == [f"polyad-schemas=={package}"]
-    for filename in ("pyproject.toml", "pkg/client/pyproject.toml"):
+    for filename in ("pyproject.toml", "pkg/polyad-sdk/pyproject.toml"):
         metadata = tomllib.loads((tmp_path / filename).read_text())
         assert f"polyad-types=={package}" in metadata["project"]["dependencies"]
     lock = tomllib.loads((tmp_path / "poetry.lock").read_text())

@@ -114,7 +114,7 @@ jobs:
           poetry build
           poetry -C pkg/polyad-types build --output ../../dist
           poetry -C pkg/polyad-schemas build --output ../../dist
-          poetry -C pkg/client build --output ../../dist
+          poetry -C pkg/polyad-sdk build --output ../../dist
           poetry -C pkg/polyad-benchmarks build --output ../../dist
           poetry run python -m venv /tmp/polyad-typing
           /tmp/polyad-typing/bin/python -m pip install dist/*.whl
@@ -144,18 +144,18 @@ jobs:
         with:
           name: python-distributions-${{ needs.python.outputs.version }}
           path: dist/
-      - name: Check standalone schemas, types and client wheels
+      - name: Check standalone schemas, types and SDK wheels
         run: |
           python -m venv /tmp/polyad-schemas
           /tmp/polyad-schemas/bin/python -m pip install --no-deps dist/polyad_schemas-*.whl
           /tmp/polyad-schemas/bin/python -I scripts/testing/check-schemas-package.py
           /tmp/polyad-schemas/bin/python -m pip check
-          python -m venv /tmp/polyad-client
-          /tmp/polyad-client/bin/python -m pip install dist/polyad_types-*.whl
-          /tmp/polyad-client/bin/python -I scripts/testing/check-types-package.py
-          /tmp/polyad-client/bin/python -m pip install --find-links dist dist/polyad_client-*.whl
-          /tmp/polyad-client/bin/python -I -c 'from polyad_client import Client; import importlib.util; assert importlib.util.find_spec("polyad") is None; assert Client("http://localhost:8090", "test")'
-          /tmp/polyad-client/bin/python -m pip check
+          python -m venv /tmp/polyad-sdk
+          /tmp/polyad-sdk/bin/python -m pip install dist/polyad_types-*.whl
+          /tmp/polyad-sdk/bin/python -I scripts/testing/check-types-package.py
+          /tmp/polyad-sdk/bin/python -m pip install --find-links dist dist/polyad_sdk-*.whl
+          /tmp/polyad-sdk/bin/python -I scripts/testing/check-sdk-package.py
+          /tmp/polyad-sdk/bin/python -m pip check
   container:
     runs-on: ${{ matrix.platform.runner }}
     strategy:

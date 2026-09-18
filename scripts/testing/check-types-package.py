@@ -33,7 +33,7 @@ def main() -> None:
     assert (package / "py.typed").is_file()
     for module in pkgutil.walk_packages(polyad_types.__path__, "polyad_types."):
         importlib.import_module(module.name)
-    for name in ("polyad", "polyad_client", "kopf", "kubernetes", "redis", "flask", "numpy", "networkx"):
+    for name in ("polyad", "polyad_sdk", "kopf", "kubernetes", "redis", "flask", "numpy", "networkx"):
         assert importlib.util.find_spec(name) is None, name
     rule = from_dict({"minimum": 1}, Cheeger)
     assert to_dict(rule) == {"minimum": 1.0, "maximum": None}

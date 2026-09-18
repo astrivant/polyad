@@ -135,7 +135,7 @@ polyad-benchmarks-plan --plan studies/load/fixtures/plan.json --namespace polyad
 ```
 
 The first command renders a reviewable composition from the same Helm templates;
-the second submits it through `polyad_client.Client.compose`. An authorized token
+the second submits it through `polyad_sdk.Client.compose`. An authorized token
 must permit composition and activation in the resulting tree. Each new composition
 creates an immutable plan ConfigMap and runs its runner once after dependencies
 are ready. `load-envelope` must already exist in the receiving namespace; the

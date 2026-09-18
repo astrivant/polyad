@@ -203,7 +203,7 @@ flowchart TB
 ## Report per-replica measurements
 
 Use one application reporter to assemble measurements over the same window and
-unit. The [Python client](../../pkg/client/README.md) submits these through the
+unit. The [Python SDK](../../pkg/polyad-sdk/README.md) submits these through the
 existing [Soul searching throughput endpoint](soul-searching.md#report-measurements).
 
 ```python
@@ -245,6 +245,8 @@ Headroom is the application's estimate of **additional sustainable work per
 second**, not CPU percentage or memory bytes. Use completed work and headroom for
 the entire pipeline copy when balancing complete graphs. The shared entrypoint
 Service then delivers that copy's share to its ready entrypoint pods.
+The [application reporting contract](../workloads/adaptive-microservices.md#report-useful-work-and-headroom)
+explains how to measure useful completion and account for shared downstream limits.
 
 Missing destination reports, replaced execution UIDs, changed generations and
 unusable capacity produce `WaitingForTrafficSample`. They do not fall back to

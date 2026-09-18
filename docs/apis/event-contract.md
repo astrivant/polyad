@@ -17,7 +17,7 @@ the framing, not graph visibility, consent permissions or replay semantics.
 ## Import the contract
 
 Install `polyad-types` to use event types without installing the operator. The
-`polyad-client` package already depends on it. Install `polyad-schemas` separately
+`polyad-sdk` package already depends on it. Install `polyad-schemas` separately
 for the JSON artifacts used below:
 
 ```python
@@ -201,7 +201,7 @@ Choose a receive limit when constructing the events client; both transports and
 callback subscriptions inherit it:
 
 ```python
-from polyad_client import Client
+from polyad_sdk import Client
 from polyad_types import ControlEvent
 
 events = Client(

@@ -668,7 +668,7 @@ namespace. They are installed alongside the execution operator and remain when
 an individual graph is deleted. `observer.enabled` is independent of federation
 and Istio multicluster enablement. Dotted arrows show reads and snapshot delivery;
 the execution operator continues to refresh Kubernetes state before mutations.
-See the [standalone client](../../pkg/client/README.md) for the read API and the
+See the [standalone SDK](../../pkg/polyad-sdk/README.md) for the read API and the
 [example values](../../examples/multicluster/west-values.yaml) for enablement.
 
 ```yaml
@@ -692,7 +692,7 @@ graphs return 503. Responses are not cached. A snapshot is observational and
 does not represent an atomic read of all Kubernetes resources.
 
 ```python
-from polyad_client import Client
+from polyad_sdk import Client
 
 reader = Client("https://observer.example.com", token="READ_CREDENTIAL")
 snapshot = reader.observe("regional-workflow-instance")

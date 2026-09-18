@@ -89,18 +89,18 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["pkg/tests"]
-pythonpath = ["pkg", "pkg/client", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
+pythonpath = ["pkg", "pkg/polyad-sdk", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
 addopts = "-n auto --maxprocesses=8 --dist=worksteal"
 
 [tool.ruff]
-src = [".", "pkg", "pkg/client", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
+src = [".", "pkg", "pkg/polyad-sdk", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
 line-length = 140
 target-version = "py313"
 
 [tool.ruff.per-file-target-version]
 "pkg/polyad-types/**/*.py" = "py311"
 "pkg/polyad-schemas/**/*.py" = "py311"
-"pkg/client/**/*.py" = "py311"
+"pkg/polyad-sdk/**/*.py" = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "D", "TC"]
@@ -121,7 +121,7 @@ convention = "google"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["pkg", "examples"]
+files = ["pkg", "examples", "soul.py"]
 exclude = ["^pkg/tests/"]
 
 [[tool.mypy.overrides]]

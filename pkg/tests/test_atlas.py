@@ -25,8 +25,8 @@ from polyad.graph.temporary import entries
 from polyad.operator.clusters.federation import INVENTORY, PARENT, REMOTE, Federation
 from polyad.operator.policies.connections import reconcile_connection
 from polyad.operator.reconciliation.controller import Controller, Pending
-from polyad_client import Client, StreamInterrupted
-from polyad_client.filters import connection_pending, event_type, field, graph, phase
+from polyad_sdk import Client, StreamInterrupted
+from polyad_sdk.filters import connection_pending, event_type, field, graph, phase
 from polyad_types import APIKey, ConnectionResponse, Event, GraphAccess, ServiceConnectionRequest, ServiceEndpoint
 from polyad_types.auth import KeyDirection
 from polyad_types.codec import converter

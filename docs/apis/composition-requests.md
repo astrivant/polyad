@@ -126,5 +126,5 @@ observations with the same Kubernetes identities and audit references.
 ## Related APIs
 
 The same service supports [durable activation requests](../workloads/activation.md) for workloads,
-subgraphs and daemon replica groups. The [standalone Python client](../../pkg/client/README.md)
+subgraphs and daemon replica groups. The [standalone Python SDK](../../pkg/polyad-sdk/README.md)
 can submit compositions, inspect audit identities, pulse nodes and subscribe to events.

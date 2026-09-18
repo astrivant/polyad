@@ -10,7 +10,7 @@ repository:
   description: Kubernetes operator for scheduling and securing workloads as composable graphs
 
   # GitHub supports one homepage URL; use the operator's published package.
-  # Client: https://pypi.org/project/polyad-client/
+  # SDK (after its first release): https://pypi.org/project/polyad-sdk/
   # Shared types: https://pypi.org/project/polyad-types/
   homepage: https://pypi.org/project/polyad/
 

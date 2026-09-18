@@ -159,7 +159,7 @@ can use their HTTP Service authority with sidecar mTLS.
 
 ```python
 import os
-from polyad_client import Client
+from polyad_sdk import Client
 
 client = Client(os.environ["POLYAD_EVENTS_URL"], os.environ["POLYAD_EVENTS_TOKEN"])
 subscription = client.subscribe(

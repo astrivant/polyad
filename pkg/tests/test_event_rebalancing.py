@@ -15,11 +15,11 @@ import pytest
 from polyad.api.events.builder import EventAPIBuilder
 from polyad.events import rebalance as module
 from polyad.events.rebalance import Rebalancer
-from polyad_client import Client
-from polyad_client.client import APIError
-from polyad_client.routing import addresses
-from polyad_client.subscriptions import StreamInterrupted
 from polyad_schemas.events import event_schema
+from polyad_sdk import Client
+from polyad_sdk.client import APIError
+from polyad_sdk.routing import addresses
+from polyad_sdk.subscriptions import StreamInterrupted
 from polyad_types import CopulseEvent, Event, EventRebalanceSettings
 from tests.test_chart import CHART, render
 

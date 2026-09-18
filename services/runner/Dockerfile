@@ -6,7 +6,7 @@ RUN python -m venv /opt/poetry && /opt/poetry/bin/pip install --no-cache-dir poe
 ENV POETRY_VIRTUALENVS_CREATE=false VIRTUAL_ENV=/opt/venv PATH="/opt/venv/bin:${PATH}"
 RUN python -m venv /opt/venv
 COPY pkg/polyad-types /src/pkg/polyad-types
-COPY pkg/client /src/pkg/client
+COPY pkg/polyad-sdk /src/pkg/polyad-sdk
 COPY pkg/polyad-benchmarks /src/pkg/polyad-benchmarks
 WORKDIR /src/pkg/polyad-benchmarks
 RUN --mount=type=cache,id=polyad-benchmarks-${TARGETARCH},target=/root/.cache/pypoetry,sharing=locked \

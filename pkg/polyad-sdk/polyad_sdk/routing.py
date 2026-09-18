@@ -56,7 +56,7 @@ def opener(endpoint: tuple[str, int]) -> OpenerDirector:
     Returns:
         OpenerDirector: One-request transport without redirects or environment proxies.
     """
-    from polyad_client.client import _NoRedirect
+    from polyad_sdk.client import _NoRedirect
 
     def connect(kind: type[HTTPConnection], host: str, **kwargs: Any) -> HTTPConnection:
         connection = kind(host, **kwargs)

@@ -18,6 +18,7 @@ application needs and work backward to discover which graph could produce it.
 
 - [What changes when the starting point is an outcome](#what-changes-when-the-starting-point-is-an-outcome)
 - [Relationship to existing Polyad capabilities](#relationship-to-existing-polyad-capabilities)
+- [From local capabilities to Natural Selection](#from-local-capabilities-to-natural-selection)
 - [Natural Selection takes precedence](#natural-selection-takes-precedence)
 - [Example: make incoming records searchable](#example-make-incoming-records-searchable)
 - [Outcome requests and capability contracts](#outcome-requests-and-capability-contracts)
@@ -98,6 +99,35 @@ controllers would retain their configured replica targets and authority.
 The separate [decision-gate proposal](decision-gates.md) could eventually select
 between approved plans or request human review. Copolyad's initial planning
 mode should work without that proposed extension.
+
+## From local capabilities to Natural Selection
+
+[Service Symbiosis](../workloads/adaptive-microservices.md) gives participating
+applications a way to observe their neighborhood, negotiate relationships and
+adjust their own behavior. The executable [local Soul searching example](../workloads/local-soul-searching.md)
+adds a process supervisor: three services change their real TCP topology and
+roll child workers between two approved capability representations under load.
+
+**Automatic capability placement and composition selection would extend this
+foundation toward Natural Selection.** A service image can contain multiple
+implementations. Capability contracts describe their inputs, outputs, required
+permissions, resource costs, initialization and drain behavior, and any state
+that must survive replacement. A placement decision assigns an implementation
+to an eligible execution boundary; a composition decision connects the selected
+implementations into a plan for the required outcome.
+
+Natural Selection would choose those assignments using current observations and
+requirements such as completion rate, queue age, latency, headroom and cost. It
+must account for shared downstream capacity and the temporary resource overlap
+needed to roll implementations. The plan identifies the owner of each action:
+an application supervisor starts internal components, while Polyad admits and
+executes changes to managed workloads and graph relationships.
+
+Plan revisions coordinate these choices across services. New components become
+ready before receiving work, accepted work drains or transfers with its identity,
+and observations verify the resulting outcome. Once admitted, Natural Selection
+owns the composition and can replace conflicting Soul searching decisions;
+Soul searching adapts the settings delegated by the active plan.
 
 ## Natural Selection takes precedence
 

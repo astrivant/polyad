@@ -9,6 +9,8 @@ import copy
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 import yaml
@@ -18,7 +20,10 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.http.errors import Conflict, Forbidden
 from polyad.api.workloads.throughput import report_throughput
-from polyad.operator.policies.throughput import SAMPLE, STATE, reconcile_throughput
+from polyad.operator.policies.rules import RuleViolation
+from polyad.operator.policies.soul import controller as soul_searching
+from polyad.operator.policies.soul.contracts import SAMPLE, STATE
+from polyad.operator.policies.soul.controller import search_soul
 from polyad.operator.reconciliation.controller import Controller
 from polyad_types import GraphAccess, ThroughputSample
 from polyad_types.codec import converter, to_dict
@@ -97,7 +102,7 @@ async def feed(api, second, *, offered=200, completed=50, demand=None):
     )
     graph["metadata"].setdefault("annotations", {})[SAMPLE] = json.dumps(to_dict(sample))
     api.objects[("Graph", "test", "pipeline")] = graph
-    changed = await reconcile_throughput(Controller(api), graph, now=clock)
+    changed = await search_soul(Controller(api), graph, now=clock)
     return changed, await api.get("Graph", "test", "pipeline")
 
 
@@ -140,6 +145,58 @@ def test_conflicting_static_upper_bound_blocks_adaptation():
     asyncio.run(run())
 
 
+@pytest.mark.parametrize("drift", ["capacity", "rules", "sample_age", "resource_version"])
+def test_final_admission_rejects_drift_without_spending_change_budget(monkeypatch, drift):
+    """
+    A valid recommendation cannot survive changed evidence or a concurrent graph write.
+    """
+
+    async def run():
+        api = fixture("Adapt")
+        child = resource("Deployment", "worker", {"replicas": 1})
+        child["metadata"]["ownerReferences"] = [{"uid": "uid-pipeline"}]
+        api.objects[("Deployment", "test", "worker")] = child
+        await feed(api, 0)
+        before = await api.get("Graph", "test", "pipeline")
+        calls = list(api.calls)
+        propose = soul_searching.propose
+
+        async def change_after_planning(controller, obj, search):
+            proposal = await propose(controller, obj, search)
+            assert proposal is not None
+            if drift == "capacity":
+                child["spec"]["replicas"] = 2
+                child["metadata"]["generation"] += 1
+            elif drift == "rules":
+                api.objects[("GraphRule", "test", "hard")]["spec"]["cheeger"]["maximum"] = 0.75
+            elif drift == "resource_version":
+                current = copy.deepcopy(api.objects[("Graph", "test", "pipeline")])
+                meta = current["metadata"]
+                meta["resourceVersion"] = str(int(meta["resourceVersion"]) + 1)
+                api.objects[("Graph", "test", "pipeline")] = current
+            return proposal
+
+        monkeypatch.setattr(soul_searching, "propose", change_after_planning)
+        if drift == "sample_age":
+            monkeypatch.setattr(soul_searching, "time", SimpleNamespace(monotonic=Mock(side_effect=[0, 31])))
+        if drift == "rules":
+            with pytest.raises(RuleViolation):
+                await feed(api, 10)
+        elif drift == "resource_version":
+            with pytest.raises(ApiException) as error:
+                await feed(api, 10)
+            assert error.value.status == 409
+        else:
+            assert not (await feed(api, 10))[0]
+        after = await api.get("Graph", "test", "pipeline")
+        assert after["spec"] == before["spec"]
+        assert after["metadata"]["annotations"][STATE] == before["metadata"]["annotations"][STATE]
+        assert after["metadata"]["generation"] == before["metadata"]["generation"]
+        assert api.calls == calls
+
+    asyncio.run(run())
+
+
 def test_replays_stale_samples_and_low_demand_do_not_restructure():
     """
     Reconciliation frequency cannot manufacture sustained application measurements.
@@ -150,14 +207,14 @@ def test_replays_stale_samples_and_low_demand_do_not_restructure():
         _, graph = await feed(api, 0)
         first = datetime(2026, 9, 16, tzinfo=UTC)
         for second in (10, 20, 31):
-            assert not await reconcile_throughput(Controller(api), graph, now=first + timedelta(seconds=second))
+            assert not await search_soul(Controller(api), graph, now=first + timedelta(seconds=second))
             graph = await api.get("Graph", "test", "pipeline")
         assert graph["status"]["throughput"]["phase"] == "StaleSample"
         raw = json.loads(graph["metadata"]["annotations"][SAMPLE])
         raw.update(observedAt=(first + timedelta(seconds=40)).isoformat(), offeredPerSecond=0, completedPerSecond=0)
         graph["metadata"]["annotations"][SAMPLE] = json.dumps(raw)
         api.objects[("Graph", "test", "pipeline")] = graph
-        assert not await reconcile_throughput(Controller(api), graph, now=first + timedelta(seconds=40))
+        assert not await search_soul(Controller(api), graph, now=first + timedelta(seconds=40))
         graph = await api.get("Graph", "test", "pipeline")
         assert graph["status"]["throughput"]["phase"] == "BelowDemandThreshold"
 
@@ -323,7 +380,7 @@ def test_tuning_reference_selects_demand_tiers_without_relaxing_hard_bounds(offe
             )
             obj["metadata"].setdefault("annotations", {})[SAMPLE] = json.dumps(to_dict(sample))
             api.objects[("Graph", "test", "pipeline")] = obj
-            changed = await reconcile_throughput(Controller(api), obj, now=clock)
+            changed = await search_soul(Controller(api), obj, now=clock)
             if second < 120:
                 assert not changed
         actual = await api.get("Graph", "test", "pipeline")

@@ -1,13 +1,13 @@
 [project]
-name = "polyad-client"
+name = "polyad-sdk"
 version = "0.0.1a3"
-description = "Small typed Python client for Polyad operator APIs"
+description = "Typed Python SDK for adaptive services and Polyad operator APIs"
 authors = [{name = "Emma Doyle"}]
 readme = {file = "README.md", content-type = "text/markdown"}
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.11,<4"
-keywords = ["polyad", "kubernetes", "graphs", "topology", "client", "api"]
+keywords = ["polyad", "kubernetes", "graphs", "topology", "sdk", "microservices"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
@@ -28,13 +28,13 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/astrivant/polyad"
-Documentation = "https://github.com/astrivant/polyad/blob/main/pkg/client/README.md"
+Documentation = "https://github.com/astrivant/polyad/blob/main/pkg/polyad-sdk/README.md"
 Repository = "https://github.com/astrivant/polyad"
 Issues = "https://github.com/astrivant/polyad/issues"
 Changelog = "https://github.com/astrivant/polyad/releases"
 
 [tool.poetry]
-packages = [{include = "polyad_client"}]
+packages = [{include = "polyad_sdk"}]
 
 [tool.poetry.dependencies]
 polyad-types = {path = "../polyad-types"}

@@ -38,7 +38,7 @@ def sources(project: Path) -> dict[str, str]:
     result = {}
     for directory in (
         "pkg/polyad-benchmarks",
-        "pkg/client",
+        "pkg/polyad-sdk",
         "pkg/polyad-types",
         "charts/polyad-benchmarks",
         "charts/polyad-crds",

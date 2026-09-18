@@ -32,6 +32,12 @@ inside it.<sup>[\[6\]](../deployment/operator.md#scheduling-a-graph-onto-a-resou
 Polyad also tracks the resources it creates
 for that graph through their cleanup.<sup>[\[8\]](../deployment/operator.md#reconciliation-and-shutdown)</sup>
 
+[**Service Symbiosis**](../workloads/adaptive-microservices.md) describes how the
+services inside these graphs cooperate: discover compatible peers, react to
+relationship and capacity changes, share work within admission budgets and
+report useful completion. The [Python SDK](../../pkg/polyad-sdk/README.md)
+provides the observation and control interface for this application model.
+
 ## Table of contents
 
 - [Conditions and admission](#conditions-and-admission)

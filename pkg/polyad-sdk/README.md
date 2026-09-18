@@ -1,6 +1,11 @@
-# Polyad client
+# Polyad SDK
 
-A typed Python 3.11–3.14 client for Polyad's composition, activation, event and temporary connection APIs.
+A typed Python 3.11–3.14 SDK for **Service Symbiosis** and Polyad's operator APIs.
+Service Symbiosis lets microservices discover compatible peers and adapt their
+relationships and work together across Graphs and PolyGraphs.
+Applications receive connection, capacity and decision deltas with current context.
+The same package includes `Client` for composition, activation, discovery, events
+and temporary connections.
 
 `connect(document)`, `connection(namespace, request_id)` and
 `disconnect(namespace, request_id)` use the separate connections Service and a
@@ -9,9 +14,17 @@ for token rotation, namespace scope, TTL and cleanup semantics.
 It uses the shared [polyad-types](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/README.md) models and
 does not install the operator.
 
+For application behavior around these APIs, see
+[Service Symbiosis: writing adaptive microservices](https://github.com/astrivant/polyad/blob/main/docs/workloads/adaptive-microservices.md):
+cooperative producers and consumers, graph-level capacity, backpressure and
+safe handoffs, using the implemented `AdaptiveService` interface.
+
 ## Table of contents
 
 - [Installation](#installation)
+- [Adaptive services and deltas](#adaptive-services-and-deltas)
+  - [Identity, permissions and freshness](#identity-permissions-and-freshness)
+  - [Hooks, recovery and explicit actions](#hooks-recovery-and-explicit-actions)
 - [Observations](#observations)
 - [Activation](#activation)
 - [Composition and request handling](#composition-and-request-handling)
@@ -29,11 +42,186 @@ does not install the operator.
 Install from a checkout:
 
 ```sh
-pip install ./pkg/polyad-types ./pkg/client
+pip install ./pkg/polyad-types ./pkg/polyad-sdk
 ```
 
-Release CI builds and publishes `polyad-client` separately from `polyad`.
-Once that release is available, install it with `pip install polyad-client`.
+Release CI builds and publishes `polyad-sdk` separately from `polyad`.
+Once that release is available, install it with `pip install polyad-sdk`.
+
+## Adaptive services and deltas
+
+`AdaptiveService` implements the observation and control interface for Service
+Symbiosis. It maintains an immutable view of one managed node's authorized
+neighborhood. Its hooks receive `Change` values containing **deltas**, the previous
+view and the current view. `Client` remains available for direct API calls and raw
+event subscriptions in this same package.
+
+```python
+import logging
+
+from polyad_sdk import AdaptiveService, Change, Settings
+
+log = logging.getLogger(__name__)
+service = AdaptiveService.from_environment(
+    settings=Settings(
+        refresh_seconds=10,
+        max_age_seconds=60,
+        max_observations=512,
+        max_connections=256,
+        transport="sse",  # "websocket" when enabled on the operator
+    ),
+    timeout=45,
+)
+
+
+def changed(change: Change) -> None:
+    if change.baseline:
+        log.info("Neighborhood baseline: %s candidate peers", len(change.after.candidates))
+        return
+    for delta in change.deltas:
+        log.info(
+            "%s %s: %s -> %s (numeric difference: %s)",
+            delta.kind, ".".join(delta.path), delta.before, delta.after, delta.difference,
+        )
+
+
+service.on_change(changed, paths=("topology", "resources", "decision", "connections", "available"))
+service.run()  # Blocking: use the application's existing task/thread supervisor.
+```
+
+The initial snapshot and an explicit replay reset establish a **baseline** with
+no deltas. A missing measurement remains unknown. A later observation of three
+Pods becoming five yields `before=3`, `after=5`, `difference=2`. A newly observed
+metric is `added`, with `difference=None`; it did not increase from an assumed
+zero. Numeric differences are arithmetic changes, not elapsed-time rates. Compare
+units, measurement windows and generations in the surrounding views before using
+them for application control.
+
+Paths use stable logical names and execution UIDs. Reordering lists, changing an
+event cursor or refreshing observation timestamps does not trigger a change hook.
+Replacing an execution UID produces removal and addition, even if its name is the
+same. New desired peers may initially have no running execution.
+
+| Change prefix | Data and application use |
+| --- | --- |
+| `topology.outgoing` / `topology.incoming` | Peer membership and allowed ports; refresh eligible producer/consumer relationships |
+| `topology.node.executions` | This node's execution membership, termination and replica-count changes |
+| `topology.dependencies` / `topology.dependents` | Changes in prerequisite relationships |
+| `resources` | Observed containing-graph resource metrics; assess capacity changes |
+| `decision` | Soul searching phase, measured demand, Cheeger values and current/proposed traffic or capacity |
+| `observations.<uid>` | Public status and resource metrics for a known neighborhood execution |
+| `connections.<uid>` | Negotiation, consent and lifetime changes; expire local grants |
+| `available` / `reason` | Whether topology is fresh and admits considering new assignments |
+
+For example, a replica-count delta may have the path
+`topology.outgoing.sink.node.executions.uid-sink.replicas`.
+`change.matching("decision")` selects decision deltas. Matching also includes an
+added/removed containing object, so a filter for `resources.pods` observes the
+first resource snapshot and its expiry. Values in `before` and `after` are
+recursively read-only; the triggering `event` is an independent callback copy.
+
+`change.after.decision` preserves `Recommended`, `Applied` and other operator
+phases, including `currentTraffic` versus `proposedTraffic`. A recommendation is
+input for preparation; a usable path also needs admission, ready application
+transport and compatible work. `view.candidates` lists desired outgoing peers
+with a nonterminating execution and a positive replica count when supplied. The
+application checks readiness, protocol compatibility, ownership and its own
+admission budgets before assigning work. Use Istio's configured route when Istio
+owns traffic percentages.
+
+### Identity, permissions and freshness
+
+`from_environment()` reads `POLYAD_GRAPH_NAMESPACE`, `POLYAD_GRAPH_KIND`,
+`POLYAD_GRAPH_NAME`, `POLYAD_GRAPH_UID` and `POLYAD_NODE_NAME`, plus
+`POLYAD_EVENTS_URL`. Supply the application's events credential through
+`POLYAD_EVENTS_TOKEN` or `POLYAD_EVENTS_TOKEN_FILE`. Pass `cluster="west"` when
+selecting a registered cluster through the root events Service. Each instance
+tracks one graph-node identity and one cluster's replay cursor.
+
+Optional API and connections clients read their respective `POLYAD_API_*` and
+`POLYAD_CONNECTIONS_*` URL, token and token-file settings. For connections, the
+SDK also recognizes the projected `/var/run/polyad-connections/token` file.
+Token files are reread for each request. API keys, service-account tokens and
+operator access modes keep their existing permissions; subscribing grants no
+additional rights. `allow_unauthenticated=True` supports administrator-enabled
+authentication-free demos for endpoints that permit them.
+
+Outside a managed workload, construct `AdaptiveService(identity, events,
+api=api_client, connections=connections_client)` with a `polyad_types.ServiceEndpoint`
+and separately authorized `Client` instances. Discovery elsewhere in the atlas
+remains available through `Client.discover()` and `Client.services()`.
+
+`service.view` evaluates freshness on every read. Stale or invalid topology
+makes `available=False` and `candidates=()`, while retaining the last observed
+structure for diagnostics and draining. Metrics remain `None` until received,
+and cached resource observations expire independently. Their cache age measures
+time since receipt; application measurement timestamps remain in the underlying
+status and must also be checked, especially after replay.
+
+Topology refreshes occur when its events arrive or when an event/heartbeat arrives
+after `refresh_seconds`. Configure the client's read timeout above the operator's
+heartbeat interval; choose `max_age_seconds` to accommodate both heartbeat and
+operator snapshot publication intervals. Intervals accept 0.1–300 seconds with
+refresh no longer than maximum age. Both inventories accept 1–4096 entries;
+exceeding a limit fails explicitly. `max_event_bytes` is also configurable on
+`from_environment()` or `Client`; the default is 1 MiB. These application settings
+can narrow the [operator event budgets](https://github.com/astrivant/polyad/blob/main/docs/apis/event-contract.md).
+
+### Hooks, recovery and explicit actions
+
+Register hooks before running. `paths` selects delta prefixes; `match` accepts the
+existing composable event filters, including exact and regex field matches:
+
+```python
+from polyad_sdk.filters import event_type, field
+
+service.on_change(
+    changed,
+    paths=("decision",),
+    match=event_type("graph") & field("name", regex=r"^pipeline"),
+)
+```
+
+A raw event filter skips a snapshot baseline, which has no triggering event. Hooks
+run serially on the calling thread; keep them bounded and hand business work to
+the application's own workers. A failed hook stops consumption without advancing
+`service.cursor`. Retrying `run()` on the same instance finishes that pending
+change, skips its already successful hooks, refreshes topology and resumes after
+the last successful cursor. The optional `checkpoint` callback runs after all
+matching hooks succeed; persistence failures also retain the pending change.
+Application side effects need their own durable idempotency contract across
+process restarts. A new SDK instance starts from a fresh topology baseline; its
+in-memory receipts and measurement cache are populated by subsequent events.
+
+Transport errors and stream controls propagate to the application's supervisor.
+After a reset or HTTP 410, explicitly call `refresh(reset=True)` before resuming;
+it clears incomplete cached measurements and receipts and establishes a new
+baseline. Resolve any failed pending hook first. Recover active connection receipts
+from application-owned durable request IDs using `Client.connection()` as needed.
+Ordinary refreshes preserve the old replay cursor so they do not skip events.
+`Settings(rebalance=True)` enables the existing managed subscription reconnection
+protocol. `stop()` requests shutdown; an active read ends on data/heartbeat or its
+configured timeout. The SDK starts no web server or background threads.
+
+A `Change` describes the observation being handled, including on a retry. Read
+`service.view` again before issuing new work or acting after a delay: it evaluates
+current freshness and grant expiry, while a saved `change.after` remains the
+immutable historical context for that observation.
+
+Actions remain explicit:
+
+- `service.connect(target, request_id=..., ttl_seconds=..., ports=...)` proposes
+  a connection from the configured identity through the connections client.
+- `service.respond(receipt_uid, "Approve" | "Reject")` answers an observed,
+  unexpired receipt after the application checks its policy. Hooks never approve
+  automatically, and the operator still enforces consent and GraphRules.
+- `service.report_throughput(sample)` submits an application-measured
+  `polyad_types.ThroughputSample` for the configured boundary through the API
+  client. The designated reporter supplies aggregation, generation, unit and
+  measurement window.
+
+For cooperative producer/consumer behavior, see
+[Service Symbiosis: writing adaptive microservices](https://github.com/astrivant/polyad/blob/main/docs/workloads/adaptive-microservices.md#use-the-python-sdk).
 
 ## Observations
 
@@ -47,7 +235,7 @@ Observers have no execution authority. See
 
 ```python
 import os
-from polyad_client import Client
+from polyad_sdk import Client
 
 client = Client(
     os.environ["POLYAD_API_URL"],
@@ -158,7 +346,7 @@ for supported payloads, validation, replay tuning and recovery.
 
 ## WebSocket subscriptions
 
-`polyad-client` includes the `websockets` dependency. SSE remains the default.
+`polyad-sdk` includes the `websockets` dependency. SSE remains the default.
 When the operator enables `events.websockets.enabled`, select WebSocket transport
 on the same events Service:
 

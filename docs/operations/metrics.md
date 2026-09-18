@@ -2,7 +2,7 @@
 
 Polyad exposes queue pressure, tracked objects and graph hierarchy observations
 through a dedicated, optional HTTP service. It uses the
-[Prometheus Python client](https://prometheus.github.io/client_python/)
+[Prometheus Python SDK](https://prometheus.github.io/client_python/)
 for `/metrics`; `/v1/metrics` provides the corresponding JSON snapshot, including
 parent/root identities and graph status. `/openapi.json` describes the HTTP API.
 

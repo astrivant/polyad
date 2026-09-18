@@ -130,9 +130,9 @@ dev = ["pre-commit", "tox"]
 testing = ["coverage", "pytest", "pytest-benchmark"]
 
 [[package]]
-name = "polyad-client"
+name = "polyad-sdk"
 version = "0.0.1a3"
-description = "Small typed Python client for Polyad operator APIs"
+description = "Typed Python SDK for adaptive services and Polyad operator APIs"
 optional = false
 python-versions = ">=3.11,<4"
 groups = ["main"]
@@ -145,7 +145,7 @@ websockets = ">=17.1,<18"
 
 [package.source]
 type = "directory"
-url = "../client"
+url = "../polyad-sdk"
 
 [[package]]
 name = "polyad-types"
@@ -601,4 +601,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4"
-content-hash = "8f4a7b7305e7e2eb868f8d31fd8958550693f22988409d3e637dff0c703327cc"
+content-hash = "45706a748a94dceda3bef539cccf6f3ad97478647b63a1cd634f1571a7e80529"

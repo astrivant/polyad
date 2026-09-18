@@ -394,7 +394,7 @@ choices. Authoring runs in the user's build or CI environment; the submitted
 artifact contains declarative resources and a versioned intermediate
 representation (IR). The operator accepts that artifact, never Python callbacks
 or serialized executable code. Keep shared IR types in `pkg/polyad-types` and
-client submission support in `pkg/client`; an authoring package must not require
+client submission support in `pkg/polyad-sdk`; an authoring package must not require
 installing the operator.
 
 Proposed Python syntax for the later authoring layer:

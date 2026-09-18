@@ -78,7 +78,7 @@ and `nextOffset` pagination. Select a boundary using `graph`, `namespace`, `kind
 
 ```python
 import os
-from polyad_client import Client
+from polyad_sdk import Client
 
 client = Client(os.environ["POLYAD_EVENTS_URL"], os.environ["POLYAD_EVENTS_TOKEN"])
 for service in client.services(max_graphs=256):
@@ -111,7 +111,7 @@ are possible; this avoids a read/subscribe gap. Cursors from different cluster
 streams are not interchangeable.
 
 ```python
-from polyad_client.filters import event_type, field, graph
+from polyad_sdk.filters import event_type, field, graph
 
 snapshot = client.discover(
     graph="application-west", namespace="workloads", cluster="west"
@@ -209,7 +209,7 @@ not interchangeable.
 from pathlib import Path
 from polyad_types import ConnectionResponse, ServiceConnectionRequest, ServiceEndpoint, from_dict
 from polyad_types.network import NetworkPort
-from polyad_client.filters import connection_pending
+from polyad_sdk.filters import connection_pending
 
 connections = Client(
     os.environ["POLYAD_CONNECTIONS_URL"], None,

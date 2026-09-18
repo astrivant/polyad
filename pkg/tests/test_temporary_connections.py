@@ -24,7 +24,7 @@ from polyad.operator.policies.network import context, ensure_policies
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.reconciliation.controller import Controller, Pending
-from polyad_client import APIError, Client
+from polyad_sdk import APIError, Client
 from polyad_types import resources as asts
 from polyad_types.codec import converter
 from polyad_types.requests import ConnectionRequest, ConnectionResponse

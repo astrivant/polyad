@@ -213,6 +213,27 @@ print(json.dumps(True))
     )
 
 
+def test_throughput_intake_does_not_import_the_adaptation_pipeline():
+    """
+    Receiving measurements loads the annotation contract without the decision controller.
+    """
+    modules = probe(
+        {},
+        """
+import json, sys
+import polyad.api.workloads.throughput
+print(json.dumps(sorted(sys.modules)))
+""",
+    )
+    assert "polyad.operator.policies.soul.contracts" in modules
+    assert_absent(
+        modules,
+        "polyad.operator.policies.soul.controller",
+        "polyad.operator.policies.soul.observations",
+        "polyad.operator.policies.soul.planning",
+    )
+
+
 @pytest.mark.parametrize("stored", [False, True])
 def test_named_key_database_is_independent_of_state_storage(tmp_path, stored):
     """

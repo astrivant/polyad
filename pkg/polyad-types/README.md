@@ -1,7 +1,7 @@
 # Polyad types
 
 Shared Python 3.11–3.14 resource, configuration and API models for Polyad. This
-package provides the same definitions used by the operator and Python client,
+package provides the same definitions used by the operator and Python SDK,
 including constructor validation, serialization and a `py.typed` marker.
 Its only dependencies are attrs, cattrs and typing-extensions.
 
@@ -25,7 +25,7 @@ pip install polyad-types
 ```
 
 Import it as `polyad_types`. Installing it does not install `polyad` or
-`polyad-client`. From a repository checkout, use `pip install ./pkg/polyad-types`.
+`polyad-sdk`. From a repository checkout, use `pip install ./pkg/polyad-types`.
 
 ## Example
 
@@ -129,10 +129,10 @@ for each tree, validated examples and transport framing.
 
 ## Client integration
 
-The [Python client](https://github.com/astrivant/polyad/blob/main/pkg/client/README.md) accepts shared request objects:
+The [Python SDK](https://github.com/astrivant/polyad/blob/main/pkg/polyad-sdk/README.md) accepts shared request objects:
 
 ```python
-from polyad_client import Client
+from polyad_sdk import Client
 from polyad_types import CompositionItem, CompositionRequest
 
 request = CompositionRequest(
@@ -145,7 +145,7 @@ receipt = client.compose(request)
 ```
 
 From the repository root, install both local packages with
-`pip install ./pkg/polyad-types ./pkg/client`. Release versions of the client
+`pip install ./pkg/polyad-types ./pkg/polyad-sdk`. Release versions of the client
 and operator depend on the matching `polyad-types` version.
 
 ## Publishing

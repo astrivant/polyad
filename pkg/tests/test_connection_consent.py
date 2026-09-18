@@ -27,7 +27,7 @@ from polyad.graph.temporary import entries
 from polyad.operator.coordination.pulses import PulseDeferred, PulsePolicy
 from polyad.operator.coordination.shared_queue import SharedQueue
 from polyad.operator.reconciliation.controller import Controller
-from polyad_client import APIError, Client
+from polyad_sdk import APIError, Client
 from polyad_types import ConnectionResponse
 from polyad_types.resources import GROUP
 from tests.test_authentication import access, header, registry

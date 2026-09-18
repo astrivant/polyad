@@ -350,7 +350,7 @@ by cluster. Incomplete scans and expired reports are unavailable, never zero.
 Remote reports expire from the shared cache after at most 15 seconds; workload
 signals also retain their existing generation and observation-age checks.
 
-Root events and topology routes accept `?cluster=west`. The Python client exposes
+Root events and topology routes accept `?cluster=west`. The Python SDK exposes
 `Client.topology(..., cluster="west")` and `Client.events(cluster="west")`.
 Keep cursors per cluster stream. Workloads receive `POLYAD_CLUSTER_NAME` along
 with their existing graph identity. Composition intake remains rooted in the

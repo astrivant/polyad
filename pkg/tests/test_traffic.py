@@ -18,7 +18,8 @@ from polyad.compiler.passes.network import scope_label
 from polyad.compiler.passes.traffic import capacity_weights, step_weights
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.rules import RuleViolation
-from polyad.operator.policies.throughput import SAMPLE, reconcile_throughput
+from polyad.operator.policies.soul.contracts import SAMPLE
+from polyad.operator.policies.soul.controller import search_soul
 from polyad.operator.policies.traffic import ensure_routes
 from polyad.operator.reconciliation.controller import Controller, Pending, child_name
 from polyad_types import ThroughputSample, TrafficDestination, TrafficRoute, TrafficSample, TrafficWeights
@@ -118,7 +119,7 @@ async def report(api, second, *, measurements=True, stale=False, completed=50):
     )
     root["metadata"].setdefault("annotations", {})[SAMPLE] = json.dumps(to_dict(sample))
     api.objects[("Graph", "test", "pipeline")] = root
-    changed = await reconcile_throughput(Controller(api), root, now=now)
+    changed = await search_soul(Controller(api), root, now=now)
     return changed, await api.get("Graph", "test", "pipeline")
 
 

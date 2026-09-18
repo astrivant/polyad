@@ -19,7 +19,7 @@ Definitions without a policy keep their existing automatic
 - [Policy on the downstream definition](#policy-on-the-downstream-definition)
 - [Parallel daemons and replica bounds](#parallel-daemons-and-replica-bounds)
 - [Frequency bounds](#frequency-bounds)
-- [API and standalone Python client](#api-and-standalone-python-client)
+- [API and standalone Python SDK](#api-and-standalone-python-sdk)
 - [Durability, cleanup and limits](#durability-cleanup-and-limits)
 
 ## Terms used in this guide
@@ -29,7 +29,7 @@ Definitions without a policy keep their existing automatic
 | **Pulse** | One request, identified by a request ID, to start a new execution. It does not carry the application's data. | “Process batch 42,” with request ID `batch-42`. |
 | **Activation target** | The graph node the request asks to run. Its Workload, Daemon, Graph or PolyGraph definition must have an [activation policy](#policy-on-the-downstream-definition). | A `process-batch` node referring to a reusable Workload definition. |
 | **Activation policy** | Settings that decide how requests wait, overlap or are rejected, and how often work may start. | Queue up to 32 requests and leave at least five seconds between starts. |
-| **Activation receipt** | The stored `Activation` resource that records a request and its progress. Acceptance of the request does not mean execution has started. | Look up `batch-42` through the [activation API](#api-and-standalone-python-client) to check its status. |
+| **Activation receipt** | The stored `Activation` resource that records a request and its progress. Acceptance of the request does not mean execution has started. | Look up `batch-42` through the [activation API](#api-and-standalone-python-sdk) to check its status. |
 | **Admission** | The [checks before work starts](../introduction/concepts.md#conditions-and-admission), including dependencies, gates and graph constraints. | A queued request waits until its dependencies and capacity requirements are satisfied. |
 
 ```mermaid
@@ -150,16 +150,16 @@ creation cannot consume another frequency allowance. Monitor
 `status.activations.<node>` for `pending`, `active`, `completed`, `failed`,
 `lastAdmissionTime` and `overdue`. Graph event observations include these summaries.
 
-## API and standalone Python client
+## API and standalone Python SDK
 
 Enable the existing composition API with `api.enabled=true`; activation uses its
 port, bearer authentication, rate limits, and optional Gateway API/Istio routing.
-The [standalone client](../../pkg/client/README.md) requires Python 3.11+ and no
-operator dependencies. Install it directly with `pip install ./pkg/polyad-types ./pkg/client`.
+The [standalone SDK](../../pkg/polyad-sdk/README.md) requires Python 3.11+ and no
+operator dependencies. Install it directly with `pip install ./pkg/polyad-types ./pkg/polyad-sdk`.
 
 ```python
 import os
-from polyad_client import Client
+from polyad_sdk import Client
 
 client = Client(
     os.environ["POLYAD_API_URL"],

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from polyad.api.http.errors import Conflict, Forbidden
 from polyad.events.visibility import observation_ancestry, permitted_observation, public_observation
-from polyad.operator.policies.throughput import SAMPLE
+from polyad.operator.policies.soul.contracts import SAMPLE
 from polyad_types.codec import to_dict
 from polyad_types.topology import topology
 

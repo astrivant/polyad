@@ -43,7 +43,7 @@ schema; loading it does not fetch that URL. See the JSON Schema guide to
 
 Use `pip install 'polyad[schemas]'` to install the operator with this extra.
 `pip install polyad-schemas` installs only the standalone schema library.
-The production image includes the extra; importing the types or client package
+The production image includes the extra; importing the types or SDK package
 alone does not install or import schemas.
 
 | Submodule | Loader | Contents |

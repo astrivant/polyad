@@ -29,10 +29,12 @@ the Kubernetes Operators Framework for Python.
   NetworkPolicy and Istio integration. [Istio percentage routing](docs/graphs/traffic-balancing.md)
   divides requests among workload or graph replicas using fixed splits, demand tiers
   or measured spare capacity.
-- **Let services participate.** Through the [standalone Python client](pkg/client/README.md),
+- **Let services participate.** Through the [standalone Python SDK](pkg/polyad-sdk/README.md),
   workloads can submit compositions, activate work, request [TTL-bound connections](docs/apis/temporary-connections.md)
   and discover permitted services across the [atlas](docs/apis/discovery.md), with filtered
-  event hooks and peer-approved connections.
+  event hooks and peer-approved connections. This application model is
+  [**Service Symbiosis**](docs/workloads/adaptive-microservices.md): services with
+  different roles discover compatible peers and adjust their work together.
   [Shared types](pkg/polyad-types/README.md) and [JSON Schemas](pkg/polyad-schemas/README.md)
   are also available separately from the operator.
 - **Rebalance event subscriptions.** Subscribe over SSE or WebSocket and opt into
@@ -85,10 +87,17 @@ and its [Helm reference values](charts/polyad/values-soul-searching.reference.ya
 The [demand guide](docs/graphs/load-profiles.md#define-demand) explains signal names,
 units and thresholds; use `Observe` mode to inspect recommendations before enabling adaptation.
 
-Applications can install the [Python client](pkg/client/README.md) or just the
+Applications can install the [Python SDK](pkg/polyad-sdk/README.md) or just the
 [shared types](pkg/polyad-types/README.md) without installing the operator. From a
 checkout, use `pip install ./pkg/polyad-types`; the standalone distribution is
 named `polyad-types` and exposes `polyad_types`.
+
+Use [Service Symbiosis](docs/workloads/adaptive-microservices.md) to write
+producers and consumers that cooperate across Graphs and PolyGraphs: discover
+compatible peers, react to connection and capacity deltas, propagate backpressure
+and report useful completion. Run the standalone [`python soul.py`](soul.py)
+[local demonstration](docs/workloads/local-soul-searching.md) to watch three service
+processes change their TCP topology and roll their child workers under load.
 
 Explore [graph concepts](docs/introduction/concepts.md), [graph rules](docs/graphs/graph-rules.md),
 [composition requests](docs/apis/composition-requests.md), the [composition API](docs/apis/composition-api.md),
@@ -143,10 +152,12 @@ work toward available capacity and gives a node autoscaler notice of future
 scheduling demand. Structural bounds do not guarantee a data rate; application
 measurements and load tests determine useful targets and preparation budgets.
 
-The [Python client](pkg/client/README.md) lets services request new compositions,
+The [Python SDK](pkg/polyad-sdk/README.md) lets services request new compositions,
 activate work and establish [temporary connections](docs/apis/temporary-connections.md)
 as needs emerge. [Topology events](docs/workloads/workload-events.md) keep them
-informed as their neighbors change. Authorization and graph rules constrain
+informed as their neighbors change. The SDK's [adaptive interface](pkg/polyad-sdk/README.md#adaptive-services-and-deltas)
+exposes added/removed connections, replica and metric deltas, and decision
+transitions with the current neighborhood context. Authorization and graph rules constrain
 those requests, giving applications a way to adapt without an administrator
 rewriting the deployment for every change.
 
@@ -649,7 +660,7 @@ namespaces.<sup>[\[15\]](docs/deployment/networking.md#workload-access-to-operat
 A running service can also pulse downstream workloads or daemon replica groups,
 with explicit concurrency and frequency policies.<sup>[\[17\]](docs/workloads/activation.md)</sup>
 
-The [Python client](pkg/client/README.md) supports filtered event hooks over SSE
+The [Python SDK](pkg/polyad-sdk/README.md) supports filtered event hooks over SSE
 or WebSocket. With optional [connection rebalancing](docs/operations/event-rebalancing.md),
 operators send paced reconnect instructions, called **copulses**, when membership
 changes or an administrator starts a roll. Clients retain their last completed

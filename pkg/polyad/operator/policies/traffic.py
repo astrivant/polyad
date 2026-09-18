@@ -11,7 +11,7 @@ from fnmatch import fnmatchcase
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.network import scope_label
-from polyad.compiler.passes.traffic import capacity_weights, route_specs
+from polyad.compiler.passes.traffic import route_specs
 from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.reconciliation.replication import effective_spec
@@ -22,8 +22,6 @@ if TYPE_CHECKING:
     from typing import Any
 
     from polyad.operator.reconciliation.controller import Controller
-    from polyad_types.throughput import ThroughputSample
-    from polyad_types.traffic import TrafficWeights
 
 KINDS = frozenset({"VirtualService", "DestinationRule"})
 
@@ -92,45 +90,6 @@ async def target_selector(
             raise Pending("waiting for the graph replica containing the traffic entrypoint")
         current = child
     return labels
-
-
-async def headroom_targets(controller: Controller, obj: dict[str, Any], sample: ThroughputSample) -> tuple[TrafficWeights, ...] | None:
-    """
-    Convert complete, revision-fenced replica measurements into bounded percentage targets.
-
-    Args:
-        controller (Controller): Family-leased reader for current replica identities.
-        obj (dict[str, Any]): Graph containing the configured routes.
-        sample (ThroughputSample): Fresh aggregate and per-replica measurements from one window.
-
-    Returns:
-        tuple[TrafficWeights, ...] | None: Desired splits, or None for missing, replaced or unusable replica measurements.
-    """
-    from polyad.operator.reconciliation.controller import Pending
-
-    graph = topology(obj["spec"], obj["kind"])
-    reports = {(item.route, item.target): item for item in sample.traffic}
-    result = []
-    for route in graph.traffic:
-        capacities = {}
-        for destination in route.destinations:
-            report = reports.get((route.name, destination.target))
-            if report is None:
-                return None
-            executions: dict[str, Any] = {}
-            try:
-                await target_selector(controller, obj, destination.target, executions=executions)
-            except Pending:
-                return None
-            execution = executions[destination.target]
-            if execution["metadata"]["uid"] != report.targetUid or execution["metadata"].get("generation", 1) != report.generation:
-                return None
-            capacities[destination.target] = report.completedPerSecond + report.headroomPerSecond
-        weights = capacity_weights(route, capacities)
-        if weights is None:
-            return None
-        result.append(weights)
-    return tuple(result)
 
 
 async def ensure_routes(controller: Controller, obj: dict[str, Any]) -> None:

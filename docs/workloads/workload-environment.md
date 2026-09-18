@@ -18,7 +18,7 @@ the generated graph name or UID:
 
 ```python
 import os
-from polyad_client import Client
+from polyad_sdk import Client
 
 client = Client(os.environ["POLYAD_API_URL"], os.environ["POLYAD_API_TOKEN"])
 receipt = client.activate(

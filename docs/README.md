@@ -42,9 +42,11 @@ then [run your first workload](introduction/getting-started.md).
 
 | Guide | Contents |
 | --- | --- |
-| [Workload activation and pulses](workloads/activation.md) | Workload pulses, parallel daemons, frequency bounds and the standalone Python client |
+| [Workload activation and pulses](workloads/activation.md) | Workload pulses, parallel daemons, frequency bounds and the standalone Python SDK |
 | [Workload environment](workloads/workload-environment.md) | Automatic graph identity, ancestry, activation receipts and operator endpoint discovery |
 | [Workload topology events](workloads/workload-events.md) | Neighbor discovery, structural notifications, scaling membership and replay recovery |
+| [Service Symbiosis: writing adaptive microservices](workloads/adaptive-microservices.md) | Cooperative producers and consumers across Graphs and PolyGraphs, backpressure, useful throughput and delta-driven Python SDK hooks |
+| [Local Soul searching: processes and network topology](workloads/local-soul-searching.md) | Standalone Python demo, three real TCP peers, adaptive child workers, two Cheeger boundaries and graceful recovery |
 | [Workload controllers and storage](workloads/workload-storage.md) | Deployment or StatefulSet execution, native volumes, PVC templates and retention |
 
 ## APIs
@@ -101,7 +103,7 @@ then [run your first workload](introduction/getting-started.md).
 | Guide | Contents |
 | --- | --- |
 | [Supported resource registry](development/resource-registry.md) | Supported kinds, AST models, API identities and scheduling capabilities |
-| [Operator package layout](development/operator-layout.md) | Lifecycle, reconciliation, policies, coordination, clusters, observability and adapters |
+| [Operator package layout](development/operator-layout.md) | Lifecycle, reconciliation, the central Soul searching decision pipeline, policies, coordination, clusters, observability and adapters |
 | [Mutation plans](development/mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |
 | [Kubernetes write pipeline](development/write-pipeline.md) | Bounded admission, dependency contracts, validation windows, watch invalidation, duplicate coalescing and targeted recovery |
 | [Mutation diagram patterns](development/mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
@@ -124,6 +126,6 @@ then [run your first workload](introduction/getting-started.md).
 | Reference | Contents |
 | --- | --- |
 | [Polyad scheduling guide](../pkg/polyad/balance/README.md) | Cooperative work, checkpoints, policies, rewrites and graph images |
-| [Polyad client](../pkg/client/README.md) | Compositions, activation, temporary connections, graph events and Soul searching reports without operator dependencies |
+| [Polyad SDK](../pkg/polyad-sdk/README.md) | Adaptive service deltas, discovery, activation, temporary connections and Soul searching reports without operator dependencies |
 | [Polyad types](../pkg/polyad-types/README.md) | Resource, configuration and request models without operator dependencies |
 | [Polyad Helm chart](../charts/polyad/README.md) | Operator, autoscaling and shared queue settings |

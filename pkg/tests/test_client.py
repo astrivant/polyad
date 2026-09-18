@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 import pytest
 
 from polyad.api import APIBuilder
-from polyad_client import APIError, Client
+from polyad_sdk import APIError, Client
 from polyad_types import CompositionItem, CompositionRequest, Event, to_dict
 
 
@@ -20,8 +20,8 @@ def test_websocket_client_headers_checkpoints_and_cleanup(monkeypatch):
     """
     Preserve cluster selection and rotating headers while callbacks checkpoint only observations.
     """
-    from polyad_client import StreamInterrupted, websocket
-    from polyad_client.filters import event_type
+    from polyad_sdk import StreamInterrupted, websocket
+    from polyad_sdk.filters import event_type
 
     connector = MagicMock()
     connection = connector.return_value.__enter__.return_value
@@ -56,7 +56,7 @@ def test_websocket_client_rejects_invalid_frames_and_closes(monkeypatch, frame):
     """
     Binary frames and invalid envelopes cannot reach application callbacks.
     """
-    from polyad_client import websocket
+    from polyad_sdk import websocket
 
     connector = MagicMock()
     connector.return_value.__enter__.return_value.recv.return_value = frame
@@ -74,7 +74,7 @@ def test_websocket_handshake_errors_keep_http_status(monkeypatch):
     from websockets.exceptions import InvalidStatus
     from websockets.http11 import Response
 
-    from polyad_client import websocket
+    from polyad_sdk import websocket
 
     connector = MagicMock(side_effect=InvalidStatus(Response(410, "Gone", Headers(), bytearray(b'{"error":"expired"}'))))
     monkeypatch.setattr(websocket, "_NoRedirect", connector)
@@ -91,7 +91,7 @@ def test_websocket_redirects_cannot_move_an_authenticated_subscription(monkeypat
     from websockets.exceptions import InvalidStatus
     from websockets.http11 import Response
 
-    from polyad_client import websocket
+    from polyad_sdk import websocket
 
     redirect = InvalidStatus(Response(302, "Found", Headers({"Location": "wss://other.example/events"})))
     attempt = MagicMock(side_effect=redirect)

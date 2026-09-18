@@ -1,7 +1,7 @@
 # Polyad benchmarks
 
 A standalone Python 3.13–3.14 package for repeatable operator experiments. Uses
-`polyad-client`; it does not install the operator or grant Kubernetes permissions.
+`polyad-sdk`; it does not install the operator or grant Kubernetes permissions.
 
 ## Table of contents
 
@@ -15,7 +15,7 @@ A standalone Python 3.13–3.14 package for repeatable operator experiments. Use
 From a checkout:
 
 ```sh
-pip install ./pkg/polyad-types ./pkg/client ./pkg/polyad-benchmarks
+pip install ./pkg/polyad-types ./pkg/polyad-sdk ./pkg/polyad-benchmarks
 ```
 
 ## Commands

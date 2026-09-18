@@ -455,9 +455,9 @@ class Controller:
                 await reconcile_reserved(self, obj)
                 return
             if obj["spec"].get("throughput"):
-                from polyad.operator.policies.throughput import reconcile_throughput
+                from polyad.operator.policies.soul.controller import search_soul
 
-                if await reconcile_throughput(self, obj):
+                if await search_soul(self, obj):
                     raise Pending("throughput profile applied; refresh before workload admission")
                 refreshed = await self.api.get(kind, namespace, name)
                 if refreshed is None or refreshed["metadata"]["uid"] != obj["metadata"]["uid"]:

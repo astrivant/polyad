@@ -105,7 +105,7 @@ def test_fixture_uses_real_http_and_pins_graph_context(monkeypatch, capsys):
             monkeypatch.delenv("POLYAD_BENCHMARK_FIXTURE_TOKEN")
             # The request cannot use the operator token as its fixture credential.
             monkeypatch.setenv("POLYAD_BENCHMARK_FIXTURE_TOKEN", "fixture-token")
-            from polyad_client import APIError, Client
+            from polyad_sdk import APIError, Client
 
             with pytest.raises(APIError) as error:
                 Client(f"http://127.0.0.1:{server.server_port}", "wrong").activate(

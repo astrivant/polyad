@@ -12,14 +12,14 @@ from collections import OrderedDict
 from threading import Event as StopEvent
 from typing import TYPE_CHECKING
 
-from polyad_client.client import APIError
+from polyad_sdk.client import APIError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from typing import Literal
 
-    from polyad_client.client import Client
-    from polyad_client.filters import Filter
+    from polyad_sdk.client import Client
+    from polyad_sdk.filters import Filter
     from polyad_types.events import Event
 
 
@@ -53,6 +53,7 @@ class Subscription:
         history: int = 1024,
         transport: Literal["sse", "websocket"] = "sse",
         rebalance: bool = False,
+        heartbeats: bool = False,
     ) -> None:
         """
         Bind one authorized stream and a bounded in-process callback replay history.
@@ -64,11 +65,15 @@ class Subscription:
             history (int): Maximum remembered event-handler successes; not durable exactly-once delivery.
             transport (Literal['sse', 'websocket']): Operator event transport, retaining the same callbacks and cursors.
             rebalance (bool): Discover authoritative membership and automatically resume after bounded transport resets.
+            heartbeats (bool): Emit SSE heartbeats for application refresh scheduling.
         """
         if type(history) is not int or not 1 <= history <= 65536:
             raise ValueError("subscription history must be an integer from 1 through 65536")
         if transport not in {"sse", "websocket"}:
             raise ValueError("event transport must be sse or websocket")
+        if type(heartbeats) is not bool:
+            raise ValueError("heartbeats must be a boolean")
+        self.heartbeats = heartbeats
         self.transport = transport
         self.client, self.cluster, self.cursor, self.history = client, cluster, cursor, history
         self._hooks: list[tuple[Filter, Callable[[Event], None]]] = []
@@ -135,8 +140,16 @@ class Subscription:
             if self.rebalance:
                 self._resume()
                 return
-            stream = self.client.events(last_event_id=self.cursor, cluster=self.cluster, transport=self.transport)
+            stream = self.client.events(
+                last_event_id=self.cursor,
+                cluster=self.cluster,
+                transport=self.transport,
+                stop_event=self._stopped,
+                heartbeats=self.heartbeats,
+            )
             for event in stream:
+                if self._stopped.is_set():
+                    break
                 self.dispatch(event)
         finally:
             close = getattr(stream, "close", None)
@@ -169,7 +182,7 @@ class Subscription:
         return False
 
     def _resume(self) -> None:
-        from polyad_client.routing import addresses
+        from polyad_sdk.routing import addresses
 
         backoff = 1.0
         while not self._stopped.is_set():
@@ -189,7 +202,12 @@ class Subscription:
                     target = targets[self._rotation % len(targets)] if targets else None
                     self._rotation += 1
                     stream = self.client.events(
-                        last_event_id=self.cursor, cluster=self.cluster, transport=self.transport, endpoint=target, stop_event=self._stopped
+                        last_event_id=self.cursor,
+                        cluster=self.cluster,
+                        transport=self.transport,
+                        endpoint=target,
+                        stop_event=self._stopped,
+                        heartbeats=self.heartbeats,
                     )
                 except Exception as error:
                     if not self._retryable(error):

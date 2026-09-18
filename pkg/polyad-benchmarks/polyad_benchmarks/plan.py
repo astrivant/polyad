@@ -22,7 +22,7 @@ from polyad_types import CompositionRequest, converter
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_client import Client
+    from polyad_sdk import Client
 
 
 def composition_plan(plan: dict[str, Any], chart: Path, namespace: str) -> dict[str, Any]:

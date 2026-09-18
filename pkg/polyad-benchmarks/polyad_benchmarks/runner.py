@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from polyad_benchmarks.config import RunConfig, operator_client, request_prefix
 from polyad_benchmarks.identity import grafana_path, log_event, new_run_id, parent_run_id, plan_hash
-from polyad_client import APIError, Client
+from polyad_sdk import APIError, Client
 
 if TYPE_CHECKING:
     from collections.abc import Callable
