@@ -205,6 +205,8 @@ def test_native_integer_or_string_and_nullable_fields(tmp_path, port):
                 "spec": {
                     "nodes": [],
                     "throughput": {
+                        "unit": "jobs",
+                        "tiers": [{"threshold": 0, "cheeger": {"minimum": 0}}],
                         "demand": '{{ dict "name" "queueDepth" "unit" "jobs" | toJson }}',
                     },
                 }
