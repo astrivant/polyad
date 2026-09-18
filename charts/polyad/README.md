@@ -238,8 +238,8 @@ for metric behavior, prerequisites and an example with both targets.
 
 Federation, mesh and observers remain optional. Root-managed execution requires
 HA, using either Dense or Distributed mode. Remote execution Deployments
-are created by the root operator from OperatorPools, rather than rendered separately
-by Helm. `NOTES.txt` remains at the template root, and install-time CRDs remain in
+are created by the root operator from Helm-declared or separately managed
+OperatorPools. `NOTES.txt` remains at the template root, and install-time CRDs remain in
 `crds/`. Directory placement organizes the source; values select the rendered
 resources.
 

@@ -142,8 +142,8 @@ Fields identify their required/optional status, exact CRD defaults, allowed
 choices and README-generator types. Required fields apply when their containing
 object is present. Values without defaults are illustrative placeholders.
 Optional alternatives can be mutually exclusive: copy the fields you need into
-your values instead of uncommenting the complete catalog. Open-ended Kubernetes
-and application payloads are marked rather than inventing a finite field list.
+your values. Open-ended Kubernetes and application payloads are explicitly
+marked so administrators can supply the fields their workloads require.
 
 | Resource kind | Named map and full reference |
 | --- | --- |

@@ -85,8 +85,7 @@ standard `k8s.node.name` OpenTelemetry resource attribute for enabled logs/trace
 The shared Helm helper covers singular and HA operators, distributed component
 Daemon templates, observers and Helm-installed downstream workers. The root
 reconciler applies selectors again when provisioning remote Deployment or
-DaemonSet workers, so they resolve destination Pod/node state rather than copying
-root values.
+DaemonSet workers, so each worker resolves its own destination Pod/node state.
 
 The compiler injects the same selectors into application containers, init
 containers and native sidecars for Jobs, Deployments and StatefulSets. Context

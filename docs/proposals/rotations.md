@@ -220,9 +220,8 @@ The proposed execution phases are:
    revocation. Kubernetes Secret deletion alone does not revoke a credential.
 
 Hooks are references to typed operations or finite Graphs with an explicit
-completion contract, not arbitrary callbacks submitted to the operator. A
-rotation verifies that the remote dependency accepts the new credential through
-an application check or revision acknowledgement. Systems
+completion contract. A rotation verifies that the remote dependency accepts
+the new credential through an application check or revision acknowledgement. Systems
 that cannot accept overlapping credentials need a declared disruption window;
 changing traversal cannot make that switch seamless.
 
@@ -238,9 +237,9 @@ planned step. Independent reload behavior remains available for other consumers.
 Before every mutation, re-read target identity, desired revision, current
 readiness, ancestor constraints and selected GraphRules under the existing
 mutation fence. Recompute graph metrics, including Cheeger where required.
-Structural validity and availability are separate checks: the current Cheeger
-calculation does not establish the capacity or connectivity of only healthy
-Pods, and it does not guarantee application throughput during a rollout.
+Structural validity, healthy capacity and application throughput each require
+their own checks. The current Cheeger calculation measures the declared graph;
+rollout readiness and application measurements describe the serving workloads.
 
 Rollout admission must additionally account for the proposed step's worst-case
 unavailability, surge, live replicas, quorum and required ready instances at each
@@ -298,9 +297,9 @@ Persist the request, resolved policy revision, target UIDs, plan revision, curre
 wave, operation IDs and per-target receipts in Kubernetes. Large plans need
 bounded child records.
 PostgreSQL, when enabled, may mirror nonsensitive rollout observations. An HA
-handoff resumes from fresh Kubernetes observations and receipts, replacing
-repeating already adopted changes. Retries provide idempotent reconciliation,
-not exactly-once external side effects; hooks need the same operation identity.
+handoff resumes from fresh Kubernetes observations and uses receipts to skip
+already adopted changes. Retries reuse the operation identity so hooks can
+deduplicate external side effects.
 
 Reserve conflicting targets, ancestor availability budgets and shared credential
 revision scopes before dispatch. Use the existing graph-family leases for local

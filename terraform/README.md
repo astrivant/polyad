@@ -131,7 +131,7 @@ cp terraform.tfvars.example terraform.tfvars
 
 Edit `terraform.tfvars` with your project and desired zone. Generate a bcrypt
 hash of your chosen **admin** password; `admin` is Argo CD's built-in
-administrative username, rather than `root`. In Bash, read the password without
+administrative username. In Bash, read the password without
 echoing it and pass it to the local hash command:
 
 ```bash
@@ -367,7 +367,7 @@ also accommodates the optional Dragonfly scaler and bootstrap HPA.
 Use the Application's pruning review when removing resources. If you disable a
 scaler and want Git to manage its count again, remove the corresponding
 `ignoreDifferences` entry in the bootstrap chart. Argo tracks resources by its own
-annotation rather than altering application instance labels used by selectors.
+annotation, preserving application instance labels used by selectors.
 
 For a disposable run, remove any external resources created by your test workload,
 save results, and run:

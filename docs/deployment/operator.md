@@ -59,7 +59,7 @@ There are two useful interpretations of a cycle:
 
 For a recurrence `x[t+1] = F(x[t], input[t])`, a fixed point satisfies `F(x*, input*) = x*`. Existence does not imply convergence. A contraction provides convergence; a linear autonomous recurrence converges to zero when its matrix has spectral radius below one. Stream stability instead depends on arrival/service rates, queues, and feedback gain. These mathematical properties are application contracts, not conclusions the operator can draw from connectivity alone.
 
-Useful temporal properties include “a stopped boundary never admits new work,” “an admitted request eventually receives service,” and “ownership is released only after cleanup.” Readiness may become false again; completion is a terminal observation for a particular execution. Daemon scheduling uses reservations and fairness to govern continuing work.
+Useful temporal properties include “a stopped boundary never admits new work,” “an admitted request eventually receives service,” and “ownership is released only after cleanup.” Readiness may become false again; completion is a terminal observation for a particular execution. Daemon scheduling requires reservations and fairness to govern continuing work.
 
 ## API and Python abstractions
 
@@ -376,7 +376,7 @@ requests; parallel mode permits bounded concurrency. Timer-driven requests use
 `maxIntervalSeconds` with `onDeadline: Activate`.
 
 Applications own iteration counts, termination conditions and state shared
-between runs. A timer measures admission frequency from its configured schedule.
+between runs. A timer bounds admission frequency according to its activation policy.
 See [activation policies](../workloads/activation.md) and the
 [repeated graph example](../../examples/repeated-graph.yaml).
 
@@ -400,7 +400,7 @@ Dragonfly stores resource notifications in 32 shard streams and coalesces duplic
 
 Raw Kopf event handlers publish work hints without writing Kopf progress annotations. Five-second API scans recover missed events and rebuild the shared queues after cache loss. Kubernetes desired state and status remain authoritative.
 
-Deterministic names and owner UID checks make lost create acknowledgements recoverable. Status patches and rewrites include resource versions; deletes include UID and resource-version preconditions. Acknowledging DELETE does not prove disappearance. Replaced and removed children drain before replacements are admitted. A definition update replaces affected execution resources; completed Jobs can therefore run again. This is an explicit revision boundary, not transparent checkpoint migration.
+Deterministic names and owner UID checks make lost create acknowledgements recoverable. Status patches and rewrites include resource versions; deletes include UID and resource-version preconditions. After a DELETE acknowledgement, the operator verifies resource disappearance. Replaced and removed children drain before replacements are admitted. A definition update replaces affected execution resources; completed Jobs can therefore run again. Applications handle checkpoint migration across that revision boundary.
 
 `Rewrite` replaces the complete graph spec at `expectedGeneration`. The spec and rewrite receipt annotation are committed atomically; a retry checks the receipt before doing anything. Reference edits and Graph spec edits can also change desired topology directly. No arbitrary Python rewrite callbacks run inside the operator.
 

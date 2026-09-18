@@ -451,8 +451,8 @@ for trust and discovery setup. Ordinary Kubernetes Services are discovered by
 the configured control planes; no additional ServiceEntry is required for that
 case. Ensure the Service's DNS name resolves in the caller's cluster, using a
 matching Service where needed. Use DestinationRule subsets and VirtualService
-routes when you need to select a specific cluster rather than the mesh's normal
-endpoint selection; see [Istio's multicluster traffic management](https://istio.io/latest/docs/ops/configuration/traffic-management/multicluster/).
+routes to select a specific cluster; see
+[Istio's multicluster traffic management](https://istio.io/latest/docs/ops/configuration/traffic-management/multicluster/).
 
 ```mermaid
 ---

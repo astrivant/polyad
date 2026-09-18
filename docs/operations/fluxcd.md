@@ -106,8 +106,8 @@ status; they do not use the invalid `has(status)` top-level macro.<sup>[\[1\]](h
 
 Native Jobs, Deployments, StatefulSets, Pods and claims retain Flux's built-in health checks.
 The root graph carries descendant failures into Flux health even when those
-resources were created by Polyad rather than applied by Flux. Installing only the
-operator HelmRelease does not monitor every workload graph in the cluster.
+resources were created by Polyad. Configure health checks for the application
+graphs alongside the operator HelmRelease.
 
 ## HelmRelease support
 

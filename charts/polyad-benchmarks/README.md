@@ -39,7 +39,7 @@ Graph and starts normal graph cleanup. Export results first. Helm skips already
 installed CRDs; their lifecycle remains with the operator's CRD installation.
 
 Use `--skip-crds` only when both Polyad and any enabled monitoring CRDs already exist. For Argo CD,
-set `helm.skipCrds: true`, so it does not claim shared CRDs for the fixture app.
+set `helm.skipCrds: true` to keep shared CRD ownership with the operator installation.
 
 An existing Secret may provide two keys: one operator API token authorized for
 activation in this graph tree, and a separate fixture token. An empty Secret

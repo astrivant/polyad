@@ -41,7 +41,7 @@ submission generates a UUID-backed `runId`, submitted as its `requestId`. `compo
 `CompositionRequest`; `submit_plan(client, plan, chart, namespace)` submits it.
 The referenced administrator GraphRule must already exist. Each composed run has
 its own graph, immutable ConfigMap and runner Job. Reusing its request ID is an
-idempotent retry, not a new experiment. Use `--run-id SAVED_RUN_ID` or an explicit
+idempotent retry of the same experiment. Use `--run-id SAVED_RUN_ID` or an explicit
 plan `requestId` only for that retry; leave them unset for a new run. Rendering
 with `--render-only` also generates an ID: pass that ID with `--run-id` when
 submitting the reviewed plan.

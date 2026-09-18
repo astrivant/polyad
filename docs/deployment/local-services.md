@@ -64,8 +64,8 @@ keeps its separate three-vertex boundary and
 [Cheeger and replica budget](components.md#scaling-and-structural-bounds).
 
 External databases and caches configured only through connection Secrets are
-outside this chart's Kubernetes inventory. Likewise, an independently installed
-CloudNativePG or External Secrets controller is not a local chart workload. The
+outside this chart's Kubernetes inventory. Independently installed CloudNativePG
+and External Secrets controllers remain in their own release inventories. The
 database instances this chart declares are included. KEDA has explicit existing
 installation references because it drives this operator's scaling.
 
