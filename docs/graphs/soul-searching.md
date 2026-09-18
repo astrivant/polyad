@@ -1,12 +1,7 @@
 # Soul searching: application throughput and graph structure
 
 **Soul searching** is Polyad's **bounded topology optimizer** for a `Graph` or
-`PolyGraph`. **Topology** is the pattern of connections between its workloads,
-services and nested graphs. **Bounded** means the optimizer chooses from
-administrator-approved adjustments and must satisfy the configured rules and
-resource ceilings.
-
-It runs as a feedback controller, using application demand and throughput reports
+`PolyGraph`. It runs as a feedback controller, using application demand and throughput reports
 to recommend or apply approved connection layouts
 and optional [traffic percentages between workload and graph replicas](traffic-balancing.md).
 Approved [load profiles](load-profiles.md) can also adjust capacity lookahead before
@@ -26,12 +21,14 @@ For policies active in both a parent and child, see
 
 ## Table of contents
 
-- [How the controls fit together](#how-the-controls-fit-together)
-- [Calibrate the relationship](#calibrate-the-relationship)
-- [Configure a bounded policy](#configure-a-bounded-policy)
-- [Automatic traffic-weight adjustments](#automatic-traffic-weight-adjustments)
-- [Report measurements](#report-measurements)
-- [Bounds, observations and scalability](#bounds-observations-and-scalability)
+- [Soul searching: application throughput and graph structure](#soul-searching-application-throughput-and-graph-structure)
+  - [Table of contents](#table-of-contents)
+  - [How the controls fit together](#how-the-controls-fit-together)
+  - [Calibrate the relationship](#calibrate-the-relationship)
+  - [Configure a bounded policy](#configure-a-bounded-policy)
+  - [Automatic traffic-weight adjustments](#automatic-traffic-weight-adjustments)
+  - [Report measurements](#report-measurements)
+  - [Bounds, observations and scalability](#bounds-observations-and-scalability)
 
 ## How the controls fit together
 
