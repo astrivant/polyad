@@ -1,17 +1,17 @@
-# Nature: deriving graphs from desired outcomes
+# Copolyad: deriving graphs from desired outcomes
 
-**Status: design proposal, not implemented.** Nature would plan application
+**Status: design proposal, not implemented.** Copolyad would plan application
 compositions from desired outcomes and service capability contracts, then submit
 those compositions to Polyad for admission and execution. The contracts and
 planning behavior below are proposed additions, not available APIs or CRDs.
 
-**Natural Selection** is the name of Nature's proposed composition-planning
+**Natural Selection** is the name of Copolyad's proposed composition-planning
 algorithm. It derives and selects candidate graphs from desired outcomes,
-capability contracts and administrator-defined constraints. Nature names the
-project; Natural Selection names the algorithm.
+capability contracts and administrator-defined constraints. Copolyad names the
+proposal and project concept; Natural Selection names the algorithm.
 
 Polyad starts with an application graph and its rules, then coordinates how it
-is deployed, connected and adapted. Nature would start with the result an
+is deployed, connected and adapted. Copolyad would start with the result an
 application needs and work backward to discover which graph could produce it.
 This is an architectural inversion of inputs and outputs, rather than a claim
 of a formal mathematical dual of Polyad.
@@ -31,10 +31,10 @@ of a formal mathematical dual of Polyad.
 ## What changes when the starting point is an outcome
 
 Polyad asks: “Given this application graph and its rules, how should we deploy,
-connect and adapt it?” Nature would ask: “Given this desired result, available
+connect and adapt it?” Copolyad would ask: “Given this desired result, available
 capabilities and constraints, what application graph should exist?”
 
-| Dimension | Polyad today | Proposed Nature responsibility |
+| Dimension | Polyad today | Proposed Copolyad responsibility |
 | --- | --- | --- |
 | Starting point | Declared workloads, relationships and rules | Desired outcomes and acceptable tradeoffs |
 | Composition | Deploy and adapt an approved composition | Find capabilities that can fulfill an outcome |
@@ -50,7 +50,7 @@ flowchart TB
         measurements --> adaptation["Bounded graph adaptation"]
         adaptation --> execution
     end
-    subgraph nature["Nature: derive graphs with Natural Selection"]
+    subgraph copolyad["Copolyad: derive graphs with Natural Selection"]
         outcome["Desired outcome"] --> requirements["Required capabilities"]
         requirements --> discovery["Discover and compose services"]
         discovery --> proposal["Proposed graph"]
@@ -81,13 +81,13 @@ locations; the proposed capability catalog would describe what those services
 can do and what they require. Soul searching could then adapt an admitted
 composition within its approved settings.
 
-The recommended boundary is a planner above Polyad. Nature would submit
+The recommended boundary is a planner above Polyad. Copolyad would submit
 proposals through authorized Polyad interfaces. Polyad would retain graph
 ownership, admission, mutation ordering and execution. Existing KEDA/HPA
 controllers would retain their configured replica targets and authority.
 
 The separate [decision-gate proposal](decision-gates.md) could eventually select
-between approved plans or request human review. Nature's initial planning
+between approved plans or request human review. Copolyad's initial planning
 mode should work without that proposed extension.
 
 ## Example: make incoming records searchable
