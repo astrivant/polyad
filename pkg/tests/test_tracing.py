@@ -14,7 +14,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from polyad.api.application import Routes, create_application
+from polyad.api.http.application import Routes, create_application
 from polyad.operator.adapters.kubernetes import API
 from polyad.operator.observability import tracing
 from tests.test_chart import render

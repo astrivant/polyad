@@ -156,7 +156,7 @@ Layer [values-agent-metrics.yaml](../../charts/polyad-benchmarks/values-agent-me
 onto that benchmark release to enable its private Prometheus remote-write
 receiver and disable the duplicate operator ServiceMonitor. The dashboard remains.
 
-Layer [operator-agents-values.yaml](../../studies/load/operator-agents-values.yaml)
+Layer [operator-agents-values.yaml](../../studies/load/fixtures/operator-agents-values.yaml)
 onto the **operator** release to send all available component metrics and traces
 to the study backends. The study stack has no Loki installation, so this particular
 overlay disables logs. Supply an existing Loki URL and enable logs to collect all

@@ -56,6 +56,7 @@ spec:
         {{- if .Values.mesh.operator.enabled }}
         sidecar.istio.io/inject: "true"
         sidecar.istio.io/nativeSidecar: "true"
+        {{- include "polyad.proxyResources" . | nindent 8 }}
         {{- $proxy := dict "holdApplicationUntilProxyStarts" true -}}
         {{- if .Values.events.rebalance.enabled }}{{ $_ := set $proxy "terminationDrainDuration" (printf "%vs" .Values.events.rebalance.drainSeconds) }}{{ end }}
         proxy.istio.io/config: {{ $proxy | toJson | quote }}

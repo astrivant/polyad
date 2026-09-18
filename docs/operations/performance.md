@@ -14,10 +14,41 @@ family, its scope and the feature required to publish it.
 
 ## Table of contents
 
+- [Resource baseline and right-sizing](#resource-baseline-and-right-sizing)
 - [Autoscaling response](#autoscaling-response)
 - [Worker cadence](#worker-cadence)
 - [Write admission and validation](#write-admission-and-validation)
 - [KEDA-managed targets](#keda-managed-targets)
+
+## Resource baseline and right-sizing
+
+Each operator Python container starts with **1 CPU and 1 GiB of memory**, with
+requests equal to limits. This gives unmodified operator Pods the `Guaranteed`
+QoS class. Dense and HA replicas, the Distributed bootstrap/gateway/executor/
+telemetry components, and Helm-installed workers use `operator.resources`.
+Root-provisioned workers inherit that Pod template unless their OperatorPool
+sets `resources`; the shipped pool reference uses the same baseline. Read-only
+observers use the same default through `observer.resources`.
+
+```yaml
+operator:
+  resources:
+    requests: {cpu: "1", memory: 1Gi}
+    limits: {cpu: "1", memory: 1Gi}
+```
+
+When operator or observer mesh injection is enabled, `mesh.proxyResources`
+sets equal requests and limits for Istio proxy and init containers: `100m` CPU
+and `128Mi` memory by default. That allocation is **additional** to the Python
+container's 1 CPU / 1 GiB. Preserve matching, nonzero CPU and memory pairs in
+any other containers injected by your cluster to retain Guaranteed QoS.
+
+Use [Grafana during a load study](../../studies/load/README.md#monitoring-and-traces)
+to observe CPU usage and throttling, memory working set, restarts, reconciliation
+latency and write backlog before changing allocations. Adjust both requests and
+limits together, then repeat the same benchmark plan. Changes to requests also
+change the HPA's utilization baseline. PostgreSQL, Dragonfly and collection
+agents retain their separate resource settings.
 
 ## Autoscaling response
 
@@ -28,8 +59,11 @@ independently:
 operator:
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: "1"
+      memory: 1Gi
+    limits:
+      cpu: "1"
+      memory: 1Gi
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -56,8 +90,8 @@ operator:
 `targetMemoryUtilizationPercentage` accepts an integer from 1 to 100. Its default
 is `null`, which omits memory from the HPA. Enabling this metric requires
 `operator.resources.requests.memory`; Helm rejects an enabled memory target
-without that request. The example targets 80% of the requested `256Mi`, or
-`204.8Mi` per Pod. Memory limits do not determine this percentage. Resource
+without that request. Without sidecars, the example targets 80% of the requested `1Gi`, or
+`819.2Mi` per Pod. Memory limits do not determine this percentage. Resource
 metrics cover the Pod, so injected sidecars also need appropriate resource
 requests. See [Kubernetes resource metrics](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/#support-for-resource-metrics).
 

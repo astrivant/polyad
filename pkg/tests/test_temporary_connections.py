@@ -15,7 +15,7 @@ from openapi_spec_validator import validate
 
 from polyad.api.connections.app import build_app
 from polyad.api.connections.store import AUDIENCE, FINALIZER, Caller, ConnectionSettings, ConnectionStore
-from polyad.api.errors import Conflict, Forbidden, Unauthorized
+from polyad.api.http.errors import Conflict, Forbidden, Unauthorized
 from polyad.compiler.passes.network import NetworkScope, traffic
 from polyad.events.topology import topology_snapshot
 from polyad.graph import NetworkAccess
@@ -771,7 +771,7 @@ def test_api_server_serves_real_http_and_closes_workers(monkeypatch, domain):
     """
     from types import SimpleNamespace
 
-    from polyad.api.server import APIServer
+    from polyad.api.http.server import APIServer
     from tests.test_composition_api import document
 
     monkeypatch.setenv("POLYAD_API_RATE_LIMIT_ENABLED", "false")

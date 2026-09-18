@@ -143,6 +143,12 @@ def test_every_operator_component_stays_on_dedicated_pool(installation):
             spec = obj["spec"]
         else:
             continue
+        for container in spec.get("containers", []):
+            if "polyad.operator.runtime" in container.get("command", []):
+                assert container["resources"] == {
+                    "requests": {"cpu": "1", "memory": "1Gi"},
+                    "limits": {"cpu": "1", "memory": "1Gi"},
+                }
         assert spec["nodeSelector"]["cloud.google.com/gke-nodepool"] == "polyad", obj["metadata"]["name"]
         assert {"key": "dedicated", "operator": "Equal", "value": "polyad", "effect": "NoSchedule"} in spec["tolerations"]
         checked.add(obj["metadata"]["name"])

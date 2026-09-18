@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from kubernetes.client.exceptions import ApiException
 
-from polyad.metrics.builder import MetricsAPIBuilder
+from polyad.api.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
 from polyad.operator.coordination import dragonfly
 from polyad.operator.coordination.leases import Coordinator, NotOwner

@@ -12,7 +12,7 @@ from attrs import evolve, frozen
 from flask import Response, request
 from prometheus_client import CONTENT_TYPE_LATEST
 
-from polyad.api.application import Routes
+from polyad.api.http.application import Routes
 from polyad.auth.http import Access, install
 from polyad.metrics.store import MetricsStore
 from polyad.metrics.workloads import workload_metric

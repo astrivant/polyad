@@ -8,7 +8,7 @@ import json
 import os
 from typing import TYPE_CHECKING
 
-from polyad.api.errors import Forbidden
+from polyad.api.http.errors import Forbidden
 from polyad_types.codec import converter
 from polyad_types.discovery import AccessMode, AtlasAccess
 

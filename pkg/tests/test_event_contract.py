@@ -17,7 +17,7 @@ import jsonschema
 import pytest
 from attrs import fields
 
-from polyad.events.builder import EventAPIBuilder
+from polyad.api.events.builder import EventAPIBuilder
 from polyad.events.store import EventStore
 from polyad_client import Client
 from polyad_schemas import event_schema

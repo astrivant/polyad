@@ -13,6 +13,7 @@ short-lived probe command used for readiness and administrator diagnostics.
 ## Table of contents
 
 - [Container and thread hierarchy](#container-and-thread-hierarchy)
+- [API module organization](#api-module-organization)
 - [Tasks on the operator event loop](#tasks-on-the-operator-event-loop)
 - [How an HTTP request reaches Kubernetes](#how-an-http-request-reaches-kubernetes)
 - [Deployment roles and remote workers](#deployment-roles-and-remote-workers)
@@ -92,6 +93,38 @@ Kopf's health listener on 8080 is a separate **aiohttp listener task on the Kopf
 event loop**. It does not create another Flask application or Python process.
 Optional mesh proxies and database/cache servers run in their own containers;
 they are outside this Python hierarchy.
+
+## API module organization
+
+HTTP code lives under [`polyad/api`](../../pkg/polyad/api), grouped by responsibility:
+
+| Subpackage | Responsibility |
+| --- | --- |
+| `http` | Shared Flask application, blueprint registration, server lifecycle, HTTP/WebSocket transports, errors and request limits |
+| `composition` | Composition submission, receipts, audit lookup and the composition API's OpenAPI contract |
+| `workloads` | Activation submission/status/stop and application throughput reports; registered on the composition blueprint |
+| `connections` | Temporary connection requests, consent, cross-cluster negotiation and connection state |
+| `observations` | Read-only graph snapshots served by optional observer processes |
+| `events` | Discovery, topology reads and SSE/WebSocket subscription routes |
+| `metrics` | Prometheus and scalar autoscaling routes |
+
+The event stores remain in `polyad.events`; measurement collection remains in
+`polyad.metrics`. Their HTTP builders register routes on the application passed
+by `polyad.api.http.server.APIServer`. Imports for optional endpoint families
+stay inside the corresponding runtime setup methods.
+
+Each operator process creates at most **one Flask application and one serving
+thread**, regardless of the number of enabled endpoint families. Each observer
+process follows the same rule. Separate Kubernetes Services and ports retain
+family-specific authentication and network policies; they do not start separate
+servers. Startup refuses a second start, and duplicate blueprint registration
+fails. Standalone builder calls can still create an application for embedding
+or tests; operator startup always supplies its shared application.
+
+Public imports remain available from `polyad.api` (`APIBuilder`, `create_app`,
+`RateLimitPolicy`), `polyad.events` (`EventAPIBuilder`, `EventStore`) and
+`polyad.metrics` (`MetricsAPIBuilder`). They load HTTP dependencies only when
+requested.
 
 ## Tasks on the operator event loop
 
@@ -296,7 +329,7 @@ by responsibility and describes their import and feature-enablement boundaries.
 | [queue.py](../../pkg/polyad/operator/coordination/queue.py) | Local FIFO reconciliation |
 | [write_queue.py](../../pkg/polyad/operator/coordination/write_queue.py) | Pending Kubernetes intent conflicts within each API adapter |
 | [contracts.py](../../pkg/polyad/operator/coordination/contracts.py) / [validation.py](../../pkg/polyad/operator/coordination/validation.py) | Captured dependency hashes, targeted refresh and bounded validation ahead of dispatch |
-| [server.py](../../pkg/polyad/api/server.py) | Shared Flask/HTTP lifecycle and thread-to-loop bridge |
+| [server.py](../../pkg/polyad/api/http/server.py) | Shared Flask/HTTP lifecycle and thread-to-loop bridge |
 | [kubernetes.py](../../pkg/polyad/operator/adapters/kubernetes.py) | Kubernetes transport offloading and write fences |
 | [roles.py](../../pkg/polyad/operator/lifecycle/roles.py) / [root.py](../../pkg/polyad/operator/clusters/root.py) | Role selection and remote cluster tasks |
 | [observer.py](../../pkg/polyad/operator/observer.py) | Observer's main-thread event loop |

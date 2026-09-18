@@ -84,7 +84,7 @@ jobs:
             helm lint charts/polyad-benchmarks -f "charts/polyad-benchmarks/values-$profile.yaml"
             helm template study charts/polyad-benchmarks -f "charts/polyad-benchmarks/values-$profile.yaml" > "$RUNNER_TEMP/benchmark-$profile.yaml"
           done
-          helm template study charts/polyad-benchmarks -n polyad -f studies/load/gke-values.yaml > "$RUNNER_TEMP/benchmark-monitoring.yaml"
+          helm template study charts/polyad-benchmarks -n polyad -f studies/load/fixtures/gke-values.yaml > "$RUNNER_TEMP/benchmark-monitoring.yaml"
           bash scripts/validation/kubeconform.sh -strict -summary -kubernetes-version 1.35.0 "$RUNNER_TEMP"/benchmark-*.yaml
   package:
     needs: [source, chart]

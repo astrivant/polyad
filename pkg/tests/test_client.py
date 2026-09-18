@@ -183,7 +183,7 @@ def test_client_reads_shared_observer_snapshots():
     """
     Use the standalone client's existing authentication transport for optional read replicas.
     """
-    from polyad.api.observations import build_app
+    from polyad.api.observations.app import build_app
 
     client = Client("http://observer:8094", "read-token")
     client._opener = Adapter(build_app(lambda kind, name: {"kind": kind, "name": name, "cluster": "west"}, "read-token"))

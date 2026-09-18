@@ -15,7 +15,7 @@ spec:
       skipCrds: true
       valueFiles:
         - values-smoke.yaml
-        - ../../studies/load/gke-values.yaml
+        - ../../studies/load/fixtures/gke-values.yaml
       parameters:
         - name: polyadResources.variables.images.runner
           value: YOUR_REGISTRY/polyad-benchmarks-runner

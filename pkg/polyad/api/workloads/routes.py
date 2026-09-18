@@ -1,0 +1,84 @@
+"""
+Register workload commands on the shared composition API blueprint.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from flask import jsonify, request
+
+from polyad.api.http.errors import Unavailable
+from polyad_types.codec import converter
+from polyad_types.requests import ActivationRequest, identity
+from polyad_types.throughput import ThroughputSample
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
+    from flask import Response
+
+    from polyad.api.http.application import Routes
+
+
+def register_routes(
+    app: Routes,
+    activate: Callable[[ActivationRequest], dict[str, Any]] | None,
+    activation_lookup: Callable[[str], dict[str, Any] | None] | None,
+    activation_stop: Callable[[str], dict[str, Any] | None] | None,
+    throughput: Callable[[ThroughputSample], dict[str, Any]] | None,
+) -> None:
+    """
+    Attach activation and throughput routes without creating another application.
+
+    Args:
+        app (Routes): Composition blueprint carrying authentication and error handling.
+        activate (Callable[[ActivationRequest], dict[str, Any]] | None): Durable activation submission.
+        activation_lookup (Callable[[str], dict[str, Any] | None] | None): Activation status lookup.
+        activation_stop (Callable[[str], dict[str, Any] | None] | None): Activation stop handler.
+        throughput (Callable[[ThroughputSample], dict[str, Any]] | None): Authorized throughput intake.
+
+    Returns:
+        None: Routes are attached to the existing blueprint.
+    """
+
+    @app.post("/v1/activations")
+    def activation_submit() -> tuple[Response, int]:
+        value = converter.structure(request.get_json(), ActivationRequest)
+        if activate is None:
+            raise Unavailable("activation service is not configured")
+        return jsonify(activate(value)), 202
+
+    @app.get("/v1/activations/<request_id>")
+    def activation_status(request_id: str) -> tuple[Response, int]:
+        if activation_lookup is None:
+            raise Unavailable("activation service is not configured")
+        value = activation_lookup(identity(request_id))
+        return (jsonify(value), 200) if value else (jsonify(error="activation not found"), 404)
+
+    @app.post("/v1/activations/<request_id>/stop")
+    def activation_cancel(request_id: str) -> tuple[Response, int]:
+        if activation_stop is None:
+            raise Unavailable("activation service is not configured")
+        value = activation_stop(identity(request_id))
+        return (jsonify(value), 202) if value else (jsonify(error="activation not found"), 404)
+
+    @app.post("/v1/throughput")
+    def report() -> tuple[Response, int]:
+        if throughput is None:
+            raise Unavailable("throughput service is not configured")
+        body = request.get_json()
+        if not isinstance(body, dict) or type(body.get("generation")) is not int:
+            raise ValueError("throughput generation must be an integer")
+        if any(type(body.get(name)) not in (int, float) for name in ("offeredPerSecond", "completedPerSecond")):
+            raise ValueError("throughput rates must be numbers")
+        traffic = body.get("traffic", [])
+        if not isinstance(traffic, list) or any(
+            not isinstance(item, dict)
+            or type(item.get("generation")) is not int
+            or any(type(item.get(name)) not in (int, float) for name in ("completedPerSecond", "headroomPerSecond"))
+            for item in traffic
+        ):
+            raise ValueError("traffic observations require integer generations and numeric rates")
+        return jsonify(throughput(converter.structure(body, ThroughputSample))), 202

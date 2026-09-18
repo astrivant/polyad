@@ -10,9 +10,9 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.activations import ActivationStore
-from polyad.api.app import Conflict
-from polyad.api.builder import APIBuilder
+from polyad.api.composition.app import Conflict
+from polyad.api.composition.builder import APIBuilder
+from polyad.api.workloads.activations import ActivationStore
 from polyad.operator.coordination.leases import Coordinator
 from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types.activation import ActivationPolicy

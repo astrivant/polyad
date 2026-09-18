@@ -8,6 +8,7 @@ capacity or exercise temporary-connection negotiation yet.
 
 ## Table of contents
 
+- [Study artifacts](#study-artifacts)
 - [Fixture graph](#fixture-graph)
 - [Deploy](#deploy)
 - [Plans and replica counts](#plans-and-replica-counts)
@@ -15,6 +16,24 @@ capacity or exercise temporary-connection negotiation yet.
 - [Repeat an experiment](#repeat-an-experiment)
 - [Read measurements](#read-measurements)
 - [Cleanup](#cleanup)
+
+## Study artifacts
+
+Study-specific deployment and run inputs live in [`fixtures/`](fixtures/):
+
+| Artifact | Purpose |
+| --- | --- |
+| [application.yaml](fixtures/application.yaml) | Manually synced Argo CD Application for the benchmark chart |
+| [gke-values.yaml](fixtures/gke-values.yaml) | Benchmark placement, monitoring and Reloader overlay |
+| [operator-values.yaml](fixtures/operator-values.yaml) | Operator metrics, graph diagnostics and tracing overlay |
+| [operator-agents-values.yaml](fixtures/operator-agents-values.yaml) | Optional Alloy collection overlay for the operator release |
+| [plan.json](fixtures/plan.json) | Client-submitted composition, replica counts and run parameters |
+| [scenario.json](fixtures/scenario.json) | Installed fixture selection and refresh execution settings |
+
+Reusable chart templates and test profiles remain in `charts/polyad-benchmarks`.
+The refresh runner snapshots `fixtures/scenario.json` and fingerprints all study
+inputs. Raw run outputs go under the chosen `.cache/benchmarks/refresh-RUN`
+directory; verified published measurements go to `studies/load/results.json`.
 
 ## Fixture graph
 
@@ -45,7 +64,7 @@ namespace after its CRDs and API are ready:
 ```sh
 helm dependency build charts/polyad-benchmarks
 helm upgrade --install benchmarks charts/polyad-benchmarks -n polyad \
-  -f studies/load/gke-values.yaml \
+  -f studies/load/fixtures/gke-values.yaml \
   --set polyadResources.variables.images.runner=YOUR_REGISTRY/polyad-benchmarks-runner \
   --set polyadResources.variables.images.fixture=YOUR_REGISTRY/polyad-benchmarks-fixture \
   --set polyadResources.variables.images.tag=RUN
@@ -56,14 +75,14 @@ with monitoring and Reloader. Runner Jobs produce load on the separate `copolyad
 pool. Polyad's chart remains on `polyad`; all three pools use the same machine
 type but autoscale independently. `polyadResources.variables.placement` controls
 consumers, while `runnerPlacement` controls generators. Both require a selector
-and the matching dedicated-pool toleration. The client [plan.json](plan.json)
+and the matching dedicated-pool toleration. The client [plan.json](fixtures/plan.json)
 uses the same separation. Record node-provisioning time separately for each pool.
 
 Terraform also registers a manual-sync `polyad-benchmarks` Application in its
 [standalone Argo CD UI](../../terraform/README.md#inspect-the-benchmark-application).
 Choose either that Application or the Helm installation above to own the fixture.
 For an existing Argo installation without Terraform registration, use the
-[standalone Application example](application.yaml). Set its revision and published
+[standalone Application example](fixtures/application.yaml). Set its revision and published
 image parameters before applying it; do not apply it over Terraform's Application.
 Argo owns definitions, while dynamic Jobs and receipts remain operator-owned.
 Unrelated syncs do not issue activations.
@@ -105,12 +124,12 @@ changed definitions. When using an existing Reloader, disable `reloader.enabled`
 but retain the fixture opt-in.
 
 A client can instead create an isolated run without Kubernetes write credentials.
-Edit [plan.json](plan.json), including published images and a fresh request ID:
+Edit [plan.json](fixtures/plan.json), including published images and a fresh request ID:
 
 ```sh
 export POLYAD_API_URL=http://YOUR_OPERATOR_API:8080
-polyad-benchmarks-plan --plan studies/load/plan.json --namespace polyad --render-only > /tmp/load-composition.json
-polyad-benchmarks-plan --plan studies/load/plan.json --namespace polyad
+polyad-benchmarks-plan --plan studies/load/fixtures/plan.json --namespace polyad --render-only > /tmp/load-composition.json
+polyad-benchmarks-plan --plan studies/load/fixtures/plan.json --namespace polyad
 ```
 
 The first command renders a reviewable composition from the same Helm templates;
@@ -138,7 +157,7 @@ seven days on a 10 GiB PVC, Tempo retains 72 hours on 10 GiB, and Grafana has a
 `copolyad` producers. Adjust storage, retention and placement in the dependency
 values, and record their overhead on the consumer pool.
 
-Apply [operator-values.yaml](operator-values.yaml) to the operator's existing
+Apply [operator-values.yaml](fixtures/operator-values.yaml) to the operator's existing
 Helm/GitOps configuration as an additional overlay. It enables metrics, graph
 labels and OTLP/HTTP export to `benchmarks-otel.polyad.svc:4318/v1/traces`; adapt the
 namespace when needed. It deliberately samples every operator trace for the study.
@@ -182,7 +201,7 @@ without claiming that screenshots or Prometheus snapshots were automatically tak
 ## Repeat an experiment
 
 Install the package as described in [its README](../../pkg/polyad-benchmarks/README.md).
-Edit [scenario.json](scenario.json) for the namespace, graph, fixture selector and
+Edit [scenario.json](fixtures/scenario.json) for the namespace, graph, fixture selector and
 overall deadline. It never contains credentials. Set arrival rate and other
 experiment inputs through `polyadResources.variables.run` in the Helm values;
 the snapshot includes the Graph, definitions and plan used by the cluster.

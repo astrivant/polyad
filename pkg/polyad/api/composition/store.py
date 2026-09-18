@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.errors import Conflict
+from polyad.api.http.errors import Conflict
 from polyad.compiler.passes.composition import read_receipt, receipt_spec, request_name
 from polyad_types import resources as asts
 from polyad_types.requests import COMPOSITION_KINDS

@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING, Any
 from attrs import evolve, field, frozen
 from flask import Response, g, jsonify, request, stream_with_context
 
-from polyad.api.application import Routes
-from polyad.api.errors import Forbidden, Unavailable
-from polyad.api.limits import RateLimitPolicy, install_limits
+from polyad.api.http.application import Routes
+from polyad.api.http.errors import Forbidden, Unavailable
+from polyad.api.http.limits import RateLimitPolicy, install_limits
 from polyad.auth.http import Access, install
 from polyad.auth.policy import public_demo
 from polyad.events.rebalance import Rebalancer

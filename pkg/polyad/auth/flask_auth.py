@@ -12,7 +12,7 @@ from flask import g, jsonify
 if TYPE_CHECKING:
     from flask import Flask, Response
 
-    from polyad.api.application import Routes
+    from polyad.api.http.application import Routes
     from polyad.auth.keys import Keyring
 
 

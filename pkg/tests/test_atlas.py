@@ -15,7 +15,7 @@ import pytest
 from attrs import evolve
 
 from polyad.api.connections.store import ConnectionSettings, ConnectionStore
-from polyad.api.errors import Conflict, Forbidden, Unavailable
+from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.events.access import require_scope, scope_allows
 from polyad.events.discovery import Directory
 from polyad.events.store import EventStore

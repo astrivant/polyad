@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from polyad.api.connections.consent import decisions
 from polyad.api.connections.paths import identities, path
-from polyad.api.errors import Conflict, Forbidden, Unavailable
+from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.compiler.passes.network import NetworkScope, traffic
 from polyad.events.access import configuration, require_scope
 from polyad.graph.service_connections import ANNOTATION, grants

@@ -622,6 +622,19 @@
               "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/peers"
             }
           }
+        },
+        "proxyResources": {
+          "type": "object",
+          "description": "Equal requests and limits for injected operator and observer Istio containers, in addition to operator resources.",
+          "additionalProperties": false,
+          "properties": {
+            "cpu": {
+              "$ref": "values.schema.json#/properties/mesh/properties/proxyResources/properties/cpu"
+            },
+            "memory": {
+              "$ref": "values.schema.json#/properties/mesh/properties/proxyResources/properties/memory"
+            }
+          }
         }
       }
     },

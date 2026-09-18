@@ -14,7 +14,7 @@ import pytest
 from openapi_spec_validator import validate
 from prometheus_client.parser import text_string_to_metric_families
 
-from polyad.metrics.builder import MetricsAPIBuilder
+from polyad.api.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.inventory import inventory
 from polyad.metrics.store import MetricsStore
 from polyad.operator.adapters.kubernetes import GROUP, VERSION
@@ -208,7 +208,7 @@ def test_api_builder_schema_snapshot_and_retirement(monkeypatch):
     """
     Serve valid OpenAPI and both formats; never return empty success before sampling or while retiring.
     """
-    from polyad.metrics import builder
+    from polyad.api.metrics import builder
     from polyad.operator.lifecycle.health import Lifecycle
 
     state = Lifecycle()

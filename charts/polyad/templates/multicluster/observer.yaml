@@ -101,6 +101,7 @@ spec:
         {{- if .Values.observer.mesh }}
         sidecar.istio.io/inject: 'true'
         sidecar.istio.io/nativeSidecar: 'true'
+        {{- include "polyad.proxyResources" . | nindent 8 }}
         proxy.istio.io/config: '{"holdApplicationUntilProxyStarts":true}'
         {{- end }}
       {{- end }}

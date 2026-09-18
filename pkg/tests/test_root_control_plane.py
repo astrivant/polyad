@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from polyad.metrics.builder import MetricsAPIBuilder
+from polyad.api.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
 from polyad.operator.clusters.pools import FINALIZER, OWNER, PoolManager
 from polyad.operator.clusters.root import RootControlPlane
@@ -273,6 +273,7 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
                             {
                                 "name": "operator",
                                 "image": "polyad:v1",
+                                "resources": {"requests": {"cpu": "1", "memory": "1Gi"}, "limits": {"cpu": "1", "memory": "1Gi"}},
                                 "command": ["/usr/bin/tini", "--", "python", "-m", "polyad.operator.runtime"],
                                 "env": [
                                     *({"name": name, "value": str(CONFIGURATION[key])} for key, name in ENVIRONMENT.items()),
@@ -326,6 +327,7 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
         deployed = remote.children("Deployment")[0]
         assert deployed["spec"]["replicas"] == 2
         pod = deployed["spec"]["template"]
+        assert pod["spec"]["containers"][0]["resources"] == root_deployment["spec"]["template"]["spec"]["containers"][0]["resources"]
         assert pod["spec"]["automountServiceAccountToken"] is False
         assert pod["spec"]["containers"][0]["command"] == ["/usr/bin/tini", "--", "python", "-m", "polyad.operator.runtime"]
         assert "serviceAccountName" not in pod["spec"]

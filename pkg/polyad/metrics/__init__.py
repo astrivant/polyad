@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.metrics.builder import MetricsAPIBuilder as MetricsAPIBuilder
+    from polyad.api.metrics.builder import MetricsAPIBuilder as MetricsAPIBuilder
 
 __all__ = ["MetricsAPIBuilder"]
 
@@ -29,7 +29,7 @@ def __getattr__(name: str) -> Any:
     """
     if name != "MetricsAPIBuilder":
         raise AttributeError(name)
-    from polyad.metrics.builder import MetricsAPIBuilder
+    from polyad.api.metrics.builder import MetricsAPIBuilder
 
     globals()[name] = MetricsAPIBuilder
     return MetricsAPIBuilder

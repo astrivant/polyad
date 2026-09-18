@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.observations import ObservationAPI, build_app, observe
+from polyad.api.observations.app import ObservationAPI, build_app, observe
 from polyad.compiler.passes.network import policy_specs, traffic
 from polyad.operator.clusters.federation import INVENTORY, PARENT, REMOTE, Federation
 from polyad.operator.policies.rules import RuleViolation, check_rules
@@ -343,7 +343,7 @@ def test_observer_rejects_graph_replacement_during_snapshot():
     """
     A deleted and recreated graph cannot share the first incarnation's observation.
     """
-    from polyad.api.errors import Unavailable
+    from polyad.api.http.errors import Unavailable
 
     api = FakeAPI(resource("Graph", "pipeline", {"nodes": []}))
     original = api.get

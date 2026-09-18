@@ -34,13 +34,15 @@ operator:
     ## @param operator.resources.requests [object] Settings for operator.resources.requests; configure the fields below.
     requests:
       ## @param operator.resources.requests.cpu [string] Requested operator CPU, required for CPU autoscaling CPU requests are needed when enabling the CPU HPA.
-      cpu: 100m # CPU requests are needed when enabling the CPU HPA.
+      cpu: '1'
       ## @param operator.resources.requests.memory [string] Requested operator memory, required when the HPA memory metric is enabled Required for the memory metric; its target is not based on limits.
-      memory: 128Mi # Required for the memory metric; its target is not based on limits.
+      memory: 1Gi
     ## @param operator.resources.limits [object] Settings for operator.resources.limits; configure the fields below.
     limits:
+      ## @param operator.resources.limits.cpu [string] CPU limit; match the request to retain Guaranteed QoS
+      cpu: '1'
       ## @param operator.resources.limits.memory [string] Operator memory limit
-      memory: 512Mi
+      memory: 1Gi
 
 ## @param architecture [object] Settings for architecture; configure the fields below.
 architecture:

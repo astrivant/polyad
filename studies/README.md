@@ -18,6 +18,10 @@ Repeatable experiments keep their recipes here and their execution code in
 No cloud measurements are bundled initially. Recorded results must come from an
 actual run; the offline smoke checks validate the harness, not operator capacity.
 
+Each study keeps deployment manifests, overlays, plans and its `scenario.json`
+under `studies/NAME/fixtures/`. The study README and published `results.json`
+remain at the study root. Shared execution code stays in `polyad-benchmarks`.
+
 ## Refresh protocol
 
 Following the `hypothesis-helm` study workflow, `polyad-benchmarks-refresh` has

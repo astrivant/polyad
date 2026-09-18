@@ -69,11 +69,13 @@ rootControlPlane:
         ## @param rootControlPlane.pools[].resources.requests [object] Settings for rootControlPlane.pools[].resources.requests; configure the fields below.
         requests:
           ## @param rootControlPlane.pools[].resources.requests.cpu [string] Kubernetes CPU quantity; requests reserve scheduling capacity and limits cap usage.
-          cpu: 250m
+          cpu: '1'
           ## @param rootControlPlane.pools[].resources.requests.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
-          memory: 256Mi
+          memory: 1Gi
         ## @param rootControlPlane.pools[].resources.limits [object] Settings for rootControlPlane.pools[].resources.limits; configure the fields below.
         limits:
+          ## @param rootControlPlane.pools[].resources.limits.cpu [string] CPU limit; match the request to retain Guaranteed QoS
+          cpu: '1'
           ## @param rootControlPlane.pools[].resources.limits.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
           memory: 1Gi
   # Optional complete workload-cluster transport registry, using the peer shape

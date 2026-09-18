@@ -34,7 +34,7 @@ polyad_automated_sync = true
 # Keep manual sync while setting published images. Sync never starts load traffic.
 benchmarks_enabled = true
 benchmarks_automated_sync = false
-# benchmarks_values_files = ["values-steady.yaml", "../../studies/load/gke-values.yaml"]
+# benchmarks_values_files = ["values-steady.yaml", "../../studies/load/fixtures/gke-values.yaml"]
 # benchmarks_values_override = <<-YAML
 #   polyadResources:
 #     variables:

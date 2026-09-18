@@ -14,7 +14,7 @@ from cattrs.errors import CattrsError
 
 from polyad.api.connections.consent import confirmed, decisions
 from polyad.api.connections.store import FINALIZER, ConnectionSettings
-from polyad.api.errors import Conflict, Forbidden, Unavailable
+from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.compiler.passes.network import NetworkScope
 from polyad.graph.temporary import ANNOTATION, CLEANUP, MAX_CONNECTIONS, active_entries, deadline, entries, overlay
 from polyad.operator.coordination.contracts import expires_before

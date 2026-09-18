@@ -16,8 +16,8 @@ from attrs import evolve
 from cattrs.errors import CattrsError
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.errors import Conflict, Forbidden
-from polyad.api.throughput import report_throughput
+from polyad.api.http.errors import Conflict, Forbidden
+from polyad.api.workloads.throughput import report_throughput
 from polyad.operator.policies.throughput import SAMPLE, STATE, reconcile_throughput
 from polyad.operator.reconciliation.controller import Controller
 from polyad_types import GraphAccess, ThroughputSample

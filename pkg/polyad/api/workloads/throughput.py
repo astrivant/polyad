@@ -9,7 +9,7 @@ import os
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from polyad.api.errors import Conflict, Forbidden
+from polyad.api.http.errors import Conflict, Forbidden
 from polyad.events.visibility import observation_ancestry, permitted_observation, public_observation
 from polyad.operator.policies.throughput import SAMPLE
 from polyad_types.codec import to_dict

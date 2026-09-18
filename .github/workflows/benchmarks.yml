@@ -36,7 +36,7 @@ jobs:
           mkdir -p .cache/benchmarks/smoke
           poetry --project pkg/polyad-benchmarks run python -m pytest -c pyproject.toml -o addopts='' pkg/tests/test_benchmarks.py --junitxml=.cache/benchmarks/smoke/pytest.xml
           helm lint charts/polyad-benchmarks
-          helm template study charts/polyad-benchmarks -f studies/load/gke-values.yaml > .cache/benchmarks/smoke/fixture.yaml
+          helm template study charts/polyad-benchmarks -f studies/load/fixtures/gke-values.yaml > .cache/benchmarks/smoke/fixture.yaml
       - uses: actions/upload-artifact@v4
         if: always()
         with:

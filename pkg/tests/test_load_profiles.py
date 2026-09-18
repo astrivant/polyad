@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 import pytest
 from cattrs.errors import CattrsError
 
-from polyad.api.throughput import report_throughput
+from polyad.api.workloads.throughput import report_throughput
 from polyad_types import DemandSample, GraphAccess, ThroughputSample
 from polyad_types.topology import topology
 from tests.test_throughput import feed, fixture

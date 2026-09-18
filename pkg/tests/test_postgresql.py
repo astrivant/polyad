@@ -13,8 +13,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from polyad.api.metrics.builder import MetricsAPIBuilder
 from polyad.auth.store import CredentialStore
-from polyad.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
 from polyad.operator.adapters.postgresql import StateStore, state_document
 from polyad_types.auth import APIKey

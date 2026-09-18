@@ -622,6 +622,19 @@
               "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/peers"
             }
           }
+        },
+        "proxyResources": {
+          "type": "object",
+          "description": "Equal requests and limits for injected operator and observer Istio containers, in addition to operator resources.",
+          "additionalProperties": false,
+          "properties": {
+            "cpu": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/proxyResources/properties/cpu"
+            },
+            "memory": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/proxyResources/properties/memory"
+            }
+          }
         }
       }
     },
@@ -11577,7 +11590,8 @@
             "install",
             "operator",
             "ingress",
-            "multicluster"
+            "multicluster",
+            "proxyResources"
           ],
           "properties": {
             "enabled": {
@@ -11798,6 +11812,25 @@
                   }
                 }
               ]
+            },
+            "proxyResources": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cpu",
+                "memory"
+              ],
+              "description": "Equal requests and limits for injected operator and observer Istio containers, in addition to operator resources.",
+              "properties": {
+                "cpu": {
+                  "$ref": "#/definitions/helmValues/definitions/resourceQuantity",
+                  "description": "CPU request and limit for injected proxy and init containers."
+                },
+                "memory": {
+                  "$ref": "#/definitions/helmValues/definitions/resourceQuantity",
+                  "description": "Memory request and limit for injected proxy and init containers."
+                }
+              }
             }
           },
           "allOf": [

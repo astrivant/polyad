@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from polyad.events.builder import EventAPIBuilder
+from polyad.api.events.builder import EventAPIBuilder
 from polyad.events.store import EventStore, TopologyReplaced
 from polyad.events.topology import neighbors, topology_snapshot
 from polyad.operator.lifecycle import handlers

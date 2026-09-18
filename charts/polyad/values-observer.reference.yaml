@@ -30,15 +30,15 @@ observer:
     ## @param observer.resources.requests [object] Settings for observer.resources.requests; configure the fields below.
     requests:
       ## @param observer.resources.requests.cpu [string] Kubernetes CPU quantity; requests reserve scheduling capacity and limits cap usage.
-      cpu: 100m
+      cpu: '1'
       ## @param observer.resources.requests.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
-      memory: 128Mi
+      memory: 1Gi
     ## @param observer.resources.limits [object] Settings for observer.resources.limits; configure the fields below.
     limits:
       ## @param observer.resources.limits.cpu [string] Kubernetes CPU quantity; requests reserve scheduling capacity and limits cap usage.
       cpu: '1'
       ## @param observer.resources.limits.memory [string] Kubernetes memory quantity; requests reserve capacity and limits bound container memory.
-      memory: 512Mi
+      memory: 1Gi
   ## @param observer.mesh [boolean] Enable native sidecar injection, strict mTLS and source-identity authorization for observer Pods Set true only with mesh.enabled, then supply allowed principals.
   mesh: false # Set true only with mesh.enabled, then supply allowed principals.
   ## @param observer.principals [array] Exact source principals allowed to read the observer when observer.mesh is enabled Exact mTLS identities; enforced when observer.mesh=true.

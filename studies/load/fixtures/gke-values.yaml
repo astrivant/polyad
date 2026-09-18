@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../charts/polyad-benchmarks/values.schema.json
+# yaml-language-server: $schema=../../../charts/polyad-benchmarks/values.schema.json
 ## @param polyadResources [object] Settings for polyadResources.
 polyadResources:
   ## @param polyadResources.variables [object] Benchmark images, bounded arrivals and graph-managed Pod settings.

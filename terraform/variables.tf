@@ -159,7 +159,7 @@ variable "benchmarks_enabled" {
 variable "benchmarks_values_files" {
   description = "Ordered values paths relative to charts/polyad-benchmarks in polyad_revision; choose a test profile before the GKE placement overlay."
   type        = list(string)
-  default     = ["values-smoke.yaml", "../../studies/load/gke-values.yaml"]
+  default     = ["values-smoke.yaml", "../../studies/load/fixtures/gke-values.yaml"]
 }
 
 variable "benchmarks_values_override" {

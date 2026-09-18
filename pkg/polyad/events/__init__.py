@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.events.builder import EventAPIBuilder as EventAPIBuilder
+    from polyad.api.events.builder import EventAPIBuilder as EventAPIBuilder
     from polyad.events.store import EventStore as EventStore
 
 __all__ = ["EventAPIBuilder", "EventStore"]
@@ -29,9 +29,9 @@ def __getattr__(name: str) -> Any:
     Raises:
         AttributeError: The requested name is not a public export.
     """
-    modules = {"EventAPIBuilder": "builder", "EventStore": "store"}
+    modules = {"EventAPIBuilder": "polyad.api.events.builder", "EventStore": "polyad.events.store"}
     if name not in modules:
         raise AttributeError(name)
-    value = getattr(import_module(f"polyad.events.{modules[name]}"), name)
+    value = getattr(import_module(modules[name]), name)
     globals()[name] = value
     return value

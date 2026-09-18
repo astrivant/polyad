@@ -11,7 +11,7 @@ from attrs import evolve
 
 from polyad.api.connections.consent import endpoint
 from polyad.api.connections.paths import identities, path
-from polyad.api.errors import Conflict, Forbidden, Unavailable
+from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.events.access import require_scope
 from polyad_types.codec import converter
 from polyad_types.requests import ConnectionRequest

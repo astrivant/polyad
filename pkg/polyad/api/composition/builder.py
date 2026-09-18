@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 
 from attrs import evolve, field, frozen
 
-from polyad.api.app import _build_app
-from polyad.api.limits import RateLimitPolicy
+from polyad.api.composition.app import _build_app
+from polyad.api.http.limits import RateLimitPolicy
 from polyad.auth.http import Access
 from polyad.auth.policy import public_demo
 from polyad_types.requests import ActivationRequest, CompositionRequest

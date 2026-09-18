@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from attrs import field, frozen
 from flask import g, jsonify, request
 
-from polyad.api.application import Routes
+from polyad.api.http.application import Routes
 from polyad.auth.policy import public_demo
 from polyad.cache import cache_url
 from polyad.compiler.passes.composition import request_name

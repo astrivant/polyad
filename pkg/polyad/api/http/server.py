@@ -15,9 +15,9 @@ from waitress import wasyncore
 from waitress.server import create_server
 from waitress.task import ThreadedTaskDispatcher
 
-from polyad.api.application import create_application
-from polyad.api.errors import RequestError, Unavailable
-from polyad.api.limits import RateLimitPolicy
+from polyad.api.http.application import create_application
+from polyad.api.http.errors import RequestError, Unavailable
+from polyad.api.http.limits import RateLimitPolicy
 from polyad.auth.http import Access
 from polyad.operator.coordination.pulses import PulseDeferred
 from polyad.operator.lifecycle.health import lifecycle
@@ -94,7 +94,7 @@ class APIServer:
             return None
 
         if self.websockets:
-            from polyad.api.websocket import WebSocketServer
+            from polyad.api.http.websocket import WebSocketServer
 
             self.server = WebSocketServer(self.app, host, selected, self.stream_slots, self.stopping)
             port_domains = {str(port): name for name, port in selected.items() if port}
@@ -242,10 +242,10 @@ class APIServer:
         Returns:
             None: Routes share the process application and Kubernetes intake adapter.
         """
-        from polyad.api.activations import ActivationStore
-        from polyad.api.builder import APIBuilder
-        from polyad.api.store import CompositionStore
-        from polyad.api.throughput import report_throughput
+        from polyad.api.composition.builder import APIBuilder
+        from polyad.api.composition.store import CompositionStore
+        from polyad.api.workloads.activations import ActivationStore
+        from polyad.api.workloads.throughput import report_throughput
 
         api = self.api
         store = CompositionStore(api, namespace)
@@ -320,7 +320,7 @@ class APIServer:
         Returns:
             None: Streaming routes use the same server and shutdown signal.
         """
-        from polyad.events.builder import EventAPIBuilder
+        from polyad.api.events.builder import EventAPIBuilder
         from polyad.events.discovery import Directory
         from polyad.events.rebalance import Rebalancer, configuration
         from polyad.events.settings import settings_from_environment
@@ -387,7 +387,7 @@ class APIServer:
         Returns:
             None: Metrics use shared HTTP workers and credential storage.
         """
-        from polyad.metrics.builder import MetricsAPIBuilder
+        from polyad.api.metrics.builder import MetricsAPIBuilder
 
         builder = MetricsAPIBuilder(access=self.access).with_store(store)
         if token:

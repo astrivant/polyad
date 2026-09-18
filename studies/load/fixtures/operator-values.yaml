@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# yaml-language-server: $schema=../../../charts/polyad/values.reference.schema.json
 ## @param metrics [object] Settings for metrics.
 metrics:
   ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement

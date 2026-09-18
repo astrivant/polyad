@@ -36,7 +36,7 @@ from polyad_types.resources import BOUNDARY_KINDS
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.api.server import APIServer
+    from polyad.api.http.server import APIServer
     from polyad.events.store import EventStore
     from polyad.metrics.store import MetricsStore
     from polyad.operator.adapters.postgresql import StateStore
@@ -121,7 +121,7 @@ async def startup(settings: kopf.OperatorSettings, **_: Any) -> None:
     queue = RefreshQueue(reconcile)
     queue.start()
     if any(serves(feature) for feature in ("API", "CONNECTIONS", "EVENTS", "METRICS")):
-        from polyad.api.server import APIServer
+        from polyad.api.http.server import APIServer
 
         http = APIServer(API())
     if serves("CONNECTIONS"):

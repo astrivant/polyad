@@ -103,15 +103,17 @@ operator:
   serviceAccess:
     ## @param operator.serviceAccess.discovery [string] Cluster is usable by demo callers, which have no named-key home graph.
     discovery: Cluster
-  ## @param operator.resources [object] Explicit requests let GKE reason about capacity as component copies grow.
+  ## @param operator.resources [object] Match the chart baseline: 1 CPU and 1Gi per operator container with Guaranteed QoS; right-size requests and limits together using Grafana.
   resources:
     ## @param operator.resources.requests [object] Reserved capacity per operator or component Pod.
     requests:
       ## @param operator.resources.requests.cpu [string] CPU request per Pod; increasing copies creates schedulable capacity demand.
-      cpu: 250m
-      ## @param operator.resources.requests.memory [string] Memory request per Pod, distinct from the container limit.
-      memory: 512Mi
-    ## @param operator.resources.limits [object] Bound memory without imposing a CPU throttle on this test baseline.
+      cpu: '1'
+      ## @param operator.resources.requests.memory [string] Memory request per container; match the limit to retain Guaranteed QoS.
+      memory: 1Gi
+    ## @param operator.resources.limits [object] Fixed CPU and memory caps matching requests for repeatable benchmarks.
     limits:
+      ## @param operator.resources.limits.cpu [string] CPU limit per container; match requests.cpu and record throttling when right-sizing.
+      cpu: '1'
       ## @param operator.resources.limits.memory [string] Maximum memory per Pod; record OOMs separately from scaling decisions.
       memory: 1Gi

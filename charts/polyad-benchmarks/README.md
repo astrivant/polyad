@@ -70,7 +70,7 @@ ramp or warm-up. These are starting experiments, not capacity claims.
 ```sh
 helm upgrade --install benchmarks charts/polyad-benchmarks -n polyad \
   -f charts/polyad-benchmarks/values-steady.yaml \
-  -f studies/load/gke-values.yaml
+  -f studies/load/fixtures/gke-values.yaml
 ```
 
 `values.yaml` holds common settings and selects smoke by default. The reusable
@@ -96,7 +96,7 @@ use these same templates to create isolated compositions with immutable plans.
 
 Optional dependencies provide Prometheus/Grafana, Tempo, and an OpenTelemetry
 Collector, with a ServiceMonitor and a starter dashboard. All are disabled by
-default; [the GKE overlay](../../studies/load/gke-values.yaml) enables them and
+default; [the GKE overlay](../../studies/load/fixtures/gke-values.yaml) enables them and
 separates producers, consumers and the operator across dedicated pools. The
 [standalone Argo CD UI](../../terraform/README.md#inspect-the-benchmark-application)
 can inspect the fixture Graph and its generated resources. Read the

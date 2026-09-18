@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING
 from cattrs.errors import CattrsError
 from flask import g, jsonify, request
 
-from polyad.api.application import Routes
-from polyad.api.errors import Conflict, Forbidden, Unauthorized, Unavailable
-from polyad.api.limits import install_limits
+from polyad.api.http.application import Routes
+from polyad.api.http.errors import Conflict, Forbidden, Unauthorized, Unavailable
+from polyad.api.http.limits import install_limits
 from polyad.auth.policy import public_demo
 from polyad.compiler.passes.schema import structural_schema
 from polyad.operator.coordination.pulses import PulseDeferred
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from flask import Flask, Response
 
     from polyad.api.connections.store import Caller
-    from polyad.api.limits import RateLimitPolicy
+    from polyad.api.http.limits import RateLimitPolicy
 
 
 def build_app(

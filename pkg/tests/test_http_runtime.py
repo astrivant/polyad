@@ -15,12 +15,12 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from polyad.api.application import create_application
-from polyad.api.builder import APIBuilder
+from polyad.api.composition.builder import APIBuilder
 from polyad.api.connections.store import ConnectionSettings
-from polyad.api.server import APIServer
-from polyad.events.builder import EventAPIBuilder
-from polyad.metrics.builder import MetricsAPIBuilder
+from polyad.api.events.builder import EventAPIBuilder
+from polyad.api.http.application import create_application
+from polyad.api.http.server import APIServer
+from polyad.api.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
 from tests.test_temporary_connections import ConnectionAPI
 
@@ -65,15 +65,19 @@ def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch,
     """
     One dispatcher serves every API and reserves workers even when demo event slots are full.
     """
-    from polyad.api import server as module
+    from polyad.api.http import application, websocket
+    from polyad.api.http import server as module
+    from polyad.api.observations.app import build_app as observations
 
     monkeypatch.setenv("POLYAD_API_RATE_LIMIT_ENABLED", "false")
     monkeypatch.setenv("POLYAD_AUTH_MODE", "Disabled" if demo else "Required")
     monkeypatch.setenv("POLYAD_SERVICE_ACCESS", '{"discovery":"Cluster"}')
     monkeypatch.setenv("POLYAD_CACHE_URL", "redis://127.0.0.1:6379/0")
-    application_factory = Mock(wraps=module.create_application)
+    application_factory = Mock(wraps=application.Application)
+    websocket_factory = Mock(wraps=websocket.WebSocketServer)
     server_factory = Mock(wraps=module.create_server)
-    monkeypatch.setattr(module, "create_application", application_factory)
+    monkeypatch.setattr(application, "Application", application_factory)
+    monkeypatch.setattr(websocket, "WebSocketServer", websocket_factory)
     monkeypatch.setattr(module, "create_server", server_factory)
 
     async def run():
@@ -90,6 +94,10 @@ def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch,
         runtime.connections(ConnectionSettings("test"))
         runtime.events(store, "test", "reader", connections=1, websockets=websockets)
         runtime.metrics(MetricsStore(), "scraper")
+        observations(Mock(), "observer", application=runtime.app)
+        runtime.ports["observations"] = 8094
+        assert set(runtime.app.blueprints) == {"composition", "events", "metrics", "connections", "observations"}
+        assert all(routes.application is runtime.app for routes in runtime.app.extensions["polyad.routes"].values())
         assert application_factory.call_count == 1
         assert not server_factory.called
         with ExitStack() as stack:
@@ -101,13 +109,21 @@ def test_one_server_keeps_metrics_available_with_full_event_streams(monkeypatch,
         with pytest.raises(RuntimeError, match="only be started once"):
             runtime.start(host="127.0.0.1", ports=ports)
         assert server_factory.call_count == (0 if websockets else 1)
+        assert websocket_factory.call_count == (1 if websockets else 0)
+        assert application_factory.call_count == 1
         if not websockets:
             assert server_factory.call_args.kwargs["threads"] == 9
         else:
             assert runtime.server.workers == 9
 
         def fetch(domain, path="/openapi.json", method="GET"):
-            token = {"composition": "writer", "connections": "projected", "events": "reader", "metrics": "scraper"}[domain]
+            token = {
+                "composition": "writer",
+                "connections": "projected",
+                "events": "reader",
+                "metrics": "scraper",
+                "observations": "observer",
+            }[domain]
             return urllib.request.urlopen(
                 urllib.request.Request(
                     f"http://127.0.0.1:{ports[domain]}{path}",

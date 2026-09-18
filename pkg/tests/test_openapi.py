@@ -64,7 +64,7 @@ def test_openapi_schema_matches_persisted_receipt_and_audit_responses():
     """
     import asyncio
 
-    from polyad.api.store import CompositionStore
+    from polyad.api.composition.store import CompositionStore
     from tests.test_composition_api import request_value
     from tests.test_operator import FakeAPI
 

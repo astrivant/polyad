@@ -11,8 +11,8 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.api import create_app
-from polyad.api.app import Conflict
-from polyad.api.store import CompositionStore
+from polyad.api.composition.app import Conflict
+from polyad.api.composition.store import CompositionStore
 from polyad.compiler.passes.composition import compile_composition, read_receipt, receipt_spec, request_name
 from polyad.operator.coordination.leases import Coordinator
 from polyad.operator.policies.rules import RuleViolation

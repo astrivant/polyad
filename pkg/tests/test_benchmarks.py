@@ -124,7 +124,7 @@ def test_chart_uses_crd_templates_and_explicit_pulses():
             "--namespace",
             "polyad",
             "--values",
-            str(ROOT / "studies/load/gke-values.yaml"),
+            str(ROOT / "studies/load/fixtures/gke-values.yaml"),
             "--set",
             "polyadResources.variables.secretName=study-access",
             "--set",
@@ -249,7 +249,7 @@ def test_client_plan_uses_canonical_graph_with_immutable_per_run_settings():
     """
     Configure replica counts through composition while retaining administrator rule references.
     """
-    configured = json.loads((ROOT / "studies/load/plan.json").read_text())
+    configured = json.loads((ROOT / "studies/load/fixtures/plan.json").read_text())
     document = plan.composition_plan(configured, ROOT / "charts/polyad-benchmarks", "polyad")
     objects = {item["id"]: item for item in document["objects"]}
     assert document["requestId"] == configured["requestId"]
@@ -283,7 +283,7 @@ def test_monitoring_and_reloader_target_the_operator_from_fixtures_pool():
             "-n",
             "polyad",
             "-f",
-            str(ROOT / "studies/load/gke-values.yaml"),
+            str(ROOT / "studies/load/fixtures/gke-values.yaml"),
         ],
         text=True,
     )

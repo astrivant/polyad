@@ -167,7 +167,7 @@ def test_activated_subgraph_propagates_receipt_to_descendants():
     """
     A leaf inside an activated graph receives that graph's receipt and concrete instance UID.
     """
-    from polyad.api.activations import ActivationStore
+    from polyad.api.workloads.activations import ActivationStore
 
     async def scenario():
         graph = resource("Graph", "pulsing", {"mode": "persistent", "nodes": [{"name": "target", "kind": "Graph", "ref": "batch"}]})

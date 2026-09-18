@@ -10,18 +10,18 @@ from cattrs.errors import CattrsError
 from flask import jsonify, request
 from werkzeug.exceptions import HTTPException
 
-from polyad.api.application import Routes
-from polyad.api.errors import Conflict as Conflict
-from polyad.api.errors import Forbidden
-from polyad.api.errors import Unavailable as Unavailable
-from polyad.api.limits import install_limits
-from polyad.api.openapi import openapi_document
+from polyad.api.composition.openapi import openapi_document
+from polyad.api.http.application import Routes
+from polyad.api.http.errors import Conflict as Conflict
+from polyad.api.http.errors import Forbidden
+from polyad.api.http.errors import Unavailable as Unavailable
+from polyad.api.http.limits import install_limits
+from polyad.api.workloads.routes import register_routes
 from polyad.auth.http import install
 from polyad.auth.policy import public_demo
 from polyad.compiler.passes.composition import compile_composition
 from polyad_types.codec import converter
-from polyad_types.requests import ActivationRequest, CompositionRequest, identity
-from polyad_types.throughput import ThroughputSample
+from polyad_types.requests import CompositionRequest, identity
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -29,8 +29,10 @@ if TYPE_CHECKING:
 
     from flask import Flask, Response
 
-    from polyad.api.limits import RateLimitPolicy
+    from polyad.api.http.limits import RateLimitPolicy
     from polyad.auth.http import Access
+    from polyad_types.requests import ActivationRequest
+    from polyad_types.throughput import ThroughputSample
 
 
 def _build_app(
@@ -117,45 +119,7 @@ def _build_app(
         result = lookup(identity(request_id), True)
         return (jsonify(result), 200) if result is not None else (jsonify(error="composition not found"), 404)
 
-    @app.post("/v1/activations")
-    def activation_submit() -> tuple[Response, int]:
-        value = converter.structure(request.get_json(), ActivationRequest)
-        if activate is None:
-            raise Unavailable("activation service is not configured")
-        return jsonify(activate(value)), 202
-
-    @app.get("/v1/activations/<request_id>")
-    def activation_status(request_id: str) -> tuple[Response, int]:
-        if activation_lookup is None:
-            raise Unavailable("activation service is not configured")
-        value = activation_lookup(identity(request_id))
-        return (jsonify(value), 200) if value else (jsonify(error="activation not found"), 404)
-
-    @app.post("/v1/activations/<request_id>/stop")
-    def activation_cancel(request_id: str) -> tuple[Response, int]:
-        if activation_stop is None:
-            raise Unavailable("activation service is not configured")
-        value = activation_stop(identity(request_id))
-        return (jsonify(value), 202) if value else (jsonify(error="activation not found"), 404)
-
-    @app.post("/v1/throughput")
-    def report() -> tuple[Response, int]:
-        if throughput is None:
-            raise Unavailable("throughput service is not configured")
-        body = request.get_json()
-        if not isinstance(body, dict) or type(body.get("generation")) is not int:
-            raise ValueError("throughput generation must be an integer")
-        if any(type(body.get(name)) not in (int, float) for name in ("offeredPerSecond", "completedPerSecond")):
-            raise ValueError("throughput rates must be numbers")
-        traffic = body.get("traffic", [])
-        if not isinstance(traffic, list) or any(
-            not isinstance(item, dict)
-            or type(item.get("generation")) is not int
-            or any(type(item.get(name)) not in (int, float) for name in ("completedPerSecond", "headroomPerSecond"))
-            for item in traffic
-        ):
-            raise ValueError("traffic observations require integer generations and numeric rates")
-        return jsonify(throughput(converter.structure(body, ThroughputSample))), 202
+    register_routes(app, activate, activation_lookup, activation_stop, throughput)
 
     schema = openapi_document(title, version)
     if not authenticated:
@@ -188,6 +152,6 @@ def create_app(
     Returns:
         Flask: Authenticated composition application.
     """
-    from polyad.api.builder import APIBuilder
+    from polyad.api.composition.builder import APIBuilder
 
     return APIBuilder().with_handlers(submit, lookup).with_bearer_token(token).build()

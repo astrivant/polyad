@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, Mock
 import jsonschema
 import pytest
 
+from polyad.api.events.builder import EventAPIBuilder
 from polyad.events import rebalance as module
-from polyad.events.builder import EventAPIBuilder
 from polyad.events.rebalance import Rebalancer
 from polyad_client import Client
 from polyad_client.client import APIError
@@ -289,7 +289,7 @@ def test_direct_socket_preserves_authority_and_receives_real_stream(monkeypatch,
     """
     from flask import request
 
-    from polyad.api.server import APIServer
+    from polyad.api.http.server import APIServer
     from tests.test_temporary_connections import ConnectionAPI
 
     monkeypatch.setenv("POLYAD_API_RATE_LIMIT_ENABLED", "false")

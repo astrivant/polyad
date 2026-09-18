@@ -17,8 +17,8 @@ from openapi_spec_validator import validate
 from websockets.exceptions import ConnectionClosedError, InvalidStatus
 from websockets.sync.client import connect
 
-from polyad.api.server import APIServer
-from polyad.events.builder import EventAPIBuilder
+from polyad.api.events.builder import EventAPIBuilder
+from polyad.api.http.server import APIServer
 from polyad.events.store import CursorExpired
 from polyad_client import APIError, Client
 from tests.test_temporary_connections import ConnectionAPI

@@ -12,7 +12,7 @@ import pytest
 import yaml
 from jsonschema import validate
 
-from polyad.api.store import CompositionStore
+from polyad.api.composition.store import CompositionStore
 from polyad.compiler.passes.composition import receipt_spec, request_name
 from polyad.compiler.passes.daemon import compile_daemon, execution_pod
 from polyad.operator.observability.graph_status import observed

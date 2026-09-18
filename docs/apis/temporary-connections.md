@@ -465,7 +465,7 @@ a 128 KiB annotation budget. The endpoint uses the chart's shared
 
 The HTTP routes and authenticated receipt store live in `polyad.api.connections`.
 Composition, connection, event and metrics blueprints share one Flask application,
-one Waitress runtime and one shutdown lifecycle in `polyad.api.server`. Listener
+one Waitress runtime and one shutdown lifecycle in `polyad.api.http.server`. Listener
 ports retain independent enablement and authentication policies. See the
 [HTTP runtime](composition-api.md) for worker reservations and socket-based routing. `polyad.graph.temporary` defines the
 request and effective topology overlay. `polyad.operator.policies.connections` performs

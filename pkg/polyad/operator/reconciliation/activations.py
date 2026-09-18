@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from attrs import evolve
 
-from polyad.api.activations import ActivationStore
+from polyad.api.workloads.activations import ActivationStore
 from polyad.compiler.activation import activation_name
 from polyad.compiler.passes.children import child_name
 from polyad.compiler.passes.identity import inject_environment

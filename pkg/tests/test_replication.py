@@ -9,7 +9,7 @@ import asyncio
 import pytest
 from openapi_spec_validator import validate
 
-from polyad.metrics.builder import MetricsAPIBuilder
+from polyad.api.metrics.builder import MetricsAPIBuilder
 from polyad.metrics.store import MetricsStore
 from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad.operator.reconciliation.replication import replica_selector

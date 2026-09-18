@@ -85,7 +85,7 @@ def prepare(project: Path, root: Path) -> dict[str, Any]:
     root.mkdir(parents=True, exist_ok=False)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=project, text=True).strip()
     for study in STUDIES:
-        config = json.loads((project / "studies" / study / "scenario.json").read_text())
+        config = json.loads((project / "studies" / study / "fixtures" / "scenario.json").read_text())
         write_json(root / "inputs" / f"{study}.json", config)
     provenance = {
         "revision": revision,

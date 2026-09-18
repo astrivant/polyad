@@ -29,7 +29,7 @@ async def main():
     api.writes = WriteBacklog()
     with patch.object(handlers, 'API', return_value=api):
         if any(serves(f) for f in ('API', 'EVENTS', 'CONNECTIONS', 'METRICS')):
-            from polyad.api.server import APIServer
+            from polyad.api.http.server import APIServer
             with patch.object(APIServer, 'start'):
                 await handlers.startup(kopf.OperatorSettings())
         else:
@@ -148,9 +148,9 @@ def test_split_helm_components_only_import_their_endpoint_families():
         if component == "executor":
             assert_absent(result["modules"], "flask", "waitress", "prometheus_client")
         if component == "gateway":
-            assert_absent(result["modules"], "polyad.metrics.builder", "prometheus_client")
+            assert_absent(result["modules"], "polyad.api.metrics.builder", "prometheus_client")
         if component == "telemetry":
-            assert_absent(result["modules"], "polyad.api.builder", "polyad.events.builder", "polyad.api.connections.app")
+            assert_absent(result["modules"], "polyad.api.composition.builder", "polyad.api.events.builder", "polyad.api.connections.app")
 
 
 @pytest.mark.parametrize("backend", ["Builtin", "FlaskHTTPAuth"])
@@ -202,11 +202,11 @@ def test_lazy_public_exports_preserve_import_identity():
         """
 import json
 from polyad.api import APIBuilder, create_app, RateLimitPolicy
-from polyad.api.builder import APIBuilder as Builder
+from polyad.api.composition.builder import APIBuilder as Builder
 from polyad.events import EventAPIBuilder, EventStore
 from polyad.events.store import EventStore as Store
 from polyad.metrics import MetricsAPIBuilder
-from polyad.metrics.builder import MetricsAPIBuilder as Metrics
+from polyad.api.metrics.builder import MetricsAPIBuilder as Metrics
 assert APIBuilder is Builder and EventStore is Store and MetricsAPIBuilder is Metrics
 print(json.dumps(True))
 """,
@@ -250,5 +250,7 @@ import polyad.operator.observer
 print(json.dumps(sorted(sys.modules)))
 """,
     )
-    assert "polyad.api.observations" in result
-    assert_absent(result, "polyad.api.builder", "polyad.events.builder", "polyad.metrics.builder", "psycopg", "opentelemetry.sdk")
+    assert "polyad.api.observations.app" in result
+    assert_absent(
+        result, "polyad.api.composition.builder", "polyad.api.events.builder", "polyad.api.metrics.builder", "psycopg", "opentelemetry.sdk"
+    )

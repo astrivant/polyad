@@ -172,18 +172,20 @@ operator:
     tag: '0.0.1-alpha3'
     ## @param operator.image.pullPolicy [string] Operator image pull policy
     pullPolicy: IfNotPresent
-  ## @param operator.resources [object] Settings for operator.resources.
+  ## @param operator.resources [object] Per operator container baseline of 1 CPU and 1Gi; keep requests equal to limits when right-sizing for Guaranteed QoS. Applies to dense, split and worker processes.
   resources:
     ## @param operator.resources.requests [object] Settings for operator.resources.requests.
     requests:
-      ## @param operator.resources.requests.cpu [string] Requested operator CPU, required for CPU autoscaling
-      cpu: 100m
-      ## @param operator.resources.requests.memory [string] Requested operator memory, required when the HPA memory metric is enabled
-      memory: 128Mi
+      ## @param operator.resources.requests.cpu [string] Requested operator CPU; match limits.cpu for Guaranteed QoS and use this baseline for CPU autoscaling
+      cpu: '1'
+      ## @param operator.resources.requests.memory [string] Requested operator memory; match limits.memory for Guaranteed QoS and use this baseline for memory autoscaling
+      memory: 1Gi
     ## @param operator.resources.limits [object] Settings for operator.resources.limits.
     limits:
-      ## @param operator.resources.limits.memory [string] Operator memory limit
-      memory: 512Mi
+      ## @param operator.resources.limits.cpu [string] CPU limit; match the request to retain Guaranteed QoS
+      cpu: '1'
+      ## @param operator.resources.limits.memory [string] Operator memory limit; match the request when right-sizing from Grafana
+      memory: 1Gi
   ## @param operator.terminationGracePeriodSeconds [integer] Time allowed for operator shutdown and outstanding API calls
   terminationGracePeriodSeconds: 60
 
@@ -640,6 +642,12 @@ mesh:
       hosts: ['*.local']
     ## @param mesh.multicluster.peers [array] Remote transport registrations; see docs/deployment/multicluster.md for same-network and gateway configurations
     peers: []
+  ## @param mesh.proxyResources [object] Equal requests and limits for injected Istio containers in operator and observer Pods; added to the Python container allocation
+  proxyResources:
+    ## @param mesh.proxyResources.cpu [string] CPU request and limit for the Istio proxy and init containers; tune alongside operator CPU from Grafana
+    cpu: 100m
+    ## @param mesh.proxyResources.memory [string] Memory request and limit for the Istio proxy and init containers; matching pairs preserve Guaranteed QoS
+    memory: 128Mi
   ## @param mesh.operator [object] Settings for mesh.operator.
   operator:
     ## @param mesh.operator.enabled [boolean] Inject the operator pods and authorize their API and event ports with Istio
@@ -747,20 +755,20 @@ observer:
   principals: []
   ## @param observer.peers [array] NetworkPolicy peers allowed to reach observer TCP 8094 when networkPolicy.enabled is set
   peers: []
-  ## @param observer.resources [object] CPU and memory requests and limits for the read replicas
+  ## @param observer.resources [object] Per observer container baseline of 1 CPU and 1Gi; keep requests equal to limits for Guaranteed QoS
   resources:
     ## @param observer.resources.requests [object] Settings for observer.resources.requests.
     requests:
       ## @param observer.resources.requests.cpu [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
-      cpu: 100m
+      cpu: '1'
       ## @param observer.resources.requests.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
-      memory: 128Mi
+      memory: 1Gi
     ## @param observer.resources.limits [object] Settings for observer.resources.limits.
     limits:
       ## @param observer.resources.limits.cpu [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
       cpu: '1'
       ## @param observer.resources.limits.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
-      memory: 512Mi
+      memory: 1Gi
 
 ## @section Advance graph capacity
 ## @param capacity [object] Settings for capacity.

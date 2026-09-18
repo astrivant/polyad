@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from flask import Flask, Response
 
-    from polyad.api.application import Routes
+    from polyad.api.http.application import Routes
     from polyad.auth.lanes import Lanes
     from polyad.auth.store import CredentialStore
 

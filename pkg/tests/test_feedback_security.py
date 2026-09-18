@@ -173,6 +173,7 @@ def test_auth_database_stores_verifiers_and_honors_revocation():
     store.pool.connection.return_value.__enter__ = Mock(return_value=connection)
     store.pool.connection.return_value.__exit__ = Mock(return_value=False)
     store.scope, store.lock, store.initialized = "test/control-plane", Lock(), False
+    store.cipher = None
     key = APIKey(name="client", direction="Inbound", existingSecret="key", endpoints=("events",))
     secret = "a-long-random-bearer-value"
     assert store.permitted("services", key, secret)

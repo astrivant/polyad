@@ -20,7 +20,7 @@ pip install ./pkg/polyad-types ./pkg/client ./pkg/polyad-benchmarks
 
 ## Commands
 
-- `polyad-benchmarks-plan --plan studies/load/plan.json --render-only`: render a
+- `polyad-benchmarks-plan --plan studies/load/fixtures/plan.json --render-only`: render a
   composition from a plan using the canonical Helm fixture templates. Omit
   `--render-only` to submit it through the client. Requires Helm and chart dependencies.
 - `polyad-benchmarks start --graph-uid UID --run-id RUN`: explicitly activate the
@@ -35,7 +35,7 @@ pip install ./pkg/polyad-types ./pkg/client ./pkg/polyad-benchmarks
 
 ## Plans and replicas
 
-The [example plan](../../studies/load/plan.json) specifies a unique `requestId`,
+The [example plan](../../studies/load/fixtures/plan.json) specifies a unique `requestId`,
 fixture replicas, batch execution concurrency, images, placement and arrival
 parameters. `composition_plan` renders the versioned chart into a typed
 `CompositionRequest`; `submit_plan(client, plan, chart, namespace)` submits it.

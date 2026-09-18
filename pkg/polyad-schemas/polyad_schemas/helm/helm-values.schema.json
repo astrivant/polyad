@@ -1737,7 +1737,8 @@
         "install",
         "operator",
         "ingress",
-        "multicluster"
+        "multicluster",
+        "proxyResources"
       ],
       "properties": {
         "enabled": {
@@ -1958,6 +1959,25 @@
               }
             }
           ]
+        },
+        "proxyResources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu",
+            "memory"
+          ],
+          "description": "Equal requests and limits for injected operator and observer Istio containers, in addition to operator resources.",
+          "properties": {
+            "cpu": {
+              "$ref": "#/definitions/resourceQuantity",
+              "description": "CPU request and limit for injected proxy and init containers."
+            },
+            "memory": {
+              "$ref": "#/definitions/resourceQuantity",
+              "description": "Memory request and limit for injected proxy and init containers."
+            }
+          }
         }
       },
       "allOf": [

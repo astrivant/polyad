@@ -19,8 +19,8 @@ from kubernetes.client.exceptions import ApiException
 from polyad.api.connections.app import build_app
 from polyad.api.connections.consent import CONSENTS, confirmed, endpoint
 from polyad.api.connections.store import ConnectionSettings, ConnectionStore
-from polyad.api.errors import Conflict, Forbidden
-from polyad.events.builder import EventAPIBuilder
+from polyad.api.events.builder import EventAPIBuilder
+from polyad.api.http.errors import Conflict, Forbidden
 from polyad.events.store import EventStore
 from polyad.events.visibility import public_observation
 from polyad.graph.temporary import entries

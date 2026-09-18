@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# yaml-language-server: $schema=../../../charts/polyad/values.reference.schema.json
 # Layer on the operator release, not the benchmark release.
 # The study stack has no log backend: configure logs.url and enabled=true to add an existing Loki.
 ## @param telemetry [object] Optional namespace-scoped metrics, log and trace collectors with explicit backend destinations.

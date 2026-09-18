@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 from openapi_spec_validator import validate
 
-from polyad.events.builder import EventAPIBuilder
+from polyad.api.events.builder import EventAPIBuilder
 from polyad.events.store import CursorExpired, EventStore
 from polyad.events.topology import topology_snapshot
 from polyad.events.visibility import public_observation
@@ -196,7 +196,7 @@ def test_live_event_server_streams_and_stops_cleanly(monkeypatch):
     """
     import urllib.request
 
-    from polyad.api.server import APIServer
+    from polyad.api.http.server import APIServer
     from polyad.operator.adapters.kubernetes import API
 
     monkeypatch.setenv("POLYAD_CACHE_URL", os.environ["POLYAD_TEST_DRAGONFLY_URL"])
