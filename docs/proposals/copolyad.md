@@ -76,7 +76,8 @@ submit new compositions, and [atlas discovery](../apis/discovery.md) and
 find and connect to one another.
 
 Natural Selection would derive a composition from requirements and explicit
-capability descriptions. Discovery provides permitted identities and
+capability descriptions expressed in a [typed contract language and planning
+IR](copolyad-language.md). Discovery provides permitted identities and
 locations; the proposed capability catalog would describe what those services
 can do and what they require. Soul searching could then adapt an admitted
 composition within its approved settings.
@@ -139,7 +140,10 @@ unsatisfied rather than relax a region restriction or silently omit enrichment.
 ## Outcome requests and capability contracts
 
 The following are proposed contract contents, not finalized field names.
-Versioned, importable types and schemas should precede executable configuration.
+The [language and IR proposal](copolyad-language.md) provides concrete outcome
+and capability examples, type and semantic matching rules, and the boundary
+between Natural Selection's Contract IR and its selected Plan IR. Versioned,
+importable types and schemas should precede executable configuration.
 
 | Contract | Required information |
 | --- | --- |
@@ -259,7 +263,7 @@ be developed through repeatable [benchmark studies](../../studies/README.md).
 
 | Stage | Deliverable | Acceptance criteria |
 | --- | --- | --- |
-| Contract modeling | Versioned outcome, capability and receipt schemas | Reject ambiguous units, incompatible schemas and missing semantic prerequisites; preserve provenance |
+| Contract modeling | Versioned Contract IR, Plan IR and receipt schemas | Reject ambiguous units, incompatible schemas and missing semantic prerequisites; preserve provenance |
 | Offline planning | Deterministic planning over a small approved catalog | Produce inspectable candidates; explain unresolved requirements; distinguish infeasibility from exhausted search budgets |
 | Polyad integration | Authorized proposal submission and outcome correlation | Enforce live rules and local authority; preserve idempotency; reject stale plans and recover through targeted replanning |
 | Bounded feedback | Administrator-approved revisions after measured deviations | Respect cooldowns and search/change budgets; avoid oscillation, duplicate work and competing capacity assignments |
