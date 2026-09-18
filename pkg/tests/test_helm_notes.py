@@ -32,7 +32,8 @@ def test_default_notes_do_not_advertise_disabled_apis():
     text = notes()
     assert "No external API routes are configured" in text
     assert "Composition, events and metrics Services are disabled" in text
-    assert "http://127.0.0.1:8080/healthz" in text
+    assert "exec deployment/example-polyad -c operator -- python -m polyad.operator.lifecycle.probes" in text
+    assert "127.0.0.1:8080" not in text
     assert "helm get notes example -n apps" in text
     assert "/v1/" not in text and "/openapi.json" not in text
 

@@ -100,8 +100,8 @@ spec:
           command: [/usr/bin/tini, --, python, -m, polyad.operator.runtime]
           args:
             - --namespace={{ ternary .Values.worker.rootNamespace .Release.Namespace .Values.worker.enabled }}
-            - --liveness=http://0.0.0.0:8080/healthz
           env:
+            {{- include "polyad.podContextEnv" . | nindent 12 }}
             {{- include "polyad.tracingEnv" . | nindent 12 }}
             {{- include "polyad.postgresql.recordEncryptionEnv" . | nindent 12 }}
             - name: POLYAD_SERVICE_ACCESS
@@ -435,10 +435,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             exec:
-              command:
-                - python
-                - -c
-                - "import json,pathlib,urllib.request; assert not pathlib.Path('/tmp/polyad-events-draining').exists(); s=json.load(urllib.request.urlopen('http://localhost:8080/healthz',timeout=2))['scheduler']; assert s['initialized'] and s['worker'] and s['apiFresh'] and s['cacheFresh'] and s.get('attached',True)"
+              command: [python, -m, polyad.operator.lifecycle.probes, --ready]
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3

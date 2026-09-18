@@ -29,9 +29,9 @@ WORKDIR /app
 EXPOSE 8080 8090 8091 8092
 STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).close()"]
+    CMD ["python", "-m", "polyad.operator.lifecycle.probes"]
 ENTRYPOINT ["/usr/bin/tini", "--", "python", "-m", "polyad.operator.runtime"]
-CMD ["--liveness=http://0.0.0.0:8080/healthz"]
+CMD []
 
 FROM base AS build-tools
 ENV POETRY_NO_INTERACTION=1 \

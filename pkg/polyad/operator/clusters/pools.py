@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, cast
 
 import yaml  # type: ignore[import-untyped]
 
+from polyad.compiler.passes.identity import inject_environment
 from polyad.events.visibility import INTERNAL, public_observation
 from polyad.metrics.workloads import current_observation
 from polyad.operator.clusters.remote_scaling import INTENT, remote_revision
@@ -564,6 +565,7 @@ class PoolManager:
         container = next(item for item in pod["spec"]["containers"] if item["name"] == "operator")
         if "resources" in spec:
             container["resources"] = spec["resources"]
+        inject_environment(pod, {})
         env = {item["name"]: item for item in container.get("env", [])}
         for variable in ("POLYAD_AUTH_CONFIG_FILE", "POLYAD_AUTH_DATABASE_DSN_FILE"):
             env.pop(variable, None)

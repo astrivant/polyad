@@ -19,9 +19,34 @@ POD_FIELDS = {
     "POLYAD_POD_NAME": "metadata.name",
     "POLYAD_POD_UID": "metadata.uid",
     "POLYAD_POD_NAMESPACE": "metadata.namespace",
+    "POLYAD_POD_IP": "status.podIP",
+    "POLYAD_POD_IPS": "status.podIPs",
+    "POLYAD_HOST_IP": "status.hostIP",
+    "POLYAD_HOST_IPS": "status.hostIPs",
     "POLYAD_KUBERNETES_NODE_NAME": "spec.nodeName",
     "POLYAD_SERVICE_ACCOUNT_NAME": "spec.serviceAccountName",
 }
+RESOURCE_FIELDS = {
+    "POLYAD_CPU_REQUEST_MILLICORES": ("requests.cpu", "1m"),
+    "POLYAD_CPU_LIMIT_MILLICORES": ("limits.cpu", "1m"),
+    "POLYAD_MEMORY_REQUEST_BYTES": ("requests.memory", "1"),
+    "POLYAD_MEMORY_LIMIT_BYTES": ("limits.memory", "1"),
+}
+
+
+def pod_environment() -> list[dict[str, Any]]:
+    """
+    Describe local Kubernetes context, resolved by each container's own kubelet.
+
+    Returns:
+        list[dict[str, Any]]: Downward API identity, placement and resource environment selectors.
+    """
+    fields = [{"name": name, "valueFrom": {"fieldRef": {"apiVersion": "v1", "fieldPath": path}}} for name, path in POD_FIELDS.items()]
+    fields.extend(
+        {"name": name, "valueFrom": {"resourceFieldRef": {"resource": resource, "divisor": divisor}}}
+        for name, (resource, divisor) in RESOURCE_FIELDS.items()
+    )
+    return fields
 
 
 def inject_environment(pod: dict[str, Any], values: dict[str, str]) -> None:
@@ -36,8 +61,8 @@ def inject_environment(pod: dict[str, Any], values: dict[str, str]) -> None:
         None: All declared regular and init containers are updated in place.
     """
     managed: list[dict[str, Any]] = [{"name": name, "value": value.replace("$", "$$")} for name, value in values.items()]
-    managed.extend({"name": name, "valueFrom": {"fieldRef": {"apiVersion": "v1", "fieldPath": path}}} for name, path in POD_FIELDS.items())
-    names = set(values) | POD_FIELDS.keys()
+    managed.extend(pod_environment())
+    names = set(values) | POD_FIELDS.keys() | RESOURCE_FIELDS.keys()
     for group in ("containers", "initContainers"):
         for container in pod["spec"].get(group) or []:
             container["env"] = copy.deepcopy(managed) + [item for item in container.get("env") or [] if item["name"] not in names]

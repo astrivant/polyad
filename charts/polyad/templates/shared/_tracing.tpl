@@ -4,20 +4,6 @@
 - name: POLYAD_LOGS_ENABLED
   value: {{ .Values.tracing.logs.enabled | quote }}
 {{- if or .Values.tracing.enabled .Values.tracing.logs.enabled }}
-- name: POLYAD_POD_NAME
-  valueFrom:
-    fieldRef:
-      fieldPath: metadata.name
-- name: POLYAD_POD_UID
-  valueFrom:
-    fieldRef:
-      fieldPath: metadata.uid
-- name: POLYAD_POD_NAMESPACE
-  valueFrom:
-    fieldRef:
-      fieldPath: metadata.namespace
-- name: POLYAD_POD_CLUSTER
-  value: {{ .Values.global.multiCluster.clusterName | quote }}
 - name: OTEL_SERVICE_NAME
   value: {{ .Values.tracing.serviceName | quote }}
 - name: OTEL_RESOURCE_ATTRIBUTES

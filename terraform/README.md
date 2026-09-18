@@ -47,8 +47,10 @@ See the [upstream chart release](https://github.com/argoproj/argo-helm/releases/
 The `polyad` Application follows `https://github.com/astrivant/polyad.git`,
 revision `main`, path `charts/polyad`. Terraform registers that public Git source
 and the Argo, KEDA, Istio and Dragonfly OCI Helm repositories. Dependencies come
-from Polyad's committed `Chart.lock`; optional dependencies are registered even
-when disabled. No Git credentials are needed. Polyad's existing
+from Polyad's committed `Chart.lock`; remote optional dependencies are registered
+even when disabled. Local `file://` dependencies, including `polyad-crds`, come
+from the Git checkout and need no Argo repository entry. No Git credentials are
+needed. Polyad's existing
 [Argo graph health checks](../docs/operations/argocd.md) are installed too.
 
 The Git-backed [test values](polyad-values.yaml) enable two bootstrap replicas,
@@ -258,6 +260,23 @@ from the local `Chart.yaml`; apply Terraform again when new dependency
 repositories are added upstream. Provider selections are committed in
 `.terraform.lock.hcl`; use `terraform init -upgrade` only for an intentional update.
 
+After updating providers, refresh the lock file for both Linux CI and Apple
+Silicon development before committing it:
+
+```sh
+terraform -chdir=terraform providers lock \
+  -platform=linux_amd64 \
+  -platform=darwin_arm64
+```
+
+This verifies the published provider packages and records content hashes for both
+platforms. CI uses `init -lockfile=readonly`, so it cannot add a missing Linux
+content hash before `validate` checks the unpacked providers. Archive checksums
+alone do not cover that check. Keep the provider versions and checksum checks
+intact when fixing this mismatch; the command above adds platform coverage
+without upgrading providers. Add further `-platform` arguments for other
+developer platforms. See [Terraform's provider locking command](https://developer.hashicorp.com/terraform/cli/commands/providers/lock).
+
 ## Ownership and teardown
 
 Terraform owns GKE, Argo CD, repository configuration, health customizations, the
@@ -294,7 +313,7 @@ separately. Enabled project APIs remain enabled after destroy.
 From the repository root, with Terraform providers and chart dependencies fetched:
 
 ```sh
-terraform -chdir=terraform init -backend=false
+terraform -chdir=terraform init -backend=false -lockfile=readonly
 terraform -chdir=terraform fmt -check -recursive
 terraform -chdir=terraform validate
 terraform -chdir=terraform test

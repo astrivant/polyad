@@ -116,9 +116,9 @@ Scheduler metrics{{- if .Values.metrics.authentication.enabled }} (bearer authen
 Composition, events and metrics Services are disabled.
 {{- end }}
 
-Pod health (operator-local endpoint):
-  kubectl -n {{ .Release.Namespace }} port-forward deployment/{{ .Release.Name }}-polyad 8080:8080
-  GET http://127.0.0.1:8080/healthz
+Pod health (bound to the Pod IP):
+  kubectl -n {{ .Release.Namespace }} exec deployment/{{ .Release.Name }}-polyad -c operator -- python -m polyad.operator.lifecycle.probes
+  Add --ready to check scheduler readiness as well.
 
 {{- if or .Values.api.enabled .Values.events.enabled (and .Values.metrics.enabled .Values.metrics.authentication.enabled) }}
 Bearer credentials are supplied through Authorization: Bearer <token>.

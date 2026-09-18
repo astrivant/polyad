@@ -66,6 +66,7 @@ then [run your first workload](introduction/getting-started.md).
 | [CRDs and named resource templates](../charts/polyad-crds/README.md) | Independently versioned APIs, name-keyed instance maps, cross-resource TPL references and complete commented reference values |
 | [Development and production containers](deployment/containers.md) | Development and production builds, runtime permissions and image checks |
 | [Operator processes, threads and async tasks](deployment/process-hierarchy.md) | Tini, Python threads, async tasks, shared HTTP workers, observers and graceful shutdown |
+| [Pod context and health binding](deployment/pod-context.md) | Pod-only health listeners, Downward API identity and addresses, node placement and container resource variables |
 | [Graph based workload scheduling on Kubernetes](deployment/operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
 | [Graph status](deployment/operator.md#graph-instance-status) | Breadth, depth, lifecycle counters and descendant summaries |
 | [Compiler objects](deployment/operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |

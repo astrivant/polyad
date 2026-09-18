@@ -1,7 +1,8 @@
 locals {
   chart = yamldecode(file("${path.module}/../charts/polyad/Chart.yaml"))
 
-  # Register every dependency, including currently disabled optional charts.
+  # Register remote dependencies, including currently disabled optional charts.
+  # Local file:// dependencies are supplied by the Git checkout.
   # Argo's OCI repository URL omits oci:// and uses enableOCI instead.
   repositories = merge({
     polyad = { type = "git", url = "https://github.com/astrivant/polyad.git" }
@@ -14,6 +15,7 @@ locals {
       url       = trimprefix(url, "oci://")
       enableOCI = tostring(startswith(url, "oci://"))
     }
+    if !startswith(url, "file://")
   })
 
   # Kept in step with the Python resource registry by test_terraform.py.

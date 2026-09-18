@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from polyad.compiler.passes.identity import inject_environment
+from polyad.compiler.passes.identity import inject_environment, pod_environment
 from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad.operator.reconciliation.identity import graph_ancestry
 from polyad_types.resources import GROUP
@@ -74,6 +74,7 @@ def test_every_workload_container_gets_trusted_identity(monkeypatch, kind):
             entries = container["env"]
             assert len({item["name"] for item in entries}) == len(entries)
             assert next(item for item in entries if item["name"] == "POLYAD_GRAPH_UID")["value"] == "uid-processing"
+            assert all(item in entries for item in pod_environment())
         assert token in compiled["spec"]["containers"][0]["env"]
         assert compiled["spec"]["containers"][0]["envFrom"] == [{"secretRef": {"name": "application"}}]
         assert api.objects[(kind, "test", "worker")] == original

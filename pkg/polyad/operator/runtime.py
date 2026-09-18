@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import kopf
 
 from polyad.operator.lifecycle.health import lifecycle
+from polyad.operator.lifecycle.probes import health_endpoint
 from polyad.operator.observability.logging import add_logging_options, configure_log_export, configure_logging, shutdown_log_export
 from polyad.operator.observability.tracing import configure_tracing, shutdown_tracing
 
@@ -100,9 +101,13 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--namespace", default=os.environ.get("POLYAD_NAMESPACE", "default"))
-    parser.add_argument("--liveness", default="http://0.0.0.0:8080/healthz")
+    parser.add_argument("--liveness", help="Health URL on POLYAD_POD_IP; defaults to port 8080 and /healthz")
     add_logging_options(parser)
     args = parser.parse_args()
+    try:
+        endpoint = health_endpoint(args.liveness)
+    except ValueError as error:
+        parser.error(str(error))
     if os.environ.get("POLYAD_ROOT_WORKER", "false").lower() == "true":
         if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() != "true" or not os.environ.get("KUBECONFIG"):
             parser.error("root workers require root mode and an explicit root kubeconfig")
@@ -113,7 +118,13 @@ def main() -> None:
     os.environ["POLYAD_NAMESPACE"] = args.namespace
     logger = logging.getLogger(__name__)
     logger.debug("Starting operator namespace=%s log_level=%s", args.namespace, args.log_level)
-    runtime = OperatorThread(standalone=True, namespaces=[args.namespace], liveness_endpoint=args.liveness)
+    logger.info(
+        "Operator health listener ready to bind pod=%s node=%s endpoint=%s",
+        os.environ.get("POLYAD_POD_NAME", "local"),
+        os.environ.get("POLYAD_KUBERNETES_NODE_NAME", "local"),
+        endpoint,
+    )
+    runtime = OperatorThread(standalone=True, namespaces=[args.namespace], liveness_endpoint=endpoint)
 
     def stop(signum: int, frame: FrameType | None) -> None:
         """

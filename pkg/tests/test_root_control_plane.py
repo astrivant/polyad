@@ -347,6 +347,9 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
         assert env["POLYAD_TRACING_ENABLED"]["value"] == "true"
         assert env["POLYAD_LOGS_ENABLED"]["value"] == "true"
         assert env["POLYAD_POD_CLUSTER"]["value"] == "west"
+        assert env["POLYAD_POD_IP"]["valueFrom"]["fieldRef"]["fieldPath"] == "status.podIP"
+        assert env["POLYAD_KUBERNETES_NODE_NAME"]["valueFrom"]["fieldRef"]["fieldPath"] == "spec.nodeName"
+        assert env["POLYAD_CPU_LIMIT_MILLICORES"]["valueFrom"]["resourceFieldRef"] == {"resource": "limits.cpu", "divisor": "1m"}
         trace_secret_name = env["OTEL_EXPORTER_OTLP_TRACES_HEADERS"]["valueFrom"]["secretKeyRef"]["name"]
         assert trace_secret_name != "tracing"
         assert env["OTEL_EXPORTER_OTLP_LOGS_HEADERS"]["valueFrom"]["secretKeyRef"]["name"] == trace_secret_name

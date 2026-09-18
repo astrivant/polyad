@@ -120,6 +120,7 @@ spec:
           imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
           command: [/usr/bin/tini, --, python, -m, polyad.operator.observer]
           env:
+            {{- include "polyad.podContextEnv" . | nindent 12 }}
             {{- include "polyad.tracingEnv" . | nindent 12 }}
             - name: POLYAD_LOG_LEVEL
               value: {{ .Values.operator.logLevel | quote }}

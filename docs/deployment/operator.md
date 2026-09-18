@@ -586,7 +586,15 @@ back to `INFO` after troubleshooting to reduce volume.
 
 ## Health
 
-The operator's startup and liveness probes use Kopf's `/healthz` endpoint and the registered worker probe. Readiness also checks API/Lease renewal freshness and Dragonfly connectivity (`apiFresh` and `cacheFresh`). Periodic API scans and cache pings keep connectivity observations current even in an empty namespace. A slow or unavailable API can make the pod unready without triggering a restart loop. A stopped worker fails liveness. The health handler never treats an indefinitely running workload as a fault.
+The operator's startup and liveness probes use Kopf's `/healthz` endpoint, bound
+only to the Downward API Pod IP, and the registered worker probe. Readiness uses
+the same address and also checks API/Lease renewal freshness and Dragonfly
+connectivity (`apiFresh` and `cacheFresh`). Periodic API scans and cache pings keep
+connectivity observations current even in an empty namespace. A slow or unavailable
+API can make the pod unready without triggering a restart loop. A stopped worker
+fails liveness. The health handler never treats an indefinitely running workload
+as a fault. See [Pod context and health binding](pod-context.md) for diagnostics
+and the Kubernetes node, address and resource environment variables.
 
 Daemon containers must supply startup, readiness and liveness probes. Graph admission observes current-generation Deployment or StatefulSet rollout and readiness. StatefulSets also respect configured partitions, `OnDelete`, and `minReadySeconds`; see [controller readiness](../workloads/workload-storage.md#statefulset-configuration). Readiness edges control initial admission only: downstream work already admitted continues if upstream readiness later drops. End-to-end availability and recovery require application retry/backpressure contracts.
 

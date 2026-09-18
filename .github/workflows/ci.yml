@@ -21,6 +21,8 @@ jobs:
         with:
           terraform_version: 1.13.4
       - run: terraform -chdir=terraform fmt -check -recursive
+      # Commit platform content hashes with `providers lock` (see terraform/README.md).
+      # Read-only initialization keeps missing Linux checksums from being masked in CI.
       - run: terraform -chdir=terraform init -backend=false -lockfile=readonly
       - run: terraform -chdir=terraform validate
       - name: Test with mocked providers (no cloud credentials or resources)

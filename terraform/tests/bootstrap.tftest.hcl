@@ -79,10 +79,10 @@ run "gitops_bootstrap" {
   assert {
     condition = (
       length(local.repositories) == 5 &&
-      alltrue([for repo in values(local.repositories) : !startswith(repo.url, "oci://")]) &&
+      alltrue([for repo in values(local.repositories) : !startswith(repo.url, "oci://") && !startswith(repo.url, "file://")]) &&
       length([for repo in values(local.repositories) : repo if try(repo.enableOCI, "false") == "true"]) == 1
     )
-    error_message = "Register Polyad Git, Argo, KEDA, Istio and Dragonfly OCI with Argo's OCI URL format."
+    error_message = "Register Polyad Git and remote charts with Argo's OCI URL format; local chart dependencies stay in the Git checkout."
   }
 
   assert {

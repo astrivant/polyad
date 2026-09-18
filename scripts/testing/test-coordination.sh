@@ -23,7 +23,7 @@ while time.monotonic() < deadline:
     for pod in pods:
         result = subprocess.run([
             'kubectl', '-n', namespace, 'exec', pod['metadata']['name'], '--', 'python', '-c',
-            "import json,urllib.request; print(json.dumps(json.load(urllib.request.urlopen('http://localhost:8080/healthz'))['scheduler']))"
+            "import json; from polyad.operator.lifecycle.probes import read_health; print(json.dumps(read_health()['scheduler']))"
         ], capture_output=True, text=True)
         if result.returncode == 0:
             health.append((pod['metadata']['name'], json.loads(result.stdout)))

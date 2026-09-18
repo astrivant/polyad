@@ -61,6 +61,9 @@ All values are strings. Optional context is the empty string when absent.
 | `POLYAD_ACTIVATION_ID`, `POLYAD_ACTIVATION_UID` | Current activation receipt, or nearest enclosing graph activation |
 | `POLYAD_POD_NAME`, `POLYAD_POD_UID`, `POLYAD_POD_NAMESPACE` | This concrete Pod's identity |
 | `POLYAD_KUBERNETES_NODE_NAME`, `POLYAD_SERVICE_ACCOUNT_NAME` | Assigned Kubernetes node and Pod service account |
+| `POLYAD_POD_IP`, `POLYAD_POD_IPS`, `POLYAD_HOST_IP`, `POLYAD_HOST_IPS` | Primary and dual-stack Pod/node addresses |
+| `POLYAD_CPU_REQUEST_MILLICORES`, `POLYAD_CPU_LIMIT_MILLICORES` | This container's CPU request/limit in millicores |
+| `POLYAD_MEMORY_REQUEST_BYTES`, `POLYAD_MEMORY_LIMIT_BYTES` | This container's memory request/limit in bytes |
 | `POLYAD_API_URL`, `POLYAD_EVENTS_URL`, `POLYAD_METRICS_URL`, `POLYAD_CONNECTIONS_URL` | Namespace-qualified internal Service URL for each enabled operator listener |
 
 Kubernetes supplies Pod identity, node and service account fields through the
@@ -69,6 +72,10 @@ Each Deployment or StatefulSet replica therefore gets its own Pod UID while shar
 graph node. The compiler obtains graph ancestry from current owner references,
 verifies parent UIDs and stops admission if an owner is missing, replaced or
 terminating. Cycles and ancestry beyond 32 boundaries are rejected.
+
+See [Pod context and health binding](../deployment/pod-context.md) for resource
+selector fallback behavior, environment snapshot semantics and the distinction
+between actual node placement and scheduling constraints.
 
 ## Configuration and lifecycle
 

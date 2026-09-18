@@ -45,6 +45,7 @@ def telemetry_resource() -> Resource:
         ("k8s.pod.uid", "POLYAD_POD_UID"),
         ("k8s.namespace.name", "POLYAD_POD_NAMESPACE"),
         ("k8s.cluster.name", "POLYAD_POD_CLUSTER"),
+        ("k8s.node.name", "POLYAD_KUBERNETES_NODE_NAME"),
     ):
         if value := os.environ.get(variable):
             attributes[name] = value

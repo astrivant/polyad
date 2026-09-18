@@ -176,7 +176,9 @@ annotations are separate publishing metadata.
 
 ### Runtime checks
 
-The image health check calls the existing Kopf `/healthz` endpoint on port 8080.
+The image health check runs `python -m polyad.operator.lifecycle.probes`, querying
+Kopf's `/healthz` endpoint on the Downward API Pod IP and port 8080. Standalone
+containers without Kubernetes context use loopback. See [Pod context](pod-context.md).
 It includes a startup allowance and fails when the runtime requests replacement or
 starts draining. Kubernetes uses the chart's startup, readiness and liveness probes
 instead of Docker's image health check. If overriding `--liveness` for standalone
