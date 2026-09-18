@@ -23,6 +23,7 @@ For policies active in both a parent and child, see
 - [How the controls fit together](#how-the-controls-fit-together)
 - [Calibrate the relationship](#calibrate-the-relationship)
 - [Configure a bounded policy](#configure-a-bounded-policy)
+- [Automatic traffic-weight adjustments](#automatic-traffic-weight-adjustments)
 - [Report measurements](#report-measurements)
 - [Bounds, observations and scalability](#bounds-observations-and-scalability)
 
@@ -171,6 +172,35 @@ To configure percentage routing instead of, or alongside, connection layouts,
 see [fixed splits and automatic Tiers or Headroom balancing](traffic-balancing.md#choose-an-automatic-balancing-mode).
 Those routes can target Workload, Daemon, Graph, PolyGraph and nested ReplicaGroup
 copies through their local service entrypoints.
+
+## Automatic traffic-weight adjustments
+
+**`mode: Adapt` automatically updates live traffic weights.** `trafficMode`
+determines how Soul searching chooses the target split:
+
+- **`Tiers`:** the selected demand tier supplies administrator-defined percentages
+  in `tiers[].trafficWeights`. Polyad moves the route's current
+  `spec.traffic[].destinations[].weight` values toward that target and reconciles
+  the resulting Istio routing. The tier's configured target percentages remain unchanged.
+- **`Headroom`:** Polyad calculates the target percentages from each configured
+  destination's completed throughput and reported spare capacity, then applies
+  bounded steps toward that split. Omit tier `trafficWeights` in this mode.
+
+For the [80/20 tier example](traffic-balancing.md#choose-an-automatic-balancing-mode),
+a route starting at 60/40 can move automatically through **70/30 → 80/20**.
+`maxWeightStep: 10` limits each destination's change to ten percentage points per
+action. Each step requires fresh qualifying reports: at least three samples over
+60 seconds, a 300-second cooldown between successful changes, and room within the
+shared budget of two changes per rolling hour. The proposed state must satisfy
+the tier's Cheeger target, live GraphRules and destination weight limits.
+
+With the default `trigger: Shortfall`, offered demand must reach the tier's
+threshold (100 records per second here) and completed work must remain below 90%
+of offered work. Reaching the threshold alone does not trigger a change. If the
+shortfall resolves at 70/30, the controller need not continue to 80/20. Choose
+[`trigger: Demand`](load-profiles.md) to allow tier-based adjustments under sustained
+positive demand even while throughput keeps up. `mode: Observe` only recommends
+these changes; it leaves live weights as configured.
 
 ## Report measurements
 

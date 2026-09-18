@@ -160,6 +160,15 @@ throughput:
             workers/replica-1: 20
 ```
 
+Here `Adapt` automatically moves the live route toward the selected tier's 80/20
+target. From the earlier 60/40 split, eligible adjustments can produce 70/30 and
+then 80/20, subject to stabilization, cooldown and the shared change budget.
+The tier target remains administrator-defined. Because `trigger` defaults to
+`Shortfall`, demand reaching 100 records per second alone is insufficient: a
+sustained throughput deficit is also required. See
+[automatic traffic-weight adjustments](soul-searching.md#automatic-traffic-weight-adjustments)
+for the precise behavior and the `Demand` alternative.
+
 For measured capacity, use `trafficMode: Headroom` and omit `trafficWeights`:
 
 ```yaml

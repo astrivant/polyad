@@ -118,9 +118,6 @@ spec:
         sidecar.istio.io/inject: {{ .Values.mesh.operator.enabled | quote }}
       annotations:
         checksum/config: {{ include "polyad.telemetry.config" . | sha256sum }}
-        {{- if .Values.mesh.operator.enabled }}
-        traffic.sidecar.istio.io/excludeInboundPorts: "12345,9090"
-        {{- end }}
     spec:
       serviceAccountName: {{ $name }}
       terminationGracePeriodSeconds: 60
