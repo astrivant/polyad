@@ -30,9 +30,18 @@ of a formal mathematical dual of Polyad.
 
 ## What changes when the starting point is an outcome
 
-Polyad asks: “Given this application graph and its rules, how should we deploy,
-connect and adapt it?” Copolyad would ask: “Given this desired result, available
-capabilities and constraints, what application graph should exist?”
+- **Polyad:** “Here is the organism. Keep it functioning and adapting within
+  these rules.”
+- **Copolyad:** “Here are the conditions for survival. Determine what organism
+  could satisfy them.”
+
+**Soul searching** adapts the existing structure. **Natural Selection** would
+choose a composition capable of meeting the requirements.
+
+More formally, Polyad asks: “Given this application graph and its rules, how
+should we deploy, connect and adapt it?” Copolyad would ask: “Given this desired
+result, available capabilities and constraints, what application graph should
+exist?”
 
 | Dimension | Polyad today | Proposed Copolyad responsibility |
 | --- | --- | --- |
