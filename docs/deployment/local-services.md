@@ -9,6 +9,7 @@ Remote operator groups remain peers in the enclosing reserved PolyGraph.
 
 - [What belongs to the root Graph](#what-belongs-to-the-root-graph)
 - [Install KEDA with the chart](#install-keda-with-the-chart)
+- [Autoscale bundled KEDA in HA mode](#autoscale-bundled-keda-in-ha-mode)
 - [Use existing KEDA](#use-existing-keda)
 - [Health, ownership and constraints](#health-ownership-and-constraints)
 - [Inventory and permissions](#inventory-and-permissions)
@@ -23,7 +24,7 @@ gateway/executor/telemetry pipeline retain their existing branches.
 | `bootstrap` | Root operator Deployment | Helm and the optional operator HPA |
 | `components` | Gateway, executor and telemetry ReplicaGroups, in Distributed mode | Polyad, with GraphRule admission and KEDA demand |
 | `endpoints` | Enabled composition, events, metrics and temporary-connection Services | Helm |
-| `keda` | Operator, metrics server and enabled admission webhook Deployments and Services | Bundled KEDA chart or its existing installation |
+| `keda` | Operator, metrics server and enabled admission webhook Deployments and Services | Bundled chart and HA component HPAs, or the existing installation |
 | `dragonfly` | Bundled Dragonfly operator, its Service, cache instance, StatefulSet and primary Service | Helm and the Dragonfly operator |
 | `postgresql` | Managed state and separate authentication Cluster resources and their read/write Services | Helm and CloudNativePG |
 | `mesh` | Bundled Istiod and enabled ingress/east-west gateway workloads and Services | Their Helm dependencies |
@@ -94,6 +95,46 @@ Choose one KEDA installation for the cluster. Existing KEDA installations should
 use the next configuration instead of installing overlapping controllers and
 cluster-scoped APIs. Downstream worker releases cannot enable `keda.install`;
 the root coordinates their scaling.
+
+## Autoscale bundled KEDA in HA mode
+
+Bundled KEDA starts with two Pods per enabled Deployment, including when Polyad
+uses its singular profile. With `ha: true` and `keda.install: true`,
+`keda.autoscaling.enabled` defaults to `true` and creates native Kubernetes HPAs
+for the metrics server and admission webhooks. Each scales independently between
+two and five Pods, targeting 70% CPU and 80% memory utilization relative to its
+container's resource requests. A five-minute scale-down window limits churn.
+
+These HPAs use the Kubernetes **resource metrics API** (`metrics.k8s.io`), which
+must be available in the cluster. Container metrics measure the KEDA process
+independently of injected sidecars. KEDA's external-metrics API, Polyad's metrics
+endpoint and their authentication settings are separate from this control loop.
+
+The KEDA operator keeps a fixed replica count, defaulting to two for leader
+failover. One leader performs reconciliation. For metrics-server replicas to
+share API traffic, configure or verify API-server aggregator routing
+(`--enable-aggregator-routing=true`). See [KEDA's HA guidance](https://keda.sh/docs/2.20/operate/cluster/#high-availability).
+
+Tune each component under `keda.autoscaling.metricsServer` or
+`keda.autoscaling.webhooks`: `minReplicas`, `maxReplicas`, CPU and memory targets,
+and `enabled`. Set a memory target to `null` to use CPU alone. Shared
+`keda.autoscaling.behavior` configures stabilization windows and optional HPA
+rate policies. The [KEDA reference values](../../charts/polyad/values-keda.reference.yaml)
+show these controls together. Resource requests come from upstream
+`kedaOperator.resources.metricServer` and `kedaOperator.resources.webhooks`;
+each selected metric requires a positive request.
+
+Set `keda.autoscaling.enabled: false` to keep upstream replica counts fixed.
+Disabling an upstream component also removes its HPA. HA requires at least two
+initial Pods for each enabled component and an HPA minimum of two. Custom
+Deployment and container names are resolved from the bundled chart.
+
+For GitOps, let the HPA own `/spec/replicas` on these two Deployments. The
+[Terraform Argo CD bootstrap](../../terraform/bootstrap/templates/application.yaml)
+already preserves counts managed by `kube-controller-manager` for the default
+KEDA names; update those targets when overriding names. Helm continues to own
+the operator's fixed replicas, images, resource requests and autoscaling bounds.
+Existing KEDA installations retain their own scaling configuration and ownership.
 
 ## Use existing KEDA
 

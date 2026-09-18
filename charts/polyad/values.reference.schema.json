@@ -933,6 +933,94 @@
               "$ref": "values.schema.json#/properties/keda/properties/observation/properties/services"
             }
           }
+        },
+        "autoscaling": {
+          "type": "object",
+          "description": "Native resource-metric HPAs for bundled KEDA components when ha and keda.install are true.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/enabled"
+            },
+            "metricsServer": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/metricsServer/properties/enabled"
+                },
+                "minReplicas": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/metricsServer/properties/minReplicas"
+                },
+                "maxReplicas": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/metricsServer/properties/maxReplicas"
+                },
+                "targetCPUUtilizationPercentage": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/metricsServer/properties/targetCPUUtilizationPercentage"
+                },
+                "targetMemoryUtilizationPercentage": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/metricsServer/properties/targetMemoryUtilizationPercentage"
+                }
+              }
+            },
+            "webhooks": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/webhooks/properties/enabled"
+                },
+                "minReplicas": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/webhooks/properties/minReplicas"
+                },
+                "maxReplicas": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/webhooks/properties/maxReplicas"
+                },
+                "targetCPUUtilizationPercentage": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/webhooks/properties/targetCPUUtilizationPercentage"
+                },
+                "targetMemoryUtilizationPercentage": {
+                  "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/webhooks/properties/targetMemoryUtilizationPercentage"
+                }
+              }
+            },
+            "behavior": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "scaleUp": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "stabilizationWindowSeconds": {
+                      "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/behavior/properties/scaleUp/properties/stabilizationWindowSeconds"
+                    },
+                    "selectPolicy": {
+                      "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/behavior/properties/scaleUp/properties/selectPolicy"
+                    },
+                    "policies": {
+                      "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/behavior/properties/scaleUp/properties/policies"
+                    }
+                  }
+                },
+                "scaleDown": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "stabilizationWindowSeconds": {
+                      "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/behavior/properties/scaleDown/properties/stabilizationWindowSeconds"
+                    },
+                    "selectPolicy": {
+                      "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/behavior/properties/scaleDown/properties/selectPolicy"
+                    },
+                    "policies": {
+                      "$ref": "values.schema.json#/properties/keda/properties/autoscaling/properties/behavior/properties/scaleDown/properties/policies"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -1616,6 +1704,20 @@
                   "$ref": "values.schema.json#/properties/kedaOperator/properties/prometheus/properties/webhooks/properties/port"
                 }
               }
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/resources/properties/operator"
+            },
+            "metricServer": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/resources/properties/metricServer"
+            },
+            "webhooks": {
+              "$ref": "values.schema.json#/properties/kedaOperator/properties/resources/properties/webhooks"
             }
           }
         }

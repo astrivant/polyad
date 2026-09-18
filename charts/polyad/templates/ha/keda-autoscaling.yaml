@@ -1,0 +1,50 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if and .Values.ha .Values.keda.install -}}
+{{- if lt (int .Values.kedaOperator.operator.replicaCount) 2 }}{{ fail "HA requires kedaOperator.operator.replicaCount of at least two for leader failover" }}{{ end -}}
+{{- $base := printf "%s/charts/kedaOperator/templates" (trimSuffix "/templates" .Template.BasePath) -}}
+{{- $context := merge (dict "Template" (dict "BasePath" $base)) (deepCopy .Subcharts.kedaOperator) -}}
+{{- range $component, $file := dict "metricsServer" "metrics-server/deployment.yaml" "webhooks" "webhooks/deployment.yaml" -}}
+{{- $deployment := include (printf "%s/%s" $base $file) $context | fromYaml -}}
+{{- if eq (get $deployment "kind") "Deployment" -}}
+{{- if lt (int $deployment.spec.replicas) 2 }}{{ fail (printf "HA requires kedaOperator.%s.replicaCount of at least two" $component) }}{{ end -}}
+{{- $settings := index $.Values.keda.autoscaling $component -}}
+{{- if and $.Values.keda.autoscaling.enabled $settings.enabled -}}
+{{- if gt (int $settings.minReplicas) (int $settings.maxReplicas) }}{{ fail (printf "keda.autoscaling.%s.minReplicas must not exceed maxReplicas" $component) }}{{ end -}}
+{{- $container := index $deployment.spec.template.spec.containers 0 -}}
+{{- $metrics := dict "cpu" $settings.targetCPUUtilizationPercentage -}}
+{{- if $settings.targetMemoryUtilizationPercentage }}{{ $_ := set $metrics "memory" $settings.targetMemoryUtilizationPercentage }}{{ end -}}
+{{- range $resource, $target := $metrics -}}
+{{- $request := dig "resources" "requests" $resource "" $container | toString -}}
+{{- if le (float64 (regexFind "^[+]?([0-9]+([.][0-9]*)?|[.][0-9]+)" $request)) 0.0 }}{{ fail (printf "KEDA %s autoscaling requires a positive %s request for container %s" $component $resource $container.name) }}{{ end -}}
+{{- end }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $.Release.Name }}-keda-{{ $component | kebabcase }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $deployment.metadata.name }}
+  minReplicas: {{ $settings.minReplicas }}
+  maxReplicas: {{ $settings.maxReplicas }}
+  behavior:
+    {{- toYaml $.Values.keda.autoscaling.behavior | nindent 4 }}
+  metrics:
+    {{- range $resource, $target := $metrics }}
+    - type: ContainerResource
+      containerResource:
+        name: {{ $resource }}
+        container: {{ $container.name }}
+        target:
+          type: Utilization
+          averageUtilization: {{ $target }}
+    {{- end }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

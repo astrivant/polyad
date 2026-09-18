@@ -933,6 +933,94 @@
               "$ref": "#/definitions/helmValues/properties/keda/properties/observation/properties/services"
             }
           }
+        },
+        "autoscaling": {
+          "type": "object",
+          "description": "Native resource-metric HPAs for bundled KEDA components when ha and keda.install are true.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/enabled"
+            },
+            "metricsServer": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/metricsServer/properties/enabled"
+                },
+                "minReplicas": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/metricsServer/properties/minReplicas"
+                },
+                "maxReplicas": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/metricsServer/properties/maxReplicas"
+                },
+                "targetCPUUtilizationPercentage": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/metricsServer/properties/targetCPUUtilizationPercentage"
+                },
+                "targetMemoryUtilizationPercentage": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/metricsServer/properties/targetMemoryUtilizationPercentage"
+                }
+              }
+            },
+            "webhooks": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/webhooks/properties/enabled"
+                },
+                "minReplicas": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/webhooks/properties/minReplicas"
+                },
+                "maxReplicas": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/webhooks/properties/maxReplicas"
+                },
+                "targetCPUUtilizationPercentage": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/webhooks/properties/targetCPUUtilizationPercentage"
+                },
+                "targetMemoryUtilizationPercentage": {
+                  "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/webhooks/properties/targetMemoryUtilizationPercentage"
+                }
+              }
+            },
+            "behavior": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "scaleUp": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "stabilizationWindowSeconds": {
+                      "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/behavior/properties/scaleUp/properties/stabilizationWindowSeconds"
+                    },
+                    "selectPolicy": {
+                      "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/behavior/properties/scaleUp/properties/selectPolicy"
+                    },
+                    "policies": {
+                      "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/behavior/properties/scaleUp/properties/policies"
+                    }
+                  }
+                },
+                "scaleDown": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "stabilizationWindowSeconds": {
+                      "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/behavior/properties/scaleDown/properties/stabilizationWindowSeconds"
+                    },
+                    "selectPolicy": {
+                      "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/behavior/properties/scaleDown/properties/selectPolicy"
+                    },
+                    "policies": {
+                      "$ref": "#/definitions/helmValues/properties/keda/properties/autoscaling/properties/behavior/properties/scaleDown/properties/policies"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -1616,6 +1704,20 @@
                   "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/prometheus/properties/webhooks/properties/port"
                 }
               }
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/resources/properties/operator"
+            },
+            "metricServer": {
+              "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/resources/properties/metricServer"
+            },
+            "webhooks": {
+              "$ref": "#/definitions/helmValues/properties/kedaOperator/properties/resources/properties/webhooks"
             }
           }
         }
@@ -12700,12 +12802,232 @@
                   "description": "Existing KEDA Service names; match the installation names."
                 }
               }
+            },
+            "autoscaling": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Native resource-metric HPAs for bundled KEDA components when ha and keda.install are true.",
+              "required": [
+                "enabled",
+                "metricsServer",
+                "webhooks",
+                "behavior"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable independent native HPAs for the bundled KEDA metrics server and admission webhooks in HA mode."
+                },
+                "metricsServer": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled",
+                    "minReplicas",
+                    "maxReplicas",
+                    "targetCPUUtilizationPercentage"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Autoscale this bundled component when it is installed and HA is enabled."
+                    },
+                    "minReplicas": {
+                      "type": "integer",
+                      "minimum": 2,
+                      "maximum": 32,
+                      "description": "Minimum component replicas; retain at least two for availability."
+                    },
+                    "maxReplicas": {
+                      "type": "integer",
+                      "minimum": 2,
+                      "maximum": 32,
+                      "description": "Maximum component replicas; must be at least minReplicas."
+                    },
+                    "targetCPUUtilizationPercentage": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100,
+                      "description": "KEDA container CPU utilization as a percentage of its request."
+                    },
+                    "targetMemoryUtilizationPercentage": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 1,
+                      "maximum": 100,
+                      "description": "KEDA container memory utilization as a percentage of its request; null disables this metric."
+                    }
+                  }
+                },
+                "webhooks": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled",
+                    "minReplicas",
+                    "maxReplicas",
+                    "targetCPUUtilizationPercentage"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Autoscale this bundled component when it is installed and HA is enabled."
+                    },
+                    "minReplicas": {
+                      "type": "integer",
+                      "minimum": 2,
+                      "maximum": 32,
+                      "description": "Minimum component replicas; retain at least two for availability."
+                    },
+                    "maxReplicas": {
+                      "type": "integer",
+                      "minimum": 2,
+                      "maximum": 32,
+                      "description": "Maximum component replicas; must be at least minReplicas."
+                    },
+                    "targetCPUUtilizationPercentage": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100,
+                      "description": "KEDA container CPU utilization as a percentage of its request."
+                    },
+                    "targetMemoryUtilizationPercentage": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 1,
+                      "maximum": 100,
+                      "description": "KEDA container memory utilization as a percentage of its request; null disables this metric."
+                    }
+                  }
+                },
+                "behavior": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "scaleUp": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "stabilizationWindowSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3600,
+                          "description": "Scale-up recommendation window in seconds (0-3600)"
+                        },
+                        "selectPolicy": {
+                          "type": "string",
+                          "enum": [
+                            "Max",
+                            "Min",
+                            "Disabled"
+                          ],
+                          "description": "Choose the largest or smallest permitted change, or disable scale-up (Max, Min, Disabled)"
+                        },
+                        "policies": {
+                          "type": "array",
+                          "minItems": 1,
+                          "maxItems": 16,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "type",
+                              "value",
+                              "periodSeconds"
+                            ],
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "Pods",
+                                  "Percent"
+                                ]
+                              },
+                              "value": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 2147483647
+                              },
+                              "periodSeconds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1800
+                              }
+                            }
+                          },
+                          "description": "Rate limits (Pods or Percent); defaults to 100 percent or 4 Pods per 15 seconds; periodSeconds accepts 1-1800"
+                        }
+                      }
+                    },
+                    "scaleDown": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "stabilizationWindowSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3600,
+                          "description": "Scale-down recommendation window in seconds (0-3600)"
+                        },
+                        "selectPolicy": {
+                          "type": "string",
+                          "enum": [
+                            "Max",
+                            "Min",
+                            "Disabled"
+                          ],
+                          "description": "Choose the largest or smallest permitted change, or disable scale-down (Max, Min, Disabled)"
+                        },
+                        "policies": {
+                          "type": "array",
+                          "minItems": 1,
+                          "maxItems": 16,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "type",
+                              "value",
+                              "periodSeconds"
+                            ],
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "Pods",
+                                  "Percent"
+                                ]
+                              },
+                              "value": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 2147483647
+                              },
+                              "periodSeconds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1800
+                              }
+                            }
+                          },
+                          "description": "Rate limits (Pods or Percent); defaults to 100 percent per 15 seconds; periodSeconds accepts 1-1800"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           },
           "required": [
             "authentication",
             "install",
-            "observation"
+            "observation",
+            "autoscaling"
           ]
         },
         "externalSecrets": {
@@ -14599,6 +14921,20 @@
                       "maximum": 65535
                     }
                   }
+                }
+              }
+            },
+            "resources": {
+              "type": "object",
+              "properties": {
+                "operator": {
+                  "$ref": "#/definitions/helmValues/definitions/kedaResourceRequirements"
+                },
+                "metricServer": {
+                  "$ref": "#/definitions/helmValues/definitions/kedaResourceRequirements"
+                },
+                "webhooks": {
+                  "$ref": "#/definitions/helmValues/definitions/kedaResourceRequirements"
                 }
               }
             }
@@ -50463,6 +50799,40 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 65535
+            }
+          }
+        },
+        "kedaResourceRequirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requests": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/helmValues/definitions/resourceQuantity"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                ]
+              }
+            },
+            "limits": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/helmValues/definitions/resourceQuantity"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                ]
+              }
             }
           }
         }

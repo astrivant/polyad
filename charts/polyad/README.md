@@ -66,7 +66,10 @@ Install KEDA separately or set `keda.install=true` to enable the pinned upstream
 dependency. In root mode, KEDA and every enabled local service join the
 [root operator Graph](../../docs/deployment/local-services.md). The
 [KEDA reference values](values-keda.reference.yaml) describe bundled and existing
-installations. Then enable cache HA with an initial primary and one replica:
+installations. With `ha=true`, bundled KEDA also enables
+[CPU/memory autoscaling for its metrics server and webhooks](../../docs/deployment/local-services.md#autoscale-bundled-keda-in-ha-mode),
+with configurable bounds and stabilization under `keda.autoscaling`.
+Enable cache HA with an initial primary and one replica:
 
 ```sh
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
@@ -511,18 +514,34 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### KEDA installation, observation and credentials
 
-| Name                                           | Description                                                                                                                                                 | Value   |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `keda.install`                                 | **Type: boolean.** Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation                    | `false` |
-| `keda.observation.enabled`                     | **Type: boolean.** Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA | `true` |
-| `keda.observation.namespace`                   | **Type: string.** Namespace of an existing KEDA installation; bundled KEDA always uses the release namespace                                                | `keda` |
-| `keda.observation.deployments`                 | **Type: array.** Existing KEDA Deployment names to observe; remove disabled components or replace customized names; ignored for bundled KEDA                | `["keda-operator", "keda-operator-metrics-apiserver", "keda-admission-webhooks"]` |
-| `keda.observation.services`                    | **Type: array.** Existing KEDA Service names to observe; match the installed KEDA chart; ignored for bundled KEDA                                           | `["keda-operator", "keda-operator-metrics-apiserver", "keda-admission-webhooks"]` |
-| `keda.authentication.enabled`                  | **Type: boolean.** Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics                                  | `false` |
-| `keda.authentication.name`                     | **Type: string.** TriggerAuthentication name; empty uses the release metrics name                                                                           | `""` |
-| `kedaOperator.prometheus.operator.enabled`     | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
-| `kedaOperator.prometheus.metricServer.enabled` | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
-| `kedaOperator.prometheus.webhooks.enabled`     | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
+| Name                                                               | Description                                                                                                                                                 | Value   |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `keda.install`                                                     | **Type: boolean.** Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation                    | `false` |
+| `keda.autoscaling.enabled`                                         | **Type: boolean.** Autoscale enabled KEDA metrics-server and webhook components in HA mode; false keeps their upstream replica counts fixed                 | `true` |
+| `keda.autoscaling.metricsServer.enabled`                           | **Type: boolean.** Create an HPA when the bundled metrics server is enabled                                                                                 | `true` |
+| `keda.autoscaling.metricsServer.minReplicas`                       | **Type: integer.** Minimum metrics-server Pods; at least two for availability                                                                               | `2` |
+| `keda.autoscaling.metricsServer.maxReplicas`                       | **Type: integer.** Maximum metrics-server Pods; at least minReplicas and at most 32                                                                         | `5` |
+| `keda.autoscaling.metricsServer.targetCPUUtilizationPercentage`    | **Type: integer.** Target CPU utilization of the KEDA container relative to its CPU request                                                                 | `70` |
+| `keda.autoscaling.metricsServer.targetMemoryUtilizationPercentage` | **Type: integer or null.** Target memory utilization of the KEDA container relative to its memory request; null disables memory scaling                     | `80` |
+| `keda.autoscaling.webhooks.enabled`                                | **Type: boolean.** Create an HPA when bundled admission webhooks are enabled                                                                                | `true` |
+| `keda.autoscaling.webhooks.minReplicas`                            | **Type: integer.** Minimum admission-webhook Pods; at least two for availability                                                                            | `2` |
+| `keda.autoscaling.webhooks.maxReplicas`                            | **Type: integer.** Maximum admission-webhook Pods; at least minReplicas and at most 32                                                                      | `5` |
+| `keda.autoscaling.webhooks.targetCPUUtilizationPercentage`         | **Type: integer.** Target CPU utilization of the KEDA container relative to its CPU request                                                                 | `70` |
+| `keda.autoscaling.webhooks.targetMemoryUtilizationPercentage`      | **Type: integer or null.** Target memory utilization of the KEDA container relative to its memory request; null disables memory scaling                     | `80` |
+| `keda.autoscaling.behavior.scaleUp.stabilizationWindowSeconds`     | **Type: integer.** Seconds of scale-up recommendations to retain; zero responds immediately                                                                 | `0` |
+| `keda.autoscaling.behavior.scaleDown.stabilizationWindowSeconds`   | **Type: integer.** Seconds of scale-down recommendations to retain; 300 limits churn after a demand spike                                                   | `300` |
+| `keda.observation.enabled`                                         | **Type: boolean.** Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA | `true` |
+| `keda.observation.namespace`                                       | **Type: string.** Namespace of an existing KEDA installation; bundled KEDA always uses the release namespace                                                | `keda` |
+| `keda.observation.deployments`                                     | **Type: array.** Existing KEDA Deployment names to observe; remove disabled components or replace customized names; ignored for bundled KEDA                | `["keda-operator", "keda-operator-metrics-apiserver", "keda-admission-webhooks"]` |
+| `keda.observation.services`                                        | **Type: array.** Existing KEDA Service names to observe; match the installed KEDA chart; ignored for bundled KEDA                                           | `["keda-operator", "keda-operator-metrics-apiserver", "keda-admission-webhooks"]` |
+| `keda.authentication.enabled`                                      | **Type: boolean.** Create a namespaced TriggerAuthentication referencing the metrics token; requires authenticated metrics                                  | `false` |
+| `keda.authentication.name`                                         | **Type: string.** TriggerAuthentication name; empty uses the release metrics name                                                                           | `""` |
+| `kedaOperator.operator.replicaCount`                               | **Type: integer.** Fixed KEDA operator replicas; defaults to two even for singular Polyad and must stay at least two in HA mode                             | `2` |
+| `kedaOperator.metricsServer.replicaCount`                          | **Type: integer.** Initial metrics-server Pods; the HPA owns subsequent counts when bundled HA autoscaling is enabled                                       | `2` |
+| `kedaOperator.webhooks.replicaCount`                               | **Type: integer.** Initial admission-webhook Pods; the HPA owns subsequent counts when bundled HA autoscaling is enabled                                    | `2` |
+| `kedaOperator.prometheus.operator.enabled`                         | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
+| `kedaOperator.prometheus.metricServer.enabled`                     | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
+| `kedaOperator.prometheus.webhooks.enabled`                         | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
 
 ### Optional External Secrets Operator resources
 

@@ -1,7 +1,13 @@
 # Soul searching: application throughput and graph structure
 
-**Soul searching** is Polyad's bounded topology optimizer. It uses application
-throughput reports to recommend or apply administrator-approved connection layouts
+**Soul searching** is Polyad's **bounded topology optimizer** for a `Graph` or
+`PolyGraph`. **Topology** is the pattern of connections between its workloads,
+services and nested graphs. **Bounded** means the optimizer chooses from
+administrator-approved adjustments and must satisfy the configured rules and
+resource ceilings.
+
+It runs as a feedback controller, using application demand and throughput reports
+to recommend or apply approved connection layouts
 and optional [traffic percentages between workload and graph replicas](traffic-balancing.md).
 Approved [load profiles](load-profiles.md) can also adjust capacity lookahead before
 completed throughput falls behind, independently of KEDA/HPA replica scaling.

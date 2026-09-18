@@ -549,6 +549,44 @@ authentication:
 keda:
   ## @param keda.install [boolean] Install the pinned upstream KEDA chart in this release namespace; leave false to use an existing cluster installation
   install: false
+  ## @param keda.autoscaling [object] Native resource-metric HPAs for bundled KEDA when ha and keda.install are true; requires the Kubernetes resource metrics API
+  autoscaling:
+    ## @param keda.autoscaling.enabled [boolean] Autoscale enabled KEDA metrics-server and webhook components in HA mode; false keeps their upstream replica counts fixed
+    enabled: true
+    ## @param keda.autoscaling.metricsServer [object] Scale external-metrics serving capacity; configure API-server aggregator routing to distribute requests across replicas
+    metricsServer:
+      ## @param keda.autoscaling.metricsServer.enabled [boolean] Create an HPA when the bundled metrics server is enabled
+      enabled: true
+      ## @param keda.autoscaling.metricsServer.minReplicas [integer] Minimum metrics-server Pods; at least two for availability
+      minReplicas: 2
+      ## @param keda.autoscaling.metricsServer.maxReplicas [integer] Maximum metrics-server Pods; at least minReplicas and at most 32
+      maxReplicas: 5
+      ## @param keda.autoscaling.metricsServer.targetCPUUtilizationPercentage [integer] Target CPU utilization of the KEDA container relative to its CPU request
+      targetCPUUtilizationPercentage: 70
+      ## @param keda.autoscaling.metricsServer.targetMemoryUtilizationPercentage [integer, nullable] Target memory utilization of the KEDA container relative to its memory request; null disables memory scaling
+      targetMemoryUtilizationPercentage: 80
+    ## @param keda.autoscaling.webhooks [object] Scale admission capacity independently of external-metrics serving
+    webhooks:
+      ## @param keda.autoscaling.webhooks.enabled [boolean] Create an HPA when bundled admission webhooks are enabled
+      enabled: true
+      ## @param keda.autoscaling.webhooks.minReplicas [integer] Minimum admission-webhook Pods; at least two for availability
+      minReplicas: 2
+      ## @param keda.autoscaling.webhooks.maxReplicas [integer] Maximum admission-webhook Pods; at least minReplicas and at most 32
+      maxReplicas: 5
+      ## @param keda.autoscaling.webhooks.targetCPUUtilizationPercentage [integer] Target CPU utilization of the KEDA container relative to its CPU request
+      targetCPUUtilizationPercentage: 70
+      ## @param keda.autoscaling.webhooks.targetMemoryUtilizationPercentage [integer, nullable] Target memory utilization of the KEDA container relative to its memory request; null disables memory scaling
+      targetMemoryUtilizationPercentage: 80
+    ## @param keda.autoscaling.behavior [object] HPA stabilization and optional directional rate policies shared by KEDA components
+    behavior:
+      ## @param keda.autoscaling.behavior.scaleUp [object] Scale-up stabilization and optional policies
+      scaleUp:
+        ## @param keda.autoscaling.behavior.scaleUp.stabilizationWindowSeconds [integer] Seconds of scale-up recommendations to retain; zero responds immediately
+        stabilizationWindowSeconds: 0
+      ## @param keda.autoscaling.behavior.scaleDown [object] Scale-down stabilization and optional policies
+      scaleDown:
+        ## @param keda.autoscaling.behavior.scaleDown.stabilizationWindowSeconds [integer] Seconds of scale-down recommendations to retain; 300 limits churn after a demand spike
+        stabilizationWindowSeconds: 300
   ## @param keda.observation [object] Settings for keda.observation.
   observation:
     ## @param keda.observation.enabled [boolean] Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA
@@ -568,6 +606,18 @@ keda:
 
 ## @param kedaOperator [object] Upstream KEDA chart overrides used only when keda.install is true; its rendered workloads and Services are automatically included in the reserved root Graph
 kedaOperator:
+  ## @param kedaOperator.operator [object] Upstream leader-elected reconciler; extra Pods provide failover capacity
+  operator:
+    ## @param kedaOperator.operator.replicaCount [integer] Fixed KEDA operator replicas; defaults to two even for singular Polyad and must stay at least two in HA mode
+    replicaCount: 2
+  ## @param kedaOperator.metricsServer [object] Upstream external-metrics API server settings
+  metricsServer:
+    ## @param kedaOperator.metricsServer.replicaCount [integer] Initial metrics-server Pods; the HPA owns subsequent counts when bundled HA autoscaling is enabled
+    replicaCount: 2
+  ## @param kedaOperator.webhooks [object] Upstream admission webhook settings
+  webhooks:
+    ## @param kedaOperator.webhooks.replicaCount [integer] Initial admission-webhook Pods; the HPA owns subsequent counts when bundled HA autoscaling is enabled
+    replicaCount: 2
   ## @param kedaOperator.prometheus [object] Settings for kedaOperator.prometheus.
   prometheus:
     ## @param kedaOperator.prometheus.operator [object] Settings for kedaOperator.prometheus.operator.

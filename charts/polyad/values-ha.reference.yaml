@@ -4,6 +4,8 @@
 #          -f charts/polyad/values-ha.reference.yaml
 # Guide: ../../docs/deployment/deployment-profiles.md#ha-in-one-cluster
 # These are reference overrides; values.yaml contains all defaults.
+# Add values-keda.reference.yaml to bundle KEDA with automatic CPU/memory scaling
+# of its metrics server and webhooks; keda.autoscaling.enabled=false fixes counts.
 ## @param ha [boolean] Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
 ha: true
 

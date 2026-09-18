@@ -68,6 +68,11 @@ def test_git_application_preserves_autoscaling(installation):
 
     exclusions = {(item["group"], item["kind"], item["name"]): item for item in spec["ignoreDifferences"]}
     for resource in installation:
+        if resource["kind"] == "HorizontalPodAutoscaler":
+            target = resource["spec"]["scaleTargetRef"]
+            identity = (target["apiVersion"].split("/")[0], target["kind"], target["name"])
+            assert exclusions[identity]["managedFieldsManagers"] == ["kube-controller-manager"]
+            assert exclusions[identity]["namespace"] == "polyad"
         if resource["kind"] != "ScaledObject":
             continue
         target = resource["spec"]["scaleTargetRef"]
