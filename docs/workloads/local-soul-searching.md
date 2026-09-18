@@ -1,7 +1,9 @@
 # Local Soul searching: processes and network topology
 
-[`soul.py`](../../soul.py) is a standalone, standard-library Python example under
-500 lines. Three service processes own adaptive child-worker pools. A separate
+[`soul.py`](../../soul.py) is a standalone, standard-library Python example. Its
+opening documentation includes ASCII diagrams of the changing TCP network,
+process tree and worker-routing graphs. Three service processes own adaptive
+child-worker pools. A separate
 producer loads all three, while a root supervisor admits changes to the TCP
 connections between the services. Each service runs the observe, propose, admit,
 roll and drain cycle locally.
@@ -161,7 +163,7 @@ JSON output includes service identity, PID and monotonic time:
 
 The [integration tests](../../pkg/tests/test_local_soul.py) run real subprocesses
 and sockets, verify readiness before role changes, exact topology transitions,
-result counts, process ceilings, interruption cleanup and the 500-line limit:
+result counts, process ceilings and interruption cleanup:
 
 ```sh
 poetry run pytest pkg/tests/test_local_soul.py

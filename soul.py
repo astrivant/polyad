@@ -1,12 +1,135 @@
 """
-Run a local Soul searching process tree with only Python's standard library.
+Run Soul searching locally with real processes, TCP peers and adaptive workers.
 
-Usage: python soul.py [--jobs 96] [--work-seconds 0.05]
-Three services change real TCP peer connections from a chain to a triangle and back.
-A fourth process generates load through bounded IPC channels. Each service owns its
-observe -> propose -> admit -> roll loop and returns to one interactive worker.
-A simulated per-batch I/O delay makes batching visibly more efficient; results
-are real, checked squares. JSON logs describe every decision and process role.
+Run it from the repository root; only Python's standard library is needed:
+
+    python soul.py
+    python soul.py --jobs 128 --work-seconds 0.02 --tick 0.02
+    python soul.py --help
+
+What runs
+---------
+S0, S1 and S2 are separate service processes. Each owns its child workers and
+chooses when to change their execution profile. The root supervisor owns the
+service network. A separate producer sends a warmup followed by a burst:
+
+    main (root supervisor)
+    +-- producer -------- IPC load --------> S0, S1, S2
+    +-- S0
+    |   +-- worker(s)
+    +-- S1
+    |   +-- worker(s)
+    +-- S2
+        +-- worker(s)
+
+The branches above show process ownership. The diagrams below show data paths.
+
+How the TCP network changes
+---------------------------
+Each service listens on an ephemeral localhost port. Arrows show who opens a
+persistent peer connection; work results return through that same connection.
+
+    1. Baseline: chain                         Cheeger = 1
+
+    S0 ------> S1 ------> S2
+
+    2. Sustained demand: add the S0 -> S2 edge  Cheeger = 2
+
+    S0 ------> S1 ------> S2
+    |                     ^
+    +---------------------+
+
+    3. Recovery: remove the added edge         Cheeger = 1
+
+    S0 ------> S1 ------> S2
+
+After at least two services switch to batch workers, the root admits the
+triangle. Each newly opened TCP edge carries a square-computation job to a
+child worker at its destination. The result is checked before that service
+acknowledges the topology change. All three acknowledgements are required for
+"topology_committed". These edges are actual sockets, not just diagram labels.
+
+Once all services finish their accepted work and restore their interactive
+profile, the root closes S0 -> S2 and restores the original chain. The original
+chain connections stay open until the final shutdown.
+
+How each service's processing tree changes
+-----------------------------------------
+Each service follows this cycle independently. Sx means any of S0, S1 or S2:
+
+    Baseline              Under load              Recovered
+    Sx                    Sx                      Sx
+    +-- interactive       +-- batch-1              +-- interactive (new PID)
+                          +-- batch-2
+                          +-- batch-3
+
+An interactive worker accepts one job per dispatch; a batch worker accepts up
+to four. Both compute the same result. A simulated I/O delay per dispatch makes
+batching's capacity benefit visible without an external dependency.
+
+The handoff temporarily overlaps generations, within a four-worker ceiling:
+
+    Scale up:  1 old interactive + 3 starting batch workers = 4 live children
+    Recover:   3 old batch workers + 1 starting interactive = 4 live children
+
+Replacements must acknowledge readiness before taking new work. Retiring
+workers finish their accepted batches, receive a stop command and are joined.
+The old generation continues serving while replacements start.
+
+There is also a routing graph inside each service. D is its dispatch component
+and C is its result collector; both live inside the service process:
+
+    Baseline / recovered:                     Cheeger = 1
+
+    D ------> interactive ------> C
+
+    Under load:                               Cheeger = 1.5
+
+             +--> batch-1 --+
+    D -------+--> batch-2 --+------> C
+             +--> batch-3 --+
+
+These edges are worker command/result pipes. Each parallel branch connects the
+same D and C vertices. Retiring workers drain accepted jobs outside the graph
+used to admit new dispatches. Worker-routing and service-network Cheeger values
+are computed independently by enumerating their cuts with direction ignored.
+
+What drives the decisions
+-------------------------
+"search_soul" selects an approved profile from observed backlog and sustained
+pressure. "service" checks constraints and enacts worker changes; "main" does
+the same for the peer network. The defaults require three observations of at
+least eight outstanding jobs before switching to batch workers. A cooldown
+limits changes, and an empty backlog must remain quiet before recovery.
+
+The fixed Cheeger floor stays at 1. Demand selects separate targets of 1.5 for
+batch worker routing and 2 for the service triangle. Live process limits,
+bounded batches, a 64-job pending queue and change budgets also constrain the
+response. Cheeger measures structure; completed jobs measure useful work.
+
+The producer's IPC load drives worker adaptation. The extra TCP jobs exercise
+the admitted peer links. With defaults, all 288 producer jobs are verified,
+along with the peer jobs. The root waits for baseline recovery, requests stop,
+and joins the producer and services; each service joins its workers. Failures
+and interruption enter cleanup without reporting success.
+
+Reading the output
+------------------
+JSON lines include the process PID, service identity and monotonic timestamp:
+
+    observed             backlog and completion deltas
+    admitted / committed worker profile decisions and their Cheeger evidence
+    worker_*             spawn, readiness, join and cleanup of real processes
+    topology_admitted    proposed chain or triangle and its calculated Cheeger
+    edge_opened / closed actual peer connection changes
+    peer_work_completed  a child worker completed the job sent over a TCP edge
+    topology_committed   every service acknowledged the new topology epoch
+    baseline_restored    this service returned to one interactive worker
+    success              the entire experiment finished and its tree was joined
+
+Settings and CLI flags below expose load, timing and resource limits. See
+"docs/workloads/local-soul-searching.md" for the walkthrough and the connection
+to the proposed Natural Selection capability-placement and composition planner.
 """
 
 from __future__ import annotations
@@ -130,7 +253,7 @@ def worker(pipe: Connection, profile: Profile, settings: Settings) -> None:
 
 def producer(outputs: list[Connection], settings: Settings) -> None:
     """
-    Warm both services, then deliver a burst followed by an explicit end of input.
+    Warm all three services, then deliver a burst followed by an explicit end of input.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, interrupt)
@@ -378,7 +501,7 @@ def main() -> None:
     """
     Run three services, admit their topology changes, then verify recovery and stop the tree.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     for item in fields(Settings):
         parser.add_argument("--" + item.name.replace("_", "-"), type=type(item.default), default=item.default)
     settings = Settings(**vars(parser.parse_args()))
