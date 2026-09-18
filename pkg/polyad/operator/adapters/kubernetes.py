@@ -18,6 +18,7 @@ from kubernetes.client.exceptions import ApiException
 from opentelemetry import trace
 
 from polyad.compiler.registry import GRAPH_OWNED_KINDS, RESOURCE_TYPES
+from polyad.operator.adapters.interfaces import ResourceAPI
 from polyad.operator.coordination.contracts import active_contract, without_capture
 from polyad.operator.coordination.dispatch import DispatchGraph, admission
 from polyad.operator.coordination.settings import WorkGraphSettings
@@ -46,7 +47,7 @@ BUILTINS = {kind: (descriptor.prefix, descriptor.plural) for kind, descriptor in
 WORKLOAD_KINDS = tuple(kind for kind in BUILTINS if kind in GRAPH_OWNED_KINDS)
 
 
-class API:
+class API(ResourceAPI):
     """
     Use namespaced, JSON Kubernetes requests with finite transport timeouts.
 

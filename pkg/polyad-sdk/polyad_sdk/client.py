@@ -12,6 +12,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from polyad_sdk.interfaces import ConnectionNegotiator, EventSource, ThroughputReporter
 from polyad_types import ActivationRequest, to_dict
 from polyad_types.events import DEFAULT_MAX_EVENT_BYTES, Event, EventStreamSettings, EventTooLarge, validate_event_limit
 
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
     from threading import Event as StopEvent
     from typing import Any, Literal
 
-    from polyad_sdk.subscriptions import Subscription
     from polyad_types import CompositionRequest, ConnectionRequest, ConnectionResponse, ServiceConnectionRequest, ThroughputSample
 
 
@@ -46,7 +46,7 @@ class _NoRedirect(HTTPRedirectHandler):
         return None
 
 
-class Client:
+class Client(EventSource, ThroughputReporter, ConnectionNegotiator):
     """
     Call Polyad APIs with no implicit mutation retries.
     """
@@ -482,36 +482,6 @@ class Client:
                         event_type = value
                     elif field == "data":
                         data.append(value)
-
-    def subscribe(
-        self,
-        *,
-        cluster: str | None = None,
-        cursor: str | None = None,
-        history: int = 1024,
-        transport: Literal["sse", "websocket"] = "sse",
-        rebalance: bool = False,
-        heartbeats: bool = False,
-    ) -> Subscription:
-        """
-        Build a resumable subscription with explicit application event hooks.
-
-        Args:
-            cluster (str | None): Registered cluster stream.
-            cursor (str | None): Previously committed stream cursor.
-            history (int): Bounded count of successful event-handler calls remembered during retries.
-            transport (Literal['sse', 'websocket']): SSE by default, or an operator-enabled WebSocket subscription.
-            rebalance (bool): Rediscover and reconnect on copulses or transient transport failures, preserving completed checkpoints.
-            heartbeats (bool): Deliver SSE heartbeats to hooks that maintain periodic application observations.
-
-        Returns:
-            Subscription: Register filters and callbacks, then call run on the application's chosen thread.
-        """
-        from polyad_sdk.subscriptions import Subscription
-
-        return Subscription(
-            self, cluster=cluster, cursor=cursor, history=history, transport=transport, rebalance=rebalance, heartbeats=heartbeats
-        )
 
     def event_endpoints(self, *, cluster: str | None = None) -> dict[str, Any]:
         """

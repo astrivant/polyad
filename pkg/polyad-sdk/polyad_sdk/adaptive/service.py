@@ -8,6 +8,7 @@ import copy
 import os
 import threading
 import time
+from abc import ABC, abstractmethod
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,27 +22,37 @@ from polyad_types import ConnectionResponse, ServiceConnectionRequest, ServiceEn
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any, Literal
+    from typing import Any, Literal, Self
 
     from polyad_sdk.adaptive.models import Environment
+    from polyad_sdk.interfaces import ConnectionNegotiator, EventSource, ThroughputReporter
     from polyad_sdk.subscriptions import Subscription
     from polyad_types.events import Event
     from polyad_types.network import NetworkPort
     from polyad_types.throughput import ThroughputSample
 
 
-class AdaptiveService:
+class AdaptiveService(ABC):
     """
-    Maintain one graph-node context on the caller's thread without starting an application server.
+    Define application adaptation over authorized, checkpointed neighborhood changes.
+
+    Subclass this ABC and implement adapt() to update application-owned routing,
+    admission or worker policy. The base owns observation freshness, delta
+    construction, ordered delivery and replay checkpoints. It starts no threads,
+    workers or application servers, and does not infer permission to mutate graphs.
+
+    adapt() runs first for every baseline or meaningful change. Additional
+    on_change() hooks run afterward. A failed adaptation blocks later hooks and
+    cursor advancement; retrying the same change resumes unfinished delivery.
     """
 
     def __init__(
         self,
         identity: ServiceEndpoint,
-        events: Client,
+        events: EventSource,
         *,
-        api: Client | None = None,
-        connections: Client | None = None,
+        api: ThroughputReporter | None = None,
+        connections: ConnectionNegotiator | None = None,
         settings: Settings | None = None,
         checkpoint: Callable[[str], None] | None = None,
         clock: Callable[[], float] = time.time,
@@ -51,9 +62,9 @@ class AdaptiveService:
 
         Args:
             identity (ServiceEndpoint): Exact graph incarnation and logical node, with an optional registered cluster.
-            events (Client): Authorized events/topology client.
-            api (Client | None): Separately authorized throughput/composition client.
-            connections (Client | None): Projected-token client for consent and connection requests.
+            events (EventSource): Authorized events/topology client.
+            api (ThroughputReporter | None): Separately authorized throughput reporter.
+            connections (ConnectionNegotiator | None): Projected-token client for consent and connection requests.
             settings (Settings | None): Freshness, inventory and event transport settings.
             checkpoint (Callable[[str], None] | None): Persist a cursor after all matching hooks succeed.
             clock (Callable[[], float]): Application clock returning Unix seconds; injectable for deterministic tests.
@@ -65,7 +76,7 @@ class AdaptiveService:
         self._lock = threading.RLock()
         self._operation = threading.Lock()
         self._published = self._state.view(clock())
-        self._hooks: list[tuple[Callable[[Change], None], tuple[str, ...], Filter | None]] = []
+        self._hooks: list[tuple[Callable[[Change], None], tuple[str, ...], Filter | None]] = [(self.adapt, (), None)]
         self._pending: Change | None = None
         self._handled: set[int] = set()
         self._pending_cursor: str | None = None
@@ -73,6 +84,36 @@ class AdaptiveService:
         self._subscription: Subscription | None = None
         self._running = False
         self._stopped = threading.Event()
+
+    @abstractmethod
+    def adapt(self, change: Change) -> None:
+        """
+        Apply one authorized baseline or meaningful delta to application-owned behavior.
+
+        Implement this method in a concrete service subclass. Use the baseline
+        to initialize application context and change.matching() to select later
+        deltas. Recheck self.view when acting, especially on a retry, because
+        topology or connection grants may have expired since the change arrived.
+
+        Keep adaptation bounded: update local policy or notify the application's
+        worker supervisor instead of doing business work on this observation
+        thread. Preserve readiness, local admission budgets and accepted-work
+        draining when handing a change to that supervisor.
+
+        The base invokes this before optional hooks and checkpoint persistence.
+        Exceptions propagate with this change pending. Make partial effects
+        retry-safe; successful adaptation is skipped if a later hook or checkpoint
+        fails and the same change is retried within this instance.
+
+        Args:
+            change (Change): Immutable before/after views, meaningful deltas and
+                an isolated copy of the triggering event, when present.
+
+        Returns:
+            None: Application adaptation completed, allowing later hooks and
+                checkpoint persistence to proceed.
+        """
+        ...
 
     @classmethod
     def from_environment(
@@ -84,7 +125,7 @@ class AdaptiveService:
         max_event_bytes: int = 1024 * 1024,
         checkpoint: Callable[[str], None] | None = None,
         allow_unauthenticated: bool = False,
-    ) -> AdaptiveService:
+    ) -> Self:
         """
         Read injected workload identity and application-owned credentials without granting new access.
 
@@ -97,7 +138,7 @@ class AdaptiveService:
             allow_unauthenticated (bool): Explicitly permit clients without credentials for an administrator-enabled demo.
 
         Returns:
-            AdaptiveService: Configured runtime; construction performs no network calls or thread startup.
+            Self: Configured concrete subclass; construction performs no network calls or thread startup.
         """
         identity = ServiceEndpoint(
             cluster,
@@ -147,9 +188,9 @@ class AdaptiveService:
         """
         return self._cursor
 
-    def on_change(self, callback: Callable[[Change], None], *, paths: tuple[str, ...] = (), match: Filter | None = None) -> AdaptiveService:
+    def on_change(self, callback: Callable[[Change], None], *, paths: tuple[str, ...] = (), match: Filter | None = None) -> Self:
         """
-        Register a delta hook, optionally selecting field prefixes and existing event filters.
+        Register an additional hook after adapt(), optionally selecting paths and event filters.
 
         Args:
             callback (Callable[[Change], None]): Synchronous application hook; failures retain the pending change for retry.
@@ -157,7 +198,7 @@ class AdaptiveService:
             match (Filter | None): Optional predicate over the triggering authorized event; snapshot baselines have no event.
 
         Returns:
-            AdaptiveService: This instance for chained registration; hooks run only on meaningful changes or baselines.
+            Self: This concrete instance for chained registration; hooks run only on meaningful changes or baselines.
         """
         if self._running or self._pending is not None:
             raise RuntimeError("register hooks before running or retrying a pending change")

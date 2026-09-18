@@ -14,6 +14,7 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.graph import Node, Placement, Topology
+from polyad.operator.adapters import ResourceAPI
 from polyad.operator.adapters.kubernetes import GROUP, VERSION
 from polyad.operator.coordination.queue import RefreshQueue
 from polyad.operator.reconciliation.controller import FINALIZER, Controller, Pending, observed
@@ -46,7 +47,7 @@ def resource(kind, name, spec=None):
     }
 
 
-class FakeAPI:
+class FakeAPI(ResourceAPI):
     """
     Retain deleting resources until tests simulate the garbage collector.
     """

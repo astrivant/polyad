@@ -9,10 +9,11 @@ from __future__ import annotations
 import json
 import re
 import time
+from abc import ABC, abstractmethod
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import nullcontext
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
 from polyad.graph.workloads import Statistics
 
@@ -25,11 +26,15 @@ if TYPE_CHECKING:
     from typing import TextIO
 
 
-class ProcessOwner(Protocol):
+class ProcessOwner(ABC):
     """
-    Application-supplied owner that retains a command and its descendants until joined.
+    Retain an application's command and its descendants until they are joined.
+
+    Implement run and stop in an application-supplied subclass. OperationQueue
+    creates one owner per operation and retains it through cleanup failures.
     """
 
+    @abstractmethod
     def run(
         self,
         command: list[str],
@@ -56,6 +61,7 @@ class ProcessOwner(Protocol):
         """
         ...
 
+    @abstractmethod
     def stop(self) -> None:
         """
         Prevent new children and stop and join owned process trees, safely on repeated calls.

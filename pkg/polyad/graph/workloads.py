@@ -5,8 +5,9 @@ Describe measurable workloads that can cooperate with checkpoint requests.
 from __future__ import annotations
 
 import math
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -120,12 +121,17 @@ class Control:
     report: Callable[[Statistics], None]
 
 
-class Workload(Protocol):
+class Workload(ABC):
     """
     Require a description and cooperative execution from schedulable work.
+
+    Subclass and implement work and run. Expose work as a property or a concrete
+    class attribute; assigning it only in __init__ does not implement the
+    abstract property. run must retain ownership through completion or checkpoint.
     """
 
     @property
+    @abstractmethod
     def work(self) -> Work:
         """
         Return immutable identity, dependencies, resource needs and initial estimates.
@@ -135,6 +141,7 @@ class Workload(Protocol):
         """
         ...
 
+    @abstractmethod
     def run(self, control: Control, checkpoint: dict[str, object] | None) -> Outcome:
         """
         Execute until completion, cancellation or a requested recoverable pause.

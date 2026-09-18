@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from typing import Literal
 
-    from polyad_sdk.client import Client
     from polyad_sdk.filters import Filter
+    from polyad_sdk.interfaces import EventSource
     from polyad_types.events import Event
 
 
@@ -46,7 +46,7 @@ class Subscription:
 
     def __init__(
         self,
-        client: Client,
+        client: EventSource,
         *,
         cluster: str | None = None,
         cursor: str | None = None,
@@ -59,7 +59,7 @@ class Subscription:
         Bind one authorized stream and a bounded in-process callback replay history.
 
         Args:
-            client (Client): Client configured for the event service.
+            client (EventSource): Client configured for the event service.
             cluster (str | None): Registered cluster stream; each stream needs its own subscription.
             cursor (str | None): Last completely handled event ID, restored by the application.
             history (int): Maximum remembered event-handler successes; not durable exactly-once delivery.

@@ -5,6 +5,7 @@ Rank ready work and request worthwhile preemption with uncertainty and aging gua
 from __future__ import annotations
 
 import math
+from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -15,8 +16,60 @@ if TYPE_CHECKING:
     from polyad.graph.workloads import Estimate, Work
 
 
+class SchedulingPolicy(ABC):
+    """
+    Rank ready work and decide whether cooperative preemption is worthwhile.
+
+    The scheduler retains dependency, capacity and checkpoint admission. A policy
+    supplies ordering and pause decisions; it never starts or stops workloads.
+    """
+
+    def priorities(self, works: Mapping[str, Work]) -> dict[str, int]:
+        """
+        Assign stable insertion-order priorities unless a policy overrides traversal.
+
+        Args:
+            works (Mapping[str, Work]): Validated current graph in insertion order.
+
+        Returns:
+            dict[str, int]: Tie-breaking position for every workload.
+        """
+        return {name: index for index, name in enumerate(works)}
+
+    @abstractmethod
+    def rank(self, estimate: Estimate, waiting: float, order: int) -> tuple[float, float, int]:
+        """
+        Rank a ready workload without changing dependencies or reserving resources.
+
+        Args:
+            estimate (Estimate): Latest remaining-time and checkpoint estimates.
+            waiting (float): Seconds spent waiting for admission.
+            order (int): Stable priority assigned by priorities().
+
+        Returns:
+            tuple[float, float, int]: Ascending ordering key.
+        """
+        ...
+
+    @abstractmethod
+    def preempt(self, running: Estimate, waiting: Estimate, elapsed: float, waited: float) -> bool:
+        """
+        Decide whether to request a cooperative pause from resumable running work.
+
+        Args:
+            running (Estimate): Active workload's remaining work and pause costs.
+            waiting (Estimate): Candidate workload's latest estimates.
+            elapsed (float): Current execution slice in seconds.
+            waited (float): Candidate's time waiting in seconds.
+
+        Returns:
+            bool: True to request a checkpoint; resources remain held until it completes.
+        """
+        ...
+
+
 @dataclass(frozen=True)
-class ShortestRemaining:
+class ShortestRemaining(SchedulingPolicy):
     """
     Favor shorter known jobs while giving long-waiting work eventual priority.
 
@@ -40,18 +93,6 @@ class ShortestRemaining:
         for value in (self.minimum_run_seconds, self.minimum_gain_seconds, self.maximum_wait_seconds):
             if not math.isfinite(value) or value < 0:
                 raise ValueError("policy thresholds must be finite and nonnegative")
-
-    def priorities(self, works: Mapping[str, Work]) -> dict[str, int]:
-        """
-        Assign stable submission priorities for the current graph.
-
-        Args:
-            works (Mapping[str, Work]): Current graph in insertion order.
-
-        Returns:
-            dict[str, int]: Tie-breaking positions by workload name.
-        """
-        return {name: index for index, name in enumerate(works)}
 
     def rank(self, estimate: Estimate, waiting: float, order: int) -> tuple[float, float, int]:
         """

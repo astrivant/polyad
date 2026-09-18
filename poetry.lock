@@ -354,7 +354,7 @@ version = "26.2.0"
 description = "Composable complex class support for attrs and dataclasses."
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
     {file = "cattrs-26.2.0-py3-none-any.whl", hash = "sha256:c680f17cd1df3a1c038ad1db8d90a9c595568cc54c4e8098e7ceb8d7b9bd826b"},
     {file = "cattrs-26.2.0.tar.gz", hash = "sha256:3cf49f69df8326bcf17a3cb3d3d3ec4a856858fe3a7473746c9044c317d3ba55"},
@@ -2958,12 +2958,30 @@ type = "directory"
 url = "pkg/polyad-schemas"
 
 [[package]]
+name = "polyad-sdk"
+version = "0.0.1a3"
+description = "Typed Python SDK for adaptive services and Polyad operator APIs"
+optional = false
+python-versions = ">=3.11,<4"
+groups = ["dev"]
+files = []
+develop = true
+
+[package.dependencies]
+polyad-types = "0.0.1a3"
+websockets = ">=17.1,<18"
+
+[package.source]
+type = "directory"
+url = "pkg/polyad-sdk"
+
+[[package]]
 name = "polyad-types"
 version = "0.0.1a3"
 description = "Shared resource, configuration and API models for Polyad"
 optional = false
 python-versions = ">=3.11,<4"
-groups = ["main"]
+groups = ["main", "dev"]
 files = []
 develop = false
 
@@ -4134,7 +4152,7 @@ version = "17.1"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
 optional = false
 python-versions = ">=3.11"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
     {file = "websockets-17.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:88b882764ef65147a7a5ae13168dedbe225a04e2ff4858fe543f2c402f093e9c"},
     {file = "websockets-17.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:98a5b2589a56a4b4f098b0a958099a4356ab904a7844f1da3841efca469af7e9"},
@@ -4559,4 +4577,4 @@ schemas = ["polyad-schemas"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4.0"
-content-hash = "d54d52bace7dca4de8918b57841499c6be43382838bab22938b600380aeab612"
+content-hash = "f13eafa5b7c73f8314addf6afa6d594995882e02e8ba5a951565ea089a3a5d59"

@@ -98,6 +98,9 @@ compatible peers, react to connection and capacity deltas, propagate backpressur
 and report useful completion. Run the standalone [`python soul.py`](soul.py)
 [local demonstration](docs/workloads/local-soul-searching.md) to watch three service
 processes change their TCP topology and roll their child workers under load.
+Run [`python nature.py`](nature.py) for the [parent Natural Selection demonstration](docs/workloads/local-natural-selection.md):
+changing requirements select capabilities and routes, mutate services, preserve
+useful survivors and retire excluded processes.
 
 Explore [graph concepts](docs/introduction/concepts.md), [graph rules](docs/graphs/graph-rules.md),
 [composition requests](docs/apis/composition-requests.md), the [composition API](docs/apis/composition-api.md),

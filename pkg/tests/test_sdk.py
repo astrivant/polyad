@@ -5,6 +5,7 @@ Exercise the SDK's application-facing deltas, replay and authorization boundarie
 from __future__ import annotations
 
 import copy
+import inspect
 import io
 import json
 from datetime import UTC, datetime
@@ -23,6 +24,44 @@ if TYPE_CHECKING:
     from polyad_sdk import Change
 
 EXAMPLES = json.loads((Path(__file__).parent / "data/events.json").read_text())
+
+
+class RecordingService(AdaptiveService):
+    """
+    Record concrete application adaptation independently of optional SDK hooks.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Preserve the inherited constructor while owning per-instance adaptation evidence.
+        """
+        super().__init__(*args, **kwargs)
+        self.changes = []
+
+    def adapt(self, change: Change) -> None:
+        """
+        Retain each delivered baseline or meaningful change as application behavior.
+        """
+        self.changes.append(change)
+
+
+def test_adaptive_service_is_a_public_abc_with_a_required_application_hook():
+    """
+    Root and adaptive imports expose the same abstract contract with no default adaptation.
+    """
+    from abc import ABC
+
+    from polyad_sdk.adaptive import AdaptiveService as PublicAdaptiveService
+
+    assert PublicAdaptiveService is AdaptiveService
+    assert issubclass(AdaptiveService, ABC) and inspect.isabstract(AdaptiveService)
+    assert AdaptiveService.__abstractmethods__ == frozenset({"adapt"})
+    with pytest.raises(TypeError, match="abstract.*adapt"):
+        AdaptiveService(
+            ServiceEndpoint("", "test", "Graph", "pipeline", "uid-pipeline", "source"),
+            Client("https://events.example", "reader"),
+        )
+    assert not inspect.isabstract(RecordingService)
 
 
 def observation(index=0, cursor="1-0"):
@@ -79,10 +118,8 @@ def runtime():
         "outgoing": [{"node": node("sink"), "ports": [{"port": 8080, "protocol": "TCP"}]}],
     }
     events.topology = MagicMock(side_effect=lambda **_: copy.deepcopy(topology))
-    service = AdaptiveService(ServiceEndpoint("", "test", "Graph", "pipeline", "uid-pipeline", "source"), events, clock=clock)
-    changes: list[Change] = []
-    service.on_change(changes.append)
-    return service, topology, clock, changes
+    service = RecordingService(ServiceEndpoint("", "test", "Graph", "pipeline", "uid-pipeline", "source"), events, clock=clock)
+    return service, topology, clock, service.changes
 
 
 def test_baseline_and_identity_keyed_connection_capacity_deltas(runtime):
@@ -227,6 +264,64 @@ def test_checkpoint_failure_and_callback_payload_mutation_are_isolated(runtime):
     assert len(changes) == 2 and service.cursor == "1-0"
 
 
+def test_failed_adaptation_blocks_hooks_and_checkpoint_until_it_succeeds(runtime):
+    """
+    The mandatory application step retries with its original change before later observers run.
+    """
+    original, _, clock, _ = runtime
+    attempts = []
+    hooks = []
+    checkpoints = []
+
+    class RetryService(RecordingService):
+        def adapt(self, change):
+            attempts.append(change)
+            if change.event is not None and len(attempts) == 2:
+                # Mutating this private copy must not poison a later retry.
+                change.event.data.clear()
+                raise RuntimeError("adaptation needs retry")
+            super().adapt(change)
+
+    service = RetryService(original.identity, original.events, clock=clock, checkpoint=checkpoints.append)
+    service.on_change(hooks.append)
+    service.refresh()
+    event = observation()
+    with pytest.raises(RuntimeError, match="adaptation needs retry"):
+        service.dispatch(event)
+    assert service.cursor == "0-0" and checkpoints == ["0-0"]
+    assert len(hooks) == len(service.changes) == 1
+    with pytest.raises(RuntimeError, match="pending event"):
+        service.dispatch(observation(cursor="2-0"))
+    service.dispatch(event)
+    assert len(attempts) == 3 and len(hooks) == len(service.changes) == 2
+    assert service.changes[-1].event.data["name"] == "pipeline"
+    assert checkpoints == ["0-0", "1-0"]
+
+
+def test_baseline_adaptation_failure_retries_without_skipping_initialization(runtime):
+    """
+    Initial application setup is part of checkpointed delivery rather than constructor side effects.
+    """
+    original, _, clock, _ = runtime
+    attempts = []
+
+    class RetryBaseline(RecordingService):
+        def adapt(self, change):
+            attempts.append(change)
+            if len(attempts) == 1:
+                raise RuntimeError("initialization needs retry")
+            super().adapt(change)
+
+    service = RetryBaseline(original.identity, original.events, clock=clock)
+    assert not attempts
+    with pytest.raises(RuntimeError, match="initialization needs retry"):
+        service.refresh()
+    assert service.cursor is None and not service.changes
+    service.refresh()
+    assert service.cursor == "0-0" and len(service.changes) == 1
+    assert all(change.baseline for change in attempts)
+
+
 def test_refresh_expiry_and_reset_preserve_unknown_state_and_cursor(runtime):
     """
     Refresh reads never skip replay; reset explicitly starts a new baseline with unknown metrics.
@@ -270,7 +365,7 @@ def test_cluster_fence_inventory_and_generation_regression(runtime):
     Explicit cluster identity, snapshot bounds and newer resource generations remain authoritative.
     """
     service, topology, _, _ = runtime
-    bounded = AdaptiveService(service.identity, service.events, settings=Settings(max_observations=1))
+    bounded = RecordingService(service.identity, service.events, settings=Settings(max_observations=1))
     with pytest.raises(ValueError, match="max_observations"):
         bounded.refresh()
     service.refresh()
@@ -281,7 +376,7 @@ def test_cluster_fence_inventory_and_generation_regression(runtime):
     service.dispatch(stale)
     assert service.view.resources == {}
     identity = ServiceEndpoint("west", "test", "Graph", "pipeline", "uid-pipeline", "source")
-    foreign = AdaptiveService(identity, service.events, clock=lambda: 100)
+    foreign = RecordingService(identity, service.events, clock=lambda: 100)
     topology["graph"]["cluster"] = "east"
     with pytest.raises(ValueError, match="identity"):
         foreign.refresh()
@@ -369,15 +464,16 @@ def test_environment_uses_rotating_application_credentials(monkeypatch, tmp_path
         monkeypatch.setenv("POLYAD_" + key, value)
     for key in ("API_URL", "CONNECTIONS_URL", "EVENTS_TOKEN"):
         monkeypatch.delenv("POLYAD_" + key, raising=False)
-    service = AdaptiveService.from_environment()
+    service = RecordingService.from_environment()
+    assert isinstance(service, RecordingService)
     assert service.events._authorization_headers()["Authorization"] == "Bearer first"
     token.write_text("rotated")
     assert service.events._authorization_headers()["Authorization"] == "Bearer rotated"
     assert service.api is None and service.connections is None
     monkeypatch.delenv("POLYAD_EVENTS_TOKEN_FILE")
     with pytest.raises(ValueError, match="application-owned"):
-        AdaptiveService.from_environment()
-    assert AdaptiveService.from_environment(allow_unauthenticated=True).events._authorization_headers() == {}
+        RecordingService.from_environment()
+    assert RecordingService.from_environment(allow_unauthenticated=True).events._authorization_headers() == {}
 
 
 def test_reporting_and_filtered_hooks_use_existing_permissions(runtime):

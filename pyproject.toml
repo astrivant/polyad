@@ -69,6 +69,7 @@ polyad-types = {path = "pkg/polyad-types"}
 polyad-schemas = {path = "pkg/polyad-schemas", optional = true}
 
 [tool.poetry.group.dev.dependencies]
+polyad-sdk = {path = "pkg/polyad-sdk", develop = true}
 pytest = ">=9.0.3,<10"
 deepdiff = ">=9.1,<10"
 ruff = "^0.15"
@@ -121,7 +122,7 @@ convention = "google"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["pkg", "examples", "soul.py"]
+files = ["pkg", "examples", "soul.py", "nature.py"]
 exclude = ["^pkg/tests/"]
 
 [[tool.mypy.overrides]]

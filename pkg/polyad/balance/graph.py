@@ -11,7 +11,7 @@ from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, cast
 
 from polyad.balance.scheduler import Scheduler, State
-from polyad.graph import Control, Estimate, Outcome, ShutdownContract, Statistics, Work
+from polyad.graph import Control, Estimate, Outcome, ShutdownContract, Statistics, Work, Workload
 from polyad.graph.hashing import shape_hash
 from polyad.graph.rewrites import RewriteRegistry
 
@@ -19,12 +19,12 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
 
-    from polyad.balance.policy import ShortestRemaining
-    from polyad.graph import Finalizer, Workload
+    from polyad.balance.policy import SchedulingPolicy
+    from polyad.graph import Finalizer
     from polyad.graph.gates import DelayGate, Gate
 
 
-class Graph:
+class Graph(Workload):
     """
     Reserve a parent allocation around a separately balanced dynamic child graph.
     """
@@ -35,7 +35,7 @@ class Graph:
         units: Sequence[Workload],
         *,
         directory: Path,
-        policy: ShortestRemaining | None = None,
+        policy: SchedulingPolicy | None = None,
         diagrams: bool = False,
         plots: bool = False,
         routes: Mapping[str, Gate | DelayGate] | None = None,
@@ -51,7 +51,7 @@ class Graph:
             work (Work): Parent identity, prerequisites and entire child resource allocation.
             units (Sequence[Workload]): Initial child graph, including nested Graph instances.
             directory (Path): Unique child scheduler journal directory.
-            policy (ShortestRemaining | None): Independent balancing policy inside this graph.
+            policy (SchedulingPolicy | None): Independent balancing policy inside this graph.
             diagrams (bool): Export child graph snapshots as well as parent snapshots.
             plots (bool): Export a PNG at graph creation and each rewrite.
             routes (Mapping[str, Gate | DelayGate] | None): Admission rules for child units.
@@ -63,12 +63,22 @@ class Graph:
         self.plots, self.routes, self.facts = plots, routes, facts
         self.rewrites = RewriteRegistry()
         self.finalizers = finalizers
-        self.work = work
+        self._work = work
         self.units = tuple(units)
         self._initial_names = {unit.work.name for unit in self.units}
         self.directory, self.policy, self.diagrams = directory, policy, diagrams
         self.resolve, self.notify = resolve, notify
         self.scheduler: Scheduler | None = None
+
+    @property
+    def work(self) -> Work:
+        """
+        Return the parent allocation and identity used to schedule this graph.
+
+        Returns:
+            Work: Immutable enclosing workload description.
+        """
+        return self._work
 
     @property
     def shape_hash(self) -> str:

@@ -1,9 +1,10 @@
 # Copolyad: deriving graphs from desired outcomes
 
-**Status: design proposal, not implemented.** Copolyad would plan application
+**Status: cluster architecture proposal with a [runnable local planner](../workloads/local-natural-selection.md).** Copolyad would plan application
 compositions from desired outcomes and service capability contracts, then submit
 those compositions to Polyad for admission and execution. The contracts and
-planning behavior below are proposed additions, not available APIs or CRDs.
+cluster planning behavior below are proposed additions. The local example
+implements finite capability selection and process lifecycles in Python.
 
 **Natural Selection** is the name of Copolyad's proposed composition-planning
 algorithm. It derives and selects candidate graphs from desired outcomes,
@@ -107,6 +108,14 @@ applications a way to observe their neighborhood, negotiate relationships and
 adjust their own behavior. The executable [local Soul searching example](../workloads/local-soul-searching.md)
 adds a process supervisor: three services change their real TCP topology and
 roll child workers between two approved capability representations under load.
+
+The executable [Natural Selection example](../workloads/local-natural-selection.md)
+adds a parent planner around that worker and policy machinery. A changing output
+contract selects a fused capability and a composed pipeline. One service mutates,
+another survives with the same PID, an additional stage is born and a more costly
+fixed-capability service retires. Readiness, plan revisions and complete draining
+govern the handoff; Soul searching keeps adapting workers inside the selected
+capabilities.
 
 **Automatic capability placement and composition selection would extend this
 foundation toward Natural Selection.** A service image can contain multiple

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
+from polyad.operator.adapters.interfaces import StateBackend
 from polyad.operator.lifecycle.health import credential_token
 from polyad.sql import record_cipher, statement
 from polyad.transport.pools import register
@@ -51,7 +52,7 @@ def state_document(obj: dict[str, Any]) -> dict[str, Any]:
     return document
 
 
-class StateStore:
+class StateStore(StateBackend):
     """
     Commit complete inventories atomically and reject superseded scans across HA replicas.
     """

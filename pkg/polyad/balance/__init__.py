@@ -8,5 +8,6 @@ from polyad.balance.graph import Graph as Graph
 from polyad.balance.policy import FIFO as FIFO
 from polyad.balance.policy import BreadthFirst as BreadthFirst
 from polyad.balance.policy import DepthFirst as DepthFirst
+from polyad.balance.policy import SchedulingPolicy as SchedulingPolicy
 from polyad.balance.policy import ShortestRemaining as ShortestRemaining
 from polyad.balance.scheduler import Scheduler as Scheduler

@@ -47,6 +47,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Workload topology events](workloads/workload-events.md) | Neighbor discovery, structural notifications, scaling membership and replay recovery |
 | [Service Symbiosis: writing adaptive microservices](workloads/adaptive-microservices.md) | Cooperative producers and consumers across Graphs and PolyGraphs, backpressure, useful throughput and delta-driven Python SDK hooks |
 | [Local Soul searching: processes and network topology](workloads/local-soul-searching.md) | Standalone Python demo, three real TCP peers, adaptive child workers, two Cheeger boundaries and graceful recovery |
+| [Local Natural Selection: mutation, survival and retirement](workloads/local-natural-selection.md) | Parent planner over Soul searching, typed capability composition, changing outcomes, surviving service PIDs and graceful retirement |
 | [Workload controllers and storage](workloads/workload-storage.md) | Deployment or StatefulSet execution, native volumes, PVC templates and retention |
 
 ## APIs
@@ -102,6 +103,7 @@ then [run your first workload](introduction/getting-started.md).
 
 | Guide | Contents |
 | --- | --- |
+| [Python extension interfaces](development/python-interfaces.md) | Public ABCs for workloads, process ownership, scheduling, SDK transports and operator adapters |
 | [Supported resource registry](development/resource-registry.md) | Supported kinds, AST models, API identities and scheduling capabilities |
 | [Operator package layout](development/operator-layout.md) | Lifecycle, reconciliation, the central Soul searching decision pipeline, policies, coordination, clusters, observability and adapters |
 | [Mutation plans](development/mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |

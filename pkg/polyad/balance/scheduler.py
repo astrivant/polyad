@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
 
+    from polyad.balance.policy import SchedulingPolicy
     from polyad.graph.gates import Gate
     from polyad.graph.workloads import Outcome, Work, Workload
 
@@ -69,7 +70,7 @@ class Scheduler:
         slots: int,
         directory: Path,
         memory_bytes: int | None = None,
-        policy: ShortestRemaining | None = None,
+        policy: SchedulingPolicy | None = None,
         diagrams: bool = False,
         plots: bool = False,
         rewrites: RewriteRegistry | None = None,
@@ -87,7 +88,7 @@ class Scheduler:
             slots (int): Total resource slots, including nested workload parallelism.
             directory (Path): Exclusive scheduler journal and checkpoint directory.
             memory_bytes (int | None): Optional memory reservation budget.
-            policy (ShortestRemaining | None): Ready-work ordering and preemption policy.
+            policy (SchedulingPolicy | None): Ready-work ordering and preemption policy.
             diagrams (bool): Write Mermaid snapshots when graph or lifecycle state changes.
             plots (bool): Save matplotlib PNG snapshots on graph creation and rewrites.
             rewrites (RewriteRegistry | None): Registry owned by this scheduling boundary.

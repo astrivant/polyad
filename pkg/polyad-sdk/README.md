@@ -17,12 +17,13 @@ does not install the operator.
 For application behavior around these APIs, see
 [Service Symbiosis: writing adaptive microservices](https://github.com/astrivant/polyad/blob/main/docs/workloads/adaptive-microservices.md):
 cooperative producers and consumers, graph-level capacity, backpressure and
-safe handoffs, using the implemented `AdaptiveService` interface.
+safe handoffs, using the `AdaptiveService` abstract base class.
 
 ## Table of contents
 
 - [Installation](#installation)
 - [Adaptive services and deltas](#adaptive-services-and-deltas)
+  - [Subclass contract](#subclass-contract)
   - [Identity, permissions and freshness](#identity-permissions-and-freshness)
   - [Hooks, recovery and explicit actions](#hooks-recovery-and-explicit-actions)
 - [Observations](#observations)
@@ -50,11 +51,11 @@ Once that release is available, install it with `pip install polyad-sdk`.
 
 ## Adaptive services and deltas
 
-`AdaptiveService` implements the observation and control interface for Service
-Symbiosis. It maintains an immutable view of one managed node's authorized
-neighborhood. Its hooks receive `Change` values containing **deltas**, the previous
-view and the current view. `Client` remains available for direct API calls and raw
-event subscriptions in this same package.
+`AdaptiveService` is an abstract base class for Service Symbiosis. Implement
+`adapt(change)` in a subclass to respond to authorized neighborhood changes.
+The inherited runtime maintains immutable context, constructs **deltas** and
+handles stream checkpoints. `Client` remains available for direct API calls and
+raw event subscriptions in this same package.
 
 ```python
 import logging
@@ -62,7 +63,21 @@ import logging
 from polyad_sdk import AdaptiveService, Change, Settings
 
 log = logging.getLogger(__name__)
-service = AdaptiveService.from_environment(
+
+
+class NeighborhoodService(AdaptiveService):
+    def adapt(self, change: Change) -> None:
+        if change.baseline:
+            log.info("Neighborhood baseline: %s candidate peers", len(change.after.candidates))
+            return
+        for delta in change.deltas:
+            log.info(
+                "%s %s: %s -> %s (numeric difference: %s)",
+                delta.kind, ".".join(delta.path), delta.before, delta.after, delta.difference,
+            )
+
+
+service = NeighborhoodService.from_environment(
     settings=Settings(
         refresh_seconds=10,
         max_age_seconds=60,
@@ -72,20 +87,6 @@ service = AdaptiveService.from_environment(
     ),
     timeout=45,
 )
-
-
-def changed(change: Change) -> None:
-    if change.baseline:
-        log.info("Neighborhood baseline: %s candidate peers", len(change.after.candidates))
-        return
-    for delta in change.deltas:
-        log.info(
-            "%s %s: %s -> %s (numeric difference: %s)",
-            delta.kind, ".".join(delta.path), delta.before, delta.after, delta.difference,
-        )
-
-
-service.on_change(changed, paths=("topology", "resources", "decision", "connections", "available"))
 service.run()  # Blocking: use the application's existing task/thread supervisor.
 ```
 
@@ -129,6 +130,51 @@ application checks readiness, protocol compatibility, ownership and its own
 admission budgets before assigning work. Use Istio's configured route when Istio
 owns traffic percentages.
 
+### Subclass contract
+
+Import the same ABC from `polyad_sdk` or `polyad_sdk.adaptive`. Instantiating
+`AdaptiveService` itself raises `TypeError`; concrete subclasses must implement
+`adapt(self, change: Change) -> None`. Call `from_environment()` on that subclass
+or construct it with explicit identity and clients. Factory and hook-registration
+return types preserve the concrete subclass.
+
+The delivery sequence is:
+
+```text
+read authorized state -> build baseline or deltas -> subclass adapt(change)
+    -> matching on_change hooks -> persist checkpoint -> advance cursor
+```
+
+`adapt()` is called automatically for the initial baseline, explicit replay
+resets and meaningful changes. Heartbeats or reordered fields that produce no
+deltas skip adaptation. Use `change.matching("topology")`, `"decision"` or other
+prefixes inside the method to select the changes your application can handle.
+Additional `on_change()` callbacks run after `adapt()` and can have their own
+path and event filters.
+
+Keep `adapt()` short: update routing/admission policy or notify the application's
+worker supervisor. That supervisor owns readiness, bounded work queues, worker
+replacement and draining, as illustrated in the
+[local Soul example](https://github.com/astrivant/polyad/blob/main/docs/workloads/local-soul-searching.md#writing-an-adaptive-application).
+The SDK owns the observation loop and starts no application processes or servers.
+The script's concrete `AdaptiveService` extends this ABC, delivering local
+observations through `refresh()` and `dispatch()` to its `adapt(change)` hook.
+Its local snapshot adapter replaces the HTTP events client for the demonstration.
+
+If adaptation raises, later hooks and checkpointing wait for a successful retry.
+If adaptation succeeds but a later hook or checkpoint fails, retrying the pending
+change in the same instance skips the already successful adaptation. Partial
+application effects still need idempotency across retries and process restarts.
+Construction performs no network calls and never invokes `adapt()`.
+
+The SDK also exposes `EventSource`, `ThroughputReporter` and
+`ConnectionNegotiator` ABCs. `Client` implements all three. `AdaptiveService`
+accepts them independently through `events`, `api` and `connections`, and
+`Subscription` accepts an `EventSource`. Custom event transports inherit the
+standard `subscribe()` implementation and its hook/checkpoint behavior. See
+[Python extension interfaces](https://github.com/astrivant/polyad/blob/main/docs/development/python-interfaces.md#sdk-observation-and-actions)
+for required methods and lifecycle responsibilities.
+
 ### Identity, permissions and freshness
 
 `from_environment()` reads `POLYAD_GRAPH_NAMESPACE`, `POLYAD_GRAPH_KIND`,
@@ -146,8 +192,8 @@ operator access modes keep their existing permissions; subscribing grants no
 additional rights. `allow_unauthenticated=True` supports administrator-enabled
 authentication-free demos for endpoints that permit them.
 
-Outside a managed workload, construct `AdaptiveService(identity, events,
-api=api_client, connections=connections_client)` with a `polyad_types.ServiceEndpoint`
+Outside a managed workload, construct your concrete subclass, for example
+`NeighborhoodService(identity, events, api=api_client, connections=connections_client)` with a `polyad_types.ServiceEndpoint`
 and separately authorized `Client` instances. Discovery elsewhere in the atlas
 remains available through `Client.discover()` and `Client.services()`.
 
@@ -169,14 +215,20 @@ can narrow the [operator event budgets](https://github.com/astrivant/polyad/blob
 
 ### Hooks, recovery and explicit actions
 
-Register hooks before running. `paths` selects delta prefixes; `match` accepts the
-existing composable event filters, including exact and regex field matches:
+Register additional hooks before running. They follow the required `adapt()`
+method. `paths` selects delta prefixes; `match` accepts the existing composable
+event filters, including exact and regex field matches:
 
 ```python
 from polyad_sdk.filters import event_type, field
 
+
+def audit_decision(change: Change) -> None:
+    log.info("Decision deltas: %s", change.matching("decision"))
+
+
 service.on_change(
-    changed,
+    audit_decision,
     paths=("decision",),
     match=event_type("graph") & field("name", regex=r"^pipeline"),
 )
@@ -184,7 +236,7 @@ service.on_change(
 
 A raw event filter skips a snapshot baseline, which has no triggering event. Hooks
 run serially on the calling thread; keep them bounded and hand business work to
-the application's own workers. A failed hook stops consumption without advancing
+the application's own workers. A failed adaptation or hook stops consumption without advancing
 `service.cursor`. Retrying `run()` on the same instance finishes that pending
 change, skips its already successful hooks, refreshes topology and resumes after
 the last successful cursor. The optional `checkpoint` callback runs after all

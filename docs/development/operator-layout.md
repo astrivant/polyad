@@ -26,10 +26,12 @@ All paths below are relative to [`pkg/polyad/operator`](../../pkg/polyad/operato
 | `coordination/` | Planner election, shard leases, local and shared queues, write contracts, validation, dependency dispatch and pending conflicts, and scaling the shared Dragonfly service | `leases`, `queue`, `shared_queue`, `write_queue`, `contracts`, `validation`, `dispatch`, `dragonfly` |
 | `clusters/` | Root orchestration, remote graph ownership, worker pools, remote scaling consent and reserved operator membership | `root`, `federation`, `pools`, `remote_scaling`, `reserved` |
 | `observability/` | Status trees, descendant summaries, write pressure, component demand, decision logs and traces | `graph_status`, `rollup`, `metrics`, `pressure`, `decisions`, `logging`, `tracing` |
-| `adapters/` | Fenced Kubernetes transport and optional PostgreSQL graph-state persistence | `kubernetes`, `postgresql` |
+| `adapters/` | Public resource/state interfaces, fenced Kubernetes transport and optional PostgreSQL persistence | `interfaces`, `kubernetes`, `postgresql` |
 
 Graph algorithms and topology transformations remain in `polyad.graph`, shared
 resource models in `polyad_types`, and HTTP listeners in `polyad.api`. The
+public [Python ABCs](python-interfaces.md) describe replaceable behavior across
+these packages. The
 operator packages connect those facilities to reconciliation and deployment
 lifecycle. The shared Flask application still has one owner in
 [`lifecycle/handlers.py`](../../pkg/polyad/operator/lifecycle/handlers.py).

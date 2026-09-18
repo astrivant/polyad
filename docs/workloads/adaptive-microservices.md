@@ -24,7 +24,7 @@ which accept and complete it. A service can perform both roles: an enrichment
 service consumes raw records and produces enriched records for an indexer.
 
 The [Python SDK](../../pkg/polyad-sdk/README.md) supplies a delta-first
-`AdaptiveService` interface alongside discovery, subscriptions, connection
+`AdaptiveService` abstract base class alongside discovery, subscriptions, connection
 negotiation and throughput reporting. The SDK exposes Service Symbiosis to
 application code; [Soul searching](../graphs/soul-searching.md) uses the reported
 demand to adapt permitted graph structure and traffic. Polyad checks current
@@ -196,7 +196,7 @@ to implement the Service Symbiosis loop:
 | Step | SDK capability | Application responsibility |
 | --- | --- | --- |
 | Find eligible peers | `Client.discover()` or bounded `Client.services()` traversal; `AdaptiveService.view` for observed neighbors | Match work contracts, resolve declared entrypoints and keep selection inside active permissions |
-| React to observations | `AdaptiveService.on_change()` with connection, capacity and decision deltas | Refresh a routing view, wake a scheduler or begin a drain; avoid sending business work on the event callback thread |
+| React to observations | Subclass `AdaptiveService.adapt()` for connection, capacity and decision deltas; add filtered observers with `on_change()` | Refresh a routing view, wake a scheduler or begin a drain; avoid sending business work on the event callback thread |
 | Ask for a missing path | `AdaptiveService.connect()`; the peer calls `respond()` | Check compatibility and policy, wait for Active, then verify usable transport |
 | Exchange work and capacity | The application's HTTP, RPC or queue transport | Enforce shared admission, acknowledgements, idempotency and backpressure |
 | Inform graph adaptation | An authorized reporter calls `report_throughput()` | Aggregate comparable measurements and report sustainable whole-path headroom |
@@ -425,8 +425,9 @@ A socket that remains open is not permission to continue after a grant expires.
 ## Use the Python SDK
 
 Install `polyad-sdk` independently of the operator. It contains both `Client` for
-API calls and `AdaptiveService` for an immutable application view with delta
-hooks. See the [SDK guide](../../pkg/polyad-sdk/README.md#adaptive-services-and-deltas)
+API calls and the `AdaptiveService` ABC for an immutable application view with
+deltas. Subclasses implement `adapt(change)`; the inherited runtime calls it
+before optional hooks and checkpointing. See the [SDK guide](../../pkg/polyad-sdk/README.md#adaptive-services-and-deltas)
 for installation, credentials, tuning and recovery.
 
 **Deltas tell applications what to adjust.** An added consumer invites readiness
@@ -441,7 +442,8 @@ missing observations and a replay gap require fresh context. An SDK change alway
 includes `before` and `after` views so handlers can interpret a delta against the
 current graph, unit, decision phase and resource incarnation.
 
-This integration accepts the application's own routing and admission functions:
+This factory binds the application's routing and admission functions to a
+concrete SDK subclass:
 
 ```python
 from collections.abc import Callable
@@ -449,29 +451,35 @@ from collections.abc import Callable
 from polyad_sdk import AdaptiveService, Change, Environment, Settings
 
 
-def install_cooperation(
-    service: AdaptiveService,
+def cooperative_service(
     update_candidates: Callable[[Environment], None],
     pause_assignments: Callable[[], None],
-) -> None:
-    def neighborhood_changed(change: Change) -> None:
-        current = service.view  # Recheck freshness when acting, including retries.
-        if not current.available:
-            pause_assignments()
-            return
-        if change.baseline or change.matching("topology") or change.matching("available"):
-            update_candidates(current)
+) -> AdaptiveService:
+    class CooperativeService(AdaptiveService):
+        def adapt(self, change: Change) -> None:
+            current = self.view  # Recheck freshness when acting, including retries.
+            if not current.available:
+                pause_assignments()
+                return
+            if change.baseline or change.matching("topology") or change.matching("available"):
+                update_candidates(current)
 
-    service.on_change(neighborhood_changed, paths=("topology", "available"))
+    return CooperativeService.from_environment(
+        settings=Settings(refresh_seconds=10, max_age_seconds=60),
+        timeout=45,
+    )
 
 
-service = AdaptiveService.from_environment(
-    settings=Settings(refresh_seconds=10, max_age_seconds=60),
-    timeout=45,
-)
-# Register with the application's routing/admission functions, then call
-# service.run() through its existing supervisor. Call service.stop() at shutdown.
+# Pass the application's routing/admission functions to cooperative_service().
+# Run the returned instance through its existing supervisor; stop() ends its stream.
 ```
+
+The subclass must implement `adapt()`. It runs automatically for a baseline or
+meaningful delta; optional `on_change()` hooks run afterward. A failed adaptation
+keeps the change pending without advancing its cursor. Successful adaptation is
+not repeated when a later hook or checkpoint fails within the same instance.
+The [SDK subclass contract](../../pkg/polyad-sdk/README.md#subclass-contract)
+defines the full delivery and retry order.
 
 `update_candidates` resolves the exposed execution identities, validates the
 work protocol and considers ready consumers within their admission budgets.
@@ -511,6 +519,12 @@ TCP topology changes from a chain to a triangle and back. The example checks
 Cheeger bounds at both boundaries, verifies every result and shuts down its tree.
 See the [local example guide](local-soul-searching.md) for diagrams, controls and
 lifecycle evidence.
+
+Run [`python nature.py`](../../nature.py) for the
+[parent Natural Selection example](local-natural-selection.md). It derives
+compatible service routes from a required outcome, mutates one capability,
+retains useful service identities and drains excluded processes. Soul searching
+continues adapting workers inside each selected capability.
 
 Automatic capability placement and composition selection would extend this
 foundation toward the proposed [Natural Selection planner](../proposals/copolyad.md#from-local-capabilities-to-natural-selection).

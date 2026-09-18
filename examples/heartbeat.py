@@ -6,13 +6,12 @@ from __future__ import annotations
 
 import argparse
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
 from typing import TYPE_CHECKING
 
 from polyad.balance import BreadthFirst, Scheduler
-from polyad.graph import Outcome, Rewrite, ShutdownContract, Statistics, Work
+from polyad.graph import Outcome, Rewrite, ShutdownContract, Statistics, Work, Workload
 from polyad.graph.gates import AND, NOT, OR, Signal
 
 if TYPE_CHECKING:
@@ -21,18 +20,36 @@ if TYPE_CHECKING:
     from polyad.graph import Control
 
 
-@dataclass
-class Heartbeat:
+class Heartbeat(Workload):
     """
     Do no useful computation while reporting one healthy tick each second.
 
     Attributes:
-        work (Work): Identity and prerequisites.
         after_tick (Callable[[], None] | None): Optional rewrite callback after the heartbeat.
     """
 
-    work: Work
     after_tick: Callable[[], None] | None = None
+
+    def __init__(self, work: Work, after_tick: Callable[[], None] | None = None) -> None:
+        """
+        Bind the immutable scheduling description and optional application callback.
+
+        Args:
+            work (Work): Identity, prerequisites and resource reservation.
+            after_tick (Callable[[], None] | None): Callback after a completed tick.
+        """
+        self._work = work
+        self.after_tick = after_tick
+
+    @property
+    def work(self) -> Work:
+        """
+        Expose this workload's scheduling description through the ABC contract.
+
+        Returns:
+            Work: Immutable identity, dependencies and resource requirements.
+        """
+        return self._work
 
     def run(self, control: Control, checkpoint: dict[str, object] | None) -> Outcome:
         """

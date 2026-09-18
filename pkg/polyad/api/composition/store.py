@@ -16,7 +16,7 @@ from polyad_types.requests import COMPOSITION_KINDS
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad.operator.adapters.kubernetes import API
+    from polyad.operator.adapters.interfaces import ResourceAPI
     from polyad_types.requests import CompositionRequest
 
 
@@ -25,12 +25,12 @@ class CompositionStore:
     Use Kubernetes as the durable source of accepted composition requests.
     """
 
-    def __init__(self, api: API, namespace: str) -> None:
+    def __init__(self, api: ResourceAPI, namespace: str) -> None:
         """
         Bind one API adapter and the operator's namespace.
 
         Args:
-            api (API): Adapter serializing receipt writes; graph writes use the leased worker.
+            api (ResourceAPI): Adapter serializing receipt writes; graph writes use the leased worker.
             namespace (str): Fixed namespace for every request from this API instance.
         """
         self.api, self.namespace = api, namespace

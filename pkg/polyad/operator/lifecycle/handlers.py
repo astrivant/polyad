@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from polyad.api.http.server import APIServer
     from polyad.events.store import EventStore
     from polyad.metrics.store import MetricsStore
-    from polyad.operator.adapters.postgresql import StateStore
+    from polyad.operator.adapters.interfaces import StateBackend
     from polyad.operator.clusters.root import RootControlPlane
     from polyad.operator.coordination.queue import Key
     from polyad.operator.reconciliation.controller import Controller
@@ -60,7 +60,7 @@ tuning = OperatorTuning()
 work_graph = WorkGraphSettings()
 background: list[asyncio.Task[None]] = []
 root_plane: RootControlPlane | None = None
-state: StateStore | None = None
+state: StateBackend | None = None
 KINDS = tuple(sorted(RECONCILED_KINDS))
 logger = logging.getLogger(__name__)
 

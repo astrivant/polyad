@@ -12,6 +12,9 @@ from polyad_sdk.adaptive.service import AdaptiveService as AdaptiveService
 from polyad_sdk.client import APIError as APIError
 from polyad_sdk.client import Client as Client
 from polyad_sdk.filters import Filter as Filter
+from polyad_sdk.interfaces import ConnectionNegotiator as ConnectionNegotiator
+from polyad_sdk.interfaces import EventSource as EventSource
+from polyad_sdk.interfaces import ThroughputReporter as ThroughputReporter
 from polyad_sdk.subscriptions import StreamInterrupted as StreamInterrupted
 from polyad_sdk.subscriptions import Subscription as Subscription
 from polyad_types.events import Event as Event

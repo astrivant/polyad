@@ -47,7 +47,9 @@ if it supports checkpoints, has run for at least five seconds, and provides know
 estimated remaining-time advantage, after uncertainty margins, must exceed those costs by at least one second. Aging can request
 preemption for fairness instead. These are configurable scheduling heuristics, not calibrated probabilities or optimality claims.
 
-Use `FIFO()` for submission order without preemption. Subclass the policy to supply different `rank` and `preempt` decisions.
+Use `FIFO()` for submission order without preemption. Subclass `SchedulingPolicy` to supply different `rank` and `preempt` decisions.
+Its default `priorities()` follows insertion order; override it for another graph traversal.
+See the [public Python interfaces](../../../docs/development/python-interfaces.md) for the complete extension contracts.
 Reordering ready work changes the schedule, not the dependency graph. `submit` adds a validated batch of workloads;
 `dependencies` changes prerequisites of unstarted work. Both return acknowledgement futures and reject cycles or missing parents
 without partially mutating the graph. Do not block waiting for an acknowledgement from the scheduler's own notification callback.
@@ -55,12 +57,12 @@ without partially mutating the graph. Do not block waiting for an acknowledgemen
 ## Cooperative execution
 
 ```python
-from polyad.graph import Control, Estimate, Outcome, Statistics, Work
+from polyad.graph import Control, Estimate, Outcome, Statistics, Work, Workload
 from polyad.balance import Scheduler
 from pathlib import Path
 
 
-class Count:
+class Count(Workload):
     work = Work(
         "count", "inputs-v1:implementation-v1", resumable=True,
         statistics=Statistics(total=100, estimate=Estimate(checkpoint_seconds=0.01, resume_seconds=0.01)),

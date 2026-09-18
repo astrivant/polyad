@@ -34,8 +34,8 @@ from polyad_types.resources import BOUNDARY_KINDS
 if TYPE_CHECKING:
     from typing import Any
 
+    from polyad.operator.adapters.interfaces import StateBackend
     from polyad.operator.adapters.kubernetes import API
-    from polyad.operator.adapters.postgresql import StateStore
     from polyad.operator.coordination.leases import Coordinator
     from polyad.operator.coordination.queue import Key
     from polyad.operator.lifecycle.tuning import OperatorTuning
@@ -240,7 +240,7 @@ class RootControlPlane:
     Keep authority, events, demand and worker capacity in a single management cluster.
     """
 
-    def __init__(self, coordinator: Coordinator, controller: Controller, shared: SharedQueue, *, state: StateStore | None = None) -> None:
+    def __init__(self, coordinator: Coordinator, controller: Controller, shared: SharedQueue, *, state: StateBackend | None = None) -> None:
         """
         Share existing leases and guarded transports with remote execution workers.
 
@@ -248,7 +248,7 @@ class RootControlPlane:
             coordinator (Coordinator): Root planner and shard leases.
             controller (Controller): Root graph controller.
             shared (SharedQueue): Root Dragonfly transport.
-            state (StateStore | None): Optional durable store shared by root observations.
+            state (StateBackend | None): Optional durable store shared by root observations.
         """
         self.coordinator, self.controller, self.shared = coordinator, controller, shared
         self.state = state

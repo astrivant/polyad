@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from redis.asyncio import Redis
 from redis.exceptions import ReadOnlyError
 
+from polyad.cache.interfaces import CacheBackend
 from polyad.transport.redis import pool
 
 if TYPE_CHECKING:
@@ -27,7 +28,7 @@ def cache_url() -> str:
     return os.environ.get("POLYAD_CACHE_URL") or os.environ.get("POLYAD_DRAGONFLY_URL", "redis://localhost:6379/0")
 
 
-class Cache:
+class Cache(CacheBackend):
     """
     Own an asynchronous connection pool and namespace transient JSON cache entries.
     """
