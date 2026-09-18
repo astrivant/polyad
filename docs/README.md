@@ -113,6 +113,7 @@ then [run your first workload](introduction/getting-started.md).
 
 | Guide | Contents |
 | --- | --- |
+| [Nature: deriving graphs from desired outcomes (proposal)](proposals/nature.md) | Natural Selection composition algorithm, capability contracts, outcome feedback and Polyad's admission boundary |
 | [Graph-scoped rollouts and rotations (proposal)](proposals/rotations.md) | Root-coordinated waves, graph policy bindings, Secret revisions, traversal and KEDA coordination |
 | [Rollout sparsity and events (proposal)](proposals/rollout-sparsity.md) | Inherited frequency limits, bounded debounce, queued triggers and rollout lifecycle notifications |
 | [Transistor gates and decision programs (proposal)](proposals/decision-gates.md) | Conditional activation, durable choices, typed facts and a Python/CEL authoring direction |
