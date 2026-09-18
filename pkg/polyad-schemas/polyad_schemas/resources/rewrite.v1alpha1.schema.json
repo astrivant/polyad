@@ -1383,5 +1383,5 @@
     "spec"
   ],
   "description": "Apply a one-shot replacement of a graph specification at an expected generation. The operator records a receipt with the spec change so retries do not apply the same rewrite twice.",
-  "$comment": "Generated from charts/polyad/crds/rewrites.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/rewrites.yaml; do not edit this artifact."
 }

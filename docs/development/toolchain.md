@@ -274,26 +274,32 @@ PyPI. Add `--dry-run` to validate the publishing flow without uploading. See
 ## Verified Helm chart builds
 
 Main-branch pushes and pull requests call `.github/workflows/chart.yml` from the
-Test workflow. Chart validation uses `astrivant/hypothesis-helm@main` with **three
-shards and two workers per shard**. PRs, main-branch pushes and tagged builds
+Test workflow. Chart validation uses `astrivant/hypothesis-helm@main` across `charts/polyad` and `charts/polyad-crds`, with **three
+shards per chart and two workers per shard**. PRs, main-branch pushes and tagged builds
 inherit the action's defaults for test selection, sampling, example counts,
 reruns and result caching. The release path does not request a separate
 exhaustive mode. Since the action tracks `main`, those defaults follow upstream;
 consult its [action definition](https://github.com/astrivant/hypothesis-helm/blob/main/action.yml)
 for the current behavior.
 
-All three shards must succeed before Test can permit automatic tagging. The same
+All six chart/shard jobs must succeed before Test can permit automatic tagging. The same
 workflow validates user-pushed/manual release tags through reusable CI, and is
 called directly after automatic tagging. For tagged builds, its package job
-requires all three validation shards, packages `charts/polyad`, and uploads
-`helm-chart-<tag>` containing the `.tgz` archive for 30 days. Main and PR runs
+requires all six validation jobs, packages both charts, and uploads
+`helm-chart-<tag>` containing both `.tgz` archives for 30 days. Main and PR runs
 validate without producing a release chart archive.
 
 The workflow resolves the source commit once and uses that SHA for every shard
 and the package job. Packaging also checks that the release tag still identifies
-that SHA. The archive retains the chart's declared version; update `Chart.yaml`
-when releasing a new chart version. These builds upload workflow artifacts;
+that SHA. The operator chart follows the operator release tag. The resource chart retains
+its independently declared version; update its `Chart.yaml` and the parent
+dependency pin when releasing changed definitions or templates. These builds upload workflow artifacts;
 they do not publish to a Helm registry or GitHub Release.
+
+The resource chart has empty instance maps by default. Its scoped hypothesis-helm
+policy permits an empty instance bundle (`HH1009`); Python tests verify the CRD
+installation output and representative instances independently. All other checks
+remain enabled, and the operator chart retains its normal policy.
 
 ## Helm documentation
 
@@ -306,7 +312,7 @@ Descriptions explain the setting's purpose and tradeoffs.
 
 After changing the canonical schema or adding values, synchronize annotations
 across defaults, reference overlays, examples and test fixtures, then regenerate
-the chart's parameter table:
+both charts' parameter tables:
 
 ```bash
 poetry run python scripts/validation/check-values.py --fix-annotations
@@ -319,6 +325,11 @@ and authored descriptions. The pinned Bitnami generator runs through
 `scripts/schemas/generate-helm-readme.py`, which shows these tags as visible types
 while retaining actual defaults, including nonempty strings and collections.
 Run the hook through pre-commit to use its pinned Node environment.
+
+The resource chart also ships fully commented examples for each kind. The wrapper
+decodes their marked example blocks when generating a reference table; type checks
+cover those blocks without enabling any instances. Regenerate those examples from
+the CRDs with `scripts/schemas/generate-all.py`.
 
 Commit any regenerated table with the values change. The chart's hand-authored
 `values.schema.json` retains its conditional validation rules. CI runs the same

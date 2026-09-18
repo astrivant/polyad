@@ -1,0 +1,8 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if .Values.postgresql.recordEncryption.enabled -}}
+{{- if not (or .Values.postgresql.enabled .Values.authentication.storage.enabled) -}}
+{{- fail "record encryption requires postgresql.enabled or authentication.storage.enabled" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

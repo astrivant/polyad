@@ -1,0 +1,29 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- $config := .Values.postgresql.encryptionAtRest -}}
+{{- if $config.enabled -}}
+{{- $state := and .Values.postgresql.enabled .Values.postgresql.managed -}}
+{{- $auth := and .Values.authentication.storage.enabled .Values.authentication.storage.separateDatabase .Values.authentication.storage.managed -}}
+{{- if not (or $state $auth) }}{{ fail "postgresql.encryptionAtRest requires at least one chart-managed database; configure external database encryption with its provider" }}{{ end -}}
+{{- $name := include "polyad.postgresql.encryptedStorageClass" . -}}
+{{- if eq $config.provider "GKE" -}}
+{{- if not $config.kmsKeyName }}{{ fail "GKE encrypted storage requires postgresql.encryptionAtRest.kmsKeyName" }}{{ end -}}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ $name | quote }}
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/component: postgresql-storage
+provisioner: pd.csi.storage.gke.io
+parameters:
+  type: {{ $config.diskType | quote }}
+  disk-encryption-kms-key: {{ $config.kmsKeyName | quote }}
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+{{- end -}}
+{{- end -}}
+{{- end -}}

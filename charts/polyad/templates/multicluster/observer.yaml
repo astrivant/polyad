@@ -130,6 +130,7 @@ spec:
             - name: POLYAD_STATE_SCOPE
               value: {{ default (printf "%s/%s" .Release.Namespace .Release.Name) .Values.postgresql.scope | quote }}
             {{- if .Values.authentication.storage.enabled }}
+            {{- include "polyad.postgresql.recordEncryptionEnv" . | nindent 12 }}
             - name: POLYAD_AUTH_DATABASE_DSN_FILE
               value: /var/run/polyad/auth-database/uri
             {{- end }}
@@ -170,6 +171,7 @@ spec:
             {{- toYaml .Values.observer.resources | nindent 12 }}
           volumeMounts:
             {{- if .Values.authentication.storage.enabled }}
+            {{- include "polyad.postgresql.recordEncryptionMount" . | nindent 12 }}
             - name: authentication-database
               mountPath: /var/run/polyad/auth-database
               readOnly: true
@@ -193,6 +195,7 @@ spec:
               port: observations
       volumes:
         {{- if .Values.authentication.storage.enabled }}
+        {{- include "polyad.postgresql.recordEncryptionVolume" . | nindent 8 }}
         {{- include "polyad.authenticationDatabaseVolume" . | nindent 8 }}
         {{- end }}
         {{- if not $required }} []

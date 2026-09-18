@@ -16,9 +16,10 @@ regenerate both copies. Generated JSON files are never independent sources.
 | Contract | Canonical source |
 | --- | --- |
 | Shared Python models and events | `pkg/polyad-types/polyad_types/` attrs models and field metadata |
-| Polyad manifests | `charts/polyad/crds/`, with modeled subtrees regenerated first |
+| Polyad manifests | `charts/polyad-crds/crds/`, with modeled subtrees regenerated first |
 | Helm configuration | `charts/polyad/values.schema.json` |
-| Dragonfly | Vendored `charts/polyad/crds/dragonflies.yaml`; no second snapshot |
+| Named resource values, defaults and commented examples | Generated from `charts/polyad-crds/crds/` by `scripts/schemas/generate-resource-chart.py`; the parent embeds the generated dependency contract |
+| Dragonfly | Vendored `charts/polyad-crds/crds/dragonflies.yaml`; no second snapshot |
 | Gateway API, Istio, KEDA and External Secrets | [sources.json](sources.json) and verified snapshots under [upstream](upstream/) |
 | Upstream licenses | Catalogued files under [licenses](licenses/) and `charts/polyad/LICENSE.dragonfly-operator` |
 
@@ -31,6 +32,8 @@ flowchart TD
     overlay --> package
     catalog["Pinned upstream catalog and snapshots"] --> manifests["Shared manifest conversion"]
     crds --> manifests
+    crds --> named["Named resource values, defaults and examples"]
+    named --> values
     manifests --> chart["Chart validation schemas"]
     manifests --> package
 ```
@@ -41,7 +44,7 @@ chart version. Generation fails if a dependency pin disagrees with `Chart.yaml`
 or a snapshot or license digest changes unexpectedly.
 
 Generated `$comment` annotations identify source provenance. The chart outputs
-live under `charts/polyad/schemas/`; package outputs are grouped into
+live under `charts/polyad/schemas/` and `charts/polyad-crds/schemas/`; package outputs are grouped into
 `polyad_schemas.models`, `.resources`, `.events` and `.helm`.
 
 ## Regenerate and check

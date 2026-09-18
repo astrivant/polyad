@@ -75,7 +75,7 @@ are applied by the operator even where the CRD does not persist a default value.
 | [`cheegerComputation`](#cheeger-computation-budgets-and-priorities) | Inherit operator ceilings | `maxVertices`, `maxCuts`, `timeoutSeconds`, ordered `priorityCuts`; preferences never weaken bounds |
 | [`network`](#network-contracts) | Omitted | Scope, isolation, peer, port and optional Istio restrictions |
 
-The [GraphRule CRD](../../charts/polyad/crds/graphrules.yaml) defines the Kubernetes
+The [GraphRule CRD](../../charts/polyad-crds/crds/graphrules.yaml) defines the Kubernetes
 schema. Structural integer limits and spectral thresholds have a CRD maximum of
 1,000,000. The Python types are `StructuralRule`, `Spectrum`, `Cheeger` and
 `NetworkAccess`, exported from `polyad.graph`.

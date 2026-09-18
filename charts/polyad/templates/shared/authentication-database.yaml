@@ -25,7 +25,7 @@ spec:
         - {{ .Files.Get "files/postgresql/restrict-schema.sql" | trim | quote }}
   storage:
     size: {{ .Values.authentication.storage.size | quote }}
-    {{- with .Values.authentication.storage.storageClass }}
+    {{- with include "polyad.postgresql.storageClass" (dict "root" . "configured" .Values.authentication.storage.storageClass "path" "authentication.storage.storageClass") }}
     storageClass: {{ . | quote }}
     {{- end }}
   resources:

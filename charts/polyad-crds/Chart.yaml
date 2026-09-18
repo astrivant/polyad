@@ -1,0 +1,7 @@
+apiVersion: v2
+name: polyad-crds
+description: Versioned Polyad CRD definitions and named resource templates
+type: application
+version: 0.0.1-alpha3
+appVersion: v1alpha1
+kubeVersion: '>=1.30.0-0'

@@ -23,6 +23,28 @@ CHART = ROOT / "charts/polyad"
 PARAMETER = re.compile(r"^(\s*##\s*@param\s+)(\S+)\s+(?:\[([^]]+)\]\s*)?(.*)$")
 
 
+def commented_example(source: str) -> str | None:
+    """
+    Decode the inert resource field catalog for annotation checks and README generation.
+
+    Args:
+        source (str): Reference values with a marked commented example.
+
+    Returns:
+        str | None: Uncommented example, or None for ordinary values files.
+
+    Raises:
+        ValueError: An example contains active YAML or lacks its closing marker.
+    """
+    marker = "# BEGIN RESOURCE EXAMPLE\n"
+    if marker not in source:
+        return None
+    body, end, _ = source.split(marker, 1)[1].partition("# END RESOURCE EXAMPLE")
+    if not end or any(not line.startswith("# ") for line in body.splitlines()):
+        raise ValueError("resource examples must be fully commented and have an end marker")
+    return "\n".join(line[2:] for line in body.splitlines()) + "\n"
+
+
 def annotated_values(source: str, schema: dict[str, Any]) -> str:
     """
     Add schema-derived type tags while preserving authored parameter descriptions.
@@ -43,6 +65,22 @@ def annotated_values(source: str, schema: dict[str, Any]) -> str:
     previous: dict[str, int] = {}
     inserts: dict[int, list[str]] = {}
 
+    def types_of(definition: dict[str, Any]) -> list[str]:
+        kinds = definition.get("type", [])
+        kinds = [kinds] if isinstance(kinds, str) else kinds
+        if not kinds:
+            kinds = sorted({kind for branch in definition.get("anyOf", []) for kind in types_of(branch)})
+        return kinds
+
+    def container_branch(definition: dict[str, Any], expected: str) -> dict[str, Any]:
+        if definition.get("type") == expected:
+            return definition
+        for branch in definition.get("anyOf", []):
+            candidate = container_branch(branch, expected)
+            if candidate.get("type") == expected:
+                return candidate
+        return definition
+
     def visit(node: yaml.Node, definition: dict[str, Any], path: str = "") -> None:
         while "$ref" in definition:
             reference = definition["$ref"]
@@ -51,6 +89,10 @@ def annotated_values(source: str, schema: dict[str, Any]) -> str:
             definition = schema
             for part in reference[2:].split("/"):
                 definition = definition[part.replace("~1", "/").replace("~0", "~")]
+        if "anyOf" in definition:
+            expected = "object" if isinstance(node, yaml.MappingNode) else "array" if isinstance(node, yaml.SequenceNode) else None
+            if expected:
+                definition = container_branch(definition, expected)
         if isinstance(node, yaml.SequenceNode):
             items = definition.get("items", {})
             if isinstance(items, dict):
@@ -62,6 +104,10 @@ def annotated_values(source: str, schema: dict[str, Any]) -> str:
         for key_node, value_node in node.value:
             name = key_node.value
             child = definition.get("properties", {}).get(name)
+            if child is None:
+                child = next(
+                    (value for pattern, value in definition.get("patternProperties", {}).items() if re.search(pattern, name)), None
+                )
             if child is None and isinstance(definition.get("additionalProperties"), dict):
                 child = definition["additionalProperties"]
             if child is None:
@@ -73,10 +119,7 @@ def annotated_values(source: str, schema: dict[str, Any]) -> str:
                 resolved = schema
                 for part in reference[2:].split("/"):
                     resolved = resolved[part.replace("~1", "/").replace("~0", "~")]
-            types = resolved.get("type", [])
-            types = [types] if isinstance(types, str) else types
-            if not types:
-                types = sorted({branch["type"] for branch in resolved.get("anyOf", []) if isinstance(branch.get("type"), str)})
+            types = types_of(resolved)
             tags = [kind for kind in types if kind != "null"] + (["nullable"] if "null" in types else [])
             if not tags:
                 raise ValueError(f"{full} has no explicit annotation type")
@@ -144,6 +187,8 @@ def value_files() -> list[Path]:
     return sorted(
         {
             CHART / "values.yaml",
+            ROOT / "charts/polyad-crds/values.yaml",
+            *(ROOT / "charts/polyad-crds").glob("values-*.reference.yaml"),
             *CHART.glob("values-*.reference.yaml"),
             *(ROOT / "examples").rglob("*values.yaml"),
             *(ROOT / "examples/deployment-profiles").glob("*.yaml"),
@@ -174,13 +219,15 @@ def type_gaps(value: Any, node: dict[str, Any], root: dict[str, Any], path: str 
         node = root
         for part in pointer[2:].split("/"):
             node = node[part.replace("~1", "/").replace("~0", "~")]
+    if node.get("x-kubernetes-preserve-unknown-fields") or node.get("x-polyad-freeform"):
+        return
     for keyword in ("anyOf", "oneOf"):
         if keyword in node:
             validator = jsonschema.Draft7Validator(root)
             candidates = [
                 list(type_gaps(value, candidate, root, path))
                 for candidate in node[keyword]
-                if validator.evolve(schema=candidate).is_valid(value)
+                if all(error.validator == "required" for error in validator.evolve(schema=candidate).iter_errors(value))
             ]
             yield from min(candidates, key=len) if candidates else [path]
             return
@@ -190,6 +237,10 @@ def type_gaps(value: Any, node: dict[str, Any], root: dict[str, Any], path: str 
     if isinstance(value, dict):
         for key, child in value.items():
             schema = node.get("properties", {}).get(key, node.get("additionalProperties", {}))
+            for pattern, matching in node.get("patternProperties", {}).items():
+                if re.search(pattern, key):
+                    schema = matching
+                    break
             if not isinstance(schema, dict):
                 schema = {}
             yield from type_gaps(child, schema, root, f"{path}.{key}")
@@ -222,7 +273,10 @@ def validate(path: Path) -> None:
     schema_path = (path.parent / match[1]).resolve()
     schema = json.loads(schema_path.read_text())
     jsonschema.Draft7Validator.check_schema(schema)
-    canonical = json.loads((CHART / "values.schema.json").read_text())
+    canonical_path = (
+        schema_path.with_name("values.schema.json") if schema_path.name == "values.reference.schema.json" else CHART / "values.schema.json"
+    )
+    canonical = json.loads(canonical_path.read_text())
     jsonschema.Draft7Validator.check_schema(canonical)
     registry = Registry().with_resource("values.schema.json", Resource.from_contents(canonical))
     value = yaml.load(source, Loader=UniqueLoader)
@@ -233,6 +287,8 @@ def validate(path: Path) -> None:
         raise ValueError("missing nested type schemas: " + ", ".join(gaps))
     if annotated_values(source, coverage) != source:
         raise ValueError("missing or stale @param type tags; run scripts/validation/check-values.py --fix-annotations")
+    if (example := commented_example(source)) is not None and annotated_values(example, coverage) != example:
+        raise ValueError("missing or stale commented-example type tags; run scripts/schemas/generate-all.py")
 
 
 def main() -> int:
@@ -256,7 +312,7 @@ def main() -> int:
                     raise ValueError("missing YAML editor schema directive")
                 schema_path = (path.parent / match[1]).resolve()
                 if schema_path.name == "values.reference.schema.json":
-                    schema_path = CHART / "values.schema.json"
+                    schema_path = schema_path.with_name("values.schema.json")
                 updated = annotated_values(source, json.loads(schema_path.read_text()))
                 if updated != source:
                     path.write_text(updated)

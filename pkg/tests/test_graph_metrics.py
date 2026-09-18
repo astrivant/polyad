@@ -314,7 +314,7 @@ def test_emitted_status_matches_crd_schema(kind, filename):
     import jsonschema
     import yaml
 
-    path = Path(__file__).resolve().parents[2] / "charts" / "polyad" / "crds" / f"{filename}.yaml"
+    path = Path(__file__).resolve().parents[2] / "charts" / "polyad-crds" / "crds" / f"{filename}.yaml"
     crd = yaml.safe_load(path.read_text())
     schema = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]["status"]
 

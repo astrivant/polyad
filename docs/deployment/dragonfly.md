@@ -104,7 +104,7 @@ For an existing release, install the new CRD before upgrading because Helm does
 not add CRDs during upgrades:
 
 ```sh
-kubectl apply -f charts/polyad/crds/dragonflypools.yaml
+kubectl apply -f charts/polyad-crds/crds/dragonflypools.yaml
 ```
 
 Exclude `DragonflyPool.spec.replicas` and `Dragonfly.spec.replicas` from continuous

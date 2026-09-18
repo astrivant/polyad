@@ -1,0 +1,374 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# PolyGraph field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param polygraphs [object] Named PolyGraph instances; empty by default. Copy selected fields below to configure one.
+polygraphs: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section PolyGraph field reference
+# ## @param polygraphs [object] PolyGraph instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# polygraphs:
+#   ## @param polygraphs.example [object] Compose graph boundaries into a finite or persistent graph of workloads and resources. Admission follows lifecycle dependencies; deletion waits for owned resources to finish cleanup.
+#   example:
+#     ## @param polygraphs.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param polygraphs.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param polygraphs.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param polygraphs.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param polygraphs.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param polygraphs.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for this PolyGraph resource. Compose graph boundaries into a finite or persistent graph of workloads and resources. Admission follows lifecycle dependencies; deletion waits for owned resources to finish cleanup.
+#     spec:
+#       ## @param polygraphs.example.spec.traffic [array, string] Optional. No CRD default; the value shown is illustrative.
+#       traffic:
+#         -
+#           ## @param polygraphs.example.spec.traffic[].name [string] Required. No CRD default; the value shown is illustrative. Unique route name within this graph.
+#           name: "example"
+#           ## @param polygraphs.example.spec.traffic[].source [string] Required. No CRD default; the value shown is illustrative. Local caller node; selects its descendant mesh pods.
+#           source: "example"
+#           ## @param polygraphs.example.spec.traffic[].service [string] Required. No CRD default; the value shown is illustrative. Existing Service in the graph namespace covering all destination pods.
+#           service: "example"
+#           ## @param polygraphs.example.spec.traffic[].port [integer, string] Required. No CRD default; the value shown is illustrative. Service port carrying HTTP, HTTP/2 or gRPC traffic.
+#           port: 1
+#           ## @param polygraphs.example.spec.traffic[].destinations [array, string] Required. No CRD default; the value shown is illustrative. Distinct downstream subsets whose percentages sum to 100.
+#           destinations:
+#             -
+#               ## @param polygraphs.example.spec.traffic[].destinations[].target [string] Required. No CRD default; the value shown is illustrative. Downstream node path, such as workers/replica-0/entrypoint, whose pods form a subset.
+#               target: "example"
+#               ## @param polygraphs.example.spec.traffic[].destinations[].weight [integer, string] Required. No CRD default; the value shown is illustrative. Configured percentage of new HTTP requests.
+#               weight: 0
+#               ## @param polygraphs.example.spec.traffic[].destinations[].minWeight [integer, string] Optional. No CRD default; the value shown is illustrative. Smallest percentage allowed by automatic adjustment.
+#               minWeight: 0
+#               ## @param polygraphs.example.spec.traffic[].destinations[].maxWeight [integer, string] Optional. No CRD default; the value shown is illustrative. Largest percentage allowed by automatic adjustment.
+#               maxWeight: 0
+#       ## @param polygraphs.example.spec.throughput [object, string] Optional. No CRD default; the value shown is illustrative. Observe or adapt topology using empirical throughput targets within hard structural rules.
+#       throughput:
+#         ## @param polygraphs.example.spec.throughput.unit [string] Required. No CRD default; the value shown is illustrative. Application work unit shared by offered and completed rates, such as records.
+#         unit: "example"
+#         ## @param polygraphs.example.spec.throughput.tiers [array, string] Required. No CRD default; the value shown is illustrative. Strictly increasing demand thresholds; highest matching tier wins.
+#         tiers:
+#           -
+#             ## @param polygraphs.example.spec.throughput.tiers[].threshold [number, string] Required. No CRD default; the value shown is illustrative. Inclusive threshold in the selected demand signal's unit; defaults to offered work per second.
+#             threshold: 0
+#             ## @param polygraphs.example.spec.throughput.tiers[].cheeger [object, string] Required. No CRD default; the value shown is illustrative. Bound exact edge expansion on the simple undirected projection. A cut's ratio is its crossing-edge count divided by its smaller side's vertex count. The constant is the minimum ratio over all cuts. Raising the minimum rejects severe structural bottlenecks; lowering the maximum requires a sparse cut. Throughput policies can select these structural targets using application-reported rates; the constant itself is edge expansion.
+#             cheeger:
+#               ## @param polygraphs.example.spec.throughput.tiers[].cheeger.minimum [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               minimum: 0
+#               ## @param polygraphs.example.spec.throughput.tiers[].cheeger.maximum [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               maximum: 0
+#             # Constraint: A throughput tier requires at least one Cheeger bound.
+#             # Constraint: Cheeger minimum must not exceed maximum.
+#             ## @param polygraphs.example.spec.throughput.tiers[].trafficWeights [array, string] Optional. No CRD default; the value shown is illustrative. Optional calibrated request percentages for configured routes.
+#             trafficWeights:
+#               -
+#                 ## @param polygraphs.example.spec.throughput.tiers[].trafficWeights[].route [string] Required. No CRD default; the value shown is illustrative. Name of the configured traffic route.
+#                 route: "example"
+#                 ## @param polygraphs.example.spec.throughput.tiers[].trafficWeights[].weights [object, string] Required. No CRD default; the value shown is illustrative. Complete target-to-percentage mapping for that route.
+#                 weights: {}
+#             ## @param polygraphs.example.spec.throughput.tiers[].capacity [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             capacity:
+#               ## @param polygraphs.example.spec.throughput.tiers[].capacity.lookaheadStages [integer, string] Required. No CRD default; the value shown is illustrative. Missing dependency layers to prepare, bounded by the approved ceiling.
+#               lookaheadStages: 1
+#               ## @param polygraphs.example.spec.throughput.tiers[].capacity.maxPods [integer, string] Required. No CRD default; the value shown is illustrative. Maximum outstanding forecast Pods, also bounded by operator configuration.
+#               maxPods: 1
+#         ## @param polygraphs.example.spec.throughput.layouts [array, string] Optional. No CRD default; the value shown is illustrative. Approved alternatives, tried in declaration order.
+#         layouts:
+#           -
+#             ## @param polygraphs.example.spec.throughput.layouts[].name [string] Required. No CRD default; the value shown is illustrative. Stable administrator-selected layout name.
+#             name: "example"
+#             ## @param polygraphs.example.spec.throughput.layouts[].connections [array, string] Required. No CRD default; the value shown is illustrative. Complete replacement connections; nodes and admission stay unchanged.
+#             connections:
+#               -
+#                 ## @param polygraphs.example.spec.throughput.layouts[].connections[].source [string] Required. No CRD default; the value shown is illustrative. Node emitting data on this connection.
+#                 source: "example"
+#                 ## @param polygraphs.example.spec.throughput.layouts[].connections[].target [string] Required. No CRD default; the value shown is illustrative. Node receiving data on this connection.
+#                 target: "example"
+#                 ## @param polygraphs.example.spec.throughput.layouts[].connections[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Optional transport grants when graph networking is enabled.
+#                 ports:
+#                   -
+#                     ## @param polygraphs.example.spec.throughput.layouts[].connections[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                     port: 1
+#                     ## @param polygraphs.example.spec.throughput.layouts[].connections[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                     protocol: "TCP"
+#         ## @param polygraphs.example.spec.throughput.mode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Observe", "Adapt". Observe reports recommendations; Adapt may apply approved parameters.
+#         mode: "Observe"
+#         ## @param polygraphs.example.spec.throughput.sampleMaxAgeSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum age and gap between usable samples.
+#         sampleMaxAgeSeconds: 1
+#         ## @param polygraphs.example.spec.throughput.sustainedSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Continuous trigger duration required before selecting a profile.
+#         sustainedSeconds: 1
+#         ## @param polygraphs.example.spec.throughput.minSamples [integer, string] Optional. No CRD default; the value shown is illustrative. Distinct reports required during the sustained trigger.
+#         minSamples: 2
+#         ## @param polygraphs.example.spec.throughput.shortfallRatio [number, string] Optional. No CRD default; the value shown is illustrative. Completed/offered ratio below which demanded throughput is unmet.
+#         shortfallRatio: 1
+#         ## @param polygraphs.example.spec.throughput.cooldownSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Minimum time between successful profile adjustments.
+#         cooldownSeconds: 1
+#         ## @param polygraphs.example.spec.throughput.maxChangesPerHour [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum successful changes in a rolling hour.
+#         maxChangesPerHour: 1
+#         ## @param polygraphs.example.spec.throughput.cheegerComputation [object, string] Optional. No CRD default; the value shown is illustrative. Budget exact cut search and examine important partitions first without weakening bounds.
+#         cheegerComputation:
+#           ## @param polygraphs.example.spec.throughput.cheegerComputation.maxVertices [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#           maxVertices: 2
+#           ## @param polygraphs.example.spec.throughput.cheegerComputation.maxCuts [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#           maxCuts: 1
+#           ## @param polygraphs.example.spec.throughput.cheegerComputation.timeoutSeconds [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#           timeoutSeconds: 0.001
+#           ## @param polygraphs.example.spec.throughput.cheegerComputation.priorityCuts [array, string] Optional. No CRD default; the value shown is illustrative. Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
+#           priorityCuts: []
+#         ## @param polygraphs.example.spec.throughput.maxWeightStep [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum percentage-point change per destination in one automatic adjustment.
+#         maxWeightStep: 1
+#         ## @param polygraphs.example.spec.throughput.trafficMode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Tiers", "Headroom". Use calibrated tier percentages or measured per-destination sustainable capacity.
+#         trafficMode: "Tiers"
+#         ## @param polygraphs.example.spec.throughput.trigger [string] Optional. No CRD default; the value shown is illustrative. Choices: "Shortfall", "Demand". React to sustained shortfall or prepare on sustained positive selected demand.
+#         trigger: "Shortfall"
+#         ## @param polygraphs.example.spec.throughput.capacityCeiling [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         capacityCeiling:
+#           ## @param polygraphs.example.spec.throughput.capacityCeiling.lookaheadStages [integer, string] Required. No CRD default; the value shown is illustrative. Missing dependency layers to prepare, bounded by the approved ceiling.
+#           lookaheadStages: 1
+#           ## @param polygraphs.example.spec.throughput.capacityCeiling.maxPods [integer, string] Required. No CRD default; the value shown is illustrative. Maximum outstanding forecast Pods, also bounded by operator configuration.
+#           maxPods: 1
+#         ## @param polygraphs.example.spec.throughput.demand [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         demand:
+#           ## @param polygraphs.example.spec.throughput.demand.name [string] Required. No CRD default; the value shown is illustrative. Exact signal name the authorized reporter must supply.
+#           name: "example"
+#           ## @param polygraphs.example.spec.throughput.demand.unit [string] Required. No CRD default; the value shown is illustrative. Exact measurement unit, such as jobs, sessions or bytes-per-second.
+#           unit: "example"
+#       ## @param polygraphs.example.spec.activation [object, string] Optional. No CRD default; the value shown is illustrative. Control how repeated requests start a downstream workload or graph.
+#       activation:
+#         ## @param polygraphs.example.spec.activation.mode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Queue", "Reject", "Coalesce", "Parallel". Busy-target admission policy.
+#         mode: "Queue"
+#         ## @param polygraphs.example.spec.activation.maxConcurrent [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum selected or running executions for parallel mode.
+#         maxConcurrent: 1
+#         ## @param polygraphs.example.spec.activation.maxPending [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum retained pending requests admitted to the queue.
+#         maxPending: 1
+#         ## @param polygraphs.example.spec.activation.replicasPerActivation [integer, string] Optional. No CRD default; the value shown is illustrative. Deployment or StatefulSet replicas in each daemon activation.
+#         replicasPerActivation: 1
+#         ## @param polygraphs.example.spec.activation.maxReplicas [integer, string] Optional. No CRD default; the value shown is illustrative. Upper bound on the total daemon replicas reserved by concurrent pulses.
+#         maxReplicas: 1
+#         ## @param polygraphs.example.spec.activation.minIntervalSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Minimum time between execution admissions.
+#         minIntervalSeconds: 0
+#         ## @param polygraphs.example.spec.activation.maxIntervalSeconds [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         maxIntervalSeconds: 1
+#         ## @param polygraphs.example.spec.activation.onDeadline [string] Optional. No CRD default; the value shown is illustrative. Choices: "Report", "Activate". Report overdue admission or submit a timer pulse.
+#         onDeadline: "Report"
+#       ## @param polygraphs.example.spec.capacity [object, string] Optional. No CRD default; the value shown is illustrative. Forecast missing execution nodes before their admission dependencies finish.
+#       capacity:
+#         ## @param polygraphs.example.spec.capacity.backend [string] Optional. No CRD default; the value shown is illustrative. Choices: "Auto", "ProvisioningRequest", "Placeholders". Preferred capacity mechanism.
+#         backend: "Auto"
+#         ## @param polygraphs.example.spec.capacity.lookaheadStages [integer, string] Optional. No CRD default; the value shown is illustrative. Number of uncreated dependency layers to forecast at each boundary.
+#         lookaheadStages: 1
+#         ## @param polygraphs.example.spec.capacity.maxPods [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum forecast Pods held by this boundary at once.
+#         maxPods: 1
+#         ## @param polygraphs.example.spec.capacity.timeoutSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum time to hold an unconsumed request, including gate waits.
+#         timeoutSeconds: 10
+#         ## @param polygraphs.example.spec.capacity.provisioningClassName [string] Optional. No CRD default; the value shown is illustrative. Autoscaler provisioning class; empty uses the operator default.
+#         provisioningClassName: "example"
+#         ## @param polygraphs.example.spec.capacity.parameters [object, string] Optional. No CRD default; the value shown is illustrative. Provider-specific ProvisioningRequest parameters.
+#         parameters: {}
+#         ## @param polygraphs.example.spec.capacity.retryToken [string] Optional. No CRD default; the value shown is illustrative. Change this value to retry a failed or expired plan.
+#         retryToken: "example"
+#       ## @param polygraphs.example.spec.network [object, string] Optional. No CRD default; the value shown is illustrative. Isolate a graph subtree and intersect its exceptions with inherited constraints.
+#       network:
+#         ## @param polygraphs.example.spec.network.scope [string] Optional. No CRD default; the value shown is illustrative. Choices: "Boundary", "Subtree". Apply to direct workloads or propagate to all descendant workloads.
+#         scope: "Boundary"
+#         ## @param polygraphs.example.spec.network.ingress [array, string] Optional. No CRD default; the value shown is illustrative. Additional allowed inbound traffic.
+#         ingress:
+#           -
+#             ## @param polygraphs.example.spec.network.ingress[].peer [object, string] Required. No CRD default; the value shown is illustrative. Select peers in an explicit namespace, optionally by graph or pod labels.
+#             peer:
+#               ## @param polygraphs.example.spec.network.ingress[].peer.namespace [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               namespace: "example"
+#               ## @param polygraphs.example.spec.network.ingress[].peer.graph [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               graph: "example"
+#               ## @param polygraphs.example.spec.network.ingress[].peer.kind [string] Optional. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Kind of the referenced graph instance.
+#               kind: "Graph"
+#               ## @param polygraphs.example.spec.network.ingress[].peer.node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               node: "example"
+#               ## @param polygraphs.example.spec.network.ingress[].peer.podLabels [object, string] Optional. No CRD default; the value shown is illustrative. Additional exact pod-label matches, combined with graph selection.
+#               podLabels: {}
+#               ## @param polygraphs.example.spec.network.ingress[].peer.cluster [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               cluster: "example"
+#             ## @param polygraphs.example.spec.network.ingress[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination ports; empty means every transport port.
+#             ports:
+#               -
+#                 ## @param polygraphs.example.spec.network.ingress[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                 port: 1
+#                 ## @param polygraphs.example.spec.network.ingress[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                 protocol: "TCP"
+#             ## @param polygraphs.example.spec.network.ingress[].node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             node: "example"
+#             ## @param polygraphs.example.spec.network.ingress[].principals [array, string] Optional. No CRD default; the value shown is illustrative. Exact Istio source identities such as cluster.local/ns/team/sa/client.
+#             principals: []
+#             ## @param polygraphs.example.spec.network.ingress[].methods [array, string] Optional. No CRD default; the value shown is illustrative. Allowed inbound HTTP methods; empty leaves methods unconstrained.
+#             methods: []
+#             ## @param polygraphs.example.spec.network.ingress[].paths [array, string] Optional. No CRD default; the value shown is illustrative. Exact inbound HTTP paths; empty leaves paths unconstrained.
+#             paths: []
+#         ## @param polygraphs.example.spec.network.egress [array, string] Optional. No CRD default; the value shown is illustrative. Additional allowed outbound traffic.
+#         egress:
+#           -
+#             ## @param polygraphs.example.spec.network.egress[].peer [object, string] Required. No CRD default; the value shown is illustrative. Select peers in an explicit namespace, optionally by graph or pod labels.
+#             peer:
+#               ## @param polygraphs.example.spec.network.egress[].peer.namespace [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               namespace: "example"
+#               ## @param polygraphs.example.spec.network.egress[].peer.graph [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               graph: "example"
+#               ## @param polygraphs.example.spec.network.egress[].peer.kind [string] Optional. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Kind of the referenced graph instance.
+#               kind: "Graph"
+#               ## @param polygraphs.example.spec.network.egress[].peer.node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               node: "example"
+#               ## @param polygraphs.example.spec.network.egress[].peer.podLabels [object, string] Optional. No CRD default; the value shown is illustrative. Additional exact pod-label matches, combined with graph selection.
+#               podLabels: {}
+#               ## @param polygraphs.example.spec.network.egress[].peer.cluster [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               cluster: "example"
+#             ## @param polygraphs.example.spec.network.egress[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination ports; empty means every transport port.
+#             ports:
+#               -
+#                 ## @param polygraphs.example.spec.network.egress[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                 port: 1
+#                 ## @param polygraphs.example.spec.network.egress[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                 protocol: "TCP"
+#             ## @param polygraphs.example.spec.network.egress[].node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             node: "example"
+#             ## @param polygraphs.example.spec.network.egress[].principals [array, string] Optional. No CRD default; the value shown is illustrative. Exact Istio source identities such as cluster.local/ns/team/sa/client.
+#             principals: []
+#             ## @param polygraphs.example.spec.network.egress[].methods [array, string] Optional. No CRD default; the value shown is illustrative. Allowed inbound HTTP methods; empty leaves methods unconstrained.
+#             methods: []
+#             ## @param polygraphs.example.spec.network.egress[].paths [array, string] Optional. No CRD default; the value shown is illustrative. Exact inbound HTTP paths; empty leaves paths unconstrained.
+#             paths: []
+#         ## @param polygraphs.example.spec.network.isolateIngress [boolean, string] Optional. No CRD default; the value shown is illustrative. Restrict incoming connections.
+#         isolateIngress: false
+#         ## @param polygraphs.example.spec.network.isolateEgress [boolean, string] Optional. No CRD default; the value shown is illustrative. Restrict outgoing connections.
+#         isolateEgress: false
+#         ## @param polygraphs.example.spec.network.allowWithin [boolean, string] Optional. No CRD default; the value shown is illustrative. Allow traffic between all workloads inside this boundary.
+#         allowWithin: false
+#         ## @param polygraphs.example.spec.network.allowDNS [boolean, string] Optional. No CRD default; the value shown is illustrative. Allow TCP/UDP 53 to kube-system pods labeled k8s-app=kube-dns.
+#         allowDNS: false
+#         ## @param polygraphs.example.spec.network.mesh [boolean, string] Optional. No CRD default; the value shown is illustrative. Require Istio injection, strict mutual TLS and inbound authorization.
+#         mesh: false
+#       ## @param polygraphs.example.spec.rules [array, string] Optional. No CRD default; the value shown is illustrative. Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.
+#       rules: []
+#       ## @param polygraphs.example.spec.nodes [array, string] Required. No CRD default; the value shown is illustrative. Graph membership in deterministic admission order. Names are unique within this boundary; definitions are resolved in the same namespace.
+#       nodes:
+#         -
+#           ## @param polygraphs.example.spec.nodes[].cluster [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#           cluster: "example"
+#           ## @param polygraphs.example.spec.nodes[].id [string] Optional. No CRD default; the value shown is illustrative. Optional request-local node identity retained on generated manifests for auditing.
+#           id: "example"
+#           ## @param polygraphs.example.spec.nodes[].name [string] Required. No CRD default; the value shown is illustrative. Unique name of this node within its graph. Used by dependencies, connections and lifecycle signals.
+#           name: "example"
+#           ## @param polygraphs.example.spec.nodes[].kind [string] Required. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Graph boundary kind instantiated from the referenced template.
+#           kind: "Graph"
+#           ## @param polygraphs.example.spec.nodes[].ref [string] Required. No CRD default; the value shown is illustrative. Name of the reusable definition in the same namespace. Nested Graph and PolyGraph definitions must set templateOnly to true.
+#           ref: "example"
+#           ## @param polygraphs.example.spec.nodes[].requires [array, string] Optional. No CRD default; the value shown is illustrative. Lifecycle prerequisites that must all hold before initial admission. Admission dependencies must be acyclic; use connections for cyclic data flow.
+#           requires:
+#             -
+#               ## @param polygraphs.example.spec.nodes[].requires[].node [string] Required. No CRD default; the value shown is illustrative. Name of the upstream node within this graph.
+#               node: "example"
+#               ## @param polygraphs.example.spec.nodes[].requires[].condition [string] Optional. Default: "completed". Choices: "started", "ready", "completed". Observation required before admission: started means the execution resource exists; ready means it exposes readiness; completed means finite execution succeeded. Daemons and resources cannot satisfy completed. Readiness loss does not cancel already-admitted consumers.
+#               condition: "completed"
+#           ## @param polygraphs.example.spec.nodes[].gate [string] Optional. No CRD default; the value shown is illustrative. Name of a Gate definition in the same namespace. Admission requires its expression to evaluate to true; false or unknown blocks admission.
+#           gate: "example"
+#           ## @param polygraphs.example.spec.nodes[].slots [integer, string] Optional. Default: 1. Admission slots reserved by this node until finite work completes or execution is removed. Must fit the containing graph; this is not a CPU request.
+#           slots: 1
+#       ## @param polygraphs.example.spec.connections [array, string] Optional. No CRD default; the value shown is illustrative. Declarative data-flow edges, including cycles and self-loops. These edges neither block admission nor configure network transport.
+#       connections:
+#         -
+#           ## @param polygraphs.example.spec.connections[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination transport grants; omitted connections remain data-flow declarations.
+#           ports:
+#             -
+#               ## @param polygraphs.example.spec.connections[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#               port: 1
+#               ## @param polygraphs.example.spec.connections[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#               protocol: "TCP"
+#           ## @param polygraphs.example.spec.connections[].source [string] Required. No CRD default; the value shown is illustrative. Name of the source node for this data-flow connection.
+#           source: "example"
+#           ## @param polygraphs.example.spec.connections[].target [string] Required. No CRD default; the value shown is illustrative. Name of the destination node for this data-flow connection.
+#           target: "example"
+#       ## @param polygraphs.example.spec.mode [string] Optional. Default: "finite". Choices: "finite", "persistent". Finite graphs report completion when finite work completes and resource nodes are ready. Persistent graphs remain active until stopped or deleted. Graphs containing daemons must be persistent.
+#       mode: "finite"
+#       ## @param polygraphs.example.spec.slots [integer, string] Optional. Default: 64. Total admission-slot capacity for this boundary. Node reservations govern admission; Kubernetes independently schedules actual CPU, memory and device requests.
+#       slots: 64
+#       ## @param polygraphs.example.spec.shutdownPolicy [string] Optional. No CRD default; the value shown is illustrative. Name of a ShutdownPolicy in the same namespace, specifying a runtime limit and termination grace period.
+#       shutdownPolicy: "example"
+#       ## @param polygraphs.example.spec.suspend [boolean, string] Optional. Default: false. Stop admitting work and drain owned execution while true. Clearing suspension permits fresh execution; this is not an application checkpoint request.
+#       suspend: false
+#       ## @param polygraphs.example.spec.templateOnly [boolean, string] Optional. Default: false. Keep this boundary as an inert reusable definition. A parent graph creates an owned executable copy with this flag cleared.
+#       templateOnly: false
+#       ## @param polygraphs.example.spec.placement [object, string] Optional. No CRD default; the value shown is illustrative. Placement defaults or enforced constraints copied to descendant pod templates. Tolerations permit matching taints; selectors and required affinity restrict eligible nodes. This does not reserve capacity.
+#       placement:
+#         ## @param polygraphs.example.spec.placement.nodeSelector [object, string] Optional. No CRD default; the value shown is illustrative. Exact Kubernetes node-label matches, all of which must hold. Use labels for node groups or resource slices; cloud tags must first be exposed as node labels. Conflicting inherited values are rejected.
+#         nodeSelector: {}
+#         ## @param polygraphs.example.spec.placement.nodeAffinity [object, string] Optional. No CRD default; the value shown is illustrative. Required and preferred Kubernetes node-selection rules. Required rules intersect across graph, definition and pod scopes; preferences are combined.
+#         nodeAffinity:
+#           ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution [object, string] Optional. No CRD default; the value shown is illustrative. Hard node eligibility rules evaluated when scheduling. Changes to node labels after scheduling do not by themselves evict a running pod.
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#             ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms [array, string] Required. No CRD default; the value shown is illustrative. Alternative node-selection terms combined with OR. Expressions within one term are combined with AND. An empty term selects no nodes.
+#             nodeSelectorTerms:
+#               -
+#                 ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions [array, string] Optional. No CRD default; the value shown is illustrative. Node-label requirements combined with AND within this term.
+#                 matchExpressions:
+#                   -
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#                 ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields [array, string] Optional. No CRD default; the value shown is illustrative. Node-field requirements combined with AND within this term.
+#                 matchFields:
+#                   -
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#           ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution [array, string] Optional. No CRD default; the value shown is illustrative. Weighted node preferences applied after hard eligibility checks. Unmatched preferences do not prevent scheduling.
+#           preferredDuringSchedulingIgnoredDuringExecution:
+#             -
+#               ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].weight [integer, string] Required. No CRD default; the value shown is illustrative. Preference weight from 1 to 100. Matching preferred rules contribute to the node scheduling score.
+#               weight: 1
+#               ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference [object, string] Required. No CRD default; the value shown is illustrative. Node-selection term whose match contributes the associated weight.
+#               preference:
+#                 ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions [array, string] Optional. No CRD default; the value shown is illustrative. Node-label requirements combined with AND within this term.
+#                 matchExpressions:
+#                   -
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#                 ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields [array, string] Optional. No CRD default; the value shown is illustrative. Node-field requirements combined with AND within this term.
+#                 matchFields:
+#                   -
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param polygraphs.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#         ## @param polygraphs.example.spec.placement.tolerations [array, string] Optional. No CRD default; the value shown is illustrative. Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations allow placement on tainted nodes; they do not select or guarantee a node.
+#         tolerations:
+#           -
+#             ## @param polygraphs.example.spec.placement.tolerations[].key [string] Optional. No CRD default; the value shown is illustrative. Taint key to match. An empty key requires operator Exists and matches all keys.
+#             key: "example"
+#             ## @param polygraphs.example.spec.placement.tolerations[].operator [string] Optional. No CRD default; the value shown is illustrative. Choices: "Exists", "Equal". Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal.
+#             operator: "Exists"
+#             ## @param polygraphs.example.spec.placement.tolerations[].value [string] Optional. No CRD default; the value shown is illustrative. Taint value to match when operator is Equal. Omit or leave empty when operator is Exists.
+#             value: "example"
+#             ## @param polygraphs.example.spec.placement.tolerations[].effect [string] Optional. No CRD default; the value shown is illustrative. Choices: "", "NoSchedule", "PreferNoSchedule", "NoExecute". Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute.
+#             effect: ""
+#             ## @param polygraphs.example.spec.placement.tolerations[].tolerationSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction.
+#             tolerationSeconds: 0
+#         ## @param polygraphs.example.spec.placement.enforce [boolean, string] Optional. Default: true. Keep these constraints in every descendant pod. False allows a more specific workload or graph placement to replace these defaults; an enforced ancestor cannot be relaxed.
+#         enforce: true
+# END RESOURCE EXAMPLE

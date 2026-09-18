@@ -1,0 +1,364 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# Rewrite field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param rewrites [object] Named Rewrite instances; empty by default. Copy selected fields below to configure one.
+rewrites: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section Rewrite field reference
+# ## @param rewrites [object] Rewrite instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# rewrites:
+#   ## @param rewrites.example [object] Apply a one-shot replacement of a graph specification at an expected generation. The operator records a receipt with the spec change so retries do not apply the same rewrite twice.
+#   example:
+#     ## @param rewrites.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param rewrites.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param rewrites.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param rewrites.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param rewrites.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param rewrites.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for this Rewrite resource. Apply a one-shot replacement of a graph specification at an expected generation. The operator records a receipt with the spec change so retries do not apply the same rewrite twice.
+#     spec:
+#       ## @param rewrites.example.spec.graph [string] Required. No CRD default; the value shown is illustrative. Name of the target graph in the same namespace.
+#       graph: "example"
+#       ## @param rewrites.example.spec.kind [string] Optional. Default: "Graph". Choices: "Graph", "PolyGraph". Kind of the graph targeted by this rewrite.
+#       kind: "Graph"
+#       ## @param rewrites.example.spec.expectedGeneration [integer, string] Required. No CRD default; the value shown is illustrative. Required metadata.generation of the target graph before applying the rewrite. A mismatch rejects the change unless this rewrite already has a committed receipt.
+#       expectedGeneration: 1
+#       ## @param rewrites.example.spec.topology [object, string] Required. No CRD default; the value shown is illustrative. Complete replacement graph spec, including nodes, placement and lifecycle settings. Omitted optional fields are removed rather than merged with the previous spec.
+#       topology:
+#         ## @param rewrites.example.spec.topology.traffic [array, string] Optional. No CRD default; the value shown is illustrative.
+#         traffic:
+#           -
+#             ## @param rewrites.example.spec.topology.traffic[].name [string] Required. No CRD default; the value shown is illustrative. Unique route name within this graph.
+#             name: "example"
+#             ## @param rewrites.example.spec.topology.traffic[].source [string] Required. No CRD default; the value shown is illustrative. Local caller node; selects its descendant mesh pods.
+#             source: "example"
+#             ## @param rewrites.example.spec.topology.traffic[].service [string] Required. No CRD default; the value shown is illustrative. Existing Service in the graph namespace covering all destination pods.
+#             service: "example"
+#             ## @param rewrites.example.spec.topology.traffic[].port [integer, string] Required. No CRD default; the value shown is illustrative. Service port carrying HTTP, HTTP/2 or gRPC traffic.
+#             port: 1
+#             ## @param rewrites.example.spec.topology.traffic[].destinations [array, string] Required. No CRD default; the value shown is illustrative. Distinct downstream subsets whose percentages sum to 100.
+#             destinations:
+#               -
+#                 ## @param rewrites.example.spec.topology.traffic[].destinations[].target [string] Required. No CRD default; the value shown is illustrative. Downstream node path, such as workers/replica-0/entrypoint, whose pods form a subset.
+#                 target: "example"
+#                 ## @param rewrites.example.spec.topology.traffic[].destinations[].weight [integer, string] Required. No CRD default; the value shown is illustrative. Configured percentage of new HTTP requests.
+#                 weight: 0
+#                 ## @param rewrites.example.spec.topology.traffic[].destinations[].minWeight [integer, string] Optional. No CRD default; the value shown is illustrative. Smallest percentage allowed by automatic adjustment.
+#                 minWeight: 0
+#                 ## @param rewrites.example.spec.topology.traffic[].destinations[].maxWeight [integer, string] Optional. No CRD default; the value shown is illustrative. Largest percentage allowed by automatic adjustment.
+#                 maxWeight: 0
+#         ## @param rewrites.example.spec.topology.throughput [object, string] Optional. No CRD default; the value shown is illustrative. Observe or adapt topology using empirical throughput targets within hard structural rules.
+#         throughput:
+#           ## @param rewrites.example.spec.topology.throughput.unit [string] Required. No CRD default; the value shown is illustrative. Application work unit shared by offered and completed rates, such as records.
+#           unit: "example"
+#           ## @param rewrites.example.spec.topology.throughput.tiers [array, string] Required. No CRD default; the value shown is illustrative. Strictly increasing demand thresholds; highest matching tier wins.
+#           tiers:
+#             -
+#               ## @param rewrites.example.spec.topology.throughput.tiers[].threshold [number, string] Required. No CRD default; the value shown is illustrative. Inclusive threshold in the selected demand signal's unit; defaults to offered work per second.
+#               threshold: 0
+#               ## @param rewrites.example.spec.topology.throughput.tiers[].cheeger [object, string] Required. No CRD default; the value shown is illustrative. Bound exact edge expansion on the simple undirected projection. A cut's ratio is its crossing-edge count divided by its smaller side's vertex count. The constant is the minimum ratio over all cuts. Raising the minimum rejects severe structural bottlenecks; lowering the maximum requires a sparse cut. Throughput policies can select these structural targets using application-reported rates; the constant itself is edge expansion.
+#               cheeger:
+#                 ## @param rewrites.example.spec.topology.throughput.tiers[].cheeger.minimum [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 minimum: 0
+#                 ## @param rewrites.example.spec.topology.throughput.tiers[].cheeger.maximum [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 maximum: 0
+#               # Constraint: A throughput tier requires at least one Cheeger bound.
+#               # Constraint: Cheeger minimum must not exceed maximum.
+#               ## @param rewrites.example.spec.topology.throughput.tiers[].trafficWeights [array, string] Optional. No CRD default; the value shown is illustrative. Optional calibrated request percentages for configured routes.
+#               trafficWeights:
+#                 -
+#                   ## @param rewrites.example.spec.topology.throughput.tiers[].trafficWeights[].route [string] Required. No CRD default; the value shown is illustrative. Name of the configured traffic route.
+#                   route: "example"
+#                   ## @param rewrites.example.spec.topology.throughput.tiers[].trafficWeights[].weights [object, string] Required. No CRD default; the value shown is illustrative. Complete target-to-percentage mapping for that route.
+#                   weights: {}
+#               ## @param rewrites.example.spec.topology.throughput.tiers[].capacity [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               capacity:
+#                 ## @param rewrites.example.spec.topology.throughput.tiers[].capacity.lookaheadStages [integer, string] Required. No CRD default; the value shown is illustrative. Missing dependency layers to prepare, bounded by the approved ceiling.
+#                 lookaheadStages: 1
+#                 ## @param rewrites.example.spec.topology.throughput.tiers[].capacity.maxPods [integer, string] Required. No CRD default; the value shown is illustrative. Maximum outstanding forecast Pods, also bounded by operator configuration.
+#                 maxPods: 1
+#           ## @param rewrites.example.spec.topology.throughput.layouts [array, string] Optional. No CRD default; the value shown is illustrative. Approved alternatives, tried in declaration order.
+#           layouts:
+#             -
+#               ## @param rewrites.example.spec.topology.throughput.layouts[].name [string] Required. No CRD default; the value shown is illustrative. Stable administrator-selected layout name.
+#               name: "example"
+#               ## @param rewrites.example.spec.topology.throughput.layouts[].connections [array, string] Required. No CRD default; the value shown is illustrative. Complete replacement connections; nodes and admission stay unchanged.
+#               connections:
+#                 -
+#                   ## @param rewrites.example.spec.topology.throughput.layouts[].connections[].source [string] Required. No CRD default; the value shown is illustrative. Node emitting data on this connection.
+#                   source: "example"
+#                   ## @param rewrites.example.spec.topology.throughput.layouts[].connections[].target [string] Required. No CRD default; the value shown is illustrative. Node receiving data on this connection.
+#                   target: "example"
+#                   ## @param rewrites.example.spec.topology.throughput.layouts[].connections[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Optional transport grants when graph networking is enabled.
+#                   ports:
+#                     -
+#                       ## @param rewrites.example.spec.topology.throughput.layouts[].connections[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                       port: 1
+#                       ## @param rewrites.example.spec.topology.throughput.layouts[].connections[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                       protocol: "TCP"
+#           ## @param rewrites.example.spec.topology.throughput.mode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Observe", "Adapt". Observe reports recommendations; Adapt may apply approved parameters.
+#           mode: "Observe"
+#           ## @param rewrites.example.spec.topology.throughput.sampleMaxAgeSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum age and gap between usable samples.
+#           sampleMaxAgeSeconds: 1
+#           ## @param rewrites.example.spec.topology.throughput.sustainedSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Continuous trigger duration required before selecting a profile.
+#           sustainedSeconds: 1
+#           ## @param rewrites.example.spec.topology.throughput.minSamples [integer, string] Optional. No CRD default; the value shown is illustrative. Distinct reports required during the sustained trigger.
+#           minSamples: 2
+#           ## @param rewrites.example.spec.topology.throughput.shortfallRatio [number, string] Optional. No CRD default; the value shown is illustrative. Completed/offered ratio below which demanded throughput is unmet.
+#           shortfallRatio: 1
+#           ## @param rewrites.example.spec.topology.throughput.cooldownSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Minimum time between successful profile adjustments.
+#           cooldownSeconds: 1
+#           ## @param rewrites.example.spec.topology.throughput.maxChangesPerHour [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum successful changes in a rolling hour.
+#           maxChangesPerHour: 1
+#           ## @param rewrites.example.spec.topology.throughput.cheegerComputation [object, string] Optional. No CRD default; the value shown is illustrative. Budget exact cut search and examine important partitions first without weakening bounds.
+#           cheegerComputation:
+#             ## @param rewrites.example.spec.topology.throughput.cheegerComputation.maxVertices [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             maxVertices: 2
+#             ## @param rewrites.example.spec.topology.throughput.cheegerComputation.maxCuts [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             maxCuts: 1
+#             ## @param rewrites.example.spec.topology.throughput.cheegerComputation.timeoutSeconds [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             timeoutSeconds: 0.001
+#             ## @param rewrites.example.spec.topology.throughput.cheegerComputation.priorityCuts [array, string] Optional. No CRD default; the value shown is illustrative. Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
+#             priorityCuts: []
+#           ## @param rewrites.example.spec.topology.throughput.maxWeightStep [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum percentage-point change per destination in one automatic adjustment.
+#           maxWeightStep: 1
+#           ## @param rewrites.example.spec.topology.throughput.trafficMode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Tiers", "Headroom". Use calibrated tier percentages or measured per-destination sustainable capacity.
+#           trafficMode: "Tiers"
+#           ## @param rewrites.example.spec.topology.throughput.trigger [string] Optional. No CRD default; the value shown is illustrative. Choices: "Shortfall", "Demand". React to sustained shortfall or prepare on sustained positive selected demand.
+#           trigger: "Shortfall"
+#           ## @param rewrites.example.spec.topology.throughput.capacityCeiling [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#           capacityCeiling:
+#             ## @param rewrites.example.spec.topology.throughput.capacityCeiling.lookaheadStages [integer, string] Required. No CRD default; the value shown is illustrative. Missing dependency layers to prepare, bounded by the approved ceiling.
+#             lookaheadStages: 1
+#             ## @param rewrites.example.spec.topology.throughput.capacityCeiling.maxPods [integer, string] Required. No CRD default; the value shown is illustrative. Maximum outstanding forecast Pods, also bounded by operator configuration.
+#             maxPods: 1
+#           ## @param rewrites.example.spec.topology.throughput.demand [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#           demand:
+#             ## @param rewrites.example.spec.topology.throughput.demand.name [string] Required. No CRD default; the value shown is illustrative. Exact signal name the authorized reporter must supply.
+#             name: "example"
+#             ## @param rewrites.example.spec.topology.throughput.demand.unit [string] Required. No CRD default; the value shown is illustrative. Exact measurement unit, such as jobs, sessions or bytes-per-second.
+#             unit: "example"
+#         ## @param rewrites.example.spec.topology.capacity [object, string] Optional. No CRD default; the value shown is illustrative. Forecast missing execution nodes before their admission dependencies finish.
+#         capacity:
+#           ## @param rewrites.example.spec.topology.capacity.backend [string] Optional. No CRD default; the value shown is illustrative. Choices: "Auto", "ProvisioningRequest", "Placeholders". Preferred capacity mechanism.
+#           backend: "Auto"
+#           ## @param rewrites.example.spec.topology.capacity.lookaheadStages [integer, string] Optional. No CRD default; the value shown is illustrative. Number of uncreated dependency layers to forecast at each boundary.
+#           lookaheadStages: 1
+#           ## @param rewrites.example.spec.topology.capacity.maxPods [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum forecast Pods held by this boundary at once.
+#           maxPods: 1
+#           ## @param rewrites.example.spec.topology.capacity.timeoutSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum time to hold an unconsumed request, including gate waits.
+#           timeoutSeconds: 10
+#           ## @param rewrites.example.spec.topology.capacity.provisioningClassName [string] Optional. No CRD default; the value shown is illustrative. Autoscaler provisioning class; empty uses the operator default.
+#           provisioningClassName: "example"
+#           ## @param rewrites.example.spec.topology.capacity.parameters [object, string] Optional. No CRD default; the value shown is illustrative. Provider-specific ProvisioningRequest parameters.
+#           parameters: {}
+#           ## @param rewrites.example.spec.topology.capacity.retryToken [string] Optional. No CRD default; the value shown is illustrative. Change this value to retry a failed or expired plan.
+#           retryToken: "example"
+#         ## @param rewrites.example.spec.topology.network [object, string] Optional. No CRD default; the value shown is illustrative. Isolate a graph subtree and intersect its exceptions with inherited constraints.
+#         network:
+#           ## @param rewrites.example.spec.topology.network.scope [string] Optional. No CRD default; the value shown is illustrative. Choices: "Boundary", "Subtree". Apply to direct workloads or propagate to all descendant workloads.
+#           scope: "Boundary"
+#           ## @param rewrites.example.spec.topology.network.ingress [array, string] Optional. No CRD default; the value shown is illustrative. Additional allowed inbound traffic.
+#           ingress:
+#             -
+#               ## @param rewrites.example.spec.topology.network.ingress[].peer [object, string] Required. No CRD default; the value shown is illustrative. Select peers in an explicit namespace, optionally by graph or pod labels.
+#               peer:
+#                 ## @param rewrites.example.spec.topology.network.ingress[].peer.namespace [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 namespace: "example"
+#                 ## @param rewrites.example.spec.topology.network.ingress[].peer.graph [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 graph: "example"
+#                 ## @param rewrites.example.spec.topology.network.ingress[].peer.kind [string] Optional. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Kind of the referenced graph instance.
+#                 kind: "Graph"
+#                 ## @param rewrites.example.spec.topology.network.ingress[].peer.node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 node: "example"
+#                 ## @param rewrites.example.spec.topology.network.ingress[].peer.podLabels [object, string] Optional. No CRD default; the value shown is illustrative. Additional exact pod-label matches, combined with graph selection.
+#                 podLabels: {}
+#                 ## @param rewrites.example.spec.topology.network.ingress[].peer.cluster [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 cluster: "example"
+#               ## @param rewrites.example.spec.topology.network.ingress[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination ports; empty means every transport port.
+#               ports:
+#                 -
+#                   ## @param rewrites.example.spec.topology.network.ingress[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                   port: 1
+#                   ## @param rewrites.example.spec.topology.network.ingress[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                   protocol: "TCP"
+#               ## @param rewrites.example.spec.topology.network.ingress[].node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               node: "example"
+#               ## @param rewrites.example.spec.topology.network.ingress[].principals [array, string] Optional. No CRD default; the value shown is illustrative. Exact Istio source identities such as cluster.local/ns/team/sa/client.
+#               principals: []
+#               ## @param rewrites.example.spec.topology.network.ingress[].methods [array, string] Optional. No CRD default; the value shown is illustrative. Allowed inbound HTTP methods; empty leaves methods unconstrained.
+#               methods: []
+#               ## @param rewrites.example.spec.topology.network.ingress[].paths [array, string] Optional. No CRD default; the value shown is illustrative. Exact inbound HTTP paths; empty leaves paths unconstrained.
+#               paths: []
+#           ## @param rewrites.example.spec.topology.network.egress [array, string] Optional. No CRD default; the value shown is illustrative. Additional allowed outbound traffic.
+#           egress:
+#             -
+#               ## @param rewrites.example.spec.topology.network.egress[].peer [object, string] Required. No CRD default; the value shown is illustrative. Select peers in an explicit namespace, optionally by graph or pod labels.
+#               peer:
+#                 ## @param rewrites.example.spec.topology.network.egress[].peer.namespace [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 namespace: "example"
+#                 ## @param rewrites.example.spec.topology.network.egress[].peer.graph [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 graph: "example"
+#                 ## @param rewrites.example.spec.topology.network.egress[].peer.kind [string] Optional. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Kind of the referenced graph instance.
+#                 kind: "Graph"
+#                 ## @param rewrites.example.spec.topology.network.egress[].peer.node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 node: "example"
+#                 ## @param rewrites.example.spec.topology.network.egress[].peer.podLabels [object, string] Optional. No CRD default; the value shown is illustrative. Additional exact pod-label matches, combined with graph selection.
+#                 podLabels: {}
+#                 ## @param rewrites.example.spec.topology.network.egress[].peer.cluster [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#                 cluster: "example"
+#               ## @param rewrites.example.spec.topology.network.egress[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination ports; empty means every transport port.
+#               ports:
+#                 -
+#                   ## @param rewrites.example.spec.topology.network.egress[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                   port: 1
+#                   ## @param rewrites.example.spec.topology.network.egress[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                   protocol: "TCP"
+#               ## @param rewrites.example.spec.topology.network.egress[].node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               node: "example"
+#               ## @param rewrites.example.spec.topology.network.egress[].principals [array, string] Optional. No CRD default; the value shown is illustrative. Exact Istio source identities such as cluster.local/ns/team/sa/client.
+#               principals: []
+#               ## @param rewrites.example.spec.topology.network.egress[].methods [array, string] Optional. No CRD default; the value shown is illustrative. Allowed inbound HTTP methods; empty leaves methods unconstrained.
+#               methods: []
+#               ## @param rewrites.example.spec.topology.network.egress[].paths [array, string] Optional. No CRD default; the value shown is illustrative. Exact inbound HTTP paths; empty leaves paths unconstrained.
+#               paths: []
+#           ## @param rewrites.example.spec.topology.network.isolateIngress [boolean, string] Optional. No CRD default; the value shown is illustrative. Restrict incoming connections.
+#           isolateIngress: false
+#           ## @param rewrites.example.spec.topology.network.isolateEgress [boolean, string] Optional. No CRD default; the value shown is illustrative. Restrict outgoing connections.
+#           isolateEgress: false
+#           ## @param rewrites.example.spec.topology.network.allowWithin [boolean, string] Optional. No CRD default; the value shown is illustrative. Allow traffic between all workloads inside this boundary.
+#           allowWithin: false
+#           ## @param rewrites.example.spec.topology.network.allowDNS [boolean, string] Optional. No CRD default; the value shown is illustrative. Allow TCP/UDP 53 to kube-system pods labeled k8s-app=kube-dns.
+#           allowDNS: false
+#           ## @param rewrites.example.spec.topology.network.mesh [boolean, string] Optional. No CRD default; the value shown is illustrative. Require Istio injection, strict mutual TLS and inbound authorization.
+#           mesh: false
+#         ## @param rewrites.example.spec.topology.rules [array, string] Optional. No CRD default; the value shown is illustrative. Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.
+#         rules: []
+#         ## @param rewrites.example.spec.topology.nodes [array, string] Required. No CRD default; the value shown is illustrative. Graph membership in deterministic admission order. Names are unique within this boundary; definitions are resolved in the same namespace.
+#         nodes:
+#           -
+#             ## @param rewrites.example.spec.topology.nodes[].cluster [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             cluster: "example"
+#             ## @param rewrites.example.spec.topology.nodes[].id [string] Optional. No CRD default; the value shown is illustrative. Optional request-local node identity retained on generated manifests for auditing.
+#             id: "example"
+#             ## @param rewrites.example.spec.topology.nodes[].name [string] Required. No CRD default; the value shown is illustrative. Unique name of this node within its graph. Used by dependencies, connections and lifecycle signals.
+#             name: "example"
+#             ## @param rewrites.example.spec.topology.nodes[].kind [string] Required. No CRD default; the value shown is illustrative. Choices: "Workload", "Daemon", "Resource", "Graph", "PolyGraph", "ReplicaGroup". Kind of the definition referenced by this node; determines whether execution uses a Job, Deployment, StatefulSet, resource or nested graph boundary.
+#             kind: "Workload"
+#             ## @param rewrites.example.spec.topology.nodes[].ref [string] Required. No CRD default; the value shown is illustrative. Name of the reusable definition in the same namespace. Nested Graph and PolyGraph definitions must set templateOnly to true.
+#             ref: "example"
+#             ## @param rewrites.example.spec.topology.nodes[].requires [array, string] Optional. No CRD default; the value shown is illustrative. Lifecycle prerequisites that must all hold before initial admission. Admission dependencies must be acyclic; use connections for cyclic data flow.
+#             requires:
+#               -
+#                 ## @param rewrites.example.spec.topology.nodes[].requires[].node [string] Required. No CRD default; the value shown is illustrative. Name of the upstream node within this graph.
+#                 node: "example"
+#                 ## @param rewrites.example.spec.topology.nodes[].requires[].condition [string] Optional. Default: "completed". Choices: "started", "ready", "completed". Observation required before admission: started means the execution resource exists; ready means it exposes readiness; completed means finite execution succeeded. Daemons and resources cannot satisfy completed. Readiness loss does not cancel already-admitted consumers.
+#                 condition: "completed"
+#             ## @param rewrites.example.spec.topology.nodes[].gate [string] Optional. No CRD default; the value shown is illustrative. Name of a Gate definition in the same namespace. Admission requires its expression to evaluate to true; false or unknown blocks admission.
+#             gate: "example"
+#             ## @param rewrites.example.spec.topology.nodes[].slots [integer, string] Optional. Default: 1. Admission slots reserved by this node until finite work completes or execution is removed. Must fit the containing graph; this is not a CPU request.
+#             slots: 1
+#         ## @param rewrites.example.spec.topology.connections [array, string] Optional. No CRD default; the value shown is illustrative. Declarative data-flow edges, including cycles and self-loops. These edges neither block admission nor configure network transport.
+#         connections:
+#           -
+#             ## @param rewrites.example.spec.topology.connections[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination transport grants; omitted connections remain data-flow declarations.
+#             ports:
+#               -
+#                 ## @param rewrites.example.spec.topology.connections[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                 port: 1
+#                 ## @param rewrites.example.spec.topology.connections[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                 protocol: "TCP"
+#             ## @param rewrites.example.spec.topology.connections[].source [string] Required. No CRD default; the value shown is illustrative. Name of the source node for this data-flow connection.
+#             source: "example"
+#             ## @param rewrites.example.spec.topology.connections[].target [string] Required. No CRD default; the value shown is illustrative. Name of the destination node for this data-flow connection.
+#             target: "example"
+#         ## @param rewrites.example.spec.topology.mode [string] Optional. Default: "finite". Choices: "finite", "persistent". Finite graphs report completion when finite work completes and resource nodes are ready. Persistent graphs remain active until stopped or deleted. Graphs containing daemons must be persistent.
+#         mode: "finite"
+#         ## @param rewrites.example.spec.topology.slots [integer, string] Optional. Default: 64. Total admission-slot capacity for this boundary. Node reservations govern admission; Kubernetes independently schedules actual CPU, memory and device requests.
+#         slots: 64
+#         ## @param rewrites.example.spec.topology.shutdownPolicy [string] Optional. No CRD default; the value shown is illustrative. Name of a ShutdownPolicy in the same namespace, specifying a runtime limit and termination grace period.
+#         shutdownPolicy: "example"
+#         ## @param rewrites.example.spec.topology.suspend [boolean, string] Optional. Default: false. Stop admitting work and drain owned execution while true. Clearing suspension permits fresh execution; this is not an application checkpoint request.
+#         suspend: false
+#         ## @param rewrites.example.spec.topology.templateOnly [boolean, string] Optional. Default: false. Keep this boundary as an inert reusable definition. A parent graph creates an owned executable copy with this flag cleared.
+#         templateOnly: false
+#         ## @param rewrites.example.spec.topology.placement [object, string] Optional. No CRD default; the value shown is illustrative. Placement defaults or enforced constraints copied to descendant pod templates. Tolerations permit matching taints; selectors and required affinity restrict eligible nodes. This does not reserve capacity.
+#         placement:
+#           ## @param rewrites.example.spec.topology.placement.nodeSelector [object, string] Optional. No CRD default; the value shown is illustrative. Exact Kubernetes node-label matches, all of which must hold. Use labels for node groups or resource slices; cloud tags must first be exposed as node labels. Conflicting inherited values are rejected.
+#           nodeSelector: {}
+#           ## @param rewrites.example.spec.topology.placement.nodeAffinity [object, string] Optional. No CRD default; the value shown is illustrative. Required and preferred Kubernetes node-selection rules. Required rules intersect across graph, definition and pod scopes; preferences are combined.
+#           nodeAffinity:
+#             ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution [object, string] Optional. No CRD default; the value shown is illustrative. Hard node eligibility rules evaluated when scheduling. Changes to node labels after scheduling do not by themselves evict a running pod.
+#             requiredDuringSchedulingIgnoredDuringExecution:
+#               ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms [array, string] Required. No CRD default; the value shown is illustrative. Alternative node-selection terms combined with OR. Expressions within one term are combined with AND. An empty term selects no nodes.
+#               nodeSelectorTerms:
+#                 -
+#                   ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions [array, string] Optional. No CRD default; the value shown is illustrative. Node-label requirements combined with AND within this term.
+#                   matchExpressions:
+#                     -
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                       key: "example"
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                       operator: "In"
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                       values: []
+#                   ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields [array, string] Optional. No CRD default; the value shown is illustrative. Node-field requirements combined with AND within this term.
+#                   matchFields:
+#                     -
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                       key: "example"
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                       operator: "In"
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                       values: []
+#             ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution [array, string] Optional. No CRD default; the value shown is illustrative. Weighted node preferences applied after hard eligibility checks. Unmatched preferences do not prevent scheduling.
+#             preferredDuringSchedulingIgnoredDuringExecution:
+#               -
+#                 ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].weight [integer, string] Required. No CRD default; the value shown is illustrative. Preference weight from 1 to 100. Matching preferred rules contribute to the node scheduling score.
+#                 weight: 1
+#                 ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference [object, string] Required. No CRD default; the value shown is illustrative. Node-selection term whose match contributes the associated weight.
+#                 preference:
+#                   ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions [array, string] Optional. No CRD default; the value shown is illustrative. Node-label requirements combined with AND within this term.
+#                   matchExpressions:
+#                     -
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                       key: "example"
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                       operator: "In"
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                       values: []
+#                   ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields [array, string] Optional. No CRD default; the value shown is illustrative. Node-field requirements combined with AND within this term.
+#                   matchFields:
+#                     -
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                       key: "example"
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                       operator: "In"
+#                       ## @param rewrites.example.spec.topology.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                       values: []
+#           ## @param rewrites.example.spec.topology.placement.tolerations [array, string] Optional. No CRD default; the value shown is illustrative. Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations allow placement on tainted nodes; they do not select or guarantee a node.
+#           tolerations:
+#             -
+#               ## @param rewrites.example.spec.topology.placement.tolerations[].key [string] Optional. No CRD default; the value shown is illustrative. Taint key to match. An empty key requires operator Exists and matches all keys.
+#               key: "example"
+#               ## @param rewrites.example.spec.topology.placement.tolerations[].operator [string] Optional. No CRD default; the value shown is illustrative. Choices: "Exists", "Equal". Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal.
+#               operator: "Exists"
+#               ## @param rewrites.example.spec.topology.placement.tolerations[].value [string] Optional. No CRD default; the value shown is illustrative. Taint value to match when operator is Equal. Omit or leave empty when operator is Exists.
+#               value: "example"
+#               ## @param rewrites.example.spec.topology.placement.tolerations[].effect [string] Optional. No CRD default; the value shown is illustrative. Choices: "", "NoSchedule", "PreferNoSchedule", "NoExecute". Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute.
+#               effect: ""
+#               ## @param rewrites.example.spec.topology.placement.tolerations[].tolerationSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction.
+#               tolerationSeconds: 0
+#           ## @param rewrites.example.spec.topology.placement.enforce [boolean, string] Optional. Default: true. Keep these constraints in every descendant pod. False allows a more specific workload or graph placement to replace these defaults; an enforced ancestor cannot be relaxed.
+#           enforce: true
+# END RESOURCE EXAMPLE

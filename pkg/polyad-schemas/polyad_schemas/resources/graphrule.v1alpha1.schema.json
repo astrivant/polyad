@@ -563,5 +563,5 @@
     "metadata",
     "spec"
   ],
-  "$comment": "Generated from charts/polyad/crds/graphrules.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/graphrules.yaml; do not edit this artifact."
 }

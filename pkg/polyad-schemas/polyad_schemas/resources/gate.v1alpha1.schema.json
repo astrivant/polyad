@@ -57,5 +57,5 @@
     "spec"
   ],
   "description": "Define a Boolean or delay gate. Instances keep delay observations on their containing graph.",
-  "$comment": "Generated from charts/polyad/crds/gates.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/gates.yaml; do not edit this artifact."
 }

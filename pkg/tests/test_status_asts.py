@@ -78,7 +78,7 @@ def test_chart_metrics_are_generated_from_models(name):
     """
     All graph kinds publish the exact generated schema, including descriptions.
     """
-    document = yaml.safe_load((ROOT / "charts/polyad/crds" / name).read_text())
+    document = yaml.safe_load((ROOT / "charts/polyad-crds/crds" / name).read_text())
     assert not DeepDiff(structural_schema(GraphMetrics), metrics_schema(document))
 
 
@@ -117,7 +117,7 @@ def test_regeneration_repairs_drift_without_changing_other_fields(tmp_path):
     """
     originals = {}
     for name in CRDS:
-        source = (ROOT / "charts/polyad/crds" / name).read_text()
+        source = (ROOT / "charts/polyad-crds/crds" / name).read_text()
         originals[name] = yaml.safe_load(source)
         # A valid YAML change within metrics must be noticed by the check hook.
         (tmp_path / name).write_text(source.replace("Metrics cover this scheduling boundary only.", "Stale description."))

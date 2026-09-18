@@ -38,6 +38,7 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
         "pkg/polyad-schemas/pyproject.toml",
         "poetry.lock",
         "charts/polyad/Chart.yaml",
+        "charts/polyad-crds/Chart.yaml",
         "charts/polyad/values.yaml",
         "charts/polyad/README.md",
     ):
@@ -74,6 +75,7 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
     assert actual == original
     metadata = yaml.safe_load((tmp_path / "charts/polyad/Chart.yaml").read_text())
     assert metadata["version"] == metadata["appVersion"] == chart
+    assert (tmp_path / "charts/polyad-crds/Chart.yaml").read_bytes() == (ROOT / "charts/polyad-crds/Chart.yaml").read_bytes()
     values = yaml.safe_load((tmp_path / "charts/polyad/values.yaml").read_text())
     assert values["operator"]["image"]["tag"] == chart
     row = next(
@@ -251,13 +253,18 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     workflow = yaml.load((ROOT / ".github/workflows/chart.yml").read_text(), Loader=yaml.BaseLoader)
     chart = workflow["jobs"]["chart"]
     assert chart["needs"] == "source"
-    assert chart["strategy"] == {"fail-fast": "false", "matrix": {"shard": ["1", "2", "3"]}}
+    assert chart["strategy"] == {"fail-fast": "false", "matrix": {"chart": ["polyad", "polyad-crds"], "shard": ["1", "2", "3"]}}
     action = next(step for step in chart["steps"] if step.get("uses") == "astrivant/hypothesis-helm@main")
     inputs = action["with"]
-    assert inputs["chart"] == "charts/polyad"
+    assert inputs["chart"] == "charts/${{ matrix.chart }}"
+    assert inputs["artifact-name"] == "hypothesis-helm-${{ matrix.chart }}"
+    assert inputs["artifact-dir"] == "reports/hypothesis-helm/${{ matrix.chart }}"
     assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "2"
     assert not {"sample-random", "max-examples", "rerun", "cache", "filter", "exhaustive"}.intersection(inputs)
     assert "match" not in inputs and "continue-on-error" not in action
+    policy = next(step for step in chart["steps"] if step.get("run", "").startswith("cp charts/polyad-crds/"))
+    assert policy["if"] == "matrix.chart == 'polyad-crds'"
+    assert yaml.safe_load((ROOT / "charts/polyad-crds/.hypothesis-helm.yaml").read_text()) == {"ignored": ["HH1009"]}
     package = workflow["jobs"]["package"]
     assert package["needs"] == ["source", "chart"]
     assert package["if"] == "inputs.release-tag != ''"
@@ -266,6 +273,7 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     assert package["steps"][0]["with"]["fetch-depth"] == "0"
     build = next(step for step in package["steps"] if step.get("id") == "package")
     assert build["run"].index('git rev-parse "refs/tags/$tag^{commit}"') < build["run"].index("helm package")
+    assert "helm package charts/polyad-crds --destination dist/chart" in build["run"]
     assert package["steps"][-1]["with"]["if-no-files-found"] == "error"
 
 

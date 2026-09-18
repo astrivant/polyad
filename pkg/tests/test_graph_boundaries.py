@@ -53,7 +53,7 @@ def test_spot_examples_compile_ordinary_workloads_with_placement(filename):
         documents = list(yaml.safe_load_all((Path("examples") / filename).read_text()))
         for document in documents:
             descriptor = RESOURCE_TYPES[document["kind"]]
-            crd = yaml.safe_load((Path("charts/polyad/crds") / f"{descriptor.plural}.yaml").read_text())
+            crd = yaml.safe_load((Path("charts/polyad-crds/crds") / f"{descriptor.plural}.yaml").read_text())
             Draft7Validator(crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]).validate(document)
         api = FakeAPI(*(resource(document["kind"], document["metadata"]["name"], document["spec"]) for document in documents))
         await settle(api)
@@ -73,7 +73,7 @@ def test_repeated_graph_example_uses_durable_activation_and_fresh_executions():
         documents = list(yaml.safe_load_all(Path("examples/repeated-graph.yaml").read_text()))
         schemas = {
             document["spec"]["names"]["kind"]: document["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
-            for path in Path("charts/polyad/crds").glob("*.yaml")
+            for path in Path("charts/polyad-crds/crds").glob("*.yaml")
             for document in [yaml.safe_load(path.read_text())]
         }
         for document in documents:

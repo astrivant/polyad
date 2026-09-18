@@ -31,8 +31,20 @@ postgresql:
   storage:
     ## @param postgresql.storage.size [string] Persistent storage per PostgreSQL instance Persistent volume size per instance.
     size: 20Gi # Persistent volume size per instance.
-    ## @param postgresql.storage.storageClass [string] Storage class; empty uses the cluster default Empty uses the cluster default.
-    storageClass: '' # Empty uses the cluster default.
+    ## @param postgresql.storage.storageClass [string] Empty uses the shared encrypted class when encryptionAtRest is enabled, otherwise the cluster default; explicit overrides must match the encrypted selection.
+    storageClass: ''
+  ## @param postgresql.encryptionAtRest [object] Select encrypted volumes for all managed databases; see values-postgresql-encryption.reference.yaml for GKE CMEK.
+  encryptionAtRest:
+    ## @param postgresql.encryptionAtRest.enabled [boolean] Set true and choose an encrypted class before creating database PVCs; existing disks require migration.
+    enabled: false
+    ## @param postgresql.encryptionAtRest.provider [string] ExistingStorageClass uses an administrator-verified class; GKE provisions a class with a Cloud KMS key reference.
+    provider: ExistingStorageClass
+    ## @param postgresql.encryptionAtRest.storageClass [string] Name of the verified encrypted class; required with ExistingStorageClass when enabled.
+    storageClass: ''
+    ## @param postgresql.encryptionAtRest.kmsKeyName [string] GKE-only symmetric CryptoKey name; leave empty with ExistingStorageClass.
+    kmsKeyName: ''
+    ## @param postgresql.encryptionAtRest.diskType [string] GKE-only disk type; choose one supported by your node machine family and CSI driver.
+    diskType: pd-balanced
   ## @param postgresql.ha [object] Settings for postgresql.ha; configure the fields below.
   ha:
     ## @param postgresql.ha.enabled [boolean] Enable primary plus standby instances and synchronous replication Synchronous replication; independent of operator HA.

@@ -1,4 +1,7 @@
 dependencies:
+- name: polyad-crds
+  repository: file://../polyad-crds
+  version: 0.0.1-alpha3
 - name: keda
   repository: https://kedacore.github.io/charts
   version: 2.20.2
@@ -17,5 +20,5 @@ dependencies:
 - name: gateway
   repository: https://istio-release.storage.googleapis.com/charts
   version: 1.30.4
-digest: sha256:414d33036524f110c8a4063beb914627c16686272a4cfce3ffc85acb0c3b5be6
-generated: "2026-09-17T00:55:49.254836-04:00"
+digest: sha256:dd5f341a9a86fe65d17eaefbe755626a109b256564cac115ad526d81c338bfa8
+generated: "2026-09-17T20:48:26.559516-04:00"

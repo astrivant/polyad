@@ -1,0 +1,138 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# Workload field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param workloads [object] Named Workload instances; empty by default. Copy selected fields below to configure one.
+workloads: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section Workload field reference
+# ## @param workloads [object] Workload instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# workloads:
+#   ## @param workloads.example [object] Define a reusable finite container workload. A graph node instantiates this definition as a Job; creating the definition alone does not start execution.
+#   example:
+#     ## @param workloads.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param workloads.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param workloads.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param workloads.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param workloads.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param workloads.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for this Workload resource. Define a reusable finite container workload. A graph node instantiates this definition as a Job; creating the definition alone does not start execution.
+#     spec:
+#       ## @param workloads.example.spec.activation [object, string] Optional. No CRD default; the value shown is illustrative. Control how repeated requests start a downstream workload or graph.
+#       activation:
+#         ## @param workloads.example.spec.activation.mode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Queue", "Reject", "Coalesce", "Parallel". Busy-target admission policy.
+#         mode: "Queue"
+#         ## @param workloads.example.spec.activation.maxConcurrent [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum selected or running executions for parallel mode.
+#         maxConcurrent: 1
+#         ## @param workloads.example.spec.activation.maxPending [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum retained pending requests admitted to the queue.
+#         maxPending: 1
+#         ## @param workloads.example.spec.activation.replicasPerActivation [integer, string] Optional. No CRD default; the value shown is illustrative. Deployment or StatefulSet replicas in each daemon activation.
+#         replicasPerActivation: 1
+#         ## @param workloads.example.spec.activation.maxReplicas [integer, string] Optional. No CRD default; the value shown is illustrative. Upper bound on the total daemon replicas reserved by concurrent pulses.
+#         maxReplicas: 1
+#         ## @param workloads.example.spec.activation.minIntervalSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Minimum time between execution admissions.
+#         minIntervalSeconds: 0
+#         ## @param workloads.example.spec.activation.maxIntervalSeconds [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         maxIntervalSeconds: 1
+#         ## @param workloads.example.spec.activation.onDeadline [string] Optional. No CRD default; the value shown is illustrative. Choices: "Report", "Activate". Report overdue admission or submit a timer pulse.
+#         onDeadline: "Report"
+#       ## @param workloads.example.spec.template [object, string] Required. No CRD default; the value shown is illustrative. Kubernetes Pod template for graph-owned execution. Container commands, resource requests, volumes and probes are application-defined; the operator sets restart policy and inherited placement.
+#       template:
+#         ## @param workloads.example.spec.template.metadata [object, string] Optional. No CRD default; the value shown is illustrative. Pod metadata, including application labels, annotations and externally managed cleanup finalizers.
+#         metadata: {}
+#         # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#         ## @param workloads.example.spec.template.spec [object, string] Required. No CRD default; the value shown is illustrative. Native Kubernetes Pod spec. Include containers and any resource requests, volumes, probes or lifecycle hooks. Daemon containers require startup, readiness and liveness probes; inherited graph placement also applies.
+#         spec: {}
+#         # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#       ## @param workloads.example.spec.backoffLimit [integer, string] Optional. Default: 6. Maximum Job retries before Kubernetes reports failure. Pod interruption may trigger replacement within this limit; retries can repeat application side effects.
+#       backoffLimit: 6
+#       ## @param workloads.example.spec.placement [object, string] Optional. No CRD default; the value shown is illustrative. Placement defaults or enforced constraints copied to descendant pod templates. Tolerations permit matching taints; selectors and required affinity restrict eligible nodes. This does not reserve capacity.
+#       placement:
+#         ## @param workloads.example.spec.placement.nodeSelector [object, string] Optional. No CRD default; the value shown is illustrative. Exact Kubernetes node-label matches, all of which must hold. Use labels for node groups or resource slices; cloud tags must first be exposed as node labels. Conflicting inherited values are rejected.
+#         nodeSelector: {}
+#         ## @param workloads.example.spec.placement.nodeAffinity [object, string] Optional. No CRD default; the value shown is illustrative. Required and preferred Kubernetes node-selection rules. Required rules intersect across graph, definition and pod scopes; preferences are combined.
+#         nodeAffinity:
+#           ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution [object, string] Optional. No CRD default; the value shown is illustrative. Hard node eligibility rules evaluated when scheduling. Changes to node labels after scheduling do not by themselves evict a running pod.
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#             ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms [array, string] Required. No CRD default; the value shown is illustrative. Alternative node-selection terms combined with OR. Expressions within one term are combined with AND. An empty term selects no nodes.
+#             nodeSelectorTerms:
+#               -
+#                 ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions [array, string] Optional. No CRD default; the value shown is illustrative. Node-label requirements combined with AND within this term.
+#                 matchExpressions:
+#                   -
+#                     ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#                 ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields [array, string] Optional. No CRD default; the value shown is illustrative. Node-field requirements combined with AND within this term.
+#                 matchFields:
+#                   -
+#                     ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param workloads.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#           ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution [array, string] Optional. No CRD default; the value shown is illustrative. Weighted node preferences applied after hard eligibility checks. Unmatched preferences do not prevent scheduling.
+#           preferredDuringSchedulingIgnoredDuringExecution:
+#             -
+#               ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].weight [integer, string] Required. No CRD default; the value shown is illustrative. Preference weight from 1 to 100. Matching preferred rules contribute to the node scheduling score.
+#               weight: 1
+#               ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference [object, string] Required. No CRD default; the value shown is illustrative. Node-selection term whose match contributes the associated weight.
+#               preference:
+#                 ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions [array, string] Optional. No CRD default; the value shown is illustrative. Node-label requirements combined with AND within this term.
+#                 matchExpressions:
+#                   -
+#                     ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#                 ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields [array, string] Optional. No CRD default; the value shown is illustrative. Node-field requirements combined with AND within this term.
+#                 matchFields:
+#                   -
+#                     ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param workloads.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#         ## @param workloads.example.spec.placement.tolerations [array, string] Optional. No CRD default; the value shown is illustrative. Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations allow placement on tainted nodes; they do not select or guarantee a node.
+#         tolerations:
+#           -
+#             ## @param workloads.example.spec.placement.tolerations[].key [string] Optional. No CRD default; the value shown is illustrative. Taint key to match. An empty key requires operator Exists and matches all keys.
+#             key: "example"
+#             ## @param workloads.example.spec.placement.tolerations[].operator [string] Optional. No CRD default; the value shown is illustrative. Choices: "Exists", "Equal". Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal.
+#             operator: "Exists"
+#             ## @param workloads.example.spec.placement.tolerations[].value [string] Optional. No CRD default; the value shown is illustrative. Taint value to match when operator is Equal. Omit or leave empty when operator is Exists.
+#             value: "example"
+#             ## @param workloads.example.spec.placement.tolerations[].effect [string] Optional. No CRD default; the value shown is illustrative. Choices: "", "NoSchedule", "PreferNoSchedule", "NoExecute". Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute.
+#             effect: ""
+#             ## @param workloads.example.spec.placement.tolerations[].tolerationSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction.
+#             tolerationSeconds: 0
+#         ## @param workloads.example.spec.placement.enforce [boolean, string] Optional. Default: true. Keep these constraints in every descendant pod. False allows a more specific workload or graph placement to replace these defaults; an enforced ancestor cannot be relaxed.
+#         enforce: true
+#       ## @param workloads.example.spec.persistence [object, string] Optional. No CRD default; the value shown is illustrative. Optional persistent storage contract. Storage does not checkpoint or resume application execution; use non-spot capacity.
+#       persistence:
+#         ## @param workloads.example.spec.persistence.enabled [boolean, string] Optional. Default: false. Require an explicitly selected existing persistent volume claim.
+#         enabled: false
+#         ## @param workloads.example.spec.persistence.storageClass [string] Optional. No CRD default; the value shown is illustrative. Required StorageClass name when enabled; must match the PVC storageClassName. The operator does not create StorageClasses.
+#         storageClass: "example"
+#         ## @param workloads.example.spec.persistence.claimName [string] Optional. No CRD default; the value shown is illustrative. Existing PVC in the workload namespace. External claims survive graph suspension, replacement and deletion.
+#         claimName: "example"
+#         ## @param workloads.example.spec.persistence.mountPath [string] Optional. Default: "/var/lib/polyad". Absolute non-root path mounted in application and init containers.
+#         mountPath: "/var/lib/polyad"
+#       # Constraint: enabled persistence requires storageClass and claimName
+# END RESOURCE EXAMPLE

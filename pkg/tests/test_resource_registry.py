@@ -59,7 +59,7 @@ def test_crd_identity_matches_registry():
     Reject drift in kind, API group, version and plural between Python routing and shipped CRDs.
     """
     discovered = set()
-    for path in (Path(__file__).resolve().parents[2] / "charts/polyad/crds").glob("*.yaml"):
+    for path in (Path(__file__).resolve().parents[2] / "charts/polyad-crds/crds").glob("*.yaml"):
         document = yaml.safe_load(path.read_text())
         spec = document["spec"]
         kind = spec["names"]["kind"]

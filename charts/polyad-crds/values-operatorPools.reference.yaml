@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# OperatorPool field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param operatorPools [object] Named OperatorPool instances; empty by default. Copy selected fields below to configure one.
+operatorPools: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section OperatorPool field reference
+# ## @param operatorPools [object] OperatorPool instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# operatorPools:
+#   ## @param operatorPools.example [object] Settings for operatorPools.example.
+#   example:
+#     ## @param operatorPools.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param operatorPools.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param operatorPools.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param operatorPools.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param operatorPools.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param operatorPools.example.spec [object, string] Required. No CRD default; the value shown is illustrative.
+#     spec:
+#       ## @param operatorPools.example.spec.existingDeployment [string] Optional. No CRD default; the value shown is illustrative. Helm-owned Deployment in the registered namespace; root never replaces its template or deletes it.
+#       existingDeployment: "example"
+#       ## @param operatorPools.example.spec.scalingAuthority [string] Optional. Default: "Root". Choices: "Root", "Local". Root may patch replicas after admission; Local only observes the Helm-owned Deployment.
+#       scalingAuthority: "Root"
+#       ## @param operatorPools.example.spec.controller [string] Optional. Default: "Deployment". Choices: "Deployment", "DaemonSet". Deployment scales by replicas; DaemonSet executes through a reserved PolyGraph and follows eligible nodes.
+#       controller: "Deployment"
+#       ## @param operatorPools.example.spec.cluster [string] Required. No CRD default; the value shown is illustrative.
+#       cluster: "example"
+#       # Constraint: cluster is immutable
+#       ## @param operatorPools.example.spec.replicas [integer, string] Required. Default: 1.
+#       replicas: 1
+#       ## @param operatorPools.example.spec.resources [object, string] Optional. No CRD default; the value shown is illustrative.
+#       resources: {}
+#       # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#       ## @param operatorPools.example.spec.nodeSelector [object, string] Optional. No CRD default; the value shown is illustrative.
+#       nodeSelector: {}
+#       ## @param operatorPools.example.spec.tolerations [array, string] Optional. No CRD default; the value shown is illustrative.
+#       tolerations: []
+#     # Constraint: Existing deployments retain Helm Pod configuration and require controller Deployment.
+#     # Constraint: Existing deployment attachment is immutable; create a new pool to change it.
+#     # Constraint: Local scaling requires an existing deployment.
+#     # Constraint: Local scaling is controlled at the downstream Deployment; OperatorPool replica edits are disabled.
+#     # Constraint: DaemonSet pools use node eligibility and require replicas equal to one; do not attach a KEDA scaler.
+#     # Constraint: Pool controller is immutable; create a new pool to change scheduling.
+# END RESOURCE EXAMPLE

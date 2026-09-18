@@ -79,5 +79,5 @@
       }
     }
   },
-  "$comment": "Generated from charts/polyad/crds/dragonflypools.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/dragonflypools.yaml; do not edit this artifact."
 }

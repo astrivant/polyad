@@ -14,7 +14,7 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
 from polyad.operator.lifecycle.health import credential_token
-from polyad.sql import statement
+from polyad.sql import record_cipher, statement
 from polyad_types.codec import to_dict
 
 if TYPE_CHECKING:
@@ -35,6 +35,7 @@ class CredentialStore:
             scope (str): Control-plane identity within this database.
         """
         self.scope = scope
+        self.cipher = record_cipher()
         self.lock = Lock()
         self.initialized = False
         self.pool = ConnectionPool(
@@ -94,7 +95,12 @@ class CredentialStore:
                 return False
             connection.execute(
                 statement("authentication/record-key.sql"),
-                (*identity, verifier, digest, Jsonb(policy)),
+                (
+                    *identity,
+                    verifier,
+                    digest,
+                    Jsonb(self.cipher.encrypt(policy, "polyad_auth_keys", (*identity, verifier, digest)) if self.cipher else policy),
+                ),
             )
         return True
 

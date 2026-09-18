@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# Activation field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param activations [object] Named Activation instances; empty by default. Copy selected fields below to configure one.
+activations: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section Activation field reference
+# ## @param activations [object] Activation instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# activations:
+#   ## @param activations.example [object] Durable pulse receipt. The owning graph shard admits execution using the downstream definition's activation policy.
+#   example:
+#     ## @param activations.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param activations.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param activations.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param activations.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param activations.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param activations.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Immutable request and revision fences; retain the receipt to retain idempotency.
+#     spec:
+#       ## @param activations.example.spec.requestId [string] Required. No CRD default; the value shown is illustrative. Client idempotency identity, shared across API retries.
+#       requestId: "example"
+#       ## @param activations.example.spec.kind [string] Required. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Containing executable graph kind.
+#       kind: "Graph"
+#       ## @param activations.example.spec.graph [string] Required. No CRD default; the value shown is illustrative. Containing graph instance name.
+#       graph: "example"
+#       ## @param activations.example.spec.graphUid [string] Required. No CRD default; the value shown is illustrative. Graph incarnation; recreated graphs cannot consume old requests.
+#       graphUid: "example"
+#       ## @param activations.example.spec.node [string] Required. No CRD default; the value shown is illustrative. Downstream logical vertex name.
+#       node: "example"
+#       ## @param activations.example.spec.graphGeneration [integer, string] Required. No CRD default; the value shown is illustrative. Graph revision observed at acceptance.
+#       graphGeneration: 1
+#       ## @param activations.example.spec.definitionUid [string] Required. No CRD default; the value shown is illustrative. Reusable target definition incarnation.
+#       definitionUid: "example"
+#       ## @param activations.example.spec.definitionGeneration [integer, string] Required. No CRD default; the value shown is illustrative. Reusable target definition revision.
+#       definitionGeneration: 1
+#     # Constraint: Activation intent is immutable; use a new requestId for another pulse.
+# END RESOURCE EXAMPLE

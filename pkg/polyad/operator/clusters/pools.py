@@ -568,6 +568,10 @@ class PoolManager:
         for variable in ("POLYAD_AUTH_CONFIG_FILE", "POLYAD_AUTH_DATABASE_DSN_FILE"):
             env.pop(variable, None)
         excluded = {"authentication", "authentication-database"}
+        if env.get("POLYAD_POSTGRES_ENABLED", {}).get("value") != "true":
+            # Remote executors do not use the root's authentication database.
+            excluded.add("record-encryption")
+            env = {key: value for key, value in env.items() if not key.startswith("POLYAD_POSTGRES_RECORD_")}
         pod["spec"]["volumes"] = [volume for volume in pod["spec"].get("volumes", []) if volume["name"] not in excluded]
         container["volumeMounts"] = [mount for mount in container.get("volumeMounts", []) if mount["name"] not in excluded]
         for feature in ("API", "EVENTS", "CONNECTIONS", "OPERATOR_MESH"):
@@ -605,12 +609,25 @@ class PoolManager:
             if credential is None:
                 raise ValueError(f"root credential Secret is absent: {original}")
             copied = name + "-" + hashlib.sha256(original.encode()).hexdigest()[:8]
+            mounts = [
+                volume["secret"] for volume in pod["spec"].get("volumes", []) if volume.get("secret", {}).get("secretName") == original
+            ]
+            data = credential.get("data", {})
+            if mounts and all("items" in mount for mount in mounts):
+                # Do not propagate unmounted private keys alongside a public-only projection.
+                selected = {item["key"] for mount in mounts for item in mount["items"]}
+                selected.update(
+                    item["valueFrom"]["secretKeyRef"]["key"]
+                    for item in env.values()
+                    if item.get("valueFrom", {}).get("secretKeyRef", {}).get("name") == original
+                )
+                data = {key: value for key, value in data.items() if key in selected}
             secret = {
                 "apiVersion": "v1",
                 "kind": "Secret",
                 "metadata": {"name": copied, "namespace": namespace, "labels": labels},
                 "type": "Opaque",
-                "data": credential.get("data", {}),
+                "data": data,
             }
             await self.apply(remote, secret, owner)
             for volume in pod["spec"].get("volumes", []):

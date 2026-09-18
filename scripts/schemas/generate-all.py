@@ -12,6 +12,7 @@ from pathlib import Path
 GENERATORS = (
     "generate-status-schemas.py",
     "generate-network-schemas.py",
+    "generate-resource-chart.py",
     "generate-reference-schema.py",
     "generate-event-schemas.py",
     "generate-json-schemas.py",

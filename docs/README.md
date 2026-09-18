@@ -63,6 +63,7 @@ then [run your first workload](introduction/getting-started.md).
 | Guide | Contents |
 | --- | --- |
 | [Helm deployment profiles](deployment/deployment-profiles.md) | One `ha` Boolean, optional split components, replica floors and cluster placement |
+| [CRDs and named resource templates](../charts/polyad-crds/README.md) | Independently versioned APIs, name-keyed instance maps, cross-resource TPL references and complete commented reference values |
 | [Development and production containers](deployment/containers.md) | Development and production builds, runtime permissions and image checks |
 | [Operator processes, threads and async tasks](deployment/process-hierarchy.md) | Tini, Python threads, async tasks, shared HTTP workers, observers and graceful shutdown |
 | [Graph based workload scheduling on Kubernetes](deployment/operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
@@ -76,7 +77,8 @@ then [run your first workload](introduction/getting-started.md).
 | [Helm-installed downstream operators](deployment/helm-workers.md) | Administrator-owned installation, explicit root attachment, and a choice of root or local replica scaling |
 | [Cross-cluster composition and optional observers](deployment/multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |
 | [Graph networking and event subscriptions](deployment/networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
-| [Optional PostgreSQL state storage](deployment/postgresql.md) | Durable graph state, HA database setup and connection-based KEDA scaling |
+| [Optional PostgreSQL state storage](deployment/postgresql.md) | Durable graph state, encrypted storage and GKE KMS configuration, database HA and connection-based KEDA scaling |
+| [PostgreSQL record encryption](deployment/record-encryption.md) | Optional encryption before SQL writes, administrator key Secrets, decryption and key rotation |
 | [Dragonfly HA and KEDA](deployment/dragonfly.md) | Bounded cache replica scaling, primary connection metrics and replication readiness |
 
 ## Operations

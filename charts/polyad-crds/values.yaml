@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=values.schema.json
+# Generated from the CRDs by scripts/schemas/generate-resource-chart.py; do not edit.
+## @section Resource generation
+## @param enabled [boolean] Enable instance rendering; the parent uses this to include the dependency and its CRDs.
+enabled: true
+## @param maxTplPasses [integer] Maximum passes for field references; cycles fail instead of rendering unresolved values.
+maxTplPasses: 16
+## @param global [object] Shared values inherited from the parent chart; reference them with .Values.global.
+global: {}
+## @param variables [object] Shared inputs for tpl expressions; reference them with .Values.variables.
+variables: {}
+## @section Named resources
+## @param activations [object] Activation instances keyed by name; spec and metadata support tpl references to other maps.
+activations: {}
+## @param compositions [object] Composition instances keyed by name; spec and metadata support tpl references to other maps.
+compositions: {}
+## @param daemons [object] Daemon instances keyed by name; spec and metadata support tpl references to other maps.
+daemons: {}
+## @param dragonflies [object] Dragonfly instances keyed by name; spec and metadata support tpl references to other maps.
+dragonflies: {}
+## @param dragonflyPools [object] DragonflyPool instances keyed by name; spec and metadata support tpl references to other maps.
+dragonflyPools: {}
+## @param gates [object] Gate instances keyed by name; spec and metadata support tpl references to other maps.
+gates: {}
+## @param graphRules [object] GraphRule instances keyed by name; spec and metadata support tpl references to other maps.
+graphRules: {}
+## @param graphs [object] Graph instances keyed by name; spec and metadata support tpl references to other maps.
+graphs: {}
+## @param operatorPools [object] OperatorPool instances keyed by name; spec and metadata support tpl references to other maps.
+operatorPools: {}
+## @param polygraphs [object] PolyGraph instances keyed by name; spec and metadata support tpl references to other maps.
+polygraphs: {}
+## @param remoteScales [object] RemoteScale instances keyed by name; spec and metadata support tpl references to other maps.
+remoteScales: {}
+## @param replicaGroups [object] ReplicaGroup instances keyed by name; spec and metadata support tpl references to other maps.
+replicaGroups: {}
+## @param resources [object] Resource instances keyed by name; spec and metadata support tpl references to other maps.
+resources: {}
+## @param rewrites [object] Rewrite instances keyed by name; spec and metadata support tpl references to other maps.
+rewrites: {}
+## @param shutdownPolicies [object] ShutdownPolicy instances keyed by name; spec and metadata support tpl references to other maps.
+shutdownPolicies: {}
+## @param temporaryConnections [object] TemporaryConnection instances keyed by name; spec and metadata support tpl references to other maps.
+temporaryConnections: {}
+## @param workloads [object] Workload instances keyed by name; spec and metadata support tpl references to other maps.
+workloads: {}

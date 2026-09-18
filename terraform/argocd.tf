@@ -23,8 +23,8 @@ locals {
     "-- REGISTRY_DEFINITIONS",
     "local definitions = {${join(", ", [for kind in local.definition_kinds : "${kind} = true"])}}"
   )
-  crds = [for filename in fileset("${path.module}/../charts/polyad/crds", "*.yaml") :
-    yamldecode(file("${path.module}/../charts/polyad/crds/${filename}"))
+  crds = [for filename in fileset("${path.module}/../charts/polyad-crds/crds", "*.yaml") :
+    yamldecode(file("${path.module}/../charts/polyad-crds/crds/${filename}"))
   ]
   polyad_health = {
     for crd in local.crds :

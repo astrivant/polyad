@@ -48,5 +48,5 @@
     "spec"
   ],
   "description": "Define a reusable graph runtime limit and pod termination grace period. Containers handle termination and durable cleanup; this policy does not execute Python shutdown callbacks.",
-  "$comment": "Generated from charts/polyad/crds/shutdownpolicies.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/shutdownpolicies.yaml; do not edit this artifact."
 }

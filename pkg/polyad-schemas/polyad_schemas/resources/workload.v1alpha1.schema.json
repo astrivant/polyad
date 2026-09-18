@@ -432,5 +432,5 @@
     "spec"
   ],
   "description": "Define a reusable finite container workload. A graph node instantiates this definition as a Job; creating the definition alone does not start execution.",
-  "$comment": "Generated from charts/polyad/crds/workloads.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/workloads.yaml; do not edit this artifact."
 }

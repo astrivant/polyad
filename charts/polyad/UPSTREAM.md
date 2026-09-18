@@ -7,7 +7,7 @@ The OCI artifact digest inspected for this version is
 `sha256:a2e9f431f46b0dfb4aee426b70efb4394f970525516ea3f51c8d60a345bbc260`.
 Downloaded dependencies under `charts/` are build artifacts, excluded from Git.
 
-`crds/dragonflies.yaml` is the upstream chart's rendered `templates/crds.yaml`,
+`../polyad-crds/crds/dragonflies.yaml` is the upstream chart's rendered `templates/crds.yaml`,
 with a provenance comment added. Its Apache-2.0 license is retained in
 [LICENSE.dragonfly-operator](LICENSE.dragonfly-operator). Polyad disables the
 subchart's templated CRD and installs this copy through Helm's `crds/` phase so a
@@ -55,7 +55,7 @@ Review schema compatibility, then apply CRD changes **before** upgrading the
 release. Use server-side apply for this large upstream schema:
 
 ```sh
-kubectl apply --server-side -f charts/polyad/crds/dragonflies.yaml
+kubectl apply --server-side -f charts/polyad-crds/crds/dragonflies.yaml
 helm upgrade polyad charts/polyad --namespace polyad
 ```
 

@@ -310,7 +310,7 @@ def test_daemon_schema_accepts_stateful_storage():
     """
     Keep native PVC options and controller selection expressible through CRD admission.
     """
-    crd = yaml.safe_load(Path("charts/polyad/crds/daemons.yaml").read_text())
+    crd = yaml.safe_load(Path("charts/polyad-crds/crds/daemons.yaml").read_text())
     schema = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]["spec"]
     validate(stateful_spec(), schema)
     validate({"template": template(True)}, schema)

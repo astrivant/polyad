@@ -133,6 +133,7 @@ def test_check_mode_detects_modified_missing_and_obsolete_outputs_without_writin
         "ROOT": tmp_path,
         "OUTPUT": package,
         "CHART_SCHEMAS": chart,
+        "RESOURCE_CHART_SCHEMAS": tmp_path / "resource-chart",
         "outputs": lambda: {modified: "expected", missing: "new"},
     }.items():
         monkeypatch.setitem(namespace, name, value)
@@ -169,6 +170,10 @@ def test_categorized_schema_modules_work_without_importing_models():
     assert manifest_contract("Graph") == resource_schema("Graph")
     assert values_schema() == load_schema("helm-values")
     assert values_schema(partial=True) == load_schema("helm-reference")
+    assert values_schema(chart="polyad-crds") == load_schema("helm-crds-values")
+    assert values_schema(chart="polyad-crds", partial=True) == load_schema("helm-crds-reference")
+    with pytest.raises(ValueError, match="chart must be"):
+        values_schema(chart="missing")
     for category in ("models", "resources", "events", "helm"):
         assert any(item.name.endswith(".schema.json") for item in files(f"polyad_schemas.{category}").iterdir())
 

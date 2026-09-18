@@ -6019,5 +6019,5 @@
     "kind",
     "metadata"
   ],
-  "$comment": "Generated from charts/polyad/crds/dragonflies.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/dragonflies.yaml; do not edit this artifact."
 }

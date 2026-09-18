@@ -972,7 +972,12 @@ graph observations and tracked parameters when enabled. Its optional
 [KEDA configuration](examples/postgresql/keda.yaml) scales CloudNativePG instances
 from operator connection counts, still scraped from the operator. Additional
 database instances provide standby/read capacity; writes continue through the
-primary.
+primary. [Encryption-at-rest settings](docs/deployment/postgresql.md#encryption-at-rest)
+select encrypted storage for managed state and authentication databases, using an
+administrator-provided StorageClass or GKE disks backed by a Cloud KMS key.
+Optional [record encryption](docs/deployment/record-encryption.md) uses an
+administrator-provided public key to encrypt JSON payloads inside the operator
+before writing them to either managed or external PostgreSQL databases.
 
 ## What Polyad is not
 

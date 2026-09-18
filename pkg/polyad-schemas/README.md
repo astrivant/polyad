@@ -34,7 +34,7 @@ From a checkout, use `pip install ./pkg/polyad-schemas`, or
 | `polyad_schemas.models` | `schema_for(Model)` or `schema_for("fully.qualified.Model")` | Shared model definitions |
 | `polyad_schemas.resources` | `resource_schema(kind, version, group=...)` | Polyad and pinned integration CRDs, with upstream license notices |
 | `polyad_schemas.events` | `event_schema()` | Event envelopes, typed payload shapes and stream settings |
-| `polyad_schemas.helm` | `values_schema(partial=False)` | Merged chart values or partial administrator overlays |
+| `polyad_schemas.helm` | `values_schema(partial=False, chart="polyad")` | Merged chart values or partial administrator overlays |
 
 The package root also exports these helpers, `available_schemas()` and
 `load_schema(name)`. Each call returns an independent dictionary. References
@@ -74,3 +74,6 @@ Release CI builds and tests the standalone wheel on each supported Python
 version, ships schemas and license notices in wheels and source distributions,
 and publishes this package before the operator's matching `schemas` extra.
 See [publishing commands](https://github.com/astrivant/polyad/blob/main/docs/development/toolchain.md#manual-pypi-publishing).
+
+Select `chart="polyad-crds"` to load the named-resource chart contract, including
+resource maps and TPL expressions. `partial=True` selects its overlay schema.

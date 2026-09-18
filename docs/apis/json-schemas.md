@@ -51,7 +51,7 @@ alone does not install or import schemas.
 | `polyad_schemas.models` | `schema_for(Model)` or a fully qualified model name | Shared model definitions |
 | `polyad_schemas.resources` | `resource_schema(kind, version, group=...)` | Polyad and pinned integration CRDs |
 | `polyad_schemas.events` | `event_schema()` | Event envelopes and payload trees |
-| `polyad_schemas.helm` | `values_schema(partial=False)` | Full Helm values or partial administrator overlays |
+| `polyad_schemas.helm` | `values_schema(partial=False, chart="polyad")` | Full Helm values or partial administrator overlays |
 
 Each submodule contains its JSON artifacts. The root re-exports these loaders
 and provides `available_schemas()` and `load_schema(name)` for discovery.
@@ -188,3 +188,6 @@ Use the [upstream refresh procedure](../../schemas/README.md#refresh-upstream-co
 when changing dependency versions. Standalone wheel checks verify artifacts and
 licenses without operator or types dependencies. See the
 [development toolchain](../development/toolchain.md) for release commands.
+
+Select `chart="polyad-crds"` to load the named-resource chart contract, including
+resource maps and TPL expressions. `partial=True` selects its overlay schema.

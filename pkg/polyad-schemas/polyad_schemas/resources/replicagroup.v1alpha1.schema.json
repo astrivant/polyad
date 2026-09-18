@@ -1402,5 +1402,5 @@
       }
     }
   },
-  "$comment": "Generated from charts/polyad/crds/replicagroups.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/replicagroups.yaml; do not edit this artifact."
 }

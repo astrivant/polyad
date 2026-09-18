@@ -1,4 +1,10 @@
 # yaml-language-server: $schema=values.schema.json
+## @section Polyad resource templates
+## @param polyadResources [object] Named resource maps from the polyad-crds dependency; see its values and examples for cross-resource tpl expressions and schema defaults
+polyadResources:
+  ## @param polyadResources.enabled [boolean] Include the independently versioned CRD and resource chart; false requires administrators to install definitions separately
+  enabled: true
+
 ## @section Deployment profiles
 ## @param ha [boolean] Boolean. Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
 ha: false
@@ -88,14 +94,16 @@ operator:
         selectPolicy: Max
         ## @param operator.autoscaling.behavior.scaleUp.policies [array] Rate limits (Pods or Percent); defaults to 100 percent or 4 Pods per 15 seconds; periodSeconds accepts 1-1800
         policies:
-          ## @param operator.autoscaling.behavior.scaleUp.policies[].type [string] Settings for operator.autoscaling.behavior.scaleUp.policies[].type.
-          - type: Percent
+          -
+            ## @param operator.autoscaling.behavior.scaleUp.policies[].type [string] Settings for operator.autoscaling.behavior.scaleUp.policies[].type.
+            type: Percent
             ## @param operator.autoscaling.behavior.scaleUp.policies[].value [integer] Settings for operator.autoscaling.behavior.scaleUp.policies[].value.
             value: 100
             ## @param operator.autoscaling.behavior.scaleUp.policies[].periodSeconds [integer] Settings for operator.autoscaling.behavior.scaleUp.policies[].periodSeconds.
             periodSeconds: 15
-          ## @param operator.autoscaling.behavior.scaleUp.policies[].type [string] Settings for operator.autoscaling.behavior.scaleUp.policies[].type.
-          - type: Pods
+          -
+            ## @param operator.autoscaling.behavior.scaleUp.policies[].type [string] Settings for operator.autoscaling.behavior.scaleUp.policies[].type.
+            type: Pods
             ## @param operator.autoscaling.behavior.scaleUp.policies[].value [integer] Settings for operator.autoscaling.behavior.scaleUp.policies[].value.
             value: 4
             ## @param operator.autoscaling.behavior.scaleUp.policies[].periodSeconds [integer] Settings for operator.autoscaling.behavior.scaleUp.policies[].periodSeconds.
@@ -108,8 +116,9 @@ operator:
         selectPolicy: Max
         ## @param operator.autoscaling.behavior.scaleDown.policies [array] Rate limits (Pods or Percent); defaults to 100 percent per 15 seconds; periodSeconds accepts 1-1800
         policies:
-          ## @param operator.autoscaling.behavior.scaleDown.policies[].type [string] Settings for operator.autoscaling.behavior.scaleDown.policies[].type.
-          - type: Percent
+          -
+            ## @param operator.autoscaling.behavior.scaleDown.policies[].type [string] Settings for operator.autoscaling.behavior.scaleDown.policies[].type.
+            type: Percent
             ## @param operator.autoscaling.behavior.scaleDown.policies[].value [integer] Settings for operator.autoscaling.behavior.scaleDown.policies[].value.
             value: 100
             ## @param operator.autoscaling.behavior.scaleDown.policies[].periodSeconds [integer] Settings for operator.autoscaling.behavior.scaleDown.policies[].periodSeconds.
@@ -209,8 +218,32 @@ postgresql:
   storage:
     ## @param postgresql.storage.size [string] Persistent storage per PostgreSQL instance
     size: 10Gi
-    ## @param postgresql.storage.storageClass [string] Storage class; empty uses the cluster default
+    ## @param postgresql.storage.storageClass [string] Storage class; empty uses the cluster default unless encryptionAtRest selects a class; conflicting explicit classes are rejected
     storageClass: ''
+  ## @param postgresql.encryptionAtRest [object] Select encrypted volumes for all chart-managed state and authentication database instances; external databases retain their provider configuration
+  encryptionAtRest:
+    ## @param postgresql.encryptionAtRest.enabled [boolean] Require the selected encrypted class for managed database PVCs; enabling this does not migrate existing volumes
+    enabled: false
+    ## @param postgresql.encryptionAtRest.provider [string] ExistingStorageClass uses an administrator-verified encrypted class; GKE creates a Persistent Disk CSI class referencing a Cloud KMS key
+    provider: ExistingStorageClass
+    ## @param postgresql.encryptionAtRest.storageClass [string] Required existing class name for ExistingStorageClass; optional name for the new GKE class, otherwise generated from release namespace and name
+    storageClass: ''
+    ## @param postgresql.encryptionAtRest.kmsKeyName [string] GKE symmetric Cloud KMS CryptoKey resource name in the cluster region; key material and IAM remain outside the chart
+    kmsKeyName: ''
+    ## @param postgresql.encryptionAtRest.diskType [string] GKE Persistent Disk CSI type such as pd-balanced, pd-ssd or hyperdisk-balanced; choose one supported by the node machine family and CSI driver
+    diskType: pd-balanced
+  ## @param postgresql.recordEncryption [object] Optional encryption of database JSON payloads inside each operator before SQL writes; independent of volume encryption and usable with external databases
+  recordEncryption:
+    ## @param postgresql.recordEncryption.enabled [boolean] Encrypt new state, snapshot, event and authentication-policy payloads; all database writers must use the same policy; existing rows are not migrated
+    enabled: false
+    ## @param postgresql.recordEncryption.existingSecret [string] Existing release-namespace Secret containing PEM RSA keys; key material must stay out of Helm values
+    existingSecret: ''
+    ## @param postgresql.recordEncryption.publicKeyKey [string] Secret data key holding a PEM RSA public key of at least 2048 bits; used to wrap a fresh encryption key for each record
+    publicKeyKey: public.pem
+    ## @param postgresql.recordEncryption.privateKeyKey [string] Optional matching PEM private-key entry; empty mounts only the public key, sufficient for database writes
+    privateKeyKey: ''
+    ## @param postgresql.recordEncryption.privateKeyPasswordKey [string] Optional password entry for an encrypted private PEM; requires privateKeyKey; empty means an unencrypted PEM
+    privateKeyPasswordKey: ''
   ## @param postgresql.ha [object] Settings for postgresql.ha.
   ha:
     ## @param postgresql.ha.enabled [boolean] Enable primary plus standby instances and synchronous replication
@@ -500,7 +533,7 @@ authentication:
     username: polyad_authentication
     ## @param authentication.storage.size [string] String. Persistent storage per managed authentication database instance
     size: 1Gi
-    ## @param authentication.storage.storageClass [string] String. Authentication database storage class; empty uses the cluster default
+    ## @param authentication.storage.storageClass [string] Authentication database storage class; empty uses the cluster default unless postgresql.encryptionAtRest selects a class; conflicting explicit classes are rejected
     storageClass: ''
   ## @param authentication.services [array] Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits
   services: []

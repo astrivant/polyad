@@ -63,7 +63,11 @@ Useful temporal properties include â€œa stopped boundary never admits new work,â
 
 ## API and Python abstractions
 
-All CRDs are namespaced under `polyad.astrivant.com/v1alpha1` and shipped in `charts/polyad/crds`. These are alpha APIs.
+All CRDs are namespaced under `polyad.astrivant.com/v1alpha1` and shipped in `charts/polyad-crds/crds`. These are alpha APIs.
+
+The [resource chart](../../charts/polyad-crds/README.md) versions these definitions
+independently and also generates instances from name-keyed values, with defaults
+and references between fields. The operator chart includes it as `polyadResources`.
 
 | Python abstraction | Kubernetes representation |
 | --- | --- |

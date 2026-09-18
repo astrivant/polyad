@@ -91,5 +91,5 @@
     "spec"
   ],
   "description": "Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
-  "$comment": "Generated from charts/polyad/crds/resources.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/resources.yaml; do not edit this artifact."
 }

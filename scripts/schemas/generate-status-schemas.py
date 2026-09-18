@@ -63,7 +63,7 @@ def main() -> int:
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Fail on schema drift without modifying manifests.")
-    parser.add_argument("--crd-dir", type=Path, default=Path(__file__).resolve().parents[2] / "charts/polyad/crds")
+    parser.add_argument("--crd-dir", type=Path, default=Path(__file__).resolve().parents[2] / "charts/polyad-crds/crds")
     args = parser.parse_args()
     schema = structural_schema(GraphMetrics)
     changed = [name for name in CRDS if not refresh(args.crd_dir / name, schema, check=args.check)]

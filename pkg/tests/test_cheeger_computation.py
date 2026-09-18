@@ -145,12 +145,12 @@ def test_tuning_reference_and_generated_schemas_share_computation_types():
     root = Path(__file__).parents[2]
     documents = list(yaml.safe_load_all((root / "examples/cheeger-tuning.yaml").read_text()))
     for document in documents:
-        crd = yaml.safe_load((root / f"charts/polyad/crds/{document['kind'].lower()}s.yaml").read_text())
+        crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{document['kind'].lower()}s.yaml").read_text())
         schema = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
         # Kubernetes OpenAPI uses the boolean exclusiveMinimum form from draft 4.
         jsonschema.Draft4Validator(schema).validate(document)
     for kind in ("graphs", "polygraphs", "rewrites", "graphrules"):
-        crd = yaml.safe_load((root / f"charts/polyad/crds/{kind}.yaml").read_text())
+        crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{kind}.yaml").read_text())
         spec = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]["spec"]["properties"]
         if kind == "rewrites":
             spec = spec["topology"]["properties"]

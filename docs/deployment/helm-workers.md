@@ -170,7 +170,7 @@ root replica change. Concurrent edits to the pool or downstream Deployment
 invalidate the pending write and trigger a fresh reconciliation.
 
 On existing installations, update the chart's
-[`OperatorPool` CRD](../../charts/polyad/crds/operatorpools.yaml) before using the new
+[`OperatorPool` CRD](../../charts/polyad-crds/crds/operatorpools.yaml) before using the new
 fields. Helm installs CRDs on first installation but does not upgrade them;
 administrators also maintain the downstream CRDs for Helm-installed workers.
 

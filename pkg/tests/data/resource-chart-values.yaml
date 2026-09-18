@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=../../../charts/polyad-crds/values.schema.json
+## @param variables [object] Administrator-defined inputs available to tpl expressions through .Values.variables.
+variables:
+  count: 3
+  image: busybox:1.37.0
+## @param daemons [object] Daemon instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+daemons:
+  ## @param daemons.worker [object] Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.
+  worker:
+    ## @param daemons.worker.spec [object, string] Desired configuration for this Daemon resource. Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.
+    spec:
+      ## @param daemons.worker.spec.replicas [integer, string] Desired number of daemon replicas. Readiness requires the selected controller to observe its current generation and requested rollout.
+      replicas: '{{ .Values.variables.count }}'
+      ## @param daemons.worker.spec.template [object, string] Kubernetes Pod template for graph-owned execution. Container commands, resource requests, volumes and probes are application-defined; the operator sets restart policy and inherited placement.
+      template:
+        ## @param daemons.worker.spec.template.spec [object, string] Native Kubernetes Pod spec. Include containers and any resource requests, volumes, probes or lifecycle hooks. Daemon containers require startup, readiness and liveness probes; inherited graph placement also applies.
+        spec:
+          containers:
+            - name: worker
+              image: '{{ .Values.variables.image }}'
+## @param replicaGroups [object] ReplicaGroup instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+replicaGroups:
+  ## @param replicaGroups.workers [object] Replicate executable abstractions at stable ordinals; KEDA and HPA control the bounded scale subresource.
+  workers:
+    ## @param replicaGroups.workers.spec [object, string] Bound copies and their connections while preserving stable ordinals and graph admission.
+    spec:
+      ## @param replicaGroups.workers.spec.template [object, string] Select the reusable definition instantiated at each stable replica ordinal.
+      template:
+        ## @param replicaGroups.workers.spec.template.kind [string] Settings for replicaGroups.workers.spec.template.kind.
+        kind: Daemon
+        ## @param replicaGroups.workers.spec.template.ref [string] Namespaced definition name.
+        ref: '{{ .Values.daemons.worker.metadata.name }}'
+      ## @param replicaGroups.workers.spec.replicas [integer, string] Requested number of copies, exposed through the scale subresource.
+      replicas: '{{ .Values.daemons.worker.spec.replicas }}'
+## @param graphs [object] Graph instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+graphs:
+  ## @param graphs.pipeline [object] Own and orchestrate a finite or persistent graph of workloads and resources. Admission follows lifecycle dependencies; deletion waits for owned resources to finish cleanup.
+  pipeline:
+    ## @param graphs.pipeline.spec [object, string] Desired configuration for this Graph resource. Own and orchestrate a finite or persistent graph of workloads and resources. Admission follows lifecycle dependencies; deletion waits for owned resources to finish cleanup.
+    spec:
+      ## @param graphs.pipeline.spec.nodes [array, string] Graph membership in deterministic admission order. Names are unique within this boundary; definitions are resolved in the same namespace.
+      nodes:
+        ## @param graphs.pipeline.spec.nodes[].name [string] Unique name of this node within its graph. Used by dependencies, connections and lifecycle signals.
+        - name: workers
+          ## @param graphs.pipeline.spec.nodes[].kind [string] Kind of the definition referenced by this node; determines whether execution uses a Job, Deployment, StatefulSet, resource or nested graph boundary.
+          kind: ReplicaGroup
+          ## @param graphs.pipeline.spec.nodes[].ref [string] Name of the reusable definition in the same namespace. Nested Graph and PolyGraph definitions must set templateOnly to true.
+          ref: '{{ .Values.replicaGroups.workers.metadata.name }}'

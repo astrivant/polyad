@@ -582,5 +582,5 @@
     "spec"
   ],
   "description": "Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.",
-  "$comment": "Generated from charts/polyad/crds/daemons.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/daemons.yaml; do not edit this artifact."
 }

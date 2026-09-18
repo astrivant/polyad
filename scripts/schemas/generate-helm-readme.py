@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import runpy
 import subprocess
 import tempfile
 from pathlib import Path
@@ -26,6 +27,8 @@ def main() -> int:
     parser.add_argument("--values", required=True)
     args = parser.parse_args()
     source = Path(args.values).read_text()
+    checker = runpy.run_path(str(Path(__file__).resolve().parents[1] / "validation/check-values.py"))
+    source = checker["commented_example"](source) or source
     values = yaml.safe_load(source)
     names = re.findall(r"^\s*##\s*@param\s+(\S+)", source, flags=re.MULTILINE)
     parents = {name for name in names if any(other.startswith(name + ".") for other in names)}

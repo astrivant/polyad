@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# DragonflyPool field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param dragonflyPools [object] Named DragonflyPool instances; empty by default. Copy selected fields below to configure one.
+dragonflyPools: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section DragonflyPool field reference
+# ## @param dragonflyPools [object] DragonflyPool instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# dragonflyPools:
+#   ## @param dragonflyPools.example [object] Settings for dragonflyPools.example.
+#   example:
+#     ## @param dragonflyPools.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param dragonflyPools.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param dragonflyPools.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param dragonflyPools.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param dragonflyPools.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param dragonflyPools.example.spec [object, string] Required. No CRD default; the value shown is illustrative.
+#     spec:
+#       ## @param dragonflyPools.example.spec.replicas [integer, string] Required. No CRD default; the value shown is illustrative.
+#       replicas: 2
+#       ## @param dragonflyPools.example.spec.minReplicas [integer, string] Required. No CRD default; the value shown is illustrative.
+#       minReplicas: 2
+#       ## @param dragonflyPools.example.spec.maxReplicas [integer, string] Required. No CRD default; the value shown is illustrative.
+#       maxReplicas: 2
+#     # Constraint: minReplicas must not exceed maxReplicas
+#     # Constraint: replicas must stay within the configured bounds
+# END RESOURCE EXAMPLE

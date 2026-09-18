@@ -307,7 +307,7 @@ def test_example_completes_with_root_totals():
         documents = list(yaml.safe_load_all((root_dir / "examples/polygraph.yaml").read_text()))
         schemas = {
             doc["spec"]["names"]["kind"]: doc["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
-            for path in (root_dir / "charts/polyad/crds").glob("*.yaml")
+            for path in (root_dir / "charts/polyad-crds/crds").glob("*.yaml")
             for doc in [yaml.safe_load(path.read_text())]
         }
         for doc in documents:

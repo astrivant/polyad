@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# ShutdownPolicy field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param shutdownPolicies [object] Named ShutdownPolicy instances; empty by default. Copy selected fields below to configure one.
+shutdownPolicies: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section ShutdownPolicy field reference
+# ## @param shutdownPolicies [object] ShutdownPolicy instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# shutdownPolicies:
+#   ## @param shutdownPolicies.example [object] Define a reusable graph runtime limit and pod termination grace period. Containers handle termination and durable cleanup; this policy does not execute Python shutdown callbacks.
+#   example:
+#     ## @param shutdownPolicies.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param shutdownPolicies.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param shutdownPolicies.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param shutdownPolicies.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param shutdownPolicies.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param shutdownPolicies.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for this ShutdownPolicy resource. Define a reusable graph runtime limit and pod termination grace period. Containers handle termination and durable cleanup; this policy does not execute Python shutdown callbacks.
+#     spec:
+#       ## @param shutdownPolicies.example.spec.graceSeconds [integer, string] Optional. Default: 30. Pod termination grace period in seconds. Applications should drain or checkpoint during SIGTERM or preStop handling before Kubernetes ends this period.
+#       graceSeconds: 30
+#       ## @param shutdownPolicies.example.spec.afterSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Graph lifetime limit in seconds from the Graph CR creation timestamp, including operator downtime. Reaching the limit stops admission and drains owned execution; omission disables the limit.
+#       afterSeconds: 0
+# END RESOURCE EXAMPLE

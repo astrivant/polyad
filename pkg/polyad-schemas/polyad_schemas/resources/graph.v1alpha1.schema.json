@@ -3074,5 +3074,5 @@
     "spec"
   ],
   "description": "Own and orchestrate a finite or persistent graph of workloads and resources. Admission follows lifecycle dependencies; deletion waits for owned resources to finish cleanup.",
-  "$comment": "Generated from charts/polyad/crds/graphs.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/graphs.yaml; do not edit this artifact."
 }

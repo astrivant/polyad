@@ -99,5 +99,5 @@
       "description": "Admission phase, timestamp, execution identity and reasons for rejection or coalescing."
     }
   },
-  "$comment": "Generated from charts/polyad/crds/activations.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/activations.yaml; do not edit this artifact."
 }

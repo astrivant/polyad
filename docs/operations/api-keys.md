@@ -226,6 +226,16 @@ The chart revokes PUBLIC access to the database and public schema, and the opera
 revokes PUBLIC access to its authentication tables. Database administrators retain
 administrative access. Install CloudNativePG before enabling managed storage.
 
+Use the shared [PostgreSQL encryption-at-rest settings](../deployment/postgresql.md#encryption-at-rest)
+to select encrypted volumes for this database and its standbys, as well as managed
+state storage. Choose an existing encrypted StorageClass or provision a GKE class
+with a Cloud KMS key reference. Existing PVCs require a migration; external
+databases and backups use their provider's encryption configuration.
+
+Optional [record encryption](../deployment/record-encryption.md) also encrypts
+policy JSON before the operator sends it to either authentication database.
+One-way token fingerprints, policy digests and revocation flags remain queryable.
+
 | Setting | Choice |
 | --- | --- |
 | `storage.separateDatabase: true`, `storage.managed: true` | Provision a dedicated Cluster and application login; configure `database`, `username`, `size`, `storageClass` |

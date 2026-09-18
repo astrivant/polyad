@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# RemoteScale field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param remoteScales [object] Named RemoteScale instances; empty by default. Copy selected fields below to configure one.
+remoteScales: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section RemoteScale field reference
+# ## @param remoteScales [object] RemoteScale instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# remoteScales:
+#   ## @param remoteScales.example [object] Settings for remoteScales.example.
+#   example:
+#     ## @param remoteScales.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param remoteScales.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param remoteScales.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param remoteScales.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param remoteScales.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param remoteScales.example.spec [object, string] Required. No CRD default; the value shown is illustrative.
+#     spec:
+#       ## @param remoteScales.example.spec.cluster [string] Required. No CRD default; the value shown is illustrative.
+#       cluster: "example"
+#       # Constraint: cluster is immutable
+#       ## @param remoteScales.example.spec.replicas [integer, string] Required. Default: 1.
+#       replicas: 1
+#       ## @param remoteScales.example.spec.target [object, string] Required. No CRD default; the value shown is illustrative.
+#       target:
+#         ## @param remoteScales.example.spec.target.name [string] Required. No CRD default; the value shown is illustrative.
+#         name: "example"
+#         ## @param remoteScales.example.spec.target.uid [string] Required. No CRD default; the value shown is illustrative.
+#         uid: "example"
+#         ## @param remoteScales.example.spec.target.generation [integer, string] Required. No CRD default; the value shown is illustrative. Locally approved target spec generation; local edits invalidate the request.
+#         generation: 1
+#       # Constraint: target identity and approved generation are immutable
+# END RESOURCE EXAMPLE

@@ -10,6 +10,7 @@ health metrics, and installation examples.
 - [Reference values](#reference-values)
 - [Template layout](#template-layout)
 - [Parameters](#parameters)
+  - [Polyad resource templates](#polyad-resource-templates)
   - [Deployment profiles](#deployment-profiles)
   - [Helm-installed downstream operator workers](#helm-installed-downstream-operator-workers)
   - [OpenTelemetry traces and logs](#opentelemetry-traces-and-logs)
@@ -84,7 +85,14 @@ This disables both the managed instance and the controller dependency. Install
 only one bundled Dragonfly controller release per cluster; other Polyad releases
 can share its primary endpoint with namespace-isolated queues.
 
-Polyad ships the pinned Dragonfly CRD in `crds/` so Helm registers it before
+Polyad's [separately versioned resource chart](../polyad-crds/README.md) installs
+the API definitions and can render named resource instances. Configure its maps
+under `polyadResources`, for example `polyadResources.graphs.pipeline.spec`.
+Every field accepts `tpl` references to other instances, and CRD defaults are
+populated automatically. Its [per-kind reference values](../polyad-crds/README.md#reference-values-by-kind)
+contain fully commented examples with required, optional and defaulted fields.
+
+Polyad ships the pinned Dragonfly CRD in that dependency's `crds/` so Helm registers it before
 creating the instance on a fresh installation. Keep
 `dragonflyOperator.crds.install=false` to avoid duplicate CRD ownership. Helm
 retains CRDs and does not upgrade them automatically; see [upstream provenance
@@ -156,6 +164,8 @@ default values. Schema checks keep annotations in all shipped values files in sy
 | [`values-multicluster.reference.yaml`](values-multicluster.reference.yaml) | Istio transport, peer gateways and local network identity; adapt separately per cluster | [Multicluster networking](../../docs/deployment/multicluster.md#istio-across-different-networks) |
 | [`values-observer.reference.yaml`](values-observer.reference.yaml) | Read-only observers alongside this release's operator | [Observers](../../docs/deployment/multicluster.md#optional-shared-observers) |
 | [`values-postgresql.reference.yaml`](values-postgresql.reference.yaml) | Optional persistent state, database HA and connection-driven KEDA scaling in the release cluster | [PostgreSQL](../../docs/deployment/postgresql.md) |
+| [`values-postgresql-encryption.reference.yaml`](values-postgresql-encryption.reference.yaml) | Encrypted volumes for managed state and authentication databases; GKE Cloud KMS example and existing StorageClass alternative | [Encryption at rest](../../docs/deployment/postgresql.md#encryption-at-rest) |
+| [`values-postgresql-record-encryption.reference.yaml`](values-postgresql-record-encryption.reference.yaml) | Optional encryption before database writes using an existing public/private key Secret | [Record encryption](../../docs/deployment/record-encryption.md) |
 | [`values-authentication.reference.yaml`](values-authentication.reference.yaml) | Scoped service/operator keys, workload Secret assignments and optional dedicated authentication storage | [API keys](../../docs/operations/api-keys.md) |
 | [`values-connections.reference.yaml`](values-connections.reference.yaml) | Service consent events and separate connection/reconciliation pulse budgets | [Temporary connections](../../docs/apis/temporary-connections.md) |
 | [`values-websockets.reference.yaml`](values-websockets.reference.yaml) | Optional WebSocket subscriptions sharing the events Service, authorization and subscriber limits with SSE | [WebSocket subscriptions](../../docs/workloads/workload-events.md#websocket-subscriptions) |
@@ -231,6 +241,12 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 [the root control plane](../../docs/deployment/root-control-plane.md) for architecture details.
 
 ## Parameters
+
+### Polyad resource templates
+
+| Name                      | Description                                                                                                                                    | Value  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `polyadResources.enabled` | **Type: boolean.** Include the independently versioned CRD and resource chart; false requires administrators to install definitions separately | `true` |
 
 ### Deployment profiles
 
@@ -314,31 +330,41 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### Optional PostgreSQL state storage
 
-| Name                                            | Description                                                                                                                                  | Value                                                    |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `postgresql.enabled`                            | **Type: boolean.** Persist graph state and tracked parameters in PostgreSQL                                                                  | `false` |
-| `postgresql.managed`                            | **Type: boolean.** Create a CloudNativePG Cluster; install its operator first                                                                | `true` |
-| `postgresql.existingSecret`                     | **Type: string.** External database Secret containing the connection DSN when managed is false                                               | `""` |
-| `postgresql.secretKey`                          | **Type: string.** DSN key in the external database Secret                                                                                    | `uri` |
-| `postgresql.database`                           | **Type: string.** String. Application database for graph state and optional event history; set only when bootstrapping a new managed cluster | `polyad` |
-| `postgresql.username`                           | **Type: string.** String. Dedicated application owner; PUBLIC database access is revoked and superuser access stays disabled                 | `polyad` |
-| `postgresql.events.enabled`                     | **Type: boolean.** Boolean. Archive approved application events in PostgreSQL; bounded live replay still uses Dragonfly                      | `true` |
-| `postgresql.events.retentionDays`               | **Type: integer.** Integer. Retain durable event history for this many days; graph snapshots retain current state independently              | `30` |
-| `postgresql.scope`                              | **Type: string.** State identity within the database; empty uses the release namespace and name                                              | `""` |
-| `postgresql.image`                              | **Type: string.** PostgreSQL image for the managed cluster                                                                                   | `ghcr.io/cloudnative-pg/postgresql:18.3-standard-trixie` |
-| `postgresql.maxConnections`                     | **Type: integer.** Maximum connections per managed database instance, including administration                                               | `100` |
-| `postgresql.storage.size`                       | **Type: string.** Persistent storage per PostgreSQL instance                                                                                 | `10Gi` |
-| `postgresql.storage.storageClass`               | **Type: string.** Storage class; empty uses the cluster default                                                                              | `""` |
-| `postgresql.ha.enabled`                         | **Type: boolean.** Enable primary plus standby instances and synchronous replication                                                         | `false` |
-| `postgresql.ha.instances`                       | **Type: integer.** Total instances when HA is enabled and autoscaling is disabled                                                            | `3` |
-| `postgresql.ha.topologyKey`                     | **Type: string.** Failure-domain label for required database pod anti-affinity                                                               | `kubernetes.io/hostname` |
-| `postgresql.resources.requests.cpu`             | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.     | `250m` |
-| `postgresql.resources.requests.memory`          | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.     | `512Mi` |
-| `postgresql.resources.limits.memory`            | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.     | `1Gi` |
-| `postgresql.autoscaling.enabled`                | **Type: boolean.** Create a KEDA ScaledObject for the managed Cluster using operator connection counts                                       | `false` |
-| `postgresql.autoscaling.minInstances`           | **Type: integer.** Minimum instances; at least 3 with HA, never zero                                                                         | `3` |
-| `postgresql.autoscaling.maxInstances`           | **Type: integer.** Maximum database instances                                                                                                | `6` |
-| `postgresql.autoscaling.connectionsPerInstance` | **Type: integer.** Operator connections per desired database instance; does not add primary write capacity                                   | `20` |
+| Name                                                | Description                                                                                                                                                             | Value                                                    |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `postgresql.enabled`                                | **Type: boolean.** Persist graph state and tracked parameters in PostgreSQL                                                                                             | `false` |
+| `postgresql.managed`                                | **Type: boolean.** Create a CloudNativePG Cluster; install its operator first                                                                                           | `true` |
+| `postgresql.existingSecret`                         | **Type: string.** External database Secret containing the connection DSN when managed is false                                                                          | `""` |
+| `postgresql.secretKey`                              | **Type: string.** DSN key in the external database Secret                                                                                                               | `uri` |
+| `postgresql.database`                               | **Type: string.** String. Application database for graph state and optional event history; set only when bootstrapping a new managed cluster                            | `polyad` |
+| `postgresql.username`                               | **Type: string.** String. Dedicated application owner; PUBLIC database access is revoked and superuser access stays disabled                                            | `polyad` |
+| `postgresql.events.enabled`                         | **Type: boolean.** Boolean. Archive approved application events in PostgreSQL; bounded live replay still uses Dragonfly                                                 | `true` |
+| `postgresql.events.retentionDays`                   | **Type: integer.** Integer. Retain durable event history for this many days; graph snapshots retain current state independently                                         | `30` |
+| `postgresql.scope`                                  | **Type: string.** State identity within the database; empty uses the release namespace and name                                                                         | `""` |
+| `postgresql.image`                                  | **Type: string.** PostgreSQL image for the managed cluster                                                                                                              | `ghcr.io/cloudnative-pg/postgresql:18.3-standard-trixie` |
+| `postgresql.maxConnections`                         | **Type: integer.** Maximum connections per managed database instance, including administration                                                                          | `100` |
+| `postgresql.storage.size`                           | **Type: string.** Persistent storage per PostgreSQL instance                                                                                                            | `10Gi` |
+| `postgresql.storage.storageClass`                   | **Type: string.** Storage class; empty uses the cluster default unless encryptionAtRest selects a class; conflicting explicit classes are rejected                      | `""` |
+| `postgresql.encryptionAtRest.enabled`               | **Type: boolean.** Require the selected encrypted class for managed database PVCs; enabling this does not migrate existing volumes                                      | `false` |
+| `postgresql.encryptionAtRest.provider`              | **Type: string.** ExistingStorageClass uses an administrator-verified encrypted class; GKE creates a Persistent Disk CSI class referencing a Cloud KMS key              | `ExistingStorageClass` |
+| `postgresql.encryptionAtRest.storageClass`          | **Type: string.** Required existing class name for ExistingStorageClass; optional name for the new GKE class, otherwise generated from release namespace and name       | `""` |
+| `postgresql.encryptionAtRest.kmsKeyName`            | **Type: string.** GKE symmetric Cloud KMS CryptoKey resource name in the cluster region; key material and IAM remain outside the chart                                  | `""` |
+| `postgresql.encryptionAtRest.diskType`              | **Type: string.** GKE Persistent Disk CSI type such as pd-balanced, pd-ssd or hyperdisk-balanced; choose one supported by the node machine family and CSI driver        | `pd-balanced` |
+| `postgresql.recordEncryption.enabled`               | **Type: boolean.** Encrypt new state, snapshot, event and authentication-policy payloads; all database writers must use the same policy; existing rows are not migrated | `false` |
+| `postgresql.recordEncryption.existingSecret`        | **Type: string.** Existing release-namespace Secret containing PEM RSA keys; key material must stay out of Helm values                                                  | `""` |
+| `postgresql.recordEncryption.publicKeyKey`          | **Type: string.** Secret data key holding a PEM RSA public key of at least 2048 bits; used to wrap a fresh encryption key for each record                               | `public.pem` |
+| `postgresql.recordEncryption.privateKeyKey`         | **Type: string.** Optional matching PEM private-key entry; empty mounts only the public key, sufficient for database writes                                             | `""` |
+| `postgresql.recordEncryption.privateKeyPasswordKey` | **Type: string.** Optional password entry for an encrypted private PEM; requires privateKeyKey; empty means an unencrypted PEM                                          | `""` |
+| `postgresql.ha.enabled`                             | **Type: boolean.** Enable primary plus standby instances and synchronous replication                                                                                    | `false` |
+| `postgresql.ha.instances`                           | **Type: integer.** Total instances when HA is enabled and autoscaling is disabled                                                                                       | `3` |
+| `postgresql.ha.topologyKey`                         | **Type: string.** Failure-domain label for required database pod anti-affinity                                                                                          | `kubernetes.io/hostname` |
+| `postgresql.resources.requests.cpu`                 | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.                                | `250m` |
+| `postgresql.resources.requests.memory`              | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.                                | `512Mi` |
+| `postgresql.resources.limits.memory`                | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.                                | `1Gi` |
+| `postgresql.autoscaling.enabled`                    | **Type: boolean.** Create a KEDA ScaledObject for the managed Cluster using operator connection counts                                                                  | `false` |
+| `postgresql.autoscaling.minInstances`               | **Type: integer.** Minimum instances; at least 3 with HA, never zero                                                                                                    | `3` |
+| `postgresql.autoscaling.maxInstances`               | **Type: integer.** Maximum database instances                                                                                                                           | `6` |
+| `postgresql.autoscaling.connectionsPerInstance`     | **Type: integer.** Operator connections per desired database instance; does not add primary write capacity                                                              | `20` |
 
 ### Optional HA component deployment architecture
 
@@ -459,21 +485,21 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### Named operator API credentials
 
-| Name                                      | Description                                                                                                                                                       | Value                   |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `authentication.mode`                     | **Type: string.** String. Required enforces endpoint credentials; Disabled opts into an unauthenticated demo without HTTP request quotas                          | `Required` |
-| `authentication.backend`                  | **Type: string.** String. Builtin uses Polyad's Flask hooks; FlaskHTTPAuth loads the adapter included in official operator images                                 | `Builtin` |
-| `authentication.storage.enabled`          | **Type: boolean.** Boolean. Persist one-way key verifiers and policy records in PostgreSQL and enforce database revocation; raw tokens stay in Kubernetes Secrets | `false` |
-| `authentication.storage.separateDatabase` | **Type: boolean.** Boolean. Use an isolated authentication database; false reuses the state database and its role, requiring postgresql.enabled                   | `true` |
-| `authentication.storage.managed`          | **Type: boolean.** Boolean. Provision a separate CloudNativePG Cluster; false uses the DSN from existingSecret                                                    | `true` |
-| `authentication.storage.existingSecret`   | **Type: string.** String. Externally managed authentication database connection Secret; used with separateDatabase=true and managed=false                         | `""` |
-| `authentication.storage.secretKey`        | **Type: string.** String. DSN key in the external authentication database Secret                                                                                  | `uri` |
-| `authentication.storage.database`         | **Type: string.** String. Database name for a new managed authentication cluster                                                                                  | `polyad-authentication` |
-| `authentication.storage.username`         | **Type: string.** String. Sole application login owning the managed authentication database; PostgreSQL administrators retain administrative access               | `polyad_authentication` |
-| `authentication.storage.size`             | **Type: string.** String. Persistent storage per managed authentication database instance                                                                         | `1Gi` |
-| `authentication.storage.storageClass`     | **Type: string.** String. Authentication database storage class; empty uses the cluster default                                                                   | `""` |
-| `authentication.services`                 | **Type: array.** Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits                      | `[]` |
-| `authentication.operators`                | **Type: array.** Peer operator API keys; Inbound, Outbound or Bidirectional, with HA-wide per-key lanes                                                           | `[]` |
+| Name                                      | Description                                                                                                                                                                           | Value                   |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `authentication.mode`                     | **Type: string.** String. Required enforces endpoint credentials; Disabled opts into an unauthenticated demo without HTTP request quotas                                              | `Required` |
+| `authentication.backend`                  | **Type: string.** String. Builtin uses Polyad's Flask hooks; FlaskHTTPAuth loads the adapter included in official operator images                                                     | `Builtin` |
+| `authentication.storage.enabled`          | **Type: boolean.** Boolean. Persist one-way key verifiers and policy records in PostgreSQL and enforce database revocation; raw tokens stay in Kubernetes Secrets                     | `false` |
+| `authentication.storage.separateDatabase` | **Type: boolean.** Boolean. Use an isolated authentication database; false reuses the state database and its role, requiring postgresql.enabled                                       | `true` |
+| `authentication.storage.managed`          | **Type: boolean.** Boolean. Provision a separate CloudNativePG Cluster; false uses the DSN from existingSecret                                                                        | `true` |
+| `authentication.storage.existingSecret`   | **Type: string.** String. Externally managed authentication database connection Secret; used with separateDatabase=true and managed=false                                             | `""` |
+| `authentication.storage.secretKey`        | **Type: string.** String. DSN key in the external authentication database Secret                                                                                                      | `uri` |
+| `authentication.storage.database`         | **Type: string.** String. Database name for a new managed authentication cluster                                                                                                      | `polyad-authentication` |
+| `authentication.storage.username`         | **Type: string.** String. Sole application login owning the managed authentication database; PostgreSQL administrators retain administrative access                                   | `polyad_authentication` |
+| `authentication.storage.size`             | **Type: string.** String. Persistent storage per managed authentication database instance                                                                                             | `1Gi` |
+| `authentication.storage.storageClass`     | **Type: string.** Authentication database storage class; empty uses the cluster default unless postgresql.encryptionAtRest selects a class; conflicting explicit classes are rejected | `""` |
+| `authentication.services`                 | **Type: array.** Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits                                          | `[]` |
+| `authentication.operators`                | **Type: array.** Peer operator API keys; Inbound, Outbound or Bidirectional, with HA-wide per-key lanes                                                                               | `[]` |
 
 ### KEDA installation, observation and credentials
 

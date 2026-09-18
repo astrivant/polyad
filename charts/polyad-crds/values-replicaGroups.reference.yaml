@@ -1,0 +1,106 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# ReplicaGroup field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param replicaGroups [object] Named ReplicaGroup instances; empty by default. Copy selected fields below to configure one.
+replicaGroups: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section ReplicaGroup field reference
+# ## @param replicaGroups [object] ReplicaGroup instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# replicaGroups:
+#   ## @param replicaGroups.example [object] Replicate executable abstractions at stable ordinals; KEDA and HPA control the bounded scale subresource.
+#   example:
+#     ## @param replicaGroups.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param replicaGroups.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param replicaGroups.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param replicaGroups.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param replicaGroups.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param replicaGroups.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Bound copies and their connections while preserving stable ordinals and graph admission.
+#     spec:
+#       ## @param replicaGroups.example.spec.template [object, string] Required. No CRD default; the value shown is illustrative. Select the reusable definition instantiated at each stable replica ordinal.
+#       template:
+#         ## @param replicaGroups.example.spec.template.kind [string] Required. No CRD default; the value shown is illustrative. Choices: "Workload", "Daemon", "Resource", "Graph", "PolyGraph", "ReplicaGroup".
+#         kind: "Workload"
+#         ## @param replicaGroups.example.spec.template.ref [string] Required. No CRD default; the value shown is illustrative. Namespaced definition name.
+#         ref: "example"
+#       ## @param replicaGroups.example.spec.replicas [integer, string] Optional. Default: 1. Requested number of copies, exposed through the scale subresource.
+#       replicas: 1
+#       ## @param replicaGroups.example.spec.minReplicas [integer, string] Optional. Default: 0. Inclusive lower bound, including zero.
+#       minReplicas: 0
+#       ## @param replicaGroups.example.spec.maxReplicas [integer, string] Optional. Default: 32. Inclusive upper bound, at most 256 copies per group.
+#       maxReplicas: 32
+#       ## @param replicaGroups.example.spec.templateOnly [boolean, string] Optional. Default: false. Reusable group controlling all inheriting instances.
+#       templateOnly: false
+#       ## @param replicaGroups.example.spec.replicaSource [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#       replicaSource:
+#         ## @param replicaGroups.example.spec.replicaSource.name [string] Required. No CRD default; the value shown is illustrative. Reusable ReplicaGroup name.
+#         name: "example"
+#         ## @param replicaGroups.example.spec.replicaSource.uid [string] Required. No CRD default; the value shown is illustrative. Incarnation fence for the reusable group.
+#         uid: "example"
+#       ## @param replicaGroups.example.spec.inheritReplicas [boolean, string] Optional. Default: true. Whether a generated instance follows its reusable group.
+#       inheritReplicas: true
+#       ## @param replicaGroups.example.spec.suspend [boolean, string] Optional. Default: false. Drain execution until resumed.
+#       suspend: false
+#       ## @param replicaGroups.example.spec.placement [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#       placement: {}
+#       ## @param replicaGroups.example.spec.rules [array, string] Optional. No CRD default; the value shown is illustrative. Structural restrictions for every replicated graph.
+#       rules: []
+#       ## @param replicaGroups.example.spec.network [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#       network: {}
+#       ## @param replicaGroups.example.spec.capacity [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#       capacity: {}
+#       ## @param replicaGroups.example.spec.shutdownPolicy [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#       shutdownPolicy: "example"
+#       ## @param replicaGroups.example.spec.activation [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#       activation: {}
+#       ## @param replicaGroups.example.spec.connectivity [object, string] Optional. No CRD default; the value shown is illustrative. Select data-flow edges between copies without introducing admission dependencies.
+#       connectivity:
+#         ## @param replicaGroups.example.spec.connectivity.mode [string] Optional. Default: "Independent". Choices: "Independent", "Chain", "Ring", "Star", "FullMesh", "Custom". Connection pattern over active ordinals.
+#         mode: "Independent"
+#         ## @param replicaGroups.example.spec.connectivity.bidirectional [boolean, string] Optional. Default: false. Add a reverse connection with the same ports for each edge.
+#         bidirectional: false
+#         ## @param replicaGroups.example.spec.connectivity.ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination grants for built-in patterns; Custom uses each edge's ports.
+#         ports:
+#           -
+#             ## @param replicaGroups.example.spec.connectivity.ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#             port: 1
+#             ## @param replicaGroups.example.spec.connectivity.ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#             protocol: "TCP"
+#         ## @param replicaGroups.example.spec.connectivity.edges [array, string] Optional. No CRD default; the value shown is illustrative. Custom edges, active only when both endpoints exist.
+#         edges:
+#           -
+#             ## @param replicaGroups.example.spec.connectivity.edges[].source [string] Required. No CRD default; the value shown is illustrative. Sending ordinal, such as replica-0.
+#             source: "example"
+#             ## @param replicaGroups.example.spec.connectivity.edges[].target [string] Required. No CRD default; the value shown is illustrative. Receiving ordinal, such as replica-1.
+#             target: "example"
+#             ## @param replicaGroups.example.spec.connectivity.edges[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Optional destination transport grants.
+#             ports:
+#               -
+#                 ## @param replicaGroups.example.spec.connectivity.edges[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                 port: 1
+#                 ## @param replicaGroups.example.spec.connectivity.edges[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                 protocol: "TCP"
+#       ## @param replicaGroups.example.spec.remoteScaling [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#       remoteScaling:
+#         ## @param replicaGroups.example.spec.remoteScaling.root [string] Required. No CRD default; the value shown is illustrative. Registered root cluster identity.
+#         root: "example"
+#         ## @param replicaGroups.example.spec.remoteScaling.namespace [string] Required. No CRD default; the value shown is illustrative. Namespace of the approved RemoteScale.
+#         namespace: "example"
+#         ## @param replicaGroups.example.spec.remoteScaling.name [string] Required. No CRD default; the value shown is illustrative. Name of the approved RemoteScale.
+#         name: "example"
+#         ## @param replicaGroups.example.spec.remoteScaling.uid [string] Required. No CRD default; the value shown is illustrative. Exact request incarnation; recreating it requires local approval.
+#         uid: "example"
+#     # Constraint: replicas must respect group bounds
+#     # Constraint: disable inheritReplicas before scaling an individual generated instance
+#     # Constraint: replica source identity is immutable
+# END RESOURCE EXAMPLE

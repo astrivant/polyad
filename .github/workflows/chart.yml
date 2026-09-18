@@ -34,6 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        chart: [polyad, polyad-crds]
         shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
@@ -48,10 +49,15 @@ jobs:
         run: |
           helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
           helm dependency build charts/polyad
+      - name: Permit the resource chart's intentionally empty instance defaults
+        if: matrix.chart == 'polyad-crds'
+        run: cp charts/polyad-crds/.hypothesis-helm.yaml .hypothesis-helm.yaml
       - name: Validate chart with hypothesis-helm
         uses: astrivant/hypothesis-helm@main
         with:
-          chart: charts/polyad
+          chart: charts/${{ matrix.chart }}
+          artifact-name: hypothesis-helm-${{ matrix.chart }}
+          artifact-dir: reports/hypothesis-helm/${{ matrix.chart }}
           shard: ${{ matrix.shard }}/3
           jobs: '2'
           kubeconform: 'true'
@@ -83,6 +89,7 @@ jobs:
           tag="${RELEASE_TAG#refs/tags/}"
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
           helm package charts/polyad --destination dist/chart
+          helm package charts/polyad-crds --destination dist/chart
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Upload tagged Helm chart
         uses: actions/upload-artifact@v4

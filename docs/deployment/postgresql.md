@@ -9,6 +9,12 @@ short-lived component observations. KEDA reads the operator's metrics endpoint.
 ## Table of contents
 
 - [Install the database operator](#install-the-database-operator)
+- [Encryption at rest](#encryption-at-rest)
+  - [Use an existing encrypted StorageClass](#use-an-existing-encrypted-storageclass)
+  - [Provision GKE storage with a KMS key](#provision-gke-storage-with-a-kms-key)
+  - [Verify storage and plan migration](#verify-storage-and-plan-migration)
+  - [Backups and key lifecycle](#backups-and-key-lifecycle)
+- [Encrypt records before writing](#encrypt-records-before-writing)
 - [State and tracked parameters](#state-and-tracked-parameters)
 - [Shipped SQL artifacts](#shipped-sql-artifacts)
 - [Snapshot ordering and recovery](#snapshot-ordering-and-recovery)
@@ -58,6 +64,147 @@ Ensure enough nodes and persistent storage for the maximum configured instance
 count. Synchronous commits may wait while no eligible standby is available.
 See [CloudNativePG replication](https://cloudnative-pg.io/docs/current/replication/)
 and [the official Helm chart](https://cloudnative-pg.io/charts/).
+
+## Encryption at rest
+
+Enable `postgresql.encryptionAtRest` to select encrypted volumes for **all
+chart-managed PostgreSQL databases**: graph state and event history, plus the
+separately enabled authentication database. Primary and standby instances share
+the selection, including instances later added by KEDA. With shared authentication
+storage, those records use the state database's volumes.
+
+CloudNativePG delegates at-rest encryption to the storage backend. This chart
+keeps data and WAL on each instance's `PGDATA` PVC; selecting an encrypted backend
+protects the files on that volume. Database permissions and TLS remain separate
+controls. See [CloudNativePG storage encryption](https://cloudnative-pg.io/docs/1.28/storage/#encryption-at-rest).
+
+| Helm field under `postgresql.encryptionAtRest` | Default | Choice |
+| --- | --- | --- |
+| `enabled` | `false` | Apply one encrypted storage selection to every managed database; existing volumes are not migrated |
+| `provider` | `ExistingStorageClass` | Use an administrator-verified encrypted class, or choose `GKE` to create a CSI class with a KMS key reference |
+| `storageClass` | Empty | Required existing class name; with GKE, optionally override the generated release-specific name |
+| `kmsKeyName` | Empty | GKE symmetric CryptoKey resource name, without a version suffix; empty for an existing class |
+| `diskType` | `pd-balanced` | GKE CSI disk type supported by the node machine family and driver |
+
+When enabled, nonempty `postgresql.storage.storageClass` and
+`authentication.storage.storageClass` overrides must match the selected class.
+A mismatch fails Helm rendering. Leave those overrides empty to use the shared
+selection. At least one managed database must be enabled; this setting cannot
+provision or verify encryption for a database reached through an external DSN.
+In a mixed deployment, only the chart-managed database is affected.
+
+### Use an existing encrypted StorageClass
+
+This works with any compatible CSI backend whose administrator has configured
+encryption and key access:
+
+```yaml
+postgresql:
+  enabled: true
+  managed: true
+  encryptionAtRest:
+    enabled: true
+    provider: ExistingStorageClass
+    storageClass: encrypted-postgresql
+```
+
+The chart references that class; it does not create it, inspect its provider or
+certify that its disks are encrypted. Verify the class and backing volumes with
+your storage administrator. For distinct classes or keys per database, retain
+the ordinary per-database `storageClass` settings and manage both encrypted
+classes externally, without enabling the shared selection above.
+
+### Provision GKE storage with a KMS key
+
+Use [values-postgresql-encryption.reference.yaml](../../charts/polyad/values-postgresql-encryption.reference.yaml)
+as an overlay on your deployment values. Replace its example key name before
+installation. GKE encrypts stored content by default; this option adds control
+through a customer-managed key. The regional symmetric KMS key and the
+`roles/cloudkms.cryptoKeyEncrypterDecrypter` grant to the cluster project's
+**Compute Engine service agent** must already exist. The GKE Persistent Disk CSI
+driver must be available, and the key must be in the cluster's region. See
+[GKE CMEK prerequisites](https://docs.cloud.google.com/kubernetes-engine/docs/how-to/using-cmek).
+
+```yaml
+postgresql:
+  enabled: true
+  managed: true
+  encryptionAtRest:
+    enabled: true
+    provider: GKE
+    storageClass: '' # Generated from the release namespace and name.
+    kmsKeyName: projects/key-project/locations/us-central1/keyRings/polyad/cryptoKeys/postgresql
+    diskType: pd-balanced
+```
+
+The rendered StorageClass uses `pd.csi.storage.gke.io` and the
+`disk-encryption-kms-key` parameter. Polyad sets `WaitForFirstConsumer`, permits
+volume expansion and uses `reclaimPolicy: Retain`. The class also has
+`helm.sh/resource-policy: keep`, matching the database Cluster's retention.
+It is not made the cluster default. Its generated name includes the release
+namespace to distinguish installations; custom names must be unique cluster-wide.
+
+Only the key's resource identifier appears in the class. The chart does not create
+keys, grant cloud IAM, mount key material into operator Pods or put it in Dragonfly.
+Helm or Argo CD needs permission to manage a cluster-scoped StorageClass when
+`provider: GKE` is selected. The same settings work for an authentication-only
+managed database with `postgresql.enabled: false` and
+`authentication.storage.enabled: true`, provided named API keys are configured.
+
+### Verify storage and plan migration
+
+After installing release `polyad` in namespace `polyad`, inspect both the Cluster
+selection and each actual PVC:
+
+```sh
+kubectl -n polyad get clusters.postgresql.cnpg.io \
+  -o custom-columns=NAME:.metadata.name,STORAGECLASS:.spec.storage.storageClass
+kubectl -n polyad get pvc -l cnpg.io/cluster=polyad-state \
+  -o custom-columns=NAME:.metadata.name,STORAGECLASS:.spec.storageClassName,PV:.spec.volumeName
+```
+
+Repeat the PVC check for `cnpg.io/cluster=polyad-authentication` when enabled.
+For GKE, resolve each PV's `spec.csi.volumeHandle` to its disk and verify the
+disk's `diskEncryptionKey.kmsKeyName` with Compute Engine. A selected class in
+desired configuration alone does not prove that an existing volume uses it.
+
+**Enabling this setting does not encrypt or move existing PVCs.** Plan a
+CloudNativePG migration or restore onto newly provisioned encrypted volumes.
+Changing a StorageClass's immutable parameters is not a rotation mechanism;
+create a new class for a changed provisioning policy. Disabling this chart option
+does not decrypt retained disks and may let future instances use other storage.
+Check every primary and standby after migration before retiring old volumes.
+
+### Backups and key lifecycle
+
+Backup destinations have their own encryption configuration. Configure and verify
+the object-store encryption policy for archived WAL and base backups, and the
+snapshot provider's key behavior for volume snapshots. SQL dumps are readable
+unless their destination or export process encrypts them. The chart does not
+install a backup policy; see [CloudNativePG backup methods](https://cloudnative-pg.io/docs/1.28/backup/).
+
+Retain access to all keys needed for live volumes and retained backups, and test
+restores. Key rotation and re-encryption follow the provider's disk/snapshot
+lifecycle; changing Helm values or creating a new key version is not proof that
+older disks or backups were re-encrypted. See [Compute Engine key rotation](https://docs.cloud.google.com/compute/docs/disks/customer-managed-encryption).
+
+For external PostgreSQL, configure encryption and backups with that database's
+provider before supplying its DSN. At-rest encryption does not prevent authorized
+database users from reading query results. Kubernetes Secret encryption, node
+boot disks, operator logs and application-level record encryption are separate
+from the database-volume configuration described here.
+
+## Encrypt records before writing
+
+Enable `postgresql.recordEncryption` to encrypt graph documents, namespace
+snapshots, archived event payloads and authentication policies inside the operator
+before PostgreSQL receives them. Reference an existing Secret containing an RSA
+public key, optionally with its private key. Public-only writers are supported.
+This works with managed or external databases, independently of volume encryption.
+
+See [record encryption](record-encryption.md) for the complete configuration,
+payload boundaries, decryption examples and rotation procedure, or start with
+[the typed reference values](../../charts/polyad/values-postgresql-record-encryption.reference.yaml).
 
 ## State and tracked parameters
 

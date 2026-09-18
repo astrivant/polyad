@@ -109,6 +109,7 @@ gateway or telemetry components.
 | `events.websockets.enabled` with `events.enabled` | Import Hypercorn only when starting a component that serves WebSocket events; it replaces Waitress for all that process's listeners and retains the existing Flask application. The image includes `websockets` and Hypercorn dependencies. |
 | `events.enabled` or `postgresql.events.enabled` with PostgreSQL enabled | Enable executor event publication through `POLYAD_EVENT_PUBLICATION_ENABLED`, independently of which component serves streams. |
 | `postgresql.enabled` | Load the state store and PostgreSQL drivers when enabled. |
+| `postgresql.recordEncryption.enabled` | Database writers import the record cipher and `cryptography` only when enabled. Existing Secret references become read-only key files; the dependency is included in the production image. See [record encryption](record-encryption.md). |
 | `authentication.storage.enabled` | The projected database credential enables the authentication store when named keys are configured. State storage can remain disabled. |
 | `authentication.backend: FlaskHTTPAuth` | Import Flask-HTTPAuth when installing authentication for a protected endpoint. `Builtin` and demonstration mode leave it unloaded. |
 | `api.rateLimit.enabled` | Import Flask-Limiter when installing an enabled quota. Demonstration mode skips it. Named-key lanes retain their separate limits. |

@@ -1,0 +1,185 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# Daemon field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param daemons [object] Named Daemon instances; empty by default. Copy selected fields below to configure one.
+daemons: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section Daemon field reference
+# ## @param daemons [object] Daemon instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# daemons:
+#   ## @param daemons.example [object] Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.
+#   example:
+#     ## @param daemons.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param daemons.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param daemons.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param daemons.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param daemons.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param daemons.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for this Daemon resource. Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.
+#     spec:
+#       ## @param daemons.example.spec.activation [object, string] Optional. No CRD default; the value shown is illustrative. Control how repeated requests start a downstream workload or graph.
+#       activation:
+#         ## @param daemons.example.spec.activation.mode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Queue", "Reject", "Coalesce", "Parallel". Busy-target admission policy.
+#         mode: "Queue"
+#         ## @param daemons.example.spec.activation.maxConcurrent [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum selected or running executions for parallel mode.
+#         maxConcurrent: 1
+#         ## @param daemons.example.spec.activation.maxPending [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum retained pending requests admitted to the queue.
+#         maxPending: 1
+#         ## @param daemons.example.spec.activation.replicasPerActivation [integer, string] Optional. No CRD default; the value shown is illustrative. Deployment or StatefulSet replicas in each daemon activation.
+#         replicasPerActivation: 1
+#         ## @param daemons.example.spec.activation.maxReplicas [integer, string] Optional. No CRD default; the value shown is illustrative. Upper bound on the total daemon replicas reserved by concurrent pulses.
+#         maxReplicas: 1
+#         ## @param daemons.example.spec.activation.minIntervalSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Minimum time between execution admissions.
+#         minIntervalSeconds: 0
+#         ## @param daemons.example.spec.activation.maxIntervalSeconds [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         maxIntervalSeconds: 1
+#         ## @param daemons.example.spec.activation.onDeadline [string] Optional. No CRD default; the value shown is illustrative. Choices: "Report", "Activate". Report overdue admission or submit a timer pulse.
+#         onDeadline: "Report"
+#       ## @param daemons.example.spec.template [object, string] Required. No CRD default; the value shown is illustrative. Kubernetes Pod template for graph-owned execution. Container commands, resource requests, volumes and probes are application-defined; the operator sets restart policy and inherited placement.
+#       template:
+#         ## @param daemons.example.spec.template.metadata [object, string] Optional. No CRD default; the value shown is illustrative. Pod metadata, including application labels, annotations and externally managed cleanup finalizers.
+#         metadata: {}
+#         # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#         ## @param daemons.example.spec.template.spec [object, string] Required. No CRD default; the value shown is illustrative. Native Kubernetes Pod spec. Include containers and any resource requests, volumes, probes or lifecycle hooks. Daemon containers require startup, readiness and liveness probes; inherited graph placement also applies.
+#         spec: {}
+#         # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#       ## @param daemons.example.spec.controller [string] Optional. Default: "Deployment". Choices: "Deployment", "StatefulSet", "DaemonSet". Deployment or StatefulSet scales Pods by replicas; DaemonSet runs one Pod on every eligible node and requires replicas equal to one.
+#       controller: "Deployment"
+#       ## @param daemons.example.spec.reloadOnSecretChange [boolean, string] Optional. Default: false. Opt this Deployment or StatefulSet into Stakater Reloader search for referenced Secrets marked for reload. Requires the operator's externalSecrets.enabled and externalSecrets.reloadOnChange settings and an installed Reloader.
+#       reloadOnSecretChange: false
+#       ## @param daemons.example.spec.statefulSet [object, string] Optional. No CRD default; the value shown is illustrative. StatefulSet identity, storage and rollout options; requires controller StatefulSet.
+#       statefulSet:
+#         ## @param daemons.example.spec.statefulSet.serviceName [string] Required. No CRD default; the value shown is illustrative. Existing governing headless Service; supports graph resource-name references.
+#         serviceName: "example"
+#         ## @param daemons.example.spec.statefulSet.volumeClaimTemplates [array, string] Optional. No CRD default; the value shown is illustrative. Native per-replica PVC templates. Mount each template by name in the Pod template.
+#         volumeClaimTemplates:
+#           -
+#             ## @param daemons.example.spec.statefulSet.volumeClaimTemplates[].metadata [object, string] Required. No CRD default; the value shown is illustrative.
+#             metadata:
+#               ## @param daemons.example.spec.statefulSet.volumeClaimTemplates[].metadata.name [string] Required. No CRD default; the value shown is illustrative.
+#               name: "example"
+#             # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#             ## @param daemons.example.spec.statefulSet.volumeClaimTemplates[].spec [object, string] Required. No CRD default; the value shown is illustrative. Native PVC spec including storageClassName, accessModes, resources, volumeMode and data sources.
+#             spec: {}
+#             # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#         ## @param daemons.example.spec.statefulSet.podManagementPolicy [string] Optional. Default: "OrderedReady". Choices: "OrderedReady", "Parallel".
+#         podManagementPolicy: "OrderedReady"
+#         ## @param daemons.example.spec.statefulSet.updateStrategy [object, string] Optional. No CRD default; the value shown is illustrative.
+#         updateStrategy:
+#           ## @param daemons.example.spec.statefulSet.updateStrategy.type [string] Optional. No CRD default; the value shown is illustrative. Choices: "RollingUpdate", "OnDelete".
+#           type: "RollingUpdate"
+#           ## @param daemons.example.spec.statefulSet.updateStrategy.rollingUpdate [object, string] Optional. No CRD default; the value shown is illustrative.
+#           rollingUpdate:
+#             ## @param daemons.example.spec.statefulSet.updateStrategy.rollingUpdate.partition [integer, string] Optional. No CRD default; the value shown is illustrative.
+#             partition: 0
+#             ## @param daemons.example.spec.statefulSet.updateStrategy.rollingUpdate.maxUnavailable [integer, string] Optional. No CRD default; the value shown is illustrative.
+#             maxUnavailable: 1
+#         ## @param daemons.example.spec.statefulSet.persistentVolumeClaimRetentionPolicy [object, string] Optional. No CRD default; the value shown is illustrative. PVC retention after set deletion and native replica reduction; both default to Retain.
+#         persistentVolumeClaimRetentionPolicy:
+#           ## @param daemons.example.spec.statefulSet.persistentVolumeClaimRetentionPolicy.whenDeleted [string] Optional. No CRD default; the value shown is illustrative. Choices: "Retain", "Delete".
+#           whenDeleted: "Retain"
+#           ## @param daemons.example.spec.statefulSet.persistentVolumeClaimRetentionPolicy.whenScaled [string] Optional. No CRD default; the value shown is illustrative. Choices: "Retain", "Delete".
+#           whenScaled: "Retain"
+#         ## @param daemons.example.spec.statefulSet.minReadySeconds [integer, string] Optional. Default: 0.
+#         minReadySeconds: 0
+#         ## @param daemons.example.spec.statefulSet.revisionHistoryLimit [integer, string] Optional. Default: 10.
+#         revisionHistoryLimit: 10
+#         ## @param daemons.example.spec.statefulSet.ordinals [object, string] Optional. No CRD default; the value shown is illustrative.
+#         ordinals:
+#           ## @param daemons.example.spec.statefulSet.ordinals.start [integer, string] Optional. No CRD default; the value shown is illustrative.
+#           start: 0
+#       ## @param daemons.example.spec.replicas [integer, string] Optional. Default: 1. Desired number of daemon replicas. Readiness requires the selected controller to observe its current generation and requested rollout.
+#       replicas: 1
+#       ## @param daemons.example.spec.placement [object, string] Optional. No CRD default; the value shown is illustrative. Placement defaults or enforced constraints copied to descendant pod templates. Tolerations permit matching taints; selectors and required affinity restrict eligible nodes. This does not reserve capacity.
+#       placement:
+#         ## @param daemons.example.spec.placement.nodeSelector [object, string] Optional. No CRD default; the value shown is illustrative. Exact Kubernetes node-label matches, all of which must hold. Use labels for node groups or resource slices; cloud tags must first be exposed as node labels. Conflicting inherited values are rejected.
+#         nodeSelector: {}
+#         ## @param daemons.example.spec.placement.nodeAffinity [object, string] Optional. No CRD default; the value shown is illustrative. Required and preferred Kubernetes node-selection rules. Required rules intersect across graph, definition and pod scopes; preferences are combined.
+#         nodeAffinity:
+#           ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution [object, string] Optional. No CRD default; the value shown is illustrative. Hard node eligibility rules evaluated when scheduling. Changes to node labels after scheduling do not by themselves evict a running pod.
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#             ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms [array, string] Required. No CRD default; the value shown is illustrative. Alternative node-selection terms combined with OR. Expressions within one term are combined with AND. An empty term selects no nodes.
+#             nodeSelectorTerms:
+#               -
+#                 ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions [array, string] Optional. No CRD default; the value shown is illustrative. Node-label requirements combined with AND within this term.
+#                 matchExpressions:
+#                   -
+#                     ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchExpressions[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#                 ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields [array, string] Optional. No CRD default; the value shown is illustrative. Node-field requirements combined with AND within this term.
+#                 matchFields:
+#                   -
+#                     ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param daemons.example.spec.placement.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#           ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution [array, string] Optional. No CRD default; the value shown is illustrative. Weighted node preferences applied after hard eligibility checks. Unmatched preferences do not prevent scheduling.
+#           preferredDuringSchedulingIgnoredDuringExecution:
+#             -
+#               ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].weight [integer, string] Required. No CRD default; the value shown is illustrative. Preference weight from 1 to 100. Matching preferred rules contribute to the node scheduling score.
+#               weight: 1
+#               ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference [object, string] Required. No CRD default; the value shown is illustrative. Node-selection term whose match contributes the associated weight.
+#               preference:
+#                 ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions [array, string] Optional. No CRD default; the value shown is illustrative. Node-label requirements combined with AND within this term.
+#                 matchExpressions:
+#                   -
+#                     ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchExpressions[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#                 ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields [array, string] Optional. No CRD default; the value shown is illustrative. Node-field requirements combined with AND within this term.
+#                 matchFields:
+#                   -
+#                     ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].key [string] Required. No CRD default; the value shown is illustrative. Node label or node field tested by this requirement.
+#                     key: "example"
+#                     ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].operator [string] Required. No CRD default; the value shown is illustrative. Choices: "In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt". Selector comparison operator: In, NotIn, Exists, DoesNotExist, Gt or Lt.
+#                     operator: "In"
+#                     ## @param daemons.example.spec.placement.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[].preference.matchFields[].values [array, string] Optional. No CRD default; the value shown is illustrative. Comparison values for this requirement. In and NotIn use a nonempty set; Exists and DoesNotExist use no values; Gt and Lt use one integer encoded as a string.
+#                     values: []
+#         ## @param daemons.example.spec.placement.tolerations [array, string] Optional. No CRD default; the value shown is illustrative. Kubernetes taints tolerated by descendant pods, deduplicated across scopes. Tolerations allow placement on tainted nodes; they do not select or guarantee a node.
+#         tolerations:
+#           -
+#             ## @param daemons.example.spec.placement.tolerations[].key [string] Optional. No CRD default; the value shown is illustrative. Taint key to match. An empty key requires operator Exists and matches all keys.
+#             key: "example"
+#             ## @param daemons.example.spec.placement.tolerations[].operator [string] Optional. No CRD default; the value shown is illustrative. Choices: "Exists", "Equal". Taint comparison: Equal matches key and value; Exists matches the key regardless of value. Kubernetes defaults an omitted operator to Equal.
+#             operator: "Exists"
+#             ## @param daemons.example.spec.placement.tolerations[].value [string] Optional. No CRD default; the value shown is illustrative. Taint value to match when operator is Equal. Omit or leave empty when operator is Exists.
+#             value: "example"
+#             ## @param daemons.example.spec.placement.tolerations[].effect [string] Optional. No CRD default; the value shown is illustrative. Choices: "", "NoSchedule", "PreferNoSchedule", "NoExecute". Taint effect to match. An empty effect matches all effects: NoSchedule, PreferNoSchedule and NoExecute.
+#             effect: ""
+#             ## @param daemons.example.spec.placement.tolerations[].tolerationSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Seconds a pod may remain bound after a matching NoExecute taint. Omission tolerates that taint indefinitely; zero requests immediate eviction.
+#             tolerationSeconds: 0
+#         ## @param daemons.example.spec.placement.enforce [boolean, string] Optional. Default: true. Keep these constraints in every descendant pod. False allows a more specific workload or graph placement to replace these defaults; an enforced ancestor cannot be relaxed.
+#         enforce: true
+#       ## @param daemons.example.spec.persistence [object, string] Optional. No CRD default; the value shown is illustrative. Optional persistent storage contract. Storage does not checkpoint or resume application execution; use non-spot capacity.
+#       persistence:
+#         ## @param daemons.example.spec.persistence.enabled [boolean, string] Optional. Default: false. Require an explicitly selected existing persistent volume claim.
+#         enabled: false
+#         ## @param daemons.example.spec.persistence.storageClass [string] Optional. No CRD default; the value shown is illustrative. Required StorageClass name when enabled; must match the PVC storageClassName. The operator does not create StorageClasses.
+#         storageClass: "example"
+#         ## @param daemons.example.spec.persistence.claimName [string] Optional. No CRD default; the value shown is illustrative. Existing PVC in the workload namespace. External claims survive graph suspension, replacement and deletion.
+#         claimName: "example"
+#         ## @param daemons.example.spec.persistence.mountPath [string] Optional. Default: "/var/lib/polyad". Absolute non-root path mounted in application and init containers.
+#         mountPath: "/var/lib/polyad"
+#       # Constraint: enabled persistence requires storageClass and claimName
+#     # Constraint: controller StatefulSet requires statefulSet options and serviceName.
+#     # Constraint: statefulSet options require controller StatefulSet.
+# END RESOURCE EXAMPLE

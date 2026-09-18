@@ -103,6 +103,7 @@ spec:
             - --liveness=http://0.0.0.0:8080/healthz
           env:
             {{- include "polyad.tracingEnv" . | nindent 12 }}
+            {{- include "polyad.postgresql.recordEncryptionEnv" . | nindent 12 }}
             - name: POLYAD_SERVICE_ACCESS
               value: {{ .Values.operator.serviceAccess | toJson | quote }}
             - name: POLYAD_AUTH_MODE
@@ -340,6 +341,7 @@ spec:
             {{- end }}
             {{- end }}
           volumeMounts:{{ if not (or $auth .Values.postgresql.enabled .Values.federation.enabled $apiToken $eventToken .Values.dragonfly.existingSecret $metricsToken) }} []{{ end }}
+            {{- include "polyad.postgresql.recordEncryptionMount" . | nindent 12 }}
             {{- if $auth }}
             - name: authentication
               mountPath: /var/run/polyad/authentication
@@ -447,6 +449,7 @@ spec:
                 command: [python, -m, polyad.events.rebalance]
           {{- end }}
       volumes:{{ if not (or $auth .Values.postgresql.enabled .Values.federation.enabled $apiToken $eventToken .Values.dragonfly.existingSecret $metricsToken) }} []{{ end }}
+        {{- include "polyad.postgresql.recordEncryptionVolume" . | nindent 8 }}
         {{- if $auth }}
         {{- include "polyad.authenticationVolume" . | nindent 8 }}
         - name: workload-credentials

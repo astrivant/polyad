@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# Gate field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param gates [object] Named Gate instances; empty by default. Copy selected fields below to configure one.
+gates: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section Gate field reference
+# ## @param gates [object] Gate instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# gates:
+#   ## @param gates.example [object] Define a Boolean or delay gate. Instances keep delay observations on their containing graph.
+#   example:
+#     ## @param gates.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param gates.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param gates.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param gates.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param gates.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param gates.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Reusable Boolean expression or delay gate controlling admission to the next vertex.
+#     spec:
+#       ## @param gates.example.spec.expression [object, string] Optional. No CRD default; the value shown is illustrative. Serialized Gate expression with operator, optional operands and signal name. Operators are signal, and, or, not, xor and nxor. Signals use NODE.started, NODE.ready, NODE.completed or NODE.failed; absent observations remain unknown.
+#       expression: {}
+#       # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#       ## @param gates.example.spec.delaySeconds [number, string] Optional. No CRD default; the value shown is illustrative. Standalone admission delay after dependencies are observed. Each graph instance persists its own deadline in status; waits do not occupy workers or slots.
+#       delaySeconds: 0
+#     # Constraint: Gate requires exactly one of expression or delaySeconds
+# END RESOURCE EXAMPLE

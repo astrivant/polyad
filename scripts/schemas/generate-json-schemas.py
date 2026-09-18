@@ -36,6 +36,7 @@ DIALECT = "https://json-schema.org/draft/2020-12/schema"
 BASE_ID = "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/"
 CATALOG = ROOT / "schemas/sources.json"
 CHART_SCHEMAS = ROOT / "charts/polyad/schemas"
+RESOURCE_CHART_SCHEMAS = ROOT / "charts/polyad-crds/schemas"
 
 
 def upstream_catalog() -> dict[str, Any]:
@@ -287,7 +288,7 @@ def artifacts() -> dict[str, dict[str, Any]]:
         dict[str, dict[str, Any]]: Stable artifact names mapped to generated documents.
     """
     documents = {"models": model_schema()}
-    for path in sorted((ROOT / "charts/polyad/crds").glob("*.yaml")):
+    for path in sorted((ROOT / "charts/polyad-crds/crds").glob("*.yaml")):
         crd = yaml.safe_load(path.read_text())
         group = crd["spec"]["group"]
         kind = crd["spec"]["names"]["kind"]
@@ -311,6 +312,12 @@ def artifacts() -> dict[str, dict[str, Any]]:
     overlay = rewrite_refs(overlay, "values.schema.json#", "#/definitions/helmValues")
     overlay.setdefault("definitions", {})["helmValues"] = rewrite_refs(canonical, "#", "#/definitions/helmValues")
     documents["helm-reference"] = {**overlay, "$id": BASE_ID + "helm/helm-reference.schema.json", "title": "Polyad partial Helm values"}
+    resource_values = json.loads((ROOT / "charts/polyad-crds/values.schema.json").read_text())
+    documents["helm-crds-values"] = {**resource_values, "$id": BASE_ID + "helm/helm-crds-values.schema.json"}
+    resource_overlay = json.loads((ROOT / "charts/polyad-crds/values.reference.schema.json").read_text())
+    resource_overlay = rewrite_refs(resource_overlay, "values.schema.json#", "#/definitions/resourceValues")
+    resource_overlay.setdefault("definitions", {})["resourceValues"] = rewrite_refs(resource_values, "#", "#/definitions/resourceValues")
+    documents["helm-crds-reference"] = {**resource_overlay, "$id": BASE_ID + "helm/helm-crds-reference.schema.json"}
     return documents
 
 
@@ -354,12 +361,14 @@ def outputs() -> dict[Path, str]:
             filename = f"{properties['kind']['const'].lower()}-{group.split('.')[0]}-{version}.json"
             chart_schema = {**document, "$schema": "http://json-schema.org/draft-07/schema#"}
             rendered[CHART_SCHEMAS / filename] = json.dumps(chart_schema, indent=2, allow_nan=False) + "\n"
+            if group in {GROUP, "dragonflydb.io"}:
+                rendered[RESOURCE_CHART_SCHEMAS / filename] = rendered[CHART_SCHEMAS / filename]
     for provider in upstream_catalog()["providers"]:
         license_text = checked_source(provider["license"]).decode()
         for directory in (OUTPUT / "resources", CHART_SCHEMAS):
             rendered[directory / f"{provider['name']}-LICENSE"] = license_text
     license_text = (ROOT / "charts/polyad/LICENSE.dragonfly-operator").read_text()
-    for directory in (OUTPUT / "resources", CHART_SCHEMAS):
+    for directory in (OUTPUT / "resources", CHART_SCHEMAS, RESOURCE_CHART_SCHEMAS):
         rendered[directory / "dragonfly-operator-LICENSE"] = license_text
     return rendered
 
@@ -388,7 +397,14 @@ def main() -> int:
             if not args.check:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(rendered)
-    managed = [*OUTPUT.rglob("*.schema.json"), *CHART_SCHEMAS.glob("*.json"), *OUTPUT.rglob("*-LICENSE"), *CHART_SCHEMAS.glob("*-LICENSE")]
+    managed = [
+        *OUTPUT.rglob("*.schema.json"),
+        *OUTPUT.rglob("*-LICENSE"),
+        *CHART_SCHEMAS.glob("*.json"),
+        *CHART_SCHEMAS.glob("*-LICENSE"),
+        *RESOURCE_CHART_SCHEMAS.glob("*.json"),
+        *RESOURCE_CHART_SCHEMAS.glob("*-LICENSE"),
+    ]
     for path in managed:
         if path.name != "events.schema.json" and path not in generated:
             changed.append(str(path.relative_to(ROOT)))

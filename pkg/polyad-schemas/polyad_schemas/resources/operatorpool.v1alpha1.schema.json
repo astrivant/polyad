@@ -146,5 +146,5 @@
       }
     }
   },
-  "$comment": "Generated from charts/polyad/crds/operatorpools.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/operatorpools.yaml; do not edit this artifact."
 }

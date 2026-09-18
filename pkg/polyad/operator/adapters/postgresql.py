@@ -15,7 +15,7 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
 from polyad.operator.lifecycle.health import credential_token
-from polyad.sql import statement
+from polyad.sql import record_cipher, statement
 
 if TYPE_CHECKING:
     from typing import Any
@@ -63,6 +63,7 @@ class StateStore:
             scope (str): Root control-plane identity within a shared database.
         """
         self.scope = scope
+        self.cipher = record_cipher()
         self.application = "polyad-" + hashlib.sha256(scope.encode()).hexdigest()[:24]
         self.pool = AsyncConnectionPool(
             dsn,
@@ -150,7 +151,7 @@ class StateStore:
         async with self.pool.connection() as connection:
             cursor = await connection.execute(
                 statement("state/save-namespace.sql"),
-                (*identity, started, Jsonb(snapshot)),
+                (*identity, started, Jsonb(self.cipher.encrypt(snapshot, "polyad_namespace_state", identity) if self.cipher else snapshot)),
             )
             if await cursor.fetchone() is None:
                 return False
@@ -167,7 +168,21 @@ class StateStore:
                             obj["metadata"]["uid"],
                             obj["metadata"]["resourceVersion"],
                             started,
-                            Jsonb(state_document(obj)),
+                            Jsonb(
+                                self.cipher.encrypt(
+                                    state_document(obj),
+                                    "polyad_graph_state",
+                                    (
+                                        *identity,
+                                        obj["kind"],
+                                        obj["metadata"]["name"],
+                                        obj["metadata"]["uid"],
+                                        obj["metadata"]["resourceVersion"],
+                                    ),
+                                )
+                                if self.cipher
+                                else state_document(obj)
+                            ),
                         )
                         for obj in objects
                     ],
@@ -195,7 +210,11 @@ class StateStore:
         async with self.pool.connection() as connection:
             await connection.execute(
                 statement("state/insert-event.sql"),
-                (self.scope, identity, Jsonb(payload)),
+                (
+                    self.scope,
+                    identity,
+                    Jsonb(self.cipher.encrypt(payload, "polyad_event_history", (self.scope, identity)) if self.cipher else payload),
+                ),
             )
             await connection.execute(
                 statement("state/prune-events.sql"),

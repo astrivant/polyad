@@ -1,0 +1,4 @@
+# This chart deliberately renders no instances until administrators supply named maps.
+# CRD definitions are installed by Helm's separate crds/ phase. All other checks remain enabled.
+ignored:
+  - HH1009 # Empty resource bundle is the supported default, verified by Python tests.

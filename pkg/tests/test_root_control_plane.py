@@ -238,7 +238,8 @@ def test_remote_scale_rejects_ambiguous_or_invalid_targets(failure):
     asyncio.run(scenario())
 
 
-def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_path):
+@pytest.mark.parametrize("database", [True, False])
+def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_path, database):
     """
     Root installation stays owned, rolls credential revisions and only scales worker capacity.
     """
@@ -276,6 +277,9 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
                                 "env": [
                                     *({"name": name, "value": str(CONFIGURATION[key])} for key, name in ENVIRONMENT.items()),
                                     {"name": "POLYAD_ROOT_ENABLED", "value": "true"},
+                                    {"name": "POLYAD_POSTGRES_ENABLED", "value": str(database).lower()},
+                                    {"name": "POLYAD_POSTGRES_RECORD_ENCRYPTION_ENABLED", "value": "true"},
+                                    {"name": "POLYAD_POSTGRES_RECORD_PUBLIC_KEY_FILE", "value": "/keys/public.pem"},
                                     {"name": "POLYAD_CACHE_URL", "valueFrom": {"secretKeyRef": {"name": "access", "key": "url"}}},
                                     {"name": "POLYAD_AUTH_CONFIG_FILE", "value": "/var/run/polyad/authentication/config.json"},
                                     {"name": "POLYAD_TRACING_ENABLED", "value": "true"},
@@ -295,6 +299,10 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
                         "volumes": [
                             {"name": "root", "secret": {"secretName": "access"}},
                             {"name": "authentication", "projected": {"sources": []}},
+                            {
+                                "name": "record-encryption",
+                                "secret": {"secretName": "record-keys", "items": [{"key": "public.pem", "path": "public.pem"}]},
+                            },
                         ],
                     },
                 }
@@ -304,7 +312,9 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
         secret["data"] = {"config": "e30=", "url": "cmVkaXM6Ly9jYWNoZQ=="}
         tracing_secret = resource("Secret", "tracing")
         tracing_secret["data"] = {"headers": "YXV0aG9yaXphdGlvbj10b2tlbg=="}
-        root_api, remote = ManagementAPI(pool, root_deployment, secret, tracing_secret), ManagementAPI()
+        record_keys = resource("Secret", "record-keys")
+        record_keys["data"] = {"public.pem": "cHVibGlj", "private.pem": "cHJpdmF0ZQ=="}
+        root_api, remote = ManagementAPI(pool, root_deployment, secret, tracing_secret, record_keys), ManagementAPI()
         pools = manager(root_api, remote)
         with pytest.raises(Pending, match="ownership recorded"):
             await pools.pool(pool)
@@ -327,6 +337,13 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
         assert env["POLYAD_API_ENABLED"]["value"] == "false"
         assert env["POLYAD_CACHE_URL"]["valueFrom"]["secretKeyRef"]["name"] == remote.children("Secret")[0]["metadata"]["name"]
         assert "POLYAD_AUTH_CONFIG_FILE" not in env
+        assert ("POLYAD_POSTGRES_RECORD_ENCRYPTION_ENABLED" in env) == database
+        encryption = [volume for volume in pod["spec"]["volumes"] if volume["name"] == "record-encryption"]
+        assert bool(encryption) == database
+        if database:
+            copied = await remote.get("Secret", "test", encryption[0]["secret"]["secretName"])
+            assert copied["data"] == {"public.pem": "cHVibGlj"}
+        assert all("private.pem" not in item.get("data", {}) for item in remote.children("Secret"))
         assert env["POLYAD_TRACING_ENABLED"]["value"] == "true"
         assert env["POLYAD_LOGS_ENABLED"]["value"] == "true"
         assert env["POLYAD_POD_CLUSTER"]["value"] == "west"

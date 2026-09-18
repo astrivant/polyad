@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# Resource field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param resources [object] Named Resource instances; empty by default. Copy selected fields below to configure one.
+resources: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section Resource field reference
+# ## @param resources [object] Resource instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# resources:
+#   ## @param resources.example [object] Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.
+#   example:
+#     ## @param resources.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param resources.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param resources.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param resources.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param resources.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param resources.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for this Resource resource. Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.
+#     spec:
+#       ## @param resources.example.spec.manifest [object, string] Required. No CRD default; the value shown is illustrative. Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}.
+#       manifest:
+#         ## @param resources.example.spec.manifest.apiVersion [string] Required. No CRD default; the value shown is illustrative. Choices: "v1". API version of the owned resource; supported manifests use core v1.
+#         apiVersion: "v1"
+#         ## @param resources.example.spec.manifest.kind [string] Required. No CRD default; the value shown is illustrative. Choices: "Service", "ConfigMap", "PersistentVolumeClaim". Kind of core v1 resource to create: Service, ConfigMap or PersistentVolumeClaim.
+#         kind: "Service"
+#         ## @param resources.example.spec.manifest.spec [object, string] Optional. No CRD default; the value shown is illustrative. Native spec for a Service or PersistentVolumeClaim, such as selectors, ports, storageClassName or volume requirements. ConfigMaps use data or binaryData instead.
+#         spec: {}
+#         # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
+#         ## @param resources.example.spec.manifest.data [object, string] Optional. No CRD default; the value shown is illustrative. UTF-8 string data for a ConfigMap. Keys are preserved in the graph-owned resource.
+#         data: {}
+#         ## @param resources.example.spec.manifest.binaryData [object, string] Optional. No CRD default; the value shown is illustrative. Base64-encoded binary values for a ConfigMap.
+#         binaryData: {}
+#         ## @param resources.example.spec.manifest.immutable [boolean, string] Optional. No CRD default; the value shown is illustrative. Make ConfigMap data immutable when true. Intended for ConfigMap manifests.
+#         immutable: false
+# END RESOURCE EXAMPLE

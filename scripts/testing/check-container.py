@@ -67,6 +67,7 @@ def main() -> None:
         "psycopg",
         "psycopg-binary",
         "psycopg-pool",
+        "cryptography",
         "flask-httpauth",
         "flask-limiter",
         "prometheus-client",
@@ -88,6 +89,7 @@ def main() -> None:
         "flask_limiter",
         "psycopg",
         "prometheus_client",
+        "cryptography",
         "opentelemetry.sdk",
         "opentelemetry.exporter",
     ):

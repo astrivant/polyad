@@ -207,5 +207,5 @@
       "x-kubernetes-preserve-unknown-fields": true
     }
   },
-  "$comment": "Generated from charts/polyad/crds/temporaryconnections.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/temporaryconnections.yaml; do not edit this artifact."
 }

@@ -466,7 +466,7 @@ def test_vendored_crd_matches_locked_dependency(tmp_path):
     rendered = subprocess.check_output(
         ["helm", "template", "upstream", str(tmp_path / "dragonfly-operator"), "--show-only", "templates/crds.yaml"], text=True
     )
-    assert yaml.safe_load(rendered) == yaml.safe_load((CHART / "crds" / "dragonflies.yaml").read_text())
+    assert yaml.safe_load(rendered) == yaml.safe_load((CHART.parent / "polyad-crds/crds/dragonflies.yaml").read_text())
     # The converted chart/Python copies are checked together in test_json_schemas.
 
 
@@ -721,7 +721,7 @@ def test_capacity_schemas_come_from_public_models():
     from polyad_types.resources import CapacityStatus
 
     for kind in ("graphs", "polygraphs", "rewrites"):
-        crd = yaml.safe_load((CHART / "crds" / f"{kind}.yaml").read_text())
+        crd = yaml.safe_load((CHART.parent / "polyad-crds/crds" / f"{kind}.yaml").read_text())
         props = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]
         spec = props["spec"]["properties"]
         if kind == "rewrites":

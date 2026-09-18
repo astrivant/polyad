@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# Composition field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param compositions [object] Named Composition instances; empty by default. Copy selected fields below to configure one.
+compositions: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section Composition field reference
+# ## @param compositions [object] Composition instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# compositions:
+#   ## @param compositions.example [object] Durable composition intent compiled into owned reusable definitions and one executable root graph. Status carries generated names and UIDs; finalization drains the root before deleting definitions.
+#   example:
+#     ## @param compositions.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param compositions.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param compositions.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param compositions.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param compositions.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param compositions.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Immutable request receipt. Use the Flask composition endpoint or Python receipt_spec helper to produce this document.
+#     spec:
+#       ## @param compositions.example.spec.requestId [string] Required. No CRD default; the value shown is illustrative. Stable client-generated request identity.
+#       requestId: "example"
+#       ## @param compositions.example.spec.document [string] Required. No CRD default; the value shown is illustrative. Canonical JSON CompositionRequest with rootId and ID-addressed objects. Stored as a string so CEL can enforce immutability even for arbitrary nested workload manifests.
+#       document: "example"
+#     # Constraint: Composition intent is immutable; submit a new requestId for different work.
+# END RESOURCE EXAMPLE

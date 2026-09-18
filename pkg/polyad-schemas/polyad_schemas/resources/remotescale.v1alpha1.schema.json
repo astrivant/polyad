@@ -109,5 +109,5 @@
       }
     }
   },
-  "$comment": "Generated from charts/polyad/crds/remotescales.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/remotescales.yaml; do not edit this artifact."
 }

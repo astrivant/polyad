@@ -54,8 +54,8 @@ authentication:
     username: polyad_authentication # Dedicated application owner; PUBLIC database/schema access is revoked.
     ## @param authentication.storage.size [string] Persistent storage per managed authentication database instance PVC size per authentication database instance.
     size: 1Gi # PVC size per authentication database instance.
-    ## @param authentication.storage.storageClass [string] Authentication database storage class; empty uses the cluster default Empty selects the cluster's default storage class.
-    storageClass: '' # Empty selects the cluster's default storage class.
+    ## @param authentication.storage.storageClass [string] Empty uses the shared encrypted class when postgresql.encryptionAtRest is enabled, otherwise the cluster default; explicit overrides must match the encrypted selection.
+    storageClass: ''
   ## @param authentication.services [array] Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits
   services:
     ## @param authentication.services[].name [string] Stable identity within this configuration; choose a distinct name.

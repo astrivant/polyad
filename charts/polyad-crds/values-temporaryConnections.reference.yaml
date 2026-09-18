@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# TemporaryConnection field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param temporaryConnections [object] Named TemporaryConnection instances; empty by default. Copy selected fields below to configure one.
+temporaryConnections: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section TemporaryConnection field reference
+# ## @param temporaryConnections [object] TemporaryConnection instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# temporaryConnections:
+#   ## @param temporaryConnections.example [object] Settings for temporaryConnections.example.
+#   example:
+#     ## @param temporaryConnections.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param temporaryConnections.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param temporaryConnections.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param temporaryConnections.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param temporaryConnections.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param temporaryConnections.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Request an immutable, expiring connection within a persisted graph boundary.
+#     spec:
+#       ## @param temporaryConnections.example.spec.requestId [string] Required. No CRD default; the value shown is illustrative. Client idempotency key retained with the receipt.
+#       requestId: "example"
+#       ## @param temporaryConnections.example.spec.namespace [string] Required. No CRD default; the value shown is illustrative. Namespace of the target graph and receipt.
+#       namespace: "example"
+#       ## @param temporaryConnections.example.spec.kind [string] Required. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Target boundary kind.
+#       kind: "Graph"
+#       ## @param temporaryConnections.example.spec.graph [string] Required. No CRD default; the value shown is illustrative. Persisted instance name, not a reusable template name.
+#       graph: "example"
+#       ## @param temporaryConnections.example.spec.graphUid [string] Required. No CRD default; the value shown is illustrative. Expected graph incarnation.
+#       graphUid: "example"
+#       ## @param temporaryConnections.example.spec.source [string] Required. No CRD default; the value shown is illustrative. Sending logical node or replica ordinal.
+#       source: "example"
+#       ## @param temporaryConnections.example.spec.target [string] Required. No CRD default; the value shown is illustrative. Receiving logical node or replica ordinal.
+#       target: "example"
+#       ## @param temporaryConnections.example.spec.ttlSeconds [integer, string] Required. No CRD default; the value shown is illustrative. Lifetime measured from Kubernetes receipt creation.
+#       ttlSeconds: 1
+#       ## @param temporaryConnections.example.spec.ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination grants, empty for topology only.
+#       ports:
+#         -
+#           ## @param temporaryConnections.example.spec.ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#           port: 1
+#           ## @param temporaryConnections.example.spec.ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#           protocol: "TCP"
+#       ## @param temporaryConnections.example.spec.bidirectional [boolean, string] Optional. No CRD default; the value shown is illustrative. Whether to add the reverse connection with the same ports.
+#       bidirectional: false
+#       ## @param temporaryConnections.example.spec.peers [object, string] Optional. No CRD default; the value shown is illustrative. Exact service participants for an atlas-coordinated connection.
+#       peers: {}
+#       ## @param temporaryConnections.example.spec.requester [object, string] Required. No CRD default; the value shown is illustrative.
+#       requester:
+#         ## @param temporaryConnections.example.spec.requester.cluster [string] Optional. No CRD default; the value shown is illustrative.
+#         cluster: "example"
+#         ## @param temporaryConnections.example.spec.requester.username [string] Required. No CRD default; the value shown is illustrative.
+#         username: "example"
+#         ## @param temporaryConnections.example.spec.requester.uid [string] Required. No CRD default; the value shown is illustrative.
+#         uid: "example"
+#     # Constraint: Connection intent is immutable; a new requestId creates a new deadline.
+#     # Constraint: Temporary connections require distinct endpoints.
+# END RESOURCE EXAMPLE
