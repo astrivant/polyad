@@ -19,7 +19,7 @@ the Kubernetes Operators Framework for Python.
   scale individual services, whole graphs or nested compositions. Polyad refreshes
   live graph state and enforces [GraphRules](docs/graphs/graph-rules.md), including size,
   shape and structural Cheeger bounds, before applying scaling changes.
-- **Adapt to administrator-defined demand.** [Soul searching](docs/graphs/load-profiles.md)
+- **Adapt to administrator-defined demand.** [Soul searching](docs/graphs/soul-searching.md)
   uses offered throughput or a named signal, such as queued jobs, to select approved
   Cheeger targets, connection layouts, traffic splits and capacity lookahead.
   Observe recommendations or allow bounded adaptation, including preparation before

@@ -12,7 +12,8 @@ services to agree before starting another stage.
 
 The proposed **transistor gate** decides whether a request should start work.
 For example, an ingestion service could request publication of a batch. The gate
-checks whether that batch passed validation and has an acceptable risk score.
+checks whether that batch passed validation and has an acceptable
+[risk score](#risk-scores-and-how-to-compute-them).
 If the condition is true, it forwards the request to the publication task, which
 still has to pass Polyad's [checks before work starts](../introduction/concepts.md#conditions-and-admission).
 If the condition is false, it records a rejection or selects a configured
@@ -41,6 +42,9 @@ language or executing their Python inside the operator.
 
 - [Existing building blocks and the addition](#existing-building-blocks-and-the-addition)
 - [Three ports and one durable decision](#three-ports-and-one-durable-decision)
+- [Risk scores and how to compute them](#risk-scores-and-how-to-compute-them)
+  - [A starting calculation](#a-starting-calculation)
+  - [Evidence, calibration and replay](#evidence-calibration-and-replay)
 - [Proposed configuration](#proposed-configuration)
 - [Requests, facts and provenance](#requests-facts-and-provenance)
 - [Composing decisions into a program](#composing-decisions-into-a-program)
@@ -107,6 +111,100 @@ under NOT and XOR; AND can resolve false from one false input, and OR can resolv
 true from one true input. Missing or stale observations must never make
 `NOT(ready)` authorize work by default. Evaluation errors remain separate from
 missing observations.
+
+## Risk scores and how to compute them
+
+`riskScore` summarizes the application's assessment of **taking a particular
+action on a particular case**. Here it answers: “How concerning would it be to
+publish this batch?” Higher scores represent greater concern about incorrect
+results, the reach of a mistake, recovery effort or incomplete evidence. The
+example uses integer **policy points from 0 to 100**: zero means no concern
+detected by the selected policy, and 100 is its highest score. A threshold of
+`20` permits at most twenty policy points. Compare scores under the same
+scoring policy and revision.
+
+The application owner defines that policy. A scoring Workload, service or
+subgraph computes the score from evidence for the same batch, input revision
+and intended action. In the proposed first version, the source gathers that
+result and supplies `facts.riskScore`. The transistor evaluates that supplied
+integer against the configured threshold. See
+[requests, facts and provenance](#requests-facts-and-provenance) for who may
+submit those facts and how they are pinned to a decision.
+
+### A starting calculation
+
+Use a deterministic weighted score as the initial policy:
+
+1. **Separate mandatory checks.** Schema violations, missing required approvals
+   and other conditions that must block publication belong in explicit Boolean
+   checks, such as `qualityPassed`. A low score cannot compensate for a failed
+   mandatory check. Authorization and GraphRules remain additional admission
+   requirements.
+2. **Measure soft concerns.** Choose signals with declared units, scope,
+   observation windows and minimum evidence requirements. Examples include
+   unusual records that still pass validation, affected consumers and estimated
+   time to undo publication.
+3. **Normalize each signal.** For a signal where larger values mean more concern,
+   define `low` as the zero-point reference and `high` as the hundred-point
+   reference, with `high > low`. Compute
+   `component = ceil(100 × clamp((value - low) / (high - low), 0, 1))`.
+   Here `clamp` limits a value to the stated interval. Signals with the opposite
+   direction need an explicitly inverted mapping. An unacceptable raw value
+   can also have a mandatory cutoff before scoring.
+4. **Combine the components.** Assign nonnegative integer percentage weights
+   that sum to 100, then compute
+   `riskScore = ceil(sum(weight × component) / 100)`.
+   Rounding upward keeps fractional points from making a borderline case pass.
+   Pin the mappings, weights and rounding rule to a scoring-policy revision.
+   Use fixed-point or rational arithmetic so implementations reproduce the same
+   rounding at threshold boundaries.
+
+For example, the following illustrative publication policy produces the `12`
+used in the request below. Its reference points and weights are choices for
+this example; the application owner calibrates them for their pipeline.
+
+| Component | Batch observation | Zero-point to hundred-point reference | Component points | Weight | Weighted points |
+| --- | --- | --- | ---: | ---: | ---: |
+| Unusual valid records | 0.2% of records flagged by the anomaly check | 0% to 1% flagged | 20 | 40% | 8 |
+| Reach of publication | 2% of consumers in the policy's declared population affected | 0% to 20% affected | 10 | 20% | 2 |
+| Recovery effort | Estimated rollback or replay takes 6 minutes | 0 to 60 minutes | 10 | 20% | 2 |
+| Residual evidence gaps | All policy-defined optional checks supplied | 0% to 100% of optional checks missing | 0 | 20% | 0 |
+
+The total is `ceil(8 + 2 + 2 + 0) = 12`. With `qualityPassed: true`, the
+predicate `facts.qualityPassed && facts.riskScore <= 20` selects publication.
+A score of `21` selects the configured review alternative. With
+`qualityPassed: false`, even a score of `0` selects review. A critical concern
+therefore needs an explicit mandatory check when it must always block
+publication; the weighted average alone allows tradeoffs between components.
+
+### Evidence, calibration and replay
+
+Define required evidence separately from the optional gaps scored above.
+If a required observation is missing, stale, invalid or below its minimum
+sample size, the scorer must report the result as unavailable and the source
+must wait or follow its own failure policy. It must not substitute zero or
+drop that component and redistribute its weight. In the first-version request
+contract, missing required facts reject submission. Unknown operator lifecycle
+observations can instead leave an accepted decision Pending until its deadline.
+
+Start with weights that express the application's priorities, then replay
+historical cases with known outcomes. Measure how often each candidate
+threshold would permit a harmful publication and how much unnecessary review
+it would create. Select the threshold against an explicit tolerance for those
+outcomes, and evaluate it on held-out cases before using it to authorize work.
+Run a new policy alongside the active one to compare choices without dispatching
+extra activations. Review its behavior as data and downstream consumers change.
+The example threshold of `20` is an initial policy choice to evaluate this way.
+
+Keep the raw evidence references, component scores, weights, scoring-policy
+revision, input revision and computation time in the application's result
+record so a decision can be reproduced. Sensitive evidence stays in application
+storage. If a gate must enforce a specific scoring-policy revision, declare
+that identifier as an input and check it in the predicate; undeclared fact
+fields are rejected. The first version trusts the authorized source's score
+and measures fact age from root receipt, so the source must enforce evidence
+freshness before submission. A corrected score requires a new request ID;
+retrying an existing request retains its saved facts and branch.
 
 ## Proposed configuration
 
@@ -210,6 +308,8 @@ that authorized source, not independently established truths about Kubernetes
 or application data. Missing required facts or invalid types reject the request.
 Corrections require a new request ID. Multi-producer joins need a later result
 reporting contract with a separate authorized writer for each input slot.
+The [risk-scoring policy](#risk-scores-and-how-to-compute-them) above explains
+how the source obtains the example's `riskScore: 12`.
 
 The operator supplies lifecycle observations itself. They identify the graph,
 node, selected activation or replica UIDs, revisions and observation time. A
