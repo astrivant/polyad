@@ -74,7 +74,7 @@ the Kubernetes Operators Framework for Python.
   - [Finite pipelines](#finite-pipelines)
   - [Persistent services and recurrence](#persistent-services-and-recurrence)
   - [The operator as a Graph](#the-operator-as-a-graph)
-  - [Adaptive services in action](#adaptive-services-in-action)
+  - [Writing Adaptive Microservices for Polygraphs](#writing-adaptive-microservices-for-polygraphs)
 - [What Polyad is not](#what-polyad-is-not)
 - [License](#license)
 - [References](#references)
@@ -1012,7 +1012,7 @@ Optional [record encryption](docs/deployment/record-encryption.md) uses an
 administrator-provided public key to encrypt JSON payloads inside the operator
 before writing them to either managed or external PostgreSQL databases.
 
-### Adaptive services in action
+### Writing Adaptive Microservices for Polygraphs
 
 Application code can participate in adaptation, using available capacity while
 protecting work it has already accepted. The [Soul study](studies/soul/README.md)
