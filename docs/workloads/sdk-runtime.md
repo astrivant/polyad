@@ -47,6 +47,8 @@ providers. Without providers, instrumentation remains inactive. The SDK starts
 no metrics server and does not replace the application's global providers.
 
 ```python
+from collections.abc import Callable, Sequence
+
 from polyad_sdk import Telemetry, WorkloadContext
 
 telemetry = Telemetry.otlp(
@@ -59,12 +61,18 @@ completed = telemetry.meter.create_counter("application.jobs.completed", unit="{
 latency = telemetry.meter.create_histogram("application.job.duration", unit="s")
 
 
-def complete_batch(process_batch, batch):
+def complete_batch(
+    process_batch: Callable[[Sequence[bytes]], tuple[int, float]],
+    batch: Sequence[bytes],
+) -> None:
     with telemetry.operation("application.batch"):
         count, elapsed_seconds = process_batch(batch)
         completed.add(count)
         latency.record(elapsed_seconds)
 ```
+
+Here each job is a `bytes` payload. `process_batch` returns the completed job
+count and elapsed seconds; substitute your application's job type when needed.
 
 Pass `telemetry=` to `AdaptiveService`, `Client` and `ProcessSupervisor` to share
 instrumentation. `AdaptiveService.from_environment(telemetry=telemetry, ...)`
@@ -152,10 +160,16 @@ receive a `ManagedProcess` and must return promptly. They inspect application
 state or initiate an asynchronous handshake; they do not wait indefinitely.
 
 ```python
-from polyad_sdk import ProcessPlan, ProcessSpec
+from collections.abc import Callable
+
+from polyad_sdk import ConstraintStrategy, ManagedProcess, ProcessPlan, ProcessSpec
 
 
-def worker_plans(readiness, request_drain, memory_guard):
+def worker_plans(
+    readiness: Callable[[ManagedProcess], bool],
+    request_drain: Callable[[ManagedProcess], bool],
+    memory_guard: ConstraintStrategy,
+) -> tuple[ProcessPlan, ...]:
     worker = ProcessSpec.python(
         "primary", "my_service.worker", "--batch-size", "16",
         ready=readiness, drain=request_drain,
@@ -193,16 +207,24 @@ proposals for the same name coalesce; a newer target replaces pending intent.
 There is one pending target, rather than an accumulating queue of worker changes.
 
 ```python
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any
+
 from polyad_sdk import (
-    AdaptiveService, Change, ObserveStrategy, ProcessSupervisor,
+    AdaptiveService, Change, Environment, ManagedProcess, ObserveStrategy, ProcessPlan, ProcessSupervisor,
     ResourceStrategy, Telemetry,
 )
 
 
-def build_service(plans, activate_ready_workers, select_profile, telemetry: Telemetry):
+def build_service(
+    plans: Sequence[ProcessPlan],
+    activate_ready_workers: Callable[[tuple[ManagedProcess, ...]], None],
+    select_profile: Callable[[Mapping[str, Any]], str | None],
+    telemetry: Telemetry,
+) -> tuple[AdaptiveService, ProcessSupervisor]:
     supervisor: ProcessSupervisor
 
-    def decide(change, current):
+    def decide(change: Change, current: Environment) -> None:
         if current.available and current.resources is not None:
             profile = select_profile(current.resources)
             if profile is not None:
@@ -233,10 +255,14 @@ profile, triggering change and current environment; return `None` after recordin
 the requested profile:
 
 ```python
+from collections.abc import Callable
+
 from polyad_sdk import Change, Environment, ProcessSupervisor
 
 
-def proposal_callback(supervisor: ProcessSupervisor):
+def proposal_callback(
+    supervisor: ProcessSupervisor,
+) -> Callable[[str, Change, Environment], None]:
     def propose(profile: str, change: Change, current: Environment) -> None:
         supervisor.propose(profile)
     return propose

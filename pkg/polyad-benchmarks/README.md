@@ -7,6 +7,10 @@ correlate results with logs and traces; refresh commands capture, execute and
 verify study artifacts. Uses `polyad-sdk`; it does not install the operator or
 grant Kubernetes permissions.
 
+Optional [Soul](../../studies/soul/README.md) and [Nature](../../studies/nature/README.md)
+process studies exercise SDK strategies and capability changes, retain real job
+and process measurements, and plot adaptation before, during and after disturbances.
+
 ## Table of contents
 
 - [Install](#install)
@@ -36,10 +40,17 @@ pip install ./pkg/polyad-types ./pkg/polyad-sdk ./pkg/polyad-benchmarks
 - `polyad-benchmarks-fixture --once --delay 0.1`: perform one finite batch.
 - `polyad-benchmarks-refresh --ci-phase prepare|study|finish --root DIRECTORY`:
   snapshot, execute and verify an experiment. Cloud study phases require `--context`.
-  Add `--suite local` during preparation for interaction, state-variable and
+  Add `--suite reachability` during preparation for interaction, state-variable and
   process-rerouting studies without a cluster. Install
   `pip install './pkg/polyad-benchmarks[reachability]'` for their optional HJ backend.
   Follow the [local suite commands](../../studies/symbiosis/README.md#run).
+- `python -m polyad_benchmarks.studies.soul --output DIRECTORY` and
+  `python -m polyad_benchmarks.studies.nature --output DIRECTORY`: run local process
+  studies from a checkout containing the unchanged root demos. Install the `soul`
+  or `nature` extra for the corresponding plotting dependencies, or
+  `pip install './pkg/polyad-benchmarks[process-studies]'` for both. Use
+  `--suite process` in the refresh workflow to run both as a reproducible matrix.
+  See [process study refresh](../../studies/soul/README.md#refresh-and-evidence).
 
 ## Plans and replicas
 

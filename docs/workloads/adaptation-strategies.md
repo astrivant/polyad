@@ -157,7 +157,7 @@ stale intent.
 | Strategy | Definition and selection | When to choose it |
 | --- | --- | --- |
 | `ObserveStrategy(logger=None)` | Logs baseline availability, candidate count and delta paths through the application's logger. It leaves behavior unchanged and omits payload values. | Establish which signals a service receives, correlate changes with application behavior or add observation beside an active policy. |
-| `CallbackStrategy(callback, paths=())` | Adapts an existing function into a strategy. Dot-separated `paths` select delta families; an empty sequence selects every delivered change. | Reuse an existing component or select a narrower signal, such as `decision.sample`, for an application-specific demand policy. |
+| `CallbackStrategy(callback, paths=())` | Adapts an existing function into a strategy. Dot-separated `paths` select delta families; an empty sequence selects every delivered change. | Reuse an existing component or select a narrower signal, such as `decision.demandValue`, for an application-specific demand policy. |
 | `TopologyStrategy(callback)` | A callback selector for `topology` and `connections`. | Update destination eligibility, connection intent or an allowed producer set after additions, removals, scale changes and consent updates. |
 | `ResourceStrategy(callback)` | A callback selector for `resources`, the containing graph's observed resource metrics. | Implement capacity logic that needs several metrics, multiple profiles, sustained evidence or application-specific cooldowns. |
 | `DecisionStrategy(callback)` | A callback selector for `decision`, the containing graph's public Soul searching status and measurements. | Interpret measured demand, distinguish proposed from applied changes, or prepare a handoff that depends on the operator's progress. |
@@ -165,31 +165,37 @@ stale intent.
 For example, keep route preparation separate from demand-policy evaluation:
 
 ```python
-from polyad_sdk import CallbackStrategy, TopologyStrategy
+from collections.abc import Callable, Mapping
+from typing import Any
+
+from polyad_sdk import CallbackStrategy, Change, Environment, TopologyStrategy
 
 
-def routing_and_demand_strategies(remember_candidates, observe_demand):
-    def routes_changed(change, current):
+def routing_and_demand_strategies(
+    remember_candidates: Callable[[tuple[Mapping[str, Any], ...]], None],
+    observe_demand: Callable[[Mapping[str, Any] | None], None],
+) -> tuple[TopologyStrategy, CallbackStrategy]:
+    def routes_changed(change: Change, current: Environment) -> None:
         # The supervisor checks compatibility, readiness and permissions again
         # before using a candidate. An unavailable view withdraws new intent.
         remember_candidates(current.candidates)
 
-    def demand_changed(change, current):
+    def demand_changed(change: Change, current: Environment) -> None:
         decision = current.decision if current.available else None
-        sample = decision.get("sample") if decision else None
-        observe_demand(sample)  # None means unknown, not zero demand.
+        observe_demand(decision)  # None means unknown, not zero demand.
 
     return (
         TopologyStrategy(routes_changed),
-        CallbackStrategy(demand_changed, paths=("decision.sample",)),
+        CallbackStrategy(demand_changed, paths=("decision",)),
     )
 ```
 
 The application supplies bounded callbacks that store intent or wake its existing
-supervisor. It checks the sample's configured signal, unit and freshness before
-using it. Missing samples preserve uncertainty. With several producers or
-consumers, local reservation and work-ownership rules govern how new intent is
-applied.
+supervisor. `observe_demand` receives the optional decision mapping, including
+`demandSignal`, `demandUnit`, `demandValue` and `observedAt`. It checks the configured
+signal, unit and freshness before using the value. Missing samples preserve
+uncertainty. With several producers or consumers, local reservation and
+work-ownership rules govern how new intent is applied.
 
 ## Choose checks for common changes
 
@@ -225,7 +231,7 @@ one condition; the application still checks the destination's health and opens
 the required HTTP, gRPC or other connection before sending work.
 
 `ResourceBudgetStrategy` reads a dot-separated metric below `Environment.resources`,
-such as `pods`. Match `maximum` and `reserve` to that metric's unit and graph
+such as `byKind.Deployment`. Match `maximum` and `reserve` to that metric's unit and graph
 boundary. The SDK's resource view describes the containing graph. A local
 process supervisor can provide its own observation adapter, as in
 [`soul.py`](../../soul.py), or implement a strategy over its local capacity state.
@@ -234,10 +240,10 @@ operations from spending the same headroom twice.
 
 ## Wait for permission to use a new connection
 
-Suppose a producer discovers a second consumer and wants to send it jobs through
-a temporary connection. This connection is a permission managed by Polyad, with
-an expiry time. The application still sends its jobs using its own transport,
-such as HTTP or gRPC.
+Suppose a producer discovers a second consumer and wants to send its jobs to that
+consumer through a temporary connection. This connection is a permission managed
+by Polyad, with an expiry time. The application still sends its jobs using its
+own transport, such as HTTP or gRPC.
 
 1. The producer calls `service.connect(...)`. Polyad returns a **connection
    receipt**, a record that identifies the request and reports its progress.
@@ -247,9 +253,9 @@ such as HTTP or gRPC.
    that consent through the request. The operator checks permissions and graph
    rules before marking the connection `Active`.
 3. `ConnectionPermissionStrategy` checks that the selected receipt is `Active`
-   in `service.view` and its permission has not expired. Your application checks
-   the result before assigning work to that consumer, together with its health
-   and protocol compatibility checks.
+   in `service.view` and its permission has not expired. Before assigning work,
+   your application checks this result, the consumer's health and protocol
+   compatibility.
 4. Permission has a requested lifetime, also called its time to live (TTL).
    If it expires or is revoked, stop assigning new jobs over that
    connection. Arrange completion, retry or handoff for accepted jobs according
@@ -308,7 +314,7 @@ from polyad_sdk import (
 def producer_service(
     usable_peer: Callable[[Mapping[str, Any]], bool],
     update_admission: Callable[[bool], None],
-):
+) -> AdaptiveService:
     assessments: dict[str, ConstraintAssessment] = {}
 
     def remember(result: ConstraintAssessment) -> None:
@@ -348,10 +354,15 @@ execution identity, placement, endpoints and container resources without
 including credentials. Application settings can override these defaults.
 
 ```python
-from polyad_sdk import ContainerBudgetStrategy, WorkloadContext
+from collections.abc import Callable
+
+from polyad_sdk import ConstraintAssessment, ContainerBudgetStrategy, WorkloadContext
 
 
-def child_memory_guard(read_total_memory_bytes, publish_assessment):
+def child_memory_guard(
+    read_total_memory_bytes: Callable[[], float | None],
+    publish_assessment: Callable[[ConstraintAssessment], None],
+) -> ContainerBudgetStrategy:
     context = WorkloadContext.from_environment()
     return ContainerBudgetStrategy(
         "replacement-memory",
@@ -397,29 +408,43 @@ Choose `ResourceStrategy` or a custom `AdaptationStrategy` when the decision
 requires several signals, more than two profiles, sustained demand or a local
 queue measurement. `ThresholdStrategy` reads `current.resources`; application
 throughput samples arrive under `current.decision`. Use `DecisionStrategy` or a
-`CallbackStrategy` selecting `decision.sample` to implement policies over those
-samples. A high value may call for more workers or less concurrency, depending
+`CallbackStrategy` selecting `decision` to implement policies over those
+measurements. A high value may call for more workers or less concurrency, depending
 on what the metric means and which resource is constrained.
 
-For example, a service can lower its own concurrency when the containing graph
-has many Pods competing for capacity. This is a simple resource-pressure policy;
-its thresholds must be calibrated to the application's workload.
+For example, a service can lower its own concurrency as the containing graph
+acquires more Deployment resources. The example uses the published
+`resources.byKind.Deployment` count as a coarse signal; calibrate this policy
+against measured application pressure before using it.
 
 ```python
-from polyad_sdk import ThresholdStrategy
+from collections.abc import Callable
+
+from polyad_sdk import Change, Environment, ThresholdStrategy
 
 
-def pressure_strategy(read_committed_profile, remember_proposal):
+def pressure_strategy(
+    read_committed_profile: Callable[[], str],
+    remember_proposal: Callable[[str], None],
+) -> ThresholdStrategy:
+    def propose(profile: str, change: Change, current: Environment) -> None:
+        remember_proposal(profile)
+
     return ThresholdStrategy(
-        "pods",
+        "byKind.Deployment",
         low=2,
         high=4,
         idle="normal-concurrency",
         busy="conservative-concurrency",
         active=read_committed_profile,
-        propose=lambda profile, change, current: remember_proposal(profile),
+        propose=propose,
     )
 ```
+
+`read_committed_profile()` returns the active profile name as a string.
+`remember_proposal(profile)` accepts the proposed name and returns `None` after
+recording intent. The typed `propose` adapter shows the SDK's full callback
+signature: profile name, triggering `Change` and current `Environment`.
 
 Supply the resulting component alongside the relevant constraint guards. In
 `adapt()`, hand its proposed profile to the application's existing supervisor.
@@ -468,7 +493,7 @@ or capability compatibility during a Natural Selection replacement.
 Use the [callback helpers](#observation-and-callback-strategies) when an existing
 function already implements the policy. Parent additions and removals match
 child prefixes, so removing the entire decision also reaches a callback that
-selects `decision.sample`.
+selects `decision`.
 
 ## Delivery, recovery and admission
 

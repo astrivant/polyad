@@ -211,7 +211,7 @@ from pathlib import Path
 from polyad_sdk import Client
 
 
-def connections():
+def connections() -> Client:
     # Refresh the projected credential on each operation.
     token = Path("/var/run/polyad-connections/token").read_text().strip()
     return Client(os.environ["POLYAD_CONNECTIONS_URL"], token)

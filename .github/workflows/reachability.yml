@@ -43,7 +43,7 @@ jobs:
       - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
       - run: poetry -C pkg/polyad-benchmarks sync --only main
       - id: prepare
-        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase prepare --suite local --root .cache/benchmarks/reachability
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase prepare --suite reachability --root .cache/benchmarks/reachability
       - uses: actions/upload-artifact@v4
         with:
           name: reachability-prepared

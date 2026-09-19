@@ -1,0 +1,2918 @@
+{
+  "provenance": {
+    "inputs": {
+      "nature": "ee39814ea56d0c77da8e26daa272c22aee7620c056fd1e5487d7dee36a1b0d07",
+      "soul": "4c67636f7cb3d7ddb56d30909b89c32e002d6050bebde12eeb7b10d90558bceb"
+    },
+    "matrix": {
+      "study": [
+        "soul",
+        "nature"
+      ]
+    },
+    "preparedAt": "2026-09-19T16:33:43.102504+00:00",
+    "revision": "2983e3bd55383a959565989e79cf31eb269cb253",
+    "sources": {
+      "charts/polyad-benchmarks/Chart.lock": "05bc84d58f486cfa3d4416e9d4d22f99d86413e7f684adbe07ffa5a79c7b6f4a",
+      "charts/polyad-benchmarks/Chart.yaml": "4a90b4ee1a708ae877fa48b58ec16021af7a42838b62c1efea0cb43335ef4e9a",
+      "charts/polyad-benchmarks/files/dashboard.json": "c705a369f49a0723afb60fe1f9de85181927a2483db16ba53fc7582ab49dc825",
+      "charts/polyad-benchmarks/files/fixture.yaml": "6ea012cecb34ef18801671266c59ee6b02b8710d9f57157e08af7e1e0d012026",
+      "charts/polyad-benchmarks/plans/burst.json": "7a0cf0f325172700f7cf2dfb5b669f54f3202ab435a6fbf18416b2dda37f5db3",
+      "charts/polyad-benchmarks/plans/smoke.json": "008a8dc30e66ec7ad173db2364e3dff15c08c7dee1302b662dcedb7c77844e48",
+      "charts/polyad-benchmarks/plans/steady.json": "afbded365aaeeb6760b0e67fbd2899837f6b9f151c86e8e47bcb43645449cfde",
+      "charts/polyad-benchmarks/templates/fixture.yaml": "51e930dd4cd92cbc1bab127d280c1335066aed1cf08440a6f4ff13f042f25af8",
+      "charts/polyad-benchmarks/templates/monitoring.yaml": "d66bc3b9a935512d2415ba9f522bb2f5cd7aaec465d80b8e754344cf47a9bd75",
+      "charts/polyad-benchmarks/values-agent-metrics.yaml": "d5e2a5987d754e37c989e0b412ecf5cb3810bf29204d463f8f8a64095b94f4e3",
+      "charts/polyad-benchmarks/values-burst.yaml": "f900e1f52ccbc826a71042eb7d5b70f7bb6b427deafc83681c73ad700644e7cd",
+      "charts/polyad-benchmarks/values-smoke.yaml": "de835cc19ff35c8ac9ae301f07eb49051d1835ab6ff2543ba86755b1bb84b272",
+      "charts/polyad-benchmarks/values-steady.yaml": "d988fb7090df11c05526e787499c8299e3b10b343b0a11809bc05b72e733f2d1",
+      "charts/polyad-benchmarks/values.schema.json": "37a02f50c8317185ab24f706dcc3a7003bd29c74984c4ac2ca7f09eaede7ad44",
+      "charts/polyad-benchmarks/values.yaml": "0383c2bbc1aacdcb33c7477cc2ed353104af672ea806b6690d79efb7819bac56",
+      "charts/polyad-crds/.hypothesis-helm.yaml": "1acca3a5170db2bd007c347746a12fdcc67871d2e1f8de6270340bef67f26dc4",
+      "charts/polyad-crds/Chart.yaml": "b0aa37f7bdc5c2b16bdb6911517b2b532cfe5aa4829ca29cdc9051d39b718ba4",
+      "charts/polyad-crds/crds/activations.yaml": "801eacca69a32807aa8e327fe00f8f40d69e702d9a7f53d695934db21993ea0a",
+      "charts/polyad-crds/crds/compositions.yaml": "d311c5ac17cd2263e63672b7a111e62253a70dfb803e3d2814e72e453a1dc6e1",
+      "charts/polyad-crds/crds/daemons.yaml": "ed99bd4dd17b391dfba0f4645ba9d5836ec6e98eabfd9159187830eec9dac083",
+      "charts/polyad-crds/crds/dragonflies.yaml": "83f66cbde0433c965288dc2497a840b29358e7d400ba9753329f4d1ec581fce4",
+      "charts/polyad-crds/crds/dragonflypools.yaml": "ada127473b2fb8660b4edd7cf750cf6695e225be46e2d47b36f53356531e45b1",
+      "charts/polyad-crds/crds/gates.yaml": "91255b58d9baaa0d4a5b5d2be61d4463aa330f474c7f14b7b40f9256d4558af7",
+      "charts/polyad-crds/crds/graphrules.yaml": "2cb9d126994981764558d75c3a971f564ef8f3295499d712c029d3a363ae6394",
+      "charts/polyad-crds/crds/graphs.yaml": "3b940f590041b6868d6850eb2215c7b88b83f4049675f47b1c2173ea32cfb810",
+      "charts/polyad-crds/crds/operatorpools.yaml": "90731b54695fbec3f27c6bf37733be327b2115fbaf0e72b4957d52111ca674b8",
+      "charts/polyad-crds/crds/polygraphs.yaml": "e95e950c80707b6a14da1de84b64422e1209c717e71219566a87060bdac3215a",
+      "charts/polyad-crds/crds/remotescales.yaml": "457a52a8beb1d4dbf596bc0ce753f07c23b78d9dce44586fbe89fd36e338c66e",
+      "charts/polyad-crds/crds/replicagroups.yaml": "6444915569cced5e5ea43b46d42a7e30f0be942e0d7ba4a7101a3e3e6835d388",
+      "charts/polyad-crds/crds/resources.yaml": "f7405bc9acd69c221c0eb65f4c82ddc8c8b287a2e6d4d666fb11c93a2bedd84c",
+      "charts/polyad-crds/crds/rewrites.yaml": "8d1ba4e2eb882add0e11459a56b5d2b051b50c7a7fc8c6f75c59396f15171e6e",
+      "charts/polyad-crds/crds/shutdownpolicies.yaml": "9c29c5d04db3e09fc86eab4457cf0288b2468afbe9a99594094ca9530d02ba19",
+      "charts/polyad-crds/crds/temporaryconnections.yaml": "bd9979b922fb18059e7d94587556d9415797dbb942949b98a1e478aec50b3414",
+      "charts/polyad-crds/crds/workloads.yaml": "747e3893cdd33f1b49b4dccb2c0b39712e1eea54b804a307e572e6b03d395c3e",
+      "charts/polyad-crds/files/resource-catalog.json": "c712110213e32c484ce34321d1531217aa59043e104fecbd79c3fa1397a98250",
+      "charts/polyad-crds/schemas/activation-polyad-v1alpha1.json": "3b5ce08c88fab6bd4aafe5e7a7e38f39929f98fb703b50428ed1478cef9a0b3e",
+      "charts/polyad-crds/schemas/composition-polyad-v1alpha1.json": "c4572095a1976754d818d48f51e15f24b8a75149bdbcec7b6507f754f0572b5f",
+      "charts/polyad-crds/schemas/daemon-polyad-v1alpha1.json": "3fa6cce63a8b54d60959a609ff3a716b83abe7b0328d74c0dd7c2da16d74af86",
+      "charts/polyad-crds/schemas/dragonfly-dragonflydb-v1alpha1.json": "21dda7274397eec96b3b492f3dfb7a2eb2a50a0bceb271cffd52a169b316af41",
+      "charts/polyad-crds/schemas/dragonflypool-polyad-v1alpha1.json": "498aae54f6dadce7999ff30bb1d9b5276a2e7a36bc91b3ad8cdabd19d23445d1",
+      "charts/polyad-crds/schemas/gate-polyad-v1alpha1.json": "2905b34cab48aa2e40a2f014b93ffac47532449b3e3d65b6cce2f510bfd35e4f",
+      "charts/polyad-crds/schemas/graph-polyad-v1alpha1.json": "6b4a8f0b4141d5954271a1d9074637615f1a35d13f06b216d6ae65abbc6412b7",
+      "charts/polyad-crds/schemas/graphrule-polyad-v1alpha1.json": "caea8c18293be98f67bb82724cd91cf7b8cd45e9a13dd04c2abc27434db0cca2",
+      "charts/polyad-crds/schemas/operatorpool-polyad-v1alpha1.json": "c0201d7357f1a49281b53a963f3dcc864b2cc82c4c49789e3cb5c15f3f66812b",
+      "charts/polyad-crds/schemas/polygraph-polyad-v1alpha1.json": "79a6475789086dd8b5ff8a5c7f06621fb8736ca595b213d6e44c9eea0105872e",
+      "charts/polyad-crds/schemas/remotescale-polyad-v1alpha1.json": "aba8239e2e484246794e78d5352856b93f3f0ad71a712a5fedf8e56068c50de6",
+      "charts/polyad-crds/schemas/replicagroup-polyad-v1alpha1.json": "51fc5308f09f0ceae3b6c5c61e4a5642df0387d4ad95d734a91ca1814b190fc1",
+      "charts/polyad-crds/schemas/resource-polyad-v1alpha1.json": "d1b78e051aa05bd6052b747ed8fe49c66da8601f522c5e2aaeb71489a2daafa7",
+      "charts/polyad-crds/schemas/rewrite-polyad-v1alpha1.json": "357657aaa3fa330722ed5caae342cdde6911f035b226e2084d3141f866083e3c",
+      "charts/polyad-crds/schemas/shutdownpolicy-polyad-v1alpha1.json": "79e1b5c40fed79ee7020fd259b9f480ab9077eac7f8ea6d2733fa2cad452125d",
+      "charts/polyad-crds/schemas/temporaryconnection-polyad-v1alpha1.json": "a8fdfba1c27221f6aa74ef92ffd298b3f84f24568fdd0cf095557110e6cbfc23",
+      "charts/polyad-crds/schemas/workload-polyad-v1alpha1.json": "2fb2ef1b1d73089cd74c89f0f1122c4f351735da71b40ffd6061be07212a112b",
+      "charts/polyad-crds/templates/resources.yaml": "22de297fd18c5b64bb0d138783ac656bf2bd9dda19e0fe13c20e273ebf71d37e",
+      "charts/polyad-crds/values-activations.reference.yaml": "f5e90aeb4f8ecb8bff2461d6f24697dd9dac9f5e48cbe6566eec040bde2ec144",
+      "charts/polyad-crds/values-compositions.reference.yaml": "d8bdbbd68ef52485eec92b70791f980b0b74531d9747a84f52fd20896386e37f",
+      "charts/polyad-crds/values-daemons.reference.yaml": "b84b6169a128705cede15799888e092ccba0b17f258a95c3ea4e100fd0b4deff",
+      "charts/polyad-crds/values-dragonflies.reference.yaml": "7a0ab9bb0dd916c75d10c69262ff08a4c82b68324368b83626f96cba7b36d0c4",
+      "charts/polyad-crds/values-dragonflyPools.reference.yaml": "cc537373d7b575cba87dc3419fb01581be06bf3d9f8514bc4d27bc5b46e55de3",
+      "charts/polyad-crds/values-gates.reference.yaml": "1a050a47d8d84debee6b72eeac4486c3cb6f8d0af1fdaba619a5b22e1240e408",
+      "charts/polyad-crds/values-graphRules.reference.yaml": "26c379fec9cf993e96657394fe51fb4042e4197db9ba58d29134fe5cb5956e0b",
+      "charts/polyad-crds/values-graphs.reference.yaml": "0bd53a5957723e14b73a9a07e4bf706b1b999e6da5bfad11d2bbedfa058fd146",
+      "charts/polyad-crds/values-operatorPools.reference.yaml": "5a10e6cc26ad75682b80b0a78f7f6c04f5f08c2941750aac42b49f3b62935e9f",
+      "charts/polyad-crds/values-polygraphs.reference.yaml": "98b2c69fc18085431a1dd0219e57ffb232b94e31fb7c1e8d192c991aec44b337",
+      "charts/polyad-crds/values-remoteScales.reference.yaml": "f33391941be4dd3bdab9f6cdafdf1783abe62a5df54fe5abb00260925a324e6c",
+      "charts/polyad-crds/values-replicaGroups.reference.yaml": "7f2cb4e279acbda1d4bbaf2d21cd6796b494dee046e9ff875e89d235490774b7",
+      "charts/polyad-crds/values-resources.reference.yaml": "54657a3c8cb35a86c0e4fd5068efd28229e4fa8cc0b2f7cb324fb7e08b02be1f",
+      "charts/polyad-crds/values-rewrites.reference.yaml": "d0da0d67b65a18fa731b304b96dcba602c9778aff7557acbeb4d21e0a5ca6af6",
+      "charts/polyad-crds/values-shutdownPolicies.reference.yaml": "07612c7e779db0764ca1dde66cea8d255e85fbbf8f4cb431f76266671a719678",
+      "charts/polyad-crds/values-temporaryConnections.reference.yaml": "595ebbe882e8ba57ea152a4b41ff31cc17489ec18dc225e315a14c1a979ecd8b",
+      "charts/polyad-crds/values-workloads.reference.yaml": "1634c21497fbb88a00d27443d0637ad34269b1d5da65dac24209a21f6395e328",
+      "charts/polyad-crds/values.reference.schema.json": "9ea91b7ffdcfdc166b6da6e7c568409a5662ad33c393b4b5ace03fe9e9b4c979",
+      "charts/polyad-crds/values.schema.json": "0c5e143bd4a17e3f98c2497509a8882e495c72f75dc0a1e1d87330a41453611c",
+      "charts/polyad-crds/values.yaml": "9f89ccb0a2cd04067f60e1dc86c08145c0fec9277d5d454f6086c392aafa2499",
+      "nature.py": "e0c7b2720c1e6b431a654be11eb966a04b48da57ffd8f6bc498f4bf540dad736",
+      "pkg/polyad-benchmarks/poetry.lock": "a5eca33786554c76c980378cfaf0bb4ab7dd3b7cb95ea1f615d3f589a7ecf9d2",
+      "pkg/polyad-benchmarks/polyad_benchmarks/__init__.py": "b13a88edd90e89ab914ee19b3db8bdf7639d6a533f1eebec07ed3887ef1ae34a",
+      "pkg/polyad-benchmarks/polyad_benchmarks/config.py": "88a4db4fb5e2cf415b032174a87ed67f9e0f49248130dd904adcd02cfd3c80b8",
+      "pkg/polyad-benchmarks/polyad_benchmarks/fixture.py": "306b5e6e7f2c4c44b082f26dd4dccb4f3281ed03f2158d0d079052ac6dca94ca",
+      "pkg/polyad-benchmarks/polyad_benchmarks/identity.py": "944f283a10213187f8bdf9b52d0ed2d937d60f6025f0770603925f14e39c3ca4",
+      "pkg/polyad-benchmarks/polyad_benchmarks/plan.py": "9037437e6a15907b2353c277215a143b28c224f2d25d10de78740bbcf6943182",
+      "pkg/polyad-benchmarks/polyad_benchmarks/reachability.py": "447422882b3ba77513939a44ede2c055181c060749ea74d6fbd8957af4d3656c",
+      "pkg/polyad-benchmarks/polyad_benchmarks/refresh.py": "24d5046a4a3ddd30ac86933c8f42b13782a37958ae6119888b88754ba194a751",
+      "pkg/polyad-benchmarks/polyad_benchmarks/routing_study.py": "d964208bba4374da6dd9b35cc4833b38be3e603b12d63433b2b0ac15172b1af6",
+      "pkg/polyad-benchmarks/polyad_benchmarks/runner.py": "75ad599492099f2bf3bfd12c7ba5c2b3d7ecdc3cffadaeb847f07e152828a31f",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/__init__.py": "3b108e4261e0bf5048f4f61d2faedca54223ffc24c1794e89d223dc78506dc75",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/artifacts.py": "c997ddccfbc2fcd26c2d5f2286aa5c683fbfa87deca9362a4205fd284f5d4129",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/__main__.py": "f0dbb105611ba5c56f4506c52ff79d533597517850030bbf2015fa560e41d7aa",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/monitor.py": "735cdc73a2bba472862143193c038ee1cfa62909a3bb1fca81c3e8a45937381c",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/strategies/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/strategies/capabilities/__init__.py": "af2fd3fb15a25a8f23547db29b2a8c1dfd6d580750c32ed49bb47c183b5c41d3",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/strategies/selection/__init__.py": "d2deea4aa9336594fbf77a758c8cff80136223f1a244a99168852ebf10a7eb9c",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/runner.py": "7aa99eb6ecc1be4af50fe01e99ffbfdf1a18510a5851d8b052420a8fc162ba61",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/__main__.py": "65a91376c1dfbd89e4e3b3c02a8ca049f9439252f76ee25a376f58eaff51202d",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/monitor.py": "db42f0446595cc16c1abf9eb8f1e539659ac757604428faa87ab3d1352728f22",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/plotting.py": "ba76f1a173beafd6097a559b6aa4db3bd55579ac4c66ce21b6923d074bb1de58",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/runtime/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/runtime/engine.py": "27ff013a2b914f862e17e7176f0177088ce282e39ccf3359e76f42d255eaea89",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/runtime/policy.py": "249cdf47fdfbc4b4d5f12b99c5c4a39a913511c72525f53f25005a1bbf11564d",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/runtime/service.py": "f6280484141b20e1610a34e761f70fad4366b838937c2758012544a7d27ca814",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/__init__.py": "ea21b5b1b287708eaafe13722d44a6b2b5446c2311d2c7def710def466810222",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/budget.py": "f9f33d00e617536d201ed61dfdea5a5bac746d5c0b701967e103cca32f23f653",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/memory.py": "5ac2b19773bc75a4d762f7bc49b365d1b49038fbf40200b05b0456a566a03e46",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/resources.py": "c73d509ef3ac7f9572367eb9e1861d6f0939fb605a4c96f0903518402677354c",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/threshold.py": "c48f8f41ffe89fc5d19e59c2f81080b08f27f00ae78490c77cdc4bd6d041f723",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/decisions/__init__.py": "ea21b5b1b287708eaafe13722d44a6b2b5446c2311d2c7def710def466810222",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/decisions/guard.py": "3fa6d6c9db1a06a1aad151db33934a46d628d687c881e6adf8f209f523a04f20",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/decisions/observations.py": "ae2bd400de18ca587c902cb742551cda86057718d0d1e060161261f6bbb7616e",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/freshness/__init__.py": "d85684b110248abf880e83a4d0d2c44b17169425ea09dca8ec9262592c05a822",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/observation/__init__.py": "ea21b5b1b287708eaafe13722d44a6b2b5446c2311d2c7def710def466810222",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/observation/callbacks.py": "4060d326cdf67b37a7cfb78c139644861a75e419085a31d6da271676cfa532db",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/observation/logging.py": "62a7b0b79abdaed8e3b99224007f3eb04a5d1ff5c6b09544c5b43b51811a15f7",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/reachability/__init__.py": "d6a57f237e587de80cb56e45fd257db3b2301b492b5741583d61286391dd59df",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/routing/__init__.py": "ea21b5b1b287708eaafe13722d44a6b2b5446c2311d2c7def710def466810222",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/routing/connections.py": "0e96f847a3316d24ba15c3612d3d641b922330008b0bad03a2ac5ac6c708937c",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/routing/peers.py": "d17982e6c5e33677f758f46f6c4456e7d3d676fde061b6e12313e2a59cf2565f",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/routing/topology.py": "ea692d3e811ad9515dce0cc800d61c33f54838ff60c8ba2d74e662d83b570692",
+      "pkg/polyad-benchmarks/polyad_benchmarks/variables.schema.json": "d7505c5b925cb9debd66c43e2859f17face442c7fe3492ab27bb3db413e43eb7",
+      "pkg/polyad-benchmarks/pyproject.toml": "7023dca9c4b72c8857637c47db4c982e839e612085a4392f023da0e9b6fb9ca6",
+      "pkg/polyad-sdk/polyad_sdk/__init__.py": "01cbdc0f9eedd421d2fed6e623ccbf061ade931b6456def8324627073c3ff249",
+      "pkg/polyad-sdk/polyad_sdk/api/__init__.py": "d1562410cd6174fe20ef0d42c2787a76de53750f8e08efec54da6aca894b050b",
+      "pkg/polyad-sdk/polyad_sdk/api/client.py": "29882a032289e77e165731e1cb7b42c47feaef6c1ba085e285c75a3652153ac6",
+      "pkg/polyad-sdk/polyad_sdk/api/interfaces.py": "65a911df7f3b3fd61cfb79d0b7e8f7263819ffc5443c7f63a364071d29c943cb",
+      "pkg/polyad-sdk/polyad_sdk/events/__init__.py": "01b6cffe86e0053b3ace3bb7202b9a361817d9fbb859369837cd6358eaf20739",
+      "pkg/polyad-sdk/polyad_sdk/events/filters.py": "fd33cb6442c90d359a7ffdee6b9820a53399d3aa4d222d263f209a0cf8a6ae25",
+      "pkg/polyad-sdk/polyad_sdk/events/source.py": "5c2adb7a045a639f7d1b15b3d26925af15402017a54995de4b39fef6434413b5",
+      "pkg/polyad-sdk/polyad_sdk/events/subscriptions.py": "9dc1dff9d613ecbbdbe7955ff4460af2759a1341a81ecab73cdcf4fb5cc3c5f8",
+      "pkg/polyad-sdk/polyad_sdk/observability/__init__.py": "706e8200f42177f54b0f4a63a08c7896b993902d7a789121d2f7c27cbcdcc9d4",
+      "pkg/polyad-sdk/polyad_sdk/observability/telemetry.py": "6e80e0c6492d298feb2bd9954f4dc9557c8169be53be8c427710c72bb7acd370",
+      "pkg/polyad-sdk/polyad_sdk/processes/__init__.py": "e9d3fad1726aa6589daa86a1bc3f227019d36c25127f975ea53c949e21fb4bb1",
+      "pkg/polyad-sdk/polyad_sdk/processes/models.py": "3777a02e2d0f491a8f1ae98ef7ea084860557271bfcdd8ca4667bc3ef197839c",
+      "pkg/polyad-sdk/polyad_sdk/processes/process.py": "9d498a3b295eeb5f83f191f2a06408c822e342809e0092f938d3f37a5f0e770a",
+      "pkg/polyad-sdk/polyad_sdk/processes/supervisor.py": "1596a87c5b35cfec8f12af26790b1d7096c12b948ce72bf5e45c295fa9a7de7f",
+      "pkg/polyad-sdk/polyad_sdk/runtime/__init__.py": "b12a438d88ed7ff76346f2512041b53ee070964920e8edfe4225fd17b00b18aa",
+      "pkg/polyad-sdk/polyad_sdk/runtime/context.py": "2854afd161c4b777d9f3f0778e2bd933878c6173e429a373fac71856b25c87e5",
+      "pkg/polyad-sdk/polyad_sdk/runtime/environment.py": "8f5de16d3510ddfedf4fb318fa9e9e7025d442f1dfc8f5a0d3a6772a9e9505cd",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/__init__.py": "974f95f9be1ca63fb5922a1e72dc884c6272f1a69d8267fe92bfc3c4448d63e7",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/models.py": "bac0790b6801b4b2b881d4fab88ed984ec82c05c01e01398432bc86fab0b2773",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/__init__.py": "1fdd9ab47f03e714d5fcd4e9c606032abde146ddc2157f2f710953b93fd2fc06",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/_numerical.py": "e3e30c42dda15454c5c4dce19618e783fa1c23023af2f21c7f24a5ed3f7d0196",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/envelope.py": "f4efc1b4c5d89905c49e2d417e5707a0a73e60ad77afe47f7ca1d5d177f63000",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/hj.py": "02ed596239ee2fa84ba9ec3210886a2d77589e9f618acdbcfe3e63ebfaef6968",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/models.py": "037872880ebf25b7b8356300f23df323afdcd7d2043af9f1c2856b41173419b8",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/strategy.py": "7f1b8db3b75ead2bffef54862e83d3b9b1d2dcd995fdf5c2c6a2bf6090d0dd3a",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/service.py": "167074b894c21e822d1c7f172422667f7980ac4733ef5509e4519d11fbb6f2f4",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/state.py": "baf4b75ee3e065f9bc4e7c688ecc0f8a652b21b634a803a117685bdf55084976",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/__init__.py": "3e4b5dc6a4d42b51b482692e765d1fe5032a3638f55dac2a41ebcaf865d2cfcc",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/base.py": "bb00783d4dbd861015d91935b956bf846f8bc5f102c62135dc9ae1d58b6931db",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/callbacks.py": "0dd066851c2308315292c91a0a799ac7407c810f9e3eb4c28e1beced3f4fca1c",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/capacity.py": "31d5660e2122486dfe5211944ef6df8e305cbbc35f3e3ece6dc62d71e8c9667e",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/decisions.py": "c1891a0ba91cb791cd0a4233e183888afe968174038dd50b7faf657cef2cf843",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/topology.py": "f10b79431e75d0c92e629e686987c6fb939c5eaea822d0ffb0bd217358366042",
+      "pkg/polyad-sdk/polyad_sdk/transport/__init__.py": "ba0c7082e2b544d1322a91dae52f66ce8de3af36089d1fd7ed0cec2cf9ad6fce",
+      "pkg/polyad-sdk/polyad_sdk/transport/http.py": "686bf4ec240fe355e70ec4fe7911c5961d9174acb58165902825a27961716c77",
+      "pkg/polyad-sdk/polyad_sdk/transport/routing.py": "34a44f97cafc236a511b428dd170b9e2e8bdf981729d6a6d3a72751c68146dba",
+      "pkg/polyad-sdk/polyad_sdk/transport/websocket.py": "8b8c40c052e14b9768ab83f2658a69254a0b3ead53d8ffa7b634a4618f0d30fc",
+      "pkg/polyad-sdk/pyproject.toml": "8c7846745cfe5e03dbbddd82dcd95e813e27c4d33e398035907cfe9732e45ee7",
+      "pkg/polyad-types/polyad_types/__init__.py": "c4c01ed34f651b8a201d4494f715200e9e829c7056c70d5907c40b9e5da087d0",
+      "pkg/polyad-types/polyad_types/api/__init__.py": "a3d2b310ad5b79d788958a7666f880380ed285774ed3266aade93ede8c7fa954",
+      "pkg/polyad-types/polyad_types/api/auth.py": "1321bb20c7a3581b2714453f9f5c67d7f5c09d285016485b1f677080345df375",
+      "pkg/polyad-types/polyad_types/api/discovery.py": "89a847ec4f984d9d73eb55db4e309090fc7b4aab790e0bfd8fa7f486e87415ad",
+      "pkg/polyad-types/polyad_types/api/requests.py": "6b84f1f9718d0bf2d174a7f7ca2bbd50ef0a92c828bf3b592c43ce7028f9274e",
+      "pkg/polyad-types/polyad_types/api/throughput.py": "cae804a1872100abdbc5739018c85298dd310531144eace90138548aa718f03c",
+      "pkg/polyad-types/polyad_types/events/__init__.py": "1b61c6060056a5b94be3014011b856efd5e618b092aae7bdea3d60561fa2b3c3",
+      "pkg/polyad-types/polyad_types/events/codec.py": "9cc562a3bfd2bef53e77a3fe921886de8ab5309b9e02db3f864b5ac6e480c960",
+      "pkg/polyad-types/polyad_types/events/envelope.py": "ce735b8b9ca359e0f732928993ada4012ccf18f1a7a49f57fbb4354f800b74df",
+      "pkg/polyad-types/polyad_types/events/models.py": "66bf8ed25b91050639fe9ceda0d32814f1b82d1974ddbf0b7ed0bab17b03f47c",
+      "pkg/polyad-types/polyad_types/graphs/__init__.py": "0a227beae75731e29a39bbd9b31d4454c2e1b3ca22a7e8ad6b1b418cd4668f1d",
+      "pkg/polyad-types/polyad_types/graphs/activation.py": "d15ace1eb4d90df63529a542cc6cec7603a9a4aa4045cf79a7f674c00c2ad914",
+      "pkg/polyad-types/polyad_types/graphs/capacity.py": "224bdbb9c09ea83d9d93c94bcc2007cfec4c284ee894a5e261b7029ac99839b4",
+      "pkg/polyad-types/polyad_types/graphs/replication.py": "55f3e5c12c15257a28874eb44895a193886df4f4bc2c4640507ca6b26da16e3a",
+      "pkg/polyad-types/polyad_types/graphs/rules.py": "60e8091f4707ca4d24911379c5166f7cd852671b32582a381b0699ac4cf5e226",
+      "pkg/polyad-types/polyad_types/graphs/topology.py": "3652b2fee189895b4a6eb6498d4d060f69538600ff77236ca7bfe793fffe38b0",
+      "pkg/polyad-types/polyad_types/networking/__init__.py": "a1bc27697eaabf11c7af1d67ddde8605780e3005d834f9d84004025227822e12",
+      "pkg/polyad-types/polyad_types/networking/access.py": "b296b80327b9b65e59e3b1f30ac73cc89a426ca28712b5bd717a08eb2b420bb3",
+      "pkg/polyad-types/polyad_types/networking/traffic.py": "742dcdac042fcbff53ce0eb3ac0c6db886a1bbf35c3dd3cde6bd0ce05936d72a",
+      "pkg/polyad-types/polyad_types/resources/__init__.py": "94dc5c6e08d0e904298f43cbe0c610014fce26519810ac97859549ca9c6d4205",
+      "pkg/polyad-types/polyad_types/resources/base.py": "3f9fc72ff4042c3389dfaa9615d0f252d73beb0412038c98caa21aad607f61da",
+      "pkg/polyad-types/polyad_types/resources/capacity.py": "b75cda0d0636e53eac3b3b3a3371dc6a9b801012277c45140414850e3461cd87",
+      "pkg/polyad-types/polyad_types/resources/codec.py": "d27b3cc4d938746f3bcb0e73fa2ab59e7168e7d151709fa0b53c3b4e7efec4bd",
+      "pkg/polyad-types/polyad_types/resources/common.py": "a0197ffc3ef7c34b5c759c9f1339e8184fb2acafef849ee751f577c294d34e12",
+      "pkg/polyad-types/polyad_types/resources/infrastructure.py": "97ac92e53f807159d2cc4363b257752eee8dc043c1c654e0e88759dff221df23",
+      "pkg/polyad-types/polyad_types/resources/istio.py": "994caa0946157669bafa73a07799608bbbc0226f079f54a80f7fa40675c0865a",
+      "pkg/polyad-types/polyad_types/resources/kubernetes.py": "2d59e7359bafbe4b7c93f717508e8abf7dbfd73c61f96317df97d59550f1767b",
+      "pkg/polyad-types/polyad_types/resources/mutations.py": "aa29bc9eb210e9ecf79ebbc60a2f695cca3413036a6b0d47ac9b78f21ea66811",
+      "pkg/polyad-types/polyad_types/resources/polyad.py": "0fd071f508fe3314521c9f9d472e8bc0621d2c66d064e0460ec333e11c3435c7",
+      "pkg/polyad-types/polyad_types/resources/registry.py": "c73e3c5d5f0c817462481cb0e083d88c1e199a9a05649a1fb994a2b711ac6b77",
+      "pkg/polyad-types/polyad_types/resources/status.py": "653bdc3207feb8682c2fb7218611cedbf0b846973ff848effdbc1a7ffe83741a",
+      "pkg/polyad-types/polyad_types/resources/storage.py": "995f63ee388e573707d0912f1f4a5a34223a723ece0153301f3a48647249bde1",
+      "pkg/polyad-types/polyad_types/serialization.py": "9751ed59f7c0ac15a6a59c92e7123327b34bae63a20c5cac3715fa4171c6e4a1",
+      "pkg/polyad-types/pyproject.toml": "2f12842e8608dacea281fa28e986f9d1f72e6495283d7e07b57b1fa8985d4487",
+      "services/fixture/Dockerfile": "dbe265a6c85c97300ddc47a6fff101cbb9af9333c5213cb636eecc5a5a485c42",
+      "services/operator/Dockerfile": "c2b18a78dc6d9bd3ce476678d0091465aa460e2df2f18267807520df0d7b9060",
+      "services/runner/Dockerfile": "7cde64a444988a1a76824d3d69ac6a73484588cfbc04320bbf012f5f97c569bf",
+      "soul.py": "d96f8e740c7de2853edd88586dfd93878485c05bee8450298285ee84e6ba33a4",
+      "studies/load/fixtures/application.yaml": "5a159b3ce973b5e073b0e486fcf2c2578d23416fc3e8a04ab8ac34db7ea4b366",
+      "studies/load/fixtures/gke-values.yaml": "a6cb3b2554deeec74aea06aa88dd9687357ca6c7441d91e9a1f513dfef37556a",
+      "studies/load/fixtures/operator-agents-values.yaml": "4d064f954ed46e19ce5294022a464adfd5f98c7055469665c35e3c4f6e67bf44",
+      "studies/load/fixtures/operator-values.yaml": "bbc510a732f8c30086b961276ea79ebaf4ea5a6a1c0045081c39a8701f1680c3",
+      "studies/load/fixtures/plan.json": "68f06233839660b9d4d34e70922079fdaa375023e92ceada01572d92019b2e88",
+      "studies/load/fixtures/scenario.json": "75a50e3c2bb5241883c507df2bcb896569029270eb09ba477a3037e1263c004d",
+      "studies/nature/fixtures/scenario.json": "b3cd65a55c77e235e2a7ab78ba027966453dc076fdf7ddc81272f1cb22d11023",
+      "studies/reachability-routing/fixtures/scenario.json": "746146b4e63768dab37c0e215b91103e27f935a0046f41f1c9f4ed2a80245edc",
+      "studies/reachability-state/fixtures/scenario.json": "32adc05730e03f80a4f4f4423f3cbbb5cb468f2fd841c49436736ef898bbe4f7",
+      "studies/soul/fixtures/scenario.json": "c2acf4080fa3ae64b25322d5c3320212e15d96ed48df1c7b6bfbde025982d6d5",
+      "studies/symbiosis/fixtures/scenario.json": "191c36122632b7d2195a5af992f48ee8671a0ce220eb866fa024124e582d4b45"
+    }
+  },
+  "studies": {
+    "soul": {
+      "artifacts": {
+        "adaptations.png": "7a547769d6d1556e7bc24760f4e3e13359f3daa6ff60c498c39c5d85ecfc9d83",
+        "adaptations.svg": "68cd3c36ede71ab44f9b0f5a1ccaed2e08bcad148591056506a7d625b4b32aaf",
+        "adaptive.json": "5ce3a35cfa41e167f814f5123286af02bc4e245cb5db68e7c4927433b547a9bd",
+        "fixed.json": "5a929168179be6bea484e6b209d043a24c9469c3485da75c2d89ed6421b4b105",
+        "outcomes.png": "d49b46c27973cb39f456c72316a3a023e5d3f126d29b680aba11406c7c9e608b",
+        "outcomes.svg": "8317ff0d401c1819efea7bcb99fba0e33cbf3090c4c2513fef68f0897eb08520",
+        "strategies.png": "c8e2e35e3a31470bdbcc4b2b96848d8f3ebe93f592e81fb931c225cdb314983d",
+        "strategies.svg": "40530a44453f766d4a0c0faee8143758779877291df9a56bf9db115be69809bb",
+        "topology.png": "ffa26e9cced43c78b8fba5cb32ce6f89eb33cb6b347c3e8fab90c897a655b23f",
+        "topology.svg": "daa99bf19daf4794a88f99e985d945353584dad470995b714c6823781d3fae97"
+      },
+      "complete": true,
+      "environment": {
+        "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
+        "python": "3.13.12 (main, Feb  3 2026, 17:53:27) [Clang 17.0.0 (clang-1700.6.3.2)]"
+      },
+      "figures": [
+        "topology.png",
+        "topology.svg",
+        "adaptations.png",
+        "adaptations.svg",
+        "outcomes.png",
+        "outcomes.svg",
+        "strategies.png",
+        "strategies.svg"
+      ],
+      "recipe": {
+        "phases": [
+          {
+            "name": "before",
+            "output": "squared",
+            "rate": 18,
+            "seconds": 1
+          },
+          {
+            "name": "surge",
+            "output": "squared",
+            "rate": 240,
+            "seconds": 3
+          },
+          {
+            "name": "constraints",
+            "output": "squared",
+            "rate": 240,
+            "seconds": 3
+          },
+          {
+            "name": "after",
+            "output": "squared",
+            "rate": 18,
+            "seconds": 1
+          }
+        ],
+        "runId": "load-dc172173bd3d46a799ce85480d90b1ee",
+        "timeoutSeconds": 90,
+        "workSeconds": 0.035
+      },
+      "records": [
+        {
+          "allJoined": true,
+          "completed": 1476,
+          "coverage": {
+            "CallbackStrategy": 2427,
+            "ConnectionPermissionStrategy:blocked": 37,
+            "ConnectionPermissionStrategy:satisfied": 4695,
+            "ConnectionPermissionStrategy:unknown": 17,
+            "ContainerBudgetStrategy:blocked": 13,
+            "ContainerBudgetStrategy:satisfied": 2414,
+            "DecisionGuardStrategy:blocked": 2,
+            "DecisionGuardStrategy:satisfied": 2418,
+            "DecisionGuardStrategy:unknown": 7,
+            "DecisionStrategy": 2401,
+            "FreshnessStrategy:blocked": 17,
+            "FreshnessStrategy:satisfied": 4732,
+            "ObserveStrategy": 2427,
+            "PeerAvailabilityStrategy:blocked": 65,
+            "PeerAvailabilityStrategy:satisfied": 4667,
+            "PeerAvailabilityStrategy:unknown": 17,
+            "ReachabilityStrategy:blocked": 711,
+            "ReachabilityStrategy:satisfied": 4021,
+            "ReachabilityStrategy:unknown": 17,
+            "ResourceBudgetStrategy:satisfied": 2420,
+            "ResourceBudgetStrategy:unknown": 7,
+            "ResourceStrategy": 2402,
+            "ThresholdStrategy": 1679,
+            "TopologyStrategy": 27
+          },
+          "elapsedSeconds": 44.924257959239185,
+          "events": [
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65113,
+              "service": "A",
+              "time": 4083320.696703083
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65114,
+              "service": "B",
+              "time": 4083320.699697375
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65115,
+              "service": "C",
+              "time": 4083320.707048708
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65116,
+              "service": "E",
+              "time": 4083320.710902666
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65117,
+              "service": "F",
+              "time": 4083320.712665291
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65118,
+              "service": "H",
+              "time": 4083320.714894875
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "B",
+              "time": 4083321.352534166,
+              "worker": 65126
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "F",
+              "time": 4083321.381110625,
+              "worker": 65127
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "C",
+              "time": 4083321.3926615,
+              "worker": 65129
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "A",
+              "time": 4083321.409599625,
+              "worker": 65130
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "E",
+              "time": 4083321.427554333,
+              "worker": 65131
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "H",
+              "time": 4083321.450095875,
+              "worker": 65132
+            },
+            {
+              "cheeger": 1.5,
+              "cost": 6,
+              "event": "composition_committed",
+              "phase": "before",
+              "routes": [
+                [
+                  "A"
+                ],
+                [
+                  "B"
+                ],
+                [
+                  "C"
+                ],
+                [
+                  "E"
+                ],
+                [
+                  "F"
+                ],
+                [
+                  "H"
+                ]
+              ],
+              "time": 4083322.793389833
+            },
+            {
+              "count": 18,
+              "event": "phase_started",
+              "phase": "before",
+              "rate": 18,
+              "required": "squared",
+              "time": 4083322.799462666
+            },
+            {
+              "completed": 18,
+              "event": "phase_drained",
+              "phase": "before",
+              "rejected": 0,
+              "time": 4083324.480641625
+            },
+            {
+              "count": 720,
+              "event": "phase_started",
+              "phase": "surge",
+              "rate": 240,
+              "required": "squared",
+              "time": 4083324.483352041
+            },
+            {
+              "completed": 738,
+              "event": "phase_drained",
+              "phase": "surge",
+              "rejected": 0,
+              "time": 4083343.828084166
+            },
+            {
+              "count": 720,
+              "event": "phase_started",
+              "phase": "constraints",
+              "rate": 240,
+              "required": "squared",
+              "time": 4083343.832711208
+            },
+            {
+              "completed": 1458,
+              "event": "phase_drained",
+              "phase": "constraints",
+              "rejected": 0,
+              "time": 4083363.198076458
+            },
+            {
+              "count": 18,
+              "event": "phase_started",
+              "phase": "after",
+              "rate": 18,
+              "required": "squared",
+              "time": 4083363.203120791
+            },
+            {
+              "completed": 1476,
+              "event": "phase_drained",
+              "phase": "after",
+              "rejected": 0,
+              "time": 4083364.73414925
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "A",
+              "time": 4083364.796475333,
+              "worker": 65130
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65113,
+              "service": "A",
+              "time": 4083364.860593333
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "B",
+              "time": 4083364.930761458,
+              "worker": 65126
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65114,
+              "service": "B",
+              "time": 4083364.993296958
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "C",
+              "time": 4083365.073198125,
+              "worker": 65129
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65115,
+              "service": "C",
+              "time": 4083365.131690291
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "E",
+              "time": 4083365.213699875,
+              "worker": 65131
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65116,
+              "service": "E",
+              "time": 4083365.282262083
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "F",
+              "time": 4083365.364217083,
+              "worker": 65127
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65117,
+              "service": "F",
+              "time": 4083365.433345458
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "H",
+              "time": 4083365.546338916,
+              "worker": 65132
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65118,
+              "service": "H",
+              "time": 4083365.604077375
+            }
+          ],
+          "meanLatencySeconds": 5.394548227945545,
+          "mode": "fixed",
+          "offered": 1476,
+          "peakServices": 6,
+          "phases": [
+            {
+              "finish": 4083324.480597583,
+              "name": "before",
+              "offered": 18,
+              "output": "squared",
+              "start": 4083322.799440333
+            },
+            {
+              "finish": 4083343.828072416,
+              "name": "surge",
+              "offered": 720,
+              "output": "squared",
+              "start": 4083324.483334125
+            },
+            {
+              "finish": 4083363.198060833,
+              "name": "constraints",
+              "offered": 720,
+              "output": "squared",
+              "start": 4083343.832681375
+            },
+            {
+              "finish": 4083364.734131916,
+              "name": "after",
+              "offered": 18,
+              "output": "squared",
+              "start": 4083363.20309675
+            }
+          ],
+          "rejected": 0,
+          "started": 4083320.681652791
+        },
+        {
+          "allJoined": true,
+          "completed": 1476,
+          "coverage": {
+            "CallbackStrategy": 1121,
+            "ConnectionPermissionStrategy:blocked": 36,
+            "ConnectionPermissionStrategy:satisfied": 1731,
+            "ConnectionPermissionStrategy:unknown": 17,
+            "ContainerBudgetStrategy:blocked": 67,
+            "ContainerBudgetStrategy:satisfied": 1203,
+            "DecisionGuardStrategy:blocked": 68,
+            "DecisionGuardStrategy:satisfied": 1195,
+            "DecisionGuardStrategy:unknown": 7,
+            "DecisionStrategy": 1012,
+            "FreshnessStrategy:blocked": 17,
+            "FreshnessStrategy:satisfied": 1916,
+            "ObserveStrategy": 1121,
+            "PeerAvailabilityStrategy:blocked": 59,
+            "PeerAvailabilityStrategy:satisfied": 1708,
+            "PeerAvailabilityStrategy:unknown": 17,
+            "ReachabilityStrategy:blocked": 163,
+            "ReachabilityStrategy:satisfied": 1604,
+            "ReachabilityStrategy:unknown": 17,
+            "ResourceBudgetStrategy:blocked": 1,
+            "ResourceBudgetStrategy:satisfied": 1262,
+            "ResourceBudgetStrategy:unknown": 7,
+            "ResourceStrategy": 1065,
+            "ThresholdStrategy": 497,
+            "TopologyStrategy": 60
+          },
+          "elapsedSeconds": 14.907691499684006,
+          "events": [
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65457,
+              "service": "A",
+              "time": 4083365.703266416
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65458,
+              "service": "B",
+              "time": 4083365.708026625
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65459,
+              "service": "C",
+              "time": 4083365.711386375
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65460,
+              "service": "E",
+              "time": 4083365.713078375
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65461,
+              "service": "F",
+              "time": 4083365.714930875
+            },
+            {
+              "capability": "square",
+              "event": "service_started",
+              "phase": "before",
+              "pid": 65462,
+              "service": "H",
+              "time": 4083365.72120775
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "C",
+              "time": 4083366.297302041,
+              "worker": 65470
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "E",
+              "time": 4083366.411779458,
+              "worker": 65471
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "F",
+              "time": 4083366.411300041,
+              "worker": 65472
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "B",
+              "time": 4083366.42611575,
+              "worker": 65473
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "A",
+              "time": 4083366.432184541,
+              "worker": 65474
+            },
+            {
+              "event": "worker_started",
+              "live": 1,
+              "phase": "starting",
+              "profile": "interactive",
+              "service": "H",
+              "time": 4083366.590257375,
+              "worker": 65482
+            },
+            {
+              "cheeger": 1.5,
+              "cost": 6,
+              "event": "composition_committed",
+              "phase": "before",
+              "routes": [
+                [
+                  "A"
+                ],
+                [
+                  "B"
+                ],
+                [
+                  "C"
+                ],
+                [
+                  "E"
+                ],
+                [
+                  "F"
+                ],
+                [
+                  "H"
+                ]
+              ],
+              "time": 4083367.5959495
+            },
+            {
+              "count": 18,
+              "event": "phase_started",
+              "phase": "before",
+              "rate": 18,
+              "required": "squared",
+              "time": 4083367.605725875
+            },
+            {
+              "completed": 18,
+              "event": "phase_drained",
+              "phase": "before",
+              "rejected": 0,
+              "time": 4083369.101279916
+            },
+            {
+              "event": "service_survived",
+              "phase": "surge",
+              "pid": 65457,
+              "service": "A",
+              "time": 4083369.1035655
+            },
+            {
+              "event": "service_survived",
+              "phase": "surge",
+              "pid": 65458,
+              "service": "B",
+              "time": 4083369.1035715
+            },
+            {
+              "event": "service_survived",
+              "phase": "surge",
+              "pid": 65459,
+              "service": "C",
+              "time": 4083369.103574583
+            },
+            {
+              "event": "service_survived",
+              "phase": "surge",
+              "pid": 65460,
+              "service": "E",
+              "time": 4083369.103576708
+            },
+            {
+              "event": "service_survived",
+              "phase": "surge",
+              "pid": 65461,
+              "service": "F",
+              "time": 4083369.103579
+            },
+            {
+              "event": "service_survived",
+              "phase": "surge",
+              "pid": 65462,
+              "service": "H",
+              "time": 4083369.103581208
+            },
+            {
+              "cheeger": 1.5,
+              "cost": 6,
+              "event": "composition_committed",
+              "phase": "surge",
+              "routes": [
+                [
+                  "A"
+                ],
+                [
+                  "B"
+                ],
+                [
+                  "C"
+                ],
+                [
+                  "E"
+                ],
+                [
+                  "F"
+                ],
+                [
+                  "H"
+                ]
+              ],
+              "time": 4083369.10366375
+            },
+            {
+              "count": 720,
+              "event": "phase_started",
+              "phase": "surge",
+              "rate": 240,
+              "required": "squared",
+              "time": 4083369.107772291
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "B",
+              "time": 4083369.667484916
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "B",
+              "time": 4083369.66927425,
+              "worker": 65510
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "B",
+              "time": 4083369.671597,
+              "worker": 65511
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "B",
+              "time": 4083369.67615,
+              "worker": 65512
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083369.689286166
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083369.688404791
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083369.689614916,
+              "worker": 65513
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083369.691288458,
+              "worker": 65515
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083369.691615291,
+              "worker": 65514
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083369.69294125,
+              "worker": 65516
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083369.694204708,
+              "worker": 65518
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083369.693434958,
+              "worker": 65517
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083369.696806583
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083369.699480791,
+              "worker": 65519
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083369.700854708,
+              "worker": 65520
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083369.702081208,
+              "worker": 65521
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083370.038830625
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083370.041045916,
+              "worker": 65523
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083370.0455135,
+              "worker": 65524
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083370.0593515
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083370.065206625,
+              "worker": 65526
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083370.061911041,
+              "worker": 65525
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083370.073904458,
+              "worker": 65527
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083370.077823291,
+              "worker": 65528
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "E",
+              "time": 4083371.1739345,
+              "workers": 3
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "B",
+              "time": 4083371.185764458,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "E",
+              "time": 4083371.302693166,
+              "worker": 65471
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "B",
+              "time": 4083371.36418425,
+              "worker": 65473
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "A",
+              "time": 4083371.405344333,
+              "workers": 3
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "C",
+              "time": 4083371.424209875,
+              "workers": 3
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "B",
+              "time": 4083371.468986625
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "B",
+              "time": 4083371.471601,
+              "worker": 65533
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "A",
+              "time": 4083371.503062958,
+              "worker": 65474
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "C",
+              "time": 4083371.550860291,
+              "worker": 65470
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "H",
+              "time": 4083371.708565375,
+              "workers": 3
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "F",
+              "time": 4083371.762539875,
+              "workers": 3
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "A",
+              "time": 4083371.775505916
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "A",
+              "time": 4083371.779674041,
+              "worker": 65535
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "H",
+              "time": 4083371.808652083,
+              "worker": 65482
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "E",
+              "time": 4083371.831924041
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "E",
+              "time": 4083371.836182375,
+              "worker": 65536
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "F",
+              "time": 4083371.852527666,
+              "worker": 65472
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "C",
+              "time": 4083371.898159333
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "C",
+              "time": 4083371.899685041,
+              "worker": 65541
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "H",
+              "time": 4083371.921079875
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "H",
+              "time": 4083371.922311708,
+              "worker": 65542
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "F",
+              "time": 4083371.973213416
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "surge",
+              "profile": "interactive",
+              "service": "F",
+              "time": 4083371.995002041,
+              "worker": 65543
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "B",
+              "time": 4083372.218319208,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "B",
+              "time": 4083372.33374025,
+              "worker": 65511
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "B",
+              "time": 4083372.333824833,
+              "worker": 65512
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "B",
+              "time": 4083372.350031958,
+              "worker": 65510
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "A",
+              "time": 4083372.369871291,
+              "workers": 1
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "E",
+              "time": 4083372.428534833,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "A",
+              "time": 4083372.433640041,
+              "worker": 65514
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "A",
+              "time": 4083372.433724791,
+              "worker": 65516
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "A",
+              "time": 4083372.433763083,
+              "worker": 65518
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "C",
+              "time": 4083372.444710791,
+              "workers": 1
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "H",
+              "time": 4083372.442763625,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "H",
+              "time": 4083372.54850675,
+              "worker": 65527
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "C",
+              "time": 4083372.570468875,
+              "worker": 65513
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "C",
+              "time": 4083372.570508833,
+              "worker": 65515
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "E",
+              "time": 4083372.569375916,
+              "worker": 65520
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "H",
+              "time": 4083372.569378625,
+              "worker": 65528
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "E",
+              "time": 4083372.585663958,
+              "worker": 65519
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "C",
+              "time": 4083372.602520208,
+              "worker": 65517
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "E",
+              "time": 4083372.602842333,
+              "worker": 65521
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "surge",
+              "service": "F",
+              "time": 4083372.606323958,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "H",
+              "time": 4083372.599856916,
+              "worker": 65526
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "F",
+              "time": 4083372.659282166,
+              "worker": 65523
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "F",
+              "time": 4083372.659363666,
+              "worker": 65524
+            },
+            {
+              "event": "worker_joined",
+              "phase": "surge",
+              "service": "F",
+              "time": 4083372.674128958,
+              "worker": 65525
+            },
+            {
+              "completed": 738,
+              "event": "phase_drained",
+              "phase": "surge",
+              "rejected": 0,
+              "time": 4083372.798881375
+            },
+            {
+              "event": "service_survived",
+              "phase": "constraints",
+              "pid": 65457,
+              "service": "A",
+              "time": 4083372.799359291
+            },
+            {
+              "event": "service_survived",
+              "phase": "constraints",
+              "pid": 65458,
+              "service": "B",
+              "time": 4083372.799362
+            },
+            {
+              "event": "service_survived",
+              "phase": "constraints",
+              "pid": 65459,
+              "service": "C",
+              "time": 4083372.799363875
+            },
+            {
+              "event": "service_survived",
+              "phase": "constraints",
+              "pid": 65460,
+              "service": "E",
+              "time": 4083372.799365708
+            },
+            {
+              "event": "service_survived",
+              "phase": "constraints",
+              "pid": 65461,
+              "service": "F",
+              "time": 4083372.799367333
+            },
+            {
+              "event": "service_survived",
+              "phase": "constraints",
+              "pid": 65462,
+              "service": "H",
+              "time": 4083372.799369916
+            },
+            {
+              "cheeger": 1.5,
+              "cost": 6,
+              "event": "composition_committed",
+              "phase": "constraints",
+              "routes": [
+                [
+                  "A"
+                ],
+                [
+                  "B"
+                ],
+                [
+                  "C"
+                ],
+                [
+                  "E"
+                ],
+                [
+                  "F"
+                ],
+                [
+                  "H"
+                ]
+              ],
+              "time": 4083372.799405458
+            },
+            {
+              "count": 720,
+              "event": "phase_started",
+              "phase": "constraints",
+              "rate": 240,
+              "required": "squared",
+              "time": 4083372.802270916
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083373.405089541
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083373.406170583,
+              "worker": 65548
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083373.407218,
+              "worker": 65549
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083373.408476333,
+              "worker": 65550
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 2,
+              "phase": "constraints",
+              "profile": "compact",
+              "service": "B",
+              "time": 4083373.652091791
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "compact",
+              "service": "B",
+              "time": 4083373.655232666,
+              "worker": 65553
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083373.655714
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083373.657753875,
+              "worker": 65554
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083373.660285541,
+              "worker": 65555
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083373.664139791,
+              "worker": 65556
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083373.729478541
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083373.730503375,
+              "worker": 65557
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083373.748226166,
+              "worker": 65558
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083373.750064791,
+              "worker": 65559
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083373.859388375,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083373.929550375,
+              "worker": 65535
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083374.454965041
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083374.456092833,
+              "worker": 65568
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083374.457830833,
+              "worker": 65569
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083374.465409958,
+              "worker": 65570
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "A",
+              "time": 4083374.573469583
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "A",
+              "time": 4083374.577002375,
+              "worker": 65572
+            },
+            {
+              "after": "compact",
+              "before": "interactive",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "B",
+              "time": 4083374.755831125,
+              "workers": 1
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083374.761311375
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083374.763848,
+              "worker": 65579
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083374.766196,
+              "worker": 65580
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083374.767394583,
+              "worker": 65581
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083374.784537833,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083374.834391458,
+              "worker": 65543
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "B",
+              "time": 4083374.847901583,
+              "worker": 65533
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083374.972666125,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083375.041823916,
+              "worker": 65536
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "E",
+              "time": 4083375.187229458
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "E",
+              "time": 4083375.188389583,
+              "worker": 65583
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083375.306204916,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083375.353415,
+              "worker": 65542
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083375.386449708,
+              "workers": 1
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083375.433725833,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083375.44981,
+              "worker": 65548
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083375.449885666,
+              "worker": 65549
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083375.449922333,
+              "worker": 65550
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "F",
+              "time": 4083375.456854708
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "F",
+              "time": 4083375.458396291,
+              "worker": 65584
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083375.504030541,
+              "worker": 65541
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "H",
+              "time": 4083375.522148958
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "H",
+              "time": 4083375.523233708,
+              "worker": 65585
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "C",
+              "time": 4083375.638327583
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "C",
+              "time": 4083375.640120416,
+              "worker": 65586
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083375.8355795,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083375.884197791,
+              "worker": 65557
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083375.884288458,
+              "worker": 65559
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083375.888995333,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083375.913924,
+              "worker": 65558
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083375.944955958,
+              "worker": 65554
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083375.944987291,
+              "worker": 65555
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083375.945000333,
+              "worker": 65556
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083375.97292325,
+              "workers": 1
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083376.022055166,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083376.019119333,
+              "worker": 65568
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083376.035127916,
+              "worker": 65569
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083376.035216083,
+              "worker": 65570
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083376.085904041,
+              "worker": 65580
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083376.086002166,
+              "worker": 65581
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083376.102066125,
+              "worker": 65579
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083376.120629
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083376.122315958,
+              "worker": 65587
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083376.123156416,
+              "worker": 65588
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "A",
+              "time": 4083376.124521541,
+              "worker": 65589
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "B",
+              "time": 4083376.126596625
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "B",
+              "time": 4083376.128457541,
+              "worker": 65590
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "B",
+              "time": 4083376.129687416,
+              "worker": 65591
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "B",
+              "time": 4083376.134142041,
+              "worker": 65592
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083376.154134291
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083376.158983583,
+              "worker": 65593
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083376.222851
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083376.226864041
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083376.234616333,
+              "worker": 65600
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083376.166234333,
+              "worker": 65594
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "F",
+              "time": 4083376.171574583,
+              "worker": 65595
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083376.200581458
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083376.206360541,
+              "worker": 65596
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083376.207202333,
+              "worker": 65597
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "H",
+              "time": 4083376.2209335,
+              "worker": 65598
+            },
+            {
+              "event": "worker_started",
+              "live": 2,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083376.271308333,
+              "worker": 65599
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083376.285514333,
+              "worker": 65601
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "C",
+              "time": 4083376.287053041,
+              "worker": 65602
+            },
+            {
+              "event": "worker_started",
+              "live": 3,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083376.320518125,
+              "worker": 65603
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "batch",
+              "service": "E",
+              "time": 4083376.333950166,
+              "worker": 65604
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083377.386465166,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083377.436877291,
+              "worker": 65572
+            },
+            {
+              "after": "batch",
+              "before": "compact",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "B",
+              "time": 4083377.438012166,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "B",
+              "time": 4083377.497453208,
+              "worker": 65553
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "A",
+              "time": 4083377.604885708
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "A",
+              "time": 4083377.606193583,
+              "worker": 65605
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083377.621958291,
+              "workers": 3
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083377.622500125,
+              "workers": 3
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "B",
+              "time": 4083377.639937791
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "B",
+              "time": 4083377.641434208,
+              "worker": 65606
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083377.640036583,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083377.671093458,
+              "worker": 65584
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083377.671170083,
+              "worker": 65585
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083377.703448,
+              "worker": 65583
+            },
+            {
+              "after": "batch",
+              "before": "interactive",
+              "cheeger": 1.5,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083377.722644041,
+              "workers": 3
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083377.785229958,
+              "worker": 65586
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "F",
+              "time": 4083377.82221775
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "H",
+              "time": 4083377.823231166
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "F",
+              "time": 4083377.823795541,
+              "worker": 65607
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "H",
+              "time": 4083377.824222083,
+              "worker": 65608
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "E",
+              "time": 4083377.859244166
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "E",
+              "time": 4083377.863274208,
+              "worker": 65609
+            },
+            {
+              "event": "profile_proposed",
+              "overlap": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "C",
+              "time": 4083377.928579166
+            },
+            {
+              "event": "worker_started",
+              "live": 4,
+              "phase": "constraints",
+              "profile": "interactive",
+              "service": "C",
+              "time": 4083377.934308208,
+              "worker": 65610
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083377.939139791,
+              "workers": 1
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "B",
+              "time": 4083377.963550125,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083378.017951041,
+              "worker": 65587
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083378.018178958,
+              "worker": 65588
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "A",
+              "time": 4083378.018227333,
+              "worker": 65589
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "B",
+              "time": 4083378.076605291,
+              "worker": 65590
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "B",
+              "time": 4083378.076702666,
+              "worker": 65592
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "B",
+              "time": 4083378.103661083,
+              "worker": 65591
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083378.218964583,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083378.280010666,
+              "worker": 65593
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083378.280061,
+              "worker": 65594
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083378.280004625,
+              "workers": 1
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083378.314701875,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "F",
+              "time": 4083378.303941333,
+              "worker": 65595
+            },
+            {
+              "after": "interactive",
+              "before": "batch",
+              "cheeger": 1.0,
+              "event": "profile_committed",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083378.315832791,
+              "workers": 1
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083378.336967708,
+              "worker": 65596
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083378.355021625,
+              "worker": 65598
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "H",
+              "time": 4083378.378194666,
+              "worker": 65597
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083378.405641041,
+              "worker": 65600
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083378.417514583,
+              "worker": 65599
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083378.433566291,
+              "worker": 65601
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "C",
+              "time": 4083378.450246125,
+              "worker": 65602
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083378.445913708,
+              "worker": 65603
+            },
+            {
+              "event": "worker_joined",
+              "phase": "constraints",
+              "service": "E",
+              "time": 4083378.446009583,
+              "worker": 65604
+            },
+            {
+              "completed": 1458,
+              "event": "phase_drained",
+              "phase": "constraints",
+              "rejected": 0,
+              "time": 4083378.500057166
+            },
+            {
+              "event": "service_survived",
+              "phase": "after",
+              "pid": 65457,
+              "service": "A",
+              "time": 4083378.500663
+            },
+            {
+              "event": "service_survived",
+              "phase": "after",
+              "pid": 65458,
+              "service": "B",
+              "time": 4083378.50066575
+            },
+            {
+              "event": "service_survived",
+              "phase": "after",
+              "pid": 65459,
+              "service": "C",
+              "time": 4083378.500667541
+            },
+            {
+              "event": "service_survived",
+              "phase": "after",
+              "pid": 65460,
+              "service": "E",
+              "time": 4083378.500669166
+            },
+            {
+              "event": "service_survived",
+              "phase": "after",
+              "pid": 65461,
+              "service": "F",
+              "time": 4083378.500670708
+            },
+            {
+              "event": "service_survived",
+              "phase": "after",
+              "pid": 65462,
+              "service": "H",
+              "time": 4083378.500672291
+            },
+            {
+              "cheeger": 1.5,
+              "cost": 6,
+              "event": "composition_committed",
+              "phase": "after",
+              "routes": [
+                [
+                  "A"
+                ],
+                [
+                  "B"
+                ],
+                [
+                  "C"
+                ],
+                [
+                  "E"
+                ],
+                [
+                  "F"
+                ],
+                [
+                  "H"
+                ]
+              ],
+              "time": 4083378.500752458
+            },
+            {
+              "count": 18,
+              "event": "phase_started",
+              "phase": "after",
+              "rate": 18,
+              "required": "squared",
+              "time": 4083378.502676166
+            },
+            {
+              "completed": 1476,
+              "event": "phase_drained",
+              "phase": "after",
+              "rejected": 0,
+              "time": 4083379.773566
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "A",
+              "time": 4083379.880668208,
+              "worker": 65605
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65457,
+              "service": "A",
+              "time": 4083379.947022583
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "B",
+              "time": 4083380.022323875,
+              "worker": 65606
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65458,
+              "service": "B",
+              "time": 4083380.078343208
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "C",
+              "time": 4083380.154360291,
+              "worker": 65610
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65459,
+              "service": "C",
+              "time": 4083380.20888025
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "E",
+              "time": 4083380.280631166,
+              "worker": 65609
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65460,
+              "service": "E",
+              "time": 4083380.347491875
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "F",
+              "time": 4083380.420562875,
+              "worker": 65607
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65461,
+              "service": "F",
+              "time": 4083380.479589291
+            },
+            {
+              "event": "worker_joined",
+              "phase": "after",
+              "service": "H",
+              "time": 4083380.543226166,
+              "worker": 65608
+            },
+            {
+              "event": "service_joined",
+              "phase": "after",
+              "pid": 65462,
+              "service": "H",
+              "time": 4083380.606970125
+            }
+          ],
+          "meanLatencySeconds": 0.46126642714848937,
+          "mode": "adaptive",
+          "offered": 1476,
+          "peakServices": 6,
+          "phases": [
+            {
+              "finish": 4083369.101273125,
+              "name": "before",
+              "offered": 18,
+              "output": "squared",
+              "start": 4083367.605698875
+            },
+            {
+              "finish": 4083372.798871208,
+              "name": "surge",
+              "offered": 720,
+              "output": "squared",
+              "start": 4083369.107747208
+            },
+            {
+              "finish": 4083378.500017958,
+              "name": "constraints",
+              "offered": 720,
+              "output": "squared",
+              "start": 4083372.802260041
+            },
+            {
+              "finish": 4083379.773558833,
+              "name": "after",
+              "offered": 18,
+              "output": "squared",
+              "start": 4083378.502658416
+            }
+          ],
+          "rejected": 0,
+          "started": 4083365.699669875
+        }
+      ],
+      "runId": "load-dc172173bd3d46a799ce85480d90b1ee",
+      "study": "soul"
+    }
+  }
+}

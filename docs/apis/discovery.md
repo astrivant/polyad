@@ -111,6 +111,7 @@ are possible; this avoids a read/subscribe gap. Cursors from different cluster
 streams are not interchangeable.
 
 ```python
+from polyad_sdk.events import Event
 from polyad_sdk.events.filters import event_type, field, graph
 
 snapshot = client.discover(
@@ -119,7 +120,7 @@ snapshot = client.discover(
 subscription = client.subscribe(cluster="west", cursor=snapshot["cursors"]["west"])
 
 
-def refresh_neighbors(event):
+def refresh_neighbors(event: Event) -> None:
     current = client.discover(
         graph=event.data["name"], namespace=event.data["namespace"],
         kind=event.data["kind"], cluster="west", graph_uid=event.data["uid"],
@@ -209,6 +210,7 @@ not interchangeable.
 from pathlib import Path
 from polyad_types import ConnectionResponse, ServiceConnectionRequest, ServiceEndpoint, from_dict
 from polyad_types.networking.access import NetworkPort
+from polyad_sdk.events import Event
 from polyad_sdk.events.filters import connection_pending
 
 connections = Client(
@@ -218,7 +220,7 @@ connections = Client(
 )
 
 
-def approve_allowed_peer(event):
+def approve_allowed_peer(event: Event) -> None:
     receipt = event.data["connection"]
     source = from_dict(receipt["peers"]["source"], ServiceEndpoint)
     # Application policy is explicit; a filter match alone is not consent.

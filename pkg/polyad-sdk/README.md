@@ -29,6 +29,13 @@ safe handoffs, using the `AdaptiveService` abstract base class.
 - [Environment and projected defaults](#environment-and-projected-defaults)
 - [Adaptive services and deltas](#adaptive-services-and-deltas)
   - [Snapshots and permission to act](#snapshots-and-permission-to-act)
+    - [Environment fields](#environment-fields)
+    - [Topology and neighbor fields](#topology-and-neighbor-fields)
+    - [Resource reports and decisions](#resource-reports-and-decisions)
+    - [Temporary connection fields](#temporary-connection-fields)
+    - [Change and Delta fields](#change-and-delta-fields)
+    - [Reading a delta in application code](#reading-a-delta-in-application-code)
+    - [Freshness and permission checks](#freshness-and-permission-checks)
   - [Subclass contract](#subclass-contract)
   - [Adaptation strategies](#adaptation-strategies)
   - [Identity, permissions and freshness](#identity-permissions-and-freshness)
@@ -209,8 +216,8 @@ service.run()  # Blocking: use the application's existing task/thread supervisor
 ```
 
 The initial snapshot and an explicit replay reset establish a **baseline** with
-no deltas. A missing measurement remains unknown. A later observation of three
-Pods becoming five yields `before=3`, `after=5`, `difference=2`. A newly observed
+no deltas. A missing measurement remains unknown. A requested replica count
+changing from three to five yields `before=3`, `after=5`, `difference=2`. A newly observed
 metric is `added`, with `difference=None`; it did not increase from an assumed
 zero. Numeric differences are arithmetic changes, not elapsed-time rates. Compare
 units, measurement windows and generations in the surrounding views before using
@@ -220,33 +227,6 @@ Paths use stable logical names and execution UIDs. Reordering lists, changing an
 event cursor or refreshing observation timestamps does not trigger a change hook.
 Replacing an execution UID produces removal and addition, even if its name is the
 same. New desired peers may initially have no running execution.
-
-| Change prefix | Data and application use |
-| --- | --- |
-| `topology.outgoing` / `topology.incoming` | Peer membership and allowed ports; refresh eligible producer/consumer relationships |
-| `topology.node.executions` | This node's execution membership, termination and replica-count changes |
-| `topology.dependencies` / `topology.dependents` | Changes in prerequisite relationships |
-| `resources` | Observed containing-graph resource metrics; assess capacity changes |
-| `decision` | Soul searching phase, measured demand, Cheeger values and current/proposed traffic or capacity |
-| `observations.<uid>` | Public status and resource metrics for a known neighborhood execution |
-| `connections.<uid>` | Negotiation, consent and lifetime changes; expire local grants |
-| `available` / `reason` | Whether topology is fresh and admits considering new assignments |
-
-For example, a replica-count delta may have the path
-`topology.outgoing.sink.node.executions.uid-sink.replicas`.
-`change.matching("decision")` selects decision deltas. Matching also includes an
-added/removed containing object, so a filter for `resources.pods` observes the
-first resource snapshot and its expiry. Values in `before` and `after` are
-recursively read-only; the triggering `event` is an independent callback copy.
-
-`change.after.decision` preserves `Recommended`, `Applied` and other operator
-phases, including `currentTraffic` versus `proposedTraffic`. A recommendation is
-input for preparation; a usable path also needs admission, ready application
-transport and compatible work. `view.candidates` lists desired outgoing peers
-with a nonterminating execution and a positive replica count when supplied. The
-application checks readiness, protocol compatibility, ownership and its own
-admission budgets before assigning work. Use Istio's configured route when Istio
-owns traffic percentages.
 
 ### Snapshots and permission to act
 
@@ -263,6 +243,239 @@ to observe. Metrics and connection records populate as events arrive, so an
 initial **baseline** can contain useful topology while measurements remain
 unknown. Use the baseline to initialize application state and later deltas to
 update it.
+
+#### Environment fields
+
+Import the snapshot and change types from the SDK:
+
+```python
+from polyad_sdk.symbiosis import Change, Delta, Environment
+```
+
+These are frozen Python dataclasses. Access their fields with attributes, such as
+`view.topology`, then use keys for the nested records, such as
+`view.topology["graph"]["uid"]`. SDK-produced records are recursively read-only
+`Mapping` objects; JSON arrays become tuples. These Python snapshots are built
+from the operator's topology response and events. For event payload validation,
+use the shared [event types and JSON Schema](https://github.com/astrivant/polyad/blob/main/docs/apis/event-contract.md#schemas-and-validation).
+`Environment`, `Change` and `Delta` are SDK objects, not event-envelope variants.
+
+| Field or property | Python shape | Meaning and absence |
+| --- | --- | --- |
+| `topology` | `Mapping[str, Any]` or `None` | Selected node and its neighbors, described below. `None` before the first successful topology read. The last topology remains present if it becomes unusable; check `available`. |
+| `observations` | `Mapping[str, Mapping[str, Any]]` | Resource reports keyed by Kubernetes UID. Includes the containing boundary and known executions of this node and its neighbors/dependencies, subject to observation permissions. Empty until reports arrive. |
+| `connections` | `Mapping[str, Mapping[str, Any]]` | Temporary connection receipts involving this endpoint, keyed by receipt UID. Pending receipts can be present; presence alone does not mean approval. |
+| `available` | `bool` | Whether topology is fresh, valid, executable, nonterminating and still declares this node as desired, with no outstanding observation failure. This does not establish freshness of every metric or readiness of peers. |
+| `reason` | `str` or `None` | Explanation of unavailability, such as `initial snapshot required`, `topology observation is stale` or `topology refresh failed`. `None` when available; treat the text as a diagnostic, not a fixed enum. |
+| `resources` (property) | `Mapping[str, Any]` or `None` | `observations[topology["graph"]["uid"]]["resources"]`, when that report exists. `None` before receipt or after expiry; an empty mapping means the report supplied no resource metrics. |
+| `decision` (property) | `Mapping[str, Any]` or `None` | The containing boundary's `status.throughput`, when reported. Soul searching measurements and recommendations, described below. |
+| `candidates` (property) | `tuple[Mapping[str, Any], ...]` | Outgoing neighbor entries whose node is desired and has at least one nonterminating execution with a positive `replicas` value, or with that field omitted. Empty when unavailable. |
+
+`Environment` describes live observations around the service. The separate
+[process environment](#environment-and-projected-defaults) dictionary `env`
+contains startup environment variables; `service.context` contains projected
+workload identity and container budgets.
+
+#### Topology and neighbor fields
+
+`view.topology` is the **selected-node** response from
+[Read current neighbors](https://github.com/astrivant/polyad/blob/main/docs/workloads/workload-events.md#read-current-neighbors).
+All fields below are present after a successful read unless marked optional.
+
+| Key | Shape | Meaning |
+| --- | --- | --- |
+| `graph` | Mapping with string `kind`, `namespace`, `name`, `uid`; optional `cluster` | Exact Graph, PolyGraph or ReplicaGroup instance containing this node. A replacement with the same name has a different UID. |
+| `revision` | `str` | Structural digest, including execution membership. |
+| `observedAt` | `int` or `float` | Topology publication time in Unix seconds. Used for topology freshness. |
+| `cursor` | `str` | Event replay position paired with the topology read. `service.cursor` separately tracks successfully handled events. |
+| `valid`, `templateOnly`, `terminating` | `bool` each | Whether topology resolved, whether this is a reusable definition, and whether deletion has begun. |
+| `node` | Node mapping | The selected application node. |
+| `incoming`, `outgoing` | Tuples of `{node, ports}` mappings | Data-flow neighbors. Each port record has integer `port` and string `protocol` (`TCP`, `UDP` or `SCTP`); ports describe the destination side of that directed edge. |
+| `dependencies`, `dependents` | Tuples of `{node, condition}` mappings | Lifecycle prerequisites and the nodes waiting on this node. `condition` is `started`, `ready` or `completed`. |
+
+Each node mapping has:
+
+| Key | Shape | Meaning |
+| --- | --- | --- |
+| `name` | `str` | Logical name within this boundary, including replica ordinals where applicable. |
+| `kind`, `ref` | Optional `str` fields | Declared resource kind and definition reference. They can be absent for a removed node whose execution is still draining. |
+| `cluster` | Optional `str` | Declared placement when supplied. |
+| `desired` | `bool` | Whether the node remains in the desired topology. A desired node may still have no execution. |
+| `requires` | Tuple of `{node, condition}` mappings | Names of prerequisites and their lifecycle conditions. |
+| `executions` | Tuple of execution mappings | Resources observed for this node, including terminating resources. Each has string `kind`, `name`, `uid`, `runtimeNode` and boolean `terminating`; remote entries can also have `cluster` and `namespace`. |
+| `executions[].replicas` | Optional nonnegative `int` | Requested Deployment/StatefulSet replicas, or a DaemonSet's `desiredNumberScheduled`. This is desired capacity, not a ready-Pod count. Other execution kinds omit it. |
+
+For example, `view.topology["outgoing"][0]["node"]["executions"]` gives the
+first outgoing peer's execution records. These records identify Kubernetes
+resources; resolve network addresses through Services or discovery and check
+application readiness before sending jobs.
+
+#### Resource reports and decisions
+
+`view.observations[uid]` retains a received
+[`GraphObservation`](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/polyad_types/events/models.py)
+as a mapping. The SDK keeps reports only for identities in the current
+neighborhood, and discards older desired-state generations for a known UID.
+
+| Keys | Shape and meaning |
+| --- | --- |
+| `apiVersion`, `kind`, `namespace`, `name`, `uid`, optional `cluster` | String resource identity fields. |
+| `resourceVersion`, `generation` | Opaque Kubernetes revision string and integer desired-state generation. |
+| `type` | `observation` or `deleting`. |
+| `owners`, `ancestry` | Tuples of identity mappings. Owners have `kind`, `name`, `uid`; ancestors also have `namespace` and optional `cluster`. |
+| `audit` | String-to-string mapping of public composition, request and node labels. |
+| `status` | Mapping of optional `phase` (string), `ready`, `completed`, `failed` (booleans), `observedGeneration` (integer), `activations` and `throughput` (mappings). |
+| `resources` | Extensible metric mapping. Current graph reports contain `total`, `terminating` and `byKind`, whose keys are Kubernetes kinds and whose values are counts. It can be empty. |
+
+For example, `view.resources["byKind"]["Deployment"]` counts directly owned
+Deployment resources. It does not count their ready Pods or measure CPU headroom.
+See [`ResourceMetrics` and `ResourceCounts`](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/polyad_types/resources/status.py)
+for the resource-count fields. A missing metric remains unknown; use `.get()`
+and handle `None` instead of substituting zero.
+
+`view.decision` is the containing boundary's Soul searching status. It is an
+extensible mapping: fields can be absent or `None` while the operator waits for
+measurements or a computation. Common fields are:
+
+| Keys | Meaning |
+| --- | --- |
+| `mode`, `phase`, `observedGeneration` | Observe/Adapt mode, decision state such as `Stabilizing`, `Recommended` or `Applied`, and the desired generation evaluated. |
+| `observedAt`, `offeredPerSecond`, `completedPerSecond` | Accepted application sample's ISO-8601 timestamp and rates in the configured work unit per second. |
+| `demandSignal`, `demandUnit`, `demandValue` | Selected application signal, its unit and measured value. |
+| `currentCheeger`, `target`, `proposedCheeger`, `recommendedLayout` | Current structural value, selected Cheeger bounds, proposed value and approved layout name. |
+| `currentComputation`, `candidateComputations`, `computation` | Computation reports and diagnostics, including incomplete calculations. |
+| `currentTraffic`, `targetTraffic`, `proposedTraffic` | Current route configuration, desired route/weight mappings and next bounded route configuration. |
+| `currentCapacity`, `targetCapacity`, `proposedCapacity` | Current, desired and next capacity preparation settings (`lookaheadStages`, `maxPods`), when configured. |
+
+Use the [Soul searching policy guide](https://github.com/astrivant/polyad/blob/main/docs/graphs/soul-searching.md#bounds-observations-and-scalability)
+to interpret phases and stabilization. Recommendations describe preparation;
+check the current applied configuration before using a route. Use Istio's
+configured route when Istio owns traffic percentages.
+
+#### Temporary connection fields
+
+`view.connections[receipt_uid]` contains the public
+[`ConnectionReceipt`](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/polyad_types/events/models.py):
+
+| Keys | Shape and meaning |
+| --- | --- |
+| `requestId`, `name`, `namespace`, `uid` | String proposal idempotency key and receipt identity. Approval calls use the receipt UID. |
+| `expiresAt` | ISO-8601 deadline with timezone. |
+| `target` | Mapping with string `kind`, `graph`, `graphUid`, `source`, `target`; tuple `ports` of `{port, protocol}` records; boolean `bidirectional`. |
+| `status` | Admission and negotiation mapping, including `phase`. Only an unexpired `Active` receipt satisfies the SDK connection-permission guard. |
+| `consent` | Endpoint decisions, with values `Approve` or `Reject`. |
+| `peers` | For atlas negotiation, source/target mappings containing `cluster`, `namespace`, `kind`, `graph`, `graphUid`, `node`. Empty for local receipts. |
+| `revokeRequested` | Boolean revocation flag. A received revocation removes the receipt from the SDK view. |
+
+Expired receipts and receipts reported as `Expired`, `Revoked`, `Rejected` or
+`Failed` are excluded. Pending negotiation can remain visible until expiry.
+See [temporary connection consent](#temporary-connection-consent) for requests
+and approvals. Removing a receipt from the view does not by itself close an
+application socket; your connection strategy handles stopping new work and draining.
+
+#### Change and Delta fields
+
+`adapt(change)` and registered hooks receive a `Change`:
+
+| Field or method | Python shape | Meaning |
+| --- | --- | --- |
+| `before` | `Environment` | Previously published view. On the first baseline this is the initial unavailable view; it is never `None`. |
+| `after` | `Environment` | View built for this delivery. It stays fixed during retries even if information later expires. |
+| `deltas` | `tuple[Delta, ...]` | Differences in the compared fields below, in deterministic path order. |
+| `baseline` | `bool` | True for initialization or explicit replay reset. `deltas` is empty; initialize from `after` instead of treating missing history as removals. |
+| `event` | `Event` or `None` | Triggering envelope with `id` (cursor), `event` (type) and `data` (payload). Refresh/reset baselines have no triggering event. Each callback gets an independent event copy; `event.typed()` decodes its shared event model. |
+| `matching(prefix)` | Returns `tuple[Delta, ...]` | Selects a dot-separated field prefix, including additions/removals of a containing object. |
+
+Every `Delta` describes one changed field or a whole added/removed object:
+
+| Field or property | Python shape | Meaning |
+| --- | --- | --- |
+| `path` | `tuple[str, ...]` | Stable comparison path. Logical names, execution UIDs and route targets replace list offsets. |
+| `kind` | `added`, `removed` or `changed` | Field appeared, disappeared or changed value/type. |
+| `before`, `after` | Read-only value of any supported JSON shape | Previous and new comparison values. `added` uses `before=None`; `removed` uses `after=None`. Use `kind` to distinguish absence from an actual JSON null. |
+| `difference` (property) | `float` or `None` | `after - before` for a `changed` field with finite numeric values. Additions, removals, booleans and nonnumeric/nonfinite values have no numeric difference. |
+
+The comparison projection has these roots:
+
+| Change prefix | Compared data |
+| --- | --- |
+| `topology` | `valid`, `templateOnly`, `terminating`, `node`, and the four neighbor collections. Neighbor collections are keyed by logical node name; `executions` by UID and `requires` by prerequisite name. |
+| `resources` | Containing-boundary resource metrics. |
+| `decision` | Containing-boundary Soul searching status. |
+| `observations.<uid>` | `type`, `generation`, `status` and `resources` for the reported resource. |
+| `connections.<uid>` | Retained receipt fields, including consent, phase and expiry. |
+| `available`, `reason` | Availability and its explanation. |
+
+These are **comparison paths**, not literal indexes into `Environment`. Snapshot
+neighbor/execution collections remain tuples. Named record lists are compared
+by identity, and port lists become sorted `(port, protocol)` tuples. Cursor,
+topology revision, resource version and observation timestamp changes alone do
+not produce deltas. Unkeyed sequences retain their ordering. The same graph
+measurement can appear under both `resources` and `observations.<graph-uid>.resources`;
+those are two views of one observation, not two independent samples.
+
+#### Reading a delta in application code
+
+When an existing `sink` execution changes from two requested replicas to three,
+the SDK emits:
+
+```python
+Delta(
+    path=("topology", "outgoing", "sink", "node", "executions", "uid-sink", "replicas"),
+    kind="changed",
+    before=2,
+    after=3,
+)
+# delta.difference == 1.0
+```
+
+If the entire `sink` neighbor first appears, the delta instead has
+`path=("topology", "outgoing", "sink")`, `kind="added"` and its full normalized
+neighbor record in `after`. `change.matching("topology.outgoing.sink")` handles
+both cases. Likewise, `change.matching("resources.byKind.Deployment")` includes
+an initial addition or expiry of the whole `resources` object.
+
+A callback can read the delta for context, then inspect the current snapshot:
+
+```python
+def inspect_change(change: Change, current: Environment) -> None:
+    if change.baseline:
+        print("Initialize from the baseline:", len(change.after.candidates), "candidate peers")
+        return
+    for delta in change.matching("resources.byKind.Deployment"):
+        print(delta.kind, delta.path, delta.before, delta.after, delta.difference)
+
+    if not current.available:
+        print("Pause new assignments:", current.reason)
+        return
+    resources = current.resources
+    count = None if resources is None else resources.get("byKind", {}).get("Deployment")
+    print("Current observed Deployment count:", count)  # None means unknown.
+
+
+# Register before starting the observation loop; service is your AdaptiveService.
+service.on_change(lambda change: inspect_change(change, service.view))
+```
+
+For example, counts `2 -> 3` produce a numeric `changed` delta. The first report
+produces `added`; expiry produces `removed`. Neither absence means zero. Hooks
+run for baselines and meaningful changes when the observation loop or an explicit
+refresh processes them; reading `service.view` alone does not invoke hooks.
+
+#### Freshness and permission checks
+
+Topology freshness uses its publication timestamp. Resource reports expire
+`Settings.max_age_seconds` after local receipt; the SDK does not expose that
+receipt time as a snapshot field. A recently received report can still describe
+an older application sample, so check the decision's own timestamp and generation
+where relevant. Temporary receipts follow their `expiresAt` deadline and received
+revocations, independently of the resource-report lifetime.
+
+An unavailable view retains its last topology for diagnosis but returns no
+`candidates`. Expired resource reports disappear from `observations`; derived
+`resources` and `decision` then become `None`. `service.refresh()` fetches
+topology; resource reports and receipt updates arrive through events. No single
+snapshot timestamp certifies that all these inputs were observed together.
 
 Having a snapshot lets your code inspect possible destinations, compare resource
 reports and prepare an adjustment. Authority to act comes from the service's

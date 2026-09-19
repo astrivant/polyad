@@ -151,7 +151,10 @@ changes still requires the relevant connection and API permissions.
 The SDK combines this topology with received metrics, decisions and connection
 records into its own read-only `Environment` snapshot. See
 [snapshots and permission to act](../../pkg/polyad-sdk/README.md#snapshots-and-permission-to-act)
-for how applications use that information before assigning work.
+for how applications use that information before assigning work. The SDK reference
+documents every [snapshot field](../../pkg/polyad-sdk/README.md#environment-fields),
+its nested records, and the [Change and Delta fields](../../pkg/polyad-sdk/README.md#change-and-delta-fields)
+delivered to application callbacks.
 
 Use the events Service on port 8091:
 

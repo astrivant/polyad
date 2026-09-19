@@ -1,0 +1,10 @@
+{
+  "workSeconds": 0.035,
+  "timeoutSeconds": 90,
+  "phases": [
+    {"name": "before", "seconds": 1, "rate": 18, "output": "squared"},
+    {"name": "surge", "seconds": 3, "rate": 240, "output": "squared"},
+    {"name": "constraints", "seconds": 3, "rate": 240, "output": "squared"},
+    {"name": "after", "seconds": 1, "rate": 18, "output": "squared"}
+  ]
+}

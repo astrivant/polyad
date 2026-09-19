@@ -119,6 +119,16 @@ npm test --prefix scripts/validation/mermaid
 
 ## Python types and serialization
 
+Python documentation examples annotate function parameters and return values,
+including nested callbacks and factories. Use `Callable` to show the arguments
+and result expected from application callbacks; use a `Protocol` when an example
+needs several methods from an application component. Prefer the shared SDK types
+(`Change`, `Environment`, `Event`, `ManagedProcess`) and spell out optional values
+with `| None`. Use `Mapping[str, Any]` for the SDK's extensible records, and link
+to their [field reference](../../pkg/polyad-sdk/README.md#environment-fields).
+Application types defined in an example should be identified as such, with units
+and missing-value behavior explained. Simple locals can use inferred types.
+
 The shared models live in [`pkg/polyad-types`](../../pkg/polyad-types/README.md), an
 independently installable Python 3.11+ distribution. Install it from a checkout
 with `pip install ./pkg/polyad-types`, then import `polyad_types`. Its runtime

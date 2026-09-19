@@ -369,12 +369,15 @@ The existing client can drive the observation hook:
 
 ```python
 import os
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from polyad_sdk import Client
+from polyad_sdk.events import Event
 from polyad_sdk.events.filters import event_type, field
 
 
-def watch_neighbors(app):
+def watch_neighbors(install_topology: Callable[[Mapping[str, Any]], None]) -> None:
     events = Client(
         os.environ["POLYAD_EVENTS_URL"],
         os.environ["POLYAD_EVENTS_TOKEN"],
@@ -387,24 +390,28 @@ def watch_neighbors(app):
         "node": os.environ["POLYAD_NODE_NAME"],
     }
 
-    def refresh(_event=None):
+    def refresh() -> dict[str, Any]:
         view = events.topology(**identity)
         if not view["valid"] or view["terminating"]:
             raise RuntimeError("Graph cannot admit new routing assignments")
-        app.install_topology(view)
+        install_topology(view)
         return view
+
+    def topology_changed(event: Event) -> None:
+        refresh()
 
     view = refresh()
     subscription = events.subscribe(cursor=view["cursor"])
     subscription.on(
         event_type("topology") & field("uid", equals=identity["graph_uid"]),
-        refresh,
+        topology_changed,
     )
     subscription.run()
 ```
 
-Here `app.install_topology` is an application-owned callback. It installs the
-validated metadata view and removes ineligible destinations from new
+Pass an application-owned callback such as `watch_neighbors(app.install_topology)`.
+It accepts the topology mapping and returns `None` after installing the
+validated metadata view and removing ineligible destinations from new
 assignments. Supervise `watch_neighbors` in the application's chosen thread,
 make callbacks short, and implement durable checkpointing and recovery as
 specified in the [subscription guide](../apis/discovery.md#subscribe-with-filters-and-hooks).
@@ -607,7 +614,7 @@ accepted work in application-owned durable storage. Runtime exceptions go to the
 supervisor, which pauses new assignments when observations are unavailable and
 handles retry or an explicit baseline reset.
 
-Use `change.matching("decision.sample")` to react to measured demand or throughput
+Use `change.matching("decision")` to react to measured demand or throughput
 changes and `change.matching("decision.currentTraffic")` for observed traffic
 configuration changes. Preserve the distinction between a recommendation and an
 applied decision. If Istio owns percentages, send to its configured route and let
@@ -648,6 +655,13 @@ Run [`python nature.py`](../../nature.py) for the
 compatible service routes from a required outcome, mutates one capability,
 retains useful service identities and drains excluded processes. Soul searching
 continues adapting workers inside each selected capability.
+
+The larger [Soul study](../../studies/soul/README.md) and
+[Nature study](../../studies/nature/README.md) exercise the SDK strategy catalog
+across six services at once. Each has a parent monitor, separate strategy modules,
+recorded process and job evidence, and before/during/after Matplotlib figures.
+Install their optional benchmark extras and run them through the shared refresh
+workflow to compare admission, worker changes and composition under disturbances.
 
 Automatic capability placement and composition selection would extend this
 foundation toward the proposed [Natural Selection planner](../proposals/copolyad.md#from-local-capabilities-to-natural-selection).

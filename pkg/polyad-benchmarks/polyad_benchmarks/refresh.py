@@ -23,7 +23,9 @@ if TYPE_CHECKING:
     from typing import Any
 
 STUDIES = ("load",)
-LOCAL_STUDIES = ("symbiosis", "reachability-state", "reachability-routing")
+REACHABILITY_STUDIES = ("symbiosis", "reachability-state", "reachability-routing")
+PROCESS_STUDIES = ("soul", "nature")
+LOCAL_STUDIES = REACHABILITY_STUDIES + PROCESS_STUDIES
 
 
 def sources(project: Path) -> dict[str, str]:
@@ -37,6 +39,10 @@ def sources(project: Path) -> dict[str, str]:
         dict[str, str]: Relative source paths and SHA-256 hashes.
     """
     result = {}
+    for name in ("soul.py", "nature.py"):
+        path = project / name
+        if path.is_file():
+            result[name] = hashlib.sha256(path.read_bytes()).hexdigest()
     for directory in (
         "pkg/polyad-benchmarks",
         "pkg/polyad-sdk",
@@ -285,7 +291,11 @@ def study_phase(project: Path, root: Path, study: str, context: str) -> None:
     status: dict[str, Any] = {"study": study, "success": False, "startedAt": datetime.now(UTC).isoformat()}
     try:
         verify_inputs(project, root)
-        if study in LOCAL_STUDIES:
+        if study in PROCESS_STUDIES:
+            from polyad_benchmarks.studies.runner import run as run_processes
+
+            run_processes(project, root, study)
+        elif study in LOCAL_STUDIES:
             from polyad_benchmarks.reachability import run
 
             run(root, study)
@@ -328,6 +338,11 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
         if path.stem in LOCAL_STUDIES:
             if result.get("study") != path.stem or result.get("complete") is not True or not result.get("records"):
                 raise ValueError("incomplete local measurements cannot be published")
+            if path.stem in PROCESS_STUDIES:
+                from polyad_benchmarks.studies.artifacts import verify
+
+                recipe = json.loads((root / "inputs" / f"{path.stem}.json").read_text())
+                verify(result, recipe, root / "outputs" / path.stem)
         elif (
             not result["submitted"] or result["skipped"] or result["interrupted"] or result["phases"] != {"Completed": result["submitted"]}
         ):
@@ -337,7 +352,19 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
     if publish:
         for name in results:
             destination = project / "studies" / name / "results.json"
-            shutil.copyfile(root / "summary.json", destination)
+            if name in PROCESS_STUDIES:
+                from polyad_benchmarks.studies.artifacts import compact
+
+                write_json(
+                    destination,
+                    {"provenance": json.loads((root / "provenance.json").read_text()), "studies": {name: compact(results[name])}},
+                )
+                artifacts = project / "studies" / name / "figures"
+                artifacts.mkdir(exist_ok=True)
+                for filename in results[name]["figures"]:
+                    shutil.copyfile(root / "outputs" / name / filename, artifacts / filename)
+            else:
+                shutil.copyfile(root / "summary.json", destination)
 
 
 def main() -> None:
@@ -352,13 +379,24 @@ def main() -> None:
     parser.add_argument("--project", type=Path, default=Path.cwd())
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--study", choices=STUDIES + LOCAL_STUDIES, default="load")
-    parser.add_argument("--suite", choices=("cluster", "local", "all"), default="cluster", help="Study inventory selected during prepare")
+    parser.add_argument(
+        "--suite",
+        choices=("cluster", "local", "reachability", "process", "all"),
+        default="cluster",
+        help="Study inventory selected during prepare",
+    )
     parser.add_argument("--context", default="")
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
     try:
         if args.ci_phase == "prepare":
-            studies = {"cluster": STUDIES, "local": LOCAL_STUDIES, "all": STUDIES + LOCAL_STUDIES}[args.suite]
+            studies = {
+                "cluster": STUDIES,
+                "local": LOCAL_STUDIES,
+                "reachability": REACHABILITY_STUDIES,
+                "process": PROCESS_STUDIES,
+                "all": STUDIES + LOCAL_STUDIES,
+            }[args.suite]
             provenance = prepare(args.project, args.root, studies)
             if destination := os.environ.get("GITHUB_OUTPUT"):
                 with Path(destination).open("a") as stream:

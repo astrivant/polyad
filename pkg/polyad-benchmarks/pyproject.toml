@@ -23,6 +23,9 @@ dependencies = [
 
 [project.optional-dependencies]
 reachability = ["hj-reachability>=0.7,<0.8"]
+soul = ["matplotlib>=3.10,<4"]
+nature = ["matplotlib>=3.10,<4"]
+process-studies = ["matplotlib>=3.10,<4"]
 
 [project.urls]
 Repository = "https://github.com/astrivant/polyad"

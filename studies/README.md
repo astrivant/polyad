@@ -17,13 +17,18 @@ Repeatable experiments keep their recipes here and their execution code in
 | [Symbiosis](symbiosis/README.md) | Queue envelopes and guard costs for six service interaction categories | Local Python and the optional reachability extra |
 | [Reachability state variables](reachability-state/README.md) | Lost information and computation costs for one-, two- and three-variable models | Local Python and the optional reachability extra |
 | [Reachability rerouting](reachability-routing/README.md) | Predicted queue safety versus real producer/consumer process behavior | Local Python with process creation |
+| [Soul process population](soul/README.md) | SDK strategies, worker growth, rolling replacement, admission and recovery across six services | Checkout and optional `polyad-benchmarks[soul]` extra |
+| [Nature process population](nature/README.md) | Capability replacement, composition, survival and retirement above local adaptation | Checkout and optional `polyad-benchmarks[nature]` extra |
 
 No cloud measurements are bundled initially. Recorded results must come from an
 actual run; the offline smoke checks validate the harness, not operator capacity.
 
 Each study keeps deployment manifests, overlays, plans and its `scenario.json`
 under `studies/NAME/fixtures/`. The study README and published `results.json`
-remain at the study root. Shared execution code stays in `polyad-benchmarks`.
+remain at the study root. Soul and Nature map directly to
+`pkg/polyad-benchmarks/polyad_benchmarks/studies/<study_name>/`, with their own
+monitors and strategy modules. Their `figures/` directories contain measured PNG
+and SVG plots. Shared execution code stays in `polyad-benchmarks`.
 
 ## Refresh protocol
 
@@ -31,7 +36,9 @@ Following the `hypothesis-helm` study workflow, `polyad-benchmarks-refresh` has
 three phases: `prepare`, `study`, and `finish`. Preparation snapshots input JSON
 and source hashes once. The Python `STUDIES` and `LOCAL_STUDIES` inventories supply
 the prepared matrix; `--suite cluster` is the default, `--suite local` selects
-the three local experiments, and `--suite all` selects both.
+all five local experiments. `--suite reachability` selects the three reachability
+experiments, `--suite process` selects Soul and Nature, and `--suite all` includes
+the cloud study as well.
 Study jobs retain independent logs, cluster observations, results and status.
 Finish rejects missing, mislabeled, failed or incomplete studies before creating
 `summary.json`. `--publish` additionally refreshes `studies/NAME/results.json`.
@@ -39,8 +46,9 @@ Finish rejects missing, mislabeled, failed or incomplete studies before creating
 Use a fresh `.cache/benchmarks/refresh-RUN` directory for every experiment; keep
 that directory or the corresponding CI artifact to preserve raw measurements.
 Preparation refuses to overwrite prior runs. Changed inputs fail before any
-cluster request is submitted. A timeout leaves work running for inspection;
-cleanup is explicit and documented by each study.
+cluster request is submitted. Cloud timeouts leave work running for inspection;
+local process studies clean up owned processes on failure. Each study documents
+its cleanup and artifact lifecycle.
 
 ## Tests and CI
 
@@ -52,6 +60,11 @@ The **Reachability studies** workflow tests the SDK extra on Python 3.11 through
 3.14, then runs the local prepare, study matrix and finish phases on ordinary
 hosted runners. It retains numerical and real-process measurements as artifacts
 without requiring cluster credentials. See the [local suite commands](symbiosis/README.md#run).
+
+The **Process studies** workflow tests guard reactions, planner isolation and
+process ownership on Python 3.13 and 3.14, then runs Soul and Nature through the
+same preparation, matrix and verified publication stages. It checks raw evidence
+and figure checksums and retains plots, measurements and failure logs.
 
 Manual `full-refresh` uses prepare → study matrix → finish, with the same Python
 entry point as local runs. Study jobs use an administrator-provided runner inside

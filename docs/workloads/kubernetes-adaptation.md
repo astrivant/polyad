@@ -121,11 +121,32 @@ pressure measurements and bounded intent updates. `supervisor` is a configured
 `ProcessSupervisor` with an approved `low-memory` plan.
 
 ```python
-from polyad_sdk import AdaptationStrategy, Change, Environment
+from dataclasses import dataclass
+from typing import Protocol
+
+from polyad_sdk import AdaptationStrategy, Change, Environment, ProcessSupervisor
+
+
+@dataclass(frozen=True)
+class Pressure:
+    expired: bool
+    seconds_until_full: float
+    seconds_until_ready: float
+    margin_seconds: float
+    sustainable_ready_rate: float  # Jobs per second.
+    memory_high: bool
+
+
+class ApplicationPressure(Protocol):
+    def current_pressure(self) -> Pressure | None: ...
+
+    def pause_new_assignments(self) -> None: ...
+
+    def set_admission_limit(self, jobs_per_second: float) -> None: ...
 
 
 class CapacityWaitStrategy(AdaptationStrategy):
-    def __init__(self, app, supervisor):
+    def __init__(self, app: ApplicationPressure, supervisor: ProcessSupervisor) -> None:
         self.app = app
         self.supervisor = supervisor
 
@@ -139,6 +160,11 @@ class CapacityWaitStrategy(AdaptationStrategy):
         if pressure.memory_high:
             self.supervisor.propose("low-memory")
 ```
+
+`Pressure` and `ApplicationPressure` are application types defined by this
+example. The protocol lists the methods the strategy needs; your application
+implements them. `None` means no pressure measurement is available, and `expired`
+indicates that the application's measurement has exceeded its age limit.
 
 Supply it in `strategies=[...]` before starting `AdaptiveService`. The application
 timer/admission loop must also reassess local pressure between SDK changes.

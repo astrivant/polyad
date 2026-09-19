@@ -78,6 +78,12 @@ the Kubernetes Operators Framework for Python.
 - [License](#license)
 - [References](#references)
 
+[![Six services and their child workers before, during and after adapting to load and constraints](studies/soul/figures/topology.png)](studies/soul/figures/topology.png)
+
+*Six services grow and replace child workers under load, then return to their
+baseline. Explore the measured run in the [Soul study](studies/soul/README.md),
+or click the figure for the full-size view.*
+
 ## Get started
 
 Deploy the [Kubernetes operator](docs/introduction/getting-started.md#quick-start-kubernetes)

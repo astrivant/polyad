@@ -1,0 +1,116 @@
+name: Process studies
+on:
+  pull_request:
+    paths:
+      - soul.py
+      - nature.py
+      - pkg/polyad-sdk/**
+      - pkg/polyad-types/**
+      - pkg/polyad-benchmarks/**
+      - pkg/tests/test_process_studies.py
+      - studies/soul/**
+      - studies/nature/**
+      - .github/workflows/process-studies.yml
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install ./pkg/polyad-types ./pkg/polyad-sdk ./pkg/polyad-benchmarks 'pytest>=9,<10'
+      - run: python -m pytest -o addopts='' pkg/tests/test_process_studies.py --junitxml=process-tests.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: process-tests-${{ matrix.python }}
+          path: process-tests.xml
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - id: prepare
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase prepare --suite process --root .cache/benchmarks/process
+      - uses: actions/upload-artifact@v4
+        with:
+          name: process-prepared
+          path: .cache/benchmarks/process/
+          include-hidden-files: true
+  study:
+    needs: [tests, prepare]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main --extras process-studies
+      - uses: actions/download-artifact@v4
+        with:
+          name: process-prepared
+          path: .cache/benchmarks/process/
+      - name: Run selected process study
+        env:
+          STUDY: ${{ matrix.study }}
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase study --study "$STUDY" --root .cache/benchmarks/process
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: process-study-${{ matrix.study }}
+          path: .cache/benchmarks/process/
+          include-hidden-files: true
+  finish:
+    if: always() && needs.prepare.result == 'success'
+    needs: [prepare, study]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - uses: actions/download-artifact@v4
+        with:
+          name: process-prepared
+          path: .cache/benchmarks/process/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: process-study-*
+          merge-multiple: true
+          path: .cache/benchmarks/process/
+      - run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/process --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: process-results
+          path: |
+            .cache/benchmarks/process/
+            studies/soul/results.json
+            studies/soul/figures/
+            studies/nature/results.json
+            studies/nature/figures/
+          include-hidden-files: true

@@ -29,7 +29,7 @@ From the repository root:
 
 ```sh
 pip install ./pkg/polyad-types ./pkg/polyad-sdk './pkg/polyad-benchmarks[reachability]'
-polyad-benchmarks-refresh --ci-phase prepare --suite local --root .cache/benchmarks/symbiosis-run-1
+polyad-benchmarks-refresh --ci-phase prepare --suite reachability --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase study --study symbiosis --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase study --study reachability-state --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase study --study reachability-routing --root .cache/benchmarks/symbiosis-run-1
@@ -37,13 +37,13 @@ polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/symbiosis-r
 ```
 
 Use a fresh run directory. Preparation records input and source hashes and gives
-each study a run ID. The local suite needs no cluster or Kubernetes credentials.
+each study a run ID. The reachability suite needs no cluster or Kubernetes credentials.
 Finish validates all three selected studies before publication; failed runs
 remain under the chosen directory for inspection.
 
 ## Measurements
 
-The [recorded initial results](results.json) include the complete local suite and
+The [recorded initial results](results.json) include the complete reachability suite and
 its source/input fingerprints. Keep new refresh directories to compare later runs.
 
 Results record model fingerprints, analytic queue slack, numerical margins at
