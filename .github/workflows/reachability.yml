@@ -1,0 +1,110 @@
+name: Reachability studies
+on:
+  pull_request:
+    paths:
+      - pkg/polyad-sdk/**
+      - pkg/polyad-benchmarks/**
+      - pkg/tests/test_reachability*
+      - studies/**
+      - .github/workflows/reachability.yml
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sdk:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install ./pkg/polyad-types './pkg/polyad-sdk[reachability]' 'pytest>=9,<10'
+      - run: python -m pytest -o addopts='' pkg/tests/test_reachability.py --junitxml=reachability-tests.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reachability-tests-${{ matrix.python }}
+          path: reachability-tests.xml
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - id: prepare
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase prepare --suite local --root .cache/benchmarks/reachability
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reachability-prepared
+          path: .cache/benchmarks/reachability/
+          include-hidden-files: true
+  study:
+    needs: [sdk, prepare]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main --extras reachability
+      - uses: actions/download-artifact@v4
+        with:
+          name: reachability-prepared
+          path: .cache/benchmarks/reachability/
+      - name: Run selected local study
+        env:
+          STUDY: ${{ matrix.study }}
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase study --study "$STUDY" --root .cache/benchmarks/reachability
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reachability-study-${{ matrix.study }}
+          path: .cache/benchmarks/reachability/
+          include-hidden-files: true
+  finish:
+    if: always() && needs.prepare.result == 'success'
+    needs: [prepare, study]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - uses: actions/download-artifact@v4
+        with:
+          name: reachability-prepared
+          path: .cache/benchmarks/reachability/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: reachability-study-*
+          merge-multiple: true
+          path: .cache/benchmarks/reachability/
+      - run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/reachability --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reachability-results
+          path: |
+            .cache/benchmarks/reachability/
+            studies/symbiosis/results.json
+            studies/reachability-state/results.json
+            studies/reachability-routing/results.json
+          include-hidden-files: true

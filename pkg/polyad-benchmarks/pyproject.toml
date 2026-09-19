@@ -21,6 +21,9 @@ dependencies = [
     "PyYAML>=6,<7",
 ]
 
+[project.optional-dependencies]
+reachability = ["hj-reachability>=0.7,<0.8"]
+
 [project.urls]
 Repository = "https://github.com/astrivant/polyad"
 Documentation = "https://github.com/astrivant/polyad/tree/main/studies/load"

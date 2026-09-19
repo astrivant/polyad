@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 STUDIES = ("load",)
+LOCAL_STUDIES = ("symbiosis", "reachability-state", "reachability-routing")
 
 
 def sources(project: Path) -> dict[str, str]:
@@ -72,20 +73,23 @@ def write_json(path: Path, value: Any) -> None:
     temporary.replace(path)
 
 
-def prepare(project: Path, root: Path) -> dict[str, Any]:
+def prepare(project: Path, root: Path, studies: tuple[str, ...] = STUDIES) -> dict[str, Any]:
     """
     Snapshot one common input set and derive the matrix from the Python study inventory.
 
     Args:
         project (Path): Source repository.
         root (Path): New refresh directory; existing runs are never overwritten.
+        studies (tuple[str, ...]): Nonempty, unique selection from the cloud and local inventories.
 
     Returns:
         dict[str, Any]: Provenance and matrix shared by all study jobs.
     """
+    if not studies or len(set(studies)) != len(studies) or not set(studies) <= set(STUDIES + LOCAL_STUDIES):
+        raise ValueError("select unique registered studies")
     root.mkdir(parents=True, exist_ok=False)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=project, text=True).strip()
-    for study in STUDIES:
+    for study in studies:
         config = json.loads((project / "studies" / study / "fixtures" / "scenario.json").read_text())
         config["runId"] = new_run_id()
         write_json(root / "inputs" / f"{study}.json", config)
@@ -93,11 +97,30 @@ def prepare(project: Path, root: Path) -> dict[str, Any]:
         "revision": revision,
         "preparedAt": datetime.now(UTC).isoformat(),
         "sources": sources(project),
-        "inputs": {study: hashlib.sha256((root / "inputs" / f"{study}.json").read_bytes()).hexdigest() for study in STUDIES},
-        "matrix": {"study": list(STUDIES)},
+        "inputs": {study: hashlib.sha256((root / "inputs" / f"{study}.json").read_bytes()).hexdigest() for study in studies},
+        "matrix": {"study": list(studies)},
     }
     write_json(root / "provenance.json", provenance)
     return provenance
+
+
+def selected_studies(root: Path) -> tuple[str, ...]:
+    """
+    Validate the prepared study matrix before reading or publishing its artifacts.
+
+    Args:
+        root (Path): Prepared refresh directory.
+
+    Returns:
+        tuple[str, ...]: Registered studies selected at preparation time.
+    """
+    provenance = json.loads((root / "provenance.json").read_text())
+    selected = tuple(provenance["matrix"]["study"])
+    if not selected or len(set(selected)) != len(selected) or not set(selected) <= set(STUDIES + LOCAL_STUDIES):
+        raise ValueError("invalid prepared study inventory")
+    if set(provenance["inputs"]) != set(selected):
+        raise ValueError("prepared inputs differ from the study inventory")
+    return selected
 
 
 def verify_inputs(project: Path, root: Path) -> None:
@@ -114,7 +137,7 @@ def verify_inputs(project: Path, root: Path) -> None:
     provenance = json.loads((root / "provenance.json").read_text())
     if provenance["sources"] != sources(project):
         raise ValueError("study sources differ from the prepared snapshot")
-    for study in STUDIES:
+    for study in selected_studies(root):
         if provenance["inputs"][study] != hashlib.sha256((root / "inputs" / f"{study}.json").read_bytes()).hexdigest():
             raise ValueError("study recipe differs from the prepared snapshot")
 
@@ -255,15 +278,23 @@ def study_phase(project: Path, root: Path, study: str, context: str) -> None:
     Returns:
         None: Failed studies retain diagnostics and raise for CI.
     """
-    if study not in STUDIES or not context:
-        raise ValueError("select an inventoried study and an explicit Kubernetes context")
+    if study not in selected_studies(root) or (study in STUDIES and not context):
+        raise ValueError("select a prepared study; cloud studies also require an explicit Kubernetes context")
     if (root / "statuses" / f"{study}.json").exists():
         raise ValueError("study already attempted; prepare a new refresh directory")
     status: dict[str, Any] = {"study": study, "success": False, "startedAt": datetime.now(UTC).isoformat()}
     try:
         verify_inputs(project, root)
-        cluster_study(root, study, context)
+        if study in LOCAL_STUDIES:
+            from polyad_benchmarks.reachability import run
+
+            run(root, study)
+        else:
+            cluster_study(root, study, context)
         status["success"] = True
+    except Exception as error:
+        status["error"] = f"{type(error).__name__}: {error}"
+        raise
     finally:
         status["finishedAt"] = datetime.now(UTC).isoformat()
         write_json(root / "statuses" / f"{study}.json", status)
@@ -283,7 +314,7 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
     """
     verify_inputs(project, root)
     paths = list((root / "statuses").glob("*.json"))
-    if {path.stem for path in paths} != set(STUDIES):
+    if {path.stem for path in paths} != set(selected_studies(root)):
         raise ValueError("study matrix is incomplete or contains unexpected results")
     results = {}
     for path in paths:
@@ -294,7 +325,12 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
         expected = json.loads((root / "inputs" / f"{path.stem}.json").read_text())["runId"]
         if result.get("runId") != expected:
             raise ValueError("results from a different run identity cannot be published")
-        if not result["submitted"] or result["skipped"] or result["interrupted"] or result["phases"] != {"Completed": result["submitted"]}:
+        if path.stem in LOCAL_STUDIES:
+            if result.get("study") != path.stem or result.get("complete") is not True or not result.get("records"):
+                raise ValueError("incomplete local measurements cannot be published")
+        elif (
+            not result["submitted"] or result["skipped"] or result["interrupted"] or result["phases"] != {"Completed": result["submitted"]}
+        ):
             raise ValueError("incomplete measurements cannot be published as a successful benchmark")
         results[path.stem] = result
     write_json(root / "summary.json", {"provenance": json.loads((root / "provenance.json").read_text()), "studies": results})
@@ -315,13 +351,15 @@ def main() -> None:
     parser.add_argument("--ci-phase", choices=("prepare", "study", "finish"), required=True)
     parser.add_argument("--project", type=Path, default=Path.cwd())
     parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("--study", choices=STUDIES, default="load")
+    parser.add_argument("--study", choices=STUDIES + LOCAL_STUDIES, default="load")
+    parser.add_argument("--suite", choices=("cluster", "local", "all"), default="cluster", help="Study inventory selected during prepare")
     parser.add_argument("--context", default="")
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
     try:
         if args.ci_phase == "prepare":
-            provenance = prepare(args.project, args.root)
+            studies = {"cluster": STUDIES, "local": LOCAL_STUDIES, "all": STUDIES + LOCAL_STUDIES}[args.suite]
+            provenance = prepare(args.project, args.root, studies)
             if destination := os.environ.get("GITHUB_OUTPUT"):
                 with Path(destination).open("a") as stream:
                     stream.write(f"matrix={json.dumps(provenance['matrix'])}\nrevision={provenance['revision']}\n")

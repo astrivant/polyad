@@ -1,0 +1,2017 @@
+{
+  "provenance": {
+    "inputs": {
+      "reachability-routing": "2c9f344572d66841c06a70667a67c6cfc788c0edc13e5a757236edfd64df9414",
+      "reachability-state": "099d6e20b78382b618f6f7984d79f1c945c697228017d36deb02b5e1bdf1d86c",
+      "symbiosis": "0cde9c4ee3c0d096fdc0bacc0807071a89590d4a69570b8a425e92ed693cd47a"
+    },
+    "matrix": {
+      "study": [
+        "symbiosis",
+        "reachability-state",
+        "reachability-routing"
+      ]
+    },
+    "preparedAt": "2026-09-19T15:25:56.078833+00:00",
+    "revision": "7e1163efff5eef8b2a86eb28002f0f357ffb7c6f",
+    "sources": {
+      "charts/polyad-benchmarks/Chart.lock": "05bc84d58f486cfa3d4416e9d4d22f99d86413e7f684adbe07ffa5a79c7b6f4a",
+      "charts/polyad-benchmarks/Chart.yaml": "4a90b4ee1a708ae877fa48b58ec16021af7a42838b62c1efea0cb43335ef4e9a",
+      "charts/polyad-benchmarks/files/dashboard.json": "c705a369f49a0723afb60fe1f9de85181927a2483db16ba53fc7582ab49dc825",
+      "charts/polyad-benchmarks/files/fixture.yaml": "6ea012cecb34ef18801671266c59ee6b02b8710d9f57157e08af7e1e0d012026",
+      "charts/polyad-benchmarks/plans/burst.json": "7a0cf0f325172700f7cf2dfb5b669f54f3202ab435a6fbf18416b2dda37f5db3",
+      "charts/polyad-benchmarks/plans/smoke.json": "008a8dc30e66ec7ad173db2364e3dff15c08c7dee1302b662dcedb7c77844e48",
+      "charts/polyad-benchmarks/plans/steady.json": "afbded365aaeeb6760b0e67fbd2899837f6b9f151c86e8e47bcb43645449cfde",
+      "charts/polyad-benchmarks/templates/fixture.yaml": "51e930dd4cd92cbc1bab127d280c1335066aed1cf08440a6f4ff13f042f25af8",
+      "charts/polyad-benchmarks/templates/monitoring.yaml": "d66bc3b9a935512d2415ba9f522bb2f5cd7aaec465d80b8e754344cf47a9bd75",
+      "charts/polyad-benchmarks/values-agent-metrics.yaml": "d5e2a5987d754e37c989e0b412ecf5cb3810bf29204d463f8f8a64095b94f4e3",
+      "charts/polyad-benchmarks/values-burst.yaml": "f900e1f52ccbc826a71042eb7d5b70f7bb6b427deafc83681c73ad700644e7cd",
+      "charts/polyad-benchmarks/values-smoke.yaml": "de835cc19ff35c8ac9ae301f07eb49051d1835ab6ff2543ba86755b1bb84b272",
+      "charts/polyad-benchmarks/values-steady.yaml": "d988fb7090df11c05526e787499c8299e3b10b343b0a11809bc05b72e733f2d1",
+      "charts/polyad-benchmarks/values.schema.json": "37a02f50c8317185ab24f706dcc3a7003bd29c74984c4ac2ca7f09eaede7ad44",
+      "charts/polyad-benchmarks/values.yaml": "0383c2bbc1aacdcb33c7477cc2ed353104af672ea806b6690d79efb7819bac56",
+      "charts/polyad-crds/.hypothesis-helm.yaml": "1acca3a5170db2bd007c347746a12fdcc67871d2e1f8de6270340bef67f26dc4",
+      "charts/polyad-crds/Chart.yaml": "b0aa37f7bdc5c2b16bdb6911517b2b532cfe5aa4829ca29cdc9051d39b718ba4",
+      "charts/polyad-crds/crds/activations.yaml": "801eacca69a32807aa8e327fe00f8f40d69e702d9a7f53d695934db21993ea0a",
+      "charts/polyad-crds/crds/compositions.yaml": "d311c5ac17cd2263e63672b7a111e62253a70dfb803e3d2814e72e453a1dc6e1",
+      "charts/polyad-crds/crds/daemons.yaml": "ed99bd4dd17b391dfba0f4645ba9d5836ec6e98eabfd9159187830eec9dac083",
+      "charts/polyad-crds/crds/dragonflies.yaml": "83f66cbde0433c965288dc2497a840b29358e7d400ba9753329f4d1ec581fce4",
+      "charts/polyad-crds/crds/dragonflypools.yaml": "ada127473b2fb8660b4edd7cf750cf6695e225be46e2d47b36f53356531e45b1",
+      "charts/polyad-crds/crds/gates.yaml": "91255b58d9baaa0d4a5b5d2be61d4463aa330f474c7f14b7b40f9256d4558af7",
+      "charts/polyad-crds/crds/graphrules.yaml": "2cb9d126994981764558d75c3a971f564ef8f3295499d712c029d3a363ae6394",
+      "charts/polyad-crds/crds/graphs.yaml": "3b940f590041b6868d6850eb2215c7b88b83f4049675f47b1c2173ea32cfb810",
+      "charts/polyad-crds/crds/operatorpools.yaml": "90731b54695fbec3f27c6bf37733be327b2115fbaf0e72b4957d52111ca674b8",
+      "charts/polyad-crds/crds/polygraphs.yaml": "e95e950c80707b6a14da1de84b64422e1209c717e71219566a87060bdac3215a",
+      "charts/polyad-crds/crds/remotescales.yaml": "457a52a8beb1d4dbf596bc0ce753f07c23b78d9dce44586fbe89fd36e338c66e",
+      "charts/polyad-crds/crds/replicagroups.yaml": "6444915569cced5e5ea43b46d42a7e30f0be942e0d7ba4a7101a3e3e6835d388",
+      "charts/polyad-crds/crds/resources.yaml": "f7405bc9acd69c221c0eb65f4c82ddc8c8b287a2e6d4d666fb11c93a2bedd84c",
+      "charts/polyad-crds/crds/rewrites.yaml": "8d1ba4e2eb882add0e11459a56b5d2b051b50c7a7fc8c6f75c59396f15171e6e",
+      "charts/polyad-crds/crds/shutdownpolicies.yaml": "9c29c5d04db3e09fc86eab4457cf0288b2468afbe9a99594094ca9530d02ba19",
+      "charts/polyad-crds/crds/temporaryconnections.yaml": "bd9979b922fb18059e7d94587556d9415797dbb942949b98a1e478aec50b3414",
+      "charts/polyad-crds/crds/workloads.yaml": "747e3893cdd33f1b49b4dccb2c0b39712e1eea54b804a307e572e6b03d395c3e",
+      "charts/polyad-crds/files/resource-catalog.json": "c712110213e32c484ce34321d1531217aa59043e104fecbd79c3fa1397a98250",
+      "charts/polyad-crds/schemas/activation-polyad-v1alpha1.json": "3b5ce08c88fab6bd4aafe5e7a7e38f39929f98fb703b50428ed1478cef9a0b3e",
+      "charts/polyad-crds/schemas/composition-polyad-v1alpha1.json": "c4572095a1976754d818d48f51e15f24b8a75149bdbcec7b6507f754f0572b5f",
+      "charts/polyad-crds/schemas/daemon-polyad-v1alpha1.json": "3fa6cce63a8b54d60959a609ff3a716b83abe7b0328d74c0dd7c2da16d74af86",
+      "charts/polyad-crds/schemas/dragonfly-dragonflydb-v1alpha1.json": "21dda7274397eec96b3b492f3dfb7a2eb2a50a0bceb271cffd52a169b316af41",
+      "charts/polyad-crds/schemas/dragonflypool-polyad-v1alpha1.json": "498aae54f6dadce7999ff30bb1d9b5276a2e7a36bc91b3ad8cdabd19d23445d1",
+      "charts/polyad-crds/schemas/gate-polyad-v1alpha1.json": "2905b34cab48aa2e40a2f014b93ffac47532449b3e3d65b6cce2f510bfd35e4f",
+      "charts/polyad-crds/schemas/graph-polyad-v1alpha1.json": "6b4a8f0b4141d5954271a1d9074637615f1a35d13f06b216d6ae65abbc6412b7",
+      "charts/polyad-crds/schemas/graphrule-polyad-v1alpha1.json": "caea8c18293be98f67bb82724cd91cf7b8cd45e9a13dd04c2abc27434db0cca2",
+      "charts/polyad-crds/schemas/operatorpool-polyad-v1alpha1.json": "c0201d7357f1a49281b53a963f3dcc864b2cc82c4c49789e3cb5c15f3f66812b",
+      "charts/polyad-crds/schemas/polygraph-polyad-v1alpha1.json": "79a6475789086dd8b5ff8a5c7f06621fb8736ca595b213d6e44c9eea0105872e",
+      "charts/polyad-crds/schemas/remotescale-polyad-v1alpha1.json": "aba8239e2e484246794e78d5352856b93f3f0ad71a712a5fedf8e56068c50de6",
+      "charts/polyad-crds/schemas/replicagroup-polyad-v1alpha1.json": "51fc5308f09f0ceae3b6c5c61e4a5642df0387d4ad95d734a91ca1814b190fc1",
+      "charts/polyad-crds/schemas/resource-polyad-v1alpha1.json": "d1b78e051aa05bd6052b747ed8fe49c66da8601f522c5e2aaeb71489a2daafa7",
+      "charts/polyad-crds/schemas/rewrite-polyad-v1alpha1.json": "357657aaa3fa330722ed5caae342cdde6911f035b226e2084d3141f866083e3c",
+      "charts/polyad-crds/schemas/shutdownpolicy-polyad-v1alpha1.json": "79e1b5c40fed79ee7020fd259b9f480ab9077eac7f8ea6d2733fa2cad452125d",
+      "charts/polyad-crds/schemas/temporaryconnection-polyad-v1alpha1.json": "a8fdfba1c27221f6aa74ef92ffd298b3f84f24568fdd0cf095557110e6cbfc23",
+      "charts/polyad-crds/schemas/workload-polyad-v1alpha1.json": "2fb2ef1b1d73089cd74c89f0f1122c4f351735da71b40ffd6061be07212a112b",
+      "charts/polyad-crds/templates/resources.yaml": "22de297fd18c5b64bb0d138783ac656bf2bd9dda19e0fe13c20e273ebf71d37e",
+      "charts/polyad-crds/values-activations.reference.yaml": "f5e90aeb4f8ecb8bff2461d6f24697dd9dac9f5e48cbe6566eec040bde2ec144",
+      "charts/polyad-crds/values-compositions.reference.yaml": "d8bdbbd68ef52485eec92b70791f980b0b74531d9747a84f52fd20896386e37f",
+      "charts/polyad-crds/values-daemons.reference.yaml": "b84b6169a128705cede15799888e092ccba0b17f258a95c3ea4e100fd0b4deff",
+      "charts/polyad-crds/values-dragonflies.reference.yaml": "7a0ab9bb0dd916c75d10c69262ff08a4c82b68324368b83626f96cba7b36d0c4",
+      "charts/polyad-crds/values-dragonflyPools.reference.yaml": "cc537373d7b575cba87dc3419fb01581be06bf3d9f8514bc4d27bc5b46e55de3",
+      "charts/polyad-crds/values-gates.reference.yaml": "1a050a47d8d84debee6b72eeac4486c3cb6f8d0af1fdaba619a5b22e1240e408",
+      "charts/polyad-crds/values-graphRules.reference.yaml": "26c379fec9cf993e96657394fe51fb4042e4197db9ba58d29134fe5cb5956e0b",
+      "charts/polyad-crds/values-graphs.reference.yaml": "0bd53a5957723e14b73a9a07e4bf706b1b999e6da5bfad11d2bbedfa058fd146",
+      "charts/polyad-crds/values-operatorPools.reference.yaml": "5a10e6cc26ad75682b80b0a78f7f6c04f5f08c2941750aac42b49f3b62935e9f",
+      "charts/polyad-crds/values-polygraphs.reference.yaml": "98b2c69fc18085431a1dd0219e57ffb232b94e31fb7c1e8d192c991aec44b337",
+      "charts/polyad-crds/values-remoteScales.reference.yaml": "f33391941be4dd3bdab9f6cdafdf1783abe62a5df54fe5abb00260925a324e6c",
+      "charts/polyad-crds/values-replicaGroups.reference.yaml": "7f2cb4e279acbda1d4bbaf2d21cd6796b494dee046e9ff875e89d235490774b7",
+      "charts/polyad-crds/values-resources.reference.yaml": "54657a3c8cb35a86c0e4fd5068efd28229e4fa8cc0b2f7cb324fb7e08b02be1f",
+      "charts/polyad-crds/values-rewrites.reference.yaml": "d0da0d67b65a18fa731b304b96dcba602c9778aff7557acbeb4d21e0a5ca6af6",
+      "charts/polyad-crds/values-shutdownPolicies.reference.yaml": "07612c7e779db0764ca1dde66cea8d255e85fbbf8f4cb431f76266671a719678",
+      "charts/polyad-crds/values-temporaryConnections.reference.yaml": "595ebbe882e8ba57ea152a4b41ff31cc17489ec18dc225e315a14c1a979ecd8b",
+      "charts/polyad-crds/values-workloads.reference.yaml": "1634c21497fbb88a00d27443d0637ad34269b1d5da65dac24209a21f6395e328",
+      "charts/polyad-crds/values.reference.schema.json": "9ea91b7ffdcfdc166b6da6e7c568409a5662ad33c393b4b5ace03fe9e9b4c979",
+      "charts/polyad-crds/values.schema.json": "0c5e143bd4a17e3f98c2497509a8882e495c72f75dc0a1e1d87330a41453611c",
+      "charts/polyad-crds/values.yaml": "9f89ccb0a2cd04067f60e1dc86c08145c0fec9277d5d454f6086c392aafa2499",
+      "pkg/polyad-benchmarks/poetry.lock": "8cfc8bb7c9400613c75ec75e39c5be57c30c750e6bcacaa52b322151021aed54",
+      "pkg/polyad-benchmarks/polyad_benchmarks/__init__.py": "b13a88edd90e89ab914ee19b3db8bdf7639d6a533f1eebec07ed3887ef1ae34a",
+      "pkg/polyad-benchmarks/polyad_benchmarks/config.py": "88a4db4fb5e2cf415b032174a87ed67f9e0f49248130dd904adcd02cfd3c80b8",
+      "pkg/polyad-benchmarks/polyad_benchmarks/fixture.py": "306b5e6e7f2c4c44b082f26dd4dccb4f3281ed03f2158d0d079052ac6dca94ca",
+      "pkg/polyad-benchmarks/polyad_benchmarks/identity.py": "944f283a10213187f8bdf9b52d0ed2d937d60f6025f0770603925f14e39c3ca4",
+      "pkg/polyad-benchmarks/polyad_benchmarks/plan.py": "9037437e6a15907b2353c277215a143b28c224f2d25d10de78740bbcf6943182",
+      "pkg/polyad-benchmarks/polyad_benchmarks/reachability.py": "447422882b3ba77513939a44ede2c055181c060749ea74d6fbd8957af4d3656c",
+      "pkg/polyad-benchmarks/polyad_benchmarks/refresh.py": "039baa367097c01f8cc8abd4319b47c1f20dc9ffa4b1bfcea9c2c9ecd10188ac",
+      "pkg/polyad-benchmarks/polyad_benchmarks/routing_study.py": "d964208bba4374da6dd9b35cc4833b38be3e603b12d63433b2b0ac15172b1af6",
+      "pkg/polyad-benchmarks/polyad_benchmarks/runner.py": "75ad599492099f2bf3bfd12c7ba5c2b3d7ecdc3cffadaeb847f07e152828a31f",
+      "pkg/polyad-benchmarks/polyad_benchmarks/variables.schema.json": "d7505c5b925cb9debd66c43e2859f17face442c7fe3492ab27bb3db413e43eb7",
+      "pkg/polyad-benchmarks/pyproject.toml": "2770e437b26ded52193c8a89645dff722ca091cb53add3683a97cd4df44b6883",
+      "pkg/polyad-sdk/polyad_sdk/__init__.py": "01cbdc0f9eedd421d2fed6e623ccbf061ade931b6456def8324627073c3ff249",
+      "pkg/polyad-sdk/polyad_sdk/api/__init__.py": "d1562410cd6174fe20ef0d42c2787a76de53750f8e08efec54da6aca894b050b",
+      "pkg/polyad-sdk/polyad_sdk/api/client.py": "29882a032289e77e165731e1cb7b42c47feaef6c1ba085e285c75a3652153ac6",
+      "pkg/polyad-sdk/polyad_sdk/api/interfaces.py": "65a911df7f3b3fd61cfb79d0b7e8f7263819ffc5443c7f63a364071d29c943cb",
+      "pkg/polyad-sdk/polyad_sdk/events/__init__.py": "01b6cffe86e0053b3ace3bb7202b9a361817d9fbb859369837cd6358eaf20739",
+      "pkg/polyad-sdk/polyad_sdk/events/filters.py": "fd33cb6442c90d359a7ffdee6b9820a53399d3aa4d222d263f209a0cf8a6ae25",
+      "pkg/polyad-sdk/polyad_sdk/events/source.py": "5c2adb7a045a639f7d1b15b3d26925af15402017a54995de4b39fef6434413b5",
+      "pkg/polyad-sdk/polyad_sdk/events/subscriptions.py": "9dc1dff9d613ecbbdbe7955ff4460af2759a1341a81ecab73cdcf4fb5cc3c5f8",
+      "pkg/polyad-sdk/polyad_sdk/observability/__init__.py": "706e8200f42177f54b0f4a63a08c7896b993902d7a789121d2f7c27cbcdcc9d4",
+      "pkg/polyad-sdk/polyad_sdk/observability/telemetry.py": "6e80e0c6492d298feb2bd9954f4dc9557c8169be53be8c427710c72bb7acd370",
+      "pkg/polyad-sdk/polyad_sdk/processes/__init__.py": "e9d3fad1726aa6589daa86a1bc3f227019d36c25127f975ea53c949e21fb4bb1",
+      "pkg/polyad-sdk/polyad_sdk/processes/models.py": "3777a02e2d0f491a8f1ae98ef7ea084860557271bfcdd8ca4667bc3ef197839c",
+      "pkg/polyad-sdk/polyad_sdk/processes/process.py": "9d498a3b295eeb5f83f191f2a06408c822e342809e0092f938d3f37a5f0e770a",
+      "pkg/polyad-sdk/polyad_sdk/processes/supervisor.py": "1596a87c5b35cfec8f12af26790b1d7096c12b948ce72bf5e45c295fa9a7de7f",
+      "pkg/polyad-sdk/polyad_sdk/runtime/__init__.py": "b12a438d88ed7ff76346f2512041b53ee070964920e8edfe4225fd17b00b18aa",
+      "pkg/polyad-sdk/polyad_sdk/runtime/context.py": "2854afd161c4b777d9f3f0778e2bd933878c6173e429a373fac71856b25c87e5",
+      "pkg/polyad-sdk/polyad_sdk/runtime/environment.py": "8f5de16d3510ddfedf4fb318fa9e9e7025d442f1dfc8f5a0d3a6772a9e9505cd",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/__init__.py": "974f95f9be1ca63fb5922a1e72dc884c6272f1a69d8267fe92bfc3c4448d63e7",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/models.py": "bac0790b6801b4b2b881d4fab88ed984ec82c05c01e01398432bc86fab0b2773",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/__init__.py": "1fdd9ab47f03e714d5fcd4e9c606032abde146ddc2157f2f710953b93fd2fc06",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/_numerical.py": "e3e30c42dda15454c5c4dce19618e783fa1c23023af2f21c7f24a5ed3f7d0196",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/envelope.py": "f4efc1b4c5d89905c49e2d417e5707a0a73e60ad77afe47f7ca1d5d177f63000",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/hj.py": "02ed596239ee2fa84ba9ec3210886a2d77589e9f618acdbcfe3e63ebfaef6968",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/models.py": "037872880ebf25b7b8356300f23df323afdcd7d2043af9f1c2856b41173419b8",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/reachability/strategy.py": "7f1b8db3b75ead2bffef54862e83d3b9b1d2dcd995fdf5c2c6a2bf6090d0dd3a",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/service.py": "167074b894c21e822d1c7f172422667f7980ac4733ef5509e4519d11fbb6f2f4",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/state.py": "baf4b75ee3e065f9bc4e7c688ecc0f8a652b21b634a803a117685bdf55084976",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/__init__.py": "3e4b5dc6a4d42b51b482692e765d1fe5032a3638f55dac2a41ebcaf865d2cfcc",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/base.py": "bb00783d4dbd861015d91935b956bf846f8bc5f102c62135dc9ae1d58b6931db",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/callbacks.py": "0dd066851c2308315292c91a0a799ac7407c810f9e3eb4c28e1beced3f4fca1c",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/capacity.py": "31d5660e2122486dfe5211944ef6df8e305cbbc35f3e3ece6dc62d71e8c9667e",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/decisions.py": "c1891a0ba91cb791cd0a4233e183888afe968174038dd50b7faf657cef2cf843",
+      "pkg/polyad-sdk/polyad_sdk/symbiosis/strategies/topology.py": "f10b79431e75d0c92e629e686987c6fb939c5eaea822d0ffb0bd217358366042",
+      "pkg/polyad-sdk/polyad_sdk/transport/__init__.py": "ba0c7082e2b544d1322a91dae52f66ce8de3af36089d1fd7ed0cec2cf9ad6fce",
+      "pkg/polyad-sdk/polyad_sdk/transport/http.py": "686bf4ec240fe355e70ec4fe7911c5961d9174acb58165902825a27961716c77",
+      "pkg/polyad-sdk/polyad_sdk/transport/routing.py": "34a44f97cafc236a511b428dd170b9e2e8bdf981729d6a6d3a72751c68146dba",
+      "pkg/polyad-sdk/polyad_sdk/transport/websocket.py": "8b8c40c052e14b9768ab83f2658a69254a0b3ead53d8ffa7b634a4618f0d30fc",
+      "pkg/polyad-sdk/pyproject.toml": "8c7846745cfe5e03dbbddd82dcd95e813e27c4d33e398035907cfe9732e45ee7",
+      "pkg/polyad-types/polyad_types/__init__.py": "c4c01ed34f651b8a201d4494f715200e9e829c7056c70d5907c40b9e5da087d0",
+      "pkg/polyad-types/polyad_types/api/__init__.py": "a3d2b310ad5b79d788958a7666f880380ed285774ed3266aade93ede8c7fa954",
+      "pkg/polyad-types/polyad_types/api/auth.py": "1321bb20c7a3581b2714453f9f5c67d7f5c09d285016485b1f677080345df375",
+      "pkg/polyad-types/polyad_types/api/discovery.py": "89a847ec4f984d9d73eb55db4e309090fc7b4aab790e0bfd8fa7f486e87415ad",
+      "pkg/polyad-types/polyad_types/api/requests.py": "6b84f1f9718d0bf2d174a7f7ca2bbd50ef0a92c828bf3b592c43ce7028f9274e",
+      "pkg/polyad-types/polyad_types/api/throughput.py": "cae804a1872100abdbc5739018c85298dd310531144eace90138548aa718f03c",
+      "pkg/polyad-types/polyad_types/events/__init__.py": "1b61c6060056a5b94be3014011b856efd5e618b092aae7bdea3d60561fa2b3c3",
+      "pkg/polyad-types/polyad_types/events/codec.py": "9cc562a3bfd2bef53e77a3fe921886de8ab5309b9e02db3f864b5ac6e480c960",
+      "pkg/polyad-types/polyad_types/events/envelope.py": "ce735b8b9ca359e0f732928993ada4012ccf18f1a7a49f57fbb4354f800b74df",
+      "pkg/polyad-types/polyad_types/events/models.py": "66bf8ed25b91050639fe9ceda0d32814f1b82d1974ddbf0b7ed0bab17b03f47c",
+      "pkg/polyad-types/polyad_types/graphs/__init__.py": "0a227beae75731e29a39bbd9b31d4454c2e1b3ca22a7e8ad6b1b418cd4668f1d",
+      "pkg/polyad-types/polyad_types/graphs/activation.py": "d15ace1eb4d90df63529a542cc6cec7603a9a4aa4045cf79a7f674c00c2ad914",
+      "pkg/polyad-types/polyad_types/graphs/capacity.py": "224bdbb9c09ea83d9d93c94bcc2007cfec4c284ee894a5e261b7029ac99839b4",
+      "pkg/polyad-types/polyad_types/graphs/replication.py": "55f3e5c12c15257a28874eb44895a193886df4f4bc2c4640507ca6b26da16e3a",
+      "pkg/polyad-types/polyad_types/graphs/rules.py": "60e8091f4707ca4d24911379c5166f7cd852671b32582a381b0699ac4cf5e226",
+      "pkg/polyad-types/polyad_types/graphs/topology.py": "3652b2fee189895b4a6eb6498d4d060f69538600ff77236ca7bfe793fffe38b0",
+      "pkg/polyad-types/polyad_types/networking/__init__.py": "a1bc27697eaabf11c7af1d67ddde8605780e3005d834f9d84004025227822e12",
+      "pkg/polyad-types/polyad_types/networking/access.py": "b296b80327b9b65e59e3b1f30ac73cc89a426ca28712b5bd717a08eb2b420bb3",
+      "pkg/polyad-types/polyad_types/networking/traffic.py": "742dcdac042fcbff53ce0eb3ac0c6db886a1bbf35c3dd3cde6bd0ce05936d72a",
+      "pkg/polyad-types/polyad_types/resources/__init__.py": "94dc5c6e08d0e904298f43cbe0c610014fce26519810ac97859549ca9c6d4205",
+      "pkg/polyad-types/polyad_types/resources/base.py": "3f9fc72ff4042c3389dfaa9615d0f252d73beb0412038c98caa21aad607f61da",
+      "pkg/polyad-types/polyad_types/resources/capacity.py": "b75cda0d0636e53eac3b3b3a3371dc6a9b801012277c45140414850e3461cd87",
+      "pkg/polyad-types/polyad_types/resources/codec.py": "d27b3cc4d938746f3bcb0e73fa2ab59e7168e7d151709fa0b53c3b4e7efec4bd",
+      "pkg/polyad-types/polyad_types/resources/common.py": "a0197ffc3ef7c34b5c759c9f1339e8184fb2acafef849ee751f577c294d34e12",
+      "pkg/polyad-types/polyad_types/resources/infrastructure.py": "97ac92e53f807159d2cc4363b257752eee8dc043c1c654e0e88759dff221df23",
+      "pkg/polyad-types/polyad_types/resources/istio.py": "994caa0946157669bafa73a07799608bbbc0226f079f54a80f7fa40675c0865a",
+      "pkg/polyad-types/polyad_types/resources/kubernetes.py": "2d59e7359bafbe4b7c93f717508e8abf7dbfd73c61f96317df97d59550f1767b",
+      "pkg/polyad-types/polyad_types/resources/mutations.py": "aa29bc9eb210e9ecf79ebbc60a2f695cca3413036a6b0d47ac9b78f21ea66811",
+      "pkg/polyad-types/polyad_types/resources/polyad.py": "0fd071f508fe3314521c9f9d472e8bc0621d2c66d064e0460ec333e11c3435c7",
+      "pkg/polyad-types/polyad_types/resources/registry.py": "c73e3c5d5f0c817462481cb0e083d88c1e199a9a05649a1fb994a2b711ac6b77",
+      "pkg/polyad-types/polyad_types/resources/status.py": "653bdc3207feb8682c2fb7218611cedbf0b846973ff848effdbc1a7ffe83741a",
+      "pkg/polyad-types/polyad_types/resources/storage.py": "995f63ee388e573707d0912f1f4a5a34223a723ece0153301f3a48647249bde1",
+      "pkg/polyad-types/polyad_types/serialization.py": "9751ed59f7c0ac15a6a59c92e7123327b34bae63a20c5cac3715fa4171c6e4a1",
+      "pkg/polyad-types/pyproject.toml": "2f12842e8608dacea281fa28e986f9d1f72e6495283d7e07b57b1fa8985d4487",
+      "services/fixture/Dockerfile": "dbe265a6c85c97300ddc47a6fff101cbb9af9333c5213cb636eecc5a5a485c42",
+      "services/operator/Dockerfile": "c2b18a78dc6d9bd3ce476678d0091465aa460e2df2f18267807520df0d7b9060",
+      "services/runner/Dockerfile": "7cde64a444988a1a76824d3d69ac6a73484588cfbc04320bbf012f5f97c569bf",
+      "studies/load/fixtures/application.yaml": "5a159b3ce973b5e073b0e486fcf2c2578d23416fc3e8a04ab8ac34db7ea4b366",
+      "studies/load/fixtures/gke-values.yaml": "a6cb3b2554deeec74aea06aa88dd9687357ca6c7441d91e9a1f513dfef37556a",
+      "studies/load/fixtures/operator-agents-values.yaml": "4d064f954ed46e19ce5294022a464adfd5f98c7055469665c35e3c4f6e67bf44",
+      "studies/load/fixtures/operator-values.yaml": "bbc510a732f8c30086b961276ea79ebaf4ea5a6a1c0045081c39a8701f1680c3",
+      "studies/load/fixtures/plan.json": "68f06233839660b9d4d34e70922079fdaa375023e92ceada01572d92019b2e88",
+      "studies/load/fixtures/scenario.json": "75a50e3c2bb5241883c507df2bcb896569029270eb09ba477a3037e1263c004d",
+      "studies/reachability-routing/fixtures/scenario.json": "746146b4e63768dab37c0e215b91103e27f935a0046f41f1c9f4ed2a80245edc",
+      "studies/reachability-state/fixtures/scenario.json": "32adc05730e03f80a4f4f4423f3cbbb5cb468f2fd841c49436736ef898bbe4f7",
+      "studies/symbiosis/fixtures/scenario.json": "191c36122632b7d2195a5af992f48ee8671a0ce220eb866fa024124e582d4b45"
+    }
+  },
+  "studies": {
+    "reachability-routing": {
+      "complete": true,
+      "environment": {
+        "machine": "arm64",
+        "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
+        "python": "3.13.12"
+      },
+      "records": [
+        {
+          "allJoined": true,
+          "artifact": {
+            "created_at": 1789831580.49074,
+            "expires_at": 1789831880.49074,
+            "fingerprint": "2d2225e0c76205370a84788de40799394a66993b42156e155254d6bba956e921",
+            "horizon": 2,
+            "model": {
+              "arrival_bounds": [
+                25,
+                30
+              ],
+              "capacities": [
+                10,
+                35
+              ],
+              "interaction": {
+                "effects": [
+                  0,
+                  0
+                ],
+                "relationship": "neutralism"
+              },
+              "limits": [
+                20,
+                20
+              ],
+              "names": [
+                "busy",
+                "spare"
+              ],
+              "shares": [
+                1.0,
+                0.0
+              ],
+              "targets": [
+                20,
+                20
+              ],
+              "unit": "jobs",
+              "warmup_max": 0
+            },
+            "revision": "process-trial",
+            "version": 1
+          },
+          "assessments": {
+            "blocked": 60
+          },
+          "completed": 38,
+          "consumerProcesses": 2,
+          "elapsedSeconds": 3.9587340829893947,
+          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
+          "meanLatencySeconds": 1.3177612499873106,
+          "mode": "first-consumer",
+          "offered": 60,
+          "peakOutstanding": [
+            20,
+            0
+          ],
+          "predictedAllowed": false,
+          "predictedMargin": -20.0,
+          "producerProcesses": 1,
+          "rejected": 22,
+          "repetition": 0,
+          "routed": [
+            38,
+            0
+          ]
+        },
+        {
+          "allJoined": true,
+          "artifact": {
+            "created_at": 1789831584.718281,
+            "expires_at": 1789831884.718281,
+            "fingerprint": "9dcd7d9b7813e04e3c0245d353fd266054ba54e7c08808030f43510b00d78ca0",
+            "horizon": 2,
+            "model": {
+              "arrival_bounds": [
+                25,
+                30
+              ],
+              "capacities": [
+                10,
+                35
+              ],
+              "interaction": {
+                "effects": [
+                  0,
+                  0
+                ],
+                "relationship": "neutralism"
+              },
+              "limits": [
+                20,
+                20
+              ],
+              "names": [
+                "busy",
+                "spare"
+              ],
+              "shares": [
+                0.25,
+                0.75
+              ],
+              "targets": [
+                20,
+                20
+              ],
+              "unit": "jobs",
+              "warmup_max": 0
+            },
+            "revision": "process-trial",
+            "version": 1
+          },
+          "assessments": {
+            "satisfied": 60
+          },
+          "completed": 60,
+          "consumerProcesses": 2,
+          "elapsedSeconds": 2.0431212498806417,
+          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
+          "meanLatencySeconds": 0.05142010976560414,
+          "mode": "guarded-rerouting",
+          "offered": 60,
+          "peakOutstanding": [
+            1,
+            2
+          ],
+          "predictedAllowed": true,
+          "predictedMargin": 20,
+          "producerProcesses": 1,
+          "rejected": 0,
+          "repetition": 0,
+          "routed": [
+            15,
+            45
+          ]
+        },
+        {
+          "allJoined": true,
+          "artifact": {
+            "created_at": 1789831587.39419,
+            "expires_at": 1789831887.39419,
+            "fingerprint": "9dcd7d9b7813e04e3c0245d353fd266054ba54e7c08808030f43510b00d78ca0",
+            "horizon": 2,
+            "model": {
+              "arrival_bounds": [
+                25,
+                30
+              ],
+              "capacities": [
+                10,
+                35
+              ],
+              "interaction": {
+                "effects": [
+                  0,
+                  0
+                ],
+                "relationship": "neutralism"
+              },
+              "limits": [
+                20,
+                20
+              ],
+              "names": [
+                "busy",
+                "spare"
+              ],
+              "shares": [
+                0.25,
+                0.75
+              ],
+              "targets": [
+                20,
+                20
+              ],
+              "unit": "jobs",
+              "warmup_max": 0
+            },
+            "revision": "process-trial",
+            "version": 1
+          },
+          "assessments": {
+            "satisfied": 60
+          },
+          "completed": 60,
+          "consumerProcesses": 2,
+          "elapsedSeconds": 2.0427958336658776,
+          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
+          "meanLatencySeconds": 0.050940873008221386,
+          "mode": "guarded-rerouting",
+          "offered": 60,
+          "peakOutstanding": [
+            1,
+            2
+          ],
+          "predictedAllowed": true,
+          "predictedMargin": 20,
+          "producerProcesses": 1,
+          "rejected": 0,
+          "repetition": 1,
+          "routed": [
+            15,
+            45
+          ]
+        },
+        {
+          "allJoined": true,
+          "artifact": {
+            "created_at": 1789831589.697002,
+            "expires_at": 1789831889.697002,
+            "fingerprint": "2d2225e0c76205370a84788de40799394a66993b42156e155254d6bba956e921",
+            "horizon": 2,
+            "model": {
+              "arrival_bounds": [
+                25,
+                30
+              ],
+              "capacities": [
+                10,
+                35
+              ],
+              "interaction": {
+                "effects": [
+                  0,
+                  0
+                ],
+                "relationship": "neutralism"
+              },
+              "limits": [
+                20,
+                20
+              ],
+              "names": [
+                "busy",
+                "spare"
+              ],
+              "shares": [
+                1.0,
+                0.0
+              ],
+              "targets": [
+                20,
+                20
+              ],
+              "unit": "jobs",
+              "warmup_max": 0
+            },
+            "revision": "process-trial",
+            "version": 1
+          },
+          "assessments": {
+            "blocked": 60
+          },
+          "completed": 39,
+          "consumerProcesses": 2,
+          "elapsedSeconds": 4.05325916595757,
+          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
+          "meanLatencySeconds": 1.33162141772799,
+          "mode": "first-consumer",
+          "offered": 60,
+          "peakOutstanding": [
+            20,
+            0
+          ],
+          "predictedAllowed": false,
+          "predictedMargin": -20.0,
+          "producerProcesses": 1,
+          "rejected": 21,
+          "repetition": 1,
+          "routed": [
+            39,
+            0
+          ]
+        }
+      ],
+      "runId": "load-f92ac05bac2f4c7583e7b135f883dbd4",
+      "study": "reachability-routing"
+    },
+    "reachability-state": {
+      "complete": true,
+      "environment": {
+        "machine": "arm64",
+        "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
+        "python": "3.13.12"
+      },
+      "records": [
+        {
+          "conservativeCount": 0,
+          "dimensions": 1,
+          "guard": {
+            "artifactBytes": 435,
+            "iterations": 1000,
+            "meanSeconds": 1.6679666005074977e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              80
+            ],
+            "interaction": {
+              "effects": [
+                0,
+                0
+              ],
+              "relationship": "neutralism"
+            },
+            "limits": [
+              60
+            ],
+            "names": [
+              "pooled"
+            ],
+            "shares": [
+              1.0
+            ],
+            "targets": [
+              50
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              120.0
+            ],
+            "cpuSeconds": 1.275602,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 1008,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "27e6d54bcc30198d448d4a4aec19420f0695fcf87a8de141e8801f0572c4bbb1",
+            "gridPoints": 9,
+            "importSeconds": 0.5448614996857941,
+            "peakRssBytes": 219037696,
+            "platform": "cpu",
+            "positiveGridFraction": 0.4444444444444444,
+            "samples": [
+              {
+                "analyticMargin": 50,
+                "numericalMargin": 50.0,
+                "state": [
+                  10
+                ]
+              },
+              {
+                "analyticMargin": 50,
+                "numericalMargin": 50.0,
+                "state": [
+                  10
+                ]
+              },
+              {
+                "analyticMargin": 40,
+                "numericalMargin": 40.0,
+                "state": [
+                  20
+                ]
+              },
+              {
+                "analyticMargin": 40,
+                "numericalMargin": 40.0,
+                "state": [
+                  20
+                ]
+              }
+            ],
+            "solveSeconds": 0.06756391702219844,
+            "valueBytes": 36,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.7280628341250122
+          },
+          "optimisticCount": 3,
+          "probes": [
+            {
+              "allowed": true,
+              "fullState": [
+                10,
+                0,
+                0
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                10,
+                0,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                0
+              ],
+              "referenceAllowed": true,
+              "state": [
+                20
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                20
+              ]
+            }
+          ],
+          "representation": "pooled",
+          "resolution": 9,
+          "resources": {
+            "estimatedWorkspaceBytes": 1008,
+            "gridPoints": 9,
+            "valueBytes": 36
+          }
+        },
+        {
+          "conservativeCount": 0,
+          "dimensions": 1,
+          "guard": {
+            "artifactBytes": 433,
+            "iterations": 1000,
+            "meanSeconds": 1.682700030505657e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              80
+            ],
+            "interaction": {
+              "effects": [
+                0,
+                0
+              ],
+              "relationship": "neutralism"
+            },
+            "limits": [
+              60
+            ],
+            "names": [
+              "pooled"
+            ],
+            "shares": [
+              1.0
+            ],
+            "targets": [
+              50
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              120.0
+            ],
+            "cpuSeconds": 1.227901,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 1904,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "27e6d54bcc30198d448d4a4aec19420f0695fcf87a8de141e8801f0572c4bbb1",
+            "gridPoints": 17,
+            "importSeconds": 0.4769162079319358,
+            "peakRssBytes": 224133120,
+            "platform": "cpu",
+            "positiveGridFraction": 0.47058823529411764,
+            "samples": [
+              {
+                "analyticMargin": 50,
+                "numericalMargin": 50.0,
+                "state": [
+                  10
+                ]
+              },
+              {
+                "analyticMargin": 50,
+                "numericalMargin": 50.0,
+                "state": [
+                  10
+                ]
+              },
+              {
+                "analyticMargin": 40,
+                "numericalMargin": 40.0,
+                "state": [
+                  20
+                ]
+              },
+              {
+                "analyticMargin": 40,
+                "numericalMargin": 40.0,
+                "state": [
+                  20
+                ]
+              }
+            ],
+            "solveSeconds": 0.10054837493225932,
+            "valueBytes": 68,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.4933400000445545
+          },
+          "optimisticCount": 3,
+          "probes": [
+            {
+              "allowed": true,
+              "fullState": [
+                10,
+                0,
+                0
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                10,
+                0,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                0
+              ],
+              "referenceAllowed": true,
+              "state": [
+                20
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                20
+              ]
+            }
+          ],
+          "representation": "pooled",
+          "resolution": 17,
+          "resources": {
+            "estimatedWorkspaceBytes": 1904,
+            "gridPoints": 17,
+            "valueBytes": 68
+          }
+        },
+        {
+          "conservativeCount": 0,
+          "dimensions": 2,
+          "guard": {
+            "artifactBytes": 461,
+            "iterations": 1000,
+            "meanSeconds": 5.082808388397098e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              20,
+              60
+            ],
+            "interaction": {
+              "effects": [
+                0,
+                0
+              ],
+              "relationship": "neutralism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "busy",
+              "warming"
+            ],
+            "shares": [
+              0.75,
+              0.25
+            ],
+            "targets": [
+              25,
+              25
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              75.0,
+              45.0
+            ],
+            "cpuSeconds": 1.594241,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 10368,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "18e9ea188699d36eff582dc40042b17a39ad26200dec360944c9b99c56c52e2a",
+            "gridPoints": 81,
+            "importSeconds": 0.4923332091420889,
+            "peakRssBytes": 234405888,
+            "platform": "cpu",
+            "positiveGridFraction": 0.07407407407407407,
+            "samples": [
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -5.06272554397583,
+                "state": [
+                  10,
+                  0
+                ]
+              },
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -5.06272554397583,
+                "state": [
+                  10,
+                  0
+                ]
+              },
+              {
+                "analyticMargin": 5.0,
+                "numericalMargin": 4.008782863616943,
+                "state": [
+                  0,
+                  20
+                ]
+              },
+              {
+                "analyticMargin": 5.0,
+                "numericalMargin": 4.008782863616943,
+                "state": [
+                  0,
+                  20
+                ]
+              }
+            ],
+            "solveSeconds": 0.12033199984580278,
+            "valueBytes": 324,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.9264609590172768
+          },
+          "optimisticCount": 1,
+          "probes": [
+            {
+              "allowed": false,
+              "fullState": [
+                10,
+                0,
+                0
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10,
+                0
+              ]
+            },
+            {
+              "allowed": false,
+              "fullState": [
+                10,
+                0,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10,
+                0
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                0
+              ],
+              "referenceAllowed": true,
+              "state": [
+                0,
+                20
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                0,
+                20
+              ]
+            }
+          ],
+          "representation": "queues",
+          "resolution": 9,
+          "resources": {
+            "estimatedWorkspaceBytes": 10368,
+            "gridPoints": 81,
+            "valueBytes": 324
+          }
+        },
+        {
+          "conservativeCount": 0,
+          "dimensions": 2,
+          "guard": {
+            "artifactBytes": 463,
+            "iterations": 1000,
+            "meanSeconds": 1.8961207941174506e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              20,
+              60
+            ],
+            "interaction": {
+              "effects": [
+                0,
+                0
+              ],
+              "relationship": "neutralism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "busy",
+              "warming"
+            ],
+            "shares": [
+              0.75,
+              0.25
+            ],
+            "targets": [
+              25,
+              25
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              75.0,
+              45.0
+            ],
+            "cpuSeconds": 1.618552,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 36992,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "18e9ea188699d36eff582dc40042b17a39ad26200dec360944c9b99c56c52e2a",
+            "gridPoints": 289,
+            "importSeconds": 0.4681917503476143,
+            "peakRssBytes": 243580928,
+            "platform": "cpu",
+            "positiveGridFraction": 0.06920415224913495,
+            "samples": [
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -5.001131534576416,
+                "state": [
+                  10,
+                  0
+                ]
+              },
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -5.001131534576416,
+                "state": [
+                  10,
+                  0
+                ]
+              },
+              {
+                "analyticMargin": 5.0,
+                "numericalMargin": 4.769929885864258,
+                "state": [
+                  0,
+                  20
+                ]
+              },
+              {
+                "analyticMargin": 5.0,
+                "numericalMargin": 4.769929885864258,
+                "state": [
+                  0,
+                  20
+                ]
+              }
+            ],
+            "solveSeconds": 0.09482150012627244,
+            "valueBytes": 1156,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.908319165930152
+          },
+          "optimisticCount": 1,
+          "probes": [
+            {
+              "allowed": false,
+              "fullState": [
+                10,
+                0,
+                0
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10,
+                0
+              ]
+            },
+            {
+              "allowed": false,
+              "fullState": [
+                10,
+                0,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10,
+                0
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                0
+              ],
+              "referenceAllowed": true,
+              "state": [
+                0,
+                20
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                0,
+                20
+              ]
+            }
+          ],
+          "representation": "queues",
+          "resolution": 17,
+          "resources": {
+            "estimatedWorkspaceBytes": 36992,
+            "gridPoints": 289,
+            "valueBytes": 1156
+          }
+        },
+        {
+          "conservativeCount": 0,
+          "dimensions": 3,
+          "guard": {
+            "artifactBytes": 463,
+            "iterations": 1000,
+            "meanSeconds": 2.2500334307551383e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              20,
+              60
+            ],
+            "interaction": {
+              "effects": [
+                0,
+                0
+              ],
+              "relationship": "neutralism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "busy",
+              "warming"
+            ],
+            "shares": [
+              0.75,
+              0.25
+            ],
+            "targets": [
+              25,
+              25
+            ],
+            "unit": "records",
+            "warmup_max": 2
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              75.0,
+              45.0,
+              2
+            ],
+            "cpuSeconds": 1.804561,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 104976,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "a4e42c9b03b74bfddd606ed94b9795ce7088131e4135b96689489cbc52a7b8db",
+            "gridPoints": 729,
+            "importSeconds": 0.47538625029847026,
+            "peakRssBytes": 245219328,
+            "platform": "cpu",
+            "positiveGridFraction": 0.01646090534979424,
+            "samples": [
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -5.767086029052734,
+                "state": [
+                  10,
+                  0,
+                  0
+                ]
+              },
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -11.210871696472168,
+                "state": [
+                  10,
+                  0,
+                  2
+                ]
+              },
+              {
+                "analyticMargin": 5.0,
+                "numericalMargin": 3.454272747039795,
+                "state": [
+                  0,
+                  20,
+                  0
+                ]
+              },
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -14.506196022033691,
+                "state": [
+                  0,
+                  20,
+                  2
+                ]
+              }
+            ],
+            "solveSeconds": 0.16803649999201298,
+            "valueBytes": 2916,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 2.0253943749703467
+          },
+          "optimisticCount": 0,
+          "probes": [
+            {
+              "allowed": false,
+              "fullState": [
+                10,
+                0,
+                0
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10,
+                0,
+                0
+              ]
+            },
+            {
+              "allowed": false,
+              "fullState": [
+                10,
+                0,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10,
+                0,
+                2
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                0
+              ],
+              "referenceAllowed": true,
+              "state": [
+                0,
+                20,
+                0
+              ]
+            },
+            {
+              "allowed": false,
+              "fullState": [
+                0,
+                20,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                0,
+                20,
+                2
+              ]
+            }
+          ],
+          "representation": "queues-and-readiness",
+          "resolution": 9,
+          "resources": {
+            "estimatedWorkspaceBytes": 104976,
+            "gridPoints": 729,
+            "valueBytes": 2916
+          }
+        },
+        {
+          "conservativeCount": 0,
+          "dimensions": 3,
+          "guard": {
+            "artifactBytes": 461,
+            "iterations": 1000,
+            "meanSeconds": 2.017191704362631e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              20,
+              60
+            ],
+            "interaction": {
+              "effects": [
+                0,
+                0
+              ],
+              "relationship": "neutralism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "busy",
+              "warming"
+            ],
+            "shares": [
+              0.75,
+              0.25
+            ],
+            "targets": [
+              25,
+              25
+            ],
+            "unit": "records",
+            "warmup_max": 2
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              75.0,
+              45.0,
+              2
+            ],
+            "cpuSeconds": 1.965837,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 707472,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "a4e42c9b03b74bfddd606ed94b9795ce7088131e4135b96689489cbc52a7b8db",
+            "gridPoints": 4913,
+            "importSeconds": 0.4844011249952018,
+            "peakRssBytes": 254017536,
+            "platform": "cpu",
+            "positiveGridFraction": 0.014654996946875637,
+            "samples": [
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -5.096192359924316,
+                "state": [
+                  10,
+                  0,
+                  0
+                ]
+              },
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -7.893337726593018,
+                "state": [
+                  10,
+                  0,
+                  2
+                ]
+              },
+              {
+                "analyticMargin": 5.0,
+                "numericalMargin": 4.615084171295166,
+                "state": [
+                  0,
+                  20,
+                  0
+                ]
+              },
+              {
+                "analyticMargin": -5.0,
+                "numericalMargin": -10.777132034301758,
+                "state": [
+                  0,
+                  20,
+                  2
+                ]
+              }
+            ],
+            "solveSeconds": 0.19167729234322906,
+            "valueBytes": 19652,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 2.1275444170460105
+          },
+          "optimisticCount": 0,
+          "probes": [
+            {
+              "allowed": false,
+              "fullState": [
+                10,
+                0,
+                0
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10,
+                0,
+                0
+              ]
+            },
+            {
+              "allowed": false,
+              "fullState": [
+                10,
+                0,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                10,
+                0,
+                2
+              ]
+            },
+            {
+              "allowed": true,
+              "fullState": [
+                0,
+                20,
+                0
+              ],
+              "referenceAllowed": true,
+              "state": [
+                0,
+                20,
+                0
+              ]
+            },
+            {
+              "allowed": false,
+              "fullState": [
+                0,
+                20,
+                2
+              ],
+              "referenceAllowed": false,
+              "state": [
+                0,
+                20,
+                2
+              ]
+            }
+          ],
+          "representation": "queues-and-readiness",
+          "resolution": 17,
+          "resources": {
+            "estimatedWorkspaceBytes": 707472,
+            "gridPoints": 4913,
+            "valueBytes": 19652
+          }
+        }
+      ],
+      "runId": "load-a27b283815d0471098771a08f5f96abe",
+      "study": "reachability-state"
+    },
+    "symbiosis": {
+      "complete": true,
+      "environment": {
+        "machine": "arm64",
+        "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
+        "python": "3.13.12"
+      },
+      "records": [
+        {
+          "allowed": true,
+          "effects": [
+            0,
+            0
+          ],
+          "fingerprint": "cc1e43e4022aaed3553a33ea252d06a116d07952eaf067bb97fbab38fdb9ea57",
+          "guard": {
+            "artifactBytes": 478,
+            "iterations": 1000,
+            "meanSeconds": 2.0361749920994044e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "margin": 10.0,
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              30,
+              30
+            ],
+            "interaction": {
+              "effects": [
+                0,
+                0
+              ],
+              "relationship": "neutralism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "producer-consumer",
+              "peer-consumer"
+            ],
+            "shares": [
+              0.5,
+              0.5
+            ],
+            "targets": [
+              20,
+              20
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              90.0,
+              90.0
+            ],
+            "cpuSeconds": 1.749688,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 36992,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "cc1e43e4022aaed3553a33ea252d06a116d07952eaf067bb97fbab38fdb9ea57",
+            "gridPoints": 289,
+            "importSeconds": 0.8909262921661139,
+            "peakRssBytes": 239517696,
+            "platform": "cpu",
+            "positiveGridFraction": 0.07612456747404844,
+            "samples": [
+              {
+                "analyticMargin": 20,
+                "numericalMargin": 11.7069091796875,
+                "state": [
+                  10,
+                  10
+                ]
+              }
+            ],
+            "solveSeconds": 0.13517725002020597,
+            "valueBytes": 1156,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 2.5809588339179754
+          },
+          "relationship": "neutralism"
+        },
+        {
+          "allowed": true,
+          "effects": [
+            10,
+            10
+          ],
+          "fingerprint": "187e77943c6a0d0d501159f5e08140f24c1e7c9fe50bd772ac6869da2572ba77",
+          "guard": {
+            "artifactBytes": 481,
+            "iterations": 1000,
+            "meanSeconds": 2.071675006300211e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "margin": 20,
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              30,
+              30
+            ],
+            "interaction": {
+              "effects": [
+                10,
+                10
+              ],
+              "relationship": "mutualism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "producer-consumer",
+              "peer-consumer"
+            ],
+            "shares": [
+              0.5,
+              0.5
+            ],
+            "targets": [
+              20,
+              20
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              90.0,
+              90.0
+            ],
+            "cpuSeconds": 1.5859619999999999,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 36992,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "187e77943c6a0d0d501159f5e08140f24c1e7c9fe50bd772ac6869da2572ba77",
+            "gridPoints": 289,
+            "importSeconds": 0.4530448750592768,
+            "peakRssBytes": 238731264,
+            "platform": "cpu",
+            "positiveGridFraction": 0.11418685121107267,
+            "samples": [
+              {
+                "analyticMargin": 20,
+                "numericalMargin": 15.915569305419922,
+                "state": [
+                  10,
+                  10
+                ]
+              }
+            ],
+            "solveSeconds": 0.09257379174232483,
+            "valueBytes": 1156,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.9042932079173625
+          },
+          "relationship": "mutualism"
+        },
+        {
+          "allowed": true,
+          "effects": [
+            10,
+            0
+          ],
+          "fingerprint": "463bdab1aaea27c50df8b1634fad20b403704e06390609ed1ae2ac666d7f0a2b",
+          "guard": {
+            "artifactBytes": 481,
+            "iterations": 1000,
+            "meanSeconds": 1.8561874981969593e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "margin": 10.0,
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              30,
+              30
+            ],
+            "interaction": {
+              "effects": [
+                10,
+                0
+              ],
+              "relationship": "commensalism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "producer-consumer",
+              "peer-consumer"
+            ],
+            "shares": [
+              0.5,
+              0.5
+            ],
+            "targets": [
+              20,
+              20
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              90.0,
+              90.0
+            ],
+            "cpuSeconds": 1.614294,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 36992,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "463bdab1aaea27c50df8b1634fad20b403704e06390609ed1ae2ac666d7f0a2b",
+            "gridPoints": 289,
+            "importSeconds": 0.49904816690832376,
+            "peakRssBytes": 241664000,
+            "platform": "cpu",
+            "positiveGridFraction": 0.10034602076124567,
+            "samples": [
+              {
+                "analyticMargin": 20,
+                "numericalMargin": 14.309596061706543,
+                "state": [
+                  10,
+                  10
+                ]
+              }
+            ],
+            "solveSeconds": 0.1315833330154419,
+            "valueBytes": 1156,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.8346282080747187
+          },
+          "relationship": "commensalism"
+        },
+        {
+          "allowed": false,
+          "effects": [
+            10,
+            -10
+          ],
+          "fingerprint": "e267228c3cdc311936f334d4f026130eb6d772739fe22e60be84b31ea3b91905",
+          "guard": {
+            "artifactBytes": 481,
+            "iterations": 1000,
+            "meanSeconds": 1.8910791724920274e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "margin": -10.0,
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              30,
+              30
+            ],
+            "interaction": {
+              "effects": [
+                10,
+                -10
+              ],
+              "relationship": "parasitism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "producer-consumer",
+              "peer-consumer"
+            ],
+            "shares": [
+              0.5,
+              0.5
+            ],
+            "targets": [
+              20,
+              20
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              90.0,
+              90.0
+            ],
+            "cpuSeconds": 1.626952,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 36992,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "e267228c3cdc311936f334d4f026130eb6d772739fe22e60be84b31ea3b91905",
+            "gridPoints": 289,
+            "importSeconds": 0.47177225025370717,
+            "peakRssBytes": 240336896,
+            "platform": "cpu",
+            "positiveGridFraction": 0.031141868512110725,
+            "samples": [
+              {
+                "analyticMargin": 0.0,
+                "numericalMargin": -2.323107957839966,
+                "state": [
+                  10,
+                  10
+                ]
+              }
+            ],
+            "solveSeconds": 0.17809437541291118,
+            "valueBytes": 1156,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.9655239582061768
+          },
+          "relationship": "parasitism"
+        },
+        {
+          "allowed": false,
+          "effects": [
+            -10,
+            -10
+          ],
+          "fingerprint": "b208da82b4d84235f1e2bb9791da93cd7fc02e0bbd12162ae1897cefaccb9fd4",
+          "guard": {
+            "artifactBytes": 483,
+            "iterations": 1000,
+            "meanSeconds": 1.8050665967166425e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "margin": -10.0,
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              30,
+              30
+            ],
+            "interaction": {
+              "effects": [
+                -10,
+                -10
+              ],
+              "relationship": "competition"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "producer-consumer",
+              "peer-consumer"
+            ],
+            "shares": [
+              0.5,
+              0.5
+            ],
+            "targets": [
+              20,
+              20
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              90.0,
+              90.0
+            ],
+            "cpuSeconds": 1.6308939999999998,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 36992,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "b208da82b4d84235f1e2bb9791da93cd7fc02e0bbd12162ae1897cefaccb9fd4",
+            "gridPoints": 289,
+            "importSeconds": 0.48345454223454,
+            "peakRssBytes": 240189440,
+            "platform": "cpu",
+            "positiveGridFraction": 0.0,
+            "samples": [
+              {
+                "analyticMargin": 0.0,
+                "numericalMargin": -14.218061447143555,
+                "state": [
+                  10,
+                  10
+                ]
+              }
+            ],
+            "solveSeconds": 0.11026579095050693,
+            "valueBytes": 1156,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.842647250276059
+          },
+          "relationship": "competition"
+        },
+        {
+          "allowed": false,
+          "effects": [
+            -10,
+            0
+          ],
+          "fingerprint": "acd8ca589b763aca120874966cf3b67c1dc4660c0702bee0fbe532dcc26e3c7a",
+          "guard": {
+            "artifactBytes": 480,
+            "iterations": 1000,
+            "meanSeconds": 4.428345803171396e-05,
+            "states": {
+              "satisfied": 1000
+            }
+          },
+          "margin": -10.0,
+          "model": {
+            "arrival_bounds": [
+              40,
+              60
+            ],
+            "capacities": [
+              30,
+              30
+            ],
+            "interaction": {
+              "effects": [
+                -10,
+                0
+              ],
+              "relationship": "amensalism"
+            },
+            "limits": [
+              30,
+              30
+            ],
+            "names": [
+              "producer-consumer",
+              "peer-consumer"
+            ],
+            "shares": [
+              0.5,
+              0.5
+            ],
+            "targets": [
+              20,
+              20
+            ],
+            "unit": "records",
+            "warmup_max": 0
+          },
+          "numerical": {
+            "backend": "hj_reachability",
+            "computationalDomain": [
+              90.0,
+              90.0
+            ],
+            "cpuSeconds": 1.615772,
+            "dtype": "float32",
+            "estimatedWorkspaceBytes": 36992,
+            "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
+            "fingerprint": "acd8ca589b763aca120874966cf3b67c1dc4660c0702bee0fbe532dcc26e3c7a",
+            "gridPoints": 289,
+            "importSeconds": 0.4915417078882456,
+            "peakRssBytes": 238370816,
+            "platform": "cpu",
+            "positiveGridFraction": 0.01730103806228374,
+            "samples": [
+              {
+                "analyticMargin": 0.0,
+                "numericalMargin": -5.266109466552734,
+                "state": [
+                  10,
+                  10
+                ]
+              }
+            ],
+            "solveSeconds": 0.12766933301463723,
+            "valueBytes": 1156,
+            "versions": {
+              "hj_reachability": "0.7.0",
+              "jax": "0.11.2"
+            },
+            "wallSeconds": 1.873313750140369
+          },
+          "relationship": "amensalism"
+        }
+      ],
+      "runId": "load-49f7328769b948a5837cecd370544ab4",
+      "study": "symbiosis"
+    }
+  }
+}

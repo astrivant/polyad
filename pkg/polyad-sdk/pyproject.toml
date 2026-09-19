@@ -29,6 +29,9 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.39,<2",
 ]
 
+[project.optional-dependencies]
+reachability = ["hj-reachability>=0.7,<0.8"]
+
 [project.urls]
 Homepage = "https://github.com/astrivant/polyad"
 Documentation = "https://github.com/astrivant/polyad/blob/main/pkg/polyad-sdk/README.md"

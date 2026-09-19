@@ -119,6 +119,10 @@ class TopologyStrategy(CallbackStrategy):
 
     The callback can revise routing candidates or connection intent. Use the
     fresh environment to check availability and active grants before new work.
+    During Pod rollout, eviction or scale-down, stop new assignments to retiring
+    executions and drain accepted work. A new execution still needs application
+    readiness checks. Timeouts without a membership change require local health
+    checks and do not themselves trigger this topology callback.
     """
 
     def __init__(self, callback: Callable[[Change, Environment], None]) -> None:
@@ -137,6 +141,10 @@ class ResourceStrategy(CallbackStrategy):
 
     Missing or expired measurements remain unknown. The callback owns any
     threshold, cooldown or worker-profile policy applied to that evidence.
+    While new Pods wait for node capacity, use available measurements to limit
+    admission or propose an approved local profile. This component does not
+    collect cgroup usage or Kubernetes scheduling Events; supply local pressure
+    through the application's own observation and admission loop.
     """
 
     def __init__(self, callback: Callable[[Change, Environment], None]) -> None:
@@ -155,6 +163,9 @@ class DecisionStrategy(CallbackStrategy):
 
     The callback distinguishes proposals, committed decisions and readiness
     before updating application behavior. An observed proposal grants no action.
+    A pending capacity-preparation or traffic decision may require continued
+    backpressure while Kubernetes provisions resources. Check actual peer
+    readiness after the applied phase before increasing application admission.
     """
 
     def __init__(self, callback: Callable[[Change, Environment], None]) -> None:

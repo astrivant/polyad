@@ -35,7 +35,11 @@ pip install ./pkg/polyad-types ./pkg/polyad-sdk ./pkg/polyad-benchmarks
 - `polyad-benchmarks-fixture`: serve the private mock application endpoint.
 - `polyad-benchmarks-fixture --once --delay 0.1`: perform one finite batch.
 - `polyad-benchmarks-refresh --ci-phase prepare|study|finish --root DIRECTORY`:
-  snapshot, execute and verify an experiment. The study phase requires `--context`.
+  snapshot, execute and verify an experiment. Cloud study phases require `--context`.
+  Add `--suite local` during preparation for interaction, state-variable and
+  process-rerouting studies without a cluster. Install
+  `pip install './pkg/polyad-benchmarks[reachability]'` for their optional HJ backend.
+  Follow the [local suite commands](../../studies/symbiosis/README.md#run).
 
 ## Plans and replicas
 

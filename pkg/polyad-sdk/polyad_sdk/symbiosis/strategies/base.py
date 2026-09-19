@@ -28,6 +28,12 @@ class AdaptationStrategy(ABC):
     safe to retry after a partial failure. The SDK tracks completed calls and
     retries unfinished ones; the application remains responsible for finishing
     or handing off work it has accepted.
+
+    Common implementations bridge delayed Pod/node readiness with backpressure,
+    reduce concurrency under memory pressure, or propose approved worker profiles.
+    Kubernetes diagnostics prompt fresh status checks; this interface receives
+    SDK observations, not a raw Kubernetes Event watch. Application timers handle
+    local pressure between SDK changes. See docs/workloads/kubernetes-adaptation.md.
     """
 
     @abstractmethod
@@ -87,6 +93,12 @@ class ConstraintStrategy(AdaptationStrategy):
     capacity in your own scheduling code so two operations cannot both spend
     the same available memory. Callbacks should save results or notify that
     scheduling code, and be safe to retry.
+
+    Implement this interface for local conditions such as a peer circuit opened
+    after repeated timeouts, a full durable queue, or insufficient budget while
+    a Kubernetes replacement is Pending. Keep each blocker independently named.
+    Unknown transport health or missing usage measurements must remain unknown;
+    an unrelated topology recovery must not clear them.
 
     Attributes:
         name (str): Stable application-chosen constraint identity.

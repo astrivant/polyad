@@ -34,6 +34,7 @@ safe handoffs, using the `AdaptiveService` abstract base class.
   - [Identity, permissions and freshness](#identity-permissions-and-freshness)
   - [Hooks, recovery and explicit actions](#hooks-recovery-and-explicit-actions)
 - [Telemetry and subprocess plans](#telemetry-and-subprocess-plans)
+- [Reachability and symbiosis models](#reachability-and-symbiosis-models)
 - [Observations](#observations)
 - [Activation](#activation)
 - [Composition and request handling](#composition-and-request-handling)
@@ -68,6 +69,7 @@ polyad_sdk/
     models.py                Immutable observations and deltas
     state.py                 Observation reduction, freshness and expiry
     service.py               AdaptiveService lifecycle and delivery
+    reachability/            Interaction models, queue envelopes, guard and optional HJ analysis
     strategies/
       base.py                Strategy ABCs and constraint assessments
       callbacks.py           Logging and delta-selected application callbacks
@@ -512,6 +514,27 @@ into reconciliation and newly constructed children.
 See [SDK telemetry and subprocess plans](https://github.com/astrivant/polyad/blob/main/docs/workloads/sdk-runtime.md)
 for configuration, lifecycle limits and integration examples, or run the
 [finite worker-plan demo](https://github.com/astrivant/polyad/blob/main/examples/sdk-process-plans.py).
+
+## Reachability and symbiosis models
+
+`polyad_sdk.symbiosis.reachability` provides `QueueModel`, `Interaction`,
+`Relationship`, `Envelope`, `compile_envelope`, `Observation` and
+`ReachabilityStrategy`. Model the capacity effects of mutualism, parasitism,
+competition and other relationships, then check a proposed routing split against
+an explicit finite queue contract. The runtime guard extends `ConstraintStrategy`
+and uses the standard library; it reads a compact prepared envelope and current
+application measurements.
+
+Install `pip install 'polyad-sdk[reachability]'` for the optional
+`polyad_sdk.symbiosis.reachability.hj.analyze` backend. Numerical calculations run
+in a spawned process with grid/workspace preflight limits and a wall deadline.
+The SDK's normal imports and guard checks do not load JAX. See the
+[modeling and resource guide](https://github.com/astrivant/polyad/blob/main/docs/workloads/reachability.md)
+and [repeatable studies](https://github.com/astrivant/polyad/blob/main/studies/README.md).
+
+The [Kubernetes adaptation guide](https://github.com/astrivant/polyad/blob/main/docs/workloads/kubernetes-adaptation.md)
+maps provisioning delays, transport failures, rollouts and resource pressure to
+the strategy ABCs, guards and application-owned mutations.
 
 ## Observations
 

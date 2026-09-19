@@ -1,0 +1,18 @@
+{
+  "model": {
+    "names": ["busy", "warming"],
+    "capacities": [20, 60],
+    "limits": [30, 30],
+    "targets": [25, 25],
+    "arrival_bounds": [40, 60],
+    "shares": [0.75, 0.25],
+    "warmup_max": 2,
+    "unit": "records"
+  },
+  "observations": [[10, 0, 0], [10, 0, 2], [0, 20, 0], [0, 20, 2]],
+  "resolutions": [9, 17],
+  "horizon": 1,
+  "numerical": true,
+  "guardIterations": 1000,
+  "budget": {"max_points": 100000, "max_workspace_bytes": 268435456, "timeout_seconds": 60, "accuracy": "low"}
+}

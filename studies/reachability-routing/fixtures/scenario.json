@@ -1,0 +1,15 @@
+{
+  "model": {
+    "names": ["busy", "spare"],
+    "capacities": [10, 35],
+    "limits": [20, 20],
+    "targets": [20, 20],
+    "arrival_bounds": [25, 30],
+    "shares": [0.25, 0.75],
+    "unit": "jobs"
+  },
+  "jobs": 60,
+  "rate": 30,
+  "horizon": 2,
+  "repetitions": 2
+}

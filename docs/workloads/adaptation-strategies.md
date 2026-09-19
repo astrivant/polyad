@@ -17,6 +17,12 @@ profile thresholds, `decisions` handles operator phases, and `callbacks` adapts
 application callbacks. Import public classes from the strategy package or the
 SDK root. See the [complete package map](../../pkg/polyad-sdk/README.md#package-layout).
 
+`polyad_sdk.symbiosis.reachability.ReachabilityStrategy` is a `ConstraintStrategy`
+for a modeled queue contract. It checks whether an approved routing split can
+keep queues bounded and meet its terminal target, using a current artifact and
+application measurements. See [reachability guards](reachability.md#use-a-reachability-guard)
+for interaction models, assumptions and optional numerical studies.
+
 ## Table of contents
 
 - [Start with a producer and consumer](#start-with-a-producer-and-consumer)
@@ -79,7 +85,10 @@ An **adaptation** is a change to how the application accepts, routes or processe
 work in response to its observed environment. Engineers define that behavior;
 SDK strategies deliver the relevant information, check conditions and suggest
 changes. Application code carries out worker and connection lifecycle changes.
-Each service selects the adaptations relevant to its work.
+Each service selects the adaptations relevant to its work. The
+[Kubernetes adaptation guide](kubernetes-adaptation.md) maps scheduling delays,
+intermittent connectivity, rollouts and resource pressure to these components,
+with implementation and recovery examples.
 
 Use the SDK's [telemetry and subprocess plans](sdk-runtime.md) to implement those
 local lifecycle changes: strategies propose approved profiles, a supervisor
@@ -97,6 +106,15 @@ record the result.
 | Coordination with operator decisions | Hold a dependent handoff until the required operator phase is observed, then recheck the resulting topology and application readiness. | A local action relies on Soul searching first applying a graph layout, traffic split or capacity preparation. | `DecisionStrategy` interprets decisions; `DecisionGuardStrategy` assesses an explicitly accepted phase. |
 | Loss of observation and recovery | Pause new assignments that depend on an unavailable view, preserve accepted work, recover the subscription and rebuild intent from a fresh baseline. | The event stream disconnects, observations expire, the service drains, or a graph identity changes. | `FreshnessStrategy`, baseline delivery to callback strategies, and the [SDK recovery contract](../../pkg/polyad-sdk/README.md#hooks-recovery-and-explicit-actions). |
 | Observation before enabling changes | Record which changes arrive and how often, then use that evidence to select policies and tune thresholds. | Integrating a service for the first time or diagnosing repeated adaptation. | `ObserveStrategy`; application metrics for outcomes, latency and rejected admissions. |
+
+The [local work-sharing example](local-soul-searching.md#work-sharing-through-sdk-strategies)
+implements neighbor routing with `WorkSharingStrategy(TopologyStrategy)`.
+The strategy updates eligible destinations from SDK topology deltas;
+`PeerAvailabilityStrategy` checks connection readiness and advertised capacity
+before application code delegates real queued jobs. The receiver rechecks its
+shared budget, and the source retains job ownership until a verified result
+returns. The demo compares this adaptation against a fixed topology under the
+same worker limits.
 
 A **worker profile** is an application-defined set of choices, such as child
 count, implementation, batch size and concurrency. The SDK passes profile names;

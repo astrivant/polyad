@@ -1,200 +1,200 @@
 """
-Run Soul Search locally with real processes, TCP peers and adaptive workers.
+Share real work over an adapting service network and measure the benefit.
 
-Run it from the repository root with the local SDK installed:
+Three services compute integer squares in child processes. S0 receives most of
+an uneven load; S1 has less work and S2 has spare capacity. Services first use a
+chain of TCP connections. Under sustained demand, the root can add S0 -> S2,
+letting S0 delegate queued jobs directly to S2 while retaining responsibility
+for their results. Each service also adjusts its own workers using Soul searching.
+
+Run from the repository root with the local SDK installed:
 
     python -m pip install ./pkg/polyad-types ./pkg/polyad-sdk
-    python soul.py
-    python soul.py --jobs 128 --work-seconds 0.02 --tick 0.02
+    python soul.py                    # Compare chain and adaptive runs
+    python soul.py --mode adaptive    # Just the changing topology
+    python soul.py --mode chain       # Just the fixed topology
+    python soul.py --jobs 768 --peer-window 12
     python soul.py --help
+
+The default comparison runs both trials sequentially with fresh processes, the
+same job IDs and values, the same worker profiles and the same resource limits.
+Only permission to add the shortcut differs. Measurements include verified jobs,
+completion time, mean/p95 latency and S0's accumulated backlog. A speedup above
+1 means the adaptive trial finished sooner. Actual measurements are printed,
+including slowdowns if process startup or scheduling outweighs the benefit.
 
 Reading order
 -------------
-Start with main() at the bottom, then follow the two supervisors:
+Start with main(), then follow the two supervisors:
 
-    main -> parse_settings -> SoulExperiment.run -> close in finally
-                                  |
-                                  +-- start services and form a chain
-                                  +-- start load and wait for batch pressure
-                                  +-- form a triangle and wait for recovery
-                                  +-- restore the chain, stop and verify
+    main -> parse_settings -> for each trial: SoulExperiment.run -> close
+      |                             |
+      |                             +-- start services and form a chain
+      |                             +-- start the same uneven producer load
+      |                             +-- optionally add S0 -> S2 under pressure
+      |                             +-- verify all owned jobs, quiesce new work
+      |                             +-- restore workers and chain, stop and join
+      +-- compare the measured results
 
-    service -> AdaptiveService.run -> receive / observe / publish / dispatch
-                   +-- close in finally
+    service -> AdaptiveService.run
+        receive commands / TCP / producer jobs -> measure -> SDK strategies
+            -> roll workers -> dispatch locally -> share surplus -> drain
 
-AdaptiveService extends polyad_sdk.AdaptiveService. Local observations pass
-through the SDK's refresh() and dispatch() methods, which run the configured
-FreshnessStrategy before delivering immutable Change objects to adapt().
-A local snapshot adapter supplies the worker graph;
-the example needs no operator or HTTP server.
+The reusable producer(), worker(), search_soul() and cheeger() functions also
+support nature.py. Its own producer routing and capability selection are separate
+from this demo's skewed_producer() and peer work-sharing protocol.
 
-Each run method names the steps in execution order. Read its helpers for the
-input contracts, transport and readiness details; the examples below explain
-why those steps change the graphs. Full Google-style docstrings describe each
-step's inputs, results and failure conditions.
-
-What runs
----------
-S0, S1 and S2 are separate service processes. Each owns its child workers and
-chooses when to change their execution profile. The root supervisor owns the
-service network. A separate producer sends a warmup followed by a burst:
+Process ownership and workload
+------------------------------
+With the defaults, --jobs 384 sends 384 jobs to S0, 128 to S1 and 32 to S2:
 
     main (root supervisor)
-    +-- producer -------- IPC load --------> S0, S1, S2
-    +-- S0
-    |   +-- worker(s)
-    +-- S1
-    |   +-- worker(s)
-    +-- S2
-        +-- worker(s)
+    +-- producer ----- IPC work ----> S0: 384 / S1: 128 / S2: 32
+    +-- S0 -> its child worker(s)
+    +-- S1 -> its child worker(s)
+    +-- S2 -> its child worker(s)
 
-The branches above show process ownership. The diagrams below show data paths.
+Each trial verifies 544 unique jobs. Job IDs identify their original owner and
+stay unchanged when another service executes them. Every job computes (ID+1)^2.
+A service tracks an owned job until its final result is verified, whether the
+result comes from a local worker or a TCP peer. Imported jobs execute locally;
+they are not forwarded again. This keeps responsibility and duplicate checks
+readable in a small example.
 
-How the TCP network changes
----------------------------
-Each service listens on an ephemeral localhost port. Arrows show who opens a
-persistent peer connection; work results return through that same connection.
+How the TCP network helps
+-------------------------
+Arrows carry jobs toward a compatible peer; results return on the same socket.
+All services use the same square function. Each owns a bounded queue and can
+advertise how many more jobs it can accept.
 
-    1. Baseline: chain                         Cheeger = 1
+    Chain, Cheeger = 1             Adaptive triangle, Cheeger = 2
 
-    S0 ------> S1 ------> S2
+    S0 ------> S1 ------> S2       S0 ------> S1 ------> S2
+    busy       less busy  spare    |                     ^
+                                   +--- queued jobs -----+
+                                       verified results return to S0
 
-    2. Sustained demand: add the S0 -> S2 edge  Cheeger = 2
+The fixed-chain trial can share S0 work with S1 and S1 work with S2. It cannot
+send S0 jobs directly to S2 or relay them through S1. The adaptive trial adds
+that direct path after S0 selects batch workers under sustained backlog. S0
+keeps enough queued work for its local workers and delegates surplus through
+eligible links. Newly reachable capacity can now complete the producer's load.
 
-    S0 ------> S1 ------> S2
-    |                     ^
-    +---------------------+
+After all owners verify their jobs, the root announces quiesce: no new peer
+assignments are needed. Services return to one worker. The shortcut stops new
+assignments, waits for outstanding results and exchanges a drain acknowledgement
+before closing. The root then acknowledges restoration of the original chain:
 
-    3. Recovery: remove the added edge         Cheeger = 1
+    S0 ------> S1 ------> S2       Final state before shutdown
 
-    S0 ------> S1 ------> S2
+The TCP protocol also supports removing a link while jobs are still in flight.
+New sends stop immediately, while those jobs retain their source ownership and
+must finish before the removal is acknowledged.
 
-After at least two services switch to batch workers, the root admits the
-triangle. Each newly opened TCP edge carries a square-computation job to a
-child worker at its destination. The result is checked before that service
-acknowledges the topology change. All three acknowledgements are required for
-"topology_committed". These edges are actual sockets, not just diagram labels.
+Which SDK strategies define this adaptation
+-------------------------------------------
+Work sharing is the existing neighbor-routing and work-distribution category:
 
-Once all services finish their accepted work and restore their interactive
-profile, the root closes S0 -> S2 and restores the original chain. The original
-chain connections stay open until the final shutdown.
+    SDK topology baseline or delta
+        -> WorkSharingStrategy(TopologyStrategy)
+        -> remember eligible service names
+        -> PeerAvailabilityStrategy + current service.view
+        -> application checks credit, reserves its own jobs, sends a batch
+        -> receiver checks its actual budget before accepting
 
-How each service's processing tree changes
------------------------------------------
-Each service follows this cycle independently. Sx means any of S0, S1 or S2:
+WorkSharingStrategy specializes the SDK's TopologyStrategy; it only updates
+routing intent. PeerAvailabilityStrategy checks admitted links, a completed
+square-capability handshake, available capacity and drain state. FreshnessStrategy
+also protects local profile changes. The local snapshot includes both workers
+and connected service peers, so additions and removals follow SDK change delivery.
+Application code owns sockets, job tracking and worker lifecycle.
 
-    Baseline              Under load              Recovered
-    Sx                    Sx                      Sx
-    +-- interactive       +-- batch-1              +-- interactive (new PID)
+An advertisement can become stale, especially if two senders see the same free
+slots. The receiver rechecks a shared --peer-window budget and explicitly rejects
+an entire batch that no longer fits. Only that rejection permits requeueing.
+Wrong or duplicate results fail verification. A disconnect with an uncertain
+execution outcome fails the trial and enters cleanup, retaining the ownership
+record instead of blindly retrying potentially executed work.
+
+How each service changes its processing tree
+--------------------------------------------
+Services use the same local worker policy and ceiling in both trials:
+
+    Baseline              Sustained load            Recovered
+    Sx                    Sx                        Sx
+    +-- interactive       +-- batch-1               +-- interactive (new PID)
                           +-- batch-2
                           +-- batch-3
 
-An interactive worker accepts one job per dispatch; a batch worker accepts up
-to four. Both compute the same result. A simulated I/O delay per dispatch makes
-batching's capacity benefit visible without an external dependency.
+An interactive worker processes one job per dispatch. Each batch worker accepts
+up to four. Both compute the same function; a simulated I/O delay per dispatch
+makes batching useful. Three consecutive observations at or above eight
+outstanding jobs select batch workers, subject to cooldown and resource checks.
+The service stays ready for peer work until the root quiesces the completed load,
+then a quiet interval permits recovery. A lightly loaded service may stay with
+one worker throughout; S0 and S1 demonstrate replacement under the default load.
 
-The handoff temporarily overlaps generations, within a four-worker ceiling:
+New workers must be ready before receiving jobs. Old workers finish their current
+batches and exit. A four-worker limit includes this temporary overlap:
 
-    Scale up:  1 old interactive + 3 starting batch workers = 4 live children
-    Recover:   3 old batch workers + 1 starting interactive = 4 live children
+    Scale up:  1 old interactive + 3 starting batch workers = 4 live
+    Recover:   3 old batch workers + 1 starting interactive = 4 live
 
-Replacements must acknowledge readiness before taking new work. Retiring
-workers finish their accepted batches, receive a stop command and are joined.
-The old generation continues serving while replacements start.
+The internal routing graph connects dispatch D and collect C through workers:
 
-There is also a routing graph inside each service. D is its dispatch component
-and C is its result collector; both live inside the service process:
+    One worker, Cheeger = 1        Three workers, Cheeger = 1.5
 
-    Baseline / recovered:                     Cheeger = 1
+    D -> interactive -> C         D -> batch-1 -> C
+                                  D -> batch-2 -> C
+                                  D -> batch-3 -> C
 
-    D ------> interactive ------> C
+Worker pipes and service TCP edges are measured separately, ignoring direction
+for these exact Cheeger calculations. Both obey the fixed floor of 1. Demand
+selects targets of 1.5 for workers and 2 for the triangle. Higher expansion
+exposes another possible path; the job and latency measurements show its benefit.
 
-    Under load:                               Cheeger = 1.5
+Backpressure, measurements and shutdown
+---------------------------------------
+The application holds at most 64 queued-or-delegated jobs, plus batches already
+executing locally. Each peer link has at most one batch outstanding; all incoming
+peer jobs share the receiver's peer-window ceiling. Nonblocking TCP frames and
+byte limits keep partial messages from blocking the service loop.
 
-             +--> batch-1 --+
-    D -------+--> batch-2 --+------> C
-             +--> batch-3 --+
+Completion time runs from producer launch to the last verified owned result.
+Latency starts just before the producer's pipe write, so it includes waiting
+behind backpressure. source_backlog_seconds integrates S0's observed unfinished
+owned jobs, including delegated work; work still in the producer pipe is covered
+by latency instead. Peak backlog may stay similar even when the queue drains
+sooner. The comparison uses the same worker ceiling, not identical utilization:
+the added path lets otherwise idle workers do useful work.
 
-These edges are worker command/result pipes. Each parallel branch connects the
-same D and C vertices. Retiring workers drain accepted jobs outside the graph
-used to admit new dispatches. Worker-routing and service-network Cheeger values
-are computed independently by enumerating their cuts with direction ignored.
+JSON lines explain what happened:
 
-What drives the decisions
--------------------------
-"search_soul" selects an approved profile from observed backlog and sustained
-pressure. AdaptiveService checks constraints and enacts worker changes;
-SoulExperiment does the same for the peer network. The defaults require three observations of at
-least eight outstanding jobs before switching to batch workers. A cooldown
-limits changes, and an empty backlog must remain quiet before recovery.
+    trial_started           mode and per-service job counts
+    observed                backlog and completion deltas
+    admitted / committed    worker changes, limits and Cheeger values
+    topology_committed      ready connections or fully drained removals
+    work_delegated          original job IDs sent to a peer
+    peer_batch_accepted     receiver budget checked and jobs accepted
+    peer_backpressure       whole batch rejected before execution
+    peer_work_completed     receiver's child worker produced the answer
+    delegated_work_completed source verified that answer and released its slot
+    edge_closed             connection drained with zero outstanding jobs
+    baseline_restored       owned and imported jobs done; one local worker
+    trial_verified          measured performance after every child is joined
+    comparison              both measurements, speedup and backlog-area change
+    success                 all selected trials finished and children exited
 
-The fixed Cheeger floor stays at 1. Demand selects separate targets of 1.5 for
-batch worker routing and 2 for the service triangle. Live process limits,
-bounded batches, a 64-job pending queue and change budgets also constrain the
-response. Cheeger measures structure; completed jobs measure useful work.
-
-The producer's IPC load drives worker adaptation. The extra TCP jobs exercise
-the admitted peer links. With defaults, all 288 producer jobs are verified,
-along with the peer jobs. The root waits for baseline recovery, requests stop,
-and joins the producer and services; each service joins its workers. Failures
-and interruption enter cleanup without reporting success.
-
-How to read the application lifecycle
-------------------------------------
-service() owns signals and a try/finally cleanup boundary. Start with
-AdaptiveService.run() to see the application cycle, then follow its named steps:
-
-    root commands / peer work / producer work
-                        |
-                        v
-    bounded admission -> collect results -> observe pressure and progress
-                                                |
-                                                v
-                                  SDK refresh / dispatch -> adapt(Change)
-                                                |
-                                                v
-                  propose profile -> admit budgets -> commit when ready
-                                                            |
-                                                            v
-                  verify recovery <- dispatch work / drain old workers
-
-The application-specific boundaries are worker() for computation,
-receive_producer_work() and accept_peer_work() for input contracts, and
-complete_batch() for output verification. Keep those contracts consistent when
-changing the capability. search_soul() remains a pure policy; propose_profile()
-does not start processes. admit_profile() checks overlapping generations before
-spawning, and commit_profile() waits for the whole replacement set to be ready.
-
-Backpressure prevents unbounded admission. Readiness prevents premature routing.
-Identity tracking exposes lost or duplicate work. Retiring workers drain instead
-of abandoning accepted batches. close() runs even after partial startup or an
-exception. report_recovery() separately checks this finite demonstration's
-expected load and adaptation; replace that assertion for a long-lived service.
-
-Reading the output
-------------------
-JSON lines include the process PID, service identity and monotonic timestamp:
-
-    observed             backlog and completion deltas
-    admitted / committed worker profile decisions and their Cheeger evidence
-    worker_*             spawn, readiness, join and cleanup of real processes
-    topology_admitted    proposed chain or triangle and its calculated Cheeger
-    edge_opened / closed actual peer connection changes
-    peer_work_completed  a child worker completed the job sent over a TCP edge
-    topology_committed   every service acknowledged the new topology epoch
-    baseline_restored    this service returned to one interactive worker
-    success              the entire experiment finished and its tree was joined
-
-Settings and CLI flags below expose load, timing and resource limits. See
-"docs/workloads/local-soul-searching.md" for the walkthrough and the connection
-to the proposed Natural Selection capability-placement and composition planner.
-Run nature.py to see that local parent planner reuse this worker and policy code,
-select capabilities, preserve useful services and retire excluded processes.
+The root verifies every result and joins all services and producers; services
+join their own workers. Errors and interruption run cleanup without reporting
+success. See docs/workloads/local-soul-searching.md for the walkthrough and
+nature.py for Natural Selection over these shared workers and policy functions.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import multiprocessing as mp
 import os
@@ -202,23 +202,23 @@ import signal
 import socket
 import time
 from collections import deque
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from select import select
 from typing import TYPE_CHECKING
 
 from polyad_sdk import AdaptiveService as SDKAdaptiveService
-from polyad_sdk import Client, FreshnessStrategy
+from polyad_sdk import Client, FreshnessStrategy, PeerAvailabilityStrategy, TopologyStrategy
 from polyad_types import ServiceEndpoint
 from polyad_types.events.envelope import Event
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
     from multiprocessing.connection import Connection
     from multiprocessing.process import BaseProcess
     from types import FrameType
     from typing import Any, NoReturn
 
-    from polyad_sdk import Change, ConstraintAssessment
+    from polyad_sdk import Change, ConstraintAssessment, Environment
 
 
 @dataclass(frozen=True)
@@ -231,7 +231,9 @@ class Settings:
     edge expansion. Worker limits include retiring and replacement generations.
 
     Attributes:
-        jobs (int): Number of producer jobs delivered to each service.
+        jobs (int): Jobs sent to the busiest service; the other two get one
+            third and one twelfth as many in this demo. producer(), reused by
+            nature.py, still sends this many jobs to each supplied output.
         work_seconds (float): Simulated I/O overhead for each worker dispatch.
         tick (float): Delay between service and root observation cycles.
         high_water (int): Backlog that counts as a high-demand observation.
@@ -241,11 +243,12 @@ class Settings:
         worker_limit (int): Maximum live child workers owned by one service.
         hard_minimum (float): Fixed minimum Cheeger value for admitted graphs.
         timeout (float): Maximum duration of a service or root experiment loop.
+        peer_window (int): Maximum unfinished jobs accepted from all peers together.
     """
 
-    jobs: int = 96
+    jobs: int = 384
     work_seconds: float = 0.05
-    tick: float = 0.05
+    tick: float = 0.02
     high_water: int = 8
     sustained: int = 3
     cooldown: float = 0.3
@@ -253,6 +256,7 @@ class Settings:
     worker_limit: int = 4
     hard_minimum: float = 1.0
     timeout: float = 20.0
+    peer_window: int = 12
 
 
 @dataclass(frozen=True)
@@ -307,6 +311,149 @@ class Child:
     stopping: bool = False
 
 
+@dataclass
+class Peer:
+    """
+    Keep one TCP link and its unfinished jobs under the service's ownership.
+
+    Messages are newline-delimited JSON with bounded buffers. Socket I/O never
+    waits for a full message, so an incomplete frame cannot stop local workers.
+    Advertised capacity is a hint; the receiver checks its budget again before
+    accepting a batch. Only an explicit rejection allows the sender to requeue it.
+
+    Attributes:
+        connection (socket.socket): Nonblocking socket owned by this service.
+        name (str): Other service's name, learned from hello on incoming links.
+        epoch (int): Root revision that originally authorized this link.
+        ready (bool): Whether the peer handshake has completed.
+        credit (int): Most recently advertised free job slots at the receiver.
+        advertised (int): Last capacity sent, to avoid repeating unchanged values.
+        jobs (set[int]): Jobs sent on this link whose results are still owed.
+        draining (bool): Whether new jobs are prohibited on this link.
+        drain_sent (bool): Whether the sender has requested a drain acknowledgement.
+        drained (bool): Whether the receiver acknowledged a complete drain.
+        incoming (bytearray): Incomplete received frame.
+        outgoing (bytearray): Encoded messages awaiting socket writes.
+        closed (bool): Whether the other end closed the socket.
+    """
+
+    connection: socket.socket
+    name: str = ""
+    epoch: int = 0
+    ready: bool = False
+    credit: int = 0
+    advertised: int = -1
+    jobs: set[int] = field(default_factory=set)
+    draining: bool = False
+    drain_sent: bool = False
+    drained: bool = False
+    incoming: bytearray = field(default_factory=bytearray)
+    outgoing: bytearray = field(default_factory=bytearray)
+    closed: bool = False
+
+    def send(self, kind: str, **payload: Any) -> None:
+        """
+        Queue a small protocol message without blocking the service loop.
+
+        Args:
+            kind (str): Message type, such as jobs, capacity or result.
+            **payload (Any): JSON-serializable message fields.
+
+        Returns:
+            None: The encoded message awaits the next pump call.
+
+        Raises:
+            RuntimeError: A frame or the queued output exceeds its byte budget.
+        """
+        data = (json.dumps({"kind": kind, "epoch": self.epoch, **payload}) + "\n").encode()
+        if len(data) > 8192 or len(self.outgoing) + len(data) > 65536:
+            raise RuntimeError("peer output exceeds its bounded buffer")
+        self.outgoing.extend(data)
+
+    def pump(self) -> list[dict[str, Any]]:
+        """
+        Flush available output and read complete frames within bounded buffers.
+
+        Returns:
+            list[dict[str, Any]]: Complete messages in their original order.
+
+        Raises:
+            RuntimeError: A frame is oversized, malformed or truncated on close.
+            OSError: TCP communication fails.
+        """
+        if self.outgoing:
+            try:
+                sent = self.connection.send(self.outgoing)
+                del self.outgoing[:sent]
+            except BlockingIOError:
+                pass
+        try:
+            data = self.connection.recv(8192)
+        except BlockingIOError:
+            return []
+        if not data:
+            self.closed = True
+            if self.incoming:
+                raise RuntimeError("peer closed with an incomplete frame")
+            return []
+        self.incoming.extend(data)
+        messages = []
+        while b"\n" in self.incoming:
+            frame, _, remaining = self.incoming.partition(b"\n")
+            self.incoming = bytearray(remaining)
+            if len(frame) > 8192:
+                raise RuntimeError("peer frame exceeds 8 KiB")
+            try:
+                message = json.loads(frame)
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise RuntimeError("peer sent malformed JSON") from error
+            if not isinstance(message, dict) or not isinstance(message.get("kind"), str):
+                raise RuntimeError("peer message must be a JSON object with a kind")
+            messages.append(message)
+        if len(self.incoming) > 8192:
+            raise RuntimeError("peer frame exceeds 8 KiB")
+        return messages
+
+
+class WorkSharingStrategy(TopologyStrategy):
+    """
+    Adapt the SDK's neighbor-routing strategy to this demo's service names.
+
+    TopologyStrategy delivers connection additions, removals and unavailable
+    views. This specialization remembers eligible service names; it does not
+    send jobs. PeerAvailabilityStrategy and live receiver capacity gate each
+    later send. Local child workers are separate candidates and are excluded.
+    """
+
+    def __init__(self, publish: Callable[[tuple[str, ...]], None]) -> None:
+        """
+        Bind the application's destination-list callback to topology changes.
+
+        Args:
+            publish (Callable[[tuple[str, ...]], None]): Save eligible peer names.
+        """
+        self._publish_peers = publish
+        super().__init__(self.routes_changed)
+
+    def routes_changed(self, change: Change, current: Environment) -> None:
+        """
+        Replace routing intent with service peers in the latest usable view.
+
+        Args:
+            change (Change): Baseline or topology delta delivered by the SDK.
+            current (Environment): Freshly evaluated neighborhood and lifecycle.
+
+        Returns:
+            None: Unavailable views publish an empty destination list.
+        """
+        names = tuple(
+            str(peer["node"]["name"])
+            for peer in current.candidates
+            if current.available and str(peer["node"]["name"]).startswith("service-")
+        )
+        self._publish_peers(names)
+
+
 def emit(event: str, **details: Any) -> None:
     """
     Write one atomic, structured lifecycle record.
@@ -326,8 +473,6 @@ def emit(event: str, **details: Any) -> None:
         TypeError: A supplied detail cannot be encoded as JSON.
         OSError: The output stream cannot accept the record.
     """
-    import json
-
     record = {"event": event, "pid": os.getpid(), "time": round(time.monotonic(), 3), **details}
     os.write(1, (json.dumps(record, sort_keys=True) + "\n").encode())
 
@@ -425,8 +570,8 @@ def producer(outputs: list[Connection], settings: Settings) -> None:
 
     Emit identities 0 through jobs - 1 with values identity + 1. The first three
     identities are spaced apart; the remainder create sustained pressure.
-    Soul passes three service pipes, while Nature passes its one routing pipe.
-    Blocking OS pipes provide backpressure to the finite producer.
+    Nature passes its parent's routing pipe. Soul's topology comparison uses
+    skewed_producer() instead. Blocking OS pipes backpressure this finite producer.
 
     Args:
         outputs (list[Connection]): Writable endpoints receiving identical loads.
@@ -452,6 +597,110 @@ def producer(outputs: list[Connection], settings: Settings) -> None:
     finally:
         for output in outputs:
             output.close()
+
+
+def load_counts(settings: Settings) -> tuple[int, int, int]:
+    """
+    Give S0 most of the work and leave spare capacity at S2.
+
+    Args:
+        settings (Settings): Job count for S0.
+
+    Returns:
+        tuple[int, int, int]: Identical per-service loads for both comparison runs.
+    """
+    return settings.jobs, settings.jobs // 3, max(3, settings.jobs // 12)
+
+
+def skewed_producer(outputs: list[Connection], settings: Settings) -> None:
+    """
+    Send the comparison workload with unique IDs and end-to-end start timestamps.
+
+    An ID encodes its original service as ID divided by settings.jobs. Every
+    value is ID plus one, so both the sender and receiver can verify results.
+    Timestamps precede pipe writes, including producer backpressure in latency.
+
+    Args:
+        outputs (list[Connection]): Three producer pipes in service order.
+        settings (Settings): Shared load and warmup timing for both trials.
+
+    Returns:
+        None: Each service received its finite load and end-of-input marker.
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, interrupt)
+    counts = load_counts(settings)
+    try:
+        for offset in range(max(counts)):
+            for index, (output, count) in enumerate(zip(outputs, counts, strict=True)):
+                if offset < count:
+                    identity = index * settings.jobs + offset
+                    output.send((identity, identity + 1, time.monotonic()))
+                if offset == count - 1:
+                    output.send(None)
+            if offset < 3:
+                time.sleep(settings.work_seconds * 2)
+        emit("load_finished", counts=counts, total=sum(counts))
+    finally:
+        for output in outputs:
+            output.close()
+
+
+@dataclass
+class LoadMetrics:
+    """
+    Measure only jobs originally assigned to this service, wherever they execute.
+
+    Attributes:
+        offered (dict[int, float]): Producer timestamps retained until final verification.
+        latencies (list[float]): End-to-end seconds for verified owned jobs.
+        finished (float): Time of the last owned completion.
+        previous_time (float): Last backlog observation, or zero before the first.
+        previous_backlog (int): Owned unfinished jobs at that observation.
+        backlog_seconds (float): Integral of observed owned backlog over time.
+        peak_backlog (int): Largest observed owned backlog.
+        sent (dict[str, int]): Jobs delegated to each peer, excluding rejected batches.
+        remote_executed (int): Peer-owned jobs completed by local workers.
+    """
+
+    offered: dict[int, float] = field(default_factory=dict)
+    latencies: list[float] = field(default_factory=list)
+    finished: float = 0
+    previous_time: float = 0
+    previous_backlog: int = 0
+    backlog_seconds: float = 0
+    peak_backlog: int = 0
+    sent: dict[str, int] = field(default_factory=dict)
+    remote_executed: int = 0
+
+    def observe(self, now: float) -> None:
+        """
+        Integrate unfinished owned work, including work delegated to peers.
+
+        Args:
+            now (float): Current monotonic time.
+
+        Returns:
+            None: Backlog area and peak are updated without double-counting peer jobs.
+        """
+        backlog = len(self.offered) - len(self.latencies)
+        if self.previous_time:
+            self.backlog_seconds += self.previous_backlog * (now - self.previous_time)
+        self.previous_time, self.previous_backlog = now, backlog
+        self.peak_backlog = max(self.peak_backlog, backlog)
+
+    def complete(self, identity: int) -> None:
+        """
+        Record one verified result using the original producer timestamp.
+
+        Args:
+            identity (int): Owned job whose completion was checked by the service.
+
+        Returns:
+            None: Completion latency and the last completion time are recorded.
+        """
+        self.finished = time.monotonic()
+        self.latencies.append(self.finished - self.offered[identity])
 
 
 def search_soul(active: Profile, backlog: int, high: int, quiet: float, elapsed: float, settings: Settings) -> Profile:
@@ -492,7 +741,7 @@ class Observation:
 
     Attributes:
         time (float): Monotonic time at which the observation was taken.
-        backlog (int): Accepted jobs waiting or assigned to workers.
+        backlog (int): Accepted jobs waiting, executing locally or delegated to peers.
         delta_backlog (int): Backlog change since the preceding observation.
         completed (int): Total verified jobs, including TCP peer work.
         completed_delta (int): Jobs completed since the preceding observation.
@@ -586,9 +835,19 @@ class AdaptiveService(SDKAdaptiveService):
         process_context (mp.context.SpawnContext): Context used to create child workers.
         listener (socket.socket | None): Owned TCP listener after startup.
         port (int): Listener port announced to the root after worker readiness.
-        peers (dict[str, socket.socket]): Outbound, root-admitted TCP connections.
-        inbound (list[socket.socket]): Accepted incoming peer connections.
-        replies (dict[int, socket.socket]): Peer jobs awaiting result delivery.
+        peers (dict[str, Peer]): Outbound, root-admitted TCP connections.
+        inbound (list[Peer]): Accepted incoming peer connections.
+        replies (dict[int, Peer]): Peer jobs awaiting result delivery.
+        delegated (dict[int, Peer]): Owned jobs awaiting verified results from peers.
+        routes (tuple[str, ...]): Eligible service names selected by WorkSharingStrategy.
+        peer_guard (PeerAvailabilityStrategy): SDK check for a usable downstream service.
+        sharing_available (bool): Most recently published peer guard assessment.
+        sources (set[str]): Incoming service identities authorized by the root.
+        link_epoch (int): Latest root topology revision to acknowledge.
+        link_pending (bool): Whether that revision still needs ready or drained links.
+        quiescing (bool): Root confirmation that all producer jobs have completed.
+        done_sent (bool): Whether owned-job completion was reported to the root.
+        metrics (LoadMetrics): End-to-end measurements for this service's owned jobs.
         children (dict[int, Child]): All owned worker generations, indexed by PID.
         pending (deque[tuple[int, int]]): Bounded queue of undispatched work.
         accepted (set[int]): Every admitted producer and peer job identity.
@@ -617,9 +876,19 @@ class AdaptiveService(SDKAdaptiveService):
     process_context: mp.context.SpawnContext
     listener: socket.socket | None
     port: int
-    peers: dict[str, socket.socket]
-    inbound: list[socket.socket]
-    replies: dict[int, socket.socket]
+    peers: dict[str, Peer]
+    inbound: list[Peer]
+    replies: dict[int, Peer]
+    delegated: dict[int, Peer]
+    routes: tuple[str, ...]
+    peer_guard: PeerAvailabilityStrategy
+    sharing_available: bool
+    sources: set[str]
+    link_epoch: int
+    link_pending: bool
+    quiescing: bool
+    done_sent: bool
+    metrics: LoadMetrics
     children: dict[int, Child]
     pending: deque[tuple[int, int]]
     accepted: set[int]
@@ -663,6 +932,15 @@ class AdaptiveService(SDKAdaptiveService):
         self.peers = {}
         self.inbound = []
         self.replies = {}
+        self.delegated = {}
+        self.routes = ()
+        self.sharing_available = False
+        self.sources = set()
+        self.link_epoch = 0
+        self.link_pending = False
+        self.quiescing = False
+        self.done_sent = False
+        self.metrics = LoadMetrics()
         self.children = {}
         self.pending = deque()
         self.accepted = set()
@@ -679,10 +957,15 @@ class AdaptiveService(SDKAdaptiveService):
         self.stopping = False
         self.last_change = self.last_busy = time.monotonic()
         self.deadline = self.last_change + settings.timeout
+        self.peer_guard = PeerAvailabilityStrategy("peer-work-capacity", self.observe_peers, usable=self.usable_peer)
         super().__init__(
             ServiceEndpoint("", "local", "Graph", name, f"local-{os.getpid()}-{name}", "dispatch"),
             LocalObservations(self.neighborhood),
-            strategies=(FreshnessStrategy("profile-admission", self.observe_freshness),),
+            strategies=(
+                FreshnessStrategy("profile-admission", self.observe_freshness),
+                WorkSharingStrategy(self.remember_routes),
+                self.peer_guard,
+            ),
         )
 
     def run(self) -> None:
@@ -708,7 +991,7 @@ class AdaptiveService(SDKAdaptiveService):
 
             self.receive_control()
             self.accept_peer_work()
-            self.retire_closed_peers()
+            self.poll_peers()
             self.collect_worker_results()
             self.reap_workers()
             self.receive_producer_work()
@@ -718,6 +1001,9 @@ class AdaptiveService(SDKAdaptiveService):
             self.admit_profile(observation)
             self.commit_profile(observation.time)
             self.dispatch_work()
+            self.share_work()
+            self.maintain_links()
+            self.report_completion()
             self.report_recovery(observation)
 
             if self.finish_if_stopped():
@@ -737,6 +1023,8 @@ class AdaptiveService(SDKAdaptiveService):
         """
         super().stop()
         self.stopping = True
+        for peer in self.peers.values():
+            peer.draining = True
 
     def neighborhood(self) -> dict[str, Any]:
         """
@@ -753,7 +1041,7 @@ class AdaptiveService(SDKAdaptiveService):
         return {
             "graph": {"kind": identity.kind, "namespace": identity.namespace, "name": identity.graph, "uid": identity.graphUid},
             "cursor": f"{self.sequence}-0",
-            "revision": str(self.generation),
+            "revision": f"{self.link_epoch}:{self.generation}",
             "observedAt": time.time(),
             "valid": True,
             "terminating": self.stopping,
@@ -776,8 +1064,60 @@ class AdaptiveService(SDKAdaptiveService):
                 }
                 for pid, child in self.children.items()
                 if child.ready and not child.retiring and not child.stopping and child.role == self.active.role
+            ]
+            + [
+                {
+                    "node": {
+                        "name": name,
+                        "kind": "Process",
+                        "ref": "square",
+                        "desired": True,
+                        "requires": [],
+                        "executions": [{"kind": "Process", "name": name, "uid": name, "terminating": False}],
+                    },
+                    "ports": [],
+                }
+                for name, peer in self.peers.items()
+                if peer.ready and not peer.draining
             ],
         }
+
+    def remember_routes(self, names: tuple[str, ...]) -> None:
+        """
+        Save the SDK topology strategy's current destination choices.
+
+        Args:
+            names (tuple[str, ...]): Ready peer names, excluding local workers.
+
+        Returns:
+            None: Subsequent delegation uses only these observed destinations.
+        """
+        self.routes = names
+
+    def observe_peers(self, assessment: ConstraintAssessment) -> None:
+        """
+        Retain the SDK's capacity-aware peer assessment for routing.
+
+        Args:
+            assessment (ConstraintAssessment): Whether an eligible receiver has room.
+
+        Returns:
+            None: New delegation is gated by the latest assessment.
+        """
+        self.sharing_available = assessment.satisfied
+
+    def usable_peer(self, candidate: Mapping[str, Any]) -> bool:
+        """
+        Check root permission, transport readiness and advertised receiver capacity.
+
+        Args:
+            candidate (Mapping[str, Any]): One node from the SDK's current neighborhood.
+
+        Returns:
+            bool: True for an admitted TCP peer that can accept a bounded batch.
+        """
+        peer = self.peers.get(str(candidate.get("node", {}).get("name", "")))
+        return bool(peer and peer.ready and not peer.draining and not peer.jobs and peer.credit > 0)
 
     def publish_observation(self, observation: Observation) -> None:
         """
@@ -874,17 +1214,17 @@ class AdaptiveService(SDKAdaptiveService):
 
     def receive_control(self) -> None:
         """
-        Apply one root topology decision or revoke admissions for shutdown.
+        Apply root-approved peer changes without abandoning unfinished jobs.
 
-        The root owns peer layout; this service owns enacting and acknowledging
-        it. A link is acknowledged only after an actual peer job succeeds.
+        A removed link stops accepting assignments, finishes outstanding results
+        and exchanges a drain acknowledgement before closing. The root receives
+        linked only after every addition is ready and every removal is drained.
 
         Returns:
-            None: An available command has updated connection or shutdown state.
+            None: One available topology, quiesce or stop command is processed.
 
         Raises:
-            RuntimeError: A newly connected peer returns an incorrect result.
-            OSError: The control channel or a peer connection fails.
+            RuntimeError: A topology revision goes backward or a command is invalid.
         """
         if not self.control.poll():
             return
@@ -892,106 +1232,304 @@ class AdaptiveService(SDKAdaptiveService):
         if command == "stop":
             self.stop()
             return
-        epoch, destinations = command
-        for peer in list(self.peers):
-            if peer not in destinations:
-                self.peers.pop(peer).close()
-                emit("edge_closed", service=self.name, target=peer, epoch=epoch)
-        for peer, address in destinations.items():
-            if peer not in self.peers:
-                self.connect_peer(peer, address, epoch)
-        self.control.send(("linked", self.name, epoch))
+        if command == "quiesce":
+            self.quiescing = True
+            return
+        epoch, destinations, sources = command
+        if epoch <= self.link_epoch:
+            raise RuntimeError("topology revision must advance")
+        self.link_epoch, self.link_pending = epoch, True
+        self.sources = set(sources)
+        for name, peer in self.peers.items():
+            if name not in destinations:
+                peer.draining = True
+        for name, address in destinations.items():
+            if name not in self.peers:
+                self.connect_peer(name, address, epoch)
 
     def connect_peer(self, peer: str, address: int, epoch: int) -> None:
         """
-        Open a persistent connection and verify useful work before reporting it.
-
-        Negative job values keep peer work distinct from producer identities.
-        The finite exchange has a socket timeout; the connection remains open
-        after its receipt until a later topology revision or final cleanup.
+        Open a TCP link and queue a handshake for the asynchronous service loop.
 
         Args:
-            peer (str): Destination service name ending in its vertex index.
-            address (int): Localhost TCP port announced by that destination.
-            epoch (int): Root topology revision admitting this connection.
+            peer (str): Root-approved destination service name.
+            address (int): Destination's localhost TCP port.
+            epoch (int): Root revision creating this link.
 
         Returns:
-            None: The owned peer connection has produced a verified square result.
-
-        Raises:
-            RuntimeError: The peer returns an incorrect result.
-            OSError: Connection establishment or the work exchange fails.
+            None: The link is tracked but cannot receive jobs until ready arrives.
         """
-        connection = socket.create_connection(("127.0.0.1", address), timeout=5)
-        self.peers[peer] = connection
-        value = -(1 + int(self.name[-1]) * 3 + int(peer[-1]) + epoch * 10)
-        connection.sendall(f"{value}\n".encode())
-        with connection.makefile("rb") as stream:
-            result = int(stream.readline(128))
-        if result != value * value:
-            raise RuntimeError("peer returned an incorrect work result")
-        emit("edge_opened", service=self.name, target=peer, epoch=epoch, result=result)
+        connection = socket.create_connection(("127.0.0.1", address), timeout=2)
+        connection.setblocking(False)
+        link = Peer(connection, peer, epoch)
+        self.peers[peer] = link
+        link.send("hello", source=self.name, capability="square")
 
     def accept_peer_work(self) -> None:
         """
-        Admit one peer request only when the connection and pending-work budgets allow it.
-
-        This is the TCP input adapter for the square application. Keep accepted
-        connections owned until the reply completes or cleanup runs. Producer
-        and peer requests share the same bounded queue and completion ledger.
+        Accept a bounded number of TCP links without waiting for their messages.
 
         Returns:
-            None: An available valid request is queued, or admission is deferred.
-
-        Raises:
-            RuntimeError: A peer identity is invalid or was already admitted.
-            OSError: Accepting or reading a peer request fails.
+            None: A newly accepted socket is owned until drain or cleanup.
         """
-        if self.stopping or len(self.pending) >= 64 or len(self.inbound) >= 3:
+        if self.stopping or len(self.inbound) >= 3:
             return
         assert self.listener is not None
-        if not select([self.listener], [], [], 0)[0]:
-            return
-        connection, _ = self.listener.accept()
-        self.inbound.append(connection)
-        connection.settimeout(5)
-        with connection.makefile("rb") as stream:
-            value = int(stream.readline(128))
-        identity = value - 1
-        if identity >= 0 or identity in self.accepted:
-            raise RuntimeError("invalid peer work identity")
-        self.accepted.add(identity)
-        self.replies[identity] = connection
-        self.pending.append((identity, value))
+        if select([self.listener], [], [], 0)[0]:
+            connection, _ = self.listener.accept()
+            connection.setblocking(False)
+            self.inbound.append(Peer(connection))
 
-    def retire_closed_peers(self) -> None:
+    def peer_capacity(self) -> int:
         """
-        Release closed inbound links after their accepted work has been answered.
-
-        A peer connection carries one work exchange in this demonstration.
-        Connections still awaiting a worker result remain outside this sweep.
+        Advertise free work slots after accounting for local and peer demand.
 
         Returns:
-            None: Closed idle connections are removed from the owned inbound set.
+            int: A hint bounded by the shared peer budget, rechecked on admission.
+        """
+        if self.stopping or self.quiescing:
+            return 0
+        local_work = len(self.pending) + sum(len(child.jobs) for child in self.children.values())
+        return max(0, min(self.runtime.peer_window - len(self.replies), self.runtime.peer_window - local_work))
+
+    def poll_peers(self) -> None:
+        """
+        Advance TCP I/O and verify each message before changing work ownership.
+
+        Returns:
+            None: Readiness, capacity, results and drain messages are processed.
 
         Raises:
-            RuntimeError: An idle peer sends unexpected additional work.
-            OSError: Inspecting the peer connection fails.
+            RuntimeError: A peer disappears with unfinished work or without draining.
         """
-        idle_links = [connection for connection in self.inbound if connection not in self.replies.values()]
-        for connection in select(idle_links, [], [], 0)[0]:
-            if connection.recv(1):
-                raise RuntimeError("unexpected data after the peer's work receipt")
-            self.inbound.remove(connection)
-            connection.close()
+        for outbound, links in ((True, list(self.peers.values())), (False, list(self.inbound))):
+            for peer in links:
+                for message in peer.pump():
+                    self.peer_message(peer, message, outbound=outbound)
+                if peer.closed:
+                    unfinished = peer.jobs or any(link is peer for link in self.replies.values())
+                    if unfinished or peer.outgoing or not peer.draining:
+                        raise RuntimeError("peer disconnected before its work and drain were acknowledged")
+                    peer.connection.close()
+                    if outbound:
+                        self.peers.pop(peer.name)
+                    else:
+                        self.inbound.remove(peer)
+
+    def peer_message(self, peer: Peer, message: dict[str, Any], *, outbound: bool) -> None:
+        """
+        Dispatch one message after checking its connection revision and direction.
+
+        Args:
+            peer (Peer): Owned link on which the message arrived.
+            message (dict[str, Any]): Decoded protocol frame.
+            outbound (bool): True when this service sends jobs over the link.
+
+        Returns:
+            None: The corresponding handshake or work handler updates the ledger.
+
+        Raises:
+            RuntimeError: A message is unauthorized, stale or invalid for this direction.
+        """
+        kind = message["kind"]
+        if kind == "hello" and not outbound and not peer.ready:
+            name, epoch = message.get("source"), message.get("epoch")
+            if name not in self.sources or type(epoch) is not int or not 0 < epoch <= self.link_epoch:
+                raise RuntimeError("peer handshake was not authorized by the root")
+            if message.get("capability") != "square" or any(link.ready and link.name == name for link in self.inbound):
+                raise RuntimeError("incompatible or duplicate peer handshake")
+            peer.name, peer.epoch, peer.ready = str(name), epoch, True
+            peer.send("ready", capability="square")
+            return
+        if type(message.get("epoch")) is not int or message.get("epoch") != peer.epoch:
+            raise RuntimeError("peer message has a stale connection revision")
+        if kind == "ready" and outbound and not peer.ready and message.get("capability") == "square":
+            peer.ready = True
+            emit("edge_opened", service=self.name, target=peer.name, epoch=peer.epoch)
+        elif not peer.ready:
+            raise RuntimeError("peer work arrived before readiness")
+        elif kind == "capacity" and outbound:
+            credit = message.get("slots")
+            if type(credit) is not int or not 0 <= credit <= self.runtime.peer_window:
+                raise RuntimeError("invalid peer capacity advertisement")
+            peer.credit = credit
+        elif kind == "jobs" and not outbound:
+            self.admit_peer_batch(peer, message.get("jobs"))
+        elif kind == "result" and outbound:
+            self.complete_peer_job(peer, message.get("identity"), message.get("value"))
+        elif kind == "rejected" and outbound:
+            self.requeue_rejected(peer, message.get("identities"))
+        elif kind == "drain" and not outbound:
+            if any(link is peer for link in self.replies.values()):
+                raise RuntimeError("sender requested drain before receiving its results")
+            peer.draining = True
+            peer.send("drained")
+        elif kind == "drained" and outbound and peer.drain_sent and not peer.jobs:
+            peer.drained = True
+        else:
+            raise RuntimeError(f"unexpected peer message: {kind}")
+
+    def admit_peer_batch(self, peer: Peer, jobs: Any) -> None:
+        """
+        Accept an entire batch only if the receiver still has enough capacity.
+
+        Capacity advertisements can race when two senders see the same free
+        slots. This local check either accepts all jobs or explicitly rejects
+        them before execution. Imported jobs run locally and are never forwarded.
+
+        Args:
+            peer (Peer): Ready sender whose identity was approved by the root.
+            jobs (Any): Untrusted list of job ID/value pairs from the wire.
+
+        Returns:
+            None: Jobs enter the local queue, or a rejection returns ownership to the sender.
+
+        Raises:
+            RuntimeError: IDs, values, batch size or connection lifecycle are invalid.
+        """
+        if not isinstance(jobs, list) or not 1 <= len(jobs) <= self.runtime.peer_window or peer.draining:
+            raise RuntimeError("invalid peer batch or draining connection")
+        seen: set[int] = set()
+        owner = int(peer.name[-1])
+        for job in jobs:
+            if not isinstance(job, list) or len(job) != 2 or any(type(value) is not int for value in job):
+                raise RuntimeError("peer job must contain an integer ID and value")
+            identity, value = job
+            first = owner * self.runtime.jobs
+            if not first <= identity < first + load_counts(self.runtime)[owner] or value != identity + 1:
+                raise RuntimeError("peer job does not belong to its original producer")
+            if identity in self.accepted or identity in seen:
+                raise RuntimeError("duplicate peer job")
+            seen.add(identity)
+        if len(jobs) > self.peer_capacity():
+            peer.send("rejected", identities=sorted(seen))
+            peer.advertised = -1
+            emit("peer_backpressure", service=self.name, source=peer.name, rejected=len(jobs))
+            return
+        for identity, value in jobs:
+            self.accepted.add(identity)
+            self.replies[identity] = peer
+            self.pending.append((identity, value))
+        emit("peer_batch_accepted", service=self.name, source=peer.name, jobs=sorted(seen), outstanding=len(self.replies))
+
+    def complete_peer_job(self, peer: Peer, identity: Any, value: Any) -> None:
+        """
+        Finish an owned job only after the selected peer returns the correct answer.
+
+        Args:
+            peer (Peer): Destination holding the job's execution assignment.
+            identity (Any): Returned job ID, checked against the retained ledger.
+            value (Any): Returned square, checked against the original input.
+
+        Returns:
+            None: The job is verified exactly once and its remote slot is released.
+
+        Raises:
+            RuntimeError: The result is unknown, duplicate, from another peer or incorrect.
+        """
+        if type(identity) is not int or type(value) is not int or self.delegated.get(identity) is not peer:
+            raise RuntimeError("unknown or duplicate peer result")
+        if identity not in peer.jobs or identity in self.completed or value != (identity + 1) ** 2:
+            raise RuntimeError("incorrect peer result")
+        peer.jobs.remove(identity)
+        del self.delegated[identity]
+        self.completed.add(identity)
+        self.metrics.complete(identity)
+        emit("delegated_work_completed", service=self.name, target=peer.name, job=identity, result=value)
+
+    def requeue_rejected(self, peer: Peer, identities: Any) -> None:
+        """
+        Return explicitly unaccepted work to the sender's local queue.
+
+        Args:
+            peer (Peer): Receiver that rejected the whole batch before execution.
+            identities (Any): Job IDs returned in the rejection.
+
+        Returns:
+            None: The same jobs can be processed locally or assigned again later.
+
+        Raises:
+            RuntimeError: The rejection does not match the entire outstanding batch.
+        """
+        if not isinstance(identities, list) or any(type(identity) is not int for identity in identities):
+            raise RuntimeError("invalid rejection IDs")
+        if not identities or len(set(identities)) != len(identities) or set(identities) != peer.jobs:
+            raise RuntimeError("rejection does not match outstanding work")
+        for identity in reversed(identities):
+            if self.delegated.pop(identity) is not peer:
+                raise RuntimeError("rejection came from the wrong peer")
+            self.pending.appendleft((identity, identity + 1))
+        self.metrics.sent[peer.name] -= len(identities)
+        peer.jobs.clear()
+        peer.credit = 0
+
+    def share_work(self) -> None:
+        """
+        Delegate queued producer jobs through the SDK's neighbor-routing strategy.
+
+        Retain one local batch per worker, use only the strategy's destinations
+        and recheck PeerAvailabilityStrategy against service.view before sending.
+        A single batch may be outstanding per link. Receiver rejection is safe
+        to retry; a lost connection with unknown execution outcome fails the run.
+
+        Returns:
+            None: Eligible surplus jobs move to tracked remote assignments.
+        """
+        if self.stopping or self.quiescing:
+            return
+        self.observe_peers(self.peer_guard.evaluate(self.view))
+        if not self.sharing_available:
+            return
+        for name in self.routes:
+            if not self.usable_peer({"node": {"name": name}}):
+                continue
+            peer = self.peers[name]
+            own = [job for job in self.pending if job[0] in self.metrics.offered]
+            count = min(peer.credit, self.runtime.peer_window, max(0, len(own) - self.active.workers * self.active.batch))
+            if not count:
+                continue
+            jobs = own[-count:]
+            for job in jobs:
+                self.pending.remove(job)
+                self.delegated[job[0]] = peer
+                peer.jobs.add(job[0])
+            peer.credit = 0
+            self.metrics.sent[name] = self.metrics.sent.get(name, 0) + count
+            peer.send("jobs", jobs=jobs)
+            emit("work_delegated", service=self.name, target=name, jobs=[job[0] for job in jobs], epoch=peer.epoch)
+
+    def maintain_links(self) -> None:
+        """
+        Advertise capacity, drain removed links and acknowledge topology readiness.
+
+        Returns:
+            None: Link removal waits for every result and the receiver's acknowledgement.
+        """
+        for peer in self.inbound:
+            capacity = self.peer_capacity()
+            if peer.ready and not peer.draining and capacity != peer.advertised:
+                peer.send("capacity", slots=capacity)
+                peer.advertised = capacity
+        for name, peer in list(self.peers.items()):
+            if peer.draining and peer.ready and not peer.jobs and not peer.drain_sent:
+                peer.send("drain")
+                peer.drain_sent = True
+            if peer.drained and not peer.outgoing:
+                peer.connection.close()
+                del self.peers[name]
+                emit("edge_closed", service=self.name, target=name, epoch=self.link_epoch, outstanding=0)
+        if self.link_pending and all(peer.ready and not peer.draining for peer in self.peers.values()):
+            self.control.send(("linked", self.name, self.link_epoch))
+            self.link_pending = False
 
     def receive_producer_work(self) -> None:
         """
         Validate producer requests and apply backpressure before reading more work.
 
-        The producer contract pairs each identity with value identity + 1.
-        Do not read beyond the 64-job pending budget. A root stop or producer
-        end-of-input closes admission while previously accepted work remains.
+        IDs identify their original service, values equal ID plus one, and a
+        timestamp precedes the producer's pipe write. Queued and delegated jobs
+        together consume the 64-job admission budget. A root stop or end-of-input
+        ends reading while previously accepted jobs still need results.
 
         Returns:
             None: Available valid jobs are queued within the admission limit.
@@ -1000,16 +1538,28 @@ class AdaptiveService(SDKAdaptiveService):
             RuntimeError: A producer job is malformed, duplicated or out of range.
             EOFError: The producer closes without its expected end-of-input marker.
         """
-        while not self.stopping and not self.ending and len(self.pending) < 64 and self.incoming.poll():
+        while not self.stopping and not self.ending and len(self.pending) + len(self.delegated) < 64 and self.incoming.poll():
             job = self.incoming.recv()
             if job is None:
                 self.ending = True
                 break
-            identity, value = job
-            if identity in self.accepted or identity not in range(self.runtime.jobs) or value != identity + 1:
+            identity, value, offered = job
+            owner = int(self.name[-1])
+            first = owner * self.runtime.jobs
+            if (
+                type(identity) is not int
+                or type(value) is not int
+                or identity in self.accepted
+                or not first <= identity < first + load_counts(self.runtime)[owner]
+                or value != identity + 1
+                or type(offered) not in (int, float)
+                or not math.isfinite(offered)
+                or not 0 <= offered <= time.monotonic()
+            ):
                 raise RuntimeError("invalid or duplicate input")
             self.accepted.add(identity)
-            self.pending.append(job)
+            self.metrics.offered[identity] = offered
+            self.pending.append((identity, value))
 
     def collect_worker_results(self) -> None:
         """
@@ -1062,8 +1612,12 @@ class AdaptiveService(SDKAdaptiveService):
                 raise RuntimeError("wrong or duplicate result")
             self.completed.add(identity)
             if identity in self.replies:
-                self.replies.pop(identity).sendall(f"{value}\n".encode())
-                emit("peer_work_completed", service=self.name, job=identity, result=value)
+                peer = self.replies.pop(identity)
+                peer.send("result", identity=identity, value=value)
+                self.metrics.remote_executed += 1
+                emit("peer_work_completed", service=self.name, source=peer.name, job=identity, result=value)
+            else:
+                self.metrics.complete(identity)
         child.jobs = ()
 
     def reap_workers(self) -> None:
@@ -1104,7 +1658,8 @@ class AdaptiveService(SDKAdaptiveService):
         Returns:
             Observation: Immutable evidence shared by proposal and admission.
         """
-        backlog = len(self.pending) + sum(len(child.jobs) for child in self.children.values())
+        backlog = len(self.pending) + len(self.delegated) + sum(len(child.jobs) for child in self.children.values())
+        self.metrics.observe(now)
         if backlog:
             self.last_busy = now
         self.high = self.high + 1 if backlog >= self.runtime.high_water else 0
@@ -1169,6 +1724,8 @@ class AdaptiveService(SDKAdaptiveService):
             observation.elapsed,
             self.runtime,
         )
+        if proposal == INTERACTIVE and not self.quiescing:
+            return
         if proposal != self.active:
             self.candidate = proposal
 
@@ -1310,13 +1867,35 @@ class AdaptiveService(SDKAdaptiveService):
                 child.jobs = tuple(identity for identity, _ in batch)
                 child.pipe.send(batch)
 
+    def report_completion(self) -> None:
+        """
+        Tell the root when every producer job owned here has a verified result.
+
+        Other services may still delegate jobs to this one. The root waits for
+        all three owners before quiescing new work and waiting for worker recovery.
+
+        Returns:
+            None: Completion is reported once, independently of serving peer jobs.
+
+        Raises:
+            RuntimeError: End-of-input arrives without the configured owned job count.
+        """
+        if not self.ending or self.done_sent:
+            return
+        expected = load_counts(self.runtime)[int(self.name[-1])]
+        if len(self.metrics.offered) != expected:
+            raise RuntimeError("producer ended before sending the expected load")
+        if len(self.metrics.latencies) == expected:
+            self.done_sent = True
+            self.control.send(("done", self.name, expected))
+
     def report_recovery(self, observation: Observation) -> None:
         """
         Verify the demonstration's full load and lifecycle before acknowledging recovery.
 
-        This experiment-specific assertion is separate from the application's
-        serving loop: all configured producer work and every accepted peer job
-        must complete, with adaptation followed by a stable interactive profile.
+        After root quiesce, all owned and imported jobs must be complete and the
+        service must have one ready interactive worker. Services that never
+        needed a batch profile can retain their original interactive worker.
 
         Args:
             observation (Observation): Work ledger observed before this cycle's dispatch.
@@ -1325,16 +1904,22 @@ class AdaptiveService(SDKAdaptiveService):
             None: Complete recovery is acknowledged once, when its conditions hold.
 
         Raises:
-            RuntimeError: Recovery lacks adaptation, required input or verified completion.
+            RuntimeError: Recovery lacks required input or verified completion.
         """
-        if not self.ending or observation.backlog or self.returned or self.active != INTERACTIVE or not self.workers_are_steady():
+        if (
+            not self.quiescing
+            or not self.ending
+            or observation.backlog
+            or self.returned
+            or self.active != INTERACTIVE
+            or not self.workers_are_steady()
+        ):
             return
-        producer_jobs = self.accepted.intersection(range(self.runtime.jobs))
-        if self.generation < 3 or len(producer_jobs) != self.runtime.jobs or self.completed != self.accepted:
-            raise RuntimeError("experiment did not adapt, restore and complete every job")
+        if not self.done_sent or self.completed != self.accepted or self.delegated or self.replies:
+            raise RuntimeError("experiment did not complete every owned and peer job")
         self.returned = True
-        emit("baseline_restored", service=self.name, completed=self.runtime.jobs, workers=len(self.children))
-        self.control.send(("restored", self.name, self.port))
+        emit("baseline_restored", service=self.name, completed=len(self.metrics.offered), workers=len(self.children))
+        self.control.send(("restored", self.name, asdict(self.metrics)))
 
     def finish_if_stopped(self) -> bool:
         """
@@ -1343,7 +1928,7 @@ class AdaptiveService(SDKAdaptiveService):
         Returns:
             bool: True when the run loop can return after sending its stop receipt.
         """
-        if self.stopping and not self.pending and not self.children:
+        if self.stopping and not self.pending and not self.children and not self.delegated and not self.peers and not self.inbound:
             self.control.send(("stopped", self.name, self.port))
             return True
         return False
@@ -1391,8 +1976,8 @@ class AdaptiveService(SDKAdaptiveService):
         finally:
             if self.listener is not None:
                 self.listener.close()
-            for connection in [*self.peers.values(), *self.inbound]:
-                connection.close()
+            for peer in [*self.peers.values(), *self.inbound]:
+                peer.connection.close()
             self.incoming.close()
             self.control.close()
 
@@ -1465,6 +2050,9 @@ class SoulExperiment:
         epoch (int): Current admitted topology revision.
         topology (str): Current graph layout, initially starting.
         deadline (float): Absolute monotonic deadline for the whole experiment.
+        adaptive (bool): Whether sustained S0 demand may add the direct S0-to-S2 link.
+        measurements (dict[str, dict[str, Any]]): Verified service measurements at recovery.
+        started (float): Time load generation was started, excluding service startup.
     """
 
     settings: Settings
@@ -1476,25 +2064,32 @@ class SoulExperiment:
     epoch: int
     topology: str
     deadline: float
+    adaptive: bool
+    measurements: dict[str, dict[str, Any]]
+    started: float
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, adaptive: bool = True) -> None:
         """
         Initialize root ownership and phase evidence without creating processes.
 
         Args:
             settings (Settings): Validated experiment configuration.
+            adaptive (bool): Enable the demand-triggered shortcut, or retain the chain.
         """
         self.settings = settings
         self.context = mp.get_context("spawn")
         self.services = []
         self.generator = None
         self.ports = {}
-        self.receipts = {kind: set() for kind in ("ready", "batch", "linked", "restored", "stopped")}
+        self.receipts = {kind: set() for kind in ("ready", "batch", "linked", "done", "restored", "stopped")}
         self.epoch = 0
         self.topology = "starting"
         self.deadline = time.monotonic() + settings.timeout
+        self.adaptive = adaptive
+        self.measurements = {}
+        self.started = 0
 
-    def run(self) -> None:
+    def run(self) -> dict[str, Any]:
         """
         Execute the chain, pressure, triangle, recovery and shutdown phases in order.
 
@@ -1503,24 +2098,69 @@ class SoulExperiment:
         arrives, and always checks the structural floor before a graph change.
 
         Returns:
-            None: The original chain is restored and every direct child is joined.
+            dict[str, Any]: Verified performance measurements after every child has exited.
 
         Raises:
             RuntimeError: Admission, a child, a phase deadline or final verification fails.
         """
+        emit("trial_started", mode="adaptive" if self.adaptive else "chain", counts=load_counts(self.settings))
         self.start_services()
         self.wait_for("ready")
         self.connect_services("chain")
         self.start_load()
 
-        self.wait_for("batch", count=2)
-        self.connect_services("triangle")
+        if self.adaptive:
+            self.wait_for("batch", count=1, service_name="service-0")
+            self.connect_services("triangle")
+        self.wait_for("done")
+        for member in self.services:
+            member.control.send("quiesce")
         self.wait_for("restored")
-        self.connect_services("chain")
+        if self.adaptive:
+            self.connect_services("chain")
 
         self.stop_services()
         self.verify_shutdown()
-        emit("success", services=3, completed=3 * self.settings.jobs, topology=self.topology, all_joined=True)
+        result = self.results()
+        emit("trial_verified", **result)
+        return result
+
+    def results(self) -> dict[str, Any]:
+        """
+        Summarize measured work instead of treating Cheeger as a throughput result.
+
+        Completion time starts when the root launches the producer and ends at
+        the final owned result. Latencies include producer pipe backpressure;
+        backlog area covers work admitted by S0, including delegated jobs.
+
+        Returns:
+            dict[str, Any]: Counts, time, latency, source backlog and peer-use evidence.
+
+        Raises:
+            RuntimeError: Counts disagree or the adaptive shortcut carried no owned work.
+        """
+        completed = sum(len(value["latencies"]) for value in self.measurements.values())
+        shortcut = self.measurements["service-0"]["sent"].get("service-2", 0)
+        if completed != sum(load_counts(self.settings)) or (self.adaptive and not shortcut):
+            raise RuntimeError("trial did not verify its load and useful shortcut work")
+        latencies = sorted(latency for value in self.measurements.values() for latency in value["latencies"])
+        elapsed = max(value["finished"] for value in self.measurements.values()) - self.started
+        return {
+            "mode": "adaptive" if self.adaptive else "chain",
+            "completed": completed,
+            "elapsed_seconds": round(elapsed, 6),
+            "jobs_per_second": round(completed / elapsed, 3),
+            "mean_latency_seconds": round(sum(latencies) / completed, 6),
+            "p95_latency_seconds": round(latencies[math.ceil(completed * 0.95) - 1], 6),
+            "source_backlog_seconds": round(self.measurements["service-0"]["backlog_seconds"], 6),
+            "source_peak_backlog": self.measurements["service-0"]["peak_backlog"],
+            "shortcut_jobs": shortcut,
+            "peer_jobs": sum(value["remote_executed"] for value in self.measurements.values()),
+            "worker_limit_per_service": self.settings.worker_limit,
+            "worker_ceiling": 3 * self.settings.worker_limit,
+            "peer_window": self.settings.peer_window,
+            "all_joined": True,
+        }
 
     def start_services(self) -> None:
         """
@@ -1585,6 +2225,8 @@ class SoulExperiment:
             kind, name, value = member.control.recv()
             if kind == "ready":
                 self.ports[name] = value
+            if kind == "restored":
+                self.measurements[name] = value
             if kind == "linked" and value != self.epoch:
                 continue
             if kind in self.receipts:
@@ -1604,13 +2246,14 @@ class SoulExperiment:
         if time.monotonic() > self.deadline or failed:
             raise RuntimeError("experiment deadline or child failure; stopping the tree")
 
-    def wait_for(self, kind: str, count: int = 3) -> None:
+    def wait_for(self, kind: str, count: int = 3, *, service_name: str | None = None) -> None:
         """
         Wait for a named phase while continuing to collect all service observations.
 
         Args:
             kind (str): Receipt kind, such as ready, batch, linked or restored.
             count (int): Number of distinct services required to acknowledge it.
+            service_name (str | None): Also require a particular service's acknowledgement.
 
         Returns:
             None: Enough services acknowledged the requested phase.
@@ -1619,19 +2262,18 @@ class SoulExperiment:
             RuntimeError: Health checks detect a failed child or expired deadline.
             EOFError: A service disconnects before its clean shutdown receipt.
         """
-        while len(self.receipts[kind]) < count:
+        while len(self.receipts[kind]) < count or (service_name is not None and service_name not in self.receipts[kind]):
             self.check_health()
             self.receive_reports()
-            if len(self.receipts[kind]) < count:
-                time.sleep(self.settings.tick)
+            time.sleep(self.settings.tick)
 
     def connect_services(self, topology: str) -> None:
         """
         Admit a peer layout, send its revision and wait for verified TCP connections.
 
-        Each service executes its edge changes and verifies a job through each
-        new connection before acknowledging the revision. Publishing the commit
-        therefore follows actual network readiness, not command delivery alone.
+        Services complete a capability handshake before acknowledging new links.
+        Removed links finish all results and exchange a drain acknowledgement.
+        Useful application work is measured separately after the load completes.
 
         Args:
             topology (str): Approved layout name, either chain or triangle.
@@ -1659,7 +2301,8 @@ class SoulExperiment:
         emit("topology_admitted", topology=topology, epoch=self.epoch, edges=edges, cheeger=expansion, target=target)
         for index, member in enumerate(self.services):
             destinations = {f"service-{b}": self.ports[f"service-{b}"] for a, b in edges if a == index}
-            member.control.send((self.epoch, destinations))
+            sources = [f"service-{a}" for a, b in edges if b == index]
+            member.control.send((self.epoch, destinations, sources))
         self.wait_for("linked")
         emit("topology_committed", topology=topology, epoch=self.epoch)
 
@@ -1674,7 +2317,8 @@ class SoulExperiment:
             OSError: The producer cannot be started.
         """
         outputs = [member.output for member in self.services]
-        generator = self.context.Process(target=producer, args=(outputs, self.settings), name="load-generator")
+        generator = self.context.Process(target=skewed_producer, args=(outputs, self.settings), name="load-generator")
+        self.started = time.monotonic()
         generator.start()
         self.generator = generator
         emit("load_started", producer=generator.pid, services=[member.process.pid for member in self.services])
@@ -1750,25 +2394,30 @@ class SoulExperiment:
             member.output.close()
 
 
-def parse_settings() -> Settings:
+def parse_settings() -> tuple[Settings, str]:
     """
     Parse and validate the experiment's command-line controls before creating children.
 
     Returns:
-        Settings: Finite, positive configuration with a feasible initial graph.
+        tuple[Settings, str]: Checked limits and compare, chain or adaptive mode.
 
     Raises:
         SystemExit: Argparse handles help or rejects unsupported limits.
     """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--mode", choices=("compare", "chain", "adaptive"), default="compare")
     for item in fields(Settings):
         parser.add_argument("--" + item.name.replace("_", "-"), type=type(item.default), default=item.default)
-    settings = Settings(**vars(parser.parse_args()))
-    if any(not math.isfinite(value) or value <= 0 for value in vars(settings).values()) or not 24 <= settings.jobs <= 2000:
-        parser.error("use finite positive limits and 24 through 2000 jobs per service")
+    options = vars(parser.parse_args())
+    mode = options.pop("mode")
+    settings = Settings(**options)
+    if any(not math.isfinite(value) or value <= 0 for value in vars(settings).values()) or not 96 <= settings.jobs <= 2000:
+        parser.error("use finite positive limits and 96 through 2000 jobs for S0")
     if settings.worker_limit > 6 or settings.hard_minimum > cheeger(1):
         parser.error("worker-limit must be at most six; the initial graph must satisfy the hard minimum")
-    return settings
+    if settings.peer_window > 64:
+        parser.error("peer-window must be at most 64 jobs")
+    return settings, mode
 
 
 def main() -> None:
@@ -1786,13 +2435,27 @@ def main() -> None:
         RuntimeError: A topology, child, deadline or shutdown check fails.
         KeyboardInterrupt: Cancellation unwinds through experiment cleanup.
     """
-    settings = parse_settings()
+    settings, mode = parse_settings()
     signal.signal(signal.SIGTERM, interrupt)
-    experiment = SoulExperiment(settings)
-    try:
-        experiment.run()
-    finally:
-        experiment.close()
+    results = []
+    for adaptive in (False, True) if mode == "compare" else (mode == "adaptive",):
+        experiment = SoulExperiment(settings, adaptive=adaptive)
+        try:
+            results.append(experiment.run())
+        finally:
+            experiment.close()
+    if mode == "compare":
+        baseline, adapted = results
+        emit(
+            "comparison",
+            chain=baseline,
+            adaptive=adapted,
+            speedup=round(baseline["elapsed_seconds"] / adapted["elapsed_seconds"], 3),
+            source_backlog_reduction_seconds=round(baseline["source_backlog_seconds"] - adapted["source_backlog_seconds"], 6),
+            same_load=True,
+            same_worker_limits=True,
+        )
+    emit("success", trials=len(results), completed=sum(result["completed"] for result in results), all_joined=True)
 
 
 if __name__ == "__main__":

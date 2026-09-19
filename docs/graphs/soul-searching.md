@@ -24,14 +24,12 @@ For policies active in both a parent and child, see
 
 ## Table of contents
 
-- [Soul searching: application throughput and graph structure](#soul-searching-application-throughput-and-graph-structure)
-  - [Table of contents](#table-of-contents)
-  - [How the controls fit together](#how-the-controls-fit-together)
-  - [Calibrate the relationship](#calibrate-the-relationship)
-  - [Configure a bounded policy](#configure-a-bounded-policy)
-  - [Automatic traffic-weight adjustments](#automatic-traffic-weight-adjustments)
-  - [Report measurements](#report-measurements)
-  - [Bounds, observations and scalability](#bounds-observations-and-scalability)
+- [How the controls fit together](#how-the-controls-fit-together)
+- [Calibrate the relationship](#calibrate-the-relationship)
+- [Configure a bounded policy](#configure-a-bounded-policy)
+- [Automatic traffic-weight adjustments](#automatic-traffic-weight-adjustments)
+- [Report measurements](#report-measurements)
+- [Bounds, observations and scalability](#bounds-observations-and-scalability)
 
 ## How the controls fit together
 

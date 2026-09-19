@@ -1,0 +1,24 @@
+{
+  "model": {
+    "names": ["producer-consumer", "peer-consumer"],
+    "capacities": [30, 30],
+    "limits": [30, 30],
+    "targets": [20, 20],
+    "arrival_bounds": [40, 60],
+    "shares": [0.5, 0.5],
+    "unit": "records"
+  },
+  "initialState": [10, 10],
+  "horizon": 2,
+  "interactions": [
+    {"relationship": "neutralism", "effects": [0, 0]},
+    {"relationship": "mutualism", "effects": [10, 10]},
+    {"relationship": "commensalism", "effects": [10, 0]},
+    {"relationship": "parasitism", "effects": [10, -10]},
+    {"relationship": "competition", "effects": [-10, -10]},
+    {"relationship": "amensalism", "effects": [-10, 0]}
+  ],
+  "numerical": true,
+  "guardIterations": 1000,
+  "budget": {"points_per_axis": 17, "max_points": 100000, "max_workspace_bytes": 268435456, "timeout_seconds": 60, "accuracy": "low"}
+}

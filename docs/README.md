@@ -48,7 +48,9 @@ then [run your first workload](introduction/getting-started.md).
 | [Service Symbiosis: writing adaptive microservices](workloads/adaptive-microservices.md) | Cooperative producers and consumers across Graphs and PolyGraphs, backpressure, useful throughput and delta-driven Python SDK hooks |
 | [Adaptation strategies for application constraints](workloads/adaptation-strategies.md) | Modular SDK policies for mutation difficulties, independent constraints, pressure-driven profiles and admission |
 | [SDK telemetry and subprocess plans](workloads/sdk-runtime.md) | OpenTelemetry instrumentation, approved local worker profiles, readiness, replacement, draining and recovery |
-| [Local Soul searching: processes and network topology](workloads/local-soul-searching.md) | Standalone Python demo, three real TCP peers, adaptive child workers, two Cheeger boundaries and graceful recovery |
+| [Reachability and symbiosis models](workloads/reachability.md) | Service interaction effects, finite queue envelopes, runtime guards, optional HJ analysis and state-variable studies |
+| [Adapting to Kubernetes conditions](workloads/kubernetes-adaptation.md) | Scheduling delays, flaky connectivity, rollouts, memory pressure and recovery mapped to SDK strategies and application actions |
+| [Local Soul searching: processes and network topology](workloads/local-soul-searching.md) | SDK neighbor-routing strategy, real peer work sharing, adaptive workers and measured chain-versus-shortcut comparisons under equal limits |
 | [Local Natural Selection: mutation, survival and retirement](workloads/local-natural-selection.md) | Parent planner over Soul searching, typed capability composition, changing outcomes, surviving service PIDs and graceful retirement |
 | [Workload controllers and storage](workloads/workload-storage.md) | Deployment or StatefulSet execution, native volumes, PVC templates and retention |
 

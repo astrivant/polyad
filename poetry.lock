@@ -2974,6 +2974,9 @@ opentelemetry-sdk = ">=1.39,<2"
 polyad-types = "0.0.1a15"
 websockets = ">=17.1,<18"
 
+[package.extras]
+reachability = ["hj-reachability (>=0.7,<0.8)"]
+
 [package.source]
 type = "directory"
 url = "pkg/polyad-sdk"

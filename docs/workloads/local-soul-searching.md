@@ -1,18 +1,25 @@
 # Local Soul searching: processes and network topology
 
 [`soul.py`](../../soul.py) is a local Python example built on the SDK's
-[`AdaptiveService` ABC](../../pkg/polyad-sdk/README.md#subclass-contract). Its
-opening documentation includes ASCII diagrams of the changing TCP network,
-process tree and worker-routing graphs. Three service processes own adaptive
-child-worker pools. A separate producer loads all three, while a root supervisor
-admits changes to the TCP connections between the services. Each service runs the observe, propose, admit,
-roll and drain cycle locally.
+[`AdaptiveService` ABC](../../pkg/polyad-sdk/README.md#subclass-contract). Three
+services compute integer squares in child processes. An uneven load leaves
+service 0 busy and spare capacity at service 2. Opening a direct TCP connection
+lets service 0 delegate its queued jobs to service 2 while retaining
+responsibility for their results.
+
+The default run compares a fixed chain with the adaptive topology under the same
+load, worker profiles and process limits. Each service can also replace its
+interactive worker with batch workers, then return to one worker after the load
+finishes. The script's opening documentation includes ASCII diagrams and a
+reading guide.
 
 ## Table of contents
 
 - [Run the example](#run-the-example)
 - [Read the experiment from the root](#read-the-experiment-from-the-root)
 - [Three processes change their topology](#three-processes-change-their-topology)
+- [Work sharing through SDK strategies](#work-sharing-through-sdk-strategies)
+- [Compare useful work under the same limits](#compare-useful-work-under-the-same-limits)
 - [Each service changes its processing tree](#each-service-changes-its-processing-tree)
 - [Writing an adaptive application](#writing-an-adaptive-application)
 - [Cheeger bounds at two boundaries](#cheeger-bounds-at-two-boundaries)
@@ -28,248 +35,259 @@ python -m pip install ./pkg/polyad-types ./pkg/polyad-sdk
 python soul.py
 ```
 
-`poetry install` also installs the local SDK as a development dependency.
-No Kubernetes cluster or external service is required.
-The services listen on ephemeral `127.0.0.1` TCP ports. The producer supplies
-96 jobs per service by default, for 288 verified load results. Opening a peer
-connection also sends a separate square-computation job to its destination,
-which executes it in a child worker and returns the verified result.
+`poetry install` also installs the local SDK. No Kubernetes cluster or external
+service is required. Services listen on ephemeral `127.0.0.1` TCP ports.
 
-To change the load and timing:
+The default producer sends 384 jobs to service 0, 128 to service 1 and 32 to
+service 2. Each trial verifies 544 unique jobs. Both trials shut down before the
+comparison is printed. Every job computes `(ID + 1)**2` and keeps its original ID
+when delegated over TCP. Its owner verifies the final result.
 
 ```sh
-python soul.py --jobs 128 --work-seconds 0.02 --tick 0.02
+python soul.py --jobs 768 --work-seconds 0.05 --tick 0.02
+python soul.py --mode adaptive  # Only the changing topology
+python soul.py --mode chain     # Only the fixed topology
 python soul.py --help
 ```
 
-The operation computes an integer square. Both worker representations simulate
-one I/O overhead per dispatch using `sleep`; the batch representation amortizes
-that overhead over up to four jobs. The controlled delay makes capacity changes
-repeatable. This example measures completion of those jobs; calibrate production
-profiles against the application's own work and latency budgets.
+Each worker dispatch simulates an I/O overhead using `sleep`. Interactive
+workers accept one job per dispatch; batch workers accept up to four. Batching
+amortizes that delay, while peer work sharing can use spare workers elsewhere.
+Both trials use the same simulation and worker limits.
 
 ## Read the experiment from the root
 
-Start with `main()` at the bottom of [soul.py](../../soul.py). It parses settings,
-installs termination handling and places `SoulExperiment.run()` inside a
-`try/finally` cleanup boundary. The root experiment reads in the order it runs:
+Start with `main()` at the bottom of [soul.py](../../soul.py). It reads settings
+and runs each trial within a `try/finally` cleanup boundary. The adaptive trial
+runs these phases:
 
 ```text
-start_services -> wait_for ready -> connect_services chain -> start_load
-    -> wait_for batch pressure -> connect_services triangle
-    -> wait_for restored workers -> connect_services chain
-    -> stop_services -> verify_shutdown
+start services -> wait for ready -> form chain -> start uneven load
+    -> wait for S0 batch pressure -> add S0-to-S2 shortcut
+    -> wait for all owned results -> quiesce new assignments
+    -> restore interactive workers -> restore chain
+    -> stop services -> verify every process exited -> report measurements
 ```
 
-`wait_for()` continues collecting all service reports while waiting for the
-current phase. `connect_services()` checks Cheeger bounds, sends a topology
-revision and waits for each service to confirm its actual TCP connections.
-The service processes keep adapting their workers concurrently during these
-root-level waits.
-
-The code has three entry points to read in sequence:
+The fixed-chain trial follows the same lifecycle without changing its topology.
+`wait_for()` continues receiving service reports and checking child health.
+`connect_services()` checks Cheeger bounds, sends a topology revision and waits
+for capability handshakes on new links or completed drains on removed links.
 
 | Entry point | What it explains |
 | --- | --- |
-| `main()` | Configuration, process ownership and unconditional cleanup |
-| `SoulExperiment.run()` | Experiment phases and the evidence required to advance |
-| `AdaptiveService.run()` | The application's concurrent input, policy, worker and drain cycle |
+| `main()` | Trial selection, comparison and unconditional cleanup |
+| `SoulExperiment.run()` | Experiment phases and the evidence needed to advance |
+| `AdaptiveService.run()` | Receiving work, SDK strategies, local workers, delegation and draining |
 
-Follow the named methods only when you need their transport or validation
-details. Every step has a Google-style docstring describing its inputs,
-outputs and relevant failure conditions. The
-[Nature example](local-natural-selection.md#read-the-supervisors) uses the same
-reading order for changing requirements and capabilities.
+Every helper has a Google-style docstring describing its arguments, results and
+failure conditions. The [Nature example](local-natural-selection.md#read-the-supervisors)
+uses the same reading order for changing requirements and capabilities.
 
 ## Three processes change their topology
 
-The initial service graph is a directed chain. Sustained backlog activates batch
-profiles. Once at least two services report that change, the root admits a
-triangle by adding a direct connection from service 0 to service 2. After all
-three services complete their work and restore their original worker profile,
-the root removes the shortcut and restores the chain.
+Each service can delegate its own queued jobs to a connected peer with spare
+capacity. Once sustained backlog makes service 0 select batch workers, the
+adaptive trial adds `service-0 -> service-2`. This gives the busiest service
+another place to send its actual work.
 
 ```mermaid
 flowchart LR
     subgraph initial["1. Baseline: chain"]
-        a0["Service 0"] --> a1["Service 1"] --> a2["Service 2"]
+        a0["Service 0: busy"] --> a1["Service 1"] --> a2["Service 2: spare capacity"]
     end
     subgraph loaded["2. Sustained demand: triangle"]
         b0["Service 0"] --> b1["Service 1"] --> b2["Service 2"]
-        b0 -->|"New TCP connection"| b2
+        b0 -->|"Queued jobs; results return"| b2
     end
     subgraph recovered["3. Recovered: chain"]
         c0["Service 0"] --> c1["Service 1"] --> c2["Service 2"]
     end
 ```
 
-These arrows are real, persistent TCP peer connections. A newly opened connection
-carries a job and its result before the service acknowledges its topology epoch.
-The root logs `topology_committed` only after all three services acknowledge that
-epoch. The shortcut is closed after its accepted job completes. The original
-chain connections remain open until final shutdown.
+Arrows are persistent TCP connections carrying jobs forward and results back.
+Imported jobs execute at their destination and are never forwarded again, so
+service 1 does not relay service 0's jobs to service 2 in the chain. It can send
+its own jobs to service 2. This one-hop policy keeps ownership explicit.
 
-The independent load producer uses IPC pipes to feed each service's bounded
-queue. That traffic drives worker adaptation; TCP peer jobs exercise the admitted
-connections. Worker commands and results also use private IPC pipes. The
-ownership tree, worker-routing graph and service peer graph each describe a
-different relationship.
+The producer supplies original jobs through IPC pipes; workers use separate
+command/result pipes. TCP carries a subset of those same producer jobs. The
+process ownership tree and the work-routing graph describe different relations.
+
+After all three owners verify their jobs, the root quiesces new assignments,
+waits for worker recovery and removes the shortcut. Removing a link immediately
+stops new sends. Outstanding jobs stay in the source ledger until checked results
+arrive. The sender requests a drain acknowledgement and closes only after the
+receiver confirms completion. This protocol also supports removal during
+outstanding work, which the tests exercise. The original chain links drain at
+final shutdown.
+
+## Work sharing through SDK strategies
+
+This is the [neighbor routing and work distribution adaptation](adaptation-strategies.md#choose-an-application-adaptation).
+The demo defines `WorkSharingStrategy` as a specialization of the SDK's
+`TopologyStrategy`, supplied to `AdaptiveService` with two guards:
+
+| Component | Responsibility |
+| --- | --- |
+| `WorkSharingStrategy(TopologyStrategy)` | React to SDK topology baselines and deltas, saving eligible service peers and withdrawing them when the view is unavailable. Local child workers remain separate candidates. |
+| `PeerAvailabilityStrategy` | Check root-approved membership, TCP and capability readiness, advertised free slots and drain state. Reevaluate against `service.view` before delegation. |
+| `FreshnessStrategy` | Require a fresh, usable view before considering local worker changes. |
+| Application queue and transport code | Retain one local batch per worker, delegate surplus jobs, enforce receiver admission, track results and drain removed links. |
+
+The receiver advertises free slots after accounting for local work and its shared
+peer-job budget. Two senders can see the same advertisement, so the receiver
+checks again when a batch arrives. It accepts the whole batch or rejects it
+before execution. Only an explicit rejection permits the source to requeue the
+same job IDs, retaining their original timestamps.
+
+Each link has at most one batch awaiting results. Incoming peer jobs share one
+`--peer-window` limit per receiving service. Read/write buffers are bounded and
+partial TCP messages cannot block the local worker loop. An unexpected disconnect
+with unfinished work fails the trial and enters cleanup; it never blindly retries
+work whose execution outcome is unknown.
+
+## Compare useful work under the same limits
+
+`python soul.py` starts two fresh process trees sequentially. Both use identical
+job IDs, input values, warmup timing, worker policies, process ceilings and peer
+budgets. The chain trial shares work on its two existing links. The adaptive
+trial can also open `service-0 -> service-2` under demand.
+
+The `comparison` JSON record contains both measured results:
+
+| Measurement | Meaning |
+| --- | --- |
+| `completed` | Original jobs verified once by their owners. Default: 544 per trial. |
+| `elapsed_seconds`, `jobs_per_second` | Producer launch to the last verified owned result, and jobs divided by that duration. Service startup and final shutdown are excluded. |
+| `mean_latency_seconds`, `p95_latency_seconds` | Producer timestamp to verified result at the original owner. Timestamps precede pipe writes, including producer backpressure. |
+| `source_backlog_seconds` | Area under service 0's observed unfinished-job count, including delegated work. Lower values mean less accumulated waiting after admission. |
+| `source_peak_backlog` | Largest observed owned backlog at service 0. A bounded queue can have the same peak while draining sooner. |
+| `shortcut_jobs`, `peer_jobs` | Producer jobs completed through the added edge and through all peer edges, excluding rejected batches. |
+| `speedup` | Chain completion time divided by adaptive completion time. Values above 1 indicate an improvement in this run. |
+
+Work in the producer pipe is included in latency but not service backlog area.
+The worker budget stays fixed at four live children per service, including
+replacement overlap. Utilization can change: the shortcut lets idle workers do
+useful work. Cheeger describes the added structural path; job completion shows
+whether it helps.
+
+Machine load and process scheduling affect the measured gain. The script reports
+the actual ratio, including regressions, without treating speedup as a correctness
+condition. It requires the adaptive shortcut to complete real producer jobs.
+Repeat the comparison with representative load when tuning.
 
 ## Each service changes its processing tree
 
-Each service has the same two approved representations of its capability:
-
-| Profile | Worker processes | Jobs per dispatch | Trigger |
+| Profile | Workers | Jobs per dispatch | Trigger |
 | --- | --- | --- | --- |
-| `interactive` | 1 | 1 | Initial state and recovery after a quiet interval |
-| `batch` | 3 | Up to 4 per worker | Sustained backlog above the configured high-water mark |
+| `interactive` | 1 | 1 | Initial state, then recovery after quiesce and a quiet interval |
+| `batch` | 3 | Up to 4 per worker | Sustained backlog above the configured threshold |
 
-The transition starts replacement workers and waits for their readiness
-acknowledgements. Until the replacement set is ready, the current generation
-continues accepting dispatches. The service then commits the new generation,
-stops assigning new jobs to retiring workers, collects their accepted results,
-asks them to exit and joins them.
+New workers must report ready before receiving jobs. Old workers finish accepted
+batches, stop and are joined. The four-worker ceiling includes the overlap:
+scaling up needs one old interactive worker plus three replacements; recovery
+needs three old batch workers plus one replacement. Each service makes its own
+profile decision through the SDK observation loop.
 
-The four-worker ceiling includes both generations. Scaling up therefore holds
-one old interactive worker plus three batch replacements; recovery holds three
-old batch workers plus one interactive replacement. A new PID represents the
-restored interactive worker. Each service owns its decision independently.
+Batch services remain available for peer work until the root confirms every
+owner's jobs are complete. A subsequent quiet interval permits recovery. A lightly
+loaded service can keep its original worker; the default load makes at least
+service 0 and service 1 roll their workers.
 
-The processing queue holds at most 64 pending jobs, plus one bounded batch per
-worker. The script checks result identity and value, rejects duplicate
-completion and verifies that every accepted job finishes. After all services
-restore baseline and the peer graph returns to its chain, the root requests
-shutdown and joins the producer and service processes. Each service joins its
-own children. Failures and interruption enter bounded cleanup and exit without
-a success record.
+The application holds at most 64 queued-or-delegated jobs, plus one bounded batch
+per local worker. Delegation retains source ownership until verified completion.
+The root joins services and producers, and each service joins its children.
+Errors and interruption enter cleanup without reporting success.
 
 ## Writing an adaptive application
 
-Start at `service()` in [soul.py](../../soul.py). It owns signal handling and a
-`try/finally` boundary around `AdaptiveService.run()` and `close()`. The run loop
-names each lifecycle step so the application's safety properties are visible:
+`service()` owns signals and a `try/finally` boundary around the service loop:
 
 ```text
-receive root commands and peer work
-    -> collect results and reap exited workers
-    -> admit producer work within the queue limit
-    -> observe backlog, completion deltas and quiet time
-    -> publish through SDK refresh() and dispatch()
-    -> adapt(change) proposes a worker profile
-    -> admit it against process and Cheeger budgets
-    -> commit only after replacement readiness
-    -> dispatch work and drain retiring workers
-    -> report recovery or acknowledge complete shutdown
+receive root commands, peer frames and producer work
+    -> collect results and observe pressure/progress
+    -> SDK refresh / dispatch -> update routes and propose worker profile
+    -> check limits -> commit ready workers
+    -> dispatch locally -> delegate surplus -> maintain/drain TCP links
+    -> report owned completion, worker recovery or shutdown
 ```
 
 | Responsibility | Code to read | Property to preserve |
 | --- | --- | --- |
-| Application computation | `worker()` | Both execution profiles implement the same work contract |
-| Input contracts and backpressure | `receive_producer_work()`, `accept_peer_work()` | Validate before accepting work; stop reading when admission is full or revoked |
-| Useful completion | `collect_worker_results()`, `complete_batch()` | Match each result to its accepted identity and verify it before freeing its batch |
-| Changing neighbors | `receive_control()`, `connect_peer()`, `retire_closed_peers()` | Apply admitted layouts, verify new links with work and release closed connections |
-| SDK observation delivery | `publish_observation()`, `neighborhood()`, `LocalObservations` | Refresh local worker topology, validate events and deliver immutable deltas through the SDK |
-| Evidence and policy | `observe()`, `adapt()`, `propose_profile()`, `search_soul()` | Use one immutable observation for the decision; preserve cooldown and sustained demand |
-| Safe replacement | `admit_profile()`, `spawn_worker()`, `commit_profile()` | Count old and new workers together; require readiness before dispatch switches |
-| Serving and draining | `dispatch_work()`, `reap_workers()` | Stop assigning work to retiring workers; join them after accepted work finishes |
-| Experiment verification | `report_recovery()` | Keep the finite demo's required job count and adaptation assertions separate from application serving |
-| Resource ownership | `finish_if_stopped()`, `close()` | Acknowledge graceful shutdown after draining; retain cleanup on partial startup and failure |
+| Application computation | `worker()` | Worker profiles compute the same function |
+| Input and backpressure | `receive_producer_work()`, `admit_peer_batch()` | Unique IDs, correct values, bounded admission and explicit rejections |
+| SDK routing | `WorkSharingStrategy`, `neighborhood()`, `publish_observation()` | Meaningful worker and peer deltas, with current freshness checks |
+| Delegation | `share_work()`, `complete_peer_job()`, `requeue_rejected()` | Live SDK guard, compatible capacity, retained ownership and verified results |
+| TCP lifecycle | `Peer`, `poll_peers()`, `maintain_links()` | Bounded framing, partial reads, capability readiness and acknowledged drains |
+| Worker adaptation | `adapt()`, `search_soul()`, `admit_profile()`, `commit_profile()` | Sustained demand, cooldown, process overlap and readiness |
+| Final verification | `report_completion()`, `report_recovery()`, `results()` | Every configured job completed once and measured at its original owner |
+| Cleanup | `close()` | Every process and connection remains owned through failure |
 
-To write another flavor of application, change the computation, input contracts
-and result validator together. For example, replacing integer squares with
-record normalization also requires an output validator for normalized records.
-Keep the readiness, admission, identity tracking and draining sequence around
-that capability. `worker()` accepts a computation function, as demonstrated by
-the [Natural Selection example](local-natural-selection.md).
+`WorkSharingStrategy` demonstrates the existing SDK category in application code;
+it is not an additional SDK package export. The SDK supplies strategy dispatch,
+immutable snapshots and deltas, and current-view checks. The demo owns transport,
+queue accounting and worker processes. `LocalObservations` provides worker and
+peer snapshots without an operator or HTTP server. See the [strategy guide](adaptation-strategies.md).
 
-The script's `AdaptiveService` subclasses the SDK's
-[`AdaptiveService` ABC](../../pkg/polyad-sdk/README.md#subclass-contract) and
-implements `adapt(change)`. Construction supplies a `FreshnessStrategy` for
-profile admission; its assessment and a fresh `service.view` check gate profile
-proposals. `LocalObservations` supplies a snapshot of the live
-worker neighborhood without an HTTP server. `publish_observation()` calls the
-inherited `refresh()` and `dispatch()` methods; the SDK validates each event,
-builds immutable deltas, runs the configured strategy and invokes `adapt()` before additional hooks and cursor
-advancement. The callback uses fresh `resources` deltas to propose a profile.
-Elapsed cooldown and quiet windows remain inputs even when backlog is unchanged.
-
-The demo's `run()` owns the local observation loop and process lifecycle. Its
-`runtime` settings configure load and worker limits; inherited SDK `settings`
-control observation freshness and inventory. For operator-connected applications,
-use an authorized SDK `Client` and the SDK subscription loop to deliver upstream
-observations to an application-owned supervisor.
-
-A profile proposal changes intent. It creates no worker by itself. Admission
-checks current resources and structural bounds before starting replacements,
-and commit waits for every replacement to acknowledge readiness. Those separate
-steps allow an application to adapt while keeping its promises to accepted work.
-
-For a long-lived service, replace `report_recovery()`'s finite experiment
-assertions with the application's health or drain reporting. Unexpected worker
-death currently fails the run and enters cleanup; adding retries requires an
-explicit policy for work identity, side effects and duplicate delivery.
+To change the application, update computation, input checks, capability handshake
+and result validation together. `worker()` accepts a computation function, as
+used by [nature.py](../../nature.py). Preserve readiness, ownership, capacity and
+draining checks around it. For a long-lived service, replace the finite trial's
+completion assertions with application health and lifecycle reporting.
 
 ## Cheeger bounds at two boundaries
 
-`cheeger()` enumerates every distinct cut of these small graphs. It computes
-unweighted edge expansion with directions ignored, using Polyad's
-[structural definition](../graphs/graph-rules.md#cheeger-bottleneck-bounds).
+`cheeger()` computes exact unweighted edge expansion for these small graphs,
+ignoring direction as in Polyad's [structural definition](../graphs/graph-rules.md#cheeger-bottleneck-bounds).
 
-| Boundary | Baseline | Loaded profile | Exact Cheeger values |
+| Boundary | Baseline | Under load | Values |
 | --- | --- | --- | --- |
-| Three service processes | Chain with two TCP edges | Triangle with three TCP edges | `1 → 2 → 1` |
-| One service's dispatch/collect components and workers | One worker between dispatch and collect | Three parallel workers between dispatch and collect | `1 → 1.5 → 1` |
+| Three services | Two TCP edges in a chain | Third edge completes a triangle | `1 → 2 → 1` in the adaptive trial |
+| Dispatch, workers and collection inside a service | One worker | Three parallel workers | `1 → 1.5 → 1` for a service that adapts |
 
-At the worker boundary, dispatch and collect are logical components inside the
-service process. They connect to each eligible worker through its command/result
-pipe. Retiring workers finish previously accepted work and leave the graph used
-to admit new dispatches.
-
-A fixed `hard_minimum` remains authoritative. Approved demand profiles select
-separate Cheeger targets: `1.5` for batch worker routing and `2` for the service
-triangle. The script checks those targets and the hard floor before admitting
-a change. It also checks live child counts and a four-change budget per service.
-The two boundaries compute expansion independently. Job completion and backlog
-are measured separately from these structural values.
+The fixed `hard_minimum` applies at both boundaries. Separate demand targets are
+1.5 for batch workers and 2 for the triangle. Process limits include retiring
+workers, and a four-change budget bounds worker churn. Completed jobs, latency
+and backlog are measured independently of these structural values.
 
 ## Controls and evidence
 
-All settings are declared together in `Settings` and exposed as CLI options:
+Numeric controls live in `Settings`; `--mode` selects the trials:
 
 | Option | Default | Purpose |
 | --- | --- | --- |
-| `--jobs` | `96` | Load jobs per service, including three warmup jobs; range 24–2000 |
-| `--work-seconds` | `0.05` | Simulated overhead per worker dispatch |
-| `--tick` | `0.05` | Service observation and supervision interval |
-| `--high-water` | `8` | Outstanding jobs needed to count a high-demand observation |
+| `--mode` | `compare` | Both trials, only `chain`, or only `adaptive` |
+| `--jobs` | `384` | S0 jobs; S1 gets one third, S2 one twelfth with a minimum of three. Range 96–2000 |
+| `--work-seconds` | `0.05` | Simulated delay per worker dispatch |
+| `--tick` | `0.02` | Observation and supervision interval |
+| `--high-water` | `8` | Outstanding jobs defining high demand |
 | `--sustained` | `3` | Consecutive high-demand observations before selecting batch workers |
-| `--cooldown` | `0.3` | Minimum seconds between committed worker profiles |
-| `--idle-seconds` | `0.6` | Quiet interval before returning to interactive workers |
-| `--worker-limit` | `4` | Live children per service, including rolling overlap; maximum 6 |
-| `--hard-minimum` | `1.0` | Fixed structural floor; the initial graphs must satisfy it |
-| `--timeout` | `20` | Experiment deadline in seconds |
+| `--cooldown` | `0.3` | Minimum time between worker-profile changes |
+| `--idle-seconds` | `0.6` | Quiet interval before returning to one worker after quiesce |
+| `--worker-limit` | `4` | Live children per service, including overlap; maximum 6 |
+| `--hard-minimum` | `1.0` | Structural floor; the initial graphs must satisfy it |
+| `--timeout` | `20` | Seconds per trial, including startup and shutdown |
+| `--peer-window` | `12` | Shared unfinished peer-job ceiling at a receiver and maximum batch size; maximum 64 |
 
-A limit can prevent the requested demonstration. For example,
-`--worker-limit 2` rejects the batch replacement instead of exceeding the ceiling.
-A run only reports success after both adaptation and restoration occur; an
-insufficient burst or infeasible timing configuration fails explicitly.
+Infeasible limits fail explicitly: `--worker-limit 2` blocks the batch replacement.
+An insufficient load or timing configuration can also prevent demonstrating the
+shortcut's benefit. The script reports failure if the adaptive link carries no
+producer jobs; a measured slowdown remains a valid experimental result.
 
-JSON output includes service identity, PID and monotonic time:
+JSON records include PID, service identity and monotonic time. `work_delegated`,
+`peer_batch_accepted`, `peer_backpressure`, `peer_work_completed` and
+`delegated_work_completed` trace the same original job IDs. `edge_closed` confirms
+zero outstanding work. `baseline_restored` confirms one worker with all work done.
+`trial_verified` and `comparison` report measurements. `success` confirms 1,088
+verified default results across both trials and complete process cleanup.
 
-- `observed`: backlog, backlog delta, completed jobs and completion delta.
-- `admitted` and `committed`: the worker role, generation and Cheeger evidence.
-- `worker_spawned`, `worker_ready`, `worker_joined`: actual process lifecycles.
-- `topology_admitted`, `edge_opened`, `peer_work_completed`, `edge_closed` and
-  `topology_committed`: proposed changes and evidence of actual TCP execution.
-- `baseline_restored`: a service has returned to one worker with all its jobs complete.
-- `success`: all 288 default load results are verified and the process tree is joined.
-
-The [integration tests](../../pkg/tests/test_local_soul.py) run real subprocesses
-and sockets, verify readiness before role changes, exact topology transitions,
-result counts, process ceilings and interruption cleanup:
+The [tests](../../pkg/tests/test_local_soul.py) cover SDK strategy dispatch, stale
+views, capacity races, result validation, partial TCP frames, removal during
+outstanding work, process limits and interruption cleanup:
 
 ```sh
-poetry run pytest pkg/tests/test_local_soul.py
+poetry run pytest pkg/tests/test_local_soul.py pkg/tests/test_local_nature.py
 ```
 
 ## From approved profiles to Natural Selection

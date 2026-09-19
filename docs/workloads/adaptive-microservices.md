@@ -37,6 +37,7 @@ application contract and [shows how to connect it to the SDK](#use-the-python-sd
 - [Producers and consumers](#producers-and-consumers)
 - [Cooperate across Graphs and PolyGraphs](#cooperate-across-graphs-and-polygraphs)
 - [Define the work contract](#define-the-work-contract)
+- [Define the adaptation envelope](#define-the-adaptation-envelope)
 - [Discover neighbors and react to change](#discover-neighbors-and-react-to-change)
 - [Distribute work within available capacity](#distribute-work-within-available-capacity)
 - [Report useful work and headroom](#report-useful-work-and-headroom)
@@ -243,6 +244,103 @@ A timeout leaves acceptance uncertain. Before moving that work to another
 consumer, resolve its receipt or use a shared deduplication/ownership protocol
 that fences the first execution. A receipt store local to one consumer does not
 prevent a different consumer from repeating the same external side effect.
+
+## Define the adaptation envelope
+
+An **adaptation envelope** is the range of operating conditions an application
+can accommodate, starting from a specified state, within a specified time and
+without violating its hard constraints. It describes the combined capability of
+the services, their SDK strategies and Polyad to keep the application useful as
+demand, available peers and requirements change.
+
+The envelope belongs to the boundary being measured: one service, a Graph or a
+PolyGraph. Measure the required outcome at that boundary. Two services that each
+adapt successfully can still overload a shared database or fail to complete the
+parent graph's work. See [cooperation across graph boundaries](#cooperate-across-graphs-and-polygraphs).
+
+The [work contract](#define-the-work-contract) defines what accepting and
+completing a job means. An **operating contract** adds the conditions under which
+the application must deliver those results. For example:
+
+> Starting with a healthy application serving 3,000 records per second, handle
+> an increase to 12,000 records per second within 20 seconds. After that deadline,
+> sustain that completion rate and p95 latency below 250 ms for five minutes.
+> Throughout the transition, lose no accepted records and use at most 16 CPUs,
+> including replacement processes. Keep queues bounded and obey the configured
+> GraphRules and permissions.
+
+Record the workload mix, record sizes, burst duration, initial queues and ready
+capacity as part of the scenario. Specify how the application handles work
+during those first 20 seconds, including permitted backpressure, rejection and
+queue limits. Hard constraints apply throughout; a recovery deadline applies
+only to the objectives the contract explicitly allows time to regain.
+
+**A transition is part of the capability.** An old composition and its replacement
+may each fit within 16 CPUs while their rollout overlap exceeds that limit.
+Readiness, connection consent, state transfer and draining also take time and
+resources. Test sequences such as a burst followed by a consumer failure and
+recovery: the state left by one adjustment affects which changes are possible
+next. Remaining inside the envelope requires an allowed path to the next useful
+state as well as enough steady-state capacity there.
+
+Measure the envelope with a versioned set of scenarios:
+
+| Measure | What to record |
+| --- | --- |
+| Contract coverage | Which combinations of demand, required results, failures and budgets the application satisfies |
+| Adaptation time | Time from the scenario change through observation, planning, admission, execution and stable recovery |
+| Transition cost | Extra CPU and memory, backlog, retries and permitted service degradation while changing |
+| Stability | Whether the application sustains the required behavior or repeatedly reverses its adjustments |
+| Remaining headroom | Additional demand it can accommodate while continuing to satisfy the contract |
+
+A study can summarize coverage at a deadline `T` as:
+
+```text
+A(T) = sum(weight[i] * success[i, T]) / sum(weight[i])
+```
+
+Use a nonempty scenario set with positive weights that express operational
+importance. `success[i, T]` is `1` when scenario `i` reaches its required behavior
+within both `T` and its contract's deadline, sustains that behavior for the
+specified duration and respects every hard constraint throughout the run;
+otherwise it is `0`. Publish the individual failures alongside the score,
+including cases where no allowed composition fits the budget. Evaluate several
+values of `T` to show how coverage grows with available preparation or recovery
+time. Keep starting states, resource budgets, scenario versions and weights
+fixed when comparing implementations. Repeat runs to expose timing variability.
+This coverage score is a study definition; the operator does not currently export
+it. The [reachability guide](reachability.md) defines viability and constrained
+reachability alongside the envelope, and supplies SDK queue models and a runtime
+guard. The [local studies](../../studies/README.md) measure interaction effects,
+state-variable choices and actual producer-consumer rerouting.
+
+Timing also guides preparation. If measured adaptation takes 20 seconds but the
+current workload is expected to exhaust usable headroom in 12 seconds, that
+adjustment cannot complete in time from the current state. Start preparation
+earlier when a demand signal permits it, retain more ready capacity, or invoke
+the contract's permitted backpressure or admission response. Use measured timing
+variation and forecast uncertainty when choosing that margin. The
+[load-profile guide](../graphs/load-profiles.md) describes existing bounded
+preparation controls.
+
+In the proposed [Natural Selection planner](../proposals/copolyad.md), operating
+contracts would guide composition selection. Natural Selection owns the admitted
+composition and can replace conflicting Soul searching choices; Soul searching
+and application strategies adapt within that plan's delegated choices. Polyad
+continues enforcing administrator limits and permissions. The current
+[`nature.py` example](local-natural-selection.md) selects capabilities against
+predefined requirements and exercises them with synthetic traffic. Generating
+new scenarios from observations or forecasts would extend that foundation.
+Keep a stable evaluation suite alongside generated scenarios so an improved score
+means greater capability under the same requirements.
+
+Cheeger bounds describe structural requirements within the operating contract.
+Completion, latency and resource measurements establish whether the application
+uses those paths successfully. Adding a connection enlarges the measured
+adaptation envelope only when it enables the application to satisfy an additional
+condition or transition within the declared limits. See
+[Soul searching and the two Cheeger bounds](../graphs/soul-searching.md) and
+[the load experiments below](#exercise-the-contract-under-load).
 
 ## Discover neighbors and react to change
 
@@ -536,8 +634,12 @@ Services, with bounded caches, configurable freshness and explicit lifecycle.
 Run [`python soul.py`](../../soul.py) from the repository root to exercise Service
 Symbiosis with three service processes and a separate load generator. Each
 service rolls between interactive and batch child workers; the services' actual
-TCP topology changes from a chain to a triangle and back. The example checks
-Cheeger bounds at both boundaries, verifies every result and shuts down its tree.
+TCP topology changes from a chain to a triangle and back. The new connection
+carries queued producer jobs to a peer with spare capacity through a
+`TopologyStrategy` specialization and `PeerAvailabilityStrategy` guard.
+The example compares measured completion time, latency and backlog against a
+fixed chain under the same limits, checks Cheeger bounds at both boundaries,
+verifies every result and shuts down its tree.
 See the [local example guide](local-soul-searching.md) for diagrams, controls and
 lifecycle evidence.
 
@@ -556,7 +658,9 @@ behavior needed to enact an admitted plan.
 ## Exercise the contract under load
 
 Use the [load studies](../../studies/load/README.md) to evaluate the same work
-contract across layouts, replica counts and consumer speeds. Track useful
+contract across layouts, replica counts and consumer speeds. Use the
+[adaptation envelope](#define-the-adaptation-envelope) to specify initial states,
+recovery deadlines and constraints that must hold during each transition. Track useful
 completion, queue depth and bytes, oldest work age, latency, rejections, retries,
 per-consumer headroom, topology observation age and drain progress.
 

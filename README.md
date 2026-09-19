@@ -100,7 +100,9 @@ producers and consumers that cooperate across Graphs and PolyGraphs: discover
 compatible peers, react to connection and capacity deltas, propagate backpressure
 and report useful completion. Run the standalone [`python soul.py`](soul.py)
 [local demonstration](docs/workloads/local-soul-searching.md) to watch three service
-processes change their TCP topology and roll their child workers under load.
+processes share queued work over an added TCP connection and roll their child
+workers under load. It compares completion time, latency and backlog against a
+fixed chain with the same load and worker limits.
 Run [`python nature.py`](nature.py) for the [parent Natural Selection demonstration](docs/workloads/local-natural-selection.md):
 changing requirements select capabilities and routes, mutate services, preserve
 useful survivors and retire excluded processes.
@@ -1058,6 +1060,10 @@ choices.
   [traffic balancing](docs/graphs/traffic-balancing.md) also uses calibrated splits
   or per-replica throughput and headroom to redistribute requests. Those routing
   weights are separate from the unweighted Cheeger value used by both bounds.
+- **Adaptation envelopes and reachability:** [Stanford ASL hj_reachability](https://github.com/StanfordASL/hj_reachability)
+  and [Hamilton-Jacobi Reachability: A Brief Overview and Recent Advances](https://arxiv.org/abs/1709.07523).
+  Background and numerical backend for the SDK's [queue models, reachability guard
+  and local studies](docs/workloads/reachability.md).
 - **Rewriting and composition:** Dimitri Ara et al.,
   [Polygraphs: From Rewriting to Higher Categories](https://arxiv.org/abs/2312.00429).
   Background for the rewriting, confluence and higher-dimensional diagrams in
