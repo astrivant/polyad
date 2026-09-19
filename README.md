@@ -145,11 +145,26 @@ adapt within boundaries their administrators can trust.
 
 ### How Polyad addresses these problems
 
-As a system grows, reacting to a sudden change can take longer: observations must
-travel across more boundaries, decisions involve more dependencies, and new Pods
-or nodes take time to become ready. A burst of demand or a failing consumer can
-build queues across a pipeline while that coordination catches up. Available
-capacity elsewhere only helps when services can reach it and put it to use.
+Growth puts pressure on both **request latency** and **recovery time**, especially
+when it adds interconnected dependencies and increases resource utilization.
+A request involving more services has more opportunities to wait on a slow
+component, and shared resources accumulate queues. Dean and Barroso's
+[*The Tail at Scale*](https://research.google/pubs/the-tail-at-scale/) explains
+how occasional delays can become a dominant performance problem at larger scales.
+
+Recovery can also become slower and more involved. An overloaded service can
+shift work onto its neighbors, while retries add more demand to struggling
+dependencies. Restoring useful capacity may require several services to recover,
+new Pods or nodes to become ready, and caches to warm. Google's account of
+[cascading failures](https://sre.google/sre-book/addressing-cascading-failures/)
+describes how these effects can reinforce one another.
+
+Growth also creates opportunities for parallelism and spare capacity. Dividing
+work into well-defined boundaries lets individual requests and recovery decisions
+remain local as the application expands. Polyad's architectural objective is to
+preserve these short reaction paths while coordinating changes that affect
+shared dependencies. Available capacity becomes useful when services can reach
+it and adapt how they use it.
 
 [Service Symbiosis](docs/workloads/adaptive-microservices.md) brings part of that
 response into the microservices themselves. A producer can reduce outstanding
@@ -1116,6 +1131,11 @@ choices.
   [Kubernetes Infrastructure At Medium](https://medium.engineering/kubernetes-infrastructure-at-medium-d9e2444932ef)
   (February 14, 2023). A case study covering separate clusters, gradual
   infrastructure rollouts, resource sizing and spare capacity for traffic bursts.
+- **Responsiveness at scale:** Jeffrey Dean and Luiz André Barroso,
+  [The Tail at Scale](https://research.google/pubs/the-tail-at-scale/), and
+  Google SRE's [Addressing Cascading Failures](https://sre.google/sre-book/addressing-cascading-failures/).
+  How dependency delays, overload and retries affect request latency and recovery,
+  motivating local adaptation and coordination across shared dependencies.
 - **Structural bottlenecks:** Shlomo Hoory, Nathan Linial and Avi Wigderson,
   [Expander Graphs and Their Applications](https://www.math.ias.edu/~avi/PUBLICATIONS/MYPAPERS/HLW06/hlw06.pdf#page=14)
   (2006, Section 2.1). The edge-expansion definition used by Polyad's
