@@ -1,5 +1,35 @@
 """
-Run Natural Selection above Soul searching in a local tree of real processes.
+Choose services for a changing task, then let each service adjust to its load.
+
+This demo sends integers through real Python processes. At first, each job
+must return x*x: an input of 3 must produce 9. Later, the task changes to
+x*x + 1, so that same input must produce 10. The parent process chooses which
+services to run and how to connect their processing steps. Each service then
+adjusts its own number of worker processes as work arrives and finishes.
+
+The parent makes its choices with Natural Selection. Each service adjusts its
+workers with Soul searching, imported from soul.py. These are two decisions:
+which functions the application needs, and how to run each function under load.
+
+Terms used in the code
+---------------------
+A capability is a function a service can run, such as square() or increment().
+A placement assigns one capability to a named service, such as B running square().
+A route lists the services a job passes through, such as B followed by D. A plan
+contains the chosen services and routes; together they form the composition.
+Each environment is one round of the demo with a required result and a budget.
+
+The labels raw, squared and enriched describe what an integer means at a step:
+raw is the original x, squared is x*x, and enriched is x*x + 1. These labels
+let the planner check whether one function's output fits the next function's
+input. That agreement is the input/output contract. For example, increment()
+expects squared input; sending it raw input would produce the wrong final result.
+
+A worker profile chooses one interactive worker or three batch workers. Changing
+profiles replaces child workers while their service stays alive. Replacing a
+service itself creates a new process instance, called an incarnation in the
+code. Every plan has a version number, called its revision, which travels with
+job messages so a service can reject work sent for the wrong plan.
 
 Keep this script beside soul.py and install its local SDK dependency:
 
@@ -29,7 +59,7 @@ Google-style docstrings define arguments, return values and failure conditions.
 
 Who owns what
 -------------
-Natural Selection chooses WHICH services and capabilities make up the graph.
+Natural Selection chooses WHICH functions run in which services and routes.
 Soul searching chooses HOW each selected service uses its child workers.
 
     nature.py (parent: requirements, placement, routing, plan revisions)
@@ -43,12 +73,13 @@ Soul searching chooses HOW each selected service uses its child workers.
 
 This imports soul.py's actual worker, producer, profile-selection function,
 worker-routing Cheeger calculation and lifecycle logging. The parent provides
-the changing capability contracts and composition around that machinery.
+the required result and the service routes around that machinery.
 
 Environment 1: all three can survive
 -----------------------------------
 The required result is x*x. Three independent routes are required, with a total
-capability cost of at most 4. A and B cost 1 each; C costs 2. All three fit:
+cost of at most 4. Costs are declared units for comparing plans in this demo,
+rather than measured CPU or memory. A and B cost 1 each; C costs 2. All three fit:
 
                     +--> A: square --+
     input ----------+--> B: square --+----------> verified output
@@ -57,7 +88,8 @@ capability cost of at most 4. A and B cost 1 each; C costs 2. All three fit:
     Composition Cheeger = 1.5. Three service processes are alive.
 
 The producer creates pressure. Every service uses Soul searching to roll from
-one interactive worker to three batch workers, drain, then return to one:
+one interactive worker to three batch workers, finish their work, then return
+to one interactive worker:
 
     service PID stays alive
     +-- interactive       +-- batch-1       +-- interactive (new worker PID)
@@ -67,8 +99,9 @@ one interactive worker to three batch workers, drain, then return to one:
 Environment 2: the requirements change
 --------------------------------------
 Now the result must be x*x + 1, with two independent routes and a cost ceiling
-of 3. The catalog gives A an approved fused square-plus-one capability. D can
-increment an already-squared value. B and C can only square values.
+of 3. The catalog lists the functions each service can run. A can run fused(),
+which squares the input and adds one in a single step. D can add one to a
+value that B or C has already squared. B and C can only square values.
 
                     +--> A': square-plus-one --------+
     input ----------+                               +--> verified output
@@ -76,19 +109,21 @@ increment an already-squared value. B and C can only square values.
 
     Composition Cheeger = 1.0. A', B and D are alive; old A and C have exited.
 
-The planner enumerates compatible paths and disjoint path combinations. It
-checks types, cost, service counts, rolling overlap and the hard Cheeger floor.
-It ranks feasible plans by cost, then by how few incarnations must change.
+The planner tries routes whose output labels match the next step's input label.
+It combines routes that share no service, then checks cost, process counts and
+the minimum Cheeger value. The process limit includes old and new processes
+alive together during replacement. Among plans that pass, it chooses the lowest
+cost, then the fewest new service processes.
 
     A: can mutate -> a ready replacement A' gets a new PID and capability.
     B: stays useful -> its service PID survives and feeds the new D stage.
     C: stays fixed -> B + D is cheaper than C + D; C loses its place and dies.
     D: fills a missing capability -> a new service process is born.
 
-"Complacent" describes C's fixed capability catalog. Remaining unchanged does
-not itself cause retirement: B survives unchanged because its work still fits
-the outcome and budget. Death means draining and joining the retired process.
-Mutation selects executable implementations from a finite, approved catalog.
+"Complacent" describes C's fixed choice of functions. B also stays unchanged,
+but still fits the result and budget, so it survives. Retirement or death means
+finishing accepted work, stopping the process and waiting for its exit. Mutation
+means replacing a service with one running a different function from the catalog.
 
 Environment 3: stability is useful too
 -------------------------------------
@@ -111,15 +146,19 @@ example. soul.py separately demonstrates a changing TCP peer network.
 
 Each service's internal graph is D(dispatch) -> workers -> C(collect), with
 Cheeger 1 for one worker and 1.5 for three. These values are independent of the
-outer composition's Cheeger. The fixed floor applies at both boundaries.
+graph connecting the services. Cheeger measures connections across the sparsest
+split of a graph, relative to the number of vertices on its smaller side. The
+same configured minimum applies separately to the service graph and each
+service's worker graph.
 Measured completion counts, backlog deltas and rates accompany the structural
 measurements; correctness and completion before the deadline verify each round.
 
 Admission and retirement
 ------------------------
-Between environments, the parent drains the old plan, starts replacements and
-waits for readiness, fences admissions with a new revision, commits routing,
-then stops excluded incarnations. The live-service ceiling includes overlap:
+Between environments, all jobs finish before the parent starts replacement
+services. It waits for them to be ready, asks every selected service to accept
+the new plan's version number, switches the routes, then stops the old services
+that are no longer selected. The live-service limit includes the overlap:
 
     [A, B, C] + [A', D] -> [A', B, D] + [old A, C drained and joined]
            5 live                        3 live
@@ -169,39 +208,43 @@ if TYPE_CHECKING:
 
 def square(value: int) -> int:
     """
-    Transform a raw integer into its square.
+    Square the producer's input, such as turning 3 into 9.
 
     Args:
-        value (int): Raw producer value.
+        value (int): Original integer sent by the producer.
 
     Returns:
-        int: The squared value, satisfying the squared output contract.
+        int: The input multiplied by itself, labeled squared by the planner.
     """
     return value * value
 
 
 def increment(value: int) -> int:
     """
-    Enrich an already-squared integer.
+    Add one to the result of an earlier square() step.
+
+    For an original input of 3, square() produces 9 and this function returns
+    10. In a two-service route, B squares the input and D runs this function.
 
     Args:
-        value (int): Result delivered by an upstream square capability.
+        value (int): Squared integer returned by the preceding service.
 
     Returns:
-        int: The upstream result plus one, satisfying the enriched contract.
+        int: The squared value plus one, labeled enriched by the planner.
     """
     return value + 1
 
 
 def fused(value: int) -> int:
     """
-    Produce the enriched result in one capability.
+    Square the original input and add one in a single processing step.
 
-    This implementation satisfies the same output contract as the composed
-    square-then-increment pipeline, allowing the planner to compare both forms.
+    For an input of 3, return 10. The parent can run this function in service A
+    or send the job through B's square() and D's increment(). Both routes give
+    the same answer, so the planner can compare their cost and process needs.
 
     Args:
-        value (int): Raw producer value.
+        value (int): Original integer sent by the producer.
 
     Returns:
         int: The square of the input plus one.
@@ -212,17 +255,19 @@ def fused(value: int) -> int:
 @dataclass(frozen=True)
 class Capability:
     """
-    Declare an executable implementation and its semantic input/output contract.
+    Describe a function a service can run and the data it accepts and produces.
 
-    The semantic types distinguish raw, squared and enriched integers even
-    though their Python representation is the same. The parent checks these
-    types while composing paths; workers execute the selected function.
+    All values in this demo are Python integers, but their meanings differ:
+    raw means x, squared means x*x, and enriched means x*x + 1. The planner
+    matches these labels to connect functions in the correct order. For
+    example, increment() accepts squared input and produces enriched output.
 
     Attributes:
-        name (str): Stable name for the approved implementation.
-        input (str): Semantic type required at the capability's input.
-        output (str): Semantic type produced by the capability.
-        compute (Callable[[int], int]): Pure, spawn-importable implementation.
+        name (str): Function label used in plans and logs, such as square.
+        input (str): Meaning of the expected input: raw, squared or enriched.
+        output (str): Meaning of the result, using the same labels as input.
+        compute (Callable[[int], int]): Function called by a worker. It must be
+            importable by a new process and return its result without side effects.
     """
 
     name: str
@@ -239,15 +284,16 @@ FUSED = Capability("square-plus-one", "raw", "enriched", fused)
 @dataclass(frozen=True)
 class Placement:
     """
-    Assign one approved capability and its resource cost to a logical service.
+    Assign a function and a declared cost to a named service.
 
-    Multiple catalog entries may give a service alternative capabilities. A
-    selected plan admits exactly one of those entries for each service name.
+    The catalog contains two choices for A: square() and fused(). A plan can
+    select only one of them. Changing that choice replaces A's process.
 
     Attributes:
-        name (str): Logical service identity preserved across mutations.
-        capability (Capability): Implementation that this incarnation executes.
-        cost (int): Declared steady-state resource cost used for plan ranking.
+        name (str): Service name, such as A, retained when its process is replaced.
+        capability (Capability): Function this service's workers will run.
+        cost (int): Budget units charged while this assignment is selected.
+            These are example costs, not measured CPU or memory usage.
     """
 
     name: str
@@ -261,15 +307,16 @@ CATALOG = (Placement("A", SQUARE), Placement("A", FUSED), Placement("B", SQUARE)
 @dataclass(frozen=True)
 class Requirement:
     """
-    State the desired output, independent route count and total capability budget.
+    Specify the required result, number of separate routes and cost limit.
 
-    This local scenario always starts with raw integers. Each selected route
-    must independently produce the output without sharing service placements.
+    Every route starts with the producer's original integer and must produce
+    the required result. Routes cannot share a service. For example, producing
+    x*x + 1 along two routes needs both A alone and B followed by D.
 
     Attributes:
-        output (str): Required semantic output type.
-        routes (int): Number of disjoint service paths that must satisfy it.
-        budget (int): Maximum summed capability cost across the composition.
+        output (str): Required result label: squared for x*x or enriched for x*x + 1.
+        routes (int): Number of routes, with no service shared between them.
+        budget (int): Maximum sum of the chosen Placement costs across all routes.
     """
 
     output: str
@@ -283,26 +330,32 @@ ENVIRONMENTS = (Requirement("squared", 3, 4), Requirement("enriched", 2, 3), Req
 @dataclass(frozen=True)
 class Settings:
     """
-    Bound load, policy search, process overlap, observation and experiment duration.
+    Configure job counts, adaptation timing, process limits and timeouts.
 
-    Command-line validation bounds these values before process creation. Timing
-    is expressed in monotonic seconds. The shared in-flight window spans all
-    routes; it is separate from each service's 64-job pending queue.
+    parse_settings() checks these values before any process starts. Durations
+    are in seconds and use a monotonic clock, so wall-clock adjustments do not
+    affect deadlines. The in-flight limit counts unfinished jobs across all
+    routes; each service also has its own queue of up to 64 waiting jobs.
 
     Attributes:
         jobs (int): Producer jobs per route in each environment.
-        window (int): In-flight multiplier; total credit is window times routes.
+        window (int): Unfinished jobs allowed per route on average. The shared
+            limit is window times the number of routes.
         work_seconds (float): Simulated I/O overhead per worker dispatch.
         tick (float): Interval between observation and supervision cycles.
         sustained (int): Consecutive high-backlog observations needed to adapt.
-        cooldown (float): Minimum seconds between committed worker profiles.
-        idle_seconds (float): Quiet interval required for interactive recovery.
-        worker_limit (int): Live children per service, including rolling overlap.
-        service_limit (int): Maximum distinct services in an admitted plan.
-        overlap_limit (int): Maximum old and replacement service incarnations.
+        cooldown (float): Minimum seconds between switches of worker profile.
+        idle_seconds (float): Seconds without work before returning to one worker.
+        worker_limit (int): Maximum live workers per service, including old
+            workers finishing jobs while replacement workers start.
+        service_limit (int): Maximum named services selected in a plan.
+        overlap_limit (int): Maximum service processes alive during replacement,
+            counting both old and new processes.
         candidate_limit (int): Maximum path combinations examined per selection.
-        hard_minimum (float): Required expansion at service and worker boundaries.
-        timeout (float): Deadline for each load round or lifecycle barrier.
+        hard_minimum (float): Minimum Cheeger value, checked separately for the
+            graph of services and each service's graph of workers.
+        timeout (float): Seconds allowed for a load round or a wait for service
+            readiness, plan acknowledgement or shutdown.
     """
 
     jobs: int = 96
@@ -321,14 +374,14 @@ class Settings:
 
     def soul_settings(self) -> soul.Settings:
         """
-        Delegate timing, load and worker admission limits to Soul searching.
+        Build the settings used by the worker and adaptation code in soul.py.
 
-        Preserve Soul's default high-water mark while projecting the controls
-        this example exposes. Producers can replace the job count to cover all
-        routes without changing the worker policy settings.
+        Copy the controls shared by both demos. Keep soul.py's default backlog
+        threshold for switching to batch workers. start_round() separately
+        increases the producer's job count to supply every selected route.
 
         Returns:
-            soul.Settings: Independent, immutable settings for shared Soul code.
+            soul.Settings: A new, immutable settings object for the reused code.
         """
         return soul.Settings(
             jobs=self.jobs,
@@ -346,16 +399,17 @@ class Settings:
 @dataclass(frozen=True)
 class Plan:
     """
-    Carry compatible routes and the evidence used to admit their composition.
+    Store the chosen service routes, their total cost and their Cheeger value.
 
-    The planner creates this value only after checking capability contracts,
-    independent placements, steady cost, rolling capacity and exact expansion.
+    Each route is an ordered series of processing steps. For example, the
+    square-plus-one task can use a plan with two routes: A alone, and B then D.
+    natural_selection() returns a plan after checking its costs and limits.
 
     Attributes:
         routes (tuple[tuple[Placement, ...], ...]): Ordered service stages for
-            each independently sufficient input-to-output route.
-        cost (int): Total steady-state cost of the admitted capabilities.
-        expansion (float): Exact edge expansion of the composition graph.
+            each route from the original input to the required final result.
+        cost (int): Sum of the declared costs of the selected placements.
+        expansion (float): Exact Cheeger value for the graph of these routes.
     """
 
     routes: tuple[tuple[Placement, ...], ...]
@@ -365,7 +419,7 @@ class Plan:
     @property
     def placements(self) -> dict[str, Placement]:
         """
-        Return the single admitted capability for each service in the plan.
+        Look up each selected service's function and cost by its name.
 
         Returns:
             dict[str, Placement]: Service names mapped to their assignments.
@@ -375,10 +429,11 @@ class Plan:
     @property
     def edges(self) -> set[tuple[str, str]]:
         """
-        Describe the dataflow edges relayed by the parent through process pipes.
+        List the connections a job follows from input through services to output.
 
-        Each path includes the logical input and output vertices. These edges
-        describe computation routes; the parent transports each hop over IPC.
+        A route through B then D has edges input -> B, B -> D and D -> output.
+        The parent carries each message over process pipes, including B's
+        result on its way to D. Input and output are also vertices in this graph.
 
         Returns:
             set[tuple[str, str]]: Unique directed source/destination pairs.
@@ -387,7 +442,7 @@ class Plan:
 
     def describe(self) -> list[list[str]]:
         """
-        Render ordered capability assignments for lifecycle records.
+        Format routes for logs, such as [B:square, D:increment].
 
         Returns:
             list[list[str]]: One list of service:capability labels per route.
@@ -397,15 +452,20 @@ class Plan:
 
 def expansion(routes: tuple[tuple[Placement, ...], ...]) -> float:
     """
-    Compute exact, undirected edge expansion of a small candidate composition.
+    Calculate the Cheeger value for a proposed set of service routes.
 
-    Include input, output and service vertices, deduplicate edges and enumerate
-    each cut once up to its complement. Only the finite local catalog is used,
-    keeping exponential cut enumeration small enough to inspect directly.
+    Include one vertex per service plus input and output, and ignore edge
+    direction for this calculation. For each split into two nonempty groups,
+    divide the number of crossing edges by the number of vertices in the smaller
+    group. Return the smallest ratio. A lower value indicates a sparser
+    connection between parts of the graph.
+
+    This checks every distinct split, which is practical for this small demo
+    but becomes expensive as the number of vertices grows.
 
     Args:
-        routes (tuple[tuple[Placement, ...], ...]): Nonempty candidate routes
-            from the planner, each containing at least one placement.
+        routes (tuple[tuple[Placement, ...], ...]): Proposed routes, each with
+            at least one service. The collection must also be nonempty.
 
     Returns:
         float: Minimum crossing-edge count divided by smaller-side vertex count.
@@ -422,37 +482,41 @@ def expansion(routes: tuple[tuple[Placement, ...], ...]) -> float:
 
 def natural_selection(requirement: Requirement, current: dict[str, Placement], settings: Settings) -> Plan:
     """
-    Derive typed paths, admit bounded disjoint compositions, then rank cost and churn.
+    Choose service routes that produce the required result within the limits.
 
-    Traverse the approved catalog using semantic input/output types. Compare
-    combinations of independently sufficient routes without shared services.
-    Reject cost, overlap and structural violations before ranking by cost and
-    new incarnation count. Ties retain deterministic catalog traversal order.
-    No process is started, stopped or mutated by this pure planning function.
+    First build routes by matching function labels: square() turns raw input
+    into squared output, which increment() can accept. Then combine the required
+    number of routes, checking that they share no service and fit the cost,
+    process and Cheeger limits. Count old and new processes together when
+    checking the space needed for replacements.
+
+    Prefer the lowest total cost, then the fewest new service processes. Equal
+    choices follow catalog order. This function only calculates a plan; the
+    caller starts or stops processes after selection succeeds.
 
     Args:
         requirement (Requirement): Desired output, independent routes and budget.
-        current (dict[str, Placement]): Currently admitted service assignments;
-            all count toward temporary overlap until their retirement.
-        settings (Settings): Search, process and structural admission limits.
+        current (dict[str, Placement]): Current service assignments. Their
+            processes count toward the replacement limit until they exit.
+        settings (Settings): Search limit, process limits and minimum Cheeger value.
 
     Returns:
-        Plan: The least costly feasible composition with minimal replacement
-            count among equally costly candidates.
+        Plan: The cheapest valid set of routes, preferring fewer new processes
+            when costs are equal.
 
     Raises:
-        RuntimeError: Search exhausts its candidate budget, or no composition
-            satisfies all capability, cost, process and Cheeger constraints.
+        RuntimeError: Too many route combinations need to be checked, or none
+            satisfies the required result, cost, process and Cheeger limits.
     """
     paths: list[tuple[Placement, ...]] = []
 
     def extend(kind: str, path: tuple[Placement, ...]) -> None:
         """
-        Collect compatible paths without reusing a logical service.
+        Extend a route with functions that can accept the preceding result.
 
         Args:
-            kind (str): Semantic output currently available to the next stage.
-            path (tuple[Placement, ...]): Stages selected so far from raw input.
+            kind (str): Label of the available value, such as raw or squared.
+            path (tuple[Placement, ...]): Services selected so far, each used once.
 
         Returns:
             None: Completed routes are appended to the enclosing paths list.
@@ -489,32 +553,36 @@ def natural_selection(requirement: Requirement, current: dict[str, Placement], s
 
 class Service:
     """
-    Run Soul searching inside one revision-fenced capability incarnation.
+    Run one assigned function using a worker pool that adjusts to its backlog.
 
-    One service process owns this object and every worker in children. Its
-    parent chooses the capability and composition revision; the local policy
-    chooses interactive or batch execution within that assignment. Received
-    job identities remain tracked until a new drained revision is adopted.
+    One service process owns this object and its child worker processes. Nature
+    assigns the function, such as square(). Soul searching chooses between one
+    interactive worker and three batch workers to execute that function.
+
+    Each job carries the plan's version number, called its revision. The service
+    rejects jobs for a different revision and remembers job IDs to reject
+    duplicates. It can accept a new revision once all its jobs have finished.
 
     Attributes:
-        placement (Placement): Immutable capability assignment for this PID.
-        revision (int): Parent plan revision accepted for new jobs.
-        pipe (Connection): Duplex parent channel for commands and observations.
-        settings (soul.Settings): Delegated worker policy and resource limits.
+        placement (Placement): Fixed service name and function for this process.
+        revision (int): Plan version that incoming jobs must match.
+        pipe (Connection): Two-way pipe carrying parent commands and service reports.
+        settings (soul.Settings): Worker adaptation settings and resource limits.
         children (dict[int, soul.Child]): Owned worker processes indexed by PID.
         pending (deque[tuple[int, int]]): Accepted jobs waiting for dispatch.
-        inputs (dict[int, int]): Unfinished identities and their original values.
-        accepted (set[int]): Every admitted identity in the active revision.
-        active (soul.Profile): Currently committed worker profile.
-        candidate (soul.Profile): Desired profile, possibly awaiting readiness.
-        generation (int): Number of committed worker generations in this PID.
-        high (int): Consecutive observations above the high-water mark.
-        completed (int): Verified capability results across all revisions.
+        inputs (dict[int, int]): Unfinished job IDs and their inputs to this service.
+        accepted (set[int]): All job IDs received for this revision, including finished jobs.
+        active (soul.Profile): Worker count and batch size currently receiving jobs.
+        candidate (soul.Profile): Proposed profile, possibly still starting its workers.
+        generation (int): Number of worker groups put into use by this service.
+        high (int): Consecutive observations at or above the backlog threshold.
+        completed (int): Checked results returned across all plan versions.
         previous (tuple[int, int]): Last reported backlog and completion counts.
-        last_change (float): Monotonic time of the last profile commit.
+        last_change (float): Monotonic time when the latest worker group took over.
         last_busy (float): Monotonic time of the most recent nonempty backlog.
-        stopping (bool): Whether the parent has revoked new job admissions.
-        idle_sent (bool): Whether this quiet period has been acknowledged.
+        stopping (bool): Whether the parent has asked the service to stop accepting jobs.
+        idle_sent (bool): Whether the parent was told this service is back to one
+            worker with no unfinished jobs during the current quiet period.
     """
 
     placement: Placement
@@ -538,16 +606,16 @@ class Service:
 
     def __init__(self, placement: Placement, revision: int, pipe: Connection, settings: Settings) -> None:
         """
-        Initialize a bounded worker subtree with one interactive generation.
+        Prepare to run the assigned function with one interactive worker.
 
-        Construction allocates supervision state. The first run-loop iteration
-        starts the worker, so construction itself has no process side effects.
+        Set up the job queue and worker tracking. The first run-loop iteration
+        starts the worker; constructing this object creates no processes.
 
         Args:
-            placement (Placement): Approved service identity and computation.
-            revision (int): Initial parent plan revision.
+            placement (Placement): Service name and function chosen by Nature.
+            revision (int): Initial plan version expected on incoming jobs.
             pipe (Connection): Child endpoint of the parent's control channel.
-            settings (Settings): Runtime settings projected onto Soul's policy.
+            settings (Settings): Settings copied into the shared Soul searching code.
         """
         self.placement = placement
         self.revision = revision
@@ -569,18 +637,20 @@ class Service:
 
     def run(self) -> None:
         """
-        Execute the local receive, observe, adapt, dispatch and drain cycle.
+        Receive jobs, adjust workers to the backlog, and return checked results.
 
-        This has the same shape as Soul's AdaptiveService.run(). Nature adds a
-        parent-selected capability and revision-fenced commands; the local
-        worker policy still controls concurrency within that assignment.
+        Each pass reads messages, measures unfinished work, asks Soul searching
+        for a worker profile, checks its limits and switches when new workers
+        are ready. Old workers finish their accepted batches before exiting.
+        This follows the same steps as soul.py's AdaptiveService.run().
 
         Returns:
-            None: Stop was requested and the owned worker subtree finished.
+            None: Stop was requested and every child worker has exited.
 
         Raises:
-            RuntimeError: A command, worker or admission contract fails.
-            OSError: Communication fails while work or lifecycle receipts are exchanged.
+            RuntimeError: A command is invalid, a worker fails or a proposed
+                worker profile exceeds a limit.
+            OSError: Communication fails while exchanging jobs or status messages.
         """
         while True:
             self.receive_workers()
@@ -600,11 +670,11 @@ class Service:
 
     def log(self, event: str, **details: Any) -> None:
         """
-        Attach capability identity and plan revision to Soul lifecycle evidence.
+        Log an event with this service's name, function and plan version.
 
         Args:
             event (str): Decision, observation or worker-lifecycle event name.
-            **details (Any): JSON-serializable evidence for the event.
+            **details (Any): JSON-serializable measurements or explanations.
 
         Returns:
             None: The shared logger writes a JSON line to stdout.
@@ -613,16 +683,18 @@ class Service:
 
     def admit_profile(self) -> None:
         """
-        Check overlap and structural limits before starting candidate workers.
+        Start the proposed workers if process and Cheeger limits allow them.
 
-        Existing workers remain eligible while replacements start. Repeated
-        calls do not start another copy of an already admitted generation.
+        Count both old and new workers against the process limit. Existing
+        workers keep receiving jobs while replacements start. If the proposed
+        workers are already starting, another call leaves them in place.
 
         Returns:
-            None: A pending profile has replacement workers starting within budget.
+            None: Proposed workers start, or there is no new group to start.
 
         Raises:
-            RuntimeError: The candidate exceeds process, generation or Cheeger limits.
+            RuntimeError: Too many workers would be alive, too many worker
+                groups have been used, or the worker graph fails a Cheeger bound.
         """
         if self.stopping or (self.generation > 0 and self.candidate == self.active):
             return
@@ -638,13 +710,13 @@ class Service:
 
     def spawn_worker(self, profile: soul.Profile) -> None:
         """
-        Start one admitted worker using this service's parent-selected capability.
+        Start one child worker to run the function assigned to this service.
 
         Args:
-            profile (soul.Profile): Approved execution role and maximum batch size.
+            profile (soul.Profile): Interactive or batch settings, including batch size.
 
         Returns:
-            None: The owned child is tracked while awaiting its readiness receipt.
+            None: The child is recorded while waiting for its ready message.
 
         Raises:
             OSError: Pipe allocation or worker startup fails.
@@ -669,16 +741,17 @@ class Service:
 
     def commit_profile(self, now: float) -> None:
         """
-        Transfer dispatch only after every worker in the candidate generation is ready.
+        Send new jobs to the replacement group once all its workers are ready.
 
-        Old workers retain accepted jobs and become retiring. The first profile
-        commit also announces readiness of the service incarnation to Nature.
+        Old workers finish their current batches and receive no further jobs.
+        The first group to become ready also makes this service ready, which
+        is reported to Nature before it sends any jobs.
 
         Args:
             now (float): Monotonic timestamp used for subsequent cooldown checks.
 
         Returns:
-            None: The ready profile is committed, or its startup remains incomplete.
+            None: The new group takes over, or the service keeps waiting for readiness.
         """
         if self.stopping or (self.generation > 0 and self.candidate == self.active):
             return
@@ -699,13 +772,13 @@ class Service:
 
     def receive_workers(self) -> None:
         """
-        Record available worker readiness or verify a completed capability batch.
+        Read worker messages announcing readiness or returning a batch of results.
 
         Returns:
-            None: Child readiness and completed-work receipts advance.
+            None: Ready workers are marked and available results are checked and forwarded.
 
         Raises:
-            RuntimeError: A worker batch or capability result violates its contract.
+            RuntimeError: Returned job IDs or calculated results are incorrect.
             EOFError: A worker disconnects before its expected response.
         """
         for pid, child in self.children.items():
@@ -720,17 +793,21 @@ class Service:
 
     def complete_batch(self, child: soul.Child, results: list[tuple[int, int]]) -> None:
         """
-        Verify the selected capability's output before publishing revision-bound results.
+        Check a worker's job IDs and answers, then forward the results to Nature.
+
+        Recalculate each answer from the saved input as a correctness check for
+        this demo. Include the current plan version in each result message.
 
         Args:
-            child (soul.Child): Worker that owns the accepted batch.
-            results (list[tuple[int, int]]): Returned job identities and computed values.
+            child (soul.Child): Worker assigned this batch of jobs.
+            results (list[tuple[int, int]]): Returned job IDs and calculated values.
 
         Returns:
             None: Verified results reach Nature and the worker's batch is cleared.
 
         Raises:
-            RuntimeError: Batch identities or capability results are incorrect.
+            RuntimeError: The returned IDs differ from the assigned batch or an
+                answer differs from the assigned function's result.
         """
         if tuple(identity for identity, _ in results) != child.jobs:
             raise RuntimeError("worker completion does not match its admitted batch")
@@ -743,13 +820,14 @@ class Service:
 
     def reap_workers(self) -> None:
         """
-        Join exited children only after a requested stop with no accepted batch remaining.
+        Remove exited workers after checking they finished their jobs and stopped cleanly.
 
         Returns:
-            None: Cleanly exited children are removed from the owned live population.
+            None: Finished workers are joined, their pipes closed and their records removed.
 
         Raises:
-            RuntimeError: A worker exits without a clean drain and successful status.
+            RuntimeError: A worker exits without a stop request, with unfinished
+                jobs or with a nonzero exit code.
         """
         for pid, child in list(self.children.items()):
             if child.process.is_alive():
@@ -763,17 +841,18 @@ class Service:
 
     def command(self) -> None:
         """
-        Accept only work for the active plan, and change revisions only when drained.
+        Read one parent command and check it is safe for the current service state.
 
-        Read one command. Jobs carry identity/value pairs, adopt commands carry
-        a revision and stop revokes admission while accepted jobs finish.
+        A job command carries a job ID, value and plan version. An adopt command
+        asks the service to accept a new plan version after its work finishes.
+        A stop command prevents new jobs while accepted jobs finish.
 
         Returns:
-            None: The command updates the local state and may acknowledge a plan.
+            None: Local state is updated and a plan change is acknowledged if requested.
 
         Raises:
             RuntimeError: A command is unknown, stale, duplicate or conflicts
-                with accepted work or revoked admissions.
+                with unfinished work or a stop request.
             EOFError: The parent closes the command endpoint.
         """
         kind, revision, payload = self.pipe.recv()
@@ -806,7 +885,7 @@ class Service:
         receiving stop. Each eligible child holds at most one admitted batch.
 
         Returns:
-            None: Worker pipes and accepted-batch records reflect this dispatch.
+            None: Idle workers receive a batch or a stop message as appropriate.
 
         Raises:
             OSError: A worker pipe closes before receiving its command.
@@ -826,26 +905,31 @@ class Service:
 
     def receive_commands(self) -> None:
         """
-        Read available parent commands while pending-work admission still has capacity.
+        Read parent commands until none are ready or 64 jobs are waiting for workers.
 
         Returns:
             None: Available jobs, revision changes and stop requests are processed.
 
         Raises:
-            RuntimeError: A command is stale, duplicated or violates its contract.
+            RuntimeError: A command is invalid, duplicated or refers to the wrong plan.
         """
         while self.pipe.poll() and len(self.pending) < 64:
             self.command()
 
     def observe(self, now: float) -> soul.Observation:
         """
-        Capture backlog, completion deltas and policy timing in a shared observation type.
+        Measure unfinished jobs, recent progress and time since the last worker change.
+
+        A snapshot records these values at this moment. Deltas are changes since
+        the preceding observation: for example, completed_delta counts jobs
+        finished since the last call. Soul searching uses this snapshot to
+        decide whether sustained load or a quiet period warrants a worker change.
 
         Args:
             now (float): Current monotonic observation timestamp.
 
         Returns:
-            soul.Observation: One immutable snapshot for proposal and recovery checks.
+            soul.Observation: An immutable measurement used to choose a worker profile.
         """
         backlog = len(self.inputs)
         if backlog:
@@ -874,7 +958,7 @@ class Service:
 
     def workers_are_steady(self) -> bool:
         """
-        Check whether a complete ready generation owns dispatch with no retirement pending.
+        Check that all workers are ready and none are still being replaced.
 
         Returns:
             bool: True when every owned worker is ready and none is retiring or stopping.
@@ -883,13 +967,15 @@ class Service:
 
     def propose_profile(self, observation: soul.Observation) -> None:
         """
-        Ask Soul searching for a worker profile once the preceding generation settles.
+        Choose between interactive and batch workers once the previous change finishes.
 
         Args:
-            observation (soul.Observation): Current pressure, progress and timing evidence.
+            observation (soul.Observation): Current job counts and adaptation timing.
 
         Returns:
-            None: The policy's approved choice becomes the candidate profile.
+            None: Store the proposed profile, or keep the current proposal while
+                a worker change or shutdown is in progress. admit_profile()
+                separately checks the proposal's process and Cheeger limits.
         """
         if self.stopping or self.generation == 0 or not self.workers_are_steady() or self.candidate != self.active:
             return
@@ -904,13 +990,16 @@ class Service:
 
     def report_idle(self, observation: soul.Observation) -> None:
         """
-        Acknowledge quiet baseline recovery only after all accepted work and handoffs settle.
+        Tell Nature when work has finished and the service is back to one worker.
+
+        Wait for the configured quiet interval and any worker replacement to
+        finish. Send idle only once during each quiet period.
 
         Args:
-            observation (soul.Observation): Work and quiet-time evidence from this cycle.
+            observation (soul.Observation): Unfinished job count and time without work.
 
         Returns:
-            None: A newly recovered service reports idle under its current plan revision.
+            None: An idle message is sent when ready, or the service keeps waiting.
         """
         if observation.backlog or not self.workers_are_steady() or self.active != soul.INTERACTIVE:
             return
@@ -920,10 +1009,10 @@ class Service:
 
     def finish_if_stopped(self) -> bool:
         """
-        Acknowledge parent shutdown only after the owned worker population is empty.
+        Report shutdown complete once every child worker has exited.
 
         Returns:
-            bool: True when the service may return after sending its stop receipt.
+            bool: True after sending stopped, allowing the service loop to return.
         """
         if self.stopping and not self.children:
             self.pipe.send(("stopped", self.revision, self.completed))
@@ -932,11 +1021,11 @@ class Service:
 
     def close(self) -> None:
         """
-        Reap owned workers on success, interruption or a failed contract.
+        Stop remaining workers and close their pipes when the service exits.
 
-        Send a stop sentinel where possible, then use bounded joins followed by
-        termination and a final kill if necessary. Close every owned endpoint
-        even when the normal readiness and drain protocol could not complete.
+        Request a normal stop first and wait for each worker to exit. Terminate
+        workers that exceed the wait, then kill them if they still do not exit.
+        This cleanup also runs after errors or interruption.
 
         Returns:
             None: Owned workers are joined and their communication is closed.
@@ -961,23 +1050,23 @@ class Service:
 
 def serve(placement: Placement, revision: int, pipe: Connection, settings: Settings) -> None:
     """
-    Isolate one capability and guarantee cleanup of its Soul-managed worker subtree.
+    Run a service in its own process and clean up its workers when it exits.
 
-    This spawn entry point ignores terminal SIGINT and handles parent SIGTERM
-    through stack unwinding. Cleanup runs whether the service stops normally,
-    raises a contract error or is interrupted.
+    multiprocessing calls this function when it starts a service. Leave Ctrl-C
+    handling to the parent by ignoring SIGINT here. Convert SIGTERM into an
+    exception so the finally block stops workers before this process exits.
 
     Args:
-        placement (Placement): Capability assigned to this service process.
-        revision (int): Initial admitted composition revision.
+        placement (Placement): Service name and function assigned to this process.
+        revision (int): Initial plan version expected on incoming jobs.
         pipe (Connection): Child endpoint for parent commands and observations.
-        settings (Settings): Delegated runtime and process limits.
+        settings (Settings): Adaptation timing and process limits for the service.
 
     Returns:
-        None: The service completed its run loop and joined its worker subtree.
+        None: The service loop finished and its child workers were stopped and joined.
 
     Raises:
-        RuntimeError: The local service fails a command or worker contract.
+        RuntimeError: A command is invalid, a worker fails or a worker limit is exceeded.
         KeyboardInterrupt: Parent termination interrupts the service loop.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -992,17 +1081,19 @@ def serve(placement: Placement, revision: int, pipe: Connection, settings: Setti
 @dataclass
 class Incarnation:
     """
-    Track one real service process, its contract and acknowledgements.
+    Track one running instance of a named service, including its process and pipe.
 
-    Logical names can survive a mutation while this process identity changes.
-    The parent retains every incarnation until final cleanup, including retired
-    entries, so process ownership remains explicit across plan revisions.
+    Replacing A's square() function with fused() starts a new process. Both
+    instances are called A, but each has a different process ID and Incarnation
+    record. Nature retains these records after processes exit so final cleanup
+    can account for every process it started.
 
     Attributes:
         placement (Placement): Service name and capability executed by this PID.
         process (BaseProcess): Spawned service process owned by Nature.
         pipe (Connection): Parent endpoint of the service control/data channel.
-        flags (set[tuple[str, int]]): Observed lifecycle states keyed by revision.
+        flags (set[tuple[str, int]]): Received status labels paired with their plan
+            version, such as (ready, 1) or (idle, 2).
     """
 
     placement: Placement
@@ -1014,22 +1105,23 @@ class Incarnation:
 @dataclass
 class LoadRound:
     """
-    Track one finite producer workload through the currently admitted composition.
+    Track the producer's jobs as they move through one round's service routes.
 
-    This ledger belongs to Nature. Service processes own their internal worker
-    ledgers; a job here advances to the next service only after its result arrives.
+    Nature keeps each unfinished job's route and current processing step here.
+    When B returns a squared value, Nature can use that record to send it to D
+    for the next step. Each service separately tracks jobs assigned to its workers.
 
     Attributes:
-        requirement (Requirement): Output contract checked at the final stage.
-        plan (Plan): Ordered routes admitted for this environment.
+        requirement (Requirement): Required final calculation: x*x or x*x + 1.
+        plan (Plan): Ordered service routes selected for this round.
         generator (BaseProcess): Owned producer sending work to the parent.
         incoming (Connection): Read endpoint for producer work and end-of-input.
-        total (int): Expected distinct producer identities in the round.
+        total (int): Expected number of jobs from the producer.
         started (float): Monotonic start time for the round deadline and rate.
         inflight (dict[int, tuple[int, int]]): Each unfinished job's route and stage.
-        completed (set[int]): Identities whose final results have been verified.
-        accepted (int): Count of sequential producer jobs admitted so far.
-        ending (bool): Whether the producer's end-of-input sentinel arrived.
+        completed (set[int]): Job IDs whose final results have been checked.
+        accepted (int): Number of producer jobs sent to their first service so far.
+        ending (bool): Whether the producer has sent None to mark the end of input.
     """
 
     requirement: Requirement
@@ -1046,20 +1138,22 @@ class LoadRound:
 
 class Nature:
     """
-    Own composition revisions, root-routed dataflow and service survival decisions.
+    Choose services, connect their processing steps and supervise the experiment.
 
-    Selection and placement run in this parent process. Child services own
-    their worker pools and cannot change their own capability assignment.
-    Complete one load round before replacing its admitted composition.
+    This object lives in the parent process. It uses natural_selection() to
+    choose a plan, starts the needed services and passes jobs between them.
+    Each child service adjusts its own workers while running the function
+    Nature assigned. Nature finishes a load round before changing the plan.
 
     Attributes:
-        settings (Settings): Policy, runtime and admission budgets.
-        context (mp.context.SpawnContext): Spawn context used for direct children.
-        active (dict[str, Incarnation]): Current incarnation of each service.
+        settings (Settings): Load settings, adaptation timing and process limits.
+        context (mp.context.SpawnContext): multiprocessing factory that starts
+            each producer and service in a fresh Python interpreter.
+        active (dict[str, Incarnation]): Selected service processes, keyed by name.
         created (list[Incarnation]): All service processes retained for cleanup.
         generators (list[BaseProcess]): Producer processes owned by this parent.
-        plan (Plan | None): Current admitted composition, initially absent.
-        revision (int): Monotonically increasing composition revision.
+        plan (Plan | None): Selected functions and service routes, initially absent.
+        revision (int): Plan version, increased on each successful selection.
     """
 
     settings: Settings
@@ -1072,7 +1166,7 @@ class Nature:
 
     def __init__(self, settings: Settings) -> None:
         """
-        Begin with an empty population and retain ownership of every created child.
+        Set up process tracking before any producer or service is started.
 
         Args:
             settings (Settings): Validated configuration for this experiment.
@@ -1087,18 +1181,19 @@ class Nature:
 
     def run(self) -> int:
         """
-        Apply each environment, verify its work and retire the final population.
+        Run all three scenarios, check their results, then shut down the services.
 
-        The selected services run concurrently during each load round. The
-        parent advances the environment only after verified completion and
-        worker recovery, preserving the drained boundary needed by apply().
+        Each scenario selects a plan and sends a finite load through it. Wait
+        for every job to finish and every service to return to one interactive
+        worker before applying the next scenario's requirements.
 
         Returns:
             int: Total verified producer jobs across every environment.
 
         Raises:
-            RuntimeError: Selection, workload verification or a child contract fails.
-            TimeoutError: A lifecycle barrier expires.
+            RuntimeError: No valid plan is found, a result is wrong or a child fails.
+            TimeoutError: Services take too long to become ready, accept a new
+                plan version or shut down.
         """
         completed = 0
         for requirement in ENVIRONMENTS:
@@ -1109,14 +1204,14 @@ class Nature:
 
     def retire_population(self) -> None:
         """
-        Gracefully retire all survivors after the last environment finishes.
+        Stop all selected services after the last load round finishes.
 
         Returns:
-            None: All active service subtrees are joined and the population is empty.
+            None: All services and their workers have exited and active is empty.
 
         Raises:
-            RuntimeError: A survivor fails its clean shutdown contract.
-            TimeoutError: A survivor exceeds the retirement deadline.
+            RuntimeError: A service fails to stop cleanly.
+            TimeoutError: A service takes too long to acknowledge shutdown.
         """
         for member in self.active.values():
             self.retire(member, "experiment complete")
@@ -1124,17 +1219,18 @@ class Nature:
 
     def messages(self, members: list[Incarnation]) -> list[tuple[Incarnation, str, int, Any]]:
         """
-        Consume bounded available messages and reject unexpected service failure.
+        Read available service messages and check for unexpected process exits.
 
-        Read at most 128 available messages per service, preserving each pipe's
-        ordering. Record lifecycle acknowledgements by revision for barriers.
-        Result messages retain their identity/value payload for routing checks.
+        Read at most 128 messages per service in the order received. Remember
+        status messages such as ready and adopted, together with their plan
+        version, so barrier() can wait for all services to reach the same state.
+        Return result messages with their job IDs and values for routing.
 
         Args:
             members (list[Incarnation]): Live services whose pipes may be read.
 
         Returns:
-            list[tuple[Incarnation, str, int, Any]]: Source incarnation, message
+            list[tuple[Incarnation, str, int, Any]]: Source service record, message
                 kind, plan revision and payload for each available record.
 
         Raises:
@@ -1159,23 +1255,24 @@ class Nature:
 
     def barrier(self, members: list[Incarnation], kind: str, revision: int) -> None:
         """
-        Wait for explicit readiness, revision or shutdown acknowledgements with a deadline.
+        Wait until every listed service confirms a state for the given plan version.
 
-        Barriers run between load rounds, where no job results should remain.
-        Empty member lists complete immediately, allowing unchanged populations
-        to reuse the same admission procedure as a mutation.
+        For example, wait for ready before using new services, or adopted before
+        sending jobs with a new plan version. Calls happen between load rounds,
+        when all jobs should be complete. An empty list returns immediately.
 
         Args:
             members (list[Incarnation]): Services that must acknowledge the state.
-            kind (str): Required lifecycle acknowledgement, such as ready.
+            kind (str): Status message to wait for, such as ready or adopted.
             revision (int): Plan revision to which each acknowledgement belongs.
 
         Returns:
             None: All members have acknowledged the requested state and revision.
 
         Raises:
-            RuntimeError: Work crosses the drained boundary or a service fails.
-            TimeoutError: The configured lifecycle deadline expires.
+            RuntimeError: A job result arrives when work should already be
+                finished, or a service fails.
+            TimeoutError: Services do not all respond within settings.timeout seconds.
         """
         deadline = time.monotonic() + self.settings.timeout
         while not all((kind, revision) in member.flags for member in members):
@@ -1188,20 +1285,23 @@ class Nature:
 
     def apply(self, requirement: Requirement) -> Plan:
         """
-        Select a composition, prepare its population, commit routing and retire exclusions.
+        Choose the next plan, ready its services, switch routes and stop old services.
 
-        These phases run after the preceding load round has drained. Read the
-        steps here before following the helpers for spawn and receipt details.
+        Call this after the previous round's jobs have finished. Keep services
+        whose assignments still fit, start replacements and wait for readiness.
+        Every selected service must accept the new plan version before routing
+        switches. Services excluded from the new plan can then shut down.
 
         Args:
             requirement (Requirement): Outcome and budget for the new environment.
 
         Returns:
-            Plan: The committed composition after excluded services have exited.
+            Plan: The active routes and assignments, with old services stopped.
 
         Raises:
-            RuntimeError: Selection, a child or a lifecycle contract fails.
-            TimeoutError: A readiness, revision or retirement barrier expires.
+            RuntimeError: No valid plan is found or a service fails a required check.
+            TimeoutError: A service takes too long to become ready, accept the
+                plan version or shut down.
         """
         plan = self.select_plan(requirement)
         next_members, replacements = self.prepare_population(plan)
@@ -1213,13 +1313,13 @@ class Nature:
 
     def select_plan(self, requirement: Requirement) -> Plan:
         """
-        Derive an admitted composition and publish its evidence under a new revision.
+        Choose a valid plan, give it a new version number and log the decision.
 
         Args:
             requirement (Requirement): Required output, independent routes and cost ceiling.
 
         Returns:
-            Plan: The feasible composition chosen by the pure Natural Selection planner.
+            Plan: Routes chosen by natural_selection(), ready for process setup.
 
         Raises:
             RuntimeError: No candidate satisfies the requirement within all limits.
@@ -1241,14 +1341,16 @@ class Nature:
 
     def prepare_population(self, plan: Plan) -> tuple[dict[str, Incarnation], list[Incarnation]]:
         """
-        Preserve useful service PIDs and start only changed or newly required assignments.
+        Reuse unchanged services and start processes for new or changed assignments.
 
         Args:
-            plan (Plan): Admitted assignments with their rolling overlap already checked.
+            plan (Plan): Selected assignments whose process limits have already
+                been checked, including old and replacement processes alive together.
 
         Returns:
-            tuple[dict[str, Incarnation], list[Incarnation]]: Next population keyed
-                by service name, followed by just the incarnations awaiting readiness.
+            tuple[dict[str, Incarnation], list[Incarnation]]: All services in the
+                next plan, keyed by name, followed by the newly started services
+                whose ready messages the caller must await.
         """
         next_members: dict[str, Incarnation] = {}
         replacements = []
@@ -1271,14 +1373,16 @@ class Nature:
 
     def start_incarnation(self, placement: Placement, previous: Incarnation | None) -> Incarnation:
         """
-        Spawn one admitted capability and track its process before awaiting readiness.
+        Start a service process with its assigned function and keep its cleanup record.
 
         Args:
             placement (Placement): Service name and capability for the new process.
-            previous (Incarnation | None): Old incarnation when this is a mutation.
+            previous (Incarnation | None): Process being replaced, if this service
+                is changing its function. Used to identify the change in logs.
 
         Returns:
-            Incarnation: The owned replacement with its parent-side command endpoint.
+            Incarnation: The new process and the parent's end of its pipe. The
+                caller must still wait for the service's ready message.
 
         Raises:
             OSError: Process or pipe creation fails.
@@ -1311,17 +1415,21 @@ class Nature:
 
     def adopt_revision(self, members: list[Incarnation]) -> None:
         """
-        Fence new work to the admitted revision on every survivor and replacement.
+        Ask every selected service to accept jobs with the new plan version.
+
+        Wait for all replies before the parent sends jobs. A service rejects
+        later job messages if their version differs from the one accepted here.
 
         Args:
-            members (list[Incarnation]): Ready incarnations in the next population.
+            members (list[Incarnation]): Ready service processes chosen for the next plan.
 
         Returns:
-            None: Every member acknowledged the new revision while drained.
+            None: Every service has acknowledged the new version with no jobs unfinished.
 
         Raises:
-            RuntimeError: A service rejects adoption or reports undrained work.
-            TimeoutError: Adoption exceeds the lifecycle deadline.
+            RuntimeError: A service rejects the version change or returns an
+                unexpected job result while the parent is waiting.
+            TimeoutError: Services do not all acknowledge the version within the timeout.
         """
         for member in members:
             member.pipe.send(("adopt", self.revision, None))
@@ -1329,14 +1437,14 @@ class Nature:
 
     def commit_plan(self, plan: Plan, next_members: dict[str, Incarnation]) -> list[Incarnation]:
         """
-        Publish edge changes and transfer active routing to the acknowledged population.
+        Switch to the ready services and log which job-routing connections changed.
 
         Args:
-            plan (Plan): Composition whose members have adopted the current revision.
+            plan (Plan): Routes whose services have accepted the current plan version.
             next_members (dict[str, Incarnation]): Ready service assignments keyed by name.
 
         Returns:
-            list[Incarnation]: Excluded old incarnations that still require retirement.
+            list[Incarnation]: Old service processes that the caller must now stop.
         """
         old_edges = self.plan.edges if self.plan else set()
         retiring = [member for name, member in self.active.items() if next_members.get(name) is not member]
@@ -1355,7 +1463,7 @@ class Nature:
 
     def retire_exclusions(self, members: list[Incarnation]) -> None:
         """
-        Join old incarnations once their replacements and new routing are committed.
+        Stop services left out of the new plan and log why each was replaced or removed.
 
         Args:
             members (list[Incarnation]): Excluded old service processes.
@@ -1364,8 +1472,8 @@ class Nature:
             None: Each excluded service has exited with an explicit selection reason.
 
         Raises:
-            RuntimeError: An excluded service fails its clean shutdown contract.
-            TimeoutError: Retirement exceeds the lifecycle deadline.
+            RuntimeError: A service fails to stop cleanly.
+            TimeoutError: A service takes too long to acknowledge shutdown.
         """
         for member in members:
             reason = "capability replaced" if member.placement.name in self.active else "excluded by outcome and cost budget"
@@ -1373,22 +1481,23 @@ class Nature:
 
     def retire(self, member: Incarnation, reason: str) -> None:
         """
-        Stop admissions, drain the service subtree and verify the process has exited.
+        Ask a service to stop its workers, then wait for the service itself to exit.
 
-        Retirement follows a completed load round. Wait for the service's stop
-        acknowledgement, join its PID and record the concrete reason for its
-        death. The service itself remains responsible for joining its workers.
+        Call after a load round finishes. The service stops accepting jobs,
+        shuts down its workers and sends stopped. Wait for its process to exit
+        successfully, close the pipe and log the reason for removing it.
 
         Args:
-            member (Incarnation): Previously admitted process to retire.
+            member (Incarnation): Service process to stop.
             reason (str): Human-readable selection or shutdown explanation.
 
         Returns:
             None: The service process exited successfully and its pipe is closed.
 
         Raises:
-            RuntimeError: Accepted work remains or the service exits uncleanly.
-            TimeoutError: Retirement exceeds the configured lifecycle deadline.
+            RuntimeError: A job result arrives when work should already be
+                finished, or the service fails to exit successfully.
+            TimeoutError: The service does not acknowledge shutdown within the timeout.
             EOFError: The service closes its pipe before acknowledging stop.
         """
         member.pipe.send(("stop", self.revision, None))
@@ -1413,14 +1522,14 @@ class Nature:
 
     def load(self, requirement: Requirement, plan: Plan) -> int:
         """
-        Run the bounded admit, route, recover and verify cycle for one environment.
+        Send one round of jobs through the services and check their answers and recovery.
 
         Args:
-            requirement (Requirement): Outcome against which final results are checked.
-            plan (Plan): Currently committed routes and capability assignments.
+            requirement (Requirement): Required calculation used to check final answers.
+            plan (Plan): Active service functions and routes.
 
         Returns:
-            int: Distinct producer jobs verified before the population became idle.
+            int: Number of completed producer jobs, after all services return to one worker.
 
         Raises:
             RuntimeError: Input, routing, output, adaptation or deadline checks fail.
@@ -1439,14 +1548,17 @@ class Nature:
 
     def start_round(self, requirement: Requirement, plan: Plan) -> LoadRound:
         """
-        Start a finite producer and reset this revision's load and recovery evidence.
+        Start a producer with enough jobs to exercise every selected route.
+
+        Clear earlier idle and batch reports so this round must demonstrate
+        its own change to batch workers and return to one interactive worker.
 
         Args:
             requirement (Requirement): Required output for the round.
-            plan (Plan): Routes over which producer identities will be distributed.
+            plan (Plan): Routes that will receive jobs in turn.
 
         Returns:
-            LoadRound: The owned producer endpoint and initially empty routing ledger.
+            LoadRound: Producer process, receiving pipe and empty job-tracking records.
 
         Raises:
             OSError: The producer or its pipe cannot be created.
@@ -1476,13 +1588,16 @@ class Nature:
 
     def admit_jobs(self, round_state: LoadRound) -> None:
         """
-        Admit ordered producer jobs only while the shared in-flight budget has room.
+        Assign new jobs to routes while the unfinished-job limit has room.
+
+        Rotate through the routes so each receives the same number of jobs.
+        At the limit, stop reading from the producer until some jobs finish.
 
         Args:
-            round_state (LoadRound): Current input contract, routes and work ledger.
+            round_state (LoadRound): Producer pipe, selected routes and unfinished jobs.
 
         Returns:
-            None: Available jobs are assigned to first stages, or backpressure defers input.
+            None: Jobs are sent to their first service, or input waits for capacity.
 
         Raises:
             RuntimeError: The producer sends an invalid identity, value or job count.
@@ -1504,31 +1619,31 @@ class Nature:
 
     def send_job(self, member: Incarnation, identity: int, value: int) -> None:
         """
-        Revoke stale idle evidence and send one stage's work under the current revision.
+        Send a job to one service, marking it busy and including the plan version.
 
         Args:
-            member (Incarnation): Admitted service responsible for this stage.
-            identity (int): Producer identity preserved throughout the route.
-            value (int): Raw input or verified output from the preceding stage.
+            member (Incarnation): Selected service responsible for this processing step.
+            identity (int): Job ID kept unchanged throughout its route.
+            value (int): Original input or checked output from the preceding service.
 
         Returns:
-            None: The stage command is sent and this service must report idle again.
+            None: The job is sent and the service's earlier idle flag is cleared.
         """
         member.flags.discard(("idle", self.revision))
         member.pipe.send(("job", self.revision, (identity, value)))
 
     def route_results(self, round_state: LoadRound) -> None:
         """
-        Consume current-revision observations and advance completed stages.
+        Read service messages and pass each result to its next processing step.
 
         Args:
-            round_state (LoadRound): In-flight route positions and completion ledger.
+            round_state (LoadRound): Each unfinished job's position and finished job IDs.
 
         Returns:
             None: Available results have advanced or completed their jobs.
 
         Raises:
-            RuntimeError: An observation belongs to a stale plan or a result is invalid.
+            RuntimeError: A message belongs to a different plan version or a result is invalid.
         """
         for member, kind, revision, payload in self.messages(list(self.active.values())):
             if revision != self.revision:
@@ -1540,19 +1655,23 @@ class Nature:
 
     def complete_stage(self, round_state: LoadRound, member: Incarnation, identity: int, value: int) -> None:
         """
-        Check stage ownership, then forward the result or verify the final outcome.
+        Check which service answered, then pass on its result or verify the final answer.
+
+        For the B -> D route, send B's result to D. When D answers, compare it
+        with the original input squared plus one and mark the job complete.
 
         Args:
-            round_state (LoadRound): Current routes, requirement and work ledger.
+            round_state (LoadRound): Routes, required calculation and job-tracking records.
             member (Incarnation): Service that returned the result.
-            identity (int): Producer job identity carried by the result.
+            identity (int): Original job ID carried by the result.
             value (int): Computed output of this stage.
 
         Returns:
-            None: The next stage owns the job or its final output releases in-flight credit.
+            None: The next service receives the job, or completion frees room for a new job.
 
         Raises:
-            RuntimeError: Stage ownership, result value or completion uniqueness fails.
+            RuntimeError: The wrong service answered, the final value is wrong
+                or that job has already been marked complete.
         """
         route, stage = round_state.inflight[identity]
         path = round_state.plan.routes[route]
@@ -1570,13 +1689,13 @@ class Nature:
 
     def round_finished(self, round_state: LoadRound) -> bool:
         """
-        Check that input ended, jobs completed and every service restored its baseline.
+        Check that all input is processed and every service is idle with one worker.
 
         Args:
-            round_state (LoadRound): Current producer and unfinished-work evidence.
+            round_state (LoadRound): Producer completion flag and unfinished jobs.
 
         Returns:
-            bool: True only after complete input, routing and worker recovery.
+            bool: True when input has ended, no jobs remain and all services report idle.
         """
         return (
             round_state.ending
@@ -1586,7 +1705,7 @@ class Nature:
 
     def check_round_health(self, round_state: LoadRound) -> None:
         """
-        Bound the load round and reject producer failure while routing continues.
+        Check that the producer has not failed and the round has not timed out.
 
         Args:
             round_state (LoadRound): Producer process and monotonic round start.
@@ -1603,16 +1722,21 @@ class Nature:
 
     def verify_round(self, round_state: LoadRound) -> int:
         """
-        Verify exact completion and local adaptation before publishing the round receipt.
+        Confirm every job finished once and every service used batch workers this round.
+
+        load() calls this after all services have returned to one interactive
+        worker. Log the number of completed jobs, elapsed time, completion rate
+        and service process IDs so the round can be inspected afterward.
 
         Args:
-            round_state (LoadRound): Finished round with all result identities recorded.
+            round_state (LoadRound): Finished round with completed job IDs recorded.
 
         Returns:
             int: Exact number of verified producer jobs in this environment.
 
         Raises:
-            RuntimeError: The producer, completion ledger or adaptation evidence is incomplete.
+            RuntimeError: The producer did not exit successfully, completed job
+                IDs differ from those expected, or a service never reported batch mode.
         """
         round_state.generator.join(timeout=3)
         if round_state.generator.exitcode != 0 or round_state.completed != set(range(round_state.total)):
@@ -1633,7 +1757,7 @@ class Nature:
 
     def close(self) -> None:
         """
-        Bound cleanup of producers and all service subtrees after success or interruption.
+        Stop remaining producers and services after the demo finishes or fails.
 
         Request normal service stops first. Join direct children with bounded
         waits, then terminate unresponsive processes so their cleanup handlers
@@ -1662,10 +1786,10 @@ class Nature:
 
 def parse_settings() -> Settings:
     """
-    Parse and validate command-line controls before creating the parent population.
+    Read command-line options and check their ranges before starting any processes.
 
     Returns:
-        Settings: Finite configuration within the local experiment's supported limits.
+        Settings: Checked job counts, timing values and process limits for the demo.
 
     Raises:
         SystemExit: Argparse handles help or rejects unsupported settings.
@@ -1685,19 +1809,20 @@ def parse_settings() -> Settings:
 
 def main() -> None:
     """
-    Configure Nature, execute its environments and always close the owned population.
+    Configure the demo, run all three scenarios and clean up every child process.
 
-    Read Nature.run() next for environment order, Nature.apply() for mutation
-    handoffs, Nature.load() for dataflow and Service.run() for local adaptation.
+    Read Nature.run() next for scenario order, Nature.apply() for service
+    replacement, Nature.load() for job routing and Service.run() for worker
+    adaptation inside each service.
 
     Returns:
-        None: Every environment finished and cleanup preceded the success receipt.
+        None: Every scenario finished, cleanup ran and the success event was logged.
 
     Raises:
         SystemExit: Command-line help or validation ends the invocation.
-        RuntimeError: Planning, work or a child contract fails.
-        TimeoutError: A lifecycle barrier exceeds its deadline.
-        KeyboardInterrupt: Cancellation unwinds through population cleanup.
+        RuntimeError: No valid plan is found, a job check fails or a child fails.
+        TimeoutError: A wait for service readiness, plan acknowledgement or shutdown expires.
+        KeyboardInterrupt: Cancellation runs cleanup and then ends the demo.
     """
     settings = parse_settings()
     signal.signal(signal.SIGTERM, soul.interrupt)

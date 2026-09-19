@@ -1,5 +1,5 @@
 """
-Run Soul searching locally with real processes, TCP peers and adaptive workers.
+Run Soul Search locally with real processes, TCP peers and adaptive workers.
 
 Run it from the repository root with the local SDK installed:
 
