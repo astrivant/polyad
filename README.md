@@ -145,6 +145,24 @@ adapt within boundaries their administrators can trust.
 
 ### How Polyad addresses these problems
 
+As a system grows, reacting to a sudden change can take longer: observations must
+travel across more boundaries, decisions involve more dependencies, and new Pods
+or nodes take time to become ready. A burst of demand or a failing consumer can
+build queues across a pipeline while that coordination catches up. Available
+capacity elsewhere only helps when services can reach it and put it to use.
+
+[Service Symbiosis](docs/workloads/adaptive-microservices.md) brings part of that
+response into the microservices themselves. A producer can reduce outstanding
+work when a consumer slows down, or send compatible work to an authorized peer
+with spare capacity. A consumer can adjust concurrency, switch worker profiles
+or drain accepted jobs before replacing workers. The
+[Python SDK's adaptive interface](pkg/polyad-sdk/README.md#adaptive-services-and-deltas)
+exposes connection, capacity and decision changes to application-defined
+[strategies](docs/workloads/adaptation-strategies.md). These local responses let
+services use their existing resources while additional infrastructure is being
+prepared. Services can also request [temporary connections](docs/apis/temporary-connections.md)
+and new compositions within their permissions.
+
 [Graphs and PolyGraphs](docs/introduction/concepts.md) make related workloads and
 their connections reusable deployment units. [GraphRules](docs/graphs/graph-rules.md)
 express their structural requirements, which Polyad checks against live state
@@ -152,23 +170,25 @@ before applying [ReplicaGroup scaling requests](docs/graphs/replication.md#const
 A [root control plane](docs/deployment/root-control-plane.md) extends that model
 across registered clusters, coordinating deployments and collecting observations.
 
-For pipelines with idle workers behind busy stages, [Cheeger bounds](docs/graphs/cheeger-orchestration.md)
-constrain sparse connectivity, while [Soul searching](docs/graphs/soul-searching.md)
-uses administrator-selected demand signals to guide approved connection changes,
-[traffic balancing](docs/graphs/traffic-balancing.md) and
-[preparation for upcoming stages](docs/graphs/load-profiles.md). This helps direct
-work toward available capacity and gives a node autoscaler notice of future
-scheduling demand. Structural bounds do not guarantee a data rate; application
-measurements and load tests determine useful targets and preparation budgets.
+At those larger boundaries, [Soul searching](docs/graphs/soul-searching.md) uses
+observed demand, completed throughput and reported spare capacity to guide
+approved connection changes and [traffic balancing](docs/graphs/traffic-balancing.md).
+Traffic can shift between individual services, whole graph replicas or PolyGraph
+replicas as their measured ability to accept work changes.
+[Cheeger bounds](docs/graphs/cheeger-orchestration.md) constrain structural
+bottlenecks, while [capacity preparation](docs/graphs/load-profiles.md) gives
+upcoming stages and node autoscalers notice of future demand. Application
+measurements and load tests establish useful targets for each boundary.
 
-The [Python SDK](pkg/polyad-sdk/README.md) lets services request new compositions,
-activate work and establish [temporary connections](docs/apis/temporary-connections.md)
-as needs emerge. [Topology events](docs/workloads/workload-events.md) keep them
-informed as their neighbors change. The SDK's [adaptive interface](pkg/polyad-sdk/README.md#adaptive-services-and-deltas)
-exposes added/removed connections, replica and metric deltas, and decision
-transitions with the current neighborhood context. Authorization and graph rules constrain
-those requests, giving applications a way to adapt without an administrator
-rewriting the deployment for every change.
+The same approach applies to a small producer-consumer pair and an application
+spread across clusters: respond close to the work, report what happened, and
+coordinate broader changes where dependencies are shared. Immediate admission
+and backpressure stay local; graph changes follow configured observation windows,
+cooldowns and resource limits. This gives a growing system ways to respond promptly
+without every reaction waiting for coordination across the whole application.
+Its [adaptation envelope](docs/workloads/adaptive-microservices.md#define-the-adaptation-envelope)
+records which changes it can absorb, how quickly it recovers and which constraints
+it must preserve.
 
 ### Graphs of graphs
 
