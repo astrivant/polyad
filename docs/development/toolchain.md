@@ -144,8 +144,8 @@ For cattrs serialization, supply the same concrete graph type when converting
 in both directions:
 
 ```python
-from polyad_types.codec import converter
-from polyad_types.topology import GraphNode, PolyGraph
+from polyad_types.graphs.topology import GraphNode, PolyGraph
+from polyad_types.serialization import converter
 
 graph = PolyGraph(
     nodes=(GraphNode(name="batch", kind="Graph", ref="batch-template"),),

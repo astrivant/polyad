@@ -87,7 +87,7 @@ def overlay(obj: dict[str, Any], spec: dict[str, Any], *, now: datetime | None =
     if not grants:
         return spec
     if obj["kind"] == "ReplicaGroup" and "template" in spec:
-        from polyad_types.replication import replica_topology
+        from polyad_types.graphs.replication import replica_topology
 
         spec = replica_topology(spec)
     result = copy.deepcopy(spec)

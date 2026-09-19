@@ -21,8 +21,8 @@ from polyad.auth.http import install
 from polyad.auth.policy import public_demo
 from polyad.compiler.passes.composition import compile_composition
 from polyad.operator.observability.tracing import identify_request
-from polyad_types.codec import converter
-from polyad_types.requests import CompositionRequest, identity
+from polyad_types.api.requests import CompositionRequest, identity
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -32,8 +32,8 @@ if TYPE_CHECKING:
 
     from polyad.api.http.limits import RateLimitPolicy
     from polyad.auth.http import Access
-    from polyad_types.requests import ActivationRequest
-    from polyad_types.throughput import ThroughputSample
+    from polyad_types.api.requests import ActivationRequest
+    from polyad_types.api.throughput import ThroughputSample
 
 
 def _build_app(

@@ -8,6 +8,7 @@ import copy
 import inspect
 import io
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,10 +16,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from polyad_sdk import AdaptiveService, Client, Delta, Event, Settings, StreamInterrupted
-from polyad_sdk.filters import event_type, field
+from polyad_sdk import AdaptiveService, Client, Delta, Event, ObserveStrategy, Settings, StreamInterrupted
+from polyad_sdk.events.filters import event_type, field
 from polyad_types import ServiceEndpoint, ThroughputSample
-from polyad_types.network import NetworkPort
+from polyad_types.networking.access import NetworkPort
 
 if TYPE_CHECKING:
     from polyad_sdk import Change
@@ -47,11 +48,11 @@ class RecordingService(AdaptiveService):
 
 def test_adaptive_service_is_a_public_abc_with_a_required_application_hook():
     """
-    Root and adaptive imports expose the same abstract contract with no default adaptation.
+    Root and symbiosis imports expose the same abstract contract with no default adaptation.
     """
     from abc import ABC
 
-    from polyad_sdk.adaptive import AdaptiveService as PublicAdaptiveService
+    from polyad_sdk.symbiosis import AdaptiveService as PublicAdaptiveService
 
     assert PublicAdaptiveService is AdaptiveService
     assert issubclass(AdaptiveService, ABC) and inspect.isabstract(AdaptiveService)
@@ -118,7 +119,9 @@ def runtime():
         "outgoing": [{"node": node("sink"), "ports": [{"port": 8080, "protocol": "TCP"}]}],
     }
     events.topology = MagicMock(side_effect=lambda **_: copy.deepcopy(topology))
-    service = RecordingService(ServiceEndpoint("", "test", "Graph", "pipeline", "uid-pipeline", "source"), events, clock=clock)
+    service = RecordingService(
+        ServiceEndpoint("", "test", "Graph", "pipeline", "uid-pipeline", "source"), events, clock=clock, strategies=[ObserveStrategy()]
+    )
     return service, topology, clock, service.changes
 
 
@@ -282,7 +285,7 @@ def test_failed_adaptation_blocks_hooks_and_checkpoint_until_it_succeeds(runtime
                 raise RuntimeError("adaptation needs retry")
             super().adapt(change)
 
-    service = RetryService(original.identity, original.events, clock=clock, checkpoint=checkpoints.append)
+    service = RetryService(original.identity, original.events, clock=clock, checkpoint=checkpoints.append, strategies=[ObserveStrategy()])
     service.on_change(hooks.append)
     service.refresh()
     event = observation()
@@ -312,7 +315,7 @@ def test_baseline_adaptation_failure_retries_without_skipping_initialization(run
                 raise RuntimeError("initialization needs retry")
             super().adapt(change)
 
-    service = RetryBaseline(original.identity, original.events, clock=clock)
+    service = RetryBaseline(original.identity, original.events, clock=clock, strategies=[ObserveStrategy()])
     assert not attempts
     with pytest.raises(RuntimeError, match="initialization needs retry"):
         service.refresh()
@@ -365,7 +368,7 @@ def test_cluster_fence_inventory_and_generation_regression(runtime):
     Explicit cluster identity, snapshot bounds and newer resource generations remain authoritative.
     """
     service, topology, _, _ = runtime
-    bounded = RecordingService(service.identity, service.events, settings=Settings(max_observations=1))
+    bounded = RecordingService(service.identity, service.events, settings=Settings(max_observations=1), strategies=[ObserveStrategy()])
     with pytest.raises(ValueError, match="max_observations"):
         bounded.refresh()
     service.refresh()
@@ -376,7 +379,7 @@ def test_cluster_fence_inventory_and_generation_regression(runtime):
     service.dispatch(stale)
     assert service.view.resources == {}
     identity = ServiceEndpoint("west", "test", "Graph", "pipeline", "uid-pipeline", "source")
-    foreign = RecordingService(identity, service.events, clock=lambda: 100)
+    foreign = RecordingService(identity, service.events, clock=lambda: 100, strategies=[ObserveStrategy()])
     topology["graph"]["cluster"] = "east"
     with pytest.raises(ValueError, match="identity"):
         foreign.refresh()
@@ -464,7 +467,7 @@ def test_environment_uses_rotating_application_credentials(monkeypatch, tmp_path
         monkeypatch.setenv("POLYAD_" + key, value)
     for key in ("API_URL", "CONNECTIONS_URL", "EVENTS_TOKEN"):
         monkeypatch.delenv("POLYAD_" + key, raising=False)
-    service = RecordingService.from_environment()
+    service = RecordingService.from_environment(environ=os.environ, strategies=[ObserveStrategy()])
     assert isinstance(service, RecordingService)
     assert service.events._authorization_headers()["Authorization"] == "Bearer first"
     token.write_text("rotated")
@@ -472,8 +475,13 @@ def test_environment_uses_rotating_application_credentials(monkeypatch, tmp_path
     assert service.api is None and service.connections is None
     monkeypatch.delenv("POLYAD_EVENTS_TOKEN_FILE")
     with pytest.raises(ValueError, match="application-owned"):
-        RecordingService.from_environment()
-    assert RecordingService.from_environment(allow_unauthenticated=True).events._authorization_headers() == {}
+        RecordingService.from_environment(environ=os.environ, strategies=[ObserveStrategy()])
+    assert (
+        RecordingService.from_environment(
+            allow_unauthenticated=True, environ=os.environ, strategies=[ObserveStrategy()]
+        ).events._authorization_headers()
+        == {}
+    )
 
 
 def test_reporting_and_filtered_hooks_use_existing_permissions(runtime):

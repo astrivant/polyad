@@ -184,10 +184,12 @@ the [Natural Selection example](local-natural-selection.md).
 
 The script's `AdaptiveService` subclasses the SDK's
 [`AdaptiveService` ABC](../../pkg/polyad-sdk/README.md#subclass-contract) and
-implements `adapt(change)`. `LocalObservations` supplies a snapshot of the live
+implements `adapt(change)`. Construction supplies a `FreshnessStrategy` for
+profile admission; its assessment and a fresh `service.view` check gate profile
+proposals. `LocalObservations` supplies a snapshot of the live
 worker neighborhood without an HTTP server. `publish_observation()` calls the
 inherited `refresh()` and `dispatch()` methods; the SDK validates each event,
-builds immutable deltas and invokes `adapt()` before additional hooks and cursor
+builds immutable deltas, runs the configured strategy and invokes `adapt()` before additional hooks and cursor
 advancement. The callback uses fresh `resources` deltas to propose a profile.
 Elapsed cooldown and quiet windows remain inputs even when backlog is unchanged.
 

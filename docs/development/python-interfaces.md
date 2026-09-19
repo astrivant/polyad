@@ -18,10 +18,12 @@ substituted; the shipped backends retain their existing configuration and behavi
 
 | Import | Implement | Shipped implementation or consumer |
 | --- | --- | --- |
-| `polyad.graph.Workload` | `work` property and `run(control, checkpoint)` | `polyad.balance.Graph`, heartbeat example, `Scheduler` |
+| `polyad.graph.Workload` | `work` property and `run(control, checkpoint)` | `polyad.scheduling.Graph`, heartbeat example, `Scheduler` |
 | `polyad.graph.ProcessOwner` | `run(...)`, `stop()` | Application-supplied owners passed to `OperationQueue(owner_factory=...)` |
-| `polyad.balance.SchedulingPolicy` | `rank(...)`, `preempt(...)`; optionally `priorities(...)` | `ShortestRemaining`, `FIFO`, `BreadthFirst`, `DepthFirst` |
+| `polyad.scheduling.SchedulingPolicy` | `rank(...)`, `preempt(...)`; optionally `priorities(...)` | `ShortestRemaining`, `FIFO`, `BreadthFirst`, `DepthFirst` |
 | `polyad_sdk.AdaptiveService` | `adapt(change)` | Application subclasses and [`soul.py`](../../soul.py) |
+| `polyad_sdk.AdaptationStrategy` | `adapt(change, current)` | Ordered components passed to `AdaptiveService(strategies=...)` |
+| `polyad_sdk.ConstraintStrategy` | `evaluate(current)` | Freshness, peer availability, connection permission, graph/container budget and decision guards |
 | `polyad_sdk.EventSource` | `topology(...)`, `events(...)`, `event_endpoints(...)`; set `url` | `Client`, `Subscription`, `AdaptiveService` |
 | `polyad_sdk.ThroughputReporter` | `report_throughput(sample)` | `Client`, `AdaptiveService(api=...)` |
 | `polyad_sdk.ConnectionNegotiator` | `connect_services(request)`, `respond_connection(...)` | `Client`, `AdaptiveService(connections=...)` |
@@ -41,7 +43,7 @@ execution. Implement `work` as a property or a concrete class attribute. A field
 assigned only inside `__init__`, including a generated dataclass constructor,
 does not fulfill an abstract property. The
 [heartbeat example](../../examples/heartbeat.py) demonstrates the property form;
-the [scheduling guide](../../pkg/polyad/balance/README.md#cooperative-execution)
+the [scheduling guide](../../pkg/polyad/scheduling/README.md#cooperative-execution)
 shows a constant description.
 
 `run()` retains ownership of accepted work and any child processes until it
@@ -54,7 +56,7 @@ Custom policies extend `SchedulingPolicy` directly. For example, this policy
 prefers the most recently submitted ready work and lets active work finish:
 
 ```python
-from polyad.balance import SchedulingPolicy
+from polyad.scheduling import SchedulingPolicy
 from polyad.graph import Estimate
 
 
@@ -70,7 +72,7 @@ Pass `policy=NewestReady()` to `Scheduler` or a nested `Graph`. The default
 `priorities()` supplies insertion-order positions. The scheduler still checks
 dependencies, available slots, memory and checkpoint eligibility. Policy choices
 change ordering within those constraints. See
-[graph traversal ordering](../../pkg/polyad/balance/README.md#graph-traversal-ordering).
+[graph traversal ordering](../../pkg/polyad/scheduling/README.md#graph-traversal-ordering).
 
 ## SDK observation and actions
 
@@ -85,8 +87,16 @@ and cancellation. Endpoint discovery comes from that configured authority.
 `subscribe()` is provided by the ABC and returns the shared `Subscription`, so a
 custom transport uses the same hooks, retry bookkeeping and checkpoints.
 
-The SDK continues to validate events, calculate deltas and invoke `adapt(change)`
-before additional callbacks and checkpoint advancement. See the
+The SDK validates events, calculates deltas, runs injected `AdaptationStrategy`
+components in order, then invokes `adapt(change)` before additional callbacks
+and checkpoint advancement. Construction requires a nonempty, application-chosen
+strategy set. `require_strategies=False` explicitly permits an empty set, leaving
+adaptation behavior undefined for uncovered cases. Components have independent retry bookkeeping and
+receive current freshness on each attempt. The shipped `ConstraintStrategy`
+implementations publish named satisfied, blocked or unknown assessments for
+[mutation difficulties](../workloads/adaptation-strategies.md). The application
+combines the constraints relevant to each action and owns final admission,
+readiness and draining. See the
 [SDK subclass contract](../../pkg/polyad-sdk/README.md#subclass-contract) and
 [local adaptation walkthrough](../workloads/local-soul-searching.md#writing-an-adaptive-application).
 Throughput reports and connection requests retain their existing authorization,
@@ -118,6 +128,13 @@ Importing `polyad.operator.adapters.ResourceAPI`, `StateBackend`, or
 `polyad.cache.CacheBackend` does not load Kubernetes, PostgreSQL or Redis drivers.
 The cache package loads its Redis implementation when `Cache` is requested. SDK
 interfaces ship in `polyad-sdk` and require no operator installation.
+
+The SDK groups API actions under `polyad_sdk.api`, event sources and subscriptions
+under `polyad_sdk.events`, startup context under `polyad_sdk.runtime`, and network
+implementations under `polyad_sdk.transport`. Adaptation lives in `polyad_sdk.symbiosis`,
+with strategy contracts and implementations grouped under `.strategies`.
+Package-root public imports remain available. See the
+[SDK package map](../../pkg/polyad-sdk/README.md#package-layout) for individual modules.
 
 These are Python extension points. Existing Helm values still select the shipped
 services and optional capabilities. Construct custom implementations explicitly

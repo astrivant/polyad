@@ -10,9 +10,9 @@ from pathlib import Path
 from threading import Event
 from typing import TYPE_CHECKING
 
-from polyad.balance import BreadthFirst, Scheduler
 from polyad.graph import Outcome, Rewrite, ShutdownContract, Statistics, Work, Workload
 from polyad.graph.gates import AND, NOT, OR, Signal
+from polyad.scheduling import BreadthFirst, Scheduler
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -79,7 +79,7 @@ def main() -> int:
         int: Zero after the pipeline completes.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=Path(f".cache/balance/example-{time.time_ns()}"))
+    parser.add_argument("--output", type=Path, default=Path(f".cache/scheduling/example-{time.time_ns()}"))
     options = parser.parse_args()
     healthy = Event()
     scheduler: Scheduler

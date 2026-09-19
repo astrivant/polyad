@@ -26,13 +26,13 @@ from polyad.operator.clusters.federation import INVENTORY, PARENT, REMOTE, Feder
 from polyad.operator.policies.connections import reconcile_connection
 from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_sdk import Client, StreamInterrupted
-from polyad_sdk.filters import connection_pending, event_type, field, graph, phase
+from polyad_sdk.events.filters import connection_pending, event_type, field, graph, phase
 from polyad_types import APIKey, ConnectionResponse, Event, GraphAccess, ServiceConnectionRequest, ServiceEndpoint
-from polyad_types.auth import KeyDirection
-from polyad_types.codec import converter
-from polyad_types.discovery import AccessMode, AtlasAccess, ServiceAccess
-from polyad_types.network import NetworkPort
+from polyad_types.api.auth import KeyDirection
+from polyad_types.api.discovery import AccessMode, AtlasAccess, ServiceAccess
+from polyad_types.networking.access import NetworkPort
 from polyad_types.resources import GROUP
+from polyad_types.serialization import converter
 from tests.test_operator import resource, template
 from tests.test_temporary_connections import ConnectionAPI, graph_fixture, participant
 

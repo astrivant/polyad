@@ -16,15 +16,15 @@ from polyad.compiler.passes.children import child_name
 from polyad.compiler.passes.identity import inject_environment
 from polyad.operator.observability.graph_status import observed
 from polyad_types import resources as asts
-from polyad_types.requests import ActivationRequest
-from polyad_types.topology import Dependency
+from polyad_types.api.requests import ActivationRequest
+from polyad_types.graphs.topology import Dependency
 
 if TYPE_CHECKING:
     from typing import Any
 
     from polyad.operator.reconciliation.controller import Controller
-    from polyad_types.activation import ActivationPolicy
-    from polyad_types.topology import Topology
+    from polyad_types.graphs.activation import ActivationPolicy
+    from polyad_types.graphs.topology import Topology
 
 TERMINAL = {"Completed", "Failed", "Rejected", "Superseded", "Stopped"}
 ACTIVE = {"Queued", "Running", "Ready", "Stopping"}

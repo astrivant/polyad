@@ -11,8 +11,10 @@ from attrs import fields
 from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn
 
+from polyad_types.resources.base import Resource
 from polyad_types.resources.common import AST
-from polyad_types.resources.resources import RESOURCE_REGISTRY, ConfigMap, Resource
+from polyad_types.resources.kubernetes import ConfigMap
+from polyad_types.resources.registry import RESOURCE_REGISTRY
 
 if TYPE_CHECKING:
     from collections.abc import Callable

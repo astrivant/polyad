@@ -16,7 +16,7 @@ from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types import resources as asts
-from polyad_types.topology import topology
+from polyad_types.graphs.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any

@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING
 from polyad.graph.rules import evaluate_rule
 from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.cheeger import computation_limits
-from polyad_types.codec import converter
+from polyad_types.graphs.rules import StructuralRule
+from polyad_types.graphs.topology import topology
 from polyad_types.resources import BOUNDARY_KINDS
-from polyad_types.rules import StructuralRule
-from polyad_types.topology import topology
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from typing import Any

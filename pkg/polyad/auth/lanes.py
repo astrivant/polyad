@@ -16,7 +16,7 @@ from polyad.lua import script
 from polyad.transport.redis import pool
 
 if TYPE_CHECKING:
-    from polyad_types.auth import APIKey
+    from polyad_types.api.auth import APIKey
 
 LEASE_SECONDS = 120
 ACQUIRE = script("authentication/acquire.lua")

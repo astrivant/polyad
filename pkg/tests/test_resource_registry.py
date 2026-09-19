@@ -29,7 +29,7 @@ from polyad.operator.adapters.kubernetes import API, BUILTINS, KINDS, WORKLOAD_K
 from polyad.operator.lifecycle.handlers import KINDS as WATCHED_KINDS
 from polyad.operator.observability.graph_status import instance_metrics
 from polyad_types.resources import GROUP, ResourceCounts
-from polyad_types.resources.resources import RESOURCE_CLASSES
+from polyad_types.resources.registry import RESOURCE_CLASSES
 from tests.test_operator import resource
 
 

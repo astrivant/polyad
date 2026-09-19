@@ -9,8 +9,8 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from polyad_types.auth import Authentication
-from polyad_types.codec import from_dict
+from polyad_types.api.auth import Authentication
+from polyad_types.serialization import from_dict
 
 if TYPE_CHECKING:
     from typing import Any

@@ -10,9 +10,9 @@ from flask import jsonify, request
 
 from polyad.api.http.errors import Unavailable
 from polyad.operator.observability.tracing import identify_request
-from polyad_types.codec import converter
-from polyad_types.requests import ActivationRequest, identity
-from polyad_types.throughput import ThroughputSample
+from polyad_types.api.requests import ActivationRequest, identity
+from polyad_types.api.throughput import ThroughputSample
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from collections.abc import Callable

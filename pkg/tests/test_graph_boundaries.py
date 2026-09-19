@@ -14,11 +14,11 @@ from cattrs.errors import CattrsError
 from jsonschema import Draft7Validator
 
 from polyad.compiler.registry import BOUNDARY_KINDS, RESOURCE_TYPES
-from polyad_types.codec import converter
-from polyad_types.network import NetworkPeer
-from polyad_types.replication import ReplicaTemplate
-from polyad_types.requests import ActivationRequest, CompositionItem
-from polyad_types.topology import topology
+from polyad_types.api.requests import ActivationRequest, CompositionItem
+from polyad_types.graphs.replication import ReplicaTemplate
+from polyad_types.graphs.topology import topology
+from polyad_types.networking.access import NetworkPeer
+from polyad_types.serialization import converter
 from tests.test_composition import settle
 from tests.test_operator import FakeAPI, resource
 

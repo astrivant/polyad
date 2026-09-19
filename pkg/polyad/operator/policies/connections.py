@@ -24,10 +24,10 @@ from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types import resources as asts
-from polyad_types.codec import converter
-from polyad_types.network import NetworkAccess
-from polyad_types.replication import replica_topology
-from polyad_types.requests import ConnectionRequest
+from polyad_types.api.requests import ConnectionRequest
+from polyad_types.graphs.replication import replica_topology
+from polyad_types.networking.access import NetworkAccess
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from typing import Any
@@ -332,7 +332,7 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         await finish(controller, receipt, graph, "Rejected", "target or TTL is not eligible for temporary connections")
         return
     from polyad.events.access import configuration
-    from polyad_types.discovery import AccessMode
+    from polyad_types.api.discovery import AccessMode
 
     if configuration().effective(controller.federation.name, "connections") == AccessMode.DISABLED:
         await finish(controller, receipt, graph, "Rejected", "connections are disabled by this operator access mode")

@@ -18,8 +18,8 @@ from polyad.operator.coordination.leases import Coordinator
 from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types import resources as asts
-from polyad_types.codec import converter
-from polyad_types.requests import CompositionRequest
+from polyad_types.api.requests import CompositionRequest
+from polyad_types.serialization import converter
 from tests.test_operator import FakeAPI, resource, template
 
 

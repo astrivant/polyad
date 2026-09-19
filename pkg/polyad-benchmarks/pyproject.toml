@@ -1,6 +1,6 @@
 [project]
 name = "polyad-benchmarks"
-version = "0.0.1a3"
+version = "0.0.1a15"
 description = "Bounded, repeatable activation load studies for Polyad"
 authors = [{name = "Emma Doyle"}]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -16,8 +16,8 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "polyad-sdk==0.0.1a3",
-    "polyad-types==0.0.1a3",
+    "polyad-sdk==0.0.1a15",
+    "polyad-types==0.0.1a15",
     "PyYAML>=6,<7",
 ]
 

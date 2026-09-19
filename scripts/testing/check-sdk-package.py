@@ -8,11 +8,25 @@ import importlib
 import importlib.util
 import inspect
 import pkgutil
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import polyad_sdk
-from polyad_sdk import AdaptiveService, Client, ConnectionNegotiator, Delta, EventSource, Settings, ThroughputReporter
+from polyad_sdk import (
+    AdaptationStrategy,
+    AdaptiveService,
+    Client,
+    ConnectionNegotiator,
+    ConstraintStrategy,
+    Delta,
+    EventSource,
+    FreshnessStrategy,
+    Settings,
+    ThroughputReporter,
+    WorkloadContext,
+    env,
+)
 from polyad_types import ServiceEndpoint
 
 if TYPE_CHECKING:
@@ -47,20 +61,54 @@ def main() -> None:
     package = Path(polyad_sdk.__file__).parent
     assert "site-packages" in package.parts, package
     assert (package / "py.typed").is_file()
+    assert "polyad_sdk.transport.websocket" not in sys.modules
+    assert "opentelemetry.sdk" not in sys.modules
+    assert "opentelemetry.exporter" not in sys.modules
+    for namespace, names in {
+        "api": ("Client", "APIError", "ConnectionNegotiator", "ThroughputReporter"),
+        "events": ("EventSource", "Filter", "Subscription", "StreamInterrupted", "Event"),
+        "runtime": ("env", "refresh_environment", "WorkloadContext", "PodContext", "ContainerResources"),
+        "observability": ("Telemetry",),
+        "processes": ("ProcessSpec", "ProcessPlan", "ProcessSupervisor", "ManagedProcess", "PlanResult"),
+        "symbiosis": ("AdaptiveService", "Change", "Delta", "Environment", "Settings"),
+        "symbiosis.strategies": (
+            "AdaptationStrategy",
+            "ConstraintStrategy",
+            "FreshnessStrategy",
+            "PeerAvailabilityStrategy",
+            "ConnectionPermissionStrategy",
+            "ResourceBudgetStrategy",
+            "ContainerBudgetStrategy",
+            "DecisionGuardStrategy",
+            "ThresholdStrategy",
+            "ObserveStrategy",
+            "CallbackStrategy",
+            "TopologyStrategy",
+            "ResourceStrategy",
+            "DecisionStrategy",
+            "ConstraintAssessment",
+        ),
+    }.items():
+        module = importlib.import_module(f"polyad_sdk.{namespace}")
+        assert all(getattr(module, name) is getattr(polyad_sdk, name) for name in names)
     for module in pkgutil.walk_packages(polyad_sdk.__path__, "polyad_sdk."):
         importlib.import_module(module.name)
     for name in ("polyad", "kopf", "kubernetes", "redis", "flask", "numpy", "networkx"):
         assert importlib.util.find_spec(name) is None, name
     assert inspect.isabstract(AdaptiveService)
+    assert inspect.isabstract(AdaptationStrategy) and inspect.isabstract(ConstraintStrategy)
     for contract in (EventSource, ThroughputReporter, ConnectionNegotiator):
         assert inspect.isabstract(contract) and issubclass(Client, contract)
     assert not inspect.isabstract(Client)
     service = SmokeService(
         ServiceEndpoint("", "test", "Graph", "pipeline", "uid-pipeline", "source"),
         Client("http://localhost:8091", "reader"),
+        strategies=[FreshnessStrategy("admission", lambda result: None)],
         settings=Settings(),
     )
     assert not service.view.available and service.view.candidates == ()
+    assert isinstance(env, dict) and isinstance(service.context, WorkloadContext)
+    assert len(service.strategies) == 1
     assert Delta(("resources", "pods"), "changed", 2, 3).difference == 1
     print("Standalone SDK package, imports and adaptive interface passed")
 

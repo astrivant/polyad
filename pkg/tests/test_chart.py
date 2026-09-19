@@ -1177,8 +1177,8 @@ def test_component_graph_accepts_the_optional_cheeger_maximum():
     Render both inclusive bounds into the policy enforcing the existing component chain.
     """
     from polyad.graph import StructuralRule, evaluate_rule
-    from polyad_types.codec import converter
-    from polyad_types.topology import topology
+    from polyad_types.graphs.topology import topology
+    from polyad_types.serialization import converter
 
     objects = render("architecture.cheegerMaximum=1", values_files=(CHART / "values-components.reference.yaml",))
     rule = next(obj for obj in objects if obj["kind"] == "GraphRule")

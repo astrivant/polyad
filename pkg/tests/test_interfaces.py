@@ -11,13 +11,13 @@ from pathlib import Path
 
 import pytest
 
-from polyad.balance import FIFO, Graph, Scheduler, SchedulingPolicy, ShortestRemaining
 from polyad.cache import Cache, CacheBackend
 from polyad.graph import Operation, OperationQueue, Outcome, ProcessOwner, Work, Workload
 from polyad.operator.adapters import ResourceAPI, StateBackend
 from polyad.operator.adapters.kubernetes import API
 from polyad.operator.adapters.postgresql import StateStore
-from polyad_sdk import AdaptiveService, Client, ConnectionNegotiator, EventSource, ThroughputReporter
+from polyad.scheduling import FIFO, Graph, Scheduler, SchedulingPolicy, ShortestRemaining
+from polyad_sdk import AdaptiveService, Client, ConnectionNegotiator, EventSource, ObserveStrategy, ThroughputReporter
 
 
 @pytest.mark.parametrize(
@@ -220,7 +220,11 @@ def test_sdk_accepts_an_event_source_without_the_http_client():
 
     source = Source()
     service = Service(
-        ServiceEndpoint("", "test", "Graph", "pipeline", "graph-1", "worker"), source, clock=lambda: 100, checkpoint=checkpoints.append
+        ServiceEndpoint("", "test", "Graph", "pipeline", "graph-1", "worker"),
+        source,
+        clock=lambda: 100,
+        checkpoint=checkpoints.append,
+        strategies=[ObserveStrategy()],
     )
     service.run()
     assert changes[0].baseline

@@ -13,12 +13,12 @@ from polyad.api.connections.consent import endpoint
 from polyad.api.connections.paths import identities, path
 from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.events.access import require_scope
-from polyad_types.codec import converter
-from polyad_types.requests import ConnectionRequest
+from polyad_types.api.requests import ConnectionRequest
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from polyad.api.connections.store import Caller, ConnectionStore
-    from polyad_types.requests import ServiceConnectionRequest
+    from polyad_types.api.requests import ServiceConnectionRequest
 
 
 async def connection_request(store: ConnectionStore, request: ServiceConnectionRequest) -> ConnectionRequest:
@@ -89,7 +89,7 @@ async def authorize_request(store: ConnectionStore, request: ConnectionRequest, 
     Returns:
         None: Inconsistent boundaries, access modes or participant permissions reject intake.
     """
-    from polyad_types.requests import ServiceConnectionRequest
+    from polyad_types.api.requests import ServiceConnectionRequest
 
     proposed = ServiceConnectionRequest(
         request.requestId, request.peers["source"], request.peers["target"], request.ttlSeconds, request.ports, request.bidirectional

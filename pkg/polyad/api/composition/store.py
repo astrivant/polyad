@@ -11,13 +11,13 @@ from kubernetes.client.exceptions import ApiException
 from polyad.api.http.errors import Conflict
 from polyad.compiler.passes.composition import read_receipt, receipt_spec, request_name
 from polyad_types import resources as asts
-from polyad_types.requests import COMPOSITION_KINDS
+from polyad_types.api.requests import COMPOSITION_KINDS
 
 if TYPE_CHECKING:
     from typing import Any
 
     from polyad.operator.adapters.interfaces import ResourceAPI
-    from polyad_types.requests import CompositionRequest
+    from polyad_types.api.requests import CompositionRequest
 
 
 class CompositionStore:

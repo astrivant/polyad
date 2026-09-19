@@ -95,6 +95,8 @@ def test_sdk_deltas_drive_profile_changes_and_quiet_recovery(soul):
         assert isinstance(application, AdaptiveService)
         assert isinstance(application.settings, Settings)
         assert application.runtime == soul.Settings()
+        assert len(application.strategies) == 1
+        assert application.strategies[0].name == "profile-admission"
         application.on_change(changes.append)
         application.children[42] = soul.Child(Mock(), Mock(), "interactive", ready=True)
         application.candidate = None
@@ -102,6 +104,7 @@ def test_sdk_deltas_drive_profile_changes_and_quiet_recovery(soul):
         spike = soul.Observation(time=1, backlog=20, delta_backlog=20, completed=0, completed_delta=0, high=1, quiet=0, elapsed=2)
         application.publish_observation(spike)
         assert changes[0].baseline
+        assert application.profile_available
         assert application.candidate is None
         assert application.view.candidates[0]["node"]["name"] == "worker-42"
         assert application.view.resources["backlog"] == 20
@@ -161,6 +164,7 @@ def test_sdk_adaptation_rejects_stale_evidence_and_root_stop(soul, monkeypatch):
         application.receive_control()
         application.publish_observation(demand)
         assert not application.view.available
+        assert not application.profile_available
         assert application.candidate is None
         with pytest.raises(RuntimeError, match="does not make HTTP"):
             application.events.event_settings()

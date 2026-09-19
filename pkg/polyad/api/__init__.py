@@ -7,8 +7,8 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING
 
-from polyad_types.requests import CompositionItem as CompositionItem
-from polyad_types.requests import CompositionRequest as CompositionRequest
+from polyad_types.api.requests import CompositionItem as CompositionItem
+from polyad_types.api.requests import CompositionRequest as CompositionRequest
 
 if TYPE_CHECKING:
     from typing import Any

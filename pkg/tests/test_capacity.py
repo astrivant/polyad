@@ -17,7 +17,7 @@ from polyad.graph import CapacityPlan, Dependency, Node, Topology
 from polyad.operator.policies.capacity import CONSUME
 from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types import resources as asts
-from polyad_types.codec import converter
+from polyad_types.serialization import converter
 from tests.test_operator import FakeAPI, resource, template
 
 

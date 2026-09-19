@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from polyad.operator.observability.decisions import decision
-from polyad_types.events import EventRebalanceSettings
+from polyad_types.events.envelope import EventRebalanceSettings
 
 if TYPE_CHECKING:
     from typing import Any

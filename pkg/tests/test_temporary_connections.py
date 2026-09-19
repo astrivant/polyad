@@ -26,9 +26,9 @@ from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_sdk import APIError, Client
 from polyad_types import resources as asts
-from polyad_types.codec import converter
-from polyad_types.requests import ConnectionRequest, ConnectionResponse
-from polyad_types.topology import topology
+from polyad_types.api.requests import ConnectionRequest, ConnectionResponse
+from polyad_types.graphs.topology import topology
+from polyad_types.serialization import converter
 from tests.test_client import Adapter
 from tests.test_operator import FakeAPI, resource, template
 

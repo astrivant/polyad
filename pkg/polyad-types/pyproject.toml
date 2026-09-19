@@ -1,6 +1,6 @@
 [project]
 name = "polyad-types"
-version = "0.0.1a3"
+version = "0.0.1a15"
 description = "Shared resource, configuration and API models for Polyad"
 authors = [{name = "Emma Doyle"}]
 license = "GPL-3.0-only"

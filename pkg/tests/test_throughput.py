@@ -26,9 +26,9 @@ from polyad.operator.policies.soul.contracts import SAMPLE, STATE
 from polyad.operator.policies.soul.controller import search_soul
 from polyad.operator.reconciliation.controller import Controller
 from polyad_types import GraphAccess, ThroughputSample
-from polyad_types.codec import converter, to_dict
+from polyad_types.graphs.topology import ThroughputPolicy
 from polyad_types.resources import GROUP
-from polyad_types.topology import ThroughputPolicy
+from polyad_types.serialization import converter, to_dict
 from tests.test_operator import FakeAPI, resource
 
 

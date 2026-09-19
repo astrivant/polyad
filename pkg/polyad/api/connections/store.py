@@ -19,14 +19,14 @@ from polyad.api.http.errors import Conflict, Forbidden, Unauthorized, Unavailabl
 from polyad.graph.temporary import deadline
 from polyad.operator.coordination.pulses import PulsePolicy
 from polyad_types import resources as asts
-from polyad_types.codec import converter
-from polyad_types.requests import MAX_TTL
-from polyad_types.topology import topology
+from polyad_types.api.requests import MAX_TTL
+from polyad_types.graphs.topology import topology
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.clusters.federation import Federation
-    from polyad_types.requests import ConnectionRequest, ConnectionResponse, ServiceConnectionRequest
+    from polyad_types.api.requests import ConnectionRequest, ConnectionResponse, ServiceConnectionRequest
 
 FINALIZER = f"{asts.GROUP}/temporary-connection"
 AUDIENCE = "polyad-connections"
@@ -289,7 +289,7 @@ class ConnectionStore:
             dict[str, Any]: Durable receipt; network admission remains asynchronous.
         """
         from polyad.events.access import configuration
-        from polyad_types.discovery import AccessMode
+        from polyad_types.api.discovery import AccessMode
 
         if configuration().effective(caller.cluster or os.environ.get("POLYAD_CLUSTER_NAME", ""), "connections") == AccessMode.DISABLED:
             raise Forbidden("connection requests are disabled by this operator's access mode")
@@ -489,7 +489,7 @@ class ConnectionStore:
             raise Conflict("connection proposal UID changed")
         if response.decision == "Approve" and value["spec"].get("peers"):
             from polyad.api.connections.cross import connection_request
-            from polyad_types.requests import ConnectionRequest, ServiceConnectionRequest
+            from polyad_types.api.requests import ConnectionRequest, ServiceConnectionRequest
 
             intent = converter.structure({key: item for key, item in value["spec"].items() if key != "requester"}, ConnectionRequest)
             refreshed = await connection_request(

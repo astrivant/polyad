@@ -22,7 +22,7 @@ from polyad_types.resources import (
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.topology import Topology
+    from polyad_types.graphs.topology import Topology
 
 
 def _layers(graph: nx.DiGraph[str] | nx.DiGraph[int]) -> LayerMetrics:

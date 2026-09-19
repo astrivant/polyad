@@ -23,9 +23,9 @@ from polyad.operator.policies.soul.controller import search_soul
 from polyad.operator.policies.traffic import ensure_routes
 from polyad.operator.reconciliation.controller import Controller, Pending, child_name
 from polyad_types import ThroughputSample, TrafficDestination, TrafficRoute, TrafficSample, TrafficWeights
-from polyad_types.codec import to_dict
+from polyad_types.graphs.topology import topology
 from polyad_types.resources import encode_body, to_document
-from polyad_types.topology import topology
+from polyad_types.serialization import to_dict
 from tests.test_operator import FakeAPI, resource, template
 from tests.test_throughput import FeedbackAPI
 
@@ -269,7 +269,7 @@ def test_scale_in_requires_draining_the_graph_copys_traffic_weight(monkeypatch):
         group = await api.get("ReplicaGroup", "test", child_name(root, "copies"))
         group["spec"]["replicas"] = 1
         api.objects[("ReplicaGroup", "test", group["metadata"]["name"])] = group
-        from polyad_types.replication import replica_topology
+        from polyad_types.graphs.replication import replica_topology
 
         effective = {**group, "spec": replica_topology(group["spec"])}
         with pytest.raises(RuleViolation, match="drain its weight"):

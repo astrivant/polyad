@@ -16,8 +16,8 @@ from polyad.graph.cheeger import graph_cheeger as graph_cheeger
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.rules import CheegerComputation, StructuralRule
-    from polyad_types.topology import Topology
+    from polyad_types.graphs.rules import CheegerComputation, StructuralRule
+    from polyad_types.graphs.topology import Topology
 
 
 def relation_graph(topology: Topology, relation: str) -> nx.DiGraph[str]:

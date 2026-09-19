@@ -16,10 +16,10 @@ if TYPE_CHECKING:
 
 from polyad.compiler.registry import RESOURCE_MODELS as RESOURCE_REGISTRY
 from polyad_types import resources as asts
-from polyad_types.codec import converter
-from polyad_types.requests import CompositionRequest, identity
-from polyad_types.resources.resources import SpecResource
-from polyad_types.topology import topology
+from polyad_types.api.requests import CompositionRequest, identity
+from polyad_types.graphs.topology import topology
+from polyad_types.resources.base import SpecResource
+from polyad_types.serialization import converter
 
 
 def request_name(request_id: str) -> str:

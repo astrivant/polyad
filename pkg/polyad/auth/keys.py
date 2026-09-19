@@ -12,11 +12,11 @@ from threading import Lock
 from typing import TYPE_CHECKING
 
 from polyad.auth.policy import LISTENERS
-from polyad_types.auth import Authentication, KeyDirection
-from polyad_types.codec import from_dict
+from polyad_types.api.auth import Authentication, KeyDirection
+from polyad_types.serialization import from_dict
 
 if TYPE_CHECKING:
-    from polyad_types.auth import APIKey
+    from polyad_types.api.auth import APIKey
 
 
 class Keyring:

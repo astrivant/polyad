@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import networkx as nx
 from attrs import asdict, evolve, field, frozen
 
-from polyad_types.rules import CheegerComputation
+from polyad_types.graphs.rules import CheegerComputation
 
 if TYPE_CHECKING:
     from typing import Any

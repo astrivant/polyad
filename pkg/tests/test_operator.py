@@ -19,9 +19,9 @@ from polyad.operator.adapters.kubernetes import GROUP, VERSION
 from polyad.operator.coordination.queue import RefreshQueue
 from polyad.operator.reconciliation.controller import FINALIZER, Controller, Pending, observed
 from polyad.operator.runtime import OperatorThread
-from polyad_types.codec import converter
+from polyad_types.graphs.topology import topology
 from polyad_types.resources import encode_body
-from polyad_types.topology import topology
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from typing import Any

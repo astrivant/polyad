@@ -26,7 +26,7 @@ from polyad_types.resources import (
     converter,
     to_document,
 )
-from polyad_types.resources.resources import SpecResource
+from polyad_types.resources.base import SpecResource
 
 if TYPE_CHECKING:
     from typing import Any

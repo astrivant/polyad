@@ -14,9 +14,9 @@ from polyad.graph import ReplicaConnection, ReplicaConnectivity, Replication, gr
 from polyad.operator.policies.network import context
 from polyad.operator.reconciliation.controller import Controller
 from polyad_types import resources as asts
-from polyad_types.codec import converter
-from polyad_types.replication import replica_topology
-from polyad_types.topology import topology
+from polyad_types.graphs.replication import replica_topology
+from polyad_types.graphs.topology import topology
+from polyad_types.serialization import converter
 from tests.test_operator import FakeAPI, resource, template
 from tests.test_replication import group, policy_family, start_family, turn
 

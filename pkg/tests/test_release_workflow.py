@@ -13,8 +13,33 @@ from pathlib import Path
 
 import pytest
 import yaml
+from packaging.requirements import Requirement
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_library_versions_and_internal_dependencies_are_aligned():
+    """
+    Reject source and lockfile drift before incompatible distributions are released.
+    """
+    projects = [ROOT / "pyproject.toml", *sorted((ROOT / "pkg").glob("*/pyproject.toml"))]
+    metadata = {path: tomllib.loads(path.read_text()) for path in projects}
+    version = metadata[ROOT / "pyproject.toml"]["project"]["version"]
+    names = {value["project"]["name"] for value in metadata.values()}
+    for path, value in metadata.items():
+        project = value["project"]
+        assert project["version"] == version, path
+        dependencies = project.get("dependencies", []) + [
+            dependency for group in project.get("optional-dependencies", {}).values() for dependency in group
+        ]
+        for dependency in map(Requirement, dependencies):
+            if dependency.name in names:
+                assert str(dependency.specifier) == f"=={version}", (path, dependency)
+        lock_path = path.with_name("poetry.lock")
+        if lock_path.exists():
+            for package in tomllib.loads(lock_path.read_text())["package"]:
+                if package["name"] in names:
+                    assert package["version"] == version, (lock_path, package["name"])
 
 
 @pytest.mark.parametrize(

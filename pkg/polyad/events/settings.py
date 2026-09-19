@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import os
 
-from polyad_types.events import EventStreamSettings
+from polyad_types.events.envelope import EventStreamSettings
 
 
 def settings_from_environment() -> EventStreamSettings:

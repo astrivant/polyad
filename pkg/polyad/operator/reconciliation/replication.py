@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING
 from polyad.metrics.workloads import current_observation, observation_time
 from polyad.operator.clusters.remote_scaling import INTENT, approved_intent, remote_revision
 from polyad.operator.observability.graph_status import observed
-from polyad_types.codec import converter
-from polyad_types.replication import Replication, replica_topology
+from polyad_types.graphs.replication import Replication, replica_topology
 from polyad_types.resources import AUXILIARY_KINDS, GROUP
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from typing import Any

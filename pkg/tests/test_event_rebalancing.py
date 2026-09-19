@@ -17,9 +17,9 @@ from polyad.events import rebalance as module
 from polyad.events.rebalance import Rebalancer
 from polyad_schemas.events import event_schema
 from polyad_sdk import Client
-from polyad_sdk.client import APIError
-from polyad_sdk.routing import addresses
-from polyad_sdk.subscriptions import StreamInterrupted
+from polyad_sdk.events.subscriptions import StreamInterrupted
+from polyad_sdk.transport.http import APIError
+from polyad_sdk.transport.routing import addresses
 from polyad_types import CopulseEvent, Event, EventRebalanceSettings
 from tests.test_chart import CHART, render
 

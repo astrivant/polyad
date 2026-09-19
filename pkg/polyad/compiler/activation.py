@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import hashlib
 
-from polyad_types.requests import identity
+from polyad_types.api.requests import identity
 
 
 def activation_name(request_id: str) -> str:

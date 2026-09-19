@@ -32,7 +32,7 @@ def main() -> None:
         assert importlib.util.find_spec(name) is None, name
     for name in available_schemas():
         assert "$schema" in load_schema(name), name
-    assert schema_for("polyad_types.rules.Cheeger")["$ref"].endswith(".Cheeger")
+    assert schema_for("polyad_types.graphs.rules.Cheeger")["$ref"].endswith(".Cheeger")
     assert resource_schema("Graph")["properties"]["kind"]["const"] == "Graph"
     assert resource_schema("Gateway", "v1", group="networking.istio.io")["properties"]["kind"]["const"] == "Gateway"
     assert "TopologyEvent" in event_schema()["$defs"]

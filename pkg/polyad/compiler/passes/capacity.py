@@ -13,7 +13,7 @@ from kubernetes.utils.quantity import parse_quantity
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.topology import Topology
+    from polyad_types.graphs.topology import Topology
 
 
 def requests(spec: dict[str, Any], *, overhead: bool = True) -> dict[str, str]:

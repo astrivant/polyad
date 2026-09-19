@@ -91,7 +91,7 @@ The new descriptors can also build the graph spec from Python:
 
 ```python
 from polyad.graph import Node, Placement, Topology
-from polyad_types.codec import converter
+from polyad_types.serialization import converter
 
 boundary = Topology(
     nodes=(Node(name="worker", kind="Workload", ref="spot-worker"),),
@@ -325,7 +325,7 @@ Field names match the Kubernetes document, including `observedGeneration`.
 from polyad_types.resources import GraphMetrics, converter, to_document
 from polyad.compiler.passes.schema import structural_schema
 from polyad.graph import measure_topology
-from polyad_types.topology import topology
+from polyad_types.graphs.topology import topology
 
 shape = measure_topology(topology({"nodes": []}))
 metrics = GraphMetrics(observedGeneration=1, topology=shape)
@@ -545,7 +545,7 @@ kubectl get polygraph composed -n polyad -o jsonpath='{.status.metrics.rollup}'
 ```
 
 The Python library exposes the same structural measurements with
-`polyad_types.topology_metrics(topology)` and accepts an optional set of present
+`polyad.graph.topology_metrics(topology)` and accepts an optional set of present
 node names to measure an observed subset.
 
 ## Debug logging

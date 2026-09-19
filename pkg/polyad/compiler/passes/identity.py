@@ -13,7 +13,7 @@ from polyad_types.resources import GROUP
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.topology import Node
+    from polyad_types.graphs.topology import Node
 
 POD_FIELDS = {
     "POLYAD_POD_NAME": "metadata.name",

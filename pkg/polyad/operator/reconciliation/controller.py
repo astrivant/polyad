@@ -49,10 +49,10 @@ from polyad.operator.reconciliation.identity import graph_ancestry
 from polyad.operator.reconciliation.mutations import execute_mutations
 from polyad.operator.reconciliation.placement import merge_placement, place_pod
 from polyad_types import resources as asts
-from polyad_types.activation import ActivationPolicy
-from polyad_types.codec import converter
+from polyad_types.graphs.activation import ActivationPolicy
+from polyad_types.graphs.topology import topology
 from polyad_types.resources.mutations import Mutation, Precondition, Scope
-from polyad_types.topology import topology
+from polyad_types.serialization import converter
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ if TYPE_CHECKING:
 
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.coordination.queue import Key
-    from polyad_types.storage import Persistence
+    from polyad_types.resources.storage import Persistence
 
 BOUNDARIES = asts.BOUNDARY_KINDS
 FINALIZER = f"{GROUP}/drain"

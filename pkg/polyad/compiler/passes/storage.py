@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from polyad_types.codec import converter
-from polyad_types.storage import Persistence
+from polyad_types.resources.storage import Persistence
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from typing import Any

@@ -11,7 +11,7 @@ from polyad.api.http.errors import Forbidden, Unavailable
 from polyad.events.access import configuration, require_scope
 from polyad.events.topology import topology_snapshot
 from polyad.events.visibility import observation_ancestry, permitted_observation, public_observation
-from polyad_types.discovery import AccessMode
+from polyad_types.api.discovery import AccessMode
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from polyad.events.store import EventStore
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.clusters.federation import Federation
-    from polyad_types.auth import APIKey, GraphAccess
+    from polyad_types.api.auth import APIKey, GraphAccess
 
 
 class Directory:
@@ -122,7 +122,7 @@ class Directory:
         Returns:
             bool: False for missing home, replaced graphs, scope denial or unavailable ancestry.
         """
-        from polyad_types.auth import GraphAccess
+        from polyad_types.api.auth import GraphAccess
 
         if key.home is None:
             return False

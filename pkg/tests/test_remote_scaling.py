@@ -16,7 +16,7 @@ from polyad.operator.clusters.remote_scaling import INTENT, approved_intent, rem
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.reconciliation.controller import Pending
 from polyad.operator.reconciliation.replication import effective_spec
-from polyad_types.replication import replica_topology
+from polyad_types.graphs.replication import replica_topology
 from tests.test_operator import resource, template
 from tests.test_replication import group, turn
 from tests.test_root_control_plane import ManagementAPI, manager, scale_request

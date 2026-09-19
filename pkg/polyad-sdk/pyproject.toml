@@ -1,6 +1,6 @@
 [project]
 name = "polyad-sdk"
-version = "0.0.1a3"
+version = "0.0.1a15"
 description = "Typed Python SDK for adaptive services and Polyad operator APIs"
 authors = [{name = "Emma Doyle"}]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -22,8 +22,11 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "polyad-types==0.0.1a3",
+    "polyad-types==0.0.1a15",
     "websockets>=17.1,<18",
+    "opentelemetry-api>=1.39,<2",
+    "opentelemetry-sdk>=1.39,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.39,<2",
 ]
 
 [project.urls]

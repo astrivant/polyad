@@ -50,7 +50,7 @@ from polyad_schemas.helm import values_schema
 from polyad_schemas.models import schema_for
 from polyad_schemas.resources import resource_schema
 
-request = schema_for("polyad_types.requests.ConnectionRequest")
+request = schema_for("polyad_types.api.requests.ConnectionRequest")
 graph = resource_schema("Graph")
 istio = resource_schema("Gateway", "v1", group="networking.istio.io")
 events = event_schema()

@@ -9,6 +9,7 @@ Its only dependencies are attrs, cattrs and typing-extensions.
 
 - [Installation](#installation)
 - [Example](#example)
+- [Package layout](#package-layout)
 - [Public models](#public-models)
 - [Serialization](#serialization)
 - [JSON Schemas](#json-schemas)
@@ -51,6 +52,33 @@ rule = from_dict(
 assert rule.cheeger == Cheeger(minimum=0.5)
 ```
 
+## Package layout
+
+Shared wire contracts have one definition in `polyad-types`. The operator, SDK
+and benchmarks import these classes; `polyad-schemas` derives its JSON artifacts
+from them. Package releases and internal dependency pins use the same version.
+
+```text
+polyad_types/
+  api/            authentication, discovery, requests and demand reports
+  graphs/         topology, replication, rules, activation and capacity policies
+  networking/     access policies and weighted traffic routes
+  events/         envelopes, payload trees and strict event decoding
+  resources/      resource envelopes, API registry, status and mutation plans
+  serialization.py  shared configuration and resource conversion
+```
+
+`resources` separates native Kubernetes models (`kubernetes`), Polyad CRDs
+(`polyad`), Istio resources (`istio`) and infrastructure APIs (`infrastructure`).
+Their descriptors feed the single `resources.registry` catalog. `base` and
+`common` provide shared envelopes and metadata; `status`, `mutations`, `capacity`
+and `storage` describe observations and execution settings.
+
+Import common models from `polyad_types`, or use the domain modules below.
+Re-exports refer to the original classes. Runtime services, schedulers and SDK
+adaptation state remain in their respective libraries. For example, a scheduler's
+in-memory `Graph` and a Kubernetes `Graph` resource have different responsibilities.
+
 ## Public models
 
 `ServiceEndpoint`, `ServiceConnectionRequest`, `AtlasAccess`, `ServiceAccess` and
@@ -59,18 +87,19 @@ assert rule.cheeger == Cheeger(minimum=0.5)
 | Module | Public models |
 | --- | --- |
 | `polyad_types.resources` | Kubernetes resource envelopes, metadata, status metrics, capacity status and mutation plans |
-| `polyad_types.topology` | Nodes, dependencies, connections, placement and graph specifications |
-| `polyad_types.replication` | Replica templates, bounds and connection modes |
-| `polyad_types.rules` | Structural, spectral and Cheeger configuration |
-| `polyad_types.network` | Network access, peers, ports and traffic rules |
-| `polyad_types.traffic` | Istio routes, destination weights and bounds, and approved traffic splits |
-| `polyad_types.throughput` | Application throughput and per-destination capacity reports for Soul searching |
-| `polyad_types.activation`, `capacity`, `storage` | Activation, advance capacity and persistence configuration |
-| `polyad_types.requests` | Composition, activation and temporary connection requests |
-| `polyad_types.events`, `event_models` | Event envelopes, typed payload trees, stream settings |
+| `polyad_types.graphs.topology` | Nodes, dependencies, connections, placement and graph specifications |
+| `polyad_types.graphs.replication` | Replica templates, bounds and connection modes |
+| `polyad_types.graphs.rules` | Structural, spectral and Cheeger configuration |
+| `polyad_types.networking.access` | Network access, peers, ports and traffic rules |
+| `polyad_types.networking.traffic` | Istio routes, destination weights and bounds, and approved traffic splits |
+| `polyad_types.api.throughput` | Application throughput and per-destination capacity reports for Soul searching |
+| `polyad_types.graphs.activation`, `polyad_types.graphs.capacity`, `polyad_types.resources.storage` | Activation, advance capacity and persistence configuration |
+| `polyad_types.api.requests` | Composition, activation and temporary connection requests |
+| `polyad_types.api.auth`, `polyad_types.api.discovery` | API keys, graph access, discovery permissions and service identities |
+| `polyad_types.events` | Event envelopes, typed payload trees, stream settings and decoding |
 
 Top-level `Graph`, `PolyGraph` and `Daemon` are Kubernetes resource envelopes.
-`Topology` describes a Graph's specification; `polyad_types.topology.PolyGraph`
+`Topology` describes a Graph's specification; `polyad_types.graphs.topology.PolyGraph`
 describes a PolyGraph's specification. Resource `spec` dictionaries preserve
 native Kubernetes extensions and should be populated from the relevant
 configuration model when local validation is needed.
@@ -78,6 +107,11 @@ configuration model when local validation is needed.
 Reference a Daemon definition inside a persistent graph with
 `Node(name="server", kind="Daemon", ref="server")`. The `Daemon` resource model
 describes the reusable service definition; `Node` describes its place in a graph.
+
+Code using former flat module paths should use the domain paths above, such as
+`from polyad_types.graphs.rules import Cheeger`. Root imports such as
+`from polyad_types import Cheeger` continue to refer to the same model. For schema
+selection, prefer `schema_for(Cheeger)` so the class supplies its module path.
 
 ## Serialization
 
@@ -118,7 +152,7 @@ for validation examples, direct file access, dialects and regeneration.
 Import `EventAST`, `GraphEvent`, `TopologyEvent`, `ConnectionEvent`, `ControlEvent`
 and `HeartbeatEvent` from `polyad_types`. `decode_event(document)` validates and
 constructs the matching AST; `Event.typed()` does the same for client observations.
-`to_dict(ast)` serializes it. Nested payload models live in `polyad_types.event_models`.
+`to_dict(ast)` serializes it. Nested payload models live in `polyad_types.events.models`.
 
 `polyad_schemas.events.event_schema()` reads the separately packaged Draft 2020-12
 JSON Schema without an operator

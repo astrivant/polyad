@@ -192,7 +192,7 @@ def test_replica_group_composition_resolves_template_ids():
     Keep replication templates within composition auditing and cycle detection.
     """
     from polyad.compiler.passes.composition import compile_composition
-    from polyad_types.requests import CompositionItem, CompositionRequest
+    from polyad_types.api.requests import CompositionItem, CompositionRequest
 
     request = CompositionRequest(
         requestId="replicate",

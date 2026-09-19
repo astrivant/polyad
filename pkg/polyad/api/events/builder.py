@@ -21,9 +21,9 @@ from polyad.auth.policy import public_demo
 from polyad.events.rebalance import Rebalancer
 from polyad.events.store import CursorExpired, TopologyReplaced
 from polyad.events.visibility import permitted_observation
-from polyad_types.auth import APIKey, GraphAccess
-from polyad_types.events import Event as Observation
-from polyad_types.events import EventStreamSettings, EventTooLarge
+from polyad_types.api.auth import APIKey, GraphAccess
+from polyad_types.events.envelope import Event as Observation
+from polyad_types.events.envelope import EventStreamSettings, EventTooLarge
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:

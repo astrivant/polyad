@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING, Literal, Union, get_args, get_origin, get_type
 
 from attrs import NOTHING, fields, has
 
-from polyad_types.event_codec import CURSOR_PATTERN
-from polyad_types.event_models import EVENT_MODELS
-from polyad_types.events import EventRebalanceSettings, EventStreamSettings
+from polyad_types.events.codec import CURSOR_PATTERN
+from polyad_types.events.envelope import EventRebalanceSettings, EventStreamSettings
+from polyad_types.events.models import EVENT_MODELS
 
 if TYPE_CHECKING:
     from typing import Any

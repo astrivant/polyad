@@ -111,7 +111,7 @@ are possible; this avoids a read/subscribe gap. Cursors from different cluster
 streams are not interchangeable.
 
 ```python
-from polyad_sdk.filters import event_type, field, graph
+from polyad_sdk.events.filters import event_type, field, graph
 
 snapshot = client.discover(
     graph="application-west", namespace="workloads", cluster="west"
@@ -208,8 +208,8 @@ not interchangeable.
 ```python
 from pathlib import Path
 from polyad_types import ConnectionResponse, ServiceConnectionRequest, ServiceEndpoint, from_dict
-from polyad_types.network import NetworkPort
-from polyad_sdk.filters import connection_pending
+from polyad_types.networking.access import NetworkPort
+from polyad_sdk.events.filters import connection_pending
 
 connections = Client(
     os.environ["POLYAD_CONNECTIONS_URL"], None,

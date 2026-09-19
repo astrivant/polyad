@@ -12,15 +12,15 @@ from typing import TYPE_CHECKING
 from polyad.api.http.errors import Conflict, Forbidden
 from polyad.events.visibility import observation_ancestry, permitted_observation, public_observation
 from polyad.operator.policies.soul.contracts import SAMPLE
-from polyad_types.codec import to_dict
-from polyad_types.topology import topology
+from polyad_types.graphs.topology import topology
+from polyad_types.serialization import to_dict
 
 if TYPE_CHECKING:
     from typing import Any
 
     from polyad.operator.adapters.kubernetes import API
-    from polyad_types.auth import GraphAccess
-    from polyad_types.throughput import ThroughputSample
+    from polyad_types.api.auth import GraphAccess
+    from polyad_types.api.throughput import ThroughputSample
 
 
 async def report_throughput(api: API, namespace: str, sample: ThroughputSample, grants: tuple[GraphAccess, ...] | None) -> dict[str, Any]:

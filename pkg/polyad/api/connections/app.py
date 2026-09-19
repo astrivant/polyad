@@ -15,8 +15,8 @@ from polyad.api.http.limits import install_limits
 from polyad.auth.policy import public_demo
 from polyad.compiler.passes.schema import structural_schema
 from polyad.operator.coordination.pulses import PulseDeferred
-from polyad_types.codec import converter
-from polyad_types.requests import ConnectionRequest, ConnectionResponse, ServiceConnectionRequest
+from polyad_types.api.requests import ConnectionRequest, ConnectionResponse, ServiceConnectionRequest
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from collections.abc import Callable

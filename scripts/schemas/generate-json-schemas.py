@@ -22,10 +22,11 @@ import yaml
 from attrs import NOTHING, fields, has
 
 import polyad_types
-from polyad_types.event_codec import CURSOR_PATTERN
-from polyad_types.event_models import EVENT_MODELS
+from polyad_types.events.codec import CURSOR_PATTERN
+from polyad_types.events.models import EVENT_MODELS
+from polyad_types.resources.base import Resource
 from polyad_types.resources.common import AST, GROUP
-from polyad_types.resources.resources import ConfigMap, Resource
+from polyad_types.resources.kubernetes import ConfigMap
 
 if TYPE_CHECKING:
     from typing import Any

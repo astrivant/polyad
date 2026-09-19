@@ -14,7 +14,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from attrs import field, frozen
 
 from polyad.auth.http import Access
-from polyad_types.auth import KeyDirection
+from polyad_types.api.auth import KeyDirection
 
 if TYPE_CHECKING:
     from typing import Any

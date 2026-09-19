@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 from polyad.events.visibility import INTERNAL
 from polyad.operator.observability.graph_status import observed
 from polyad.operator.policies.rule_state import check_live_rules
+from polyad_types.graphs.topology import topology
 from polyad_types.resources import GROUP
-from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any

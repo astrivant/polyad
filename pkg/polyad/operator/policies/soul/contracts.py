@@ -12,9 +12,9 @@ from polyad_types.resources import GROUP
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.throughput import ThroughputSample
-    from polyad_types.topology import ThroughputPolicy, Topology
-    from polyad_types.traffic import TrafficWeights
+    from polyad_types.api.throughput import ThroughputSample
+    from polyad_types.graphs.topology import ThroughputPolicy, Topology
+    from polyad_types.networking.traffic import TrafficWeights
 
 SAMPLE = f"{GROUP}/throughput-sample"
 STATE = f"{GROUP}/throughput-state"

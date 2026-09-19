@@ -17,8 +17,8 @@ from polyad.auth.store import CredentialStore
 from polyad.operator.adapters.postgresql import StateStore, state_document
 from polyad.sql import record_cipher
 from polyad.sql.encryption import RecordCipher
-from polyad_types.auth import APIKey
-from polyad_types.codec import to_dict
+from polyad_types.api.auth import APIKey
+from polyad_types.serialization import to_dict
 from tests.test_operator import resource
 from tests.test_runtime_capabilities import assert_absent, probe
 

@@ -14,7 +14,7 @@ from polyad_types import resources as asts
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.topology import Node
+    from polyad_types.graphs.topology import Node
 
 
 def trace_child(child: asts.Resource, parent: dict[str, Any], node: Node, definition: dict[str, Any]) -> asts.Resource:

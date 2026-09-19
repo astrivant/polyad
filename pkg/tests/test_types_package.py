@@ -4,11 +4,17 @@ Check shared model identity, serialization and consumer validation contracts.
 
 from __future__ import annotations
 
+import importlib
+import pkgutil
+
 import pytest
+from attrs import has
 from cattrs.errors import ForbiddenExtraKeysError
 
+import polyad_types
 from polyad import graph
 from polyad.compiler.registry import RESOURCE_MODELS
+from polyad_schemas import load_schema
 from polyad_sdk import Event as ClientEvent
 from polyad_types import (
     ActivationRequest,
@@ -32,7 +38,8 @@ from polyad_types import (
     to_dict,
     to_document,
 )
-from polyad_types.topology import GraphNode, PolyGraph
+from polyad_types.graphs.topology import GraphNode, PolyGraph
+from polyad_types.resources import registry
 
 
 def test_operator_and_client_share_the_public_models():
@@ -44,6 +51,41 @@ def test_operator_and_client_share_the_public_models():
     assert graph.StructuralRule is StructuralRule
     assert graph.Replication is Replication
     assert ClientEvent is Event
+
+
+def test_resource_consumers_use_the_same_registry_and_classes():
+    """
+    Keep compiler dispatch and public resource constructors on the canonical catalog.
+    """
+    assert RESOURCE_MODELS is registry.RESOURCE_REGISTRY
+    assert len(registry.RESOURCE_CLASSES) == len(RESOURCE_MODELS)
+    for resource in registry.RESOURCE_CLASSES:
+        assert RESOURCE_MODELS[resource.resource_type.kind] is resource
+        module = importlib.import_module(resource.__module__)
+        assert getattr(module, resource.__name__) is resource
+
+
+def test_domain_exports_and_schemas_refer_to_canonical_models():
+    """
+    Resolve every shared model through its defining module and its generated schema.
+    """
+    definitions = load_schema("models")["$defs"]
+    discovered = set()
+    for info in pkgutil.walk_packages(polyad_types.__path__, "polyad_types."):
+        module = importlib.import_module(info.name)
+        for model in vars(module).values():
+            if not isinstance(model, type) or not has(model) or not model.__module__.startswith("polyad_types."):
+                continue
+            defining_module = importlib.import_module(model.__module__)
+            assert getattr(defining_module, model.__name__) is model
+            discovered.add(f"{model.__module__}.{model.__qualname__}")
+    assert set(definitions) == discovered
+    assert polyad_types.graphs.Cheeger is Cheeger
+    assert polyad_types.graphs.PolyGraph is PolyGraph
+    assert polyad_types.api.ConnectionRequest is ConnectionRequest
+    assert polyad_types.networking.NetworkPort is NetworkPort
+    assert polyad_types.events.Event is Event
+    assert polyad_types.serialization.converter is polyad_types.converter
 
 
 @pytest.mark.parametrize(

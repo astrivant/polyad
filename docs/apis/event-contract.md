@@ -46,7 +46,7 @@ schema = event_schema()  # Packaged JSON Schema; no HTTP request or operator imp
 Client iterators continue returning `Event(id, event, data)` so dictionary-based
 filters and hooks remain usable. Call `observation.typed()` to validate and obtain
 the corresponding syntax tree. Constructors and types live in
-[`polyad_types.event_models`](../../pkg/polyad-types/polyad_types/event_models.py).
+[`polyad_types.events.models`](../../pkg/polyad-types/polyad_types/events/models.py).
 `to_dict(ast)` converts the typed tree back into an independent JSON object.
 
 ## Supported event trees

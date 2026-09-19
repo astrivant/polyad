@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING, cast
 
 from attrs import frozen
 
-from polyad_types.network import NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
+from polyad_types.networking.access import NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.network import MeshPeer
+    from polyad_types.networking.access import MeshPeer
 
 
 @frozen

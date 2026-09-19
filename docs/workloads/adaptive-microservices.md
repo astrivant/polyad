@@ -196,7 +196,7 @@ to implement the Service Symbiosis loop:
 | Step | SDK capability | Application responsibility |
 | --- | --- | --- |
 | Find eligible peers | `Client.discover()` or bounded `Client.services()` traversal; `AdaptiveService.view` for observed neighbors | Match work contracts, resolve declared entrypoints and keep selection inside active permissions |
-| React to observations | Subclass `AdaptiveService.adapt()` for connection, capacity and decision deltas; add filtered observers with `on_change()` | Refresh a routing view, wake a scheduler or begin a drain; avoid sending business work on the event callback thread |
+| React to observations | Compose [adaptation strategies](adaptation-strategies.md) for constraints; implement `AdaptiveService.adapt()` and add filtered observers with `on_change()` | Refresh routing, wake a scheduler or begin a drain; keep business work off the event callback thread |
 | Ask for a missing path | `AdaptiveService.connect()`; the peer calls `respond()` | Check compatibility and policy, wait for Active, then verify usable transport |
 | Exchange work and capacity | The application's HTTP, RPC or queue transport | Enforce shared admission, acknowledgements, idempotency and backpressure |
 | Inform graph adaptation | An authorized reporter calls `report_throughput()` | Aggregate comparable measurements and report sustainable whole-path headroom |
@@ -250,6 +250,12 @@ Use the injected [workload identity](workload-environment.md), an authorized
 credential for the events Service and the
 [topology snapshot and replay contract](workload-events.md#read-current-neighbors):
 
+A **snapshot** records the known state of this service's surroundings when that
+view is built. Use it to choose candidate consumers and compare later changes.
+The [SDK snapshot guide](../../pkg/polyad-sdk/README.md#snapshots-and-permission-to-act)
+explains its contents, freshness and the permissions and readiness checks needed
+before acting.
+
 1. Read the current snapshot for the expected graph UID and logical node.
 2. Establish which outgoing paths have existing executions and are eligible for
    this work contract. Resolve actual addresses through application configuration
@@ -267,7 +273,7 @@ The existing client can drive the observation hook:
 import os
 
 from polyad_sdk import Client
-from polyad_sdk.filters import event_type, field
+from polyad_sdk.events.filters import event_type, field
 
 
 def watch_neighbors(app):
@@ -426,8 +432,8 @@ A socket that remains open is not permission to continue after a grant expires.
 
 Install `polyad-sdk` independently of the operator. It contains both `Client` for
 API calls and the `AdaptiveService` ABC for an immutable application view with
-deltas. Subclasses implement `adapt(change)`; the inherited runtime calls it
-before optional hooks and checkpointing. See the [SDK guide](../../pkg/polyad-sdk/README.md#adaptive-services-and-deltas)
+deltas. Subclasses implement `adapt(change)`; injected strategies run first,
+followed by that method, optional hooks and checkpointing. See the [SDK guide](../../pkg/polyad-sdk/README.md#adaptive-services-and-deltas)
 for installation, credentials, tuning and recovery.
 
 **Deltas tell applications what to adjust.** An added consumer invites readiness
@@ -448,7 +454,7 @@ concrete SDK subclass:
 ```python
 from collections.abc import Callable
 
-from polyad_sdk import AdaptiveService, Change, Environment, Settings
+from polyad_sdk import AdaptiveService, Change, Environment, ObserveStrategy, Settings
 
 
 def cooperative_service(
@@ -465,6 +471,7 @@ def cooperative_service(
                 update_candidates(current)
 
     return CooperativeService.from_environment(
+        strategies=[ObserveStrategy()],
         settings=Settings(refresh_seconds=10, max_age_seconds=60),
         timeout=45,
     )
@@ -475,11 +482,25 @@ def cooperative_service(
 ```
 
 The subclass must implement `adapt()`. It runs automatically for a baseline or
-meaningful delta; optional `on_change()` hooks run afterward. A failed adaptation
+meaningful delta after any injected strategies; optional `on_change()` hooks run afterward. A failed adaptation
 keeps the change pending without advancing its cursor. Successful adaptation is
 not repeated when a later hook or checkpoint fails within the same instance.
 The [SDK subclass contract](../../pkg/polyad-sdk/README.md#subclass-contract)
 defines the full delivery and retry order.
+
+Declare a nonempty `strategies=[...]` set before constructing the service. Each
+service chooses its categories. `require_strategies=False` explicitly permits
+an empty set with undefined adaptation behavior for uncovered cases. The SDK provides independent
+constraints for observation freshness, usable peers, connection permission,
+resource headroom and operator decisions, plus threshold-based profile proposals.
+The [adaptation catalog](adaptation-strategies.md#choose-an-application-adaptation)
+defines backpressure, rerouting, concurrency changes, local worker scaling,
+rolling replacement and recovery, with guidance on when to implement each.
+Its [strategy catalog](adaptation-strategies.md#choose-an-sdk-strategy) explains
+which SDK components to choose and how to combine guards so each blocker
+remains effective until its own condition recovers.
+The [SDK runtime guide](sdk-runtime.md) shows how to turn these policies into
+approved subprocess plans with readiness, draining, trace propagation and metrics.
 
 `update_candidates` resolves the exposed execution identities, validates the
 work protocol and considers ready consumers within their admission budgets.

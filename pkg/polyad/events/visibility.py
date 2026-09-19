@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from polyad.operator.adapters.kubernetes import API
-    from polyad_types.auth import GraphAccess
+    from polyad_types.api.auth import GraphAccess
 
 INTERNAL = f"{GROUP}/internal"
 

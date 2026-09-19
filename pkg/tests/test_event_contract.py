@@ -219,7 +219,7 @@ def test_client_size_limit_counts_complete_utf8_records_and_closes(monkeypatch, 
     """
     Exactly-at-limit frames work, while larger Unicode frames cannot escape the receive cap.
     """
-    from polyad_sdk import websocket
+    from polyad_sdk.transport import websocket
 
     event = Event("1-0", "graph", {"value": "é" * 600})
     raw = (

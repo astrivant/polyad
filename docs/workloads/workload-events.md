@@ -142,6 +142,17 @@ change; actual structural or execution-identity changes retain the behavior abov
 
 ## Read current neighbors
 
+A **topology snapshot** is the operator's published description of a graph's
+nodes, connections and observed workloads. Reading it gives your service a
+starting point for choosing possible destinations and tracking later changes.
+The read uses your observation permissions; sending work or requesting graph
+changes still requires the relevant connection and API permissions.
+
+The SDK combines this topology with received metrics, decisions and connection
+records into its own read-only `Environment` snapshot. See
+[snapshots and permission to act](../../pkg/polyad-sdk/README.md#snapshots-and-permission-to-act)
+for how applications use that information before assigning work.
+
 Use the events Service on port 8091:
 
 ```text

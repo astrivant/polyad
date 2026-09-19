@@ -17,10 +17,10 @@ from polyad.operator.lifecycle.health import credential_token
 from polyad.sql import record_cipher, statement
 from polyad.transport.pools import register
 from polyad.transport.settings import postgres_options
-from polyad_types.codec import to_dict
+from polyad_types.serialization import to_dict
 
 if TYPE_CHECKING:
-    from polyad_types.auth import APIKey
+    from polyad_types.api.auth import APIKey
 
 
 class CredentialStore:

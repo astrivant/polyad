@@ -1,6 +1,6 @@
 [project]
 name = "polyad"
-version = "0.0.1a3"
+version = "0.0.1a15"
 description = "Kubernetes operator for scheduling workloads through graphs"
 authors = [{name = "Emma Doyle"}]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -40,7 +40,7 @@ dependencies = [
     "opentelemetry-api>=1.39,<2",
     "opentelemetry-sdk>=1.39,<2",
     "opentelemetry-exporter-otlp-proto-http>=1.39,<2",
-    "polyad-types==0.0.1a3",
+    "polyad-types==0.0.1a15",
 ]
 
 [project.urls]
@@ -52,7 +52,7 @@ Changelog = "https://github.com/astrivant/polyad/releases"
 
 [project.optional-dependencies]
 flask-auth = ["flask-httpauth>=4.8,<5"]
-schemas = ["polyad-schemas==0.0.1a3"]
+schemas = ["polyad-schemas==0.0.1a15"]
 
 [project.scripts]
 polyad-operator = "polyad.operator.runtime:main"

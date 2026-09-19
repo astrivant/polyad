@@ -13,8 +13,8 @@ from polyad.api.composition.app import _build_app
 from polyad.api.http.limits import RateLimitPolicy
 from polyad.auth.http import Access
 from polyad.auth.policy import public_demo
-from polyad_types.requests import ActivationRequest, CompositionRequest
-from polyad_types.throughput import ThroughputSample
+from polyad_types.api.requests import ActivationRequest, CompositionRequest
+from polyad_types.api.throughput import ThroughputSample
 
 if TYPE_CHECKING:
     from typing import Self

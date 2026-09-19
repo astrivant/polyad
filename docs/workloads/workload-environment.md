@@ -9,6 +9,7 @@ nested graphs, ReplicaGroups and activation runs.
 
 - [Activate a downstream workload](#activate-a-downstream-workload)
 - [Variables](#variables)
+- [SDK defaults](#sdk-defaults)
 - [Configuration and lifecycle](#configuration-and-lifecycle)
 
 ## Activate a downstream workload
@@ -76,6 +77,43 @@ terminating. Cycles and ancestry beyond 32 boundaries are rejected.
 See [Pod context and health binding](../deployment/pod-context.md) for resource
 selector fallback behavior, environment snapshot semantics and the distinction
 between actual node placement and scheduling constraints.
+
+## SDK defaults
+
+The SDK exports `env: dict[str, str]`, populated with the complete process
+environment when `polyad_sdk` is imported:
+
+```python
+from polyad_sdk import env, WorkloadContext
+
+context = WorkloadContext.from_environment()
+logical_node = context.identity.node
+execution = context.runtime_node_name
+host = context.pod.node_name
+application_mode = env.get("APPLICATION_MODE", "worker")
+```
+
+`AdaptiveService.from_environment()` uses this same snapshot and retains the
+typed public projection as `service.context`. It reads all variables in the table
+above, parses ancestry and integer resource selectors, and keeps graph identity
+separate from concrete Pod identity. Activation and composition receipts provide
+correlation defaults without expanding the service's authorized graph scope.
+Optional `POLYAD_POD_CLUSTER`, when provided for operator Pods, describes physical
+placement; explicit `cluster=` continues to select the registered event authority.
+
+`ContainerBudgetStrategy` can use `context.resources` to default subprocess
+capacity to a positive CPU or memory request, capped by a smaller positive
+projected limit. Without a positive request, its default budget remains unknown.
+Explicit `maximum=` overrides this default. CPU values use millicores and memory
+values use bytes; the application supplies current aggregate usage and reserves
+headroom for replacements. See [adaptation strategies](adaptation-strategies.md).
+
+Use `refresh_environment()` deliberately during startup to reload the shared
+dictionary, or pass `environ={**env, ...}` for one service's explicit overrides.
+Existing service context remains a snapshot. The full dictionary includes
+credentials; the typed public context excludes them, while SDK clients read
+their own credentials separately. See the
+[SDK environment contract](../../pkg/polyad-sdk/README.md#environment-and-projected-defaults).
 
 ## Configuration and lifecycle
 

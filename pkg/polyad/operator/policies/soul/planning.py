@@ -18,18 +18,18 @@ from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.policies.soul.contracts import SAMPLE, Proposal
 from polyad.operator.policies.soul.observations import expansion, headroom_targets
-from polyad_types.codec import converter, to_dict
-from polyad_types.throughput import ThroughputSample
-from polyad_types.topology import topology
+from polyad_types.api.throughput import ThroughputSample
+from polyad_types.graphs.topology import topology
+from polyad_types.serialization import converter, to_dict
 
 if TYPE_CHECKING:
     from typing import Any
 
     from polyad.operator.policies.soul.contracts import Search
     from polyad.operator.reconciliation.controller import Controller
-    from polyad_types.rules import Cheeger
-    from polyad_types.topology import ThroughputTier
-    from polyad_types.traffic import TrafficWeights
+    from polyad_types.graphs.rules import Cheeger
+    from polyad_types.graphs.topology import ThroughputTier
+    from polyad_types.networking.traffic import TrafficWeights
 
 
 async def propose(controller: Controller, obj: dict[str, Any], search: Search) -> Proposal | None:

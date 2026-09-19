@@ -10,13 +10,13 @@ from typing import TYPE_CHECKING
 from attrs import evolve
 
 from polyad.compiler.passes.network import scope_label
-from polyad_types.traffic import TrafficWeights
+from polyad_types.networking.traffic import TrafficWeights
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.topology import Topology
-    from polyad_types.traffic import TrafficRoute
+    from polyad_types.graphs.topology import Topology
+    from polyad_types.networking.traffic import TrafficRoute
 
 
 def subset_name(target: str) -> str:

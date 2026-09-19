@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING
 from apispec import APISpec
 
 from polyad.compiler.passes.schema import structural_schema
-from polyad_types.activation import ActivationPolicy
-from polyad_types.capacity import CapacityPlan
-from polyad_types.replication import ReplicaConnectivity
-from polyad_types.requests import COMPOSITION_KINDS
-from polyad_types.throughput import ThroughputSample
+from polyad_types.api.requests import COMPOSITION_KINDS
+from polyad_types.api.throughput import ThroughputSample
+from polyad_types.graphs.activation import ActivationPolicy
+from polyad_types.graphs.capacity import CapacityPlan
+from polyad_types.graphs.replication import ReplicaConnectivity
 
 if TYPE_CHECKING:
     from typing import Any

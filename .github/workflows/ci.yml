@@ -204,7 +204,7 @@ jobs:
           docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges polyad:container-test --help
       - name: Check development tests
         if: matrix.profile == 'development'
-        run: docker run --rm --entrypoint /usr/bin/tini polyad:container-test -- python -m pytest -n 2 pkg/tests/test_balance_gates.py
+        run: docker run --rm --entrypoint /usr/bin/tini polyad:container-test -- python -m pytest -n 2 pkg/tests/test_scheduling_gates.py
   compose:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

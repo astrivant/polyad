@@ -15,8 +15,8 @@ from polyad.api.composition.builder import APIBuilder
 from polyad.api.workloads.activations import ActivationStore
 from polyad.operator.coordination.leases import Coordinator
 from polyad.operator.reconciliation.controller import Controller, Pending
-from polyad_types.activation import ActivationPolicy
-from polyad_types.requests import ActivationRequest
+from polyad_types.api.requests import ActivationRequest
+from polyad_types.graphs.activation import ActivationPolicy
 from polyad_types.resources import GROUP
 from tests.test_operator import FakeAPI, resource, template
 

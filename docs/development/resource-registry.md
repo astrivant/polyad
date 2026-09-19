@@ -59,9 +59,11 @@ not install those APIs or take lifecycle ownership from their controllers.
 
 ## Extending the catalog
 
-Declare metadata on the AST class's `resource_type` in
-[`resources.py`](../../pkg/polyad-types/polyad_types/resources/resources.py), then include the
-class in `RESOURCE_CLASSES`. The public catalog and its capability sets derive
+Declare metadata on the AST class's `resource_type` in the appropriate
+[resource module](../../pkg/polyad-types/polyad_types/resources/): `kubernetes`,
+`polyad`, `istio` or `infrastructure`. Include that class in `RESOURCE_CLASSES` in
+[`registry.py`](../../pkg/polyad-types/polyad_types/resources/registry.py).
+The public catalog and its capability sets derive
 from those declarations. Both mappings and descriptors are immutable at runtime.
 
 Supporting a new kind also requires its compiler or reconciliation behavior and

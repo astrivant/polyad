@@ -10,13 +10,13 @@ from typing import TYPE_CHECKING
 
 from attrs import evolve
 
-from polyad_types.codec import converter
-from polyad_types.network import TrafficRule
+from polyad_types.networking.access import TrafficRule
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.network import NetworkAccess
+    from polyad_types.networking.access import NetworkAccess
 
 ANNOTATION = "polyad.astrivant.com/service-connections"
 

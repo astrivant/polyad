@@ -46,6 +46,8 @@ then [run your first workload](introduction/getting-started.md).
 | [Workload environment](workloads/workload-environment.md) | Automatic graph identity, ancestry, activation receipts and operator endpoint discovery |
 | [Workload topology events](workloads/workload-events.md) | Neighbor discovery, structural notifications, scaling membership and replay recovery |
 | [Service Symbiosis: writing adaptive microservices](workloads/adaptive-microservices.md) | Cooperative producers and consumers across Graphs and PolyGraphs, backpressure, useful throughput and delta-driven Python SDK hooks |
+| [Adaptation strategies for application constraints](workloads/adaptation-strategies.md) | Modular SDK policies for mutation difficulties, independent constraints, pressure-driven profiles and admission |
+| [SDK telemetry and subprocess plans](workloads/sdk-runtime.md) | OpenTelemetry instrumentation, approved local worker profiles, readiness, replacement, draining and recovery |
 | [Local Soul searching: processes and network topology](workloads/local-soul-searching.md) | Standalone Python demo, three real TCP peers, adaptive child workers, two Cheeger boundaries and graceful recovery |
 | [Local Natural Selection: mutation, survival and retirement](workloads/local-natural-selection.md) | Parent planner over Soul searching, typed capability composition, changing outcomes, surviving service PIDs and graceful retirement |
 | [Workload controllers and storage](workloads/workload-storage.md) | Deployment or StatefulSet execution, native volumes, PVC templates and retention |
@@ -127,7 +129,7 @@ then [run your first workload](introduction/getting-started.md).
 
 | Reference | Contents |
 | --- | --- |
-| [Polyad scheduling guide](../pkg/polyad/balance/README.md) | Cooperative work, checkpoints, policies, rewrites and graph images |
+| [Polyad scheduling guide](../pkg/polyad/scheduling/README.md) | Cooperative work, checkpoints, policies, rewrites and graph images |
 | [Polyad SDK](../pkg/polyad-sdk/README.md) | Adaptive service deltas, discovery, activation, temporary connections and Soul searching reports without operator dependencies |
 | [Polyad types](../pkg/polyad-types/README.md) | Resource, configuration and request models without operator dependencies |
 | [Polyad Helm chart](../charts/polyad/README.md) | Operator, autoscaling and shared queue settings |

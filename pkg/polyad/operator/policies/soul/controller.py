@@ -19,7 +19,7 @@ from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.soul.contracts import STATE
 from polyad.operator.policies.soul.observations import capacity_revision, headroom_targets, observe
 from polyad.operator.policies.soul.planning import propose
-from polyad_types.topology import topology
+from polyad_types.graphs.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any

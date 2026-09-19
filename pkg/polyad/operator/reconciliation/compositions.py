@@ -10,7 +10,7 @@ from polyad.compiler.passes.composition import compile_composition, read_receipt
 from polyad.operator.observability.graph_status import observed
 from polyad.operator.policies.rules import check_rules
 from polyad_types import resources as asts
-from polyad_types.requests import COMPOSITION_KINDS
+from polyad_types.api.requests import COMPOSITION_KINDS
 
 if TYPE_CHECKING:
     from typing import Any

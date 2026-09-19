@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from polyad.balance import Graph, Scheduler
 from polyad.graph import Control, Outcome, Rewrite, Work
 from polyad.graph.gates import Signal
-from tests.test_balance import Unit
+from polyad.scheduling import Graph, Scheduler
+from tests.test_scheduling import Unit
 
 if TYPE_CHECKING:
     from pathlib import Path

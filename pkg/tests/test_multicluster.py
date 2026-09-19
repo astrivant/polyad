@@ -18,7 +18,7 @@ from polyad.operator.clusters.federation import INVENTORY, PARENT, REMOTE, Feder
 from polyad.operator.policies.rules import RuleViolation, check_rules
 from polyad.operator.reconciliation.controller import FINALIZER, Controller, Pending
 from polyad_types import GraphNode, MeshPeer, NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
-from polyad_types.topology import topology
+from polyad_types.graphs.topology import topology
 from tests.test_network import scope
 from tests.test_operator import FakeAPI, resource, template
 
@@ -268,7 +268,7 @@ def test_remote_transport_and_identity_constraints(mode, gateway_port):
     """
     Remote ingress enforces exact mTLS identity while transport policy uses real remote addresses.
     """
-    from polyad_types.codec import converter
+    from polyad_types.serialization import converter
 
     peer = converter.structure({"name": "west", "mode": mode, "cidrs": ["192.0.2.1/32"], "gatewayPort": gateway_port}, MeshPeer)
     ingress = TrafficRule(

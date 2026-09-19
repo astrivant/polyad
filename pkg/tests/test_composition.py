@@ -16,8 +16,8 @@ from polyad.operator.coordination.leases import Coordinator
 from polyad.operator.lifecycle import handlers
 from polyad.operator.reconciliation.controller import Controller, Pending
 from polyad_types import resources as asts
-from polyad_types.codec import converter
-from polyad_types.topology import topology
+from polyad_types.graphs.topology import topology
+from polyad_types.serialization import converter
 from tests.test_operator import FakeAPI, resource, template
 
 

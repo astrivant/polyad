@@ -23,8 +23,9 @@ Start with main() at the bottom, then follow the two supervisors:
                    +-- close in finally
 
 AdaptiveService extends polyad_sdk.AdaptiveService. Local observations pass
-through the SDK's refresh() and dispatch() methods, which deliver immutable
-Change objects to adapt(). A local snapshot adapter supplies the worker graph;
+through the SDK's refresh() and dispatch() methods, which run the configured
+FreshnessStrategy before delivering immutable Change objects to adapt().
+A local snapshot adapter supplies the worker graph;
 the example needs no operator or HTTP server.
 
 Each run method names the steps in execution order. Read its helpers for the
@@ -206,9 +207,9 @@ from select import select
 from typing import TYPE_CHECKING
 
 from polyad_sdk import AdaptiveService as SDKAdaptiveService
-from polyad_sdk import Client
+from polyad_sdk import Client, FreshnessStrategy
 from polyad_types import ServiceEndpoint
-from polyad_types.events import Event
+from polyad_types.events.envelope import Event
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -217,7 +218,7 @@ if TYPE_CHECKING:
     from types import FrameType
     from typing import Any, NoReturn
 
-    from polyad_sdk import Change
+    from polyad_sdk import Change, ConstraintAssessment
 
 
 @dataclass(frozen=True)
@@ -581,7 +582,8 @@ class AdaptiveService(SDKAdaptiveService):
         runtime (Settings): Application load, policy and resource limits,
             separate from the inherited SDK observation settings.
         sequence (int): Last locally published observation's replay position.
-        context (mp.context.SpawnContext): Context used to create child workers.
+        profile_available (bool): Latest strategy assessment permitting consideration of a profile change.
+        process_context (mp.context.SpawnContext): Context used to create child workers.
         listener (socket.socket | None): Owned TCP listener after startup.
         port (int): Listener port announced to the root after worker readiness.
         peers (dict[str, socket.socket]): Outbound, root-admitted TCP connections.
@@ -611,7 +613,8 @@ class AdaptiveService(SDKAdaptiveService):
     control: Connection
     runtime: Settings
     sequence: int
-    context: mp.context.SpawnContext
+    profile_available: bool
+    process_context: mp.context.SpawnContext
     listener: socket.socket | None
     port: int
     peers: dict[str, socket.socket]
@@ -653,7 +656,8 @@ class AdaptiveService(SDKAdaptiveService):
         self.control = control
         self.runtime = settings
         self.sequence = 0
-        self.context = mp.get_context("spawn")
+        self.profile_available = False
+        self.process_context = mp.get_context("spawn")
         self.listener = None
         self.port = 0
         self.peers = {}
@@ -678,6 +682,7 @@ class AdaptiveService(SDKAdaptiveService):
         super().__init__(
             ServiceEndpoint("", "local", "Graph", name, f"local-{os.getpid()}-{name}", "dispatch"),
             LocalObservations(self.neighborhood),
+            strategies=(FreshnessStrategy("profile-admission", self.observe_freshness),),
         )
 
     def run(self) -> None:
@@ -813,6 +818,18 @@ class AdaptiveService(SDKAdaptiveService):
             )
         )
 
+    def observe_freshness(self, assessment: ConstraintAssessment) -> None:
+        """
+        Retain the configured strategy's assessment for the application adaptation step.
+
+        Args:
+            assessment (ConstraintAssessment): Current topology freshness and lifecycle assessment.
+
+        Returns:
+            None: The following adapt() call can consider fresh profile proposals.
+        """
+        self.profile_available = assessment.satisfied
+
     def adapt(self, change: Change) -> None:
         """
         Translate SDK pressure deltas into a bounded application profile proposal.
@@ -829,7 +846,7 @@ class AdaptiveService(SDKAdaptiveService):
         Returns:
             None: Fresh resource evidence may update the candidate profile.
         """
-        if not change.after.available or not self.view.available:
+        if not self.profile_available or not change.after.available or not self.view.available:
             return
         if not change.baseline and not change.matching("resources"):
             return
@@ -1218,8 +1235,8 @@ class AdaptiveService(SDKAdaptiveService):
         Raises:
             OSError: A pipe or process cannot be created.
         """
-        parent, child_pipe = self.context.Pipe()
-        process = self.context.Process(target=worker, args=(child_pipe, profile, self.runtime), name=f"{self.name}-{profile.role}")
+        parent, child_pipe = self.process_context.Pipe()
+        process = self.process_context.Process(target=worker, args=(child_pipe, profile, self.runtime), name=f"{self.name}-{profile.role}")
         try:
             process.start()
         except BaseException:

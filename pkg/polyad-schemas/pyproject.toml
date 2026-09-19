@@ -1,6 +1,6 @@
 [project]
 name = "polyad-schemas"
-version = "0.0.1a3"
+version = "0.0.1a15"
 description = "Generated JSON Schemas for Polyad models, Kubernetes resources, events and Helm values"
 authors = [{name = "Emma Doyle"}]
 license = "GPL-3.0-only"

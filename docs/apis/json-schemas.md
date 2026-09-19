@@ -26,7 +26,7 @@ from polyad_schemas import (
     available_schemas, load_schema, resource_schema, schema_for,
 )
 
-request_schema = schema_for("polyad_types.requests.ConnectionRequest")
+request_schema = schema_for("polyad_types.api.requests.ConnectionRequest")
 graph_schema = resource_schema("Graph")
 events_schema = load_schema("events")
 overlay_schema = load_schema("helm-reference")
@@ -78,8 +78,8 @@ include the full API group. `available_schemas()` lists the installed catalog.
 Upstream license notices accompany the resource artifacts.
 
 Model definitions use fully qualified Python names. This distinguishes the
-`polyad_types.resources.Graph` resource envelope from topology configuration,
-and the resource `PolyGraph` from `polyad_types.topology.PolyGraph`.
+`polyad_types.resources.polyad.Graph` resource envelope from topology configuration,
+and the resource `PolyGraph` from `polyad_types.graphs.topology.PolyGraph`.
 Generic model classes use their declared type-variable bounds; schemas for
 application-defined subclasses or generic specializations are not generated.
 

@@ -13,7 +13,7 @@ from flask import g, jsonify, request
 from polyad.auth.keys import Keyring
 from polyad.auth.policy import LISTENERS, endpoint_scope, public_demo
 from polyad.cache import cache_url
-from polyad_types.auth import KeyDirection
+from polyad_types.api.auth import KeyDirection
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

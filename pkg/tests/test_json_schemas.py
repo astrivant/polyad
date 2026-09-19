@@ -30,10 +30,10 @@ from polyad_types import (
     to_dict,
     to_document,
 )
-from polyad_types.discovery import ServiceAccess
-from polyad_types.event_codec import decode_event
+from polyad_types.api.discovery import ServiceAccess
+from polyad_types.events.codec import decode_event
+from polyad_types.graphs.topology import GraphNode, PolyGraph
 from polyad_types.resources import ConfigMap
-from polyad_types.topology import GraphNode, PolyGraph
 
 ROOT = Path(__file__).resolve().parents[2]
 GENERATOR = ROOT / "scripts/schemas/generate-json-schemas.py"
@@ -165,7 +165,7 @@ def test_categorized_schema_modules_work_without_importing_models():
     from polyad_schemas.models import schema_for as model_contract
     from polyad_schemas.resources import resource_schema as manifest_contract
 
-    assert model_contract("polyad_types.network.NetworkPort") == schema_for(NetworkPort)
+    assert model_contract("polyad_types.networking.access.NetworkPort") == schema_for(NetworkPort)
     assert event_contract() == event_schema()
     assert manifest_contract("Graph") == resource_schema("Graph")
     assert values_schema() == load_schema("helm-values")

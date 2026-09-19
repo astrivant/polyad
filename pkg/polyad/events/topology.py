@@ -12,8 +12,8 @@ from cattrs.errors import CattrsError
 
 from polyad.graph.temporary import overlay
 from polyad.operator.reconciliation.replication import effective_spec
+from polyad_types.graphs.topology import topology
 from polyad_types.resources import AUXILIARY_KINDS, GROUP
-from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from typing import Any

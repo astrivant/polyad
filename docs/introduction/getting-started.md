@@ -47,20 +47,20 @@ dictionaries.<sup>[\[2\]](../development/toolchain.md#python-types-and-serializa
 
 | Model | Use it for | Execution and observations |
 | --- | --- | --- |
-| Local Python scheduler | Cooperative workloads with checkpoints, runtime estimates and graph rewrites | Python workers report progress; the scheduler records events and can export diagrams and plots.<sup>[\[3\]](../../pkg/polyad/balance/README.md#scheduling-and-feedback)</sup><sup>[\[4\]](../../pkg/polyad/balance/README.md#logs-and-diagrams)</sup> |
+| Local Python scheduler | Cooperative workloads with checkpoints, runtime estimates and graph rewrites | Python workers report progress; the scheduler records events and can export diagrams and plots.<sup>[\[3\]](../../pkg/polyad/scheduling/README.md#scheduling-and-feedback)</sup><sup>[\[4\]](../../pkg/polyad/scheduling/README.md#logs-and-diagrams)</sup> |
 | Kubernetes operator | Container workloads, persistent services, spot execution and graphs of graphs | Jobs, Deployments, StatefulSets and nested CRs report lifecycle and graph metrics; replicas coordinate ownership and API writes.<sup>[\[5\]](../deployment/operator.md#graph-instance-status)</sup><sup>[\[1\]](../deployment/operator.md#replicas-shared-queues-and-autoscaling)</sup> |
 
 The local scheduler supports estimated-duration, FIFO, breadth-first and
-depth-first ordering.<sup>[\[3\]](../../pkg/polyad/balance/README.md#scheduling-and-feedback)</sup><sup>[\[6\]](../../pkg/polyad/balance/README.md#graph-traversal-ordering)</sup>
+depth-first ordering.<sup>[\[3\]](../../pkg/polyad/scheduling/README.md#scheduling-and-feedback)</sup><sup>[\[6\]](../../pkg/polyad/scheduling/README.md#graph-traversal-ordering)</sup>
 Kubernetes admission follows
 declared dependencies, gates and per-boundary slot reservations; Kubernetes places
 the resulting Pods.<sup>[\[7\]](../deployment/operator.md#api-and-python-abstractions)</sup><sup>[\[8\]](../deployment/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup>
 Both models keep graph boundaries
-responsible for shutdown and cleanup.<sup>[\[9\]](../../pkg/polyad/balance/README.md#shutdown-conditions-and-finalizers)</sup><sup>[\[10\]](../deployment/operator.md#reconciliation-and-shutdown)</sup>
+responsible for shutdown and cleanup.<sup>[\[9\]](../../pkg/polyad/scheduling/README.md#shutdown-conditions-and-finalizers)</sup><sup>[\[10\]](../deployment/operator.md#reconciliation-and-shutdown)</sup>
 
 ### Cooperative execution and persistence
 
-Workloads must cooperate with pause and shutdown requests.<sup>[\[11\]](../../pkg/polyad/balance/README.md#cooperative-execution)</sup><sup>[\[9\]](../../pkg/polyad/balance/README.md#shutdown-conditions-and-finalizers)</sup>
+Workloads must cooperate with pause and shutdown requests.<sup>[\[11\]](../../pkg/polyad/scheduling/README.md#cooperative-execution)</sup><sup>[\[9\]](../../pkg/polyad/scheduling/README.md#shutdown-conditions-and-finalizers)</sup>
 Restarting with saved state requires application support and suitable storage;
 Polyad does not automatically checkpoint or resume arbitrary containers.<sup>[\[12\]](../deployment/operator.md#workload-persistence)</sup>
 
@@ -77,7 +77,7 @@ poetry run python examples/heartbeat.py
 
 The [heartbeat example](../../examples/heartbeat.py) reports a one-second heartbeat while the graph grows into a
 fork–join pipeline. The command prints the directory containing its plots and
-event journal.<sup>[\[4\]](../../pkg/polyad/balance/README.md#logs-and-diagrams)</sup>
+event journal.<sup>[\[4\]](../../pkg/polyad/scheduling/README.md#logs-and-diagrams)</sup>
 
 ### Quick start: Kubernetes
 

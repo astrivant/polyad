@@ -19,14 +19,14 @@ from polyad.cache import Cache
 from polyad.events.settings import settings_from_environment
 from polyad.events.topology import neighbors
 from polyad.lua import script
-from polyad_types.events import Event, EventTooLarge
+from polyad_types.events.envelope import Event, EventTooLarge
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from typing import Any
 
-    from polyad_types.events import EventStreamSettings
+    from polyad_types.events.envelope import EventStreamSettings
 
 PUBLISH = script("events/publish.lua")
 

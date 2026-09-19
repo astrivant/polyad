@@ -20,9 +20,9 @@ from polyad.graph.temporary import deadline
 from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.policies.network import context
 from polyad.operator.policies.rule_state import check_live_rules
-from polyad_types.codec import converter
-from polyad_types.discovery import ServiceEndpoint
-from polyad_types.network import MeshPeer, NetworkAccess, TrafficRule
+from polyad_types.api.discovery import ServiceEndpoint
+from polyad_types.networking.access import MeshPeer, NetworkAccess, TrafficRule
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from collections.abc import Callable

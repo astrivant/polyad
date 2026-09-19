@@ -31,6 +31,15 @@ def main() -> None:
     package = Path(polyad_types.__file__).parent
     assert "site-packages" in package.parts, package
     assert (package / "py.typed").is_file()
+    for namespace, names in {
+        "api": ("APIKey", "ServiceEndpoint", "CompositionRequest", "ThroughputSample"),
+        "graphs": ("Cheeger", "Topology", "Replication", "CapacityPlan"),
+        "networking": ("NetworkPort", "NetworkAccess", "TrafficRoute"),
+        "events": ("Event", "EventAST", "decode_event", "EventStreamSettings"),
+        "resources": ("Graph", "Daemon", "Deployment", "ObjectMeta"),
+    }.items():
+        module = importlib.import_module(f"polyad_types.{namespace}")
+        assert all(getattr(module, name) is getattr(polyad_types, name) for name in names)
     for module in pkgutil.walk_packages(polyad_types.__path__, "polyad_types."):
         importlib.import_module(module.name)
     for name in ("polyad", "polyad_sdk", "kopf", "kubernetes", "redis", "flask", "numpy", "networkx"):

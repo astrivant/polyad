@@ -21,8 +21,8 @@ from polyad.auth.keys import Keyring
 from polyad.auth.lanes import LaneFull, Lanes, Permit
 from polyad.auth.outbound import NoRedirect, OutboundClient
 from polyad_types import APIKey, KeyDirection
-from polyad_types.auth import Authentication
-from polyad_types.codec import from_dict
+from polyad_types.api.auth import Authentication
+from polyad_types.serialization import from_dict
 from tests.test_composition_api import document
 
 

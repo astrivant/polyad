@@ -13,7 +13,7 @@ from cattrs.errors import CattrsError
 
 from polyad.api.workloads.throughput import report_throughput
 from polyad_types import DemandSample, GraphAccess, ThroughputSample
-from polyad_types.topology import topology
+from polyad_types.graphs.topology import topology
 from tests.test_throughput import feed, fixture
 
 

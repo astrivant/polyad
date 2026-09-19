@@ -12,15 +12,15 @@ from typing import TYPE_CHECKING
 import yaml
 
 from polyad.compiler.passes.schema import structural_schema
-from polyad_types.activation import ActivationPolicy
-from polyad_types.capacity import CapacityPlan, CapacityTuning
-from polyad_types.network import NetworkAccess, NetworkPort
-from polyad_types.replication import Replication
-from polyad_types.requests import ConnectionRequest
+from polyad_types.api.requests import ConnectionRequest
+from polyad_types.graphs.activation import ActivationPolicy
+from polyad_types.graphs.capacity import CapacityPlan, CapacityTuning
+from polyad_types.graphs.replication import Replication
+from polyad_types.graphs.rules import CheegerComputation
+from polyad_types.graphs.topology import GraphNode, ThroughputPolicy
+from polyad_types.networking.access import NetworkAccess, NetworkPort
+from polyad_types.networking.traffic import TrafficRoute, TrafficWeights
 from polyad_types.resources import CapacityStatus
-from polyad_types.rules import CheegerComputation
-from polyad_types.topology import GraphNode, ThroughputPolicy
-from polyad_types.traffic import TrafficRoute, TrafficWeights
 
 if TYPE_CHECKING:
     from typing import Any

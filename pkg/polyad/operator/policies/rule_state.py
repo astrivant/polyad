@@ -13,10 +13,10 @@ from polyad.graph.temporary import ANNOTATION, active_entries, overlay
 from polyad.operator.clusters.remote_scaling import approved_intent
 from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.policies.rules import RuleViolation, check_rules
-from polyad_types.codec import converter
-from polyad_types.replication import Replication, replica_topology
+from polyad_types.graphs.replication import Replication, replica_topology
+from polyad_types.graphs.topology import topology
 from polyad_types.resources import AUXILIARY_KINDS, BOUNDARY_KINDS, GROUP, VERSION
-from polyad_types.topology import topology
+from polyad_types.serialization import converter
 
 if TYPE_CHECKING:
     from typing import Any

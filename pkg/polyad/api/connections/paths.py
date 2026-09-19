@@ -10,15 +10,15 @@ from typing import TYPE_CHECKING
 from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.events.visibility import public_observation
 from polyad.operator.clusters.federation import INVENTORY, PARENT
+from polyad_types.graphs.topology import topology
 from polyad_types.resources import BOUNDARY_KINDS, GROUP, VERSION
-from polyad_types.topology import topology
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
     from polyad.operator.adapters.kubernetes import API
-    from polyad_types.discovery import ServiceEndpoint
+    from polyad_types.api.discovery import ServiceEndpoint
 
 
 async def path(

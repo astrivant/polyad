@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import os
 
-from polyad_types.rules import CheegerComputation
+from polyad_types.graphs.rules import CheegerComputation
 
 
 def computation_limits() -> CheegerComputation:
