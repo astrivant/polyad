@@ -279,7 +279,7 @@ def test_helm_passes_event_tuning_to_every_execution_profile():
         "events.maxEventBytes=2048",
         "events.readBatchSize=7",
         "events.pollIntervalSeconds=0.5",
-        values_files=(CHART / "values-events.reference.yaml",),
+        values_files=(CHART / "references" / "values-events.reference.yaml",),
     )
     roles = [
         obj

@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Istio traffic strategies for locality and long-lived event connections.
+#
+# LocalFirst keeps healthy calls near their source locality without changing
+# administrator-approved graph weights. Failover adds ordered region fallback;
+# Distributed replaces priority behavior with explicit locality percentages.
+# Event LEAST_REQUEST affects only new SSE/WebSocket connections; copulses move
+# established connections in controlled batches.
+#
+# Per-Graph retries, timeouts, circuit breakers and endpoint ejection live on
+# spec.traffic[].resilience. Their typed Helm catalog is in
+# ../../polyad-crds/values-graphs.reference.yaml (and the PolyGraph/Rewrite
+# equivalents). Retries should be enabled only for idempotent operations.
+# Guide: ../../../docs/deployment/istio-features.md
+## @param global [object] Stable mesh, network and cluster identity required by multicluster routing.
+global:
+  ## @param global.meshID [string] Shared Istio mesh identity.
+  meshID: application-mesh
+  ## @param global.network [string] Network containing this release.
+  network: east-network
+  ## @param global.multiCluster [object] Local cluster identity shared by Istio and Polyad.
+  multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique cluster name within the mesh.
+    clusterName: east
+
+## @param operator [object] Shutdown budget for event connection draining and native-sidecar termination.
+operator:
+  ## @param operator.terminationGracePeriodSeconds [integer] Allow the configured event drain plus normal application and proxy shutdown.
+  terminationGracePeriodSeconds: 90
+
+## @param mesh [object] Locality-aware routing over an existing or bundled mesh.
+mesh:
+  ## @param mesh.enabled [boolean] Generate Polyad's Istio resources.
+  enabled: true
+  ## @param mesh.operator [object] Inject and authorize operator workloads participating in the routing policy.
+  operator:
+    ## @param mesh.operator.enabled [boolean] Enable operator sidecars and mesh security.
+    enabled: true
+  ## @param mesh.multicluster [object] Enable locality information and routing for Polyad Services.
+  multicluster:
+    ## @param mesh.multicluster.enabled [boolean] Enable multicluster identity without requiring an east-west gateway for same-network clusters.
+    enabled: true
+    ## @param mesh.multicluster.routing [object] Health-aware locality strategy for enabled Polyad Services.
+    routing:
+      ## @param mesh.multicluster.routing.enabled [boolean] Add endpoint ejection and locality-aware load balancing.
+      enabled: true
+      ## @param mesh.multicluster.routing.mode [string] LocalFirst prefers local healthy endpoints; alternatives are Failover and Distributed.
+      mode: LocalFirst
+      ## @param mesh.multicluster.routing.consecutive5xxErrors [integer] Consecutive server failures before ejecting an endpoint.
+      consecutive5xxErrors: 5
+      ## @param mesh.multicluster.routing.intervalSeconds [integer] Seconds between endpoint health analyses.
+      intervalSeconds: 10
+      ## @param mesh.multicluster.routing.baseEjectionSeconds [integer] Minimum seconds an unhealthy endpoint remains ejected.
+      baseEjectionSeconds: 30
+      ## @param mesh.multicluster.routing.maxEjectionPercent [integer] Maximum percentage of endpoints that may be ejected.
+      maxEjectionPercent: 50
+
+## @param events [object] Controlled rebalancing and mesh selection for long-lived subscriptions.
+events:
+  ## @param events.enabled [boolean] Serve SSE subscriptions; WebSocket remains independently optional.
+  enabled: true
+  ## @param events.rebalance [object] Move established subscriptions in bounded copulse batches.
+  rebalance:
+    ## @param events.rebalance.enabled [boolean] Enable membership discovery and controlled reconnect instructions.
+    enabled: true
+    ## @param events.rebalance.routing [string] Keep Service routing so Istio selects a healthy Pod for each new connection.
+    routing: Service
+    ## @param events.rebalance.drainSeconds [number] Stop admission and allow active connections to reconnect before termination.
+    drainSeconds: 20
+  ## @param events.istio [object] Load balancing for new event connections.
+  istio:
+    ## @param events.istio.enabled [boolean] Create the event Service DestinationRule.
+    enabled: true
+    ## @param events.istio.loadBalancer [string] LEAST_REQUEST favors replicas with fewer active requests; ROUND_ROBIN is the alternative.
+    loadBalancer: LEAST_REQUEST
+    ## @param events.istio.warmupSeconds [number] Gradually introduce newly ready replicas for new connections.
+    warmupSeconds: 30

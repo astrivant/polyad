@@ -269,7 +269,7 @@ def test_chart_wires_copulses_istio_and_native_sidecar_drain():
     """
     The overlay enables one event runtime, safe termination and mesh routing for new connections.
     """
-    objects = render(values_files=(CHART / "values-event-rebalancing.reference.yaml",))
+    objects = render(values_files=(CHART / "references" / "values-event-rebalancing.reference.yaml",))
     deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     pod = deployment["spec"]["template"]
     operator = pod["spec"]["containers"][0]

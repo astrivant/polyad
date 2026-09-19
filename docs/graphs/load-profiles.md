@@ -163,7 +163,7 @@ That sequence handles connection redistribution, not application profile selecti
 
 ## Configure approved profiles
 
-Use the typed [Helm reference overlay](../../charts/polyad/values-soul-searching.reference.yaml)
+Use the typed [Helm reference overlay](../../charts/polyad/references/values-soul-searching.reference.yaml)
 to enable capacity preparation. Demand profiles belong on individual Graphs or
 PolyGraphs, where administrators can calibrate them for each boundary.
 The [complete example](../../examples/load-profiles.yaml) includes definitions,

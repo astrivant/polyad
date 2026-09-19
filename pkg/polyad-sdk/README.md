@@ -676,6 +676,16 @@ Application side effects need their own durable idempotency contract across
 process restarts. A new SDK instance starts from a fresh topology baseline; its
 in-memory receipts and measurement cache are populated by subsequent events.
 
+When an `AdaptationReporter` is configured (the API client created by
+`from_environment()` supplies it), the SDK brackets every injected strategy with
+`Running` and `Succeeded` or `Failed` reports. The operator persists active calls
+on the projected Workload or Daemon definition under `status.adaptation` and sets
+its generic `status.progressing` flag. Generated Argo CD and Flux health checks
+therefore report that definition as Progressing while application adaptation is
+executing, without changing the containing Graph's health. Reports are fenced to
+both the graph and definition UIDs and use a stable invocation identity across an
+in-process retry.
+
 Transport errors and stream controls propagate to the application's supervisor.
 After a reset or HTTP 410, explicitly call `refresh(reset=True)` before resuming;
 it clears incomplete cached measurements and receipts and establishes a new

@@ -78,7 +78,7 @@ exporters and forwards observations to administrator-supplied monitoring backend
 Set `keda.install: true` to enable the pinned upstream dependency. It installs in
 the release namespace. `kedaOperator` passes configuration to the upstream chart;
 its actual rendered names and enabled components determine the observation
-targets. See the [typed KEDA values reference](../../charts/polyad/values-keda.reference.yaml)
+targets. See the [typed KEDA values reference](../../charts/polyad/references/values-keda.reference.yaml)
 and [upstream chart settings](https://github.com/kedacore/charts/blob/main/keda/values.yaml).
 
 After preparing the root access and cache Secrets from the
@@ -87,8 +87,8 @@ After preparing the root access and cache Secrets from the
 ```bash
 helm dependency build charts/polyad
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
-  --values charts/polyad/values-root-control-plane.reference.yaml \
-  --values charts/polyad/values-keda.reference.yaml
+  --values charts/polyad/references/values-root-control-plane.reference.yaml \
+  --values charts/polyad/references/values-keda.reference.yaml
 ```
 
 Choose one KEDA installation for the cluster. Existing KEDA installations should
@@ -119,7 +119,7 @@ Tune each component under `keda.autoscaling.metricsServer` or
 `keda.autoscaling.webhooks`: `minReplicas`, `maxReplicas`, CPU and memory targets,
 and `enabled`. Set a memory target to `null` to use CPU alone. Shared
 `keda.autoscaling.behavior` configures stabilization windows and optional HPA
-rate policies. The [KEDA reference values](../../charts/polyad/values-keda.reference.yaml)
+rate policies. The [KEDA reference values](../../charts/polyad/references/values-keda.reference.yaml)
 show these controls together. Resource requests come from upstream
 `kedaOperator.resources.metricServer` and `kedaOperator.resources.webhooks`;
 each selected metric requires a positive request.

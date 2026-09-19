@@ -191,7 +191,7 @@ def value_files() -> list[Path]:
             *(ROOT / "charts/polyad-benchmarks").glob("values*.yaml"),
             *(ROOT / "studies").rglob("*values.yaml"),
             *(ROOT / "charts/polyad-crds").glob("values-*.reference.yaml"),
-            *CHART.glob("values-*.reference.yaml"),
+            *(CHART / "references").glob("values-*.reference.yaml"),
             *(ROOT / "examples").rglob("*values.yaml"),
             *(ROOT / "examples/deployment-profiles").glob("*.yaml"),
             *(ROOT / "pkg/tests/data").rglob("*values.yaml"),

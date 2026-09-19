@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Guide: ../../../docs/deployment/postgresql.md#encrypt-records-before-writing
+# Overlay on any managed or external PostgreSQL configuration.
+# Create the key Secret in this release's namespace before starting writers.
+## @param postgresql [object] Optional durable storage and encryption performed by the operator before database writes.
+postgresql:
+  ## @param postgresql.enabled [boolean] Enable durable state and event history; authentication-only deployments can instead enable authentication.storage.
+  enabled: true
+  ## @param postgresql.recordEncryption [object] Encrypt JSON payloads with RSA-wrapped AES-256-GCM keys; SQL identities and hashes remain queryable.
+  recordEncryption:
+    ## @param postgresql.recordEncryption.enabled [boolean] Encrypt new records in every writer; existing rows, replicas running old settings and backups are not retroactively changed.
+    enabled: true
+    ## @param postgresql.recordEncryption.existingSecret [string] Replace with your existing key Secret; the chart never creates or embeds key material in Helm values.
+    existingSecret: polyad-record-keys
+    ## @param postgresql.recordEncryption.publicKeyKey [string] Secret entry containing a PEM RSA public key; 3072 bits recommended, 2048 minimum.
+    publicKeyKey: public.pem
+    ## @param postgresql.recordEncryption.privateKeyKey [string] Empty keeps the private key off writers; set private.pem to mount a matching key pair for local decryption.
+    privateKeyKey: ''
+    ## @param postgresql.recordEncryption.privateKeyPasswordKey [string] Optional Secret entry containing the exact password for an encrypted private PEM; requires privateKeyKey.
+    privateKeyPasswordKey: ''

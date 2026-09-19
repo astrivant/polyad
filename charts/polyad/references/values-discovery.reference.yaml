@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Overlay on values-root-control-plane.reference.yaml after registering workload clusters.
+# Guide: ../../../docs/apis/discovery.md. Replace graph instance names and namespaces.
+# Discovery enumerates public logical endpoints; it does not expose arbitrary Services.
+## @param operator [object] Settings for operator.
+operator:
+  ## @param operator.serviceAccess [object] Administrator ceilings inherited down the operator tree. Every request must fit both participant policies and the receiving operator; children cannot widen parent scope.
+  serviceAccess:
+    ## @param operator.serviceAccess.discovery [string] Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.
+    discovery: Atlas
+    ## @param operator.serviceAccess.connections [string] Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.
+    connections: Atlas
+    ## @param operator.serviceAccess.clusters [object] Per-cluster child ceilings and parent links; omitted clusters inherit root ceilings.
+    clusters:
+      ## @param operator.serviceAccess.clusters.west [object] Settings for operator.serviceAccess.clusters.west.
+      west:
+        ## @param operator.serviceAccess.clusters.west.parent [string] Configured parent cluster; empty inherits directly from the root. Cycles and missing parents prevent startup.
+        parent: ''
+        ## @param operator.serviceAccess.clusters.west.discovery [string] Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.
+        discovery: Atlas
+        ## @param operator.serviceAccess.clusters.west.connections [string] Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.
+        connections: Atlas
+      ## @param operator.serviceAccess.clusters.east [object] Settings for operator.serviceAccess.clusters.east.
+      east:
+        ## @param operator.serviceAccess.clusters.east.parent [string] Configured parent cluster; empty inherits directly from the root. Cycles and missing parents prevent startup.
+        parent: west
+        # A child may narrow its parent's scope. Cluster here rejects cross-cluster
+        # discovery even though both ancestors allow Atlas.
+        ## @param operator.serviceAccess.clusters.east.discovery [string] Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.
+        discovery: Cluster
+        ## @param operator.serviceAccess.clusters.east.connections [string] Disabled denies access; SameGraph stays in the home boundary; GraphTree allows related graphs in its cluster; Cluster allows that cluster; Atlas allows registered clusters. Explicit graph grants and consent still apply.
+        connections: Atlas
+    # Match your Istio installation, including any trust-domain aliases.
+    # These domains identify service accounts, not Pod UIDs. Use dedicated accounts.
+    ## @param operator.serviceAccess.trustDomains [object] Explicit cluster-to-Istio trust-domain map required for cross-cluster service negotiation; no inferred identity domains.
+    trustDomains:
+      ## @param operator.serviceAccess.trustDomains.west [string] Istio trust domain matching that cluster actual mesh identity.
+      west: cluster.local
+      ## @param operator.serviceAccess.trustDomains.east [string] Istio trust domain matching that cluster actual mesh identity.
+      east: cluster.local
+## @param events [object] Settings for events.
+events:
+  ## @param events.enabled [boolean] Serve namespace graph observations through a separate SSE Service on port 8091
+  enabled: true
+  ## @param events.existingSecret [string] Existing Secret containing a token key for read-only event subscriptions
+  existingSecret: ''
+## @param connections [object] Settings for connections.
+connections:
+  ## @param connections.enabled [boolean] Serve service-account authenticated temporary connections on port 8093
+  enabled: true
+## @param authentication [object] Settings for authentication.
+authentication:
+  ## @param authentication.services [array] Service API keys with direction, Secret reference, endpoint scopes, outbound baseUrl and individual rate/concurrency limits
+  services:
+    ## @param authentication.services[].name [string] Settings for authentication.services[].name.
+    - name: west-discovery
+      ## @param authentication.services[].direction [string] Settings for authentication.services[].direction.
+      direction: Inbound
+      ## @param authentication.services[].existingSecret [string] Existing release-namespace Secret; keep tokens outside Helm values and manage rotation externally.
+      existingSecret: west-discovery
+      ## @param authentication.services[].secretKey [string] Key inside the referenced Secret; default token for API keys and uri for database DSNs.
+      secretKey: token
+      ## @param authentication.services[].requestsPerMinute [integer] Shared sixty-second request budget for this key across all HA replicas; size for peak caller traffic.
+      requestsPerMinute: 120
+      ## @param authentication.services[].maxConcurrentRequests [integer] Shared in-flight request budget for this key, including open event streams; independent of request rate.
+      maxConcurrentRequests: 4
+      ## @param authentication.services[].endpoints [array] Settings for authentication.services[].endpoints.
+      endpoints: [discovery, events, topology]
+      # Fixed identity owned by the administrator, not chosen by HTTP callers.
+      ## @param authentication.services[].home [object] Fixed service home graph used for operator access tiers on discovery, topology and event streams. Never taken from request input.
+      home:
+        ## @param authentication.services[].home.name [string] Settings for authentication.services[].home.name.
+        name: application-west
+        ## @param authentication.services[].home.namespace [string] Settings for authentication.services[].home.namespace.
+        namespace: workloads
+        ## @param authentication.services[].home.cluster [string] Settings for authentication.services[].home.cluster.
+        cluster: west
+        ## @param authentication.services[].home.kind [string] Settings for authentication.services[].home.kind.
+        kind: Graph
+      ## @param authentication.services[].graphs [array] Settings for authentication.services[].graphs.
+      graphs:
+        ## @param authentication.services[].graphs[].name [string] Settings for authentication.services[].graphs[].name.
+        - name: application
+          ## @param authentication.services[].graphs[].namespace [string] Settings for authentication.services[].graphs[].namespace.
+          namespace: orchestration
+          ## @param authentication.services[].graphs[].cluster [string] Settings for authentication.services[].graphs[].cluster.
+          cluster: management
+          ## @param authentication.services[].graphs[].kind [string] Settings for authentication.services[].graphs[].kind.
+          kind: PolyGraph
+          ## @param authentication.services[].graphs[].descendants [boolean] Settings for authentication.services[].graphs[].descendants.
+          descendants: true
+# Also configure mesh.enabled, rootControlPlane.meshPeers and real trust domains
+# before using cross-cluster negotiation; this overlay alone does not install mesh.

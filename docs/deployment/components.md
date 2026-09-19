@@ -140,7 +140,7 @@ Cheeger constant 1. Its referenced GraphRule uses `scope: Boundary`,
 `architecture.cheegerMinimum` (default 1). Optional `architecture.cheegerMaximum`
 defaults to `null` (unbounded); set it to `1` to permit the chain but reject a
 fully connected triangle, whose expansion is `2`. See the
-[typed component reference](../../charts/polyad/values-components.reference.yaml)
+[typed component reference](../../charts/polyad/references/values-components.reference.yaml)
 and [practical tuning guide](../graphs/cheeger-tuning.md). `architecture.expandedNodes` bounds
 the three group vertices plus their Daemon copies. The default 27 permits all
 three groups to reach eight copies; smaller budgets can block a scaling request.

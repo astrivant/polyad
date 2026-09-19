@@ -25,7 +25,7 @@ def test_existing_encrypted_class_covers_both_databases_and_shared_authenticatio
         "postgresql.encryptionAtRest.enabled=true",
         "postgresql.encryptionAtRest.storageClass=encrypted-database",
         "authentication.storage.enabled=true",
-        values_files=(CHART / "values-authentication.reference.yaml",),
+        values_files=(CHART / "references" / "values-authentication.reference.yaml",),
     )
     clusters = [obj for obj in objects if obj["kind"] == "Cluster"]
     assert {obj["metadata"]["name"] for obj in clusters} == {"test-state", "test-authentication"}
@@ -38,7 +38,7 @@ def test_existing_encrypted_class_covers_both_databases_and_shared_authenticatio
         "postgresql.encryptionAtRest.storageClass=encrypted-database",
         "authentication.storage.enabled=true",
         "authentication.storage.separateDatabase=false",
-        values_files=(CHART / "values-authentication.reference.yaml",),
+        values_files=(CHART / "references" / "values-authentication.reference.yaml",),
     )
     assert [obj["metadata"]["name"] for obj in shared if obj["kind"] == "Cluster"] == ["test-state"]
 
@@ -53,7 +53,10 @@ def test_gke_cmek_class_and_keda_replicas_preserve_encrypted_storage(state_enabl
         "postgresql.ha.enabled=true",
         f"postgresql.autoscaling.enabled={str(state_enabled).lower()}",
         "authentication.storage.enabled=true",
-        values_files=(CHART / "values-authentication.reference.yaml", CHART / "values-postgresql-encryption.reference.yaml"),
+        values_files=(
+            CHART / "references" / "values-authentication.reference.yaml",
+            CHART / "references" / "values-postgresql-encryption.reference.yaml",
+        ),
     )
     storage = next(obj for obj in objects if obj["kind"] == "StorageClass")
     assert storage["metadata"]["name"] == "test-test-pg-encrypted"
@@ -85,7 +88,10 @@ def test_explicit_matching_classes_and_gke_name_are_accepted():
         "postgresql.storage.storageClass=managed-encrypted",
         "authentication.storage.enabled=true",
         "authentication.storage.storageClass=managed-encrypted",
-        values_files=(CHART / "values-authentication.reference.yaml", CHART / "values-postgresql-encryption.reference.yaml"),
+        values_files=(
+            CHART / "references" / "values-authentication.reference.yaml",
+            CHART / "references" / "values-postgresql-encryption.reference.yaml",
+        ),
     )
     assert next(obj for obj in objects if obj["kind"] == "StorageClass")["metadata"]["name"] == "managed-encrypted"
     assert all(obj["spec"]["storage"]["storageClass"] == "managed-encrypted" for obj in objects if obj["kind"] == "Cluster")
@@ -100,7 +106,10 @@ def test_conflicting_database_class_cannot_bypass_encrypted_selection(path):
         render(
             f"{path}=different-storage",
             "authentication.storage.enabled=true",
-            values_files=(CHART / "values-authentication.reference.yaml", CHART / "values-postgresql-encryption.reference.yaml"),
+            values_files=(
+                CHART / "references" / "values-authentication.reference.yaml",
+                CHART / "references" / "values-postgresql-encryption.reference.yaml",
+            ),
         )
 
 
@@ -122,7 +131,7 @@ def test_incomplete_or_invalid_encryption_configuration_fails_before_install(set
     Reject missing keys, unusable class names and encryption configured without a managed database.
     """
     with pytest.raises(subprocess.CalledProcessError):
-        render(setting, values_files=(CHART / "values-postgresql-encryption.reference.yaml",))
+        render(setting, values_files=(CHART / "references" / "values-postgresql-encryption.reference.yaml",))
 
 
 def test_external_database_encryption_is_not_claimed_by_the_chart():
@@ -133,7 +142,7 @@ def test_external_database_encryption_is_not_claimed_by_the_chart():
         render(
             "postgresql.managed=false",
             "postgresql.existingSecret=external-dsn",
-            values_files=(CHART / "values-postgresql-encryption.reference.yaml",),
+            values_files=(CHART / "references" / "values-postgresql-encryption.reference.yaml",),
         )
 
 

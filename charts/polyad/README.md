@@ -52,8 +52,8 @@ replicas using `POLYAD_CACHE_URL`, including external Redis-compatible endpoints
 
 Optional [Alloy and Prometheus Agent collectors](../../docs/operations/telemetry-agents.md)
 discover exporters from enabled chart components. Use the
-[all-signals reference](values-telemetry.reference.yaml) or
-[metrics-only reference](values-prometheus-agent.reference.yaml) with your existing backends.
+[all-signals reference](references/values-telemetry.reference.yaml) or
+[metrics-only reference](references/values-prometheus-agent.reference.yaml) with your existing backends.
 
 ```sh
 helm dependency build charts/polyad
@@ -69,7 +69,7 @@ Dragonfly data instance with five-minute PVC snapshots and eviction disabled.
 Install KEDA separately or set `keda.install=true` to enable the pinned upstream
 dependency. In root mode, KEDA and every enabled local service join the
 [root operator Graph](../../docs/deployment/local-services.md). The
-[KEDA reference values](values-keda.reference.yaml) describe bundled and existing
+[KEDA reference values](references/values-keda.reference.yaml) describe bundled and existing
 installations. With `ha=true`, bundled KEDA also enables
 [CPU/memory autoscaling for its metrics server and webhooks](../../docs/deployment/local-services.md#autoscale-bundled-keda-in-ha-mode),
 with configurable bounds and stabilization under `keda.autoscaling`.
@@ -126,7 +126,7 @@ Secret-driven health replacement. Both networking integrations are disabled by d
 Use [named API keys](../../docs/operations/api-keys.md) to separate service and operator
 credentials, with inbound/outbound/bidirectional permissions and per-key rate
 and concurrency limits shared across HA replicas. The
-[authentication reference](values-authentication.reference.yaml) includes all
+[authentication reference](references/values-authentication.reference.yaml) includes all
 three directions and a dedicated KEDA lane.
 
 Cross-cluster placement (`federation.enabled`), sidecar mesh transport
@@ -150,12 +150,13 @@ grace settings under that key (for example, `image.tag` becomes `operator.image.
 
 ## Reference values
 
-[Atlas discovery values](values-discovery.reference.yaml) demonstrate inherited
+[Atlas discovery values](references/values-discovery.reference.yaml) demonstrate inherited
 operator modes, named-key home graphs and cross-cluster service negotiation.
 
-The commented `values-*.reference.yaml` files highlight settings for each profile
-and optional extension. Copy and adapt the files you need, then pass them with
-`--values`; Helm does not load them automatically. [`values.yaml`](values.yaml)
+The commented [`references/values-*.reference.yaml`](references/README.md) files
+highlight settings for each profile and optional extension. Copy and adapt the
+files you need, then pass them with `--values`; Helm does not load them
+automatically. [`values.yaml`](values.yaml)
 remains the complete default configuration. Set the single top-level `ha` flag
 to false (default) or true. Each reference uses a generated partial editor schema
 with canonical field types; Helm validates all requirements after merging defaults.
@@ -167,28 +168,32 @@ default values. Schema checks keep annotations in all shipped values files in sy
 
 | Reference file | Configuration and placement | Guide |
 | --- | --- | --- |
-| [`values-singular.reference.yaml`](values-singular.reference.yaml) | One dense operator and a persistent cache in the release cluster | [Singular](../../docs/deployment/deployment-profiles.md#one-dense-operator) |
-| [`values-ha.reference.yaml`](values-ha.reference.yaml) | Replicated dense operators; also opts into cache HA | [HA](../../docs/deployment/deployment-profiles.md#ha-in-one-cluster) |
-| [`values-connection-pools.reference.yaml`](values-connection-pools.reference.yaml) | Per-process Redis/PostgreSQL limits and KEDA scaling from active pool demand | [Connection pools](../../docs/operations/performance.md#connection-pools-and-keda) |
-| [`values-keda.reference.yaml`](values-keda.reference.yaml) | Optional bundled KEDA installation and observation in the root operator Graph | [KEDA installation](../../docs/deployment/local-services.md#install-keda-with-the-chart) |
-| [`values-components.reference.yaml`](values-components.reference.yaml) | HA bootstrap plus a self-managed gateway/executor/telemetry Graph and KEDA scaling in the release cluster | [Components](../../docs/deployment/components.md) |
-| [`values-federation.reference.yaml`](values-federation.reference.yaml) | Remote cluster registrations for PolyGraph placement; destinations have independent execution operators | [Federation](../../docs/deployment/multicluster.md#placement-and-ownership) |
-| [`values-root-control-plane.reference.yaml`](values-root-control-plane.reference.yaml) | HA management release that installs and controls remote execution pools | [Root control plane](../../docs/deployment/root-control-plane.md) |
-| [`values-worker.reference.yaml`](values-worker.reference.yaml) | Downstream Helm-owned executors attached to a root, with explicit root or local scaling authority | [Helm workers](../../docs/deployment/helm-workers.md) |
-| [`values-multicluster.reference.yaml`](values-multicluster.reference.yaml) | Istio transport, peer gateways and local network identity; adapt separately per cluster | [Multicluster networking](../../docs/deployment/multicluster.md#istio-across-different-networks) |
-| [`values-observer.reference.yaml`](values-observer.reference.yaml) | Read-only observers alongside this release's operator | [Observers](../../docs/deployment/multicluster.md#optional-shared-observers) |
-| [`values-postgresql.reference.yaml`](values-postgresql.reference.yaml) | Optional persistent state, database HA and connection-driven KEDA scaling in the release cluster | [PostgreSQL](../../docs/deployment/postgresql.md) |
-| [`values-postgresql-encryption.reference.yaml`](values-postgresql-encryption.reference.yaml) | Encrypted volumes for managed state and authentication databases; GKE Cloud KMS example and existing StorageClass alternative | [Encryption at rest](../../docs/deployment/postgresql.md#encryption-at-rest) |
-| [`values-postgresql-record-encryption.reference.yaml`](values-postgresql-record-encryption.reference.yaml) | Optional encryption before database writes using an existing public/private key Secret | [Record encryption](../../docs/deployment/record-encryption.md) |
-| [`values-authentication.reference.yaml`](values-authentication.reference.yaml) | Scoped service/operator keys, workload Secret assignments and optional dedicated authentication storage | [API keys](../../docs/operations/api-keys.md) |
-| [`values-connections.reference.yaml`](values-connections.reference.yaml) | Service consent events and separate connection/reconciliation pulse budgets | [Temporary connections](../../docs/apis/temporary-connections.md) |
-| [`values-websockets.reference.yaml`](values-websockets.reference.yaml) | Optional WebSocket subscriptions sharing the events Service, authorization and subscriber limits with SSE | [WebSocket subscriptions](../../docs/workloads/workload-events.md#websocket-subscriptions) |
-| [`values-event-rebalancing.reference.yaml`](values-event-rebalancing.reference.yaml) | Rolling copulses, ready endpoint discovery, Istio routing and preStop draining | [Event connection rebalancing](../../docs/operations/event-rebalancing.md) |
-| [`values-events.reference.yaml`](values-events.reference.yaml) | Event byte budgets, replay batch size, polling, retention and subscriber capacity | [Event contract and tuning](../../docs/apis/event-contract.md) |
-| [`values-demo.reference.yaml`](values-demo.reference.yaml) | Public demonstration endpoints without authentication or HTTP quotas | [Demo mode](../../docs/operations/api-keys.md#demonstrations-without-authentication) |
-| [`values-tracing.reference.yaml`](values-tracing.reference.yaml) | OTLP/HTTP traces and independent decision logs, parent-based trace sampling and optional exporter credentials | [OpenTelemetry traces and logs](../../docs/operations/tracing.md) |
-| [`values-tuning.reference.yaml`](values-tuning.reference.yaml) | Work-graph worker and planner limits, validation cadence, polling intervals, Cheeger computation ceilings and metrics | [Write-pipeline configuration](../../docs/development/write-pipeline.md#configuration), [performance tuning](../../docs/operations/performance.md) |
-| [`values-soul-searching.reference.yaml`](values-soul-searching.reference.yaml) | Capacity preparation within fixed operator ceilings; per-graph profiles define demand, targets and lookahead | [Approved load profiles](../../docs/graphs/load-profiles.md) |
+| [`values-singular.reference.yaml`](references/values-singular.reference.yaml) | One dense operator and a persistent cache in the release cluster | [Singular](../../docs/deployment/deployment-profiles.md#one-dense-operator) |
+| [`values-ha.reference.yaml`](references/values-ha.reference.yaml) | Replicated dense operators; also opts into cache HA | [HA](../../docs/deployment/deployment-profiles.md#ha-in-one-cluster) |
+| [`values-connection-pools.reference.yaml`](references/values-connection-pools.reference.yaml) | Per-process Redis/PostgreSQL limits and KEDA scaling from active pool demand | [Connection pools](../../docs/operations/performance.md#connection-pools-and-keda) |
+| [`values-keda.reference.yaml`](references/values-keda.reference.yaml) | Optional bundled KEDA installation and observation in the root operator Graph | [KEDA installation](../../docs/deployment/local-services.md#install-keda-with-the-chart) |
+| [`values-components.reference.yaml`](references/values-components.reference.yaml) | HA bootstrap plus a self-managed gateway/executor/telemetry Graph and KEDA scaling in the release cluster | [Components](../../docs/deployment/components.md) |
+| [`values-federation.reference.yaml`](references/values-federation.reference.yaml) | Remote cluster registrations for PolyGraph placement; destinations have independent execution operators | [Federation](../../docs/deployment/multicluster.md#placement-and-ownership) |
+| [`values-root-control-plane.reference.yaml`](references/values-root-control-plane.reference.yaml) | HA management release that installs and controls remote execution pools | [Root control plane](../../docs/deployment/root-control-plane.md) |
+| [`values-worker.reference.yaml`](references/values-worker.reference.yaml) | Downstream Helm-owned executors attached to a root, with explicit root or local scaling authority | [Helm workers](../../docs/deployment/helm-workers.md) |
+| [`values-multicluster.reference.yaml`](references/values-multicluster.reference.yaml) | Istio transport, peer gateways and local network identity; adapt separately per cluster | [Multicluster networking](../../docs/deployment/multicluster.md#istio-across-different-networks) |
+| [`values-istio-bundled.reference.yaml`](references/values-istio-bundled.reference.yaml) | Release-owned, pinned Istio base and control plane with native operator sidecars | [Bundled Istio](../../docs/deployment/istio-features.md#deployment-strategies) |
+| [`values-istio-existing.reference.yaml`](references/values-istio-existing.reference.yaml) | Platform-owned Istio with Gateway API ingress and no control-plane lifecycle ownership | [Existing Istio](../../docs/deployment/istio-features.md#deployment-strategies) |
+| [`values-istio-features.reference.yaml`](references/values-istio-features.reference.yaml) | Proxy telemetry, Sidecar scoping, policy observation and explicit gateway egress | [Optional features](../../docs/deployment/istio-features.md#feature-reference-values) |
+| [`values-istio-traffic.reference.yaml`](references/values-istio-traffic.reference.yaml) | Locality routing, endpoint ejection and long-lived event connection balancing | [Traffic strategies](../../docs/deployment/istio-features.md#traffic-strategy-reference-values) |
+| [`values-observer.reference.yaml`](references/values-observer.reference.yaml) | Read-only observers alongside this release's operator | [Observers](../../docs/deployment/multicluster.md#optional-shared-observers) |
+| [`values-postgresql.reference.yaml`](references/values-postgresql.reference.yaml) | Optional persistent state, database HA and connection-driven KEDA scaling in the release cluster | [PostgreSQL](../../docs/deployment/postgresql.md) |
+| [`values-postgresql-encryption.reference.yaml`](references/values-postgresql-encryption.reference.yaml) | Encrypted volumes for managed state and authentication databases; GKE Cloud KMS example and existing StorageClass alternative | [Encryption at rest](../../docs/deployment/postgresql.md#encryption-at-rest) |
+| [`values-postgresql-record-encryption.reference.yaml`](references/values-postgresql-record-encryption.reference.yaml) | Optional encryption before database writes using an existing public/private key Secret | [Record encryption](../../docs/deployment/record-encryption.md) |
+| [`values-authentication.reference.yaml`](references/values-authentication.reference.yaml) | Scoped service/operator keys, workload Secret assignments and optional dedicated authentication storage | [API keys](../../docs/operations/api-keys.md) |
+| [`values-connections.reference.yaml`](references/values-connections.reference.yaml) | Service consent events and separate connection/reconciliation pulse budgets | [Temporary connections](../../docs/apis/temporary-connections.md) |
+| [`values-websockets.reference.yaml`](references/values-websockets.reference.yaml) | Optional WebSocket subscriptions sharing the events Service, authorization and subscriber limits with SSE | [WebSocket subscriptions](../../docs/workloads/workload-events.md#websocket-subscriptions) |
+| [`values-event-rebalancing.reference.yaml`](references/values-event-rebalancing.reference.yaml) | Rolling copulses, ready endpoint discovery, Istio routing and preStop draining | [Event connection rebalancing](../../docs/operations/event-rebalancing.md) |
+| [`values-events.reference.yaml`](references/values-events.reference.yaml) | Event byte budgets, replay batch size, polling, retention and subscriber capacity | [Event contract and tuning](../../docs/apis/event-contract.md) |
+| [`values-demo.reference.yaml`](references/values-demo.reference.yaml) | Public demonstration endpoints without authentication or HTTP quotas | [Demo mode](../../docs/operations/api-keys.md#demonstrations-without-authentication) |
+| [`values-tracing.reference.yaml`](references/values-tracing.reference.yaml) | OTLP/HTTP traces and independent decision logs, parent-based trace sampling and optional exporter credentials | [OpenTelemetry traces and logs](../../docs/operations/tracing.md) |
+| [`values-tuning.reference.yaml`](references/values-tuning.reference.yaml) | Work-graph worker and planner limits, validation cadence, polling intervals, Cheeger computation ceilings and metrics | [Write-pipeline configuration](../../docs/development/write-pipeline.md#configuration), [performance tuning](../../docs/operations/performance.md) |
+| [`values-soul-searching.reference.yaml`](references/values-soul-searching.reference.yaml) | Capacity preparation within fixed operator ceilings; per-graph profiles define demand, targets and lookahead | [Approved load profiles](../../docs/graphs/load-profiles.md) |
 
 Each file can render with chart defaults. Installation also requires the
 infrastructure and Secrets called out in its comments. Replace example cluster
@@ -200,9 +205,9 @@ For example, combine HA, split components and optional PostgreSQL:
 
 ```sh
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
-  --values charts/polyad/values-ha.reference.yaml \
-  --values charts/polyad/values-components.reference.yaml \
-  --values charts/polyad/values-postgresql.reference.yaml
+  --values charts/polyad/references/values-ha.reference.yaml \
+  --values charts/polyad/references/values-components.reference.yaml \
+  --values charts/polyad/references/values-postgresql.reference.yaml
 ```
 
 Later files override earlier values; lists such as `federation.clusters`,
@@ -573,6 +578,7 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | `keda.authentication.name`                                         | **Type: string.** TriggerAuthentication name; empty uses the release metrics name                                                                           | `""` |
 | `kedaOperator.operator.replicaCount`                               | **Type: integer.** Fixed KEDA operator replicas; defaults to two even for singular Polyad and must stay at least two in HA mode                             | `2` |
 | `kedaOperator.metricsServer.replicaCount`                          | **Type: integer.** Initial metrics-server Pods; the HPA owns subsequent counts when bundled HA autoscaling is enabled                                       | `2` |
+| `kedaOperator.webhooks.enabled`                                    | **Type: boolean.** Enable admission validation for KEDA resources.                                                                                          | `true` |
 | `kedaOperator.webhooks.replicaCount`                               | **Type: integer.** Initial admission-webhook Pods; the HPA owns subsequent counts when bundled HA autoscaling is enabled                                    | `2` |
 | `kedaOperator.prometheus.operator.enabled`                         | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
 | `kedaOperator.prometheus.metricServer.enabled`                     | **Type: boolean.** Expose this bundled KEDA component metrics for collection.                                                                               | `true` |
@@ -604,37 +610,73 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### Optional Istio integration
 
-| Name                                                              | Description                                                                                                                      | Value             |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `mesh.enabled`                                                    | **Type: boolean.** Allow graph HTTP and service-identity authorization and generate Istio security resources                     | `false` |
-| `mesh.install`                                                    | **Type: boolean.** Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled                         | `false` |
-| `mesh.multicluster.enabled`                                       | **Type: boolean.** Enable the existing or bundled sidecar mesh's multicluster configuration                                      | `false` |
-| `mesh.multicluster.eastWest.enabled`                              | **Type: boolean.** Install a dedicated east-west gateway for separate networks                                                   | `false` |
-| `mesh.multicluster.eastWest.portName`                             | **Type: string.** Istio Gateway listener name; protocol TLS and AUTO_PASSTHROUGH mode are required by this integration           | `tls` |
-| `mesh.multicluster.eastWest.hosts`                                | **Type: array.** Service SNI suffixes exposed through AUTO_PASSTHROUGH                                                           | `["*.local"]` |
-| `mesh.multicluster.peers`                                         | **Type: array.** Remote transport registrations; see docs/deployment/multicluster.md for same-network and gateway configurations | `[]` |
-| `mesh.proxyResources.cpu`                                         | **Type: string.** CPU request and limit for the Istio proxy and init containers; tune alongside operator CPU from Grafana        | `100m` |
-| `mesh.proxyResources.memory`                                      | **Type: string.** Memory request and limit for the Istio proxy and init containers; matching pairs preserve Guaranteed QoS       | `128Mi` |
-| `mesh.operator.enabled`                                           | **Type: boolean.** Inject the operator pods and authorize their API and event ports with Istio                                   | `false` |
-| `mesh.operator.compositionPrincipals`                             | **Type: array.** Exact mTLS source identities allowed to use the composition endpoint                                            | `[]` |
-| `mesh.operator.metricsPrincipals`                                 | **Type: array.** Exact mTLS source identities allowed to read scheduler metrics                                                  | `[]` |
-| `mesh.operator.eventPrincipals`                                   | **Type: array.** Exact mTLS source identities allowed to subscribe to events                                                     | `[]` |
-| `mesh.operator.connectionPrincipals`                              | **Type: array.** Exact mTLS source identities allowed to request temporary connections                                           | `[]` |
-| `mesh.ingress.enabled`                                            | **Type: boolean.** Install the optional upstream Istio gateway dependency                                                        | `false` |
-| `mesh.ingress.hosts`                                              | **Type: array.** Hosts served by the Istio Gateway and VirtualService                                                            | `[]` |
-| `mesh.ingress.tlsSecret`                                          | **Type: string.** TLS credential Secret in the gateway namespace, required when exposing the APIs                                | `""` |
-| `istioBase`                                                       | **Type: object.** Upstream Istio base chart overrides                                                                            | `{}` |
-| `istiod.env.ENABLE_NATIVE_SIDECARS`                               | **Type: string.** Settings for istiod.env.ENABLE_NATIVE_SIDECARS.                                                                | `true` |
-| `istiod.meshConfig.enableAutoMtls`                                | **Type: boolean.** Settings for istiod.meshConfig.enableAutoMtls.                                                                | `true` |
-| `istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts` | **Type: boolean.** Settings for istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts.                                 | `true` |
-| `istioIngress.labels.istio`                                       | **Type: string.** Settings for istioIngress.labels.istio.                                                                        | `polyad-ingress` |
-| `istioEastWest.name`                                              | **Type: string.** Settings for istioEastWest.name.                                                                               | `polyad-eastwest` |
-| `istioEastWest.labels.istio`                                      | **Type: string.** Settings for istioEastWest.labels.istio.                                                                       | `polyad-eastwest` |
-| `istioEastWest.networkGateway`                                    | **Type: string or null.** Null retains the pinned upstream Istio profile default.                                                | `""` |
-| `istioEastWest.networkGatewayPorts.status-port.port`              | **Type: integer.** Settings for istioEastWest.networkGatewayPorts.status-port.port.                                              | `15021` |
-| `istioEastWest.networkGatewayPorts.status-port.targetPort`        | **Type: integer.** Settings for istioEastWest.networkGatewayPorts.status-port.targetPort.                                        | `15021` |
-| `istioEastWest.networkGatewayPorts.tls.port`                      | **Type: integer.** Settings for istioEastWest.networkGatewayPorts.tls.port.                                                      | `15443` |
-| `istioEastWest.networkGatewayPorts.tls.targetPort`                | **Type: integer.** Settings for istioEastWest.networkGatewayPorts.tls.targetPort.                                                | `15443` |
+| Name                                                              | Description                                                                                                                                        | Value                                                         |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `mesh.enabled`                                                    | **Type: boolean.** Allow graph HTTP and service-identity authorization and generate Istio security resources                                       | `false` |
+| `mesh.install`                                                    | **Type: boolean.** Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled                                           | `false` |
+| `mesh.multicluster.enabled`                                       | **Type: boolean.** Enable the existing or bundled sidecar mesh's multicluster configuration                                                        | `false` |
+| `mesh.multicluster.eastWest.enabled`                              | **Type: boolean.** Install a dedicated east-west gateway for separate networks                                                                     | `false` |
+| `mesh.multicluster.eastWest.portName`                             | **Type: string.** Istio Gateway listener name; protocol TLS and AUTO_PASSTHROUGH mode are required by this integration                             | `tls` |
+| `mesh.multicluster.eastWest.hosts`                                | **Type: array.** Service SNI suffixes exposed through AUTO_PASSTHROUGH                                                                             | `["*.local"]` |
+| `mesh.multicluster.peers`                                         | **Type: array.** Remote transport registrations; see docs/deployment/multicluster.md for same-network and gateway configurations                   | `[]` |
+| `mesh.multicluster.routing.enabled`                               | **Type: boolean.** Add endpoint ejection and locality-aware routing to enabled Polyad Services                                                     | `false` |
+| `mesh.multicluster.routing.mode`                                  | **Type: string.** LocalFirst uses Istio locality priorities; Failover adds ordered region failovers; Distributed applies explicit locality weights | `LocalFirst` |
+| `mesh.multicluster.routing.failover`                              | **Type: array.** Ordered region mappings with from and to fields, used only in Failover mode                                                       | `[]` |
+| `mesh.multicluster.routing.distribute`                            | **Type: array.** Locality mappings with from and a to weight map, used only in Distributed mode                                                    | `[]` |
+| `mesh.multicluster.routing.consecutive5xxErrors`                  | **Type: integer.** Consecutive server errors before an endpoint is ejected                                                                         | `5` |
+| `mesh.multicluster.routing.intervalSeconds`                       | **Type: integer.** Endpoint health analysis interval                                                                                               | `10` |
+| `mesh.multicluster.routing.baseEjectionSeconds`                   | **Type: integer.** Minimum endpoint ejection duration                                                                                              | `30` |
+| `mesh.multicluster.routing.maxEjectionPercent`                    | **Type: integer.** Maximum percentage of endpoints ejected from a Service                                                                          | `50` |
+| `mesh.proxyResources.cpu`                                         | **Type: string.** CPU request and limit for the Istio proxy and init containers; tune alongside operator CPU from Grafana                          | `100m` |
+| `mesh.proxyResources.memory`                                      | **Type: string.** Memory request and limit for the Istio proxy and init containers; matching pairs preserve Guaranteed QoS                         | `128Mi` |
+| `mesh.operator.enabled`                                           | **Type: boolean.** Inject the operator pods and authorize their API and event ports with Istio                                                     | `false` |
+| `mesh.operator.compositionPrincipals`                             | **Type: array.** Exact mTLS source identities allowed to use the composition endpoint                                                              | `[]` |
+| `mesh.operator.metricsPrincipals`                                 | **Type: array.** Exact mTLS source identities allowed to read scheduler metrics                                                                    | `[]` |
+| `mesh.operator.eventPrincipals`                                   | **Type: array.** Exact mTLS source identities allowed to subscribe to events                                                                       | `[]` |
+| `mesh.operator.connectionPrincipals`                              | **Type: array.** Exact mTLS source identities allowed to request temporary connections                                                             | `[]` |
+| `mesh.telemetry.enabled`                                          | **Type: boolean.** Render a workload-scoped Istio Telemetry resource for Polyad operator Pods                                                      | `false` |
+| `mesh.telemetry.metricsProviders`                                 | **Type: array.** Istio extension providers receiving proxy metrics                                                                                 | `["prometheus"]` |
+| `mesh.telemetry.accessLogging.enabled`                            | **Type: boolean.** Export filtered Envoy access logs                                                                                               | `true` |
+| `mesh.telemetry.accessLogging.providers`                          | **Type: array.** Istio extension providers receiving access logs                                                                                   | `["envoy"]` |
+| `mesh.telemetry.accessLogging.filter`                             | **Type: string.** CEL filter; the default records failures and requests slower than one second                                                     | `response.code >= 500 \|\| response.duration >= duration('1s')` |
+| `mesh.telemetry.tracing.enabled`                                  | **Type: boolean.** Export proxy spans through configured Istio extension providers                                                                 | `false` |
+| `mesh.telemetry.tracing.providers`                                | **Type: array.** Istio extension providers receiving proxy spans                                                                                   | `[]` |
+| `mesh.telemetry.tracing.randomSamplingPercentage`                 | **Type: number.** Percentage of requests independently sampled by Envoy                                                                            | `1` |
+| `mesh.sidecar.enabled`                                            | **Type: boolean.** Render a workload-scoped Istio Sidecar resource                                                                                 | `false` |
+| `mesh.sidecar.egressHosts`                                        | **Type: array.** Namespace/host patterns visible to operator proxies, such as ./\* and istio-system/\*                                             | `["./*"]` |
+| `mesh.authorization.audit.enabled`                                | **Type: boolean.** Audit matching requests without changing the allow decision                                                                     | `false` |
+| `mesh.authorization.audit.paths`                                  | **Type: array.** Istio path patterns to audit                                                                                                      | `[]` |
+| `mesh.authorization.audit.methods`                                | **Type: array.** HTTP methods to audit; empty matches every method                                                                                 | `[]` |
+| `mesh.authorization.dryRunDeny.enabled`                           | **Type: boolean.** Evaluate a DENY policy in Istio dry-run mode without rejecting requests                                                         | `false` |
+| `mesh.authorization.dryRunDeny.paths`                             | **Type: array.** Istio path patterns that would be denied                                                                                          | `[]` |
+| `mesh.authorization.dryRunDeny.methods`                           | **Type: array.** HTTP methods that would be denied; empty matches every method                                                                     | `[]` |
+| `mesh.egress.enabled`                                             | **Type: boolean.** Render namespace-scoped ServiceEntries for declared external destinations                                                       | `false` |
+| `mesh.egress.destinations`                                        | **Type: array.** External destinations with unique name, DNS host, port and protocol                                                               | `[]` |
+| `mesh.egress.gateway.enabled`                                     | **Type: boolean.** Install a dedicated Istio gateway and route declared destinations through it                                                    | `false` |
+| `mesh.ingress.enabled`                                            | **Type: boolean.** Install the optional upstream Istio gateway dependency                                                                          | `false` |
+| `mesh.ingress.hosts`                                              | **Type: array.** Hosts served by the Istio Gateway and VirtualService                                                                              | `[]` |
+| `mesh.ingress.tlsSecret`                                          | **Type: string.** TLS credential Secret in the gateway namespace, required when exposing the APIs                                                  | `""` |
+| `mesh.ingress.gatewayAPI.enabled`                                 | **Type: boolean.** Create a Gateway API Gateway and HTTPRoute without installing the legacy gateway dependency                                     | `false` |
+| `mesh.ingress.gatewayAPI.className`                               | **Type: string.** GatewayClass used for the managed ingress                                                                                        | `istio` |
+| `mesh.ingress.jwt.enabled`                                        | **Type: boolean.** Require a valid JWT at either managed ingress gateway                                                                           | `false` |
+| `mesh.ingress.jwt.issuer`                                         | **Type: string.** Exact JWT issuer                                                                                                                 | `""` |
+| `mesh.ingress.jwt.audiences`                                      | **Type: array.** Accepted JWT audience claims                                                                                                      | `[]` |
+| `mesh.ingress.jwt.jwksUri`                                        | **Type: string.** Optional explicit JWKS endpoint; empty uses OpenID discovery                                                                     | `""` |
+| `istioBase`                                                       | **Type: object.** Upstream Istio base chart overrides                                                                                              | `{}` |
+| `istiod.env.ENABLE_NATIVE_SIDECARS`                               | **Type: string.** Settings for istiod.env.ENABLE_NATIVE_SIDECARS.                                                                                  | `true` |
+| `istiod.meshConfig.enableAutoMtls`                                | **Type: boolean.** Settings for istiod.meshConfig.enableAutoMtls.                                                                                  | `true` |
+| `istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts` | **Type: boolean.** Settings for istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts.                                                   | `true` |
+| `istioIngress.labels.istio`                                       | **Type: string.** Settings for istioIngress.labels.istio.                                                                                          | `polyad-ingress` |
+| `istioEastWestGateway.name`                                       | **Type: string.** Settings for istioEastWestGateway.name.                                                                                          | `polyad-eastwest` |
+| `istioEastWestGateway.labels.istio`                               | **Type: string.** Settings for istioEastWestGateway.labels.istio.                                                                                  | `polyad-eastwest` |
+| `istioEastWestGateway.labels.networking.istio.io/gatewayPort`     | **Type: string.** Advertised TLS Service port; update it together with networkGatewayPorts.tls.port.                                               | `15443` |
+| `istioEastWestGateway.networkGateway`                             | **Type: string or null.** Null retains the pinned upstream Istio profile default.                                                                  | `""` |
+| `istioEastWestGateway.networkGatewayPorts.status-port.port`       | **Type: integer.** Settings for istioEastWestGateway.networkGatewayPorts.status-port.port.                                                         | `15021` |
+| `istioEastWestGateway.networkGatewayPorts.status-port.targetPort` | **Type: integer.** Settings for istioEastWestGateway.networkGatewayPorts.status-port.targetPort.                                                   | `15021` |
+| `istioEastWestGateway.networkGatewayPorts.tls.port`               | **Type: integer.** Settings for istioEastWestGateway.networkGatewayPorts.tls.port.                                                                 | `15443` |
+| `istioEastWestGateway.networkGatewayPorts.tls.targetPort`         | **Type: integer.** Settings for istioEastWestGateway.networkGatewayPorts.tls.targetPort.                                                           | `15443` |
+| `istioEgress.name`                                                | **Type: string.** Stable Service name referenced by generated egress routes                                                                        | `polyad-egress` |
+| `istioEgress.labels.istio`                                        | **Type: string.** Selector used by the generated Istio Gateway                                                                                     | `polyad-egress` |
 
 ### Shared Istio namespace
 

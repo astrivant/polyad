@@ -5,7 +5,7 @@ change how many replicas run; polling controls change how often each replica
 checks for work and publishes observations. Both affect response time and the
 load placed on Kubernetes and the shared cache.
 
-Start with the typed [tuning values reference](../../charts/polyad/values-tuning.reference.yaml).
+Start with the typed [tuning values reference](../../charts/polyad/references/values-tuning.reference.yaml).
 It also exposes `operator.cheeger` computation ceilings; see
 [Cheeger search budgets and priorities](../graphs/cheeger-tuning.md#understand-computation-and-scale)
 for how they bound per-rule and application-feedback work.
@@ -127,7 +127,7 @@ also available under `operator`; see the [Helm parameters](../../charts/polyad/R
 ## Connection pools and KEDA
 
 `operator.connections` configures transport budgets per pool, per Python process.
-The [tuning reference](../../charts/polyad/values-tuning.reference.yaml) documents
+The [tuning reference](../../charts/polyad/references/values-tuning.reference.yaml) documents
 all fields and ranges. Helm projects these settings through
 `POLYAD_CONNECTION_SETTINGS` into dense operators, split components and observers.
 Root-provisioned workers inherit the root Pod template; Helm-installed workers
@@ -153,7 +153,7 @@ controls retained keepalive connections; write concurrency still comes from
 owns its watches and their transport lifecycle.
 
 For connection-driven scaling, apply the
-[connection scaling reference](../../charts/polyad/values-connection-pools.reference.yaml):
+[connection scaling reference](../../charts/polyad/references/values-connection-pools.reference.yaml):
 
 ```yaml
 ha: true
@@ -281,7 +281,7 @@ those admission requirements.
 
 Trace batching is independent of polling and scraping. The Python SDK's
 `OTEL_BSP_*` settings control batching for [OpenTelemetry traces](tracing.md);
-the [tracing reference](../../charts/polyad/values-tracing.reference.yaml) covers
+the [tracing reference](../../charts/polyad/references/values-tracing.reference.yaml) covers
 export enablement, sampling and endpoint selection. The chart does not turn a
 trace sampling ratio into a workload or autoscaler metric.
 
@@ -311,7 +311,7 @@ before admission is checked. Watches and known writes invalidate relevant receip
 immediately; a fresh receipt never bypasses the ownership check or Kubernetes
 resource-version fence. See the [write pipeline](../development/write-pipeline.md)
 for contracts, failure recovery and ordering limits, and the typed
-[values reference](../../charts/polyad/values-tuning.reference.yaml) for the overlay.
+[values reference](../../charts/polyad/references/values-tuning.reference.yaml) for the overlay.
 
 The [parallel example and deployment flow](../development/write-pipeline.md#choosing-concurrency)
 explain how to size the stages together and propagate changes to downstream

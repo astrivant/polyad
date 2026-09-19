@@ -9,6 +9,7 @@ import inspect
 import io
 import json
 import os
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,9 +17,20 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from polyad_sdk import AdaptiveService, Client, Delta, Event, ObserveStrategy, Settings, StreamInterrupted
+from polyad_sdk import (
+    AdaptationReporter,
+    AdaptiveService,
+    CallbackStrategy,
+    Client,
+    Delta,
+    Event,
+    ObserveStrategy,
+    Settings,
+    StreamInterrupted,
+)
 from polyad_sdk.events.filters import event_type, field
 from polyad_types import ServiceEndpoint, ThroughputSample
+from polyad_types.events.models import EventIdentity
 from polyad_types.networking.access import NetworkPort
 
 if TYPE_CHECKING:
@@ -149,6 +161,61 @@ def test_baseline_and_identity_keyed_connection_capacity_deltas(runtime):
     service.refresh()
     assert changes[-1].matching("topology.outgoing.sink.node.executions.replacement")[0].kind == "removed"
     assert service.view.candidates == ()
+
+
+def test_strategy_invocation_reports_a_durable_progress_window(runtime):
+    """
+    Bracket strategy work so GitOps health never has to infer local adaptation from traces.
+    """
+    service, _, _, _ = runtime
+    service.context = replace(
+        service.context,
+        definition=EventIdentity(kind="Daemon", namespace="test", name="consumer", uid="uid-consumer"),
+        definition_generation=4,
+    )
+    reporter = MagicMock(spec=AdaptationReporter)
+    phases = []
+    strategy = CallbackStrategy(lambda change, current: phases.append(reporter.report_adaptation.call_args.args[0].phase))
+    service._strategies = (strategy,)
+    service._hooks[0] = (lambda change: service._adapt_strategy(strategy, change), (), None)
+    service.adaptations = reporter
+
+    service.refresh()
+
+    reports = [call.args[0] for call in reporter.report_adaptation.call_args_list]
+    assert [report.phase for report in reports] == ["Running", "Succeeded"]
+    assert phases == ["Running"]
+    assert reports[0].invocationId == reports[1].invocationId
+    assert (reports[0].targetKind, reports[0].target, reports[0].targetUid, reports[0].targetGeneration) == (
+        "Daemon",
+        "consumer",
+        "uid-consumer",
+        4,
+    )
+
+
+def test_failed_strategy_closes_its_progress_window(runtime):
+    """
+    Publish a terminal failure before retaining the change for the SDK's normal retry path.
+    """
+    service, _, _, _ = runtime
+    service.context = replace(
+        service.context,
+        definition=EventIdentity(kind="Daemon", namespace="test", name="consumer", uid="uid-consumer"),
+        definition_generation=4,
+    )
+    reporter = MagicMock(spec=AdaptationReporter)
+
+    def fail(change, current):
+        raise RuntimeError("strategy failed")
+
+    strategy = CallbackStrategy(fail)
+    service._strategies = (strategy,)
+    service._hooks[0] = (lambda change: service._adapt_strategy(strategy, change), (), None)
+    service.adaptations = reporter
+    with pytest.raises(RuntimeError, match="strategy failed"):
+        service.refresh()
+    assert [call.args[0].phase for call in reporter.report_adaptation.call_args_list] == ["Running", "Failed"]
 
 
 def test_order_revisions_and_sample_heartbeats_do_not_create_changes(runtime):

@@ -8,6 +8,7 @@ use these definitions, which also supply the generated JSON Schemas.
 
 from __future__ import annotations
 
+from polyad_types.api.adaptation import AdaptationReport as AdaptationReport
 from polyad_types.api.auth import APIKey as APIKey
 from polyad_types.api.auth import Authentication as Authentication
 from polyad_types.api.auth import CredentialAssignment as CredentialAssignment
@@ -67,6 +68,7 @@ from polyad_types.networking.access import NetworkPeer as NetworkPeer
 from polyad_types.networking.access import NetworkPort as NetworkPort
 from polyad_types.networking.access import TrafficRule as TrafficRule
 from polyad_types.networking.traffic import TrafficDestination as TrafficDestination
+from polyad_types.networking.traffic import TrafficResilience as TrafficResilience
 from polyad_types.networking.traffic import TrafficRoute as TrafficRoute
 from polyad_types.networking.traffic import TrafficWeights as TrafficWeights
 from polyad_types.resources.base import Resource as Resource

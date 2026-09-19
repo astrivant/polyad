@@ -1,4 +1,6 @@
 # yaml-language-server: $schema=values.schema.json
+# Canonical complete configuration: every supported chart setting and default
+# lives here. Focused, optional examples are kept under references/.
 ## @section Polyad resource templates
 ## @param polyadResources [object] Named resource maps from the polyad-crds dependency; see its values and examples for cross-resource tpl expressions and schema defaults
 polyadResources:
@@ -686,6 +688,8 @@ kedaOperator:
     replicaCount: 2
   ## @param kedaOperator.webhooks [object] Upstream admission webhook settings
   webhooks:
+    ## @param kedaOperator.webhooks.enabled [boolean] Enable admission validation for KEDA resources.
+    enabled: true
     ## @param kedaOperator.webhooks.replicaCount [integer] Initial admission-webhook Pods; the HPA owns subsequent counts when bundled HA autoscaling is enabled
     replicaCount: 2
   ## @param kedaOperator.prometheus [object] Settings for kedaOperator.prometheus.
@@ -762,6 +766,24 @@ mesh:
       hosts: ['*.local']
     ## @param mesh.multicluster.peers [array] Remote transport registrations; see docs/deployment/multicluster.md for same-network and gateway configurations
     peers: []
+    ## @param mesh.multicluster.routing [object] Optional locality policy for Polyad control-plane Services; disabled preserves Istio defaults
+    routing:
+      ## @param mesh.multicluster.routing.enabled [boolean] Add endpoint ejection and locality-aware routing to enabled Polyad Services
+      enabled: false
+      ## @param mesh.multicluster.routing.mode [string] LocalFirst uses Istio locality priorities; Failover adds ordered region failovers; Distributed applies explicit locality weights
+      mode: LocalFirst
+      ## @param mesh.multicluster.routing.failover [array] Ordered region mappings with from and to fields, used only in Failover mode
+      failover: []
+      ## @param mesh.multicluster.routing.distribute [array] Locality mappings with from and a to weight map, used only in Distributed mode
+      distribute: []
+      ## @param mesh.multicluster.routing.consecutive5xxErrors [integer] Consecutive server errors before an endpoint is ejected
+      consecutive5xxErrors: 5
+      ## @param mesh.multicluster.routing.intervalSeconds [integer] Endpoint health analysis interval
+      intervalSeconds: 10
+      ## @param mesh.multicluster.routing.baseEjectionSeconds [integer] Minimum endpoint ejection duration
+      baseEjectionSeconds: 30
+      ## @param mesh.multicluster.routing.maxEjectionPercent [integer] Maximum percentage of endpoints ejected from a Service
+      maxEjectionPercent: 50
   ## @param mesh.proxyResources [object] Equal requests and limits for injected Istio containers in operator and observer Pods; added to the Python container allocation
   proxyResources:
     ## @param mesh.proxyResources.cpu [string] CPU request and limit for the Istio proxy and init containers; tune alongside operator CPU from Grafana
@@ -780,6 +802,62 @@ mesh:
     eventPrincipals: []
     ## @param mesh.operator.connectionPrincipals [array] Exact mTLS source identities allowed to request temporary connections
     connectionPrincipals: []
+  ## @param mesh.telemetry [object] Optional Istio proxy metrics, filtered access logs and tracing; disabled preserves mesh defaults
+  telemetry:
+    ## @param mesh.telemetry.enabled [boolean] Render a workload-scoped Istio Telemetry resource for Polyad operator Pods
+    enabled: false
+    ## @param mesh.telemetry.metricsProviders [array] Istio extension providers receiving proxy metrics
+    metricsProviders: [prometheus]
+    ## @param mesh.telemetry.accessLogging [object] Settings for mesh.telemetry.accessLogging.
+    accessLogging:
+      ## @param mesh.telemetry.accessLogging.enabled [boolean] Export filtered Envoy access logs
+      enabled: true
+      ## @param mesh.telemetry.accessLogging.providers [array] Istio extension providers receiving access logs
+      providers: [envoy]
+      ## @param mesh.telemetry.accessLogging.filter [string] CEL filter; the default records failures and requests slower than one second
+      filter: response.code >= 500 || response.duration >= duration('1s')
+    ## @param mesh.telemetry.tracing [object] Settings for mesh.telemetry.tracing.
+    tracing:
+      ## @param mesh.telemetry.tracing.enabled [boolean] Export proxy spans through configured Istio extension providers
+      enabled: false
+      ## @param mesh.telemetry.tracing.providers [array] Istio extension providers receiving proxy spans
+      providers: []
+      ## @param mesh.telemetry.tracing.randomSamplingPercentage [number] Percentage of requests independently sampled by Envoy
+      randomSamplingPercentage: 1
+  ## @param mesh.sidecar [object] Optional operator proxy configuration scoping; this reduces config size but is not an egress firewall
+  sidecar:
+    ## @param mesh.sidecar.enabled [boolean] Render a workload-scoped Istio Sidecar resource
+    enabled: false
+    ## @param mesh.sidecar.egressHosts [array] Namespace/host patterns visible to operator proxies, such as ./\* and istio-system/\*
+    egressHosts: ['./*']
+  ## @param mesh.authorization [object] Optional observation-first authorization policies for operator endpoints
+  authorization:
+    ## @param mesh.authorization.audit [object] Settings for mesh.authorization.audit.
+    audit:
+      ## @param mesh.authorization.audit.enabled [boolean] Audit matching requests without changing the allow decision
+      enabled: false
+      ## @param mesh.authorization.audit.paths [array] Istio path patterns to audit
+      paths: []
+      ## @param mesh.authorization.audit.methods [array] HTTP methods to audit; empty matches every method
+      methods: []
+    ## @param mesh.authorization.dryRunDeny [object] Settings for mesh.authorization.dryRunDeny.
+    dryRunDeny:
+      ## @param mesh.authorization.dryRunDeny.enabled [boolean] Evaluate a DENY policy in Istio dry-run mode without rejecting requests
+      enabled: false
+      ## @param mesh.authorization.dryRunDeny.paths [array] Istio path patterns that would be denied
+      paths: []
+      ## @param mesh.authorization.dryRunDeny.methods [array] HTTP methods that would be denied; empty matches every method
+      methods: []
+  ## @param mesh.egress [object] Optional explicit external-service registry and chart-managed egress gateway
+  egress:
+    ## @param mesh.egress.enabled [boolean] Render namespace-scoped ServiceEntries for declared external destinations
+    enabled: false
+    ## @param mesh.egress.destinations [array] External destinations with unique name, DNS host, port and protocol
+    destinations: []
+    ## @param mesh.egress.gateway [object] Settings for mesh.egress.gateway.
+    gateway:
+      ## @param mesh.egress.gateway.enabled [boolean] Install a dedicated Istio gateway and route declared destinations through it
+      enabled: false
   ## @param mesh.ingress [object] Settings for mesh.ingress.
   ingress:
     ## @param mesh.ingress.enabled [boolean] Install the optional upstream Istio gateway dependency
@@ -788,6 +866,22 @@ mesh:
     hosts: []
     ## @param mesh.ingress.tlsSecret [string] TLS credential Secret in the gateway namespace, required when exposing the APIs
     tlsSecret: ''
+    ## @param mesh.ingress.gatewayAPI [object] Optional standards-based replacement for the legacy managed Istio ingress
+    gatewayAPI:
+      ## @param mesh.ingress.gatewayAPI.enabled [boolean] Create a Gateway API Gateway and HTTPRoute without installing the legacy gateway dependency
+      enabled: false
+      ## @param mesh.ingress.gatewayAPI.className [string] GatewayClass used for the managed ingress
+      className: istio
+    ## @param mesh.ingress.jwt [object] Optional ingress JWT validation layered ahead of existing Polyad API-key authorization
+    jwt:
+      ## @param mesh.ingress.jwt.enabled [boolean] Require a valid JWT at either managed ingress gateway
+      enabled: false
+      ## @param mesh.ingress.jwt.issuer [string] Exact JWT issuer
+      issuer: ''
+      ## @param mesh.ingress.jwt.audiences [array] Accepted JWT audience claims
+      audiences: []
+      ## @param mesh.ingress.jwt.jwksUri [string] Optional explicit JWKS endpoint; empty uses OpenID discovery
+      jwksUri: ''
 ## @param istioBase [object] Upstream Istio base chart overrides
 istioBase: {}
 ## @param istiod [object] Upstream Istio control-plane chart overrides
@@ -810,33 +904,43 @@ istioIngress:
   labels:
     ## @param istioIngress.labels.istio [string] Settings for istioIngress.labels.istio.
     istio: polyad-ingress
-## @param istioEastWest [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
-istioEastWest:
-  ## @param istioEastWest.name [string] Settings for istioEastWest.name.
+## @param istioEastWestGateway [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
+istioEastWestGateway:
+  ## @param istioEastWestGateway.name [string] Settings for istioEastWestGateway.name.
   name: polyad-eastwest
-  ## @param istioEastWest.labels [object] Settings for istioEastWest.labels.
+  ## @param istioEastWestGateway.labels [object] Settings for istioEastWestGateway.labels.
   labels:
-    ## @param istioEastWest.labels.istio [string] Settings for istioEastWest.labels.istio.
+    ## @param istioEastWestGateway.labels.istio [string] Settings for istioEastWestGateway.labels.istio.
     istio: polyad-eastwest
-  ## @param istioEastWest.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
+    ## @param istioEastWestGateway.labels.networking.istio.io/gatewayPort [string] Advertised TLS Service port; update it together with networkGatewayPorts.tls.port.
+    networking.istio.io/gatewayPort: '15443'
+  ## @param istioEastWestGateway.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
   networkGateway: ''
-  ## @param istioEastWest.networkGatewayPorts [object, nullable] Null retains the pinned upstream Istio profile default.
+  ## @param istioEastWestGateway.networkGatewayPorts [object, nullable] Null retains the pinned upstream Istio profile default.
   networkGatewayPorts:
-    ## @param istioEastWest.networkGatewayPorts.status-port [object] Settings for istioEastWest.networkGatewayPorts.status-port.
+    ## @param istioEastWestGateway.networkGatewayPorts.status-port [object] Settings for istioEastWestGateway.networkGatewayPorts.status-port.
     status-port:
-      ## @param istioEastWest.networkGatewayPorts.status-port.port [integer] Settings for istioEastWest.networkGatewayPorts.status-port.port.
+      ## @param istioEastWestGateway.networkGatewayPorts.status-port.port [integer] Settings for istioEastWestGateway.networkGatewayPorts.status-port.port.
       port: 15021
-      ## @param istioEastWest.networkGatewayPorts.status-port.targetPort [integer] Settings for istioEastWest.networkGatewayPorts.status-port.targetPort.
+      ## @param istioEastWestGateway.networkGatewayPorts.status-port.targetPort [integer] Settings for istioEastWestGateway.networkGatewayPorts.status-port.targetPort.
       targetPort: 15021
-    ## @param istioEastWest.networkGatewayPorts.tls [object] Settings for istioEastWest.networkGatewayPorts.tls.
+    ## @param istioEastWestGateway.networkGatewayPorts.tls [object] Settings for istioEastWestGateway.networkGatewayPorts.tls.
     tls:
-      # Gateway.port.number uses this Service port. For a custom port, also set
+      # Gateway.port.number uses this Service port. For a custom port, also update
       # labels.networking.istio.io/gatewayPort to its string value for discovery.
-      ## @param istioEastWest.networkGatewayPorts.tls.port [integer] Settings for istioEastWest.networkGatewayPorts.tls.port.
+      ## @param istioEastWestGateway.networkGatewayPorts.tls.port [integer] Settings for istioEastWestGateway.networkGatewayPorts.tls.port.
       port: 15443
       # Istio translates the Gateway's Service port to this Pod listener port.
-      ## @param istioEastWest.networkGatewayPorts.tls.targetPort [integer] Settings for istioEastWest.networkGatewayPorts.tls.targetPort.
+      ## @param istioEastWestGateway.networkGatewayPorts.tls.targetPort [integer] Settings for istioEastWestGateway.networkGatewayPorts.tls.targetPort.
       targetPort: 15443
+## @param istioEgress [object] Upstream gateway overrides for the optional dedicated egress gateway
+istioEgress:
+  ## @param istioEgress.name [string] Stable Service name referenced by generated egress routes
+  name: polyad-egress
+  ## @param istioEgress.labels [object] Settings for istioEgress.labels.
+  labels:
+    ## @param istioEgress.labels.istio [string] Selector used by the generated Istio Gateway
+    istio: polyad-egress
 
 ## @section Shared Istio namespace
 ## @param global [object] Settings for global.

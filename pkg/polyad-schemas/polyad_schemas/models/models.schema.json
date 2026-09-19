@@ -4,6 +4,85 @@
   "title": "Polyad shared model definitions",
   "description": "Serialized shapes and explicit field constraints. Select a definition; constructor and live admission checks still apply.",
   "$defs": {
+    "polyad_types.api.adaptation.AdaptationReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "graph": {
+          "type": "string",
+          "description": "Containing graph name used for authorization."
+        },
+        "graphUid": {
+          "type": "string",
+          "description": "Exact containing graph incarnation."
+        },
+        "target": {
+          "type": "string",
+          "description": "Reusable Workload or Daemon definition name."
+        },
+        "targetUid": {
+          "type": "string",
+          "description": "Exact definition incarnation receiving status."
+        },
+        "targetGeneration": {
+          "type": "integer",
+          "description": "Definition generation represented by the report."
+        },
+        "targetKind": {
+          "enum": [
+            "Workload",
+            "Daemon"
+          ],
+          "description": "Definition resource kind."
+        },
+        "node": {
+          "type": "string",
+          "description": "Logical node invoking the strategy."
+        },
+        "invocationId": {
+          "type": "string",
+          "description": "Stable identity for one retryable strategy call."
+        },
+        "strategy": {
+          "type": "string",
+          "description": "Concrete strategy class name."
+        },
+        "phase": {
+          "enum": [
+            "Running",
+            "Succeeded",
+            "Failed"
+          ],
+          "description": "Invocation lifecycle transition."
+        },
+        "observedAt": {
+          "type": "string",
+          "description": "Timezone-aware transition timestamp."
+        },
+        "graphKind": {
+          "enum": [
+            "Graph",
+            "PolyGraph",
+            "ReplicaGroup"
+          ],
+          "description": "Containing boundary kind."
+        }
+      },
+      "description": "Fence one SDK strategy invocation to its graph and workload identity.",
+      "required": [
+        "graph",
+        "graphUid",
+        "target",
+        "targetUid",
+        "targetGeneration",
+        "targetKind",
+        "node",
+        "invocationId",
+        "strategy",
+        "phase",
+        "observedAt"
+      ]
+    },
     "polyad_types.api.auth.APIKey": {
       "type": "object",
       "additionalProperties": false,
@@ -3313,6 +3392,83 @@
         "weight"
       ]
     },
+    "polyad_types.networking.traffic.TrafficResilience": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "outlierDetection": {
+          "type": "boolean",
+          "description": "Eject endpoints that repeatedly return server errors."
+        },
+        "consecutive5xxErrors": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Consecutive server errors required before ejection."
+        },
+        "intervalSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "description": "Endpoint health analysis interval."
+        },
+        "baseEjectionSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "description": "Minimum endpoint ejection duration."
+        },
+        "maxEjectionPercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Maximum percentage of endpoints that may be ejected."
+        },
+        "maxConnections": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576,
+          "description": "TCP connection ceiling; zero leaves Istio's default."
+        },
+        "maxPendingRequests": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576,
+          "description": "Pending HTTP request ceiling; zero leaves Istio's default."
+        },
+        "maxRequests": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576,
+          "description": "Active HTTP request ceiling; zero leaves Istio's default."
+        },
+        "retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Retry attempts for failures selected by retryOn; zero disables retries."
+        },
+        "perTryTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300,
+          "description": "Optional timeout for an individual retry attempt."
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600,
+          "description": "Optional total request timeout; zero preserves Istio's default."
+        },
+        "retryOn": {
+          "enum": [
+            "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+          ],
+          "description": "Istio retry conditions used when retries are enabled."
+        }
+      },
+      "description": "Bound proxy-level failures without changing application traffic weights."
+    },
     "polyad_types.networking.traffic.TrafficRoute": {
       "type": "object",
       "additionalProperties": false,
@@ -3347,6 +3503,17 @@
           "minItems": 2,
           "maxItems": 16,
           "description": "Distinct downstream subsets whose percentages sum to 100."
+        },
+        "resilience": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.networking.traffic.TrafficResilience"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional circuit breaking, endpoint ejection and retry policy."
         }
       },
       "description": "Split mesh HTTP requests to one Service among downstream node subtrees.",

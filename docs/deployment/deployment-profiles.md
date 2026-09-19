@@ -42,8 +42,8 @@ below remain useful for minimal installations; the reference files provide more
 configuration detail. Each reference includes an editor schema directive and
 typed `@param` descriptions, including choices and prerequisites. Helm validates
 the merged values against `values.schema.json`. See also the
-[authentication reference](../../charts/polyad/values-authentication.reference.yaml)
-and [unauthenticated demo reference](../../charts/polyad/values-demo.reference.yaml).
+[authentication reference](../../charts/polyad/references/values-authentication.reference.yaml)
+and [unauthenticated demo reference](../../charts/polyad/references/values-demo.reference.yaml).
 
 Defaults, references and example values all declare their editor schema. Nested
 resources, label selectors, ports and tolerations are validated too: use Boolean
@@ -65,8 +65,8 @@ then combine HA with the federation registry in the source cluster:
 ```bash
 helm upgrade --install polyad charts/polyad --kube-context east \
   --namespace polyad --create-namespace \
-  --values charts/polyad/values-ha.reference.yaml \
-  --values charts/polyad/values-federation.reference.yaml
+  --values charts/polyad/references/values-ha.reference.yaml \
+  --values charts/polyad/references/values-federation.reference.yaml
 ```
 
 For root-owned execution, use the root reference, which includes its own HA
@@ -75,18 +75,18 @@ selection and cluster registry. This example also splits the root into component
 ```bash
 helm upgrade --install polyad charts/polyad --kube-context management \
   --namespace polyad --create-namespace \
-  --values charts/polyad/values-root-control-plane.reference.yaml \
-  --values charts/polyad/values-components.reference.yaml
+  --values charts/polyad/references/values-root-control-plane.reference.yaml \
+  --values charts/polyad/references/values-components.reference.yaml
 ```
 
 Prepare the [root credentials and shared cache](root-control-plane.md#install-and-register-clusters)
 and [component prerequisites](components.md#install) first. The reference files
 use the same `polyad-api`, `polyad-events` and `polyad-metrics` Secret names so
 combining them preserves endpoint credentials. Add
-[`values-postgresql.reference.yaml`](../../charts/polyad/values-postgresql.reference.yaml)
+[`values-postgresql.reference.yaml`](../../charts/polyad/references/values-postgresql.reference.yaml)
 last to enable optional durable state, database HA and KEDA instance scaling;
 install CloudNativePG and provide KEDA through an existing installation or the
-[KEDA values reference](../../charts/polyad/values-keda.reference.yaml).
+[KEDA values reference](../../charts/polyad/references/values-keda.reference.yaml).
 
 Helm merges files in order, with later values taking precedence. Lists replace
 earlier lists entirely, including cluster registries, execution pools and network
@@ -198,7 +198,7 @@ counts with that autoscaler so configuration updates do not reset its intent.
 
 Use `worker.enabled: true` to install a downstream executor connected to the
 root through the same chart. The
-[worker reference](../../charts/polyad/values-worker.reference.yaml) separates root
+[worker reference](../../charts/polyad/references/values-worker.reference.yaml) separates root
 identity from the hosting cluster and documents required local Secrets. Follow
 the [attachment guide](helm-workers.md) to register its existing Deployment in
 the root's reserved PolyGraph.

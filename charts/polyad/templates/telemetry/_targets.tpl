@@ -25,7 +25,7 @@
 {{- $targets = append $targets (dict "name" $suffix "namespace" $.Release.Namespace "podSelector" (dict "cnpg.io/cluster" (printf "%s-%s" $.Release.Name $suffix)) "metrics" true "port" 9187 "path" "/metrics" "logs" true) -}}
 {{- end -}}
 {{- end -}}
-{{- $dependencies := dict "dragonflyOperator" (list "deployment.yaml") "istiod" (list "deployment.yaml") "istioIngress" (list "deployment.yaml") "istioEastWest" (list "deployment.yaml") "kedaOperator" (list "manager/deployment.yaml" "metrics-server/deployment.yaml" "webhooks/deployment.yaml") -}}
+{{- $dependencies := dict "dragonflyOperator" (list "deployment.yaml") "istiod" (list "deployment.yaml") "istioIngress" (list "deployment.yaml") "istioEastWestGateway" (list "deployment.yaml") "kedaOperator" (list "manager/deployment.yaml" "metrics-server/deployment.yaml" "webhooks/deployment.yaml") -}}
 {{- range $alias, $files := $dependencies -}}
 {{- with index $.Subcharts $alias -}}
 {{- $base := printf "%s/charts/%s/templates" (trimSuffix "/templates" $.Template.BasePath) $alias -}}
@@ -43,7 +43,7 @@
 {{- end -}}
 {{- else if eq $alias "istiod" -}}
 {{- $_ := set $target "port" 15014 -}}
-{{- else if has $alias (list "istioIngress" "istioEastWest") -}}
+{{- else if has $alias (list "istioIngress" "istioEastWestGateway") -}}
 {{- $_ := set $target "port" 15090 -}}
 {{- $_ := set $target "path" "/stats/prometheus" -}}
 {{- else if eq $alias "kedaOperator" -}}

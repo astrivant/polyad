@@ -31,5 +31,6 @@ def test_flux_configuration_covers_registry():
     for item in checks:
         assert item["apiVersion"] == RESOURCE_TYPES[item["kind"]].api_version
         assert set(item) == {"apiVersion", "kind", "inProgress", "failed", "current"}
+        assert "status.progressing" in item["inProgress"]
     cases = json.loads((ROOT / "pkg/tests/flux/cases.json").read_text())
     assert {case["object"]["kind"] for case in cases} == POLYAD_KINDS

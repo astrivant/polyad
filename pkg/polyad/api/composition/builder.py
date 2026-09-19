@@ -13,6 +13,7 @@ from polyad.api.composition.app import _build_app
 from polyad.api.http.limits import RateLimitPolicy
 from polyad.auth.http import Access
 from polyad.auth.policy import public_demo
+from polyad_types.api.adaptation import AdaptationReport
 from polyad_types.api.requests import ActivationRequest, CompositionRequest
 from polyad_types.api.throughput import ThroughputSample
 
@@ -39,6 +40,7 @@ class APIBuilder:
         activation_stop (Callable[[str], dict[str, Any] | None] | None): Pulse stop signal.
         access (Access | None): Named credentials and shared rate/concurrency lanes.
         throughput (Callable[[ThroughputSample], dict[str, Any]] | None): Authorized aggregate throughput intake.
+        adaptation (Callable[[AdaptationReport], dict[str, Any]] | None): Authorized SDK strategy lifecycle intake.
     """
 
     submit: Callable[[CompositionRequest], dict[str, Any]] | None = None
@@ -52,6 +54,7 @@ class APIBuilder:
     activation_stop: Callable[[str], dict[str, Any] | None] | None = None
     access: Access | None = None
     throughput: Callable[[ThroughputSample], dict[str, Any]] | None = None
+    adaptation: Callable[[AdaptationReport], dict[str, Any]] | None = None
 
     def with_activation_handlers(
         self,
@@ -152,5 +155,6 @@ class APIBuilder:
             activation_stop=self.activation_stop,
             access=self.access,
             throughput=self.throughput,
+            adaptation=self.adaptation,
             application=application,
         )

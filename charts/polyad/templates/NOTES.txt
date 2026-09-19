@@ -26,7 +26,7 @@ The dense operator and enabled Services run in this release's cluster and namesp
 {{- end }}
 
 PUBLIC ROUTES
-{{- if not (or .Values.api.gateway.enabled .Values.mesh.ingress.enabled) }}
+{{- if not (or .Values.api.gateway.enabled .Values.mesh.ingress.enabled .Values.mesh.ingress.gatewayAPI.enabled) }}
 No external API routes are configured for this release.
 {{- end }}
 {{- if .Values.api.gateway.enabled }}
@@ -71,7 +71,24 @@ Istio HTTPS ingress (each API requires its own bearer credential)
 {{- end }}
   Ingress address: kubectl -n {{ .Release.Namespace }} get service -l istio=polyad-ingress
 {{- end }}
-{{- if or .Values.api.gateway.enabled .Values.mesh.ingress.enabled }}
+{{- if .Values.mesh.ingress.gatewayAPI.enabled }}
+Istio Gateway API HTTPS ingress (each API requires its own bearer credential)
+{{- range .Values.mesh.ingress.hosts }}
+{{- if $.Values.api.enabled }}
+{{ include "polyad.notes.composition" (printf "https://%s" .) }}
+{{- end }}
+{{- if $.Values.events.enabled }}
+  GET  https://{{ . }}/v1/discovery
+  GET  https://{{ . }}/v1/events
+{{- if $.Values.events.websockets.enabled }}
+  GET  wss://{{ . }}/v1/events/ws
+{{- end }}
+{{- end }}
+{{- end }}
+  Gateway status: kubectl -n {{ .Release.Namespace }} get gateway.gateway.networking.k8s.io {{ .Release.Name }}-polyad -o wide
+  Route status: kubectl -n {{ .Release.Namespace }} get httproute.gateway.networking.k8s.io {{ .Release.Name }}-polyad
+{{- end }}
+{{- if or .Values.api.gateway.enabled .Values.mesh.ingress.enabled .Values.mesh.ingress.gatewayAPI.enabled }}
 These are configured routes; check ingress readiness and DNS before connecting.
 Replace wildcard hosts and <...> placeholders with the actual listener values.
 {{- end }}

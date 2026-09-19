@@ -15,14 +15,14 @@ import yaml
 from deepdiff import DeepDiff
 
 from polyad.compiler.passes.network import scope_label
-from polyad.compiler.passes.traffic import capacity_weights, step_weights
+from polyad.compiler.passes.traffic import capacity_weights, route_specs, step_weights
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.policies.soul.contracts import SAMPLE
 from polyad.operator.policies.soul.controller import search_soul
 from polyad.operator.policies.traffic import ensure_routes
 from polyad.operator.reconciliation.controller import Controller, Pending, child_name
-from polyad_types import ThroughputSample, TrafficDestination, TrafficRoute, TrafficSample, TrafficWeights
+from polyad_types import ThroughputSample, TrafficDestination, TrafficResilience, TrafficRoute, TrafficSample, TrafficWeights
 from polyad_types.graphs.topology import topology
 from polyad_types.resources import encode_body, to_document
 from polyad_types.serialization import to_dict
@@ -231,6 +231,70 @@ def test_native_routes_select_each_graph_replica_and_clean_up(monkeypatch):
         assert not destination["metadata"].get("deletionTimestamp")
 
     asyncio.run(run())
+
+
+def test_route_resilience_is_explicit_and_keeps_weights_authoritative():
+    """
+    Add endpoint ejection, circuit limits and retries only when the graph opts in.
+    """
+    route = TrafficRoute(
+        "work",
+        "producer",
+        "pipeline-entry",
+        8080,
+        (TrafficDestination("first", 60), TrafficDestination("second", 40)),
+        TrafficResilience(
+            maxConnections=128,
+            maxPendingRequests=32,
+            maxRequests=256,
+            retries=2,
+            perTryTimeoutSeconds=2,
+            timeoutSeconds=5,
+        ),
+    )
+    specs = route_specs("test", "Graph", "pipeline", route)
+    assert specs["DestinationRule"]["trafficPolicy"] == {
+        "outlierDetection": {
+            "consecutive5xxErrors": 5,
+            "interval": "10s",
+            "baseEjectionTime": "30s",
+            "maxEjectionPercent": 50,
+        },
+        "connectionPool": {
+            "tcp": {"maxConnections": 128},
+            "http": {"http1MaxPendingRequests": 32, "http2MaxRequests": 256},
+        },
+    }
+    http = specs["VirtualService"]["http"][0]
+    assert [item["weight"] for item in http["route"]] == [60, 40]
+    assert http["retries"] == {
+        "attempts": 2,
+        "retryOn": "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes",
+        "perTryTimeout": "2s",
+    }
+    assert http["timeout"] == "5s"
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [TrafficResilience(retries=0), TrafficResilience(outlierDetection=False)],
+)
+def test_route_resilience_does_not_emit_unrequested_limits(policy):
+    """
+    Keep Istio defaults when an optional resilience control is zero or disabled.
+    """
+    route = TrafficRoute(
+        "work",
+        "producer",
+        "pipeline-entry",
+        8080,
+        (TrafficDestination("first", 60), TrafficDestination("second", 40)),
+        policy,
+    )
+    specs = route_specs("test", "Graph", "pipeline", route)
+    assert "retries" not in specs["VirtualService"]["http"][0]
+    if not policy.outlierDetection:
+        assert "trafficPolicy" not in specs["DestinationRule"]
 
 
 def test_route_ownership_conflict_and_disabled_mesh(monkeypatch):

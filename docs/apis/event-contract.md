@@ -155,7 +155,7 @@ poetry run python scripts/schemas/generate-event-schemas.py
 
 ## Administrator tuning
 
-Use the typed [event reference values](../../charts/polyad/values-events.reference.yaml):
+Use the typed [event reference values](../../charts/polyad/references/values-events.reference.yaml):
 
 ```yaml
 events:

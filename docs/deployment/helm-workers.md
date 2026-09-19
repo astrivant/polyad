@@ -39,7 +39,7 @@ Configure each downstream release's internal worker counts, planner parallelism,
 write admission and validation cadence with `operator.writeQueue`. Those settings
 remain under the downstream administrator's control for either scaling authority.
 See the [configuration flow and example](../development/write-pipeline.md#configuration)
-and [typed tuning overlay](../../charts/polyad/values-tuning.reference.yaml).
+and [typed tuning overlay](../../charts/polyad/references/values-tuning.reference.yaml).
 
 ```mermaid
 flowchart TB
@@ -72,7 +72,7 @@ use a [root-provisioned DaemonSet pool](root-control-plane.md#reserved-graphs-fo
 
 ## Prepare credentials and configuration
 
-Start with [`values-worker.reference.yaml`](../../charts/polyad/values-worker.reference.yaml).
+Start with [`values-worker.reference.yaml`](../../charts/polyad/references/values-worker.reference.yaml).
 It is a typed, commented overlay for the same chart, installed in the **downstream**
 cluster and namespace. Root settings identify the existing management release:
 
@@ -153,7 +153,7 @@ the Secrets above and selecting the same image as the root:
 ```bash
 helm upgrade --install west charts/polyad \
   --kube-context west --namespace workloads --create-namespace \
-  --values charts/polyad/values-worker.reference.yaml --wait
+  --values charts/polyad/references/values-worker.reference.yaml --wait
 ```
 
 The root validates the local grant, creates the observation Graph and links it
@@ -182,7 +182,7 @@ Set `scalingAuthority: Local` on the root pool, and use the
 ```bash
 helm upgrade --install west charts/polyad \
   --kube-context west --namespace workloads --create-namespace \
-  --values charts/polyad/values-worker.reference.yaml \
+  --values charts/polyad/references/values-worker.reference.yaml \
   --values examples/helm-workers/local-values.yaml --wait
 ```
 

@@ -1,0 +1,92 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if and .Values.mesh.egress.gateway.enabled (not .Values.mesh.egress.enabled) }}{{ fail "egress gateway requires mesh.egress.enabled" }}{{ end }}
+{{- if .Values.mesh.egress.enabled }}
+{{- if not .Values.mesh.enabled }}{{ fail "mesh.egress requires mesh.enabled" }}{{ end }}
+{{- if not .Values.mesh.egress.destinations }}{{ fail "mesh.egress requires at least one destination" }}{{ end }}
+{{- $names := dict -}}
+{{- range .Values.mesh.egress.destinations }}
+{{- if hasKey $names .name }}{{ fail "mesh egress destination names must be unique" }}{{ end }}
+{{- $_ := set $names .name true }}
+{{- if and $.Values.mesh.egress.gateway.enabled (or (ne (int .port) 443) (ne .protocol "TLS")) }}{{ fail "the managed egress gateway supports TLS destinations on port 443" }}{{ end }}
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: {{ printf "%s-%s" $.Release.Name .name }}
+spec:
+  hosts: [{{ .host | quote }}]
+  exportTo: ['.']
+  location: MESH_EXTERNAL
+  ports:
+    - number: {{ .port }}
+      name: {{ printf "%s-%v" (lower .protocol) .port | quote }}
+      protocol: {{ .protocol }}
+  resolution: DNS
+---
+{{- end }}
+{{- if .Values.mesh.egress.gateway.enabled }}
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Release.Name }}-polyad-egress
+spec:
+  selector:
+    istio: polyad-egress
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  servers:
+    {{- range .Values.mesh.egress.destinations }}
+    - port:
+        number: {{ .port }}
+        name: {{ printf "%s-%s-%v" (lower .protocol) .name .port | trunc 63 | trimSuffix "-" | quote }}
+        protocol: {{ .protocol }}
+      hosts: [{{ .host | quote }}]
+      tls:
+        mode: PASSTHROUGH
+    {{- end }}
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: {{ .Release.Name }}-polyad-egress
+spec:
+  hosts:
+    {{- range .Values.mesh.egress.destinations }}
+    - {{ .host | quote }}
+    {{- end }}
+  exportTo: ['.']
+  gateways: [mesh, {{ printf "%s-polyad-egress" .Release.Name | quote }}]
+  tls:
+    {{- range .Values.mesh.egress.destinations }}
+    - match:
+        - gateways: [mesh]
+          port: {{ .port }}
+          sniHosts: [{{ .host | quote }}]
+      route:
+        - destination:
+            host: {{ printf "%s.%s.svc.cluster.local" $.Values.istioEgress.name $.Release.Namespace | quote }}
+            port:
+              number: {{ .port }}
+    - match:
+        - gateways: [{{ printf "%s-polyad-egress" $.Release.Name | quote }}]
+          port: {{ .port }}
+          sniHosts: [{{ .host | quote }}]
+      route:
+        - destination:
+            host: {{ .host | quote }}
+            port:
+              number: {{ .port }}
+    {{- end }}
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: {{ .Release.Name }}-polyad-egress-gateway
+spec:
+  host: {{ printf "%s.%s.svc.cluster.local" .Values.istioEgress.name .Release.Namespace | quote }}
+  exportTo: ['.']
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+{{- end }}
+{{- end }}
+{{- end -}}

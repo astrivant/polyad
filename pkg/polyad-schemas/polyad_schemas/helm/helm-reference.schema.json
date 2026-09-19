@@ -722,6 +722,36 @@
             },
             "tlsSecret": {
               "$ref": "#/definitions/helmValues/properties/mesh/properties/ingress/properties/tlsSecret"
+            },
+            "gatewayAPI": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/ingress/properties/gatewayAPI/properties/enabled"
+                },
+                "className": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/ingress/properties/gatewayAPI/properties/className"
+                }
+              }
+            },
+            "jwt": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/ingress/properties/jwt/properties/enabled"
+                },
+                "issuer": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/ingress/properties/jwt/properties/issuer"
+                },
+                "audiences": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/ingress/properties/jwt/properties/audiences"
+                },
+                "jwksUri": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/ingress/properties/jwt/properties/jwksUri"
+                }
+              }
             }
           }
         },
@@ -731,6 +761,36 @@
           "properties": {
             "enabled": {
               "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/enabled"
+            },
+            "routing": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/routing/properties/enabled"
+                },
+                "mode": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/routing/properties/mode"
+                },
+                "failover": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/routing/properties/failover"
+                },
+                "distribute": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/routing/properties/distribute"
+                },
+                "consecutive5xxErrors": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/routing/properties/consecutive5xxErrors"
+                },
+                "intervalSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/routing/properties/intervalSeconds"
+                },
+                "baseEjectionSeconds": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/routing/properties/baseEjectionSeconds"
+                },
+                "maxEjectionPercent": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/routing/properties/maxEjectionPercent"
+                }
+              }
             },
             "eastWest": {
               "type": "object",
@@ -749,6 +809,93 @@
             },
             "peers": {
               "$ref": "#/definitions/helmValues/properties/mesh/properties/multicluster/properties/peers"
+            }
+          }
+        },
+        "telemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/telemetry/properties/enabled"
+            },
+            "metricsProviders": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/telemetry/properties/metricsProviders"
+            },
+            "accessLogging": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/telemetry/properties/accessLogging/properties/enabled"
+                },
+                "providers": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/telemetry/properties/accessLogging/properties/providers"
+                },
+                "filter": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/telemetry/properties/accessLogging/properties/filter"
+                }
+              }
+            },
+            "tracing": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/telemetry/properties/tracing/properties/enabled"
+                },
+                "providers": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/telemetry/properties/tracing/properties/providers"
+                },
+                "randomSamplingPercentage": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/telemetry/properties/tracing/properties/randomSamplingPercentage"
+                }
+              }
+            }
+          }
+        },
+        "sidecar": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/sidecar/properties/enabled"
+            },
+            "egressHosts": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/sidecar/properties/egressHosts"
+            }
+          }
+        },
+        "authorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "audit": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/authorization/properties/audit"
+            },
+            "dryRunDeny": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/authorization/properties/dryRunDeny"
+            }
+          }
+        },
+        "egress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/egress/properties/enabled"
+            },
+            "destinations": {
+              "$ref": "#/definitions/helmValues/properties/mesh/properties/egress/properties/destinations"
+            },
+            "gateway": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/mesh/properties/egress/properties/gateway/properties/enabled"
+                }
+              }
             }
           }
         },
@@ -1216,96 +1363,96 @@
         }
       }
     },
-    "istioEastWest": {
+    "istioEastWestGateway": {
       "type": "object",
       "description": "Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label",
       "properties": {
         "affinity": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/affinity"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/affinity"
         },
         "kind": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/kind"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/kind"
         },
         "annotations": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/annotations"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/annotations"
         },
         "autoscaling": {
           "type": "object",
           "properties": {
             "enabled": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/autoscaling/properties/enabled"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/autoscaling/properties/enabled"
             },
             "maxReplicas": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/autoscaling/properties/maxReplicas"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/autoscaling/properties/maxReplicas"
             },
             "minReplicas": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/autoscaling/properties/minReplicas"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/autoscaling/properties/minReplicas"
             },
             "targetCPUUtilizationPercentage": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/autoscaling/properties/targetCPUUtilizationPercentage"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/autoscaling/properties/targetCPUUtilizationPercentage"
             }
           }
         },
         "envVarFrom": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/envVarFrom"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/envVarFrom"
         },
         "strategy": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/strategy"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/strategy"
         },
         "nodeSelector": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/nodeSelector"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/nodeSelector"
         },
         "podAnnotations": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/podAnnotations"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/podAnnotations"
         },
         "resources": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/resources"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/resources"
         },
         "revision": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/revision"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/revision"
         },
         "compatibilityVersion": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/compatibilityVersion"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/compatibilityVersion"
         },
         "profile": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/profile"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/profile"
         },
         "platform": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/platform"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/platform"
         },
         "service": {
           "type": "object",
           "properties": {
             "annotations": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/annotations"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/annotations"
             },
             "selectorLabels": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/selectorLabels"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/selectorLabels"
             },
             "externalTrafficPolicy": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/externalTrafficPolicy"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/externalTrafficPolicy"
             },
             "loadBalancerIP": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/loadBalancerIP"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/loadBalancerIP"
             },
             "loadBalancerSourceRanges": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/loadBalancerSourceRanges"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/loadBalancerSourceRanges"
             },
             "ipFamilyPolicy": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/ipFamilyPolicy"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/ipFamilyPolicy"
             },
             "ports": {
               "anyOf": [
                 {
-                  "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/ports/anyOf/0"
+                  "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/ports/anyOf/0"
                 },
                 {
-                  "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/ports/anyOf/1"
+                  "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/ports/anyOf/1"
                 }
               ]
             },
             "type": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/service/properties/type"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/service/properties/type"
             }
           }
         },
@@ -1313,10 +1460,10 @@
           "type": "object",
           "properties": {
             "annotations": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/serviceAccount/properties/annotations"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/serviceAccount/properties/annotations"
             },
             "create": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/serviceAccount/properties/create"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/serviceAccount/properties/create"
             }
           }
         },
@@ -1324,59 +1471,62 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/rbac/properties/enabled"
+              "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/rbac/properties/enabled"
             }
           }
         },
         "tolerations": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/tolerations"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/tolerations"
         },
         "topologySpreadConstraints": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/topologySpreadConstraints"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/topologySpreadConstraints"
         },
         "networkGateway": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/networkGateway"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/networkGateway"
         },
         "networkGatewayPorts": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/networkGatewayPorts"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/networkGatewayPorts"
         },
         "imagePullPolicy": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/imagePullPolicy"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/imagePullPolicy"
         },
         "imagePullSecrets": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/imagePullSecrets"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/imagePullSecrets"
         },
         "podDisruptionBudget": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/podDisruptionBudget"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/podDisruptionBudget"
         },
         "terminationGracePeriodSeconds": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/terminationGracePeriodSeconds"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/terminationGracePeriodSeconds"
         },
         "volumes": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/volumes"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/volumes"
         },
         "volumeMounts": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/volumeMounts"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/volumeMounts"
         },
         "initContainers": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/initContainers"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/initContainers"
         },
         "additionalContainers": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/additionalContainers"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/additionalContainers"
         },
         "priorityClassName": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/priorityClassName"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/priorityClassName"
         },
         "lifecycle": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/lifecycle"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/lifecycle"
         },
         "name": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/name"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/name"
         },
         "labels": {
-          "$ref": "#/definitions/helmValues/properties/istioEastWest/properties/labels"
+          "$ref": "#/definitions/helmValues/properties/istioEastWestGateway/properties/labels"
         }
       }
+    },
+    "istioEgress": {
+      "$ref": "#/definitions/helmValues/properties/istioEgress"
     },
     "federation": {
       "type": "object",
@@ -12106,7 +12256,11 @@
             "operator",
             "ingress",
             "multicluster",
-            "proxyResources"
+            "proxyResources",
+            "telemetry",
+            "sidecar",
+            "authorization",
+            "egress"
           ],
           "properties": {
             "enabled": {
@@ -12176,7 +12330,9 @@
               "required": [
                 "enabled",
                 "hosts",
-                "tlsSecret"
+                "tlsSecret",
+                "gatewayAPI",
+                "jwt"
               ],
               "properties": {
                 "enabled": {
@@ -12198,6 +12354,56 @@
                   "maxLength": 63,
                   "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
                   "description": "TLS credential Secret in the gateway namespace, required when exposing the APIs"
+                },
+                "gatewayAPI": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled",
+                    "className"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "className": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 253
+                    }
+                  }
+                },
+                "jwt": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled",
+                    "issuer",
+                    "audiences",
+                    "jwksUri"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "issuer": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "audiences": {
+                      "type": "array",
+                      "maxItems": 32,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      }
+                    },
+                    "jwksUri": {
+                      "type": "string",
+                      "maxLength": 2048
+                    }
+                  }
                 }
               }
             },
@@ -12207,12 +12413,109 @@
               "required": [
                 "enabled",
                 "eastWest",
-                "peers"
+                "peers",
+                "routing"
               ],
               "properties": {
                 "enabled": {
                   "type": "boolean",
                   "description": "Enable the existing or bundled sidecar mesh's multicluster configuration"
+                },
+                "routing": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled",
+                    "mode",
+                    "failover",
+                    "distribute",
+                    "consecutive5xxErrors",
+                    "intervalSeconds",
+                    "baseEjectionSeconds",
+                    "maxEjectionPercent"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "LocalFirst",
+                        "Failover",
+                        "Distributed"
+                      ]
+                    },
+                    "failover": {
+                      "type": "array",
+                      "maxItems": 32,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "from",
+                          "to"
+                        ],
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "to": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
+                    },
+                    "distribute": {
+                      "type": "array",
+                      "maxItems": 32,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "from",
+                          "to"
+                        ],
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "to": {
+                            "type": "object",
+                            "minProperties": 1,
+                            "additionalProperties": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 100
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "consecutive5xxErrors": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "intervalSeconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 300
+                    },
+                    "baseEjectionSeconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 3600
+                    },
+                    "maxEjectionPercent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  }
                 },
                 "eastWest": {
                   "type": "object",
@@ -12327,6 +12630,189 @@
                   }
                 }
               ]
+            },
+            "telemetry": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "metricsProviders",
+                "accessLogging",
+                "tracing"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "metricsProviders": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 63
+                  }
+                },
+                "accessLogging": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled",
+                    "providers",
+                    "filter"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "providers": {
+                      "type": "array",
+                      "maxItems": 16,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 63
+                      }
+                    },
+                    "filter": {
+                      "type": "string",
+                      "maxLength": 2048
+                    }
+                  }
+                },
+                "tracing": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled",
+                    "providers",
+                    "randomSamplingPercentage"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "providers": {
+                      "type": "array",
+                      "maxItems": 16,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 63
+                      }
+                    },
+                    "randomSamplingPercentage": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  }
+                }
+              }
+            },
+            "sidecar": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "egressHosts"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "egressHosts": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 256,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 320
+                  }
+                }
+              }
+            },
+            "authorization": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "audit",
+                "dryRunDeny"
+              ],
+              "properties": {
+                "audit": {
+                  "$ref": "#/definitions/helmValues/definitions/meshObservationPolicy"
+                },
+                "dryRunDeny": {
+                  "$ref": "#/definitions/helmValues/definitions/meshObservationPolicy"
+                }
+              }
+            },
+            "egress": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "destinations",
+                "gateway"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "destinations": {
+                  "type": "array",
+                  "maxItems": 64,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "name",
+                      "host",
+                      "port",
+                      "protocol"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                      },
+                      "host": {
+                        "type": "string",
+                        "maxLength": 253,
+                        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)+$"
+                      },
+                      "port": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      "protocol": {
+                        "type": "string",
+                        "enum": [
+                          "TLS",
+                          "HTTPS"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "gateway": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled"
+                  ],
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
             },
             "proxyResources": {
               "type": "object",
@@ -13675,7 +14161,7 @@
             }
           ]
         },
-        "istioEastWest": {
+        "istioEastWestGateway": {
           "type": "object",
           "properties": {
             "affinity": {
@@ -14217,6 +14703,10 @@
             }
           },
           "description": "Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label"
+        },
+        "istioEgress": {
+          "$ref": "#/definitions/helmValues/properties/istioIngress",
+          "description": "Upstream gateway overrides for the optional dedicated egress gateway"
         },
         "federation": {
           "type": "object",
@@ -36271,6 +36761,225 @@
                                               }
                                             ],
                                             "description": "Distinct downstream subsets whose percentages sum to 100."
+                                          },
+                                          "resilience": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "anyOf": [
+                                                      {
+                                                        "type": "object",
+                                                        "description": "Bound proxy-level failures without changing application traffic weights.",
+                                                        "properties": {
+                                                          "outlierDetection": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "boolean",
+                                                                "description": "Eject endpoints that repeatedly return server errors."
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Eject endpoints that repeatedly return server errors."
+                                                          },
+                                                          "consecutive5xxErrors": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Consecutive server errors required before ejection.",
+                                                                "minimum": 1,
+                                                                "maximum": 100
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Consecutive server errors required before ejection."
+                                                          },
+                                                          "intervalSeconds": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Endpoint health analysis interval.",
+                                                                "minimum": 1,
+                                                                "maximum": 300
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Endpoint health analysis interval."
+                                                          },
+                                                          "baseEjectionSeconds": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Minimum endpoint ejection duration.",
+                                                                "minimum": 1,
+                                                                "maximum": 3600
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Minimum endpoint ejection duration."
+                                                          },
+                                                          "maxEjectionPercent": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Maximum percentage of endpoints that may be ejected.",
+                                                                "minimum": 0,
+                                                                "maximum": 100
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Maximum percentage of endpoints that may be ejected."
+                                                          },
+                                                          "maxConnections": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "TCP connection ceiling; zero leaves Istio's default.",
+                                                                "minimum": 0,
+                                                                "maximum": 1048576
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "TCP connection ceiling; zero leaves Istio's default."
+                                                          },
+                                                          "maxPendingRequests": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                                                                "minimum": 0,
+                                                                "maximum": 1048576
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Pending HTTP request ceiling; zero leaves Istio's default."
+                                                          },
+                                                          "maxRequests": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                                                                "minimum": 0,
+                                                                "maximum": 1048576
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Active HTTP request ceiling; zero leaves Istio's default."
+                                                          },
+                                                          "retries": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                                                                "minimum": 0,
+                                                                "maximum": 10
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Retry attempts for failures selected by retryOn; zero disables retries."
+                                                          },
+                                                          "perTryTimeoutSeconds": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Optional timeout for an individual retry attempt.",
+                                                                "minimum": 0,
+                                                                "maximum": 300
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Optional timeout for an individual retry attempt."
+                                                          },
+                                                          "timeoutSeconds": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Optional total request timeout; zero preserves Istio's default.",
+                                                                "minimum": 0,
+                                                                "maximum": 3600
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Optional total request timeout; zero preserves Istio's default."
+                                                          },
+                                                          "retryOn": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                  "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                                                                ],
+                                                                "description": "Istio retry conditions used when retries are enabled."
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Istio retry conditions used when retries are enabled."
+                                                          }
+                                                        },
+                                                        "required": [],
+                                                        "additionalProperties": false
+                                                      },
+                                                      {
+                                                        "type": "string",
+                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                      }
+                                                    ],
+                                                    "description": "Bound proxy-level failures without changing application traffic weights."
+                                                  },
+                                                  {
+                                                    "anyOf": [
+                                                      {
+                                                        "type": "null"
+                                                      },
+                                                      {
+                                                        "type": "string",
+                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "string",
+                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                              }
+                                            ]
                                           }
                                         },
                                         "required": [
@@ -40219,6 +40928,225 @@
                                               }
                                             ],
                                             "description": "Distinct downstream subsets whose percentages sum to 100."
+                                          },
+                                          "resilience": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "anyOf": [
+                                                      {
+                                                        "type": "object",
+                                                        "description": "Bound proxy-level failures without changing application traffic weights.",
+                                                        "properties": {
+                                                          "outlierDetection": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "boolean",
+                                                                "description": "Eject endpoints that repeatedly return server errors."
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Eject endpoints that repeatedly return server errors."
+                                                          },
+                                                          "consecutive5xxErrors": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Consecutive server errors required before ejection.",
+                                                                "minimum": 1,
+                                                                "maximum": 100
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Consecutive server errors required before ejection."
+                                                          },
+                                                          "intervalSeconds": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Endpoint health analysis interval.",
+                                                                "minimum": 1,
+                                                                "maximum": 300
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Endpoint health analysis interval."
+                                                          },
+                                                          "baseEjectionSeconds": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Minimum endpoint ejection duration.",
+                                                                "minimum": 1,
+                                                                "maximum": 3600
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Minimum endpoint ejection duration."
+                                                          },
+                                                          "maxEjectionPercent": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Maximum percentage of endpoints that may be ejected.",
+                                                                "minimum": 0,
+                                                                "maximum": 100
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Maximum percentage of endpoints that may be ejected."
+                                                          },
+                                                          "maxConnections": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "TCP connection ceiling; zero leaves Istio's default.",
+                                                                "minimum": 0,
+                                                                "maximum": 1048576
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "TCP connection ceiling; zero leaves Istio's default."
+                                                          },
+                                                          "maxPendingRequests": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                                                                "minimum": 0,
+                                                                "maximum": 1048576
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Pending HTTP request ceiling; zero leaves Istio's default."
+                                                          },
+                                                          "maxRequests": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                                                                "minimum": 0,
+                                                                "maximum": 1048576
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Active HTTP request ceiling; zero leaves Istio's default."
+                                                          },
+                                                          "retries": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                                                                "minimum": 0,
+                                                                "maximum": 10
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Retry attempts for failures selected by retryOn; zero disables retries."
+                                                          },
+                                                          "perTryTimeoutSeconds": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Optional timeout for an individual retry attempt.",
+                                                                "minimum": 0,
+                                                                "maximum": 300
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Optional timeout for an individual retry attempt."
+                                                          },
+                                                          "timeoutSeconds": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "integer",
+                                                                "description": "Optional total request timeout; zero preserves Istio's default.",
+                                                                "minimum": 0,
+                                                                "maximum": 3600
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Optional total request timeout; zero preserves Istio's default."
+                                                          },
+                                                          "retryOn": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                  "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                                                                ],
+                                                                "description": "Istio retry conditions used when retries are enabled."
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Istio retry conditions used when retries are enabled."
+                                                          }
+                                                        },
+                                                        "required": [],
+                                                        "additionalProperties": false
+                                                      },
+                                                      {
+                                                        "type": "string",
+                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                      }
+                                                    ],
+                                                    "description": "Bound proxy-level failures without changing application traffic weights."
+                                                  },
+                                                  {
+                                                    "anyOf": [
+                                                      {
+                                                        "type": "null"
+                                                      },
+                                                      {
+                                                        "type": "string",
+                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "string",
+                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                              }
+                                            ]
                                           }
                                         },
                                         "required": [
@@ -45348,6 +46276,225 @@
                                                       }
                                                     ],
                                                     "description": "Distinct downstream subsets whose percentages sum to 100."
+                                                  },
+                                                  "resilience": {
+                                                    "anyOf": [
+                                                      {
+                                                        "anyOf": [
+                                                          {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "object",
+                                                                "description": "Bound proxy-level failures without changing application traffic weights.",
+                                                                "properties": {
+                                                                  "outlierDetection": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "boolean",
+                                                                        "description": "Eject endpoints that repeatedly return server errors."
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Eject endpoints that repeatedly return server errors."
+                                                                  },
+                                                                  "consecutive5xxErrors": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Consecutive server errors required before ejection.",
+                                                                        "minimum": 1,
+                                                                        "maximum": 100
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Consecutive server errors required before ejection."
+                                                                  },
+                                                                  "intervalSeconds": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Endpoint health analysis interval.",
+                                                                        "minimum": 1,
+                                                                        "maximum": 300
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Endpoint health analysis interval."
+                                                                  },
+                                                                  "baseEjectionSeconds": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Minimum endpoint ejection duration.",
+                                                                        "minimum": 1,
+                                                                        "maximum": 3600
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Minimum endpoint ejection duration."
+                                                                  },
+                                                                  "maxEjectionPercent": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Maximum percentage of endpoints that may be ejected.",
+                                                                        "minimum": 0,
+                                                                        "maximum": 100
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Maximum percentage of endpoints that may be ejected."
+                                                                  },
+                                                                  "maxConnections": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "TCP connection ceiling; zero leaves Istio's default.",
+                                                                        "minimum": 0,
+                                                                        "maximum": 1048576
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "TCP connection ceiling; zero leaves Istio's default."
+                                                                  },
+                                                                  "maxPendingRequests": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                                                                        "minimum": 0,
+                                                                        "maximum": 1048576
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Pending HTTP request ceiling; zero leaves Istio's default."
+                                                                  },
+                                                                  "maxRequests": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                                                                        "minimum": 0,
+                                                                        "maximum": 1048576
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Active HTTP request ceiling; zero leaves Istio's default."
+                                                                  },
+                                                                  "retries": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                                                                        "minimum": 0,
+                                                                        "maximum": 10
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Retry attempts for failures selected by retryOn; zero disables retries."
+                                                                  },
+                                                                  "perTryTimeoutSeconds": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Optional timeout for an individual retry attempt.",
+                                                                        "minimum": 0,
+                                                                        "maximum": 300
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Optional timeout for an individual retry attempt."
+                                                                  },
+                                                                  "timeoutSeconds": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "integer",
+                                                                        "description": "Optional total request timeout; zero preserves Istio's default.",
+                                                                        "minimum": 0,
+                                                                        "maximum": 3600
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Optional total request timeout; zero preserves Istio's default."
+                                                                  },
+                                                                  "retryOn": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                          "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                                                                        ],
+                                                                        "description": "Istio retry conditions used when retries are enabled."
+                                                                      },
+                                                                      {
+                                                                        "type": "string",
+                                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                      }
+                                                                    ],
+                                                                    "description": "Istio retry conditions used when retries are enabled."
+                                                                  }
+                                                                },
+                                                                "required": [],
+                                                                "additionalProperties": false
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ],
+                                                            "description": "Bound proxy-level failures without changing application traffic weights."
+                                                          },
+                                                          {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "null"
+                                                              },
+                                                              {
+                                                                "type": "string",
+                                                                "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                              }
+                                                            ]
+                                                          }
+                                                        ]
+                                                      },
+                                                      {
+                                                        "type": "string",
+                                                        "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                      }
+                                                    ]
                                                   }
                                                 },
                                                 "required": [
@@ -50699,6 +51846,46 @@
         }
       },
       "definitions": {
+        "meshObservationPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "paths",
+            "methods"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "paths": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "methods": {
+              "type": "array",
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "PATCH",
+                  "DELETE",
+                  "HEAD",
+                  "OPTIONS"
+                ]
+              }
+            }
+          }
+        },
         "observationKey": {
           "required": [
             "direction",

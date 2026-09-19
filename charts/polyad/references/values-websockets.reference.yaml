@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Overlay on your authentication/discovery configuration; this does not widen grants.
+# Guide: ../../../docs/workloads/workload-events.md#websocket-subscriptions
+## @param events [object] Read-only event subscriptions through the events Service on port 8091.
+events:
+  ## @param events.enabled [boolean] Enable the events Service; configure its bearer Secret or named API keys in your base values.
+  enabled: true
+  ## @param events.websockets [object] Add WebSocket transport to the existing SSE service without another application or listener.
+  websockets:
+    ## @param events.websockets.enabled [boolean] Allow service clients to select WebSocket subscriptions; keep false when only SSE is needed.
+    enabled: true
+  ## @param events.maxConnections [integer] Combined SSE and WebSocket subscriber ceiling per replica; named-key concurrency limits remain shared across HA replicas.
+  maxConnections: 16

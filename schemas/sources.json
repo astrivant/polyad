@@ -52,6 +52,14 @@
           "sha256": "548edd15f6c94f1837137b967857c78dfe60f52608e9de3af1831482a4b7ca4f"
         },
         {
+          "kind": "RequestAuthentication",
+          "group": "security.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/requestauthentication-security-v1.json",
+          "sha256": "82c5bb056d2422214c6b467899bb705debcad7716bedf808407be3a4f754ee8e"
+        },
+        {
           "kind": "Gateway",
           "group": "networking.istio.io",
           "version": "v1",
@@ -60,12 +68,44 @@
           "sha256": "05f73d0aaf02afa95ccd65e35ef53f41e7f44c6c47ac531bb724633db4e6f053"
         },
         {
+          "kind": "DestinationRule",
+          "group": "networking.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/destinationrule-networking-v1.json",
+          "sha256": "92c80727325252852048244079ef52bd3d8a0247d15026041daf166941d28fdb"
+        },
+        {
+          "kind": "ServiceEntry",
+          "group": "networking.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/serviceentry-networking-v1.json",
+          "sha256": "d0ead9d4bc11e0a0619838d1bbf61b3f2b5e63c3eca5d9f9e427fcdc28d48eea"
+        },
+        {
+          "kind": "Sidecar",
+          "group": "networking.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/sidecar-networking-v1.json",
+          "sha256": "e2f455277cf5a00fdacd8ca42b7e37ee3d98fb04279cc7a408af6681cec26454"
+        },
+        {
           "kind": "VirtualService",
           "group": "networking.istio.io",
           "version": "v1",
           "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
           "path": "schemas/upstream/virtualservice-networking-v1.json",
           "sha256": "1ce7de1dbb3f21ed3c402f9b7a29d7ecc070b91fd4623173128f89ce6fef05f0"
+        },
+        {
+          "kind": "Telemetry",
+          "group": "telemetry.istio.io",
+          "version": "v1",
+          "source": "https://raw.githubusercontent.com/istio/istio/1.30.4/manifests/charts/base/files/crd-all.gen.yaml",
+          "path": "schemas/upstream/telemetry-telemetry-v1.json",
+          "sha256": "77e189f30ae8e65c5596cbdba0179b2bbf780f0029f96c505a8190e986f311ab"
         }
       ],
       "license": {

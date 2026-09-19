@@ -24,9 +24,59 @@ def test_all_shipped_values_have_valid_types_and_schema_coverage():
     """
     paths = VALUES_CHECK["value_files"]()
     assert CHART / "values.yaml" in paths
+    assert not list(CHART.glob("values-*.reference.yaml"))
+    assert list((CHART / "references").glob("values-*.reference.yaml"))
     assert CHART.parents[1] / "examples/postgresql/operator-values.yaml" in paths
     for path in paths:
         VALUES_CHECK["validate"](path)
+
+
+def test_istio_reference_values_cover_deployment_features_and_traffic_strategies():
+    """
+    Keep each customer-facing Istio choice discoverable in a focused, composable overlay.
+    """
+    bundled = yaml.safe_load((CHART / "references" / "values-istio-bundled.reference.yaml").read_text())
+    existing = yaml.safe_load((CHART / "references" / "values-istio-existing.reference.yaml").read_text())
+    features = yaml.safe_load((CHART / "references" / "values-istio-features.reference.yaml").read_text())
+    traffic_path = CHART / "references" / "values-istio-traffic.reference.yaml"
+    traffic = yaml.safe_load(traffic_path.read_text())
+
+    assert bundled["mesh"]["install"] is True
+    assert existing["mesh"]["install"] is False
+    assert existing["mesh"]["ingress"]["gatewayAPI"]["enabled"] is True
+    assert features["mesh"]["telemetry"]["enabled"] is True
+    assert features["mesh"]["sidecar"]["enabled"] is True
+    assert features["mesh"]["authorization"]["audit"]["enabled"] is True
+    assert features["mesh"]["authorization"]["dryRunDeny"]["enabled"] is True
+    assert features["mesh"]["egress"]["gateway"]["enabled"] is True
+    assert traffic["mesh"]["multicluster"]["routing"]["mode"] == "LocalFirst"
+    assert traffic["events"]["istio"]["loadBalancer"] == "LEAST_REQUEST"
+    assert "spec.traffic[].resilience" in traffic_path.read_text()
+
+
+def test_reference_overlays_only_use_configuration_exposed_by_values_yaml():
+    """
+    Keep values.yaml canonical: references may select or illustrate settings, never define a separate API.
+    """
+    defaults = yaml.safe_load((CHART / "values.yaml").read_text())
+    missing = []
+
+    def require_keys(reference, canonical, path=""):
+        if not isinstance(reference, dict) or not isinstance(canonical, dict):
+            return
+        for key, value in reference.items():
+            location = f"{path}.{key}" if path else key
+            if key not in canonical:
+                missing.append(location)
+                continue
+            # Empty mappings and arrays are intentionally expanded by the typed
+            # reference examples; their entry shapes remain canonical in the schema.
+            if canonical[key]:
+                require_keys(value, canonical[key], location)
+
+    for reference_path in (CHART / "references").glob("values-*.reference.yaml"):
+        require_keys(yaml.safe_load(reference_path.read_text()), defaults)
+    assert not missing, f"settings present only in reference values files: {', '.join(sorted(missing))}"
 
 
 @pytest.mark.parametrize(
@@ -43,7 +93,7 @@ def test_example_values_render_with_the_full_helm_schema(path):
         if path.name == "root-values.yaml":
             bases = [CHART.parents[1] / "examples/root-control-plane/values.yaml"]
         else:
-            namespace, bases = "workloads", [CHART / "values-worker.reference.yaml"]
+            namespace, bases = "workloads", [CHART / "references" / "values-worker.reference.yaml"]
     command = ["helm", "template", "test", str(CHART), "--namespace", namespace]
     for values in [*bases, path]:
         command += ["-f", str(values)]
@@ -70,7 +120,7 @@ def test_example_values_render_with_the_full_helm_schema(path):
         {"rootControlPlane": {"pools": [{"name": "west", "cluster": "west", "replicas": 1, "resources": {"requests": {"cpu": []}}}]}},
         {"networkPolicy": {"extraEgress": [{"ports": [{"port": True}]}]}},
         {"networkPolicy": {"extraEgress": [{"ports": [{"protocol": "https"}]}]}},
-        {"istioEastWest": {"labels": {"networking.istio.io/gatewayPort": 15443}}},
+        {"istioEastWestGateway": {"labels": {"networking.istio.io/gatewayPort": 15443}}},
         {"istioIngress": {"tolerations": [False]}},
         {"istiod": {"env": {"ENABLE_NATIVE_SIDECARS": True}}},
         {"istiod": {"meshConfig": {"enableAutoMtls": "true"}}},
@@ -207,13 +257,13 @@ def test_nested_list_parameter_types_and_duplicate_annotations():
         annotate("## @param items [array] Duplicate.\n" + source, schema)
 
 
-@pytest.mark.parametrize("path", sorted(CHART.glob("values-*.reference.yaml")), ids=lambda path: path.name)
+@pytest.mark.parametrize("path", sorted((CHART / "references").glob("values-*.reference.yaml")), ids=lambda path: path.name)
 def test_reference_overlays_are_typed_and_render_independently(path):
     """
     Editor validation accepts partial overrides while Helm validates the complete merged configuration.
     """
     source = path.read_text()
-    assert source.startswith("# yaml-language-server: $schema=values.reference.schema.json")
+    assert source.startswith("# yaml-language-server: $schema=../values.reference.schema.json")
     schema = json.loads((CHART / "values.schema.json").read_text())
     overlay = json.loads((CHART / "values.reference.schema.json").read_text())
     registry = Registry().with_resource("values.schema.json", Resource.from_contents(schema))
@@ -260,7 +310,7 @@ def test_authentication_database_placement_and_credentials(storage):
         settings += ["authentication.storage.managed=false", "authentication.storage.existingSecret=external-auth"]
     if storage == "shared":
         settings += ["authentication.storage.separateDatabase=false", "postgresql.enabled=true"]
-    command = ["helm", "template", "test", str(CHART), "-f", str(CHART / "values-authentication.reference.yaml")]
+    command = ["helm", "template", "test", str(CHART), "-f", str(CHART / "references" / "values-authentication.reference.yaml")]
     for value in settings:
         command += ["--set", value]
     objects = list(filter(None, yaml.safe_load_all(subprocess.check_output(command, text=True))))

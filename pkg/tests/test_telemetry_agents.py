@@ -21,7 +21,7 @@ def collectors(*settings, mode="Alloy", values_files=()):
     profile = "telemetry" if mode == "Alloy" else "prometheus-agent"
     return render(
         *settings,
-        values_files=(str(CHART / f"values-{profile}.reference.yaml"), *values_files),
+        values_files=(str(CHART / "references" / f"values-{profile}.reference.yaml"), *values_files),
     )
 
 

@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Overlay for a local HA operator with KEDA installed (or add keda.install=true).
+# Guide: ../../../docs/operations/performance.md#connection-pools-and-keda
+# All pools are per process. Bound total backend connections using both pool and replica ceilings.
+## @param ha [boolean] Keep at least two local operator replicas and permit autoscaling.
+ha: true
+## @param operator [object] Local operator connection and scaling controls.
+operator:
+  ## @param operator.autoscaling [object] Keep CPU, memory and connection demand under one KEDA-managed HPA.
+  autoscaling:
+    ## @param operator.autoscaling.enabled [boolean] Scale the local dense/bootstrap Deployment; requires ha.
+    enabled: true
+    ## @param operator.autoscaling.minReplicas [integer] Keep two operator replicas available.
+    minReplicas: 2
+    ## @param operator.autoscaling.maxReplicas [integer] Bound aggregate pools along with each per-process maximum.
+    maxReplicas: 8
+    ## @param operator.autoscaling.targetMemoryUtilizationPercentage [integer, nullable] Target requested memory utilization; null omits memory.
+    targetMemoryUtilizationPercentage: 80
+    ## @param operator.autoscaling.connections [object] Add active connection demand to existing resource triggers.
+    connections:
+      ## @param operator.autoscaling.connections.enabled [boolean] Enable KEDA pool pressure and automatically enable operator metrics; with architecture.autoscaling also extends component ReplicaGroup scalers.
+      enabled: true
+      ## @param operator.autoscaling.connections.targetUtilizationPercentage [integer] Target the busiest active-plus-waiting pool fraction per process; 70 leaves headroom before pool exhaustion.
+      targetUtilizationPercentage: 70
+      ## @param operator.autoscaling.connections.pollingInterval [integer] KEDA polling seconds for the local Deployment; HPA has its own cluster sync cadence.
+      pollingInterval: 15
+  ## @param operator.connections [object] Independent pools; defaults and every timeout are documented in values-tuning.reference.yaml.
+  connections:
+    ## @param operator.connections.cache [object] Shared asynchronous cache, stream and coordination clients.
+    cache:
+      ## @param operator.connections.cache.maxConnections [integer] Per-pool maximum; include all dense/split/remote processes in backend capacity planning.
+      maxConnections: 128
+    ## @param operator.connections.lanes [object] API-key lane admission; contains no raw API-key values.
+    lanes:
+      ## @param operator.connections.lanes.maxConnections [integer] Per-process lane pool ceiling; increasing replicas adds separate pools.
+      maxConnections: 32
+      ## @param operator.connections.lanes.connectTimeoutSeconds [number] Fail connection establishment after two seconds.
+      connectTimeoutSeconds: 2
+      ## @param operator.connections.lanes.socketTimeoutSeconds [number] Fail stalled Redis commands after two seconds; admission remains fail-closed.
+      socketTimeoutSeconds: 2
+    ## @param operator.connections.rateLimits [object] Separate shared composition-quota transport.
+    rateLimits:
+      ## @param operator.connections.rateLimits.maxConnections [integer] Per-process quota-pool ceiling; idle retained sockets are excluded from scaling demand.
+      maxConnections: 32
+    ## @param operator.connections.state [object] Optional graph-state PostgreSQL pool.
+    state:
+      ## @param operator.connections.state.maxConnections [integer] Per-process state connections; separate from server postgresql.maxConnections.
+      maxConnections: 2
+    ## @param operator.connections.authentication [object] Optional credential database pool; configuring limits does not enable it.
+    authentication:
+      ## @param operator.connections.authentication.maxConnections [integer] Per-process credential lookup connections; independently budget a separate database if configured.
+      maxConnections: 2

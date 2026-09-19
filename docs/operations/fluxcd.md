@@ -76,10 +76,15 @@ Kustomizations waiting. Suspending a Flux Kustomization itself is a different
 operation: it stops Flux reconciliation. Use Polyad's suspension settings to
 pause graph workloads.
 
-Failures are checked before success. The `inProgress` expression only handles
-deletion, because Flux evaluates it before `failed`; a broad “not ready” expression
-would hide failures. Current-generation metrics and descendant completeness are
-required before executable graphs report success.
+The `inProgress` expression handles deletion and an explicitly published
+`status.progressing` metrics transition before failures; it does not broadly interpret
+“not ready,” which would hide failures because Flux evaluates `inProgress` first.
+Current-generation metrics and descendant completeness are required before
+executable graphs report success.
+
+SDK strategy invocations publish this transition on their reusable Workload or
+Daemon definition. A local change in one workload's organization therefore does
+not make its entire containing Graph progressing.
 
 For [ReplicaGroups](../graphs/replication.md), `status.scaleCurrent` must also be
 true. The operator records the exact remote intent it reconciled in

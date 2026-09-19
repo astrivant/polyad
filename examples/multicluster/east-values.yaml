@@ -35,9 +35,9 @@ mesh:
         cidrs: [192.0.2.20/32] # Replace with the reachable west gateway address.
         ## @param mesh.multicluster.peers[].gatewayNamespace [string] Settings for mesh.multicluster.peers[].gatewayNamespace.
         gatewayNamespace: polyad
-## @param istioEastWest [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
-istioEastWest:
-  ## @param istioEastWest.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
+## @param istioEastWestGateway [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
+istioEastWestGateway:
+  ## @param istioEastWestGateway.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
   networkGateway: east-network
 ## @param federation [object] Settings for federation.
 federation:

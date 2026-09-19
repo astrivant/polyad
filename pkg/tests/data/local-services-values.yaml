@@ -60,7 +60,7 @@ global:
   meshID: shared
   ## @param global.network [string] Network containing this cluster; different networks use east-west gateways
   network: management-network
-## @param istioEastWest [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
-istioEastWest:
-  ## @param istioEastWest.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
+## @param istioEastWestGateway [object] Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label
+istioEastWestGateway:
+  ## @param istioEastWestGateway.networkGateway [string, nullable] Null retains the pinned upstream Istio profile default.
   networkGateway: management-network

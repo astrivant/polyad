@@ -14,5 +14,23 @@ spec:
       simple: {{ .Values.events.istio.loadBalancer }}
       warmup:
         duration: {{ printf "%vs" .Values.events.istio.warmupSeconds | quote }}
+      {{- if .Values.mesh.multicluster.routing.enabled }}
+      localityLbSetting:
+        enabled: true
+        {{- if eq .Values.mesh.multicluster.routing.mode "Failover" }}
+        failover:
+          {{- toYaml .Values.mesh.multicluster.routing.failover | nindent 10 }}
+        {{- else if eq .Values.mesh.multicluster.routing.mode "Distributed" }}
+        distribute:
+          {{- toYaml .Values.mesh.multicluster.routing.distribute | nindent 10 }}
+        {{- end }}
+      {{- end }}
+    {{- if .Values.mesh.multicluster.routing.enabled }}
+    outlierDetection:
+      consecutive5xxErrors: {{ .Values.mesh.multicluster.routing.consecutive5xxErrors }}
+      interval: {{ printf "%vs" .Values.mesh.multicluster.routing.intervalSeconds | quote }}
+      baseEjectionTime: {{ printf "%vs" .Values.mesh.multicluster.routing.baseEjectionSeconds | quote }}
+      maxEjectionPercent: {{ .Values.mesh.multicluster.routing.maxEjectionPercent }}
+    {{- end }}
 {{- end }}
 {{- end -}}

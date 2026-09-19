@@ -6,7 +6,7 @@ alongside `dragonfly.ha.enabled`. Set `dragonfly.autoscaling.enabled: false` for
 `dragonfly.ha.replicas` count. Single-instance and externally managed caches do
 not get a scaler. PostgreSQL remains independent and optional.
 
-The [HA reference values](../../charts/polyad/values-ha.reference.yaml) include:
+The [HA reference values](../../charts/polyad/references/values-ha.reference.yaml) include:
 
 ```yaml
 dragonfly:

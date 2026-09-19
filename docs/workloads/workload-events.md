@@ -262,7 +262,7 @@ application connections or restarts containers.
 
 SSE is the default. Administrators can also enable WebSockets on the **same events
 Service and port**, using the typed
-[WebSocket reference values](../../charts/polyad/values-websockets.reference.yaml):
+[WebSocket reference values](../../charts/polyad/references/values-websockets.reference.yaml):
 
 ```yaml
 events:

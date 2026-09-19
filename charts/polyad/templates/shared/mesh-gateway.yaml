@@ -1,6 +1,71 @@
 {{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
 {{- with $ -}}
-{{- if .Values.mesh.ingress.enabled }}
+{{- if or .Values.mesh.ingress.enabled .Values.mesh.ingress.gatewayAPI.enabled }}
+{{- if not .Values.mesh.enabled }}{{ fail "managed Istio ingress requires mesh.enabled" }}{{ end }}
+{{- if or (not .Values.mesh.ingress.hosts) (not .Values.mesh.ingress.tlsSecret) }}{{ fail "managed Istio ingress requires hosts and tlsSecret" }}{{ end }}
+{{- if .Values.mesh.ingress.gatewayAPI.enabled }}
+{{- if .Values.mesh.ingress.enabled }}{{ fail "enable either legacy mesh ingress or Gateway API ingress, not both" }}{{ end }}
+{{- if .Values.api.gateway.enabled }}{{ fail "mesh.ingress GatewayAPI mode replaces api.gateway; enable only one managed ingress" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  gatewayClassName: {{ .Values.mesh.ingress.gatewayAPI.className | quote }}
+  listeners:
+    {{- range $index, $host := .Values.mesh.ingress.hosts }}
+    - name: {{ printf "https-%d" $index }}
+      protocol: HTTPS
+      port: 443
+      hostname: {{ $host | quote }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: {{ $.Values.mesh.ingress.tlsSecret | quote }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
+    {{- end }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  parentRefs:
+    - name: {{ .Release.Name }}-polyad
+  hostnames:
+    {{- toYaml .Values.mesh.ingress.hosts | nindent 4 }}
+  rules:
+    {{- if .Values.events.enabled }}
+    - matches:
+        - path: {type: Exact, value: /v1/events}
+        - path: {type: Exact, value: /v1/events/config}
+        - path: {type: Exact, value: /v1/events/schema}
+        {{- if .Values.events.rebalance.enabled }}
+        - path: {type: Exact, value: /v1/events/endpoints}
+        {{- end }}
+        {{- if .Values.events.websockets.enabled }}
+        - path: {type: Exact, value: /v1/events/ws}
+        {{- end }}
+        - path: {type: Exact, value: /v1/discovery}
+        - path: {type: PathPrefix, value: /v1/graphs/}
+      backendRefs:
+        - name: {{ .Release.Name }}-polyad-events
+          port: 8091
+    {{- end }}
+    {{- if .Values.api.enabled }}
+    - matches:
+        - path: {type: PathPrefix, value: /}
+      backendRefs:
+        - name: {{ .Release.Name }}-polyad-api
+          port: 8090
+    {{- end }}
+{{- else }}
 apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
@@ -70,5 +135,6 @@ spec:
             port:
               number: 8090
     {{- end }}
+{{- end }}
 {{- end }}
 {{- end -}}

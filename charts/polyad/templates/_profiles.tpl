@@ -13,7 +13,7 @@
 {{- if or $values.api.enabled $values.events.enabled $values.metrics.enabled $values.connections.enabled $values.observer.enabled }}{{ fail "worker mode exposes only health; disable api, events, metrics, connections and observer listeners" }}{{ end -}}
 {{- if or $values.dragonfly.enabled (not $values.dragonfly.existingSecret) (not $values.rootControlPlane.kubeconfigSecret) (not $values.federation.enabled) }}{{ fail "worker mode requires external root/cache Secrets, federation.enabled=true and dragonfly.enabled=false" }}{{ end -}}
 {{- if or (and $values.postgresql.enabled $values.postgresql.managed) (and $values.authentication.storage.enabled $values.authentication.storage.managed) }}{{ fail "workers may connect to existing root databases but must not provision their own databases" }}{{ end -}}
-{{- if or $values.mesh.install $values.mesh.operator.enabled $values.mesh.ingress.enabled $values.mesh.multicluster.eastWest.enabled }}{{ fail "install mesh infrastructure separately; worker Pods use root HTTPS and cache connections" }}{{ end -}}
+{{- if or $values.mesh.install $values.mesh.operator.enabled $values.mesh.ingress.enabled $values.mesh.ingress.gatewayAPI.enabled $values.mesh.multicluster.eastWest.enabled $values.mesh.egress.gateway.enabled }}{{ fail "install mesh infrastructure separately; worker Pods use root HTTPS and cache connections" }}{{ end -}}
 {{- $host := dict -}}
 {{- range $values.federation.clusters -}}
 {{- if eq .name $values.global.multiCluster.clusterName }}{{ $_ := set $host "namespace" .namespace }}{{ end -}}

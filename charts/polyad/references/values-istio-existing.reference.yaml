@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Existing Istio deployment strategy.
+#
+# Polyad generates workload policies but does not install or upgrade Istio.
+# This is the preferred strategy when a platform team owns the mesh. The
+# example uses Kubernetes Gateway API ingress so the existing Istio
+# GatewayClass provisions the data plane; switch to mesh.ingress.enabled for
+# Polyad's pinned legacy gateway subchart, but never enable both paths.
+# Guide: ../../../docs/deployment/istio-features.md
+## @param global [object] Existing control-plane namespace and trust-domain settings.
+global:
+  ## @param global.istioNamespace [string] Namespace of the platform-managed Istio control plane.
+  istioNamespace: istio-system
+
+## @param mesh [object] Polyad integration with an existing mesh and Gateway API ingress.
+mesh:
+  ## @param mesh.enabled [boolean] Generate Polyad routing and security resources for the existing mesh.
+  enabled: true
+  ## @param mesh.install [boolean] Keep false so this release does not own Istio base or istiod.
+  install: false
+  ## @param mesh.operator [object] Inject and authorize the Polyad operator workload.
+  operator:
+    ## @param mesh.operator.enabled [boolean] Require the namespace's existing injection mechanism to provide operator sidecars.
+    enabled: true
+  ## @param mesh.ingress [object] Standards-based ingress backed by the existing Istio GatewayClass.
+  ingress:
+    ## @param mesh.ingress.hosts [array] Public DNS names accepted by the managed HTTPRoute.
+    hosts: [polyad.example.com]
+    ## @param mesh.ingress.tlsSecret [string] Existing TLS Secret referenced by the Gateway listener.
+    tlsSecret: polyad-ingress-tls
+    ## @param mesh.ingress.gatewayAPI [object] Gateway API replacement for Polyad's legacy Istio Gateway and VirtualService.
+    gatewayAPI:
+      ## @param mesh.ingress.gatewayAPI.enabled [boolean] Create a Gateway and HTTPRoute through the existing GatewayClass.
+      enabled: true
+      ## @param mesh.ingress.gatewayAPI.className [string] GatewayClass managed by the platform's Istio installation.
+      className: istio

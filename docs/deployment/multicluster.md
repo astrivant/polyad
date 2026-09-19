@@ -352,16 +352,16 @@ mesh:
     eastWest:
       enabled: true
       hosts: ['*.local']
-istioEastWest:
+istioEastWestGateway:
   networkGateway: west-network
 ```
 
-`istioEastWest.networkGateway` must equal `global.network`. The chart creates a
+`istioEastWestGateway.networkGateway` must equal `global.network`. The chart creates a
 gateway Deployment and LoadBalancer Service through the pinned upstream chart,
 plus an Istio `Gateway` with `AUTO_PASSTHROUGH` on TCP 15443 by default. The upstream
 Service also exposes health port 15021 and its standard 15012/15017 ports; Polyad does not
 create remote-control-plane routing for those ports. Gateway overrides remain
-available under `istioEastWest`, including resources, replicas and Service load
+available under `istioEastWestGateway`, including resources, replicas and Service load
 balancer configuration. Preserve its `istio: polyad-eastwest` label. Gateway names
 must remain distinct from the API ingress gateway.
 
@@ -378,9 +378,9 @@ Administrators can configure the listener's name, ports and exposed hosts:
 | --- | --- | --- |
 | `mesh.multicluster.eastWest.portName` | `tls` | Istio Gateway port name, a DNS label. |
 | `mesh.multicluster.eastWest.hosts` | `['*.local']` | Service SNI hosts admitted by the gateway; set these for your mesh's service domain. |
-| `istioEastWest.networkGatewayPorts.tls.port` | `15443` | Service port, also used as the generated Istio Gateway's `port.number`. |
-| `istioEastWest.networkGatewayPorts.tls.targetPort` | `15443` | Gateway Pod listener port; Istio resolves the Service port to this target. |
-| `istioEastWest.labels[networking.istio.io/gatewayPort]` | Omitted, which Istio treats as `15443` | Discovery port; required to match the Service port when overriding it. |
+| `istioEastWestGateway.networkGatewayPorts.tls.port` | `15443` | Service port, also used as the generated Istio Gateway's `port.number`. |
+| `istioEastWestGateway.networkGatewayPorts.tls.targetPort` | `15443` | Gateway Pod listener port; Istio resolves the Service port to this target. |
+| `istioEastWestGateway.labels[networking.istio.io/gatewayPort]` | `'15443'` | Discovery port; update it with the Service port when overriding either value. |
 | `mesh.multicluster.peers[].gatewayPort` | `15443` | Remote gateway destination port allowed by outbound graph policies. |
 
 For example, these overrides expose west's gateway on TCP 16443, forwarding to
@@ -392,7 +392,7 @@ mesh:
     eastWest:
       portName: tls-services
       hosts: ['*.local']
-istioEastWest:
+istioEastWestGateway:
   labels:
     networking.istio.io/gatewayPort: '16443'
   networkGatewayPorts:
@@ -453,6 +453,8 @@ case. Ensure the Service's DNS name resolves in the caller's cluster, using a
 matching Service where needed. Use DestinationRule subsets and VirtualService
 routes to select a specific cluster; see
 [Istio's multicluster traffic management](https://istio.io/latest/docs/ops/configuration/traffic-management/multicluster/).
+Polyad's optional local-first, failover and distributed policies are documented
+under [advanced Istio integration](istio-features.md#local-first-multicluster-traffic).
 
 ```mermaid
 ---

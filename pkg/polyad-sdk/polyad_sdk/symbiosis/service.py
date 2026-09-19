@@ -7,13 +7,16 @@ from __future__ import annotations
 import copy
 import threading
 import time
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import replace
+from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from polyad_sdk.api.client import Client
+from polyad_sdk.api.interfaces import AdaptationReporter
 from polyad_sdk.events.filters import Filter
 from polyad_sdk.events.subscriptions import StreamInterrupted
 from polyad_sdk.observability import Telemetry
@@ -22,7 +25,7 @@ from polyad_sdk.runtime.environment import env as sdk_environment
 from polyad_sdk.symbiosis.models import Change, Settings, differences
 from polyad_sdk.symbiosis.state import State, projection
 from polyad_sdk.symbiosis.strategies import AdaptationStrategy, ConstraintStrategy
-from polyad_types import ConnectionResponse, ServiceConnectionRequest
+from polyad_types import AdaptationReport, ConnectionResponse, ServiceConnectionRequest
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -91,6 +94,7 @@ class AdaptiveService(ABC):
         events: EventSource,
         *,
         api: ThroughputReporter | None = None,
+        adaptations: AdaptationReporter | None = None,
         connections: ConnectionNegotiator | None = None,
         strategies: Sequence[AdaptationStrategy] = (),
         require_strategies: bool = True,
@@ -107,6 +111,7 @@ class AdaptiveService(ABC):
             identity (ServiceEndpoint): Exact graph incarnation and logical node, with an optional registered cluster.
             events (EventSource): Authorized events/topology client.
             api (ThroughputReporter | None): Separately authorized throughput reporter.
+            adaptations (AdaptationReporter | None): Authorized strategy lifecycle reporter; defaults to api when supported.
             connections (ConnectionNegotiator | None): Projected-token client for consent and connection requests.
             strategies (Sequence[AdaptationStrategy]): Ordered application components, copied at construction.
             require_strategies (bool): Require at least one strategy; false accepts undefined behavior for uncovered cases.
@@ -122,6 +127,7 @@ class AdaptiveService(ABC):
         """
         self._strategies = _strategy_components(strategies, require_strategies)
         self.identity, self.events, self.api, self.connections = identity, events, api, connections
+        self.adaptations = adaptations if adaptations is not None else (api if isinstance(api, AdaptationReporter) else None)
         self.context = context if context is not None else WorkloadContext(identity, node_id=identity.node, runtime_node_name=identity.node)
         if self.context.identity != identity:
             raise ValueError("workload context must match the service identity")
@@ -243,10 +249,12 @@ class AdaptiveService(ABC):
 
         events = client("EVENTS", required=True)
         assert events is not None
+        api_client = client("API")
         return cls(
             identity,
             events,
-            api=client("API"),
+            api=api_client,
+            adaptations=api_client,
             connections=client("CONNECTIONS"),
             strategies=components,
             require_strategies=require_strategies,
@@ -267,8 +275,56 @@ class AdaptiveService(ABC):
         return self._strategies
 
     def _adapt_strategy(self, strategy: AdaptationStrategy, change: Change) -> None:
-        with self.telemetry.operation("adaptation.strategy", attributes={"strategy": type(strategy).__name__}):
-            strategy.adapt(change, self.view)
+        name = type(strategy).__name__
+        reporter = self.adaptations
+        definition = self.context.definition
+        position = next(index for index, component in enumerate(self._strategies) if component is strategy)
+        invocation = str(
+            uuid.uuid5(
+                uuid.NAMESPACE_URL,
+                "|".join(
+                    (
+                        self.identity.graphUid,
+                        definition.uid if definition is not None else "inline",
+                        self.context.pod.uid or self.context.runtime_node_name or "local",
+                        self.identity.node,
+                        str(position),
+                        name,
+                        self._pending_cursor or "baseline",
+                    )
+                ),
+            )
+        )
+
+        def report(phase: Literal["Running", "Succeeded", "Failed"]) -> None:
+            if reporter is None or definition is None or self.context.definition_generation is None:
+                return
+            reporter.report_adaptation(
+                AdaptationReport(
+                    self.identity.graph,
+                    self.identity.graphUid,
+                    definition.name,
+                    definition.uid,
+                    self.context.definition_generation,
+                    cast("Literal['Workload', 'Daemon']", definition.kind),
+                    self.identity.node,
+                    invocation,
+                    name,
+                    phase,
+                    datetime.now(UTC).isoformat(),
+                    cast("Literal['Graph', 'PolyGraph', 'ReplicaGroup']", self.identity.kind),
+                )
+            )
+
+        with self.telemetry.operation("adaptation.strategy", attributes={"strategy": name}):
+            report("Running")
+            try:
+                strategy.adapt(change, self.view)
+            except BaseException:
+                report("Failed")
+                raise
+            else:
+                report("Succeeded")
 
     @property
     def view(self) -> Environment:

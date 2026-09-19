@@ -92,4 +92,101 @@ spec:
     {{- end }}
     {{- end }}
 {{- end }}
+{{- if .Values.mesh.authorization.audit.enabled }}
+{{- if not .Values.mesh.operator.enabled }}{{ fail "authorization audit requires mesh.operator.enabled" }}{{ end }}
+{{- if not .Values.mesh.authorization.audit.paths }}{{ fail "authorization audit requires at least one path" }}{{ end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ .Release.Name }}-polyad-audit
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad
+  action: AUDIT
+  rules:
+    - to:
+        - operation:
+            {{- with .Values.mesh.authorization.audit.methods }}
+            methods: {{ toJson . }}
+            {{- end }}
+            paths: {{ toJson .Values.mesh.authorization.audit.paths }}
+{{- end }}
+{{- if .Values.mesh.authorization.dryRunDeny.enabled }}
+{{- if not .Values.mesh.operator.enabled }}{{ fail "authorization dry-run requires mesh.operator.enabled" }}{{ end }}
+{{- if not .Values.mesh.authorization.dryRunDeny.paths }}{{ fail "authorization dry-run requires at least one path" }}{{ end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ .Release.Name }}-polyad-dry-run-deny
+  annotations:
+    istio.io/dry-run: 'true'
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad
+  action: DENY
+  rules:
+    - to:
+        - operation:
+            {{- with .Values.mesh.authorization.dryRunDeny.methods }}
+            methods: {{ toJson . }}
+            {{- end }}
+            paths: {{ toJson .Values.mesh.authorization.dryRunDeny.paths }}
+{{- end }}
+{{- if .Values.mesh.ingress.jwt.enabled }}
+{{- if not (or .Values.mesh.ingress.enabled .Values.mesh.ingress.gatewayAPI.enabled) }}{{ fail "ingress JWT requires a managed mesh ingress" }}{{ end }}
+{{- if not .Values.mesh.ingress.jwt.issuer }}{{ fail "ingress JWT requires an issuer" }}{{ end }}
+---
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: {{ .Release.Name }}-polyad-ingress
+spec:
+  {{- if .Values.mesh.ingress.gatewayAPI.enabled }}
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Release.Name }}-polyad
+  {{- else }}
+  selector:
+    matchLabels:
+      istio: polyad-ingress
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  {{- end }}
+  jwtRules:
+    - issuer: {{ .Values.mesh.ingress.jwt.issuer | quote }}
+      {{- with .Values.mesh.ingress.jwt.audiences }}
+      audiences: {{ toJson . }}
+      {{- end }}
+      {{- with .Values.mesh.ingress.jwt.jwksUri }}
+      jwksUri: {{ . | quote }}
+      {{- end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ .Release.Name }}-polyad-ingress-jwt
+spec:
+  {{- if .Values.mesh.ingress.gatewayAPI.enabled }}
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Release.Name }}-polyad
+  {{- else }}
+  selector:
+    matchLabels:
+      istio: polyad-ingress
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  {{- end }}
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            requestPrincipals: ['*']
+{{- end }}
 {{- end -}}

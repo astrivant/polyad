@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, build_opener
 
-from polyad_sdk.api.interfaces import ConnectionNegotiator, ThroughputReporter
+from polyad_sdk.api.interfaces import AdaptationReporter, ConnectionNegotiator, ThroughputReporter
 from polyad_sdk.events.source import EventSource
 from polyad_sdk.observability import Telemetry
 from polyad_sdk.transport.http import APIError, _NoRedirect
@@ -24,10 +24,17 @@ if TYPE_CHECKING:
     from threading import Event as StopEvent
     from typing import Any, Literal
 
-    from polyad_types import CompositionRequest, ConnectionRequest, ConnectionResponse, ServiceConnectionRequest, ThroughputSample
+    from polyad_types import (
+        AdaptationReport,
+        CompositionRequest,
+        ConnectionRequest,
+        ConnectionResponse,
+        ServiceConnectionRequest,
+        ThroughputSample,
+    )
 
 
-class Client(EventSource, ThroughputReporter, ConnectionNegotiator):
+class Client(EventSource, ThroughputReporter, AdaptationReporter, ConnectionNegotiator):
     """
     Call Polyad APIs with no implicit mutation retries.
     """
@@ -88,6 +95,18 @@ class Client(EventSource, ThroughputReporter, ConnectionNegotiator):
         with self._open("POST", "/v1/throughput", to_dict(sample)) as response:
             result: dict[str, Any] = json.loads(response.read())
             return result
+
+    def report_adaptation(self, report: AdaptationReport) -> dict[str, Any]:
+        """
+        Publish one fenced SDK strategy lifecycle transition.
+
+        Args:
+            report (AdaptationReport): Fenced definition and invocation transition.
+
+        Returns:
+            dict[str, Any]: Current definition adaptation acknowledgement.
+        """
+        return self._request("POST", "/v1/adaptations", to_dict(report))
 
     def connect_services(self, request: ServiceConnectionRequest) -> dict[str, Any]:
         """

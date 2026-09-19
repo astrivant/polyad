@@ -26,7 +26,7 @@ def test_operator_profiles_preserve_guaranteed_resources(profile):
     """
     objects = render(
         *(("federation.clusters[0].namespace=test",) if profile == "values-worker.reference.yaml" else ()),
-        values_files=(CHART / profile,),
+        values_files=(CHART / "references" / profile,),
     )
     expected = {"requests": {"cpu": "1", "memory": "1Gi"}, "limits": {"cpu": "1", "memory": "1Gi"}}
     count = 0

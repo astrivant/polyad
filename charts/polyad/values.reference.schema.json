@@ -722,6 +722,36 @@
             },
             "tlsSecret": {
               "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/tlsSecret"
+            },
+            "gatewayAPI": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/gatewayAPI/properties/enabled"
+                },
+                "className": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/gatewayAPI/properties/className"
+                }
+              }
+            },
+            "jwt": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/jwt/properties/enabled"
+                },
+                "issuer": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/jwt/properties/issuer"
+                },
+                "audiences": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/jwt/properties/audiences"
+                },
+                "jwksUri": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/ingress/properties/jwt/properties/jwksUri"
+                }
+              }
             }
           }
         },
@@ -731,6 +761,36 @@
           "properties": {
             "enabled": {
               "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/enabled"
+            },
+            "routing": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/routing/properties/enabled"
+                },
+                "mode": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/routing/properties/mode"
+                },
+                "failover": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/routing/properties/failover"
+                },
+                "distribute": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/routing/properties/distribute"
+                },
+                "consecutive5xxErrors": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/routing/properties/consecutive5xxErrors"
+                },
+                "intervalSeconds": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/routing/properties/intervalSeconds"
+                },
+                "baseEjectionSeconds": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/routing/properties/baseEjectionSeconds"
+                },
+                "maxEjectionPercent": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/routing/properties/maxEjectionPercent"
+                }
+              }
             },
             "eastWest": {
               "type": "object",
@@ -749,6 +809,93 @@
             },
             "peers": {
               "$ref": "values.schema.json#/properties/mesh/properties/multicluster/properties/peers"
+            }
+          }
+        },
+        "telemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/mesh/properties/telemetry/properties/enabled"
+            },
+            "metricsProviders": {
+              "$ref": "values.schema.json#/properties/mesh/properties/telemetry/properties/metricsProviders"
+            },
+            "accessLogging": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/telemetry/properties/accessLogging/properties/enabled"
+                },
+                "providers": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/telemetry/properties/accessLogging/properties/providers"
+                },
+                "filter": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/telemetry/properties/accessLogging/properties/filter"
+                }
+              }
+            },
+            "tracing": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/telemetry/properties/tracing/properties/enabled"
+                },
+                "providers": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/telemetry/properties/tracing/properties/providers"
+                },
+                "randomSamplingPercentage": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/telemetry/properties/tracing/properties/randomSamplingPercentage"
+                }
+              }
+            }
+          }
+        },
+        "sidecar": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/mesh/properties/sidecar/properties/enabled"
+            },
+            "egressHosts": {
+              "$ref": "values.schema.json#/properties/mesh/properties/sidecar/properties/egressHosts"
+            }
+          }
+        },
+        "authorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "audit": {
+              "$ref": "values.schema.json#/properties/mesh/properties/authorization/properties/audit"
+            },
+            "dryRunDeny": {
+              "$ref": "values.schema.json#/properties/mesh/properties/authorization/properties/dryRunDeny"
+            }
+          }
+        },
+        "egress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "values.schema.json#/properties/mesh/properties/egress/properties/enabled"
+            },
+            "destinations": {
+              "$ref": "values.schema.json#/properties/mesh/properties/egress/properties/destinations"
+            },
+            "gateway": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/mesh/properties/egress/properties/gateway/properties/enabled"
+                }
+              }
             }
           }
         },
@@ -1216,96 +1363,96 @@
         }
       }
     },
-    "istioEastWest": {
+    "istioEastWestGateway": {
       "type": "object",
       "description": "Upstream east-west gateway overrides; networkGateway must equal global.network and custom tunnel ports require a matching networking.istio.io/gatewayPort label",
       "properties": {
         "affinity": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/affinity"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/affinity"
         },
         "kind": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/kind"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/kind"
         },
         "annotations": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/annotations"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/annotations"
         },
         "autoscaling": {
           "type": "object",
           "properties": {
             "enabled": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/autoscaling/properties/enabled"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/autoscaling/properties/enabled"
             },
             "maxReplicas": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/autoscaling/properties/maxReplicas"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/autoscaling/properties/maxReplicas"
             },
             "minReplicas": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/autoscaling/properties/minReplicas"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/autoscaling/properties/minReplicas"
             },
             "targetCPUUtilizationPercentage": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/autoscaling/properties/targetCPUUtilizationPercentage"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/autoscaling/properties/targetCPUUtilizationPercentage"
             }
           }
         },
         "envVarFrom": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/envVarFrom"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/envVarFrom"
         },
         "strategy": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/strategy"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/strategy"
         },
         "nodeSelector": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/nodeSelector"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/nodeSelector"
         },
         "podAnnotations": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/podAnnotations"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/podAnnotations"
         },
         "resources": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/resources"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/resources"
         },
         "revision": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/revision"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/revision"
         },
         "compatibilityVersion": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/compatibilityVersion"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/compatibilityVersion"
         },
         "profile": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/profile"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/profile"
         },
         "platform": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/platform"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/platform"
         },
         "service": {
           "type": "object",
           "properties": {
             "annotations": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/annotations"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/annotations"
             },
             "selectorLabels": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/selectorLabels"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/selectorLabels"
             },
             "externalTrafficPolicy": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/externalTrafficPolicy"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/externalTrafficPolicy"
             },
             "loadBalancerIP": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/loadBalancerIP"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/loadBalancerIP"
             },
             "loadBalancerSourceRanges": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/loadBalancerSourceRanges"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/loadBalancerSourceRanges"
             },
             "ipFamilyPolicy": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/ipFamilyPolicy"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/ipFamilyPolicy"
             },
             "ports": {
               "anyOf": [
                 {
-                  "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/ports/anyOf/0"
+                  "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/ports/anyOf/0"
                 },
                 {
-                  "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/ports/anyOf/1"
+                  "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/ports/anyOf/1"
                 }
               ]
             },
             "type": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/service/properties/type"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/service/properties/type"
             }
           }
         },
@@ -1313,10 +1460,10 @@
           "type": "object",
           "properties": {
             "annotations": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/serviceAccount/properties/annotations"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/serviceAccount/properties/annotations"
             },
             "create": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/serviceAccount/properties/create"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/serviceAccount/properties/create"
             }
           }
         },
@@ -1324,59 +1471,62 @@
           "type": "object",
           "properties": {
             "enabled": {
-              "$ref": "values.schema.json#/properties/istioEastWest/properties/rbac/properties/enabled"
+              "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/rbac/properties/enabled"
             }
           }
         },
         "tolerations": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/tolerations"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/tolerations"
         },
         "topologySpreadConstraints": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/topologySpreadConstraints"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/topologySpreadConstraints"
         },
         "networkGateway": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/networkGateway"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/networkGateway"
         },
         "networkGatewayPorts": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/networkGatewayPorts"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/networkGatewayPorts"
         },
         "imagePullPolicy": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/imagePullPolicy"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/imagePullPolicy"
         },
         "imagePullSecrets": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/imagePullSecrets"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/imagePullSecrets"
         },
         "podDisruptionBudget": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/podDisruptionBudget"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/podDisruptionBudget"
         },
         "terminationGracePeriodSeconds": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/terminationGracePeriodSeconds"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/terminationGracePeriodSeconds"
         },
         "volumes": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/volumes"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/volumes"
         },
         "volumeMounts": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/volumeMounts"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/volumeMounts"
         },
         "initContainers": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/initContainers"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/initContainers"
         },
         "additionalContainers": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/additionalContainers"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/additionalContainers"
         },
         "priorityClassName": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/priorityClassName"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/priorityClassName"
         },
         "lifecycle": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/lifecycle"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/lifecycle"
         },
         "name": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/name"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/name"
         },
         "labels": {
-          "$ref": "values.schema.json#/properties/istioEastWest/properties/labels"
+          "$ref": "values.schema.json#/properties/istioEastWestGateway/properties/labels"
         }
       }
+    },
+    "istioEgress": {
+      "$ref": "values.schema.json#/properties/istioEgress"
     },
     "federation": {
       "type": "object",

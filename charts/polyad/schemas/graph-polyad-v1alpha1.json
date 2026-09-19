@@ -90,6 +90,90 @@
                 "description": "Distinct downstream subsets whose percentages sum to 100.",
                 "minItems": 2,
                 "maxItems": 16
+              },
+              "resilience": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Bound proxy-level failures without changing application traffic weights.",
+                    "properties": {
+                      "outlierDetection": {
+                        "type": "boolean",
+                        "description": "Eject endpoints that repeatedly return server errors."
+                      },
+                      "consecutive5xxErrors": {
+                        "type": "integer",
+                        "description": "Consecutive server errors required before ejection.",
+                        "minimum": 1,
+                        "maximum": 100
+                      },
+                      "intervalSeconds": {
+                        "type": "integer",
+                        "description": "Endpoint health analysis interval.",
+                        "minimum": 1,
+                        "maximum": 300
+                      },
+                      "baseEjectionSeconds": {
+                        "type": "integer",
+                        "description": "Minimum endpoint ejection duration.",
+                        "minimum": 1,
+                        "maximum": 3600
+                      },
+                      "maxEjectionPercent": {
+                        "type": "integer",
+                        "description": "Maximum percentage of endpoints that may be ejected.",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "maxConnections": {
+                        "type": "integer",
+                        "description": "TCP connection ceiling; zero leaves Istio's default.",
+                        "minimum": 0,
+                        "maximum": 1048576
+                      },
+                      "maxPendingRequests": {
+                        "type": "integer",
+                        "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                        "minimum": 0,
+                        "maximum": 1048576
+                      },
+                      "maxRequests": {
+                        "type": "integer",
+                        "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                        "minimum": 0,
+                        "maximum": 1048576
+                      },
+                      "retries": {
+                        "type": "integer",
+                        "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "perTryTimeoutSeconds": {
+                        "type": "integer",
+                        "description": "Optional timeout for an individual retry attempt.",
+                        "minimum": 0,
+                        "maximum": 300
+                      },
+                      "timeoutSeconds": {
+                        "type": "integer",
+                        "description": "Optional total request timeout; zero preserves Istio's default.",
+                        "minimum": 0,
+                        "maximum": 3600
+                      },
+                      "retryOn": {
+                        "type": "string",
+                        "enum": [
+                          "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                        ],
+                        "description": "Istio retry conditions used when retries are enabled."
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -1486,6 +1570,90 @@
                     "description": "Distinct downstream subsets whose percentages sum to 100.",
                     "minItems": 2,
                     "maxItems": 16
+                  },
+                  "resilience": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "description": "Bound proxy-level failures without changing application traffic weights.",
+                        "properties": {
+                          "outlierDetection": {
+                            "type": "boolean",
+                            "description": "Eject endpoints that repeatedly return server errors."
+                          },
+                          "consecutive5xxErrors": {
+                            "type": "integer",
+                            "description": "Consecutive server errors required before ejection.",
+                            "minimum": 1,
+                            "maximum": 100
+                          },
+                          "intervalSeconds": {
+                            "type": "integer",
+                            "description": "Endpoint health analysis interval.",
+                            "minimum": 1,
+                            "maximum": 300
+                          },
+                          "baseEjectionSeconds": {
+                            "type": "integer",
+                            "description": "Minimum endpoint ejection duration.",
+                            "minimum": 1,
+                            "maximum": 3600
+                          },
+                          "maxEjectionPercent": {
+                            "type": "integer",
+                            "description": "Maximum percentage of endpoints that may be ejected.",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "maxConnections": {
+                            "type": "integer",
+                            "description": "TCP connection ceiling; zero leaves Istio's default.",
+                            "minimum": 0,
+                            "maximum": 1048576
+                          },
+                          "maxPendingRequests": {
+                            "type": "integer",
+                            "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                            "minimum": 0,
+                            "maximum": 1048576
+                          },
+                          "maxRequests": {
+                            "type": "integer",
+                            "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                            "minimum": 0,
+                            "maximum": 1048576
+                          },
+                          "retries": {
+                            "type": "integer",
+                            "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                            "minimum": 0,
+                            "maximum": 10
+                          },
+                          "perTryTimeoutSeconds": {
+                            "type": "integer",
+                            "description": "Optional timeout for an individual retry attempt.",
+                            "minimum": 0,
+                            "maximum": 300
+                          },
+                          "timeoutSeconds": {
+                            "type": "integer",
+                            "description": "Optional total request timeout; zero preserves Istio's default.",
+                            "minimum": 0,
+                            "maximum": 3600
+                          },
+                          "retryOn": {
+                            "type": "string",
+                            "enum": [
+                              "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                            ],
+                            "description": "Istio retry conditions used when retries are enabled."
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -1565,6 +1733,90 @@
                     "description": "Distinct downstream subsets whose percentages sum to 100.",
                     "minItems": 2,
                     "maxItems": 16
+                  },
+                  "resilience": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "description": "Bound proxy-level failures without changing application traffic weights.",
+                        "properties": {
+                          "outlierDetection": {
+                            "type": "boolean",
+                            "description": "Eject endpoints that repeatedly return server errors."
+                          },
+                          "consecutive5xxErrors": {
+                            "type": "integer",
+                            "description": "Consecutive server errors required before ejection.",
+                            "minimum": 1,
+                            "maximum": 100
+                          },
+                          "intervalSeconds": {
+                            "type": "integer",
+                            "description": "Endpoint health analysis interval.",
+                            "minimum": 1,
+                            "maximum": 300
+                          },
+                          "baseEjectionSeconds": {
+                            "type": "integer",
+                            "description": "Minimum endpoint ejection duration.",
+                            "minimum": 1,
+                            "maximum": 3600
+                          },
+                          "maxEjectionPercent": {
+                            "type": "integer",
+                            "description": "Maximum percentage of endpoints that may be ejected.",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "maxConnections": {
+                            "type": "integer",
+                            "description": "TCP connection ceiling; zero leaves Istio's default.",
+                            "minimum": 0,
+                            "maximum": 1048576
+                          },
+                          "maxPendingRequests": {
+                            "type": "integer",
+                            "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                            "minimum": 0,
+                            "maximum": 1048576
+                          },
+                          "maxRequests": {
+                            "type": "integer",
+                            "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                            "minimum": 0,
+                            "maximum": 1048576
+                          },
+                          "retries": {
+                            "type": "integer",
+                            "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                            "minimum": 0,
+                            "maximum": 10
+                          },
+                          "perTryTimeoutSeconds": {
+                            "type": "integer",
+                            "description": "Optional timeout for an individual retry attempt.",
+                            "minimum": 0,
+                            "maximum": 300
+                          },
+                          "timeoutSeconds": {
+                            "type": "integer",
+                            "description": "Optional total request timeout; zero preserves Istio's default.",
+                            "minimum": 0,
+                            "maximum": 3600
+                          },
+                          "retryOn": {
+                            "type": "string",
+                            "enum": [
+                              "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                            ],
+                            "description": "Istio retry conditions used when retries are enabled."
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [

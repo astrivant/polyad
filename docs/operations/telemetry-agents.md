@@ -17,7 +17,7 @@ disabled by default and does not add another Python API server.
 
 ## Choose a collector
 
-Start with the typed [Alloy reference](../../charts/polyad/values-telemetry.reference.yaml).
+Start with the typed [Alloy reference](../../charts/polyad/references/values-telemetry.reference.yaml).
 Set the remote-write URL, Loki push URL and OTLP/HTTP destination for your stack.
 The chart supplies collectors; it does not install those backends.
 
@@ -45,7 +45,7 @@ to port `4317`, or OTLP/HTTP traces to port `4318` at `/v1/traces`. Trace sampli
 remains an application setting; see [OpenTelemetry tracing](tracing.md).
 
 For metrics only, use the
-[Prometheus Agent reference](../../charts/polyad/values-prometheus-agent.reference.yaml).
+[Prometheus Agent reference](../../charts/polyad/references/values-prometheus-agent.reference.yaml).
 Select `PrometheusAgent`, one replica, and disable `logs.enabled` and
 `traces.enabled`. Helm rejects a mixed configuration. Metrics collection enables
 the operator's existing metrics listener except in downstream worker mode, where

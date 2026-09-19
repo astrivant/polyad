@@ -87,7 +87,7 @@ The [examples](docs/introduction/getting-started.md#examples) cover pipelines, s
 spot work, storage and nested graphs.
 
 For application feedback, start with the [approved load-profile example](examples/load-profiles.yaml)
-and its [Helm reference values](charts/polyad/values-soul-searching.reference.yaml).
+and its [Helm reference values](charts/polyad/references/values-soul-searching.reference.yaml).
 The [demand guide](docs/graphs/load-profiles.md#define-demand) explains signal names,
 units and thresholds; use `Observe` mode to inspect recommendations before enabling adaptation.
 
@@ -712,7 +712,7 @@ checkpoint, refresh ready endpoints and reconnect through Service/Istio routing
 or direct client-side round robin. Graceful shutdown gives subscriptions a bounded
 window to reconnect. See the [scale-out](docs/operations/event-rebalancing.md#scale-out-and-subscription-migration)
 and [scale-down](docs/operations/event-rebalancing.md#scale-down-and-shutdown)
-sequence diagrams and [typed Helm reference](charts/polyad/values-event-rebalancing.reference.yaml).
+sequence diagrams and [typed Helm reference](charts/polyad/references/values-event-rebalancing.reference.yaml).
 
 With a capacity policy, Polyad forecasts upcoming stages while earlier work
 runs, giving a compatible node autoscaler advance notice. Dependencies and gates
@@ -1029,7 +1029,7 @@ The [local service inventory](docs/deployment/local-services.md) observes the
 chart's enabled infrastructure while Helm and upstream operators retain lifecycle
 ownership. Set `keda.install: true` to install the optional pinned KEDA dependency,
 or configure references to existing KEDA with the
-[typed KEDA values](charts/polyad/values-keda.reference.yaml).
+[typed KEDA values](charts/polyad/references/values-keda.reference.yaml).
 
 Administrators can also [install downstream workers with Helm](docs/deployment/helm-workers.md)
 and attach their existing Deployments. Helm retains installation and upgrades;

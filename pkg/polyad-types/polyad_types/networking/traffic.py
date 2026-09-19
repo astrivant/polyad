@@ -5,8 +5,71 @@ Configure percentage routing separately from unweighted graph connectivity.
 from __future__ import annotations
 
 import re
+from typing import Literal
 
 from attrs import field, frozen
+
+RetryConditions = Literal["connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"]
+
+
+@frozen
+class TrafficResilience:
+    """
+    Bound proxy-level failures without changing application traffic weights.
+
+    Attributes:
+        outlierDetection (bool): Eject endpoints that repeatedly return server errors.
+        consecutive5xxErrors (int): Consecutive server errors required before ejection.
+        intervalSeconds (int): Endpoint health analysis interval.
+        baseEjectionSeconds (int): Minimum endpoint ejection duration.
+        maxEjectionPercent (int): Maximum percentage of endpoints that may be ejected.
+        maxConnections (int): TCP connection ceiling; zero leaves Istio's default.
+        maxPendingRequests (int): Pending HTTP request ceiling; zero leaves Istio's default.
+        maxRequests (int): Active HTTP request ceiling; zero leaves Istio's default.
+        retries (int): Retry attempts for failures selected by retryOn; zero disables retries.
+        perTryTimeoutSeconds (int): Optional timeout for an individual retry attempt.
+        timeoutSeconds (int): Optional total request timeout; zero preserves Istio's default.
+        retryOn (RetryConditions): Istio retry conditions used when retries are enabled.
+    """
+
+    outlierDetection: bool = True
+    consecutive5xxErrors: int = field(default=5, metadata={"schema": {"minimum": 1, "maximum": 100}})
+    intervalSeconds: int = field(default=10, metadata={"schema": {"minimum": 1, "maximum": 300}})
+    baseEjectionSeconds: int = field(default=30, metadata={"schema": {"minimum": 1, "maximum": 3600}})
+    maxEjectionPercent: int = field(default=50, metadata={"schema": {"minimum": 0, "maximum": 100}})
+    maxConnections: int = field(default=0, metadata={"schema": {"minimum": 0, "maximum": 1048576}})
+    maxPendingRequests: int = field(default=0, metadata={"schema": {"minimum": 0, "maximum": 1048576}})
+    maxRequests: int = field(default=0, metadata={"schema": {"minimum": 0, "maximum": 1048576}})
+    retries: int = field(default=0, metadata={"schema": {"minimum": 0, "maximum": 10}})
+    perTryTimeoutSeconds: int = field(default=0, metadata={"schema": {"minimum": 0, "maximum": 300}})
+    timeoutSeconds: int = field(default=0, metadata={"schema": {"minimum": 0, "maximum": 3600}})
+    retryOn: RetryConditions = "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject unsafe or internally inconsistent proxy limits.
+
+        Returns:
+            None: No return value.
+        """
+        bounded = {
+            "consecutive5xxErrors": (self.consecutive5xxErrors, 1, 100),
+            "intervalSeconds": (self.intervalSeconds, 1, 300),
+            "baseEjectionSeconds": (self.baseEjectionSeconds, 1, 3600),
+            "maxEjectionPercent": (self.maxEjectionPercent, 0, 100),
+            "maxConnections": (self.maxConnections, 0, 1048576),
+            "maxPendingRequests": (self.maxPendingRequests, 0, 1048576),
+            "maxRequests": (self.maxRequests, 0, 1048576),
+            "retries": (self.retries, 0, 10),
+            "perTryTimeoutSeconds": (self.perTryTimeoutSeconds, 0, 300),
+            "timeoutSeconds": (self.timeoutSeconds, 0, 3600),
+        }
+        if any(type(value) is not int or not minimum <= value <= maximum for value, minimum, maximum in bounded.values()):
+            raise ValueError("traffic resilience limits must be bounded integers")
+        if not self.retries and self.perTryTimeoutSeconds:
+            raise ValueError("per-try timeout requires retries")
+        if self.timeoutSeconds and self.perTryTimeoutSeconds > self.timeoutSeconds:
+            raise ValueError("per-try timeout cannot exceed the total request timeout")
 
 
 @frozen
@@ -54,6 +117,7 @@ class TrafficRoute:
         service (str): Existing Service in the graph namespace covering all destination pods.
         port (int): Service port carrying HTTP, HTTP/2 or gRPC traffic.
         destinations (tuple[TrafficDestination, ...]): Distinct downstream subsets whose percentages sum to 100.
+        resilience (TrafficResilience | None): Optional circuit breaking, endpoint ejection and retry policy.
     """
 
     name: str = field(metadata={"schema": {"maxLength": 63, "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"}})
@@ -61,6 +125,7 @@ class TrafficRoute:
     service: str = field(metadata={"schema": {"maxLength": 63, "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"}})
     port: int = field(metadata={"schema": {"minimum": 1, "maximum": 65535}})
     destinations: tuple[TrafficDestination, ...] = field(metadata={"schema": {"minItems": 2, "maxItems": 16}})
+    resilience: TrafficResilience | None = None
 
     def __attrs_post_init__(self) -> None:
         """

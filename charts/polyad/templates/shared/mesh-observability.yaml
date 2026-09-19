@@ -1,0 +1,59 @@
+{{- $ := merge (dict "Values" (include "polyad.profileValues" . | fromJson)) (omit . "Values") -}}
+{{- with $ -}}
+{{- if .Values.mesh.telemetry.enabled }}
+{{- if not .Values.mesh.operator.enabled }}{{ fail "mesh.telemetry requires mesh.operator.enabled" }}{{ end }}
+{{- if and .Values.mesh.telemetry.tracing.enabled (not .Values.mesh.telemetry.tracing.providers) }}{{ fail "mesh telemetry tracing requires at least one provider" }}{{ end }}
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad
+  {{- with .Values.mesh.telemetry.metricsProviders }}
+  metrics:
+    - providers:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+  {{- end }}
+  {{- if .Values.mesh.telemetry.accessLogging.enabled }}
+  accessLogging:
+    - providers:
+        {{- range .Values.mesh.telemetry.accessLogging.providers }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- with .Values.mesh.telemetry.accessLogging.filter }}
+      filter:
+        expression: {{ . | quote }}
+      {{- end }}
+  {{- end }}
+  {{- if .Values.mesh.telemetry.tracing.enabled }}
+  tracing:
+    - providers:
+        {{- range .Values.mesh.telemetry.tracing.providers }}
+        - name: {{ . | quote }}
+        {{- end }}
+      randomSamplingPercentage: {{ .Values.mesh.telemetry.tracing.randomSamplingPercentage }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.mesh.sidecar.enabled }}
+{{- if not .Values.mesh.operator.enabled }}{{ fail "mesh.sidecar requires mesh.operator.enabled" }}{{ end }}
+{{- if not .Values.mesh.sidecar.egressHosts }}{{ fail "mesh.sidecar requires at least one egress host" }}{{ end }}
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: {{ .Release.Name }}-polyad
+spec:
+  workloadSelector:
+    labels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: polyad
+  egress:
+    - hosts:
+        {{- toYaml .Values.mesh.sidecar.egressHosts | nindent 8 }}
+{{- end }}
+{{- end -}}

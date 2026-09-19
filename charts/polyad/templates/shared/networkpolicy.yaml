@@ -18,7 +18,7 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/name: polyad
   policyTypes: [Ingress, Egress]
-  ingress:{{ if not (or .Values.networkPolicy.compositionPeers .Values.networkPolicy.eventPeers .Values.networkPolicy.healthPeers .Values.networkPolicy.metricsPeers .Values.mesh.ingress.enabled .Values.connections.enabled) }} []{{ end }}
+  ingress:{{ if not (or .Values.networkPolicy.compositionPeers .Values.networkPolicy.eventPeers .Values.networkPolicy.healthPeers .Values.networkPolicy.metricsPeers .Values.mesh.ingress.enabled .Values.mesh.ingress.gatewayAPI.enabled .Values.connections.enabled) }} []{{ end }}
     {{- if .Values.connections.enabled }}
     - from:
         - namespaceSelector:
@@ -60,11 +60,15 @@ spec:
         - protocol: TCP
           port: 8080
     {{- end }}
-    {{- if .Values.mesh.ingress.enabled }}
+    {{- if or .Values.mesh.ingress.enabled .Values.mesh.ingress.gatewayAPI.enabled }}
     - from:
         - podSelector:
             matchLabels:
+              {{- if .Values.mesh.ingress.gatewayAPI.enabled }}
+              gateway.networking.k8s.io/gateway-name: {{ .Release.Name }}-polyad
+              {{- else }}
               istio: polyad-ingress
+              {{- end }}
       ports:
         - {protocol: TCP, port: 8090}
         - {protocol: TCP, port: 8091}

@@ -118,31 +118,60 @@ def route_specs(
     selectors = selectors or {
         destination.target: {scope_label(namespace, kind, name, destination.target): "true"} for destination in route.destinations
     }
+    destination_rule: dict[str, Any] = {
+        "host": host,
+        "exportTo": ["."],
+        "workloadSelector": {"matchLabels": source},
+        "subsets": [{"name": subsets[destination.target], "labels": selectors[destination.target]} for destination in route.destinations],
+    }
+    http_route: dict[str, Any] = {
+        "name": route.name,
+        "match": [{"sourceLabels": source, "sourceNamespace": namespace, "port": route.port}],
+        "route": [
+            {
+                "destination": {"host": host, "subset": subsets[destination.target], "port": {"number": route.port}},
+                "weight": destination.weight,
+            }
+            for destination in route.destinations
+        ],
+    }
+    if route.resilience is not None:
+        resilience = route.resilience
+        policy: dict[str, Any] = {}
+        if resilience.outlierDetection:
+            policy["outlierDetection"] = {
+                "consecutive5xxErrors": resilience.consecutive5xxErrors,
+                "interval": f"{resilience.intervalSeconds}s",
+                "baseEjectionTime": f"{resilience.baseEjectionSeconds}s",
+                "maxEjectionPercent": resilience.maxEjectionPercent,
+            }
+        tcp = {"maxConnections": resilience.maxConnections} if resilience.maxConnections else {}
+        http = {
+            key: value
+            for key, value in {
+                "http1MaxPendingRequests": resilience.maxPendingRequests,
+                "http2MaxRequests": resilience.maxRequests,
+            }.items()
+            if value
+        }
+        if tcp or http:
+            policy["connectionPool"] = {**({"tcp": tcp} if tcp else {}), **({"http": http} if http else {})}
+        if policy:
+            destination_rule["trafficPolicy"] = policy
+        if resilience.retries:
+            http_route["retries"] = {
+                "attempts": resilience.retries,
+                "retryOn": resilience.retryOn,
+                **({"perTryTimeout": f"{resilience.perTryTimeoutSeconds}s"} if resilience.perTryTimeoutSeconds else {}),
+            }
+        if resilience.timeoutSeconds:
+            http_route["timeout"] = f"{resilience.timeoutSeconds}s"
     return {
-        "DestinationRule": {
-            "host": host,
-            "exportTo": ["."],
-            "workloadSelector": {"matchLabels": source},
-            "subsets": [
-                {"name": subsets[destination.target], "labels": selectors[destination.target]} for destination in route.destinations
-            ],
-        },
+        "DestinationRule": destination_rule,
         "VirtualService": {
             "hosts": [host],
             "gateways": ["mesh"],
             "exportTo": ["."],
-            "http": [
-                {
-                    "name": route.name,
-                    "match": [{"sourceLabels": source, "sourceNamespace": namespace, "port": route.port}],
-                    "route": [
-                        {
-                            "destination": {"host": host, "subset": subsets[destination.target], "port": {"number": route.port}},
-                            "weight": destination.weight,
-                        }
-                        for destination in route.destinations
-                    ],
-                }
-            ],
+            "http": [http_route],
         },
     }

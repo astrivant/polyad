@@ -11,21 +11,21 @@
 {{- $_ := set $names .name true }}
 {{- end }}
 {{- if .Values.mesh.multicluster.eastWest.enabled }}
-{{- if and .Values.mesh.ingress.enabled (eq (default .Release.Name .Values.istioIngress.name) .Values.istioEastWest.name) }}
+{{- if and .Values.mesh.ingress.enabled (eq (default .Release.Name .Values.istioIngress.name) .Values.istioEastWestGateway.name) }}
 {{- fail "Istio ingress and east-west gateway names must be distinct" }}
 {{- end }}
-{{- $ports := .Values.istioEastWest.networkGatewayPorts | default dict }}
+{{- $ports := .Values.istioEastWestGateway.networkGatewayPorts | default dict }}
 {{- $tunnel := get $ports "tls" | default dict }}
-{{- $port := int (required "istioEastWest.networkGatewayPorts.tls.port is required" (get $tunnel "port")) }}
-{{- $discoveryPort := default "15443" (get .Values.istioEastWest.labels "networking.istio.io/gatewayPort") }}
+{{- $port := int (required "istioEastWestGateway.networkGatewayPorts.tls.port is required" (get $tunnel "port")) }}
+{{- $discoveryPort := default "15443" (get .Values.istioEastWestGateway.labels "networking.istio.io/gatewayPort") }}
 {{- if ne $discoveryPort (toString $port) }}
-{{- fail "istioEastWest.labels[networking.istio.io/gatewayPort] must match istioEastWest.networkGatewayPorts.tls.port (Istio defaults to 15443 when the label is omitted)" }}
+{{- fail "istioEastWestGateway.labels[networking.istio.io/gatewayPort] must match istioEastWestGateway.networkGatewayPorts.tls.port" }}
 {{- end }}
-{{- if ne .Values.istioEastWest.networkGateway .Values.global.network }}
-{{- fail "istioEastWest.networkGateway must equal global.network" }}
+{{- if ne .Values.istioEastWestGateway.networkGateway .Values.global.network }}
+{{- fail "istioEastWestGateway.networkGateway must equal global.network" }}
 {{- end }}
-{{- if ne (get .Values.istioEastWest.labels "istio") "polyad-eastwest" }}
-{{- fail "istioEastWest.labels.istio must be polyad-eastwest" }}
+{{- if ne (get .Values.istioEastWestGateway.labels "istio") "polyad-eastwest" }}
+{{- fail "istioEastWestGateway.labels.istio must be polyad-eastwest" }}
 {{- end }}
 apiVersion: networking.istio.io/v1
 kind: Gateway

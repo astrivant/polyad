@@ -17,7 +17,9 @@ def test_record_keys_reach_operator_components_but_never_postgresql(profile):
     """
     The shared operator template projects only public key data by default in dense and split deployments.
     """
-    values = ((CHART / profile,) if profile else ()) + (CHART / "values-postgresql-record-encryption.reference.yaml",)
+    values = ((CHART / "references" / profile,) if profile else ()) + (
+        CHART / "references" / "values-postgresql-record-encryption.reference.yaml",
+    )
     objects = render(values_files=values)
     pods = [obj["spec"]["template"]["spec"] for obj in objects if obj["kind"] == "Daemon"]
     pods += [obj["spec"]["template"]["spec"] for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad"]
@@ -52,7 +54,10 @@ def test_pair_and_password_reach_authentication_writers_including_observer():
         "postgresql.recordEncryption.privateKeyPasswordKey=password",
         "observer.enabled=true",
         "global.multiCluster.clusterName=west",
-        values_files=(CHART / "values-authentication.reference.yaml", CHART / "values-postgresql-record-encryption.reference.yaml"),
+        values_files=(
+            CHART / "references" / "values-authentication.reference.yaml",
+            CHART / "references" / "values-postgresql-record-encryption.reference.yaml",
+        ),
     )
     for name in ("test-polyad", "test-polyad-observer"):
         pod = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == name)["spec"]["template"]["spec"]
@@ -82,7 +87,7 @@ def test_invalid_record_encryption_values_reject_install(setting):
     Require keys, correct scalar types and at least one database writer before enabling.
     """
     with pytest.raises(subprocess.CalledProcessError):
-        render(setting, values_files=(CHART / "values-postgresql-record-encryption.reference.yaml",))
+        render(setting, values_files=(CHART / "references" / "values-postgresql-record-encryption.reference.yaml",))
 
 
 def test_disabled_encryption_mounts_no_keys_and_requires_no_secret():

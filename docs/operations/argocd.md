@@ -56,6 +56,7 @@ network access or operator RBAC is required.<sup>[\[2\]](https://argo-cd.readthe
 | --- | --- |
 | Current `Ready` graph or successfully `Completed` finite graph | Healthy |
 | Admission, gates, delays, pending capacity, startup or cleanup | Progressing |
+| CRD publishing `status.progressing: true`, including a Workload or Daemon with an active SDK adaptation | Progressing |
 | Missing status, stale generation or incomplete descendant observations | Progressing |
 | Failed leaf, failed subgraph or invalid graph | Degraded |
 | Suspended or stopped graph, including an observed suspended descendant | Suspended |

@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Guide: ../../../docs/deployment/postgresql.md#encryption-at-rest
+# Overlay on your operator and PostgreSQL values for NEW database volumes.
+# Install CloudNativePG and the GKE Persistent Disk CSI driver first.
+# Create the KMS key and its Compute Engine service-agent IAM grant separately.
+# This selects the same class for a separately enabled managed authentication database.
+## @param postgresql [object] Managed PostgreSQL and its storage encryption; existing databases need an explicit migration plan.
+postgresql:
+  ## @param postgresql.enabled [boolean] Enable the state database; encryption also covers event history stored there.
+  enabled: true
+  ## @param postgresql.managed [boolean] Create a CloudNativePG Cluster; external databases configure encryption with their provider.
+  managed: true
+  ## @param postgresql.encryptionAtRest [object] Select encrypted PVCs for every managed primary and standby, including replicas added by KEDA.
+  encryptionAtRest:
+    ## @param postgresql.encryptionAtRest.enabled [boolean] Apply this selection to state and separately enabled managed authentication databases; does not rewrite existing disks.
+    enabled: true
+    ## @param postgresql.encryptionAtRest.provider [string] GKE creates the class below; choose ExistingStorageClass and clear kmsKeyName to use an administrator-verified class on any provider.
+    provider: GKE
+    ## @param postgresql.encryptionAtRest.storageClass [string] Empty generates a release-specific GKE class name; ExistingStorageClass requires a nonempty existing class name.
+    storageClass: ''
+    ## @param postgresql.encryptionAtRest.kmsKeyName [string] Replace with a symmetric CryptoKey in the cluster's region; use the key resource without a cryptoKeyVersions suffix.
+    kmsKeyName: projects/replace-key-project/locations/us-central1/keyRings/polyad/cryptoKeys/postgresql
+    ## @param postgresql.encryptionAtRest.diskType [string] Choose a disk type supported by your machine family and CSI driver; this only affects newly provisioned volumes.
+    diskType: pd-balanced

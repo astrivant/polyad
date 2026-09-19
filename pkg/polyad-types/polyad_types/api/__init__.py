@@ -4,6 +4,7 @@ Share authentication, discovery, request and demand reporting contracts.
 
 from __future__ import annotations
 
+from polyad_types.api.adaptation import AdaptationReport as AdaptationReport
 from polyad_types.api.auth import APIKey as APIKey
 from polyad_types.api.auth import Authentication as Authentication
 from polyad_types.api.auth import CredentialAssignment as CredentialAssignment

@@ -22,7 +22,7 @@ EAST_WEST_SETTINGS = (
     "global.meshID=shared",
     "global.network=east-network",
     "global.multiCluster.clusterName=east",
-    "istioEastWest.networkGateway=east-network",
+    "istioEastWestGateway.networkGateway=east-network",
 )
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="requires Helm and helm dependency build charts/polyad")
 
@@ -35,7 +35,7 @@ def render(*settings, values_files=()):
     for filename in values_files:
         command.extend(["--values", str(Path(__file__).parent / "data" / filename)])
     for setting in settings:
-        flag = "--set-string" if setting.startswith(("dragonfly.existingSecret=", "istioEastWest.labels.")) else "--set"
+        flag = "--set-string" if setting.startswith(("dragonfly.existingSecret=", "istioEastWestGateway.labels.")) else "--set"
         if setting.startswith(("operator.tuning.", "tracing.samplingRatio=", "events.pollIntervalSeconds=")):
             flag = "--set-json"
         command.extend([flag, setting])
@@ -53,7 +53,7 @@ def test_websocket_chart_connects_values_runtime_gateway_and_policy():
         "mesh.ingress.hosts[0]=polyad.example",
         "mesh.ingress.tlsSecret=gateway-tls",
         "mesh.operator.eventPrincipals[0]=cluster.local/ns/test/sa/reader",
-        values_files=(CHART / "values-websockets.reference.yaml",),
+        values_files=(CHART / "references" / "values-websockets.reference.yaml",),
     )
     deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     env = {item["name"]: item.get("value") for item in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
@@ -537,6 +537,186 @@ def test_optional_network_policies_and_mesh_auth_are_separate_from_workloads():
     assert {"test-polyad-api", "test-polyad-events"} <= services
 
 
+def test_mesh_telemetry_sidecar_and_observation_policies_are_opt_in():
+    """
+    Scope proxy configuration and observe policy effects without changing default enforcement.
+    """
+    default = render("mesh.enabled=true", "mesh.operator.enabled=true")
+    assert not any(obj["kind"] in {"Telemetry", "Sidecar", "RequestAuthentication"} for obj in default)
+    objects = render(
+        "mesh.enabled=true",
+        "mesh.operator.enabled=true",
+        "mesh.telemetry.enabled=true",
+        "mesh.telemetry.tracing.enabled=true",
+        "mesh.telemetry.tracing.providers[0]=otel",
+        "mesh.sidecar.enabled=true",
+        "mesh.sidecar.egressHosts[0]=./*",
+        "mesh.sidecar.egressHosts[1]=istio-system/*",
+        "mesh.authorization.audit.enabled=true",
+        "mesh.authorization.audit.paths[0]=/v1/*",
+        "mesh.authorization.audit.methods[0]=POST",
+        "mesh.authorization.dryRunDeny.enabled=true",
+        "mesh.authorization.dryRunDeny.paths[0]=/admin/*",
+    )
+    telemetry = next(obj for obj in objects if obj["kind"] == "Telemetry")
+    assert telemetry["spec"]["metrics"][0]["providers"] == [{"name": "prometheus"}]
+    assert telemetry["spec"]["accessLogging"][0]["filter"]["expression"].startswith("response.code >= 500")
+    assert telemetry["spec"]["tracing"][0] == {
+        "providers": [{"name": "otel"}],
+        "randomSamplingPercentage": 1,
+    }
+    sidecar = next(obj for obj in objects if obj["kind"] == "Sidecar")
+    assert sidecar["spec"]["egress"][0]["hosts"] == ["./*", "istio-system/*"]
+    policies = {obj["metadata"]["name"]: obj for obj in objects if obj["kind"] == "AuthorizationPolicy"}
+    assert policies["test-polyad-audit"]["spec"]["action"] == "AUDIT"
+    dry_run = policies["test-polyad-dry-run-deny"]
+    assert dry_run["metadata"]["annotations"]["istio.io/dry-run"] == "true"
+    assert dry_run["spec"]["action"] == "DENY"
+    for obj, schema_name in ((telemetry, "telemetry-telemetry-v1.json"), (sidecar, "sidecar-networking-v1.json")):
+        jsonschema.Draft7Validator(json.loads((CHART / "schemas" / schema_name).read_text())).validate(obj)
+
+
+def test_locality_routing_merges_with_event_balancing():
+    """
+    Eject unhealthy endpoints and retain the existing least-request event policy.
+    """
+    objects = render(
+        "mesh.enabled=true",
+        "mesh.operator.enabled=true",
+        "mesh.multicluster.enabled=true",
+        "mesh.multicluster.routing.enabled=true",
+        "global.meshID=shared",
+        "global.network=east",
+        "global.multiCluster.clusterName=east",
+        "api.enabled=true",
+        "events.enabled=true",
+        "events.rebalance.enabled=true",
+        "events.istio.enabled=true",
+        "operator.terminationGracePeriodSeconds=80",
+    )
+    rules = [obj for obj in objects if obj["kind"] == "DestinationRule"]
+    assert {obj["metadata"]["name"] for obj in rules} == {"test-polyad-api-locality", "test-polyad-events"}
+    for rule in rules:
+        policy = rule["spec"]["trafficPolicy"]
+        assert policy["outlierDetection"]["maxEjectionPercent"] == 50
+        assert policy["loadBalancer"]["localityLbSetting"] == {"enabled": True}
+    assert (
+        next(rule for rule in rules if rule["metadata"]["name"] == "test-polyad-events")["spec"]["trafficPolicy"]["loadBalancer"]["simple"]
+        == "LEAST_REQUEST"
+    )
+
+
+@pytest.mark.parametrize("gateway_api", [False, True])
+def test_optional_ingress_jwt_and_gateway_api_convergence(gateway_api):
+    """
+    Require JWTs at either ingress implementation while preserving API-key authorization behind it.
+    """
+    settings = [
+        "mesh.enabled=true",
+        "api.enabled=true",
+        "mesh.ingress.hosts[0]=api.example.com",
+        "mesh.ingress.tlsSecret=api-cert",
+        "mesh.ingress.jwt.enabled=true",
+        "mesh.ingress.jwt.issuer=https://issuer.example.com",
+        "mesh.ingress.jwt.audiences[0]=polyad-api",
+    ]
+    settings.append("mesh.ingress.gatewayAPI.enabled=true" if gateway_api else "mesh.ingress.enabled=true")
+    objects = render(*settings)
+    request_auth = next(obj for obj in objects if obj["kind"] == "RequestAuthentication")
+    assert request_auth["spec"]["jwtRules"] == [{"issuer": "https://issuer.example.com", "audiences": ["polyad-api"]}]
+    jsonschema.Draft7Validator(json.loads((CHART / "schemas/requestauthentication-security-v1.json").read_text())).validate(request_auth)
+    policy = next(obj for obj in objects if obj["metadata"]["name"] == "test-polyad-ingress-jwt")
+    assert policy["spec"]["rules"][0]["from"][0]["source"]["requestPrincipals"] == ["*"]
+    if gateway_api:
+        gateway = next(obj for obj in objects if obj["apiVersion"] == "gateway.networking.k8s.io/v1" and obj["kind"] == "Gateway")
+        route = next(obj for obj in objects if obj["kind"] == "HTTPRoute")
+        assert gateway["spec"]["gatewayClassName"] == "istio"
+        assert route["spec"]["rules"][-1]["backendRefs"] == [{"name": "test-polyad-api", "port": 8090}]
+        assert request_auth["spec"]["targetRefs"][0]["kind"] == "Gateway"
+        assert not any(obj["apiVersion"] == "networking.istio.io/v1" and obj["kind"] == "VirtualService" for obj in objects)
+    else:
+        assert request_auth["spec"]["selector"]["matchLabels"] == {
+            "istio": "polyad-ingress",
+            "app.kubernetes.io/instance": "test",
+        }
+
+
+def test_explicit_egress_registry_and_gateway_are_opt_in():
+    """
+    Register bounded external TLS hosts and optionally route them through a dedicated gateway.
+    """
+    settings = [
+        "mesh.enabled=true",
+        "mesh.egress.enabled=true",
+        "mesh.egress.destinations[0].name=example",
+        "mesh.egress.destinations[0].host=api.example.com",
+        "mesh.egress.destinations[0].port=443",
+        "mesh.egress.destinations[0].protocol=TLS",
+    ]
+    direct = render(*settings)
+    entry = next(obj for obj in direct if obj["kind"] == "ServiceEntry")
+    assert entry["spec"]["exportTo"] == ["."]
+    jsonschema.Draft7Validator(json.loads((CHART / "schemas/serviceentry-networking-v1.json").read_text())).validate(entry)
+    assert not any(obj["metadata"].get("name") == "test-polyad-egress" and obj["kind"] == "Gateway" for obj in direct)
+    objects = render(*settings, "mesh.egress.gateway.enabled=true")
+    assert any(obj["kind"] == "Deployment" and obj["metadata"]["name"] == "polyad-egress" for obj in objects)
+    virtual = next(obj for obj in objects if obj["kind"] == "VirtualService" and obj["metadata"]["name"] == "test-polyad-egress")
+    assert virtual["spec"]["gateways"] == ["mesh", "test-polyad-egress"]
+    assert virtual["spec"]["tls"][0]["route"][0]["destination"]["host"] == "polyad-egress.test.svc.cluster.local"
+    destination = next(obj for obj in objects if obj["kind"] == "DestinationRule")
+    jsonschema.Draft7Validator(json.loads((CHART / "schemas/destinationrule-networking-v1.json").read_text())).validate(destination)
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        ("mesh.enabled=true", "mesh.operator.enabled=true", "mesh.telemetry.enabled=true", "mesh.telemetry.tracing.enabled=true"),
+        ("mesh.enabled=true", "mesh.operator.enabled=true", "mesh.authorization.audit.enabled=true"),
+        ("mesh.enabled=true", "mesh.operator.enabled=true", "mesh.authorization.dryRunDeny.enabled=true"),
+        (
+            "mesh.enabled=true",
+            "mesh.operator.enabled=true",
+            "mesh.multicluster.enabled=true",
+            "mesh.multicluster.routing.enabled=true",
+            "mesh.multicluster.routing.mode=Failover",
+            "global.meshID=shared",
+            "global.network=east",
+            "global.multiCluster.clusterName=east",
+        ),
+        (
+            "mesh.enabled=true",
+            "mesh.ingress.enabled=true",
+            "mesh.ingress.gatewayAPI.enabled=true",
+            "mesh.ingress.hosts[0]=api.example.com",
+            "mesh.ingress.tlsSecret=tls",
+        ),
+        (
+            "mesh.enabled=true",
+            "mesh.ingress.gatewayAPI.enabled=true",
+            "mesh.ingress.hosts[0]=api.example.com",
+            "mesh.ingress.tlsSecret=tls",
+            "mesh.ingress.jwt.enabled=true",
+        ),
+        ("mesh.enabled=true", "mesh.egress.gateway.enabled=true"),
+        (
+            "mesh.enabled=true",
+            "mesh.egress.enabled=true",
+            "mesh.egress.gateway.enabled=true",
+            "mesh.egress.destinations[0].name=example",
+            "mesh.egress.destinations[0].host=api.example.com",
+            "mesh.egress.destinations[0].port=8443",
+            "mesh.egress.destinations[0].protocol=TLS",
+        ),
+    ],
+)
+def test_invalid_advanced_mesh_settings_fail_closed(settings):
+    """
+    Reject incomplete providers, policies, locality, ingress identity and gateway egress.
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        render(*settings)
+
+
 def test_multicluster_gateways_and_optional_observers():
     """
     Render distinct gateways and read-only observers without changing the default installation.
@@ -589,9 +769,9 @@ def test_east_west_custom_listener_matches_service_and_discovery(port, target_po
     """
     objects = render(
         *EAST_WEST_SETTINGS,
-        f"istioEastWest.networkGatewayPorts.tls.port={port}",
-        f"istioEastWest.networkGatewayPorts.tls.targetPort={target_port}",
-        rf"istioEastWest.labels.networking\.istio\.io/gatewayPort={port}",
+        f"istioEastWestGateway.networkGatewayPorts.tls.port={port}",
+        f"istioEastWestGateway.networkGatewayPorts.tls.targetPort={target_port}",
+        rf"istioEastWestGateway.labels.networking\.istio\.io/gatewayPort={port}",
         "mesh.multicluster.eastWest.portName=tls-services",
         "mesh.multicluster.eastWest.hosts[0]=*.svc.corp.example",
         "mesh.multicluster.peers[0].name=west",
@@ -625,13 +805,13 @@ def test_east_west_custom_listener_matches_service_and_discovery(port, target_po
 @pytest.mark.parametrize(
     "setting",
     [
-        "istioEastWest.networkGatewayPorts.tls.port=16443",
-        r"istioEastWest.labels.networking\.istio\.io/gatewayPort=16443",
-        "istioEastWest.networkGatewayPorts.tls.port=0",
-        "istioEastWest.networkGatewayPorts.tls.port=65536",
-        "istioEastWest.networkGatewayPorts.tls.targetPort=0",
-        "istioEastWest.networkGatewayPorts.tls.targetPort=65536",
-        "istioEastWest.networkGatewayPorts.tls.protocol=UDP",
+        "istioEastWestGateway.networkGatewayPorts.tls.port=16443",
+        r"istioEastWestGateway.labels.networking\.istio\.io/gatewayPort=16443",
+        "istioEastWestGateway.networkGatewayPorts.tls.port=0",
+        "istioEastWestGateway.networkGatewayPorts.tls.port=65536",
+        "istioEastWestGateway.networkGatewayPorts.tls.targetPort=0",
+        "istioEastWestGateway.networkGatewayPorts.tls.targetPort=65536",
+        "istioEastWestGateway.networkGatewayPorts.tls.protocol=UDP",
         "mesh.multicluster.eastWest.portName=Invalid_Name",
         "mesh.multicluster.eastWest.portName=",
         "mesh.multicluster.eastWest.hosts=[]",
@@ -1160,7 +1340,7 @@ def test_cheeger_ceilings_reach_every_executor_profile(profile):
         "operator.cheeger.maxCuts=2097151",
         "operator.cheeger.timeoutSeconds=15",
         *(("federation.clusters[0].namespace=test",) if profile == "values-worker.reference.yaml" else ()),
-        values_files=(CHART / profile,) if profile else (),
+        values_files=(CHART / "references" / profile,) if profile else (),
     )
     pods = [obj["spec"]["template"] for obj in objects if obj["kind"] in {"Deployment", "Daemon"} and "template" in obj["spec"]]
     operators = [container for pod in pods for container in pod["spec"]["containers"] if container["name"] == "operator"]
@@ -1180,7 +1360,7 @@ def test_component_graph_accepts_the_optional_cheeger_maximum():
     from polyad_types.graphs.topology import topology
     from polyad_types.serialization import converter
 
-    objects = render("architecture.cheegerMaximum=1", values_files=(CHART / "values-components.reference.yaml",))
+    objects = render("architecture.cheegerMaximum=1", values_files=(CHART / "references" / "values-components.reference.yaml",))
     rule = next(obj for obj in objects if obj["kind"] == "GraphRule")
     graph = next(obj for obj in objects if obj["kind"] == "Graph")
     assert rule["spec"]["cheeger"] == {"minimum": 1, "maximum": 1}

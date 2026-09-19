@@ -40,7 +40,7 @@ events:
 ```
 
 Provision the event credential and subscribe the participating services before
-requesting connections. The [connection reference values](../../charts/polyad/values-connections.reference.yaml)
+requesting connections. The [connection reference values](../../charts/polyad/references/values-connections.reference.yaml)
 include separate proposal and reconciliation pulse controls. For named API keys,
 assign a fixed `home` graph and grant `events` access to the target graph tree; these credentials control event
 visibility, while projected service-account tokens identify connection participants.

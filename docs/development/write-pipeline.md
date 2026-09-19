@@ -250,7 +250,7 @@ deploying the operator. Helm projects them as `POLYAD_MUTATION_PLANNER_PARALLELI
 `POLYAD_WRITE_VALIDATION_INTERVAL_SECONDS`, `POLYAD_WRITE_VALIDATION_WINDOW_SECONDS`
 and `POLYAD_WRITE_VALIDATION_BURST`. The settings apply to local and remote adapters
 in that process and are inherited by root-managed operator worker templates. See
-the typed [tuning reference](../../charts/polyad/values-tuning.reference.yaml).
+the typed [tuning reference](../../charts/polyad/references/values-tuning.reference.yaml).
 Deployments without Helm can set the same environment variables directly.
 
 ### Choosing concurrency

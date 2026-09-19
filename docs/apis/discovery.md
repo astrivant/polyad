@@ -289,8 +289,8 @@ by retries. Actual network enforcement remains asynchronous, as described in
 
 ## Administrator configuration
 
-Start with [typed discovery reference values](../../charts/polyad/values-discovery.reference.yaml)
-and [root control-plane values](../../charts/polyad/values-root-control-plane.reference.yaml).
+Start with [typed discovery reference values](../../charts/polyad/references/values-discovery.reference.yaml)
+and [root control-plane values](../../charts/polyad/references/values-root-control-plane.reference.yaml).
 Helm passes `operator.serviceAccess` as `POLYAD_SERVICE_ACCESS` to every operator
 component. Root-provisioned execution replicas inherit the root configuration.
 Manually installed [operator workers](../deployment/helm-workers.md) must use the

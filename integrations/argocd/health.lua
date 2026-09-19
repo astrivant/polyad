@@ -16,6 +16,19 @@ if meta.deletionTimestamp ~= nil then
     return health("Progressing", "Waiting for owned resources and finalizers to finish cleanup")
 end
 
+if status.observedGeneration == (meta.generation or 1) and status.progressing == true then
+    local adaptation = status.adaptation or {}
+    local active = adaptation.invocations or {}
+    local count = 0
+    for _ in pairs(active) do
+        count = count + 1
+    end
+    if count > 0 then
+        return health("Progressing", "Application adaptation in progress (" .. tostring(count) .. " active strategy invocation(s))")
+    end
+    return health("Progressing", message)
+end
+
 -- REGISTRY_DEFINITIONS
 if definitions[obj.kind] or spec.templateOnly == true then
     return health("Healthy", "Reusable definition; execution is reported by graph instances and their resources")
@@ -26,7 +39,7 @@ end
 if phase == "Invalid" or phase == "Failed" or status.failed == true then
     return health("Degraded", message)
 end
-if obj.kind == "OperatorPool" or obj.kind == "RemoteScale" then
+if obj.kind == "OperatorPool" or obj.kind == "RemoteScale" or obj.kind == "DragonflyPool" then
     if phase == "Blocked" then
         return health("Degraded", message)
     end
@@ -82,8 +95,16 @@ if obj.kind ~= "Composition" and obj.kind ~= "Activation" then
     if (phases.Suspended or 0) > 0 or (phases.Stopped or 0) > 0 then
         return health("Suspended", message)
     end
-    if (phases.Reconciling or 0) > 0 or (phases.Draining or 0) > 0 or (phases.Unknown or 0) > 0 then
+    if (phases.Reconciling or 0) > 0 or (phases.Waiting or 0) > 0
+        or (phases.Draining or 0) > 0 or (phases.Unknown or 0) > 0 then
         return health("Progressing", message)
+    end
+end
+if obj.kind == "ReplicaGroup" then
+    local annotations = meta.annotations or {}
+    local desiredScale = annotations["polyad.astrivant.com/remote-scale-intent"] or ""
+    if status.scaleCurrent ~= true or status.observedRemoteScaleIntent ~= desiredScale then
+        return health("Progressing", "Waiting for the current replica scale intent")
     end
 end
 if phase == "Suspended" or phase == "Stopped" then

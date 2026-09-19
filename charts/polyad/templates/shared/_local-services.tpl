@@ -9,7 +9,7 @@
 {{- $_ := set $sources $group (append (get $sources $group) (dict "path" (printf "%s/%s" $.Template.BasePath .) "context" $)) -}}
 {{- end -}}
 {{- end -}}
-{{- $dependencies := dict "dragonflyOperator" (dict "group" "dragonfly" "files" (list "deployment.yaml" "service.yaml")) "istiod" (dict "group" "mesh" "files" (list "deployment.yaml" "service.yaml" "remote-istiod-service.yaml")) "istioIngress" (dict "group" "mesh" "files" (list "deployment.yaml" "service.yaml")) "istioEastWest" (dict "group" "mesh" "files" (list "deployment.yaml" "service.yaml")) "kedaOperator" (dict "group" "keda" "files" (list "manager/deployment.yaml" "manager/service.yaml" "metrics-server/deployment.yaml" "metrics-server/service.yaml" "webhooks/deployment.yaml" "webhooks/service.yaml")) -}}
+{{- $dependencies := dict "dragonflyOperator" (dict "group" "dragonfly" "files" (list "deployment.yaml" "service.yaml")) "istiod" (dict "group" "mesh" "files" (list "deployment.yaml" "service.yaml" "remote-istiod-service.yaml")) "istioIngress" (dict "group" "mesh" "files" (list "deployment.yaml" "service.yaml")) "istioEastWestGateway" (dict "group" "mesh" "files" (list "deployment.yaml" "service.yaml")) "istioEgress" (dict "group" "mesh" "files" (list "deployment.yaml" "service.yaml")) "kedaOperator" (dict "group" "keda" "files" (list "manager/deployment.yaml" "manager/service.yaml" "metrics-server/deployment.yaml" "metrics-server/service.yaml" "webhooks/deployment.yaml" "webhooks/service.yaml")) -}}
 {{- range $alias, $settings := $dependencies -}}
 {{- with index $.Subcharts $alias -}}
 {{- $base := printf "%s/charts/%s/templates" (trimSuffix "/templates" $.Template.BasePath) $alias -}}

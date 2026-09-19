@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Bundled Istio deployment strategy.
+#
+# This installs Polyad's pinned Istio base and istiod charts in the release
+# namespace, injects the operator, and applies Polyad's strict-mTLS and
+# workload-identity authorization policies. It is useful for a self-contained
+# installation whose Istio lifecycle is owned by the Polyad Helm release.
+#
+# Adapt global.istioNamespace to the Helm release namespace. For a shared or
+# platform-managed control plane, use values-istio-existing.reference.yaml.
+# Guide: ../../../docs/deployment/istio-features.md
+## @param global [object] Shared Istio namespace and identity settings.
+global:
+  ## @param global.istioNamespace [string] Namespace where this Helm release and its bundled Istio control plane are installed.
+  istioNamespace: default
+
+## @param mesh [object] Polyad mesh integration and bundled control-plane selection.
+mesh:
+  ## @param mesh.enabled [boolean] Generate Polyad's mesh routing and security resources.
+  enabled: true
+  ## @param mesh.install [boolean] Install the pinned Istio base and istiod dependencies with this release.
+  install: true
+  ## @param mesh.operator [object] Inject and authorize the Polyad operator workload.
+  operator:
+    ## @param mesh.operator.enabled [boolean] Add the native Istio sidecar and strict-mTLS policies to operator Pods.
+    enabled: true
+  ## @param mesh.proxyResources [object] Guaranteed resources added for each injected proxy and init container.
+  proxyResources:
+    ## @param mesh.proxyResources.cpu [string] Proxy CPU request and limit; tune from observed proxy saturation.
+    cpu: 100m
+    ## @param mesh.proxyResources.memory [string] Proxy memory request and limit; tune from observed proxy working set.
+    memory: 128Mi
+
+## @param istiod [object] Upstream istiod overrides used only by the bundled deployment strategy.
+istiod:
+  ## @param istiod.env [object] Upstream pilot environment overrides.
+  env:
+    ## @param istiod.env.ENABLE_NATIVE_SIDECARS [string] Use Kubernetes native sidecars for deterministic startup and shutdown ordering.
+    ENABLE_NATIVE_SIDECARS: 'true'
+  ## @param istiod.meshConfig [object] Upstream mesh defaults owned by this release.
+  meshConfig:
+    ## @param istiod.meshConfig.enableAutoMtls [boolean] Automatically originate mTLS when destinations support it.
+    enableAutoMtls: true
+    ## @param istiod.meshConfig.defaultConfig [object] Defaults applied to injected proxies.
+    defaultConfig:
+      ## @param istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts [boolean] Keep the application from racing the proxy during Pod startup.
+      holdApplicationUntilProxyStarts: true

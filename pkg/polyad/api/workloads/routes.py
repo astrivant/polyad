@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from flask import Response
 
     from polyad.api.http.application import Routes
+    from polyad_types.api.adaptation import AdaptationReport
 
 
 def register_routes(
@@ -29,6 +30,7 @@ def register_routes(
     activation_lookup: Callable[[str], dict[str, Any] | None] | None,
     activation_stop: Callable[[str], dict[str, Any] | None] | None,
     throughput: Callable[[ThroughputSample], dict[str, Any]] | None,
+    adaptation: Callable[[AdaptationReport], dict[str, Any]] | None = None,
 ) -> None:
     """
     Attach activation and throughput routes without creating another application.
@@ -39,6 +41,7 @@ def register_routes(
         activation_lookup (Callable[[str], dict[str, Any] | None] | None): Activation status lookup.
         activation_stop (Callable[[str], dict[str, Any] | None] | None): Activation stop handler.
         throughput (Callable[[ThroughputSample], dict[str, Any]] | None): Authorized throughput intake.
+        adaptation (Callable[[AdaptationReport], dict[str, Any]] | None): Authorized SDK strategy lifecycle intake.
 
     Returns:
         None: Routes are attached to the existing blueprint.
@@ -88,3 +91,11 @@ def register_routes(
         ):
             raise ValueError("traffic observations require integer generations and numeric rates")
         return jsonify(throughput(converter.structure(body, ThroughputSample))), 202
+
+    @app.post("/v1/adaptations")
+    def adapt() -> tuple[Response, int]:
+        if adaptation is None:
+            raise Unavailable("adaptation status service is not configured")
+        from polyad_types.api.adaptation import AdaptationReport
+
+        return jsonify(adaptation(converter.structure(request.get_json(), AdaptationReport))), 202

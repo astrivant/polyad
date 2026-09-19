@@ -9,6 +9,8 @@ This uses Istio's ordinary [weighted traffic routing](https://istio.io/latest/do
 It does not require an A/B experiment. Enable the chart's `mesh.enabled` integration,
 provide an Istio sidecar mesh, and opt the application graph into `spec.traffic`.
 Omitting `traffic` leaves routing to the application and its existing infrastructure.
+Optional per-route circuit breaking, endpoint ejection, retries and timeouts are
+described in [advanced Istio integration](../deployment/istio-features.md#graph-route-resilience).
 
 ## Table of contents
 

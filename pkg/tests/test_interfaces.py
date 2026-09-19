@@ -17,7 +17,7 @@ from polyad.operator.adapters import ResourceAPI, StateBackend
 from polyad.operator.adapters.kubernetes import API
 from polyad.operator.adapters.postgresql import StateStore
 from polyad.scheduling import FIFO, Graph, Scheduler, SchedulingPolicy, ShortestRemaining
-from polyad_sdk import AdaptiveService, Client, ConnectionNegotiator, EventSource, ObserveStrategy, ThroughputReporter
+from polyad_sdk import AdaptationReporter, AdaptiveService, Client, ConnectionNegotiator, EventSource, ObserveStrategy, ThroughputReporter
 
 
 @pytest.mark.parametrize(
@@ -27,6 +27,7 @@ from polyad_sdk import AdaptiveService, Client, ConnectionNegotiator, EventSourc
         ProcessOwner,
         SchedulingPolicy,
         EventSource,
+        AdaptationReporter,
         ThroughputReporter,
         ConnectionNegotiator,
         ResourceAPI,
@@ -50,6 +51,7 @@ def test_public_contracts_require_implementations(contract):
         (ShortestRemaining, SchedulingPolicy),
         (FIFO, SchedulingPolicy),
         (Client, EventSource),
+        (Client, AdaptationReporter),
         (Client, ThroughputReporter),
         (Client, ConnectionNegotiator),
         (API, ResourceAPI),

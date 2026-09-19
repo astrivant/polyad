@@ -464,7 +464,7 @@ def test_access_configuration_reaches_every_operator_container(profile):
         "operator.serviceAccess.connections=Cluster",
         "operator.serviceAccess.clusters.west.discovery=SameGraph",
         *(("federation.clusters[0].namespace=test",) if profile == "values-worker.reference.yaml" else ()),
-        values_files=(CHART / profile,) if profile else (),
+        values_files=(CHART / "references" / profile,) if profile else (),
     )
     policies = []
     for obj in objects:

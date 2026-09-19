@@ -93,7 +93,7 @@ copied into Prometheus labels.
 All emitted families are gauges. The table inventories the current exporter;
 enabling a backend does not create its infrastructure merely because metrics are
 enabled. `metrics.graphLabels` only gates the per-object families listed below.
-See the [typed tuning reference](../../charts/polyad/values-tuning.reference.yaml)
+See the [typed tuning reference](../../charts/polyad/references/values-tuning.reference.yaml)
 for values and the signals to watch when changing them.
 
 | Metric | Meaning and additional labels |

@@ -17,7 +17,7 @@ FAILED = f"{CURRENT_GENERATION} && ((has(status.phase) && status.phase in ['Fail
 READY = (
     f"{CURRENT_GENERATION} && has(status.phase) && "
     "((status.phase == 'Completed' && has(status.completed) && status.completed) || "
-    "(status.phase == 'Ready' && has(status.ready) && status.ready))"
+    "(status.phase in ['Ready', 'Running'] && has(status.ready) && status.ready))"
 )
 
 
@@ -48,10 +48,10 @@ def main() -> None:
             current, failed = f"{CURRENT_GENERATION} && has(status.applied) && status.applied", FAILED
         elif kind == "TemporaryConnection":
             current = f"{CURRENT_GENERATION} && has(status.phase) && status.phase in ['Active', 'Expired', 'Revoked']"
-            failed = f"{CURRENT_GENERATION} && has(status.phase) && status.phase in ['Rejected', 'Invalid', 'Failed']"
+            failed = f"({FAILED}) || ({CURRENT_GENERATION} && has(status.phase) && status.phase == 'Rejected')"
         elif kind in {"OperatorPool", "RemoteScale", "DragonflyPool"}:
             current = f"{CURRENT_GENERATION} && has(status.phase) && status.phase == 'Ready'"
-            failed = f"{CURRENT_GENERATION} && has(status.phase) && status.phase == 'Blocked'"
+            failed = f"({FAILED}) || ({CURRENT_GENERATION} && has(status.phase) && status.phase == 'Blocked')"
         elif kind in {"Composition", "Activation"}:
             current, failed = READY, FAILED
             if kind == "Activation":
@@ -62,8 +62,10 @@ def main() -> None:
             {
                 "apiVersion": descriptor.api_version,
                 "kind": kind,
-                # Evaluated first by Flux: only deletion may mask failures.
-                "inProgress": "has(metadata.deletionTimestamp)",
+                # Evaluated first by Flux: deletion and an explicitly published metrics transition mask failures.
+                "inProgress": (
+                    f"has(metadata.deletionTimestamp) || ({CURRENT_GENERATION} && has(status.progressing) && status.progressing)"
+                ),
                 "failed": failed,
                 "current": current,
             }

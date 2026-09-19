@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Optional Istio feature bundle for an existing or bundled mesh.
+#
+# Every feature below remains independently opt-in in values.yaml. This bundle
+# demonstrates them together: proxy telemetry, scoped proxy configuration,
+# observation-first authorization, and a controlled TLS egress path. Provider
+# names must exist in Istio mesh configuration. ServiceEntry and Sidecar scope
+# are not firewalls; pair them with NetworkPolicy or infrastructure controls.
+# Guide: ../../../docs/deployment/istio-features.md
+## @param mesh [object] Optional mesh capabilities layered on Polyad's core strict-mTLS behavior.
+mesh:
+  ## @param mesh.enabled [boolean] Enable generation of Istio resources.
+  enabled: true
+  ## @param mesh.operator [object] Workload selection required by telemetry, scoping and authorization policies.
+  operator:
+    ## @param mesh.operator.enabled [boolean] Inject and secure Polyad operator Pods.
+    enabled: true
+  ## @param mesh.telemetry [object] Workload-scoped Envoy metrics, filtered access logs and traces.
+  telemetry:
+    ## @param mesh.telemetry.enabled [boolean] Create an Istio Telemetry resource without changing mesh-wide defaults.
+    enabled: true
+    ## @param mesh.telemetry.metricsProviders [array] Existing Istio extension providers receiving proxy metrics.
+    metricsProviders: [prometheus]
+    ## @param mesh.telemetry.accessLogging [object] Filtered proxy access logging for failures and slow requests.
+    accessLogging:
+      ## @param mesh.telemetry.accessLogging.enabled [boolean] Export selected Envoy access records.
+      enabled: true
+      ## @param mesh.telemetry.accessLogging.providers [array] Existing Istio extension providers receiving access logs.
+      providers: [envoy]
+      ## @param mesh.telemetry.accessLogging.filter [string] CEL expression limiting volume to failures and requests taking at least one second.
+      filter: response.code >= 500 || response.duration >= duration('1s')
+    ## @param mesh.telemetry.tracing [object] Proxy spans independent of Polyad application tracing.
+    tracing:
+      ## @param mesh.telemetry.tracing.enabled [boolean] Export Envoy spans through the configured provider.
+      enabled: true
+      ## @param mesh.telemetry.tracing.providers [array] Existing Istio tracing providers; replace otel with the installed provider name.
+      providers: [otel]
+      ## @param mesh.telemetry.tracing.randomSamplingPercentage [number] Percentage of requests sampled independently by Envoy.
+      randomSamplingPercentage: 1
+  ## @param mesh.sidecar [object] Reduce proxy configuration size for operator workloads.
+  sidecar:
+    ## @param mesh.sidecar.enabled [boolean] Create a workload-scoped Sidecar resource.
+    enabled: true
+    ## @param mesh.sidecar.egressHosts [array] Service namespaces and registry hosts visible to operator proxies.
+    egressHosts: ['./*', 'istio-system/*']
+  ## @param mesh.authorization [object] Observe candidate endpoint policies before enforcement.
+  authorization:
+    ## @param mesh.authorization.audit [object] Emit telemetry for matching requests without changing the allow decision.
+    audit:
+      ## @param mesh.authorization.audit.enabled [boolean] Enable Istio AUDIT action for the selected methods and paths.
+      enabled: true
+      ## @param mesh.authorization.audit.paths [array] Endpoint patterns included in audit telemetry.
+      paths: ['/v1/*']
+      ## @param mesh.authorization.audit.methods [array] HTTP methods included in audit telemetry.
+      methods: [POST]
+    ## @param mesh.authorization.dryRunDeny [object] Evaluate a proposed DENY policy without rejecting traffic.
+    dryRunDeny:
+      ## @param mesh.authorization.dryRunDeny.enabled [boolean] Mark the generated DENY policy with Istio's dry-run annotation.
+      enabled: true
+      ## @param mesh.authorization.dryRunDeny.paths [array] Endpoint patterns that would be denied.
+      paths: ['/v1/compositions']
+      ## @param mesh.authorization.dryRunDeny.methods [array] HTTP methods that would be denied.
+      methods: [POST]
+  ## @param mesh.egress [object] Register explicit external destinations and optionally force the chart-managed gateway hop.
+  egress:
+    ## @param mesh.egress.enabled [boolean] Create namespace-private ServiceEntries for declared destinations.
+    enabled: true
+    ## @param mesh.egress.destinations [array] Unique DNS destinations; the managed gateway supports TLS on port 443.
+    destinations:
+      ## @param mesh.egress.destinations[].name [string] Stable name used for generated Istio resources.
+      - name: payments
+        ## @param mesh.egress.destinations[].host [string] External DNS host registered in the mesh.
+        host: payments.example.com
+        ## @param mesh.egress.destinations[].port [integer] External service port; use 443 with the managed gateway.
+        port: 443
+        ## @param mesh.egress.destinations[].protocol [string] Istio ServiceEntry protocol. Choices: HTTP, HTTPS, TLS, TCP.
+        protocol: TLS
+    ## @param mesh.egress.gateway [object] Optional dedicated gateway hop for the declared TLS destinations.
+    gateway:
+      ## @param mesh.egress.gateway.enabled [boolean] Install the pinned gateway dependency and route TLS/443 destinations through it.
+      enabled: true

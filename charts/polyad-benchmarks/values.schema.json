@@ -21119,6 +21119,225 @@
                                           }
                                         ],
                                         "description": "Distinct downstream subsets whose percentages sum to 100."
+                                      },
+                                      "resilience": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "object",
+                                                    "description": "Bound proxy-level failures without changing application traffic weights.",
+                                                    "properties": {
+                                                      "outlierDetection": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "boolean",
+                                                            "description": "Eject endpoints that repeatedly return server errors."
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Eject endpoints that repeatedly return server errors."
+                                                      },
+                                                      "consecutive5xxErrors": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Consecutive server errors required before ejection.",
+                                                            "minimum": 1,
+                                                            "maximum": 100
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Consecutive server errors required before ejection."
+                                                      },
+                                                      "intervalSeconds": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Endpoint health analysis interval.",
+                                                            "minimum": 1,
+                                                            "maximum": 300
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Endpoint health analysis interval."
+                                                      },
+                                                      "baseEjectionSeconds": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Minimum endpoint ejection duration.",
+                                                            "minimum": 1,
+                                                            "maximum": 3600
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Minimum endpoint ejection duration."
+                                                      },
+                                                      "maxEjectionPercent": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Maximum percentage of endpoints that may be ejected.",
+                                                            "minimum": 0,
+                                                            "maximum": 100
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Maximum percentage of endpoints that may be ejected."
+                                                      },
+                                                      "maxConnections": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "TCP connection ceiling; zero leaves Istio's default.",
+                                                            "minimum": 0,
+                                                            "maximum": 1048576
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "TCP connection ceiling; zero leaves Istio's default."
+                                                      },
+                                                      "maxPendingRequests": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                                                            "minimum": 0,
+                                                            "maximum": 1048576
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Pending HTTP request ceiling; zero leaves Istio's default."
+                                                      },
+                                                      "maxRequests": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                                                            "minimum": 0,
+                                                            "maximum": 1048576
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Active HTTP request ceiling; zero leaves Istio's default."
+                                                      },
+                                                      "retries": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                                                            "minimum": 0,
+                                                            "maximum": 10
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Retry attempts for failures selected by retryOn; zero disables retries."
+                                                      },
+                                                      "perTryTimeoutSeconds": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Optional timeout for an individual retry attempt.",
+                                                            "minimum": 0,
+                                                            "maximum": 300
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Optional timeout for an individual retry attempt."
+                                                      },
+                                                      "timeoutSeconds": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Optional total request timeout; zero preserves Istio's default.",
+                                                            "minimum": 0,
+                                                            "maximum": 3600
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Optional total request timeout; zero preserves Istio's default."
+                                                      },
+                                                      "retryOn": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "string",
+                                                            "enum": [
+                                                              "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                                                            ],
+                                                            "description": "Istio retry conditions used when retries are enabled."
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Istio retry conditions used when retries are enabled."
+                                                      }
+                                                    },
+                                                    "required": [],
+                                                    "additionalProperties": false
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                  }
+                                                ],
+                                                "description": "Bound proxy-level failures without changing application traffic weights."
+                                              },
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "null"
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "string",
+                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                          }
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -25067,6 +25286,225 @@
                                           }
                                         ],
                                         "description": "Distinct downstream subsets whose percentages sum to 100."
+                                      },
+                                      "resilience": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "object",
+                                                    "description": "Bound proxy-level failures without changing application traffic weights.",
+                                                    "properties": {
+                                                      "outlierDetection": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "boolean",
+                                                            "description": "Eject endpoints that repeatedly return server errors."
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Eject endpoints that repeatedly return server errors."
+                                                      },
+                                                      "consecutive5xxErrors": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Consecutive server errors required before ejection.",
+                                                            "minimum": 1,
+                                                            "maximum": 100
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Consecutive server errors required before ejection."
+                                                      },
+                                                      "intervalSeconds": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Endpoint health analysis interval.",
+                                                            "minimum": 1,
+                                                            "maximum": 300
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Endpoint health analysis interval."
+                                                      },
+                                                      "baseEjectionSeconds": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Minimum endpoint ejection duration.",
+                                                            "minimum": 1,
+                                                            "maximum": 3600
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Minimum endpoint ejection duration."
+                                                      },
+                                                      "maxEjectionPercent": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Maximum percentage of endpoints that may be ejected.",
+                                                            "minimum": 0,
+                                                            "maximum": 100
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Maximum percentage of endpoints that may be ejected."
+                                                      },
+                                                      "maxConnections": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "TCP connection ceiling; zero leaves Istio's default.",
+                                                            "minimum": 0,
+                                                            "maximum": 1048576
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "TCP connection ceiling; zero leaves Istio's default."
+                                                      },
+                                                      "maxPendingRequests": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                                                            "minimum": 0,
+                                                            "maximum": 1048576
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Pending HTTP request ceiling; zero leaves Istio's default."
+                                                      },
+                                                      "maxRequests": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                                                            "minimum": 0,
+                                                            "maximum": 1048576
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Active HTTP request ceiling; zero leaves Istio's default."
+                                                      },
+                                                      "retries": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                                                            "minimum": 0,
+                                                            "maximum": 10
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Retry attempts for failures selected by retryOn; zero disables retries."
+                                                      },
+                                                      "perTryTimeoutSeconds": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Optional timeout for an individual retry attempt.",
+                                                            "minimum": 0,
+                                                            "maximum": 300
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Optional timeout for an individual retry attempt."
+                                                      },
+                                                      "timeoutSeconds": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "integer",
+                                                            "description": "Optional total request timeout; zero preserves Istio's default.",
+                                                            "minimum": 0,
+                                                            "maximum": 3600
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Optional total request timeout; zero preserves Istio's default."
+                                                      },
+                                                      "retryOn": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "string",
+                                                            "enum": [
+                                                              "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                                                            ],
+                                                            "description": "Istio retry conditions used when retries are enabled."
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Istio retry conditions used when retries are enabled."
+                                                      }
+                                                    },
+                                                    "required": [],
+                                                    "additionalProperties": false
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                  }
+                                                ],
+                                                "description": "Bound proxy-level failures without changing application traffic weights."
+                                              },
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "null"
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "string",
+                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                          }
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -30196,6 +30634,225 @@
                                                   }
                                                 ],
                                                 "description": "Distinct downstream subsets whose percentages sum to 100."
+                                              },
+                                              "resilience": {
+                                                "anyOf": [
+                                                  {
+                                                    "anyOf": [
+                                                      {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "object",
+                                                            "description": "Bound proxy-level failures without changing application traffic weights.",
+                                                            "properties": {
+                                                              "outlierDetection": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "boolean",
+                                                                    "description": "Eject endpoints that repeatedly return server errors."
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Eject endpoints that repeatedly return server errors."
+                                                              },
+                                                              "consecutive5xxErrors": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Consecutive server errors required before ejection.",
+                                                                    "minimum": 1,
+                                                                    "maximum": 100
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Consecutive server errors required before ejection."
+                                                              },
+                                                              "intervalSeconds": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Endpoint health analysis interval.",
+                                                                    "minimum": 1,
+                                                                    "maximum": 300
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Endpoint health analysis interval."
+                                                              },
+                                                              "baseEjectionSeconds": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Minimum endpoint ejection duration.",
+                                                                    "minimum": 1,
+                                                                    "maximum": 3600
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Minimum endpoint ejection duration."
+                                                              },
+                                                              "maxEjectionPercent": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Maximum percentage of endpoints that may be ejected.",
+                                                                    "minimum": 0,
+                                                                    "maximum": 100
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Maximum percentage of endpoints that may be ejected."
+                                                              },
+                                                              "maxConnections": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "TCP connection ceiling; zero leaves Istio's default.",
+                                                                    "minimum": 0,
+                                                                    "maximum": 1048576
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "TCP connection ceiling; zero leaves Istio's default."
+                                                              },
+                                                              "maxPendingRequests": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Pending HTTP request ceiling; zero leaves Istio's default.",
+                                                                    "minimum": 0,
+                                                                    "maximum": 1048576
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Pending HTTP request ceiling; zero leaves Istio's default."
+                                                              },
+                                                              "maxRequests": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Active HTTP request ceiling; zero leaves Istio's default.",
+                                                                    "minimum": 0,
+                                                                    "maximum": 1048576
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Active HTTP request ceiling; zero leaves Istio's default."
+                                                              },
+                                                              "retries": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Retry attempts for failures selected by retryOn; zero disables retries.",
+                                                                    "minimum": 0,
+                                                                    "maximum": 10
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Retry attempts for failures selected by retryOn; zero disables retries."
+                                                              },
+                                                              "perTryTimeoutSeconds": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Optional timeout for an individual retry attempt.",
+                                                                    "minimum": 0,
+                                                                    "maximum": 300
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Optional timeout for an individual retry attempt."
+                                                              },
+                                                              "timeoutSeconds": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "integer",
+                                                                    "description": "Optional total request timeout; zero preserves Istio's default.",
+                                                                    "minimum": 0,
+                                                                    "maximum": 3600
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Optional total request timeout; zero preserves Istio's default."
+                                                              },
+                                                              "retryOn": {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "string",
+                                                                    "enum": [
+                                                                      "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+                                                                    ],
+                                                                    "description": "Istio retry conditions used when retries are enabled."
+                                                                  },
+                                                                  {
+                                                                    "type": "string",
+                                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                  }
+                                                                ],
+                                                                "description": "Istio retry conditions used when retries are enabled."
+                                                              }
+                                                            },
+                                                            "required": [],
+                                                            "additionalProperties": false
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ],
+                                                        "description": "Bound proxy-level failures without changing application traffic weights."
+                                                      },
+                                                      {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "null"
+                                                          },
+                                                          {
+                                                            "type": "string",
+                                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                          }
+                                                        ]
+                                                      }
+                                                    ]
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                  }
+                                                ]
                                               }
                                             },
                                             "required": [

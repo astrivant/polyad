@@ -19,7 +19,16 @@ def render(*settings, policy=None):
     """
     Render the full credential reference with optional policy or topology overrides.
     """
-    command = ["helm", "template", "test", str(CHART), "-n", "test", "-f", str(CHART / "values-authentication.reference.yaml")]
+    command = [
+        "helm",
+        "template",
+        "test",
+        str(CHART),
+        "-n",
+        "test",
+        "-f",
+        str(CHART / "references" / "values-authentication.reference.yaml"),
+    ]
     for setting in settings:
         command.extend(["--set", setting])
     if policy is not None:
@@ -100,7 +109,7 @@ def test_invalid_named_key_configuration_fails_before_install(setting):
     """
     with pytest.raises(subprocess.CalledProcessError):
         if setting.startswith("authentication."):
-            policy = yaml.safe_load((CHART / "values-authentication.reference.yaml").read_text())["authentication"]
+            policy = yaml.safe_load((CHART / "references" / "values-authentication.reference.yaml").read_text())["authentication"]
             path, value = setting.split("=", 1)
             group, index, field, element = re.fullmatch(r"authentication\.(\w+)\[(\d+)\]\.(\w+)(?:\[(\d+)\])?", path).groups()
             key = policy[group][int(index)]

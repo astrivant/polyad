@@ -5,6 +5,7 @@ Execute Polyad health checks in Argo CD's sandbox against lifecycle and hierarch
 from __future__ import annotations
 
 import copy
+import json
 import shutil
 import subprocess
 import sys
@@ -18,6 +19,7 @@ from polyad_types.resources import GROUP, RESOURCE_TYPES
 from tests.test_operator import resource
 
 ROOT = Path(__file__).resolve().parents[2]
+FLUX_CASES = json.loads((ROOT / "pkg/tests/flux/cases.json").read_text())
 
 
 @pytest.fixture(scope="session")
@@ -46,6 +48,16 @@ def assess(tmp_path, argocd_config, obj):
     return yaml.safe_load(output)
 
 
+@pytest.mark.parametrize("case", FLUX_CASES, ids=lambda case: case["name"])
+def test_flux_cases_match_argocd_lifecycle(tmp_path, argocd_config, case):
+    """
+    Keep Flux Current/InProgress/Failed equivalent to Argo Healthy/Progressing-or-Suspended/Degraded.
+    """
+    argo = assess(tmp_path, argocd_config, case["object"])["STATUS"]
+    expected = {"Current": "Healthy", "InProgress": ("Progressing", "Suspended"), "Failed": "Degraded"}[case["expected"]]
+    assert argo in expected if isinstance(expected, tuple) else argo == expected
+
+
 def graph(kind="Graph"):
     """
     Produce a real, generation-current status snapshot for an empty completed graph.
@@ -54,6 +66,8 @@ def graph(kind="Graph"):
     if kind == "ReplicaGroup":
         obj["spec"] = {"replicas": 0, "template": {"kind": "Graph", "ref": "template"}}
     obj["status"] = {"observedGeneration": 1, "phase": "Completed", "completed": True, "ready": True}
+    if kind == "ReplicaGroup":
+        obj["status"].update(scaleCurrent=True, observedRemoteScaleIntent="")
     obj["status"]["metrics"] = instance_metrics(obj, [])
     return obj
 
@@ -102,6 +116,26 @@ def test_graph_kinds_and_templates(tmp_path, argocd_config, kind):
     assert "Reusable definition" in assess(tmp_path, argocd_config, obj)["MESSAGE"]
 
 
+def test_active_sdk_adaptation_marks_its_daemon_definition_progressing(tmp_path, argocd_config):
+    """
+    Attribute a workload's changing organization to its reusable definition, not its containing graph.
+    """
+    obj = resource("Daemon", "consumer", {})
+    obj["status"] = {
+        "observedGeneration": 1,
+        "progressing": True,
+        "adaptation": {
+            "inProgress": True,
+            "invocations": {"call": {"node": "source", "strategy": "TopologyStrategy"}},
+        },
+    }
+    result = assess(tmp_path, argocd_config, obj)
+    assert result["STATUS"] == "Progressing"
+    assert "1 active" in result["MESSAGE"]
+    obj["metadata"]["generation"] = 2
+    assert assess(tmp_path, argocd_config, obj)["STATUS"] == "Healthy"
+
+
 @pytest.mark.parametrize("kind", ["Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule"])
 def test_definitions_do_not_claim_execution(tmp_path, argocd_config, kind):
     """
@@ -123,6 +157,7 @@ def test_definitions_do_not_claim_execution(tmp_path, argocd_config, kind):
         ("failed_leaf", "Degraded"),
         ("invalid_descendant", "Degraded"),
         ("reconciling_descendant", "Progressing"),
+        ("waiting_descendant", "Progressing"),
         ("suspended_descendant", "Suspended"),
         ("invalid", "Degraded"),
         ("draining", "Progressing"),
@@ -275,7 +310,7 @@ def test_temporary_connection_health(tmp_path, argocd_config, phase, expected):
     assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected
 
 
-@pytest.mark.parametrize("kind", ["OperatorPool", "RemoteScale"])
+@pytest.mark.parametrize("kind", ["OperatorPool", "RemoteScale", "DragonflyPool"])
 @pytest.mark.parametrize("phase,expected", [("Ready", "Healthy"), ("Pending", "Progressing"), ("Blocked", "Degraded")])
 def test_root_control_health(tmp_path, argocd_config, kind, phase, expected):
     """
@@ -284,3 +319,25 @@ def test_root_control_health(tmp_path, argocd_config, kind, phase, expected):
     obj = resource(kind, "remote")
     obj["status"] = {"phase": phase, "observedGeneration": 1}
     assert assess(tmp_path, argocd_config, obj)["STATUS"] == expected
+
+
+@pytest.mark.parametrize("kind", ["TemporaryConnection", "OperatorPool", "RemoteScale", "DragonflyPool"])
+def test_auxiliary_explicit_failure_flag_is_degraded(tmp_path, argocd_config, kind):
+    """
+    Keep the shared failure flag authoritative for specialized resource phases.
+    """
+    obj = resource(kind, "resource")
+    obj["status"] = {"phase": "Ready", "observedGeneration": 1, "failed": True}
+    assert assess(tmp_path, argocd_config, obj)["STATUS"] == "Degraded"
+
+
+def test_replica_group_waits_for_current_scale_intent(tmp_path, argocd_config):
+    """
+    Match Flux's metadata-sensitive scale fence before reporting a ready group.
+    """
+    obj = graph("ReplicaGroup")
+    obj["status"]["scaleCurrent"] = False
+    assert assess(tmp_path, argocd_config, obj)["STATUS"] == "Progressing"
+    obj["status"]["scaleCurrent"] = True
+    obj["metadata"]["annotations"] = {"polyad.astrivant.com/remote-scale-intent": "new"}
+    assert assess(tmp_path, argocd_config, obj)["STATUS"] == "Progressing"

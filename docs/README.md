@@ -85,6 +85,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Helm-installed downstream operators](deployment/helm-workers.md) | Administrator-owned installation, explicit root attachment, and a choice of root or local replica scaling |
 | [Cross-cluster composition and optional observers](deployment/multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |
 | [Graph networking and event subscriptions](deployment/networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
+| [Advanced Istio integration](deployment/istio-features.md) | Route resilience, proxy telemetry, locality, JWT ingress, scoped configuration, egress and policy observation |
 | [Optional PostgreSQL state storage](deployment/postgresql.md) | Durable graph state, encrypted storage and GKE KMS configuration, database HA and connection-based KEDA scaling |
 | [PostgreSQL record encryption](deployment/record-encryption.md) | Optional encryption before SQL writes, administrator key Secrets, decryption and key rotation |
 | [Dragonfly HA and KEDA](deployment/dragonfly.md) | Bounded cache replica scaling, primary connection metrics and replication readiness |

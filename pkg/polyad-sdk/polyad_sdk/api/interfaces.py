@@ -10,7 +10,26 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types import ConnectionResponse, ServiceConnectionRequest, ThroughputSample
+    from polyad_types import AdaptationReport, ConnectionResponse, ServiceConnectionRequest, ThroughputSample
+
+
+class AdaptationReporter(ABC):
+    """
+    Publish strategy lifecycle so definition health reflects application adaptation.
+    """
+
+    @abstractmethod
+    def report_adaptation(self, report: AdaptationReport) -> dict[str, Any]:
+        """
+        Persist the start or terminal state of one strategy invocation.
+
+        Args:
+            report (AdaptationReport): Fenced definition and invocation transition.
+
+        Returns:
+            dict[str, Any]: Current definition adaptation acknowledgement.
+        """
+        ...
 
 
 class ThroughputReporter(ABC):

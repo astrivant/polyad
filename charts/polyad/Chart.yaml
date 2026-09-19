@@ -38,7 +38,12 @@ dependencies:
     repository: https://istio-release.storage.googleapis.com/charts
     condition: mesh.ingress.enabled
   - name: gateway
-    alias: istioEastWest
+    alias: istioEastWestGateway
     version: 1.30.4
     repository: https://istio-release.storage.googleapis.com/charts
     condition: mesh.multicluster.eastWest.enabled
+  - name: gateway
+    alias: istioEgress
+    version: 1.30.4
+    repository: https://istio-release.storage.googleapis.com/charts
+    condition: mesh.egress.gateway.enabled

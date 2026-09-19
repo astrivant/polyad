@@ -116,7 +116,7 @@ classes externally, without enabling the shared selection above.
 
 ### Provision GKE storage with a KMS key
 
-Use [values-postgresql-encryption.reference.yaml](../../charts/polyad/values-postgresql-encryption.reference.yaml)
+Use [values-postgresql-encryption.reference.yaml](../../charts/polyad/references/values-postgresql-encryption.reference.yaml)
 as an overlay on your deployment values. Replace its example key name before
 installation. GKE encrypts stored content by default; this option adds control
 through a customer-managed key. The regional symmetric KMS key and the
@@ -204,7 +204,7 @@ This works with managed or external databases, independently of volume encryptio
 
 See [record encryption](record-encryption.md) for the complete configuration,
 payload boundaries, decryption examples and rotation procedure, or start with
-[the typed reference values](../../charts/polyad/values-postgresql-record-encryption.reference.yaml).
+[the typed reference values](../../charts/polyad/references/values-postgresql-record-encryption.reference.yaml).
 
 ## State and tracked parameters
 

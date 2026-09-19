@@ -134,7 +134,7 @@ connected-shape rule still applies if the minimum is lowered to zero.
 These settings affect the component boundary in Distributed mode. They do not
 set defaults for application GraphRules, child ReplicaGroups or throughput tiers.
 Component KEDA demand and `architecture.expandedNodes` control capacity separately.
-Use the typed [component reference values](../../charts/polyad/values-components.reference.yaml)
+Use the typed [component reference values](../../charts/polyad/references/values-components.reference.yaml)
 with the installation prerequisites in the component guide.
 
 ## Prioritize important cuts

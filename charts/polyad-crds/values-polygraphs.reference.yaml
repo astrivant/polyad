@@ -49,6 +49,32 @@ polygraphs: {}
 #               minWeight: 0
 #               ## @param polygraphs.example.spec.traffic[].destinations[].maxWeight [integer, string] Optional. No CRD default; the value shown is illustrative. Largest percentage allowed by automatic adjustment.
 #               maxWeight: 0
+#           ## @param polygraphs.example.spec.traffic[].resilience [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#           resilience:
+#             ## @param polygraphs.example.spec.traffic[].resilience.outlierDetection [boolean, string] Optional. No CRD default; the value shown is illustrative. Eject endpoints that repeatedly return server errors.
+#             outlierDetection: false
+#             ## @param polygraphs.example.spec.traffic[].resilience.consecutive5xxErrors [integer, string] Optional. No CRD default; the value shown is illustrative. Consecutive server errors required before ejection.
+#             consecutive5xxErrors: 1
+#             ## @param polygraphs.example.spec.traffic[].resilience.intervalSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Endpoint health analysis interval.
+#             intervalSeconds: 1
+#             ## @param polygraphs.example.spec.traffic[].resilience.baseEjectionSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Minimum endpoint ejection duration.
+#             baseEjectionSeconds: 1
+#             ## @param polygraphs.example.spec.traffic[].resilience.maxEjectionPercent [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum percentage of endpoints that may be ejected.
+#             maxEjectionPercent: 0
+#             ## @param polygraphs.example.spec.traffic[].resilience.maxConnections [integer, string] Optional. No CRD default; the value shown is illustrative. TCP connection ceiling; zero leaves Istio's default.
+#             maxConnections: 0
+#             ## @param polygraphs.example.spec.traffic[].resilience.maxPendingRequests [integer, string] Optional. No CRD default; the value shown is illustrative. Pending HTTP request ceiling; zero leaves Istio's default.
+#             maxPendingRequests: 0
+#             ## @param polygraphs.example.spec.traffic[].resilience.maxRequests [integer, string] Optional. No CRD default; the value shown is illustrative. Active HTTP request ceiling; zero leaves Istio's default.
+#             maxRequests: 0
+#             ## @param polygraphs.example.spec.traffic[].resilience.retries [integer, string] Optional. No CRD default; the value shown is illustrative. Retry attempts for failures selected by retryOn; zero disables retries.
+#             retries: 0
+#             ## @param polygraphs.example.spec.traffic[].resilience.perTryTimeoutSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Optional timeout for an individual retry attempt.
+#             perTryTimeoutSeconds: 0
+#             ## @param polygraphs.example.spec.traffic[].resilience.timeoutSeconds [integer, string] Optional. No CRD default; the value shown is illustrative. Optional total request timeout; zero preserves Istio's default.
+#             timeoutSeconds: 0
+#             ## @param polygraphs.example.spec.traffic[].resilience.retryOn [string] Optional. No CRD default; the value shown is illustrative. Choices: "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes". Istio retry conditions used when retries are enabled.
+#             retryOn: "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
 #       ## @param polygraphs.example.spec.throughput [object, string] Optional. No CRD default; the value shown is illustrative. Observe or adapt topology using empirical throughput targets within hard structural rules.
 #       throughput:
 #         ## @param polygraphs.example.spec.throughput.unit [string] Required. No CRD default; the value shown is illustrative. Application work unit shared by offered and completed rates, such as records.

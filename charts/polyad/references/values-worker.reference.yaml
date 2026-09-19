@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Install this release in the downstream cluster, namespace workloads.
+# Register its existing Deployment through an OperatorPool in the root namespace.
+# Guide: ../../../docs/deployment/helm-workers.md
+## @param worker [object] Settings for worker.
+worker:
+  ## @param worker.enabled [boolean] Run as a root-connected executor; never elect a root or expose application APIs here.
+  enabled: true
+  ## @param worker.rootNamespace [string] Match the management release namespace, not this release's namespace.
+  rootNamespace: polyad
+  ## @param worker.rootClusterName [string] Match the root's global.multiCluster.clusterName.
+  rootClusterName: management
+  ## @param worker.rootDeployment [string] Match the management Deployment name, normally ROOT_RELEASE-polyad.
+  rootDeployment: polyad-polyad
+  ## @param worker.rootGraph [string] Match the management reserved PolyGraph, normally ROOT_RELEASE-atlas.
+  rootGraph: polyad-atlas
+  ## @param worker.poolName [string] Only this root-namespace OperatorPool may attach the Deployment.
+  poolName: west-workers
+  ## @param worker.scalingAuthority [string] Root delegates replicas to the matching pool/KEDA. Local keeps replicaCount and optional HPA here; match the pool's setting.
+  scalingAuthority: Root
+
+## @param global [object] Settings for global.
+global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
+  multiCluster:
+    ## @param global.multiCluster.clusterName [string] Hosting cluster identity; keep distinct from the root identity.
+    clusterName: west
+
+## @param rootControlPlane [object] Settings for rootControlPlane.
+rootControlPlane:
+  ## @param rootControlPlane.enabled [boolean] This release is a worker, so it does not provision pools or become a root.
+  enabled: false
+  ## @param rootControlPlane.kubeconfigSecret [string] Existing DOWNSTREAM namespace Secret, key config, granting access to the root API and namespace.
+  kubeconfigSecret: root-access
+  ## @param rootControlPlane.endpoints [object] Settings for rootControlPlane.endpoints.
+  endpoints:
+    ## @param rootControlPlane.endpoints.api [string] Reachable root composition route advertised to workloads; match root configuration.
+    api: https://polyad.example.com/composition
+    ## @param rootControlPlane.endpoints.events [string] Reachable root event route advertised to workloads.
+    events: https://polyad.example.com/events
+    ## @param rootControlPlane.endpoints.metrics [string] Reachable root metrics route advertised to workloads and KEDA.
+    metrics: https://polyad.example.com/metrics
+
+## @param federation [object] Settings for federation.
+federation:
+  ## @param federation.enabled [boolean] Use the same complete cluster registry as the root; replicas can execute any assigned graph family.
+  enabled: true
+  ## @param federation.clusters [array] Secret names are local to this downstream release; contents must identify the root's registered destinations.
+  clusters:
+    ## @param federation.clusters[].name [string] Settings for federation.clusters[].name.
+    - name: west
+      ## @param federation.clusters[].namespace [string] Settings for federation.clusters[].namespace.
+      namespace: workloads
+      ## @param federation.clusters[].kubeconfigSecret [string] Settings for federation.clusters[].kubeconfigSecret.
+      kubeconfigSecret: west-access
+
+## @param dragonfly [object] Settings for dragonfly.
+dragonfly:
+  ## @param dragonfly.enabled [boolean] Reuse root queues and observations; never install an independent worker cache.
+  enabled: false
+  ## @param dragonfly.existingSecret [string] Existing DOWNSTREAM Secret, key url, pointing at the same reachable authenticated cache as the root.
+  existingSecret: root-cache
+
+# Root scaling: leave operator.replicaCount null and operator.autoscaling disabled.
+# Local scaling: set worker.scalingAuthority=Local here and scalingAuthority=Local
+# on the root pool; use ha=true
+# for two or more local replicas, and optionally operator.autoscaling.enabled=true.
+# Match operator.image to the root exactly; outdated workers do not get new shards.
+# Optional workload mesh, capacity and credential assignment settings must match
+# the root. PostgreSQL remains optional: connect to the same existing database and
+# scope with managed=false; do not create a worker-local state store.
+# API listeners stay disabled (defaults). Tracing/logging and ESO secret reloading
+# can be enabled using their normal reference values.

@@ -10,7 +10,7 @@
   status.metrics.rollup.observedGeneration == metadata.generation &&
   has(status.metrics.rollup.observationsComplete) && status.metrics.rollup.observationsComplete &&
   (!has(status.metrics.rollup.unobservedGraphs) || status.metrics.rollup.unobservedGraphs == 0) &&
-  has(status.metrics.rollup.graphsByPhase) &&
-  ['Reconciling', 'Waiting', 'Draining', 'Suspended', 'Stopped', 'Unknown'].all(p,
-    !(p in status.metrics.rollup.graphsByPhase) || status.metrics.rollup.graphsByPhase[p] == 0)
+  (!has(status.metrics.rollup.graphsByPhase) ||
+    ['Reconciling', 'Waiting', 'Draining', 'Suspended', 'Stopped', 'Unknown'].all(p,
+      !(p in status.metrics.rollup.graphsByPhase) || status.metrics.rollup.graphsByPhase[p] == 0))
 )
