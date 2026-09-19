@@ -240,6 +240,10 @@ family's rule/relation/stage labels when doing so.
 | `polyad_graph_cheeger_calculation_info` | Completion reason and projection; `Complete`, `MinimumViolated`, `VertexLimit`, `CutBudget` or `TimeBudget` |
 | `polyad_graph_throughput` | Soul searching numeric observations, application Cheeger targets, proposed Cheeger, demand/throughput, traffic weights and capacity preparation values |
 | `polyad_graph_throughput_info` | Soul searching `mode`, `phase`, demand signal and unit |
+| `polyad_service_level_state` | Current-generation Daemon contract classification (`Compliant`, `Degraded` or `Unavailable`) |
+| `polyad_service_level_sample_fresh` | Whether the latest Daemon observation is still within its configured maximum age |
+| `polyad_service_level` | Availability, latency compliance, error-budget remainder and fixed-window request/time counters |
+| `polyad_adaptation` | Current-generation SDK adaptation attempts, successes, failures and cumulative duration |
 
 Cheeger families distinguish `source="rule"` (hard policy) from
 `source="throughput"` (Soul searching), plus `stage="current"` or `"candidate"`

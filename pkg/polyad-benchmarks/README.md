@@ -41,8 +41,8 @@ pip install ./pkg/polyad-types ./pkg/polyad-sdk ./pkg/polyad-benchmarks
 - `polyad-benchmarks-fixture --once --delay 0.1`: perform one finite batch.
 - `polyad-benchmarks-refresh --ci-phase prepare|study|finish --root DIRECTORY`:
   snapshot, execute and verify an experiment. Cloud study phases require `--context`.
-  Add `--suite reachability` during preparation for interaction, state-variable and
-  process-rerouting studies without a cluster. Install
+  Add `--suite reachability` during preparation for interaction, state-variable,
+  process-rerouting and PCA Cheeger-reduction studies without a cluster. Install
   `pip install './pkg/polyad-benchmarks[reachability]'` for their optional HJ backend.
   Follow the [local suite commands](../../studies/symbiosis/README.md#run).
 - `python -m polyad_benchmarks.studies.soul --output DIRECTORY` and

@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Opt-in compatibility with a separately installed Vertical Pod Autoscaler.
+# Guide: ../../../docs/deployment/vpa.md
+## @param verticalPodAutoscaling [object] Optional compatibility with an externally installed Kubernetes Vertical Pod Autoscaler
+verticalPodAutoscaling:
+  ## @param verticalPodAutoscaling.enabled [boolean] Allow graph Resource nodes to own native VPA policies and project their bounds into targeted application containers; does not install VPA
+  enabled: true

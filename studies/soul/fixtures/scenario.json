@@ -1,6 +1,22 @@
 {
   "workSeconds": 0.035,
   "timeoutSeconds": 90,
+  "serviceLevel": {
+    "availability": 0.99,
+    "latencyP99Seconds": 0.5,
+    "maximumAdaptationSeconds": 1.0
+  },
+  "resourceLoop": {
+    "minMemoryBytes": 134217728,
+    "maxMemoryBytes": 536870912,
+    "initialMemoryBytes": 201326592,
+    "stepMemoryBytes": 67108864,
+    "targetUtilization": 0.7,
+    "intervalSeconds": 0.25,
+    "baseMemoryBytes": 67108864,
+    "workerMemoryBytes": 67108864,
+    "queuedJobMemoryBytes": 2097152
+  },
   "phases": [
     {"name": "before", "seconds": 1, "rate": 18, "output": "squared"},
     {"name": "surge", "seconds": 3, "rate": 240, "output": "squared"},

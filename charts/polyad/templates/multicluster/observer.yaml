@@ -47,6 +47,11 @@ rules:
     resources: [podtemplates]
     verbs: [get, list]
   {{- end }}
+  {{- if .Values.verticalPodAutoscaling.enabled }}
+  - apiGroups: [autoscaling.k8s.io]
+    resources: [verticalpodautoscalers]
+    verbs: [get, list]
+  {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -162,6 +167,8 @@ spec:
               value: {{ .Values.mesh.enabled | quote }}
             - name: POLYAD_CAPACITY_ENABLED
               value: {{ .Values.capacity.enabled | quote }}
+            - name: POLYAD_VPA_ENABLED
+              value: {{ .Values.verticalPodAutoscaling.enabled | quote }}
           ports:
             - name: observations
               containerPort: 8094

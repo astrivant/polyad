@@ -424,6 +424,61 @@ def test_resources_and_gates_resolve_node_names():
     asyncio.run(scenario())
 
 
+def test_vpa_resource_projects_validated_bounds_into_target_pod(monkeypatch):
+    """
+    Opt-in VPA resources resolve their target and expose bounds to the application.
+    """
+    monkeypatch.setenv("POLYAD_VPA_ENABLED", "true")
+
+    async def scenario():
+        api = FakeAPI(
+            resource(
+                "Graph",
+                "pipeline",
+                {
+                    "mode": "persistent",
+                    "nodes": [
+                        {"name": "worker", "kind": "Daemon", "ref": "worker"},
+                        {"name": "worker-vpa", "kind": "Resource", "ref": "worker-vpa"},
+                    ],
+                },
+            ),
+            resource("Daemon", "worker", {"template": template(True)}),
+            resource(
+                "Resource",
+                "worker-vpa",
+                {
+                    "manifest": {
+                        "apiVersion": "autoscaling.k8s.io/v1",
+                        "kind": "VerticalPodAutoscaler",
+                        "spec": {
+                            "targetRef": {"apiVersion": "apps/v1", "kind": "Deployment", "name": "${nodes.worker.name}"},
+                            "updatePolicy": {"updateMode": "InPlaceOrRecreate"},
+                            "resourcePolicy": {
+                                "containerPolicies": [
+                                    {
+                                        "containerName": "main",
+                                        "minAllowed": {"cpu": "250m", "memory": "128Mi"},
+                                        "maxAllowed": {"cpu": "2", "memory": "1Gi"},
+                                    }
+                                ]
+                            },
+                        },
+                    }
+                },
+            ),
+        )
+        await Controller(api).reconcile(("Graph", "test", "pipeline"))
+        deployment = api.children("Deployment")[0]
+        vpa = api.children("VerticalPodAutoscaler")[0]
+        environment = {item["name"]: item.get("value") for item in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+        assert vpa["spec"]["targetRef"]["name"] == deployment["metadata"]["name"]
+        assert environment["POLYAD_VPA_MIN_CPU_MILLICORES"] == "250"
+        assert environment["POLYAD_VPA_MAX_MEMORY_BYTES"] == str(1024**3)
+
+    asyncio.run(scenario())
+
+
 def test_nested_graph_inherits_spot_placement():
     """
     Templates remain inert while instantiated nested boundaries inherit spot placement.

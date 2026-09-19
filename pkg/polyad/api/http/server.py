@@ -246,6 +246,7 @@ class APIServer:
         from polyad.api.composition.store import CompositionStore
         from polyad.api.workloads.activations import ActivationStore
         from polyad.api.workloads.adaptation import report_adaptation
+        from polyad.api.workloads.service_level import report_service_level
         from polyad.api.workloads.throughput import report_throughput
 
         api = self.api
@@ -259,6 +260,9 @@ class APIServer:
                 ),
                 adaptation=lambda value: self.invoke(
                     report_adaptation(api, namespace, value, g.polyad_key.graphs if getattr(g, "polyad_key", None) else None)
+                ),
+                service_level=lambda value: self.invoke(
+                    report_service_level(api, namespace, value, g.polyad_key.graphs if getattr(g, "polyad_key", None) else None)
                 ),
             )
             .with_handlers(lambda value: self.invoke(store.submit(value)) or {}, lambda key, audit: self.invoke(store.lookup(key, audit)))

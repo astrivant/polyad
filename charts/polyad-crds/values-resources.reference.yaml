@@ -13,7 +13,7 @@ resources: {}
 # ## @section Resource field reference
 # ## @param resources [object] Resource instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
 # resources:
-#   ## @param resources.example [object] Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.
+#   ## @param resources.example [object] Define a reusable namespaced core resource or optional VerticalPodAutoscaler owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.
 #   example:
 #     ## @param resources.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
 #     metadata:
@@ -25,15 +25,15 @@ resources: {}
 #       labels: {}
 #       ## @param resources.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
 #       annotations: {}
-#     ## @param resources.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for this Resource resource. Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.
+#     ## @param resources.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for a graph-owned namespaced resource. Optional VPA compatibility validates bounds and projects them into the target application's environment; the external VPA controller remains responsible for resizing.
 #     spec:
-#       ## @param resources.example.spec.manifest [object, string] Required. No CRD default; the value shown is illustrative. Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}.
+#       ## @param resources.example.spec.manifest [object, string] Required. No CRD default; the value shown is illustrative. Native manifest for an owned core resource or, when enabled, autoscaling.k8s.io/v1 VerticalPodAutoscaler. The operator supplies identity and ownership. String values may reference generated names with ${nodes.NAME.name}.
 #       manifest:
-#         ## @param resources.example.spec.manifest.apiVersion [string] Required. No CRD default; the value shown is illustrative. Choices: "v1". API version of the owned resource; supported manifests use core v1.
+#         ## @param resources.example.spec.manifest.apiVersion [string] Required. No CRD default; the value shown is illustrative. Choices: "v1", "autoscaling.k8s.io/v1". API version of the owned resource. VPA manifests require the opt-in operator compatibility feature.
 #         apiVersion: "v1"
-#         ## @param resources.example.spec.manifest.kind [string] Required. No CRD default; the value shown is illustrative. Choices: "Service", "ConfigMap", "PersistentVolumeClaim". Kind of core v1 resource to create: Service, ConfigMap or PersistentVolumeClaim.
+#         ## @param resources.example.spec.manifest.kind [string] Required. No CRD default; the value shown is illustrative. Choices: "Service", "ConfigMap", "PersistentVolumeClaim", "VerticalPodAutoscaler". Kind of namespaced resource to create: Service, ConfigMap, PersistentVolumeClaim or VerticalPodAutoscaler.
 #         kind: "Service"
-#         ## @param resources.example.spec.manifest.spec [object, string] Optional. No CRD default; the value shown is illustrative. Native spec for a Service or PersistentVolumeClaim, such as selectors, ports, storageClassName or volume requirements. ConfigMaps use data or binaryData instead.
+#         ## @param resources.example.spec.manifest.spec [object, string] Optional. No CRD default; the value shown is illustrative. Native resource spec. VPA targetRef.name may reference ${nodes.NAME.name}; resourcePolicy containerPolicies retain and validate minAllowed and maxAllowed CPU/memory quantities before creation.
 #         spec: {}
 #         # Native Kubernetes or application-defined fields are accepted here; consult the referenced resource API.
 #         ## @param resources.example.spec.manifest.data [object, string] Optional. No CRD default; the value shown is illustrative. UTF-8 string data for a ConfigMap. Keys are preserved in the graph-owned resource.

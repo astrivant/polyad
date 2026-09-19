@@ -613,6 +613,188 @@
         "ttlSeconds"
       ]
     },
+    "polyad_types.api.service_level.AdaptationBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maximumDurationSeconds": {
+          "type": "number",
+          "description": "Longest permitted active adaptation."
+        },
+        "maximumUnavailableSeconds": {
+          "type": "number",
+          "description": "Unavailable time permitted in one sample."
+        },
+        "maximumFailedAttempts": {
+          "type": "integer",
+          "description": "Failed attempts permitted in the current generation."
+        }
+      },
+      "description": "Bound customer-visible impact from application adaptation."
+    },
+    "polyad_types.api.service_level.ServiceLevelPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requiredCapabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "uniqueItems": true,
+          "description": "Capabilities that must remain available."
+        },
+        "availability": {
+          "type": "number",
+          "description": "Required successful-request ratio from zero through one."
+        },
+        "latencyP99Seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional inclusive latency objective."
+        },
+        "minimumThroughputPerSecond": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional inclusive completed-work objective."
+        },
+        "windowSeconds": {
+          "type": "integer",
+          "description": "Fixed accounting-window duration."
+        },
+        "sampleMaxAgeSeconds": {
+          "type": "integer",
+          "description": "Maximum accepted observation age."
+        },
+        "adaptation": {
+          "$ref": "#/$defs/polyad_types.api.service_level.AdaptationBudget",
+          "description": "Transition-specific budgets."
+        }
+      },
+      "description": "Declare the minimum externally observable contract for a Daemon."
+    },
+    "polyad_types.api.service_level.ServiceLevelReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "graph": {
+          "type": "string",
+          "description": "Containing graph name used for authorization."
+        },
+        "graphUid": {
+          "type": "string",
+          "description": "Exact containing graph incarnation."
+        },
+        "target": {
+          "type": "string",
+          "description": "Daemon definition name."
+        },
+        "targetUid": {
+          "type": "string",
+          "description": "Exact Daemon incarnation."
+        },
+        "targetGeneration": {
+          "type": "integer",
+          "description": "Daemon generation represented by this sample."
+        },
+        "node": {
+          "type": "string",
+          "description": "Logical graph node whose service instance was measured."
+        },
+        "observedAt": {
+          "type": "string",
+          "description": "Timezone-aware end of the sample window."
+        },
+        "durationSeconds": {
+          "type": "number",
+          "description": "Width of the non-overlapping sample window."
+        },
+        "serving": {
+          "type": "boolean",
+          "description": "Whether the minimum service endpoint was usable."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "uniqueItems": true,
+          "description": "Capabilities served throughout the sample."
+        },
+        "eligibleRequests": {
+          "type": "integer",
+          "description": "Requests eligible for SLA accounting."
+        },
+        "successfulRequests": {
+          "type": "integer",
+          "description": "Eligible requests completed successfully."
+        },
+        "requestsWithinLatencyObjective": {
+          "type": "integer",
+          "description": "Eligible requests meeting the declared latency objective."
+        },
+        "latencyP99Seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Observed p99 latency."
+        },
+        "completedPerSecond": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Observed completed work rate."
+        },
+        "unavailableSeconds": {
+          "type": "number",
+          "description": "Customer-visible unavailable time in this sample."
+        },
+        "graphKind": {
+          "enum": [
+            "Graph",
+            "PolyGraph",
+            "ReplicaGroup"
+          ],
+          "description": "Containing boundary kind."
+        }
+      },
+      "description": "Report one non-overlapping service observation window.",
+      "required": [
+        "graph",
+        "graphUid",
+        "target",
+        "targetUid",
+        "targetGeneration",
+        "node",
+        "observedAt",
+        "durationSeconds",
+        "serving"
+      ]
+    },
     "polyad_types.api.throughput.DemandSample": {
       "type": "object",
       "additionalProperties": false,
@@ -3551,6 +3733,55 @@
         "weights"
       ]
     },
+    "polyad_types.resources.autoscaling.VerticalPodAutoscaler": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "metadata": {
+          "$ref": "#/$defs/polyad_types.resources.common.ObjectMeta",
+          "description": "Object identity, ownership and concurrency metadata.",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Observed resource state."
+        },
+        "spec": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Desired resource configuration."
+        },
+        "apiVersion": {
+          "const": "autoscaling.k8s.io/v1"
+        },
+        "kind": {
+          "const": "VerticalPodAutoscaler"
+        }
+      },
+      "description": "A graph-owned VPA policy whose controller is installed separately.",
+      "required": [
+        "metadata",
+        "spec",
+        "apiVersion",
+        "kind"
+      ]
+    },
     "polyad_types.resources.base.Resource": {
       "type": "object",
       "additionalProperties": true,
@@ -4023,21 +4254,22 @@
                 "capacity",
                 "activation",
                 "connection",
-                "traffic"
+                "traffic",
+                "scaling"
               ]
             },
             {
               "type": "null"
             }
-          ],
-          "description": "Role excluded from graph vertices."
+          ]
         },
         "required_feature": {
           "anyOf": [
             {
               "enum": [
                 "mesh",
-                "capacity"
+                "capacity",
+                "vpa"
               ]
             },
             {
@@ -6883,6 +7115,11 @@
           "type": "integer",
           "minimum": 0,
           "description": "Owned destination subset policies."
+        },
+        "VerticalPodAutoscaler": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Owned VPA compatibility policies."
         },
         "Job": {
           "type": "integer",

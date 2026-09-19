@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from polyad_benchmarks.studies.plotting import save
+from polyad_benchmarks.studies.plotting import describe_axis, save
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -35,6 +35,11 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
     bars = axis.bar(list(phases), list(phases.values()), color=["#38876e" if key == "Completed" else "#b96657" for key in phases])
     axis.bar_label(bars, padding=3)
     axis.set(ylabel="Requests")
+    describe_axis(
+        axis,
+        "Terminal request accounting",
+        "Each bar is one terminal phase; skipped arrivals remain explicit.",
+    )
     axis.margins(y=0.2)
     paths = save(figure, output, "outcomes", study="load", note=f"Run {result['runId']} | interrupted: {result['interrupted']}")
 
@@ -64,6 +69,16 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
             axis.legend()
         else:
             axis.text(0.5, 0.5, "No measured latency samples", transform=axis.transAxes, ha="center")
-    axes[0].set(xlabel="Request order (not wall time)", ylabel="Seconds", title="Observed request latencies")
-    axes[1].set(xlabel="Seconds", ylabel="Fraction of observed samples", title="Empirical latency distributions", ylim=(0, 1.05))
+    axes[0].set(xlabel="Request order (not wall time)", ylabel="Seconds")
+    describe_axis(
+        axes[0],
+        "Observed request latencies",
+        "Each point is an observed API or successful end-to-end duration.",
+    )
+    axes[1].set(xlabel="Seconds", ylabel="Fraction of observed samples", ylim=(0, 1.05))
+    describe_axis(
+        axes[1],
+        "Empirical latency distributions",
+        "Step curves show the fraction of measured samples completed by each duration.",
+    )
     return paths + save(figure, output, "latencies", study="load", note=f"Run {result['runId']}")

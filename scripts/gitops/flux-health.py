@@ -44,6 +44,12 @@ def main() -> None:
                 current = f"({current}) && ({scale_current})"
         elif descriptor.definition:
             current, failed = "true", "false"
+            if kind == "Daemon":
+                failed = (
+                    f"{CURRENT_GENERATION} && has(status.serviceLevel) && "
+                    "has(status.serviceLevel.observedGeneration) && status.serviceLevel.observedGeneration == metadata.generation && "
+                    "has(status.serviceLevel.state) && status.serviceLevel.state in ['Degraded', 'Unavailable']"
+                )
         elif kind == "Rewrite":
             current, failed = f"{CURRENT_GENERATION} && has(status.applied) && status.applied", FAILED
         elif kind == "TemporaryConnection":
@@ -58,14 +64,15 @@ def main() -> None:
                 current = f"({READY}) || ({CURRENT_GENERATION} && has(status.phase) && status.phase == 'Superseded')"
         else:
             raise ValueError(f"Flux health semantics are not defined for {kind}")
+        progressing = f"has(metadata.deletionTimestamp) || ({CURRENT_GENERATION} && has(status.progressing) && status.progressing)"
+        if kind == "Daemon":
+            progressing = f"({progressing}) && !({failed})"
         checks.append(
             {
                 "apiVersion": descriptor.api_version,
                 "kind": kind,
                 # Evaluated first by Flux: deletion and an explicitly published metrics transition mask failures.
-                "inProgress": (
-                    f"has(metadata.deletionTimestamp) || ({CURRENT_GENERATION} && has(status.progressing) && status.progressing)"
-                ),
+                "inProgress": progressing,
                 "failed": failed,
                 "current": current,
             }

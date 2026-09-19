@@ -201,9 +201,39 @@ This permits a complete 22-vertex enumeration if it also finishes within the tim
 budget. Raising the vertex cap alone does not raise the cut or time budgets.
 Benchmark representative boundaries before increasing these ceilings. They are
 per calculation: multiple rules, descendants and up to eight candidate layouts
-each consume work during reconciliation. Time checks are cooperative,
-between priority cuts and batches of up to 256 exhaustive cuts; preprocessing and
-scheduler delays can extend the elapsed time beyond the configured budget.
+each consume work during reconciliation. Time checks are cooperative, between
+priority cuts and every 256 exhaustive steps; preprocessing and scheduler delays
+can extend the elapsed time beyond the configured budget.
+
+Run the packaged microbenchmark on the same architecture and Python build used by
+the operator before changing a ceiling:
+
+```sh
+python scripts/testing/benchmark_cheeger.py --sizes 12 16 18 20 --repeats 5
+```
+
+It verifies the exact path-graph answer and expected cut count on every repetition,
+then reports minimum, median and maximum duration plus median cuts per second as
+JSON. `--maximum-seconds N` provides an optional environment-specific regression
+gate. Keep that threshold in deployment CI rather than treating one developer
+machine's timing as portable across CPU architectures and shared runners.
+
+The default distribution intentionally avoids a project-owned native extension:
+the 20-vertex search fits its existing budget, while compiled wheels would add a
+platform matrix for CPython, macOS, glibc, musl and ARM. Consider a native kernel
+behind the same result contract only when repeated production
+`durationSeconds` measurements or this benchmark show material reconciliation
+CPU, or when a supported boundary must exceed 20 vertices. Keep the Python path
+as the semantic oracle and source-install fallback.
+
+The [PCA-guided reduction study](../../studies/cheeger-reduction/README.md)
+measures a separate experimental option: cluster vertices in a reduced adjacency
+embedding and search only cuts formed by unions of those clusters. Its lifted
+cut is a certified upper bound, and a combinatorial-Laplacian bound supplies the
+other side of an uncertainty interval. It is not currently an admission mode.
+Use its accuracy, end-to-end cost and edge-churn plots to decide whether reduced
+witnesses are useful as priority cuts or steady-graph monitoring insurance for
+your topology. A reduced result above a required minimum cannot prove compliance.
 
 | `cheegerComputation` field | Default | Allowed values and choice |
 | --- | --- | --- |

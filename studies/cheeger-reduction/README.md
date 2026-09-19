@@ -1,0 +1,162 @@
+# PCA-guided Cheeger reduction
+
+This local study asks whether a graph can be compressed before searching its
+Cheeger cuts, and what accuracy and assurance are lost. It is an experiment,
+not a production approximation mode. Polyad's hard structural rules continue to
+require either an exact constant or a witnessed violation.
+
+## Table of contents
+
+- [Method](#method)
+- [What is certified](#what-is-certified)
+- [Controlled sweeps](#controlled-sweeps)
+- [Steady-graph insurance](#steady-graph-insurance)
+- [Run](#run)
+- [Interpret the plots](#interpret-the-plots)
+- [Limitations and production criteria](#limitations-and-production-criteria)
+
+## Method
+
+The study treats each vertex's adjacency row as a structural feature vector,
+centers those vectors, and applies singular-value decomposition for PCA. It then
+uses deterministic farthest-first k-means to group the retained coordinates into
+`k` supernodes. The reduced search considers every union of those clusters.
+
+Each candidate cluster cut is lifted back to the original graph before its edge
+boundary and vertex count are measured. Thus the reduced search changes the
+set of cuts considered, not the definition of a cut:
+
+```text
+adjacency rows -> PCA coordinates -> vertex clusters -> cluster-union cuts
+                                                      -> original-graph ratio
+```
+
+With `n` original vertices and `k` supernodes, exhaustive work falls from
+`2^(n-1)-1` to `2^(k-1)-1` cuts. PCA itself is polynomial work and can dominate
+small graphs; the cost plot measures the complete PCA, clustering, spectral-bound
+and quotient-search path rather than reporting only its cheaper enumeration.
+
+This is PCA over adjacency signatures, not a claim that the graph has ordinary
+independent Euclidean features. High retained variance is reconstruction evidence;
+it is not proof that the minimum bottleneck cut survived clustering.
+
+## What is certified
+
+The quotient result is a **certified upper bound** on the exact Cheeger constant.
+Every reported value has a concrete cut in the original graph, while excluding
+other cuts can only miss a smaller value. The study also computes `lambda2 / 2`
+from the combinatorial graph Laplacian as a lower bound for the same unnormalized
+edge-expansion definition. The exact value therefore lies in:
+
+```text
+spectral lower bound <= exact Cheeger constant <= lifted quotient upper bound
+```
+
+The interval remains valid without exhaustive enumeration. Its width is a safe
+uncertainty measure, but it can be loose. `absoluteError` and `relativeError` use
+an exhaustive reference and are available only because the study graphs remain
+small enough to solve exactly. They are evaluation metrics, not production
+certificates.
+
+An upper bound below a required minimum proves a violation. An upper bound above
+the minimum does **not** prove compliance. This asymmetry makes the reduction
+useful for early rejection, prioritizing likely cuts, monitoring, and deciding
+when exact recomputation is worthwhile; it must not silently authorize a hard
+admission decision.
+
+## Controlled sweeps
+
+[`fixtures/scenario.json`](fixtures/scenario.json) declares every varied axis.
+The full reduction sweep holds vertex count constant while crossing:
+
+- graph family: path, cycle, small-world and two-community;
+- retained PCA dimensions;
+- quotient supernode count; and
+- reproducible graph seed.
+
+The plotting code then selects one fixed supernode count for the dimension plot,
+one fixed component count for the compression plot, and both fixed settings for
+the topology comparison. This prevents correlated parameter changes from being
+presented as the effect of one axis.
+
+A separate size sweep holds topology, components and supernode budget constant
+while changing original vertex count. It compares exact enumeration with the
+entire approximation pipeline. Edge count is recorded for every graph so density
+and topology effects remain inspectable in `results.json`.
+
+The current production metric ignores edge weights, directions, duplicate edges
+and self-loops. The study deliberately does not add weight variability that would
+measure a different Cheeger definition.
+
+## Steady-graph insurance
+
+The stability sweep computes PCA clusters once, replaces a controlled fraction
+of baseline edges without changing vertex identities, and reevaluates the cached
+cluster cuts on the current graph. It compares that reuse with freshly computed
+PCA clusters and an exact reference.
+
+Cached reuse never reuses a stale numeric value: current edges always determine
+the lifted cut ratio. This makes it a plausible low-cost witness for a steady
+graph. A production policy could use topology generation and churn thresholds to
+schedule refreshes, but should fall back to fresh reduction or exact search when:
+
+- vertices are added, removed or renamed;
+- the certified interval crosses a hard policy threshold;
+- edge churn exceeds a calibrated limit;
+- the cached witness degrades materially; or
+- a successful hard-minimum decision requires proof.
+
+## Run
+
+Run the study through the same immutable-input and artifact-verification protocol
+as the other local studies:
+
+```sh
+python -m polyad_benchmarks.refresh \
+  --ci-phase prepare --suite reachability \
+  --root .cache/benchmarks/cheeger-reduction
+
+python -m polyad_benchmarks.refresh \
+  --ci-phase study --study cheeger-reduction \
+  --root .cache/benchmarks/cheeger-reduction
+```
+
+When preparing the whole reachability suite, run its other matrix entries before
+`finish`. The implementation is
+`polyad_benchmarks.cheeger_reduction.reduction_study`; plotting is isolated in
+`polyad_benchmarks.studies.cheeger_reduction.plotting`.
+
+## Interpret the plots
+
+![Accuracy across dimensions, compression and topology](figures/accuracy.png)
+
+The accuracy figure separates retained dimensions from the number of supernodes,
+then shows topology sensitivity and why retained PCA variance is not an error
+bound.
+
+![Exact cost, quotient work and certified uncertainty](figures/cost.png)
+
+The cost figure compares end-to-end measured duration, theoretical cut counts,
+observed error and the certified interval width. A speedup is meaningful only
+when PCA and clustering overhead are included.
+
+![Cached reduction under graph churn](figures/stability.png)
+
+The stability figure compares cached and refreshed reductions as edges change,
+including their runtime and the interval containing each exact study reference.
+
+## Limitations and production criteria
+
+PCA can merge the two sides of a narrow bridge because preserving global
+adjacency variance is not the same objective as preserving minimum cuts. Cluster
+count generally matters more directly than PCA component count: it determines
+which unions can be searched. Symmetric graphs can also have unstable embeddings
+even when their Cheeger constants are stable.
+
+Before this becomes an optional production feature, require representative graph
+corpora to establish topology-specific churn thresholds, maximum interval width,
+and a real end-to-end speed benefit beyond the current 20-vertex exact ceiling.
+The safe first integration is to emit reduced witnesses as `priorityCuts` for the
+existing exact/budgeted engine. Replacing exact evaluation requires a separate
+API whose result type exposes lower bound, upper bound, method, topology generation
+and cache age so callers cannot confuse it with `CheegerResult.exact=True`.

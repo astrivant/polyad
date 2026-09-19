@@ -95,6 +95,87 @@ class ContainerResources:
 
 
 @dataclass(frozen=True)
+class VPAConstraints:
+    """
+    Expose the VPA bounds Polyad compiled for this application container.
+
+    Attributes:
+        update_mode (str): Native VPA update mode, or empty when no VPA targets the container.
+        min_cpu_millicores (int | None): Lower CPU bound in millicores.
+        max_cpu_millicores (int | None): Upper CPU bound in millicores.
+        min_memory_bytes (int | None): Lower memory bound in bytes.
+        max_memory_bytes (int | None): Upper memory bound in bytes.
+    """
+
+    update_mode: str = ""
+    min_cpu_millicores: int | None = None
+    max_cpu_millicores: int | None = None
+    min_memory_bytes: int | None = None
+    max_memory_bytes: int | None = None
+
+    def __post_init__(self) -> None:
+        """
+        Reject malformed or inverted projected policy intervals.
+
+        Returns:
+            None: Valid bounds remain immutable.
+        """
+        if self.update_mode not in {"", "Off", "Initial", "Recreate", "InPlaceOrRecreate", "InPlace"}:
+            raise ValueError("POLYAD_VPA_UPDATE_MODE is unsupported")
+        for item in fields(self):
+            if item.name == "update_mode":
+                continue
+            value = getattr(self, item.name)
+            if value is not None and (type(value) is not int or value < 0):
+                raise ValueError(f"{item.name} must be a nonnegative integer or None")
+        for resource in ("cpu", "memory"):
+            minimum = getattr(self, f"min_{resource}_{'millicores' if resource == 'cpu' else 'bytes'}")
+            maximum = getattr(self, f"max_{resource}_{'millicores' if resource == 'cpu' else 'bytes'}")
+            if minimum is not None and maximum is not None and minimum > maximum:
+                raise ValueError(f"VPA minimum {resource} must not exceed its maximum")
+
+    @classmethod
+    def from_environment(cls, environ: Mapping[str, str] | None = None) -> VPAConstraints:
+        """
+        Parse projected bounds in the same units as :class:`ContainerResources`.
+
+        Args:
+            environ (Mapping[str, str] | None): Explicit environment; defaults to the SDK snapshot.
+
+        Returns:
+            VPAConstraints: Typed application policy interval.
+        """
+        env = sdk_environment if environ is None else environ
+        return cls(
+            update_mode=env.get("POLYAD_VPA_UPDATE_MODE", ""),
+            min_cpu_millicores=_integer(env, "POLYAD_VPA_MIN_CPU_MILLICORES"),
+            max_cpu_millicores=_integer(env, "POLYAD_VPA_MAX_CPU_MILLICORES"),
+            min_memory_bytes=_integer(env, "POLYAD_VPA_MIN_MEMORY_BYTES"),
+            max_memory_bytes=_integer(env, "POLYAD_VPA_MAX_MEMORY_BYTES"),
+        )
+
+    def clamp(self, resource: Literal["cpu", "memory"], value: int) -> int:
+        """
+        Clamp an application resource decision to the configured VPA interval.
+
+        Args:
+            resource (Literal['cpu', 'memory']): CPU in millicores or memory in bytes.
+            value (int): Proposed nonnegative value in the selected resource unit.
+
+        Returns:
+            int: Value constrained to any projected lower and upper bounds.
+        """
+        if type(value) is not int or value < 0:
+            raise ValueError("resource value must be a nonnegative integer")
+        if resource not in {"cpu", "memory"}:
+            raise ValueError("resource must be cpu or memory")
+        unit = "millicores" if resource == "cpu" else "bytes"
+        minimum = getattr(self, f"min_{resource}_{unit}")
+        maximum = getattr(self, f"max_{resource}_{unit}")
+        return max(minimum or 0, min(value, maximum if maximum is not None else value))
+
+
+@dataclass(frozen=True)
 class PodContext:
     """
     Identify this concrete Pod and its actual placement from the Downward API.
@@ -139,6 +220,7 @@ class WorkloadContext:
         ancestry (tuple[EventIdentity, ...]): Verified-at-compilation root-to-containing chain.
         pod (PodContext): Concrete execution identity and actual placement.
         resources (ContainerResources): Projected container requests and limits.
+        vpa (VPAConstraints): Optional VPA policy bounds for this application container.
         definition (EventIdentity | None): Reusable Workload or Daemon definition.
         definition_generation (int | None): Definition generation at compilation.
         node_id (str): Composition node ID, defaulting to the logical node name.
@@ -161,6 +243,7 @@ class WorkloadContext:
     ancestry: tuple[EventIdentity, ...] = ()
     pod: PodContext = field(default_factory=PodContext)
     resources: ContainerResources = field(default_factory=ContainerResources)
+    vpa: VPAConstraints = field(default_factory=VPAConstraints)
     definition: EventIdentity | None = None
     definition_generation: int | None = None
     node_id: str = field(default="", metadata={"env": "POLYAD_NODE_ID"})
@@ -214,6 +297,7 @@ class WorkloadContext:
             ancestry=ancestry,
             pod=pod,
             resources=ContainerResources.from_environment(env),
+            vpa=VPAConstraints.from_environment(env),
             definition=_reference(env, "DEFINITION", identity.namespace),
             definition_generation=_integer(env, "POLYAD_DEFINITION_GENERATION"),
             **strings,

@@ -10,7 +10,26 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types import AdaptationReport, ConnectionResponse, ServiceConnectionRequest, ThroughputSample
+    from polyad_types import AdaptationReport, ConnectionResponse, ServiceConnectionRequest, ServiceLevelReport, ThroughputSample
+
+
+class ServiceLevelReporter(ABC):
+    """
+    Publish service observations independently of adaptation lifecycle events.
+    """
+
+    @abstractmethod
+    def report_service_level(self, report: ServiceLevelReport) -> dict[str, Any]:
+        """
+        Persist one fenced, non-overlapping SLA observation window.
+
+        Args:
+            report (ServiceLevelReport): Request, quality, capability and availability observations.
+
+        Returns:
+            dict[str, Any]: Current evaluated service-level status.
+        """
+        ...
 
 
 class AdaptationReporter(ABC):

@@ -8,7 +8,9 @@ from textwrap import fill
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
     from matplotlib.figure import Figure
+    from matplotlib.text import Text
 
 INTRODUCTIONS = {
     "load": {
@@ -51,6 +53,20 @@ INTRODUCTIONS = {
             "How does guarded rerouting change completion, rejection and latency under the same processing budget?",
         ),
     },
+    "cheeger-reduction": {
+        "accuracy": (
+            r"PCA Cheeger reduction: $\hat{h}_Q(G)$ approximation accuracy",
+            r"How do PCA dimension $d$, quotient size $k$ and topology change error against exact $h(G)$?",
+        ),
+        "cost": (
+            r"PCA Cheeger reduction: work $N_{cuts}$ and uncertainty",
+            r"When does $2^{k-1}-1$ reduce computation, and how wide is $[\lambda_2/2,\hat{h}_Q]$?",
+        ),
+        "stability": (
+            r"PCA Cheeger reduction under edge churn $\rho_E$",
+            r"How do cached and refreshed bounds $\hat{h}_Q(G_t)$ behave as a previously stable graph changes?",
+        ),
+    },
     "soul": {
         "topology": (
             "Soul: observed process graph",
@@ -67,6 +83,15 @@ INTRODUCTIONS = {
         "strategies": (
             "Soul: exercised SDK strategies",
             "Which SDK strategies run during local adaptation, and how often do guards allow, block or lack evidence for an action?",
+        ),
+        "service-level": (
+            "Soul: service level through adaptation",
+            "How do measured availability, latency and each service's contract state change while Soul adapts workers and admission?",
+        ),
+        "resources": (
+            "Soul: resource discovery and response",
+            "How does the local VPA analogue vary admitted memory, what does the SDK observe from the real cgroup, "
+            "and how do workers respond?",
         ),
     },
     "nature": {
@@ -86,8 +111,47 @@ INTRODUCTIONS = {
             "Nature: exercised SDK strategies",
             "Which SDK strategies run inside selected services, and how often do their guards allow, block or lack evidence for an action?",
         ),
+        "service-level": (
+            "Nature: service level through composition change",
+            "How do availability, latency and service contract states change while Natural Selection replaces capabilities "
+            "and Soul adapts workers?",
+        ),
+        "resources": (
+            "Nature: resource discovery inside changing compositions",
+            "How does modeled vertical allocation interact with real SDK cgroup observations and worker adaptation "
+            "across service incarnations?",
+        ),
     },
 }
+
+
+def describe_axis(axis: Axes, title: str, description: str) -> Text:
+    """
+    Place a concise interpretation beneath a subplot title.
+
+    Args:
+        axis (Axes): Subplot receiving the heading.
+        title (str): Short name for the measurement shown.
+        description (str): Sentence explaining how to read the panel.
+
+    Returns:
+        Text: Description artist positioned above the plotting area.
+    """
+    axis.set_title(title, pad=34, fontsize=11)
+    axis.title.set_gid("subplot-title")
+    artist = axis.text(
+        0.5,
+        1.01,
+        fill(description, width=58),
+        transform=axis.transAxes,
+        ha="center",
+        va="bottom",
+        fontsize=8,
+        color="#64748b",
+        clip_on=False,
+    )
+    artist.set_gid("subplot-description")
+    return artist
 
 
 def describe(figure: Figure, study: str, name: str, *, note: str = "") -> float:

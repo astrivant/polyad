@@ -38,19 +38,21 @@ spec:
                     type: string
                     enum:
                     - v1
-                    description: API version of the owned resource; supported manifests use core v1.
+                    - autoscaling.k8s.io/v1
+                    description: API version of the owned resource. VPA manifests require the opt-in operator compatibility feature.
                   kind:
                     type: string
                     enum:
                     - Service
                     - ConfigMap
                     - PersistentVolumeClaim
-                    description: 'Kind of core v1 resource to create: Service, ConfigMap or PersistentVolumeClaim.'
+                    - VerticalPodAutoscaler
+                    description: 'Kind of namespaced resource to create: Service, ConfigMap, PersistentVolumeClaim or VerticalPodAutoscaler.'
                   spec:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
-                    description: Native spec for a Service or PersistentVolumeClaim, such as selectors, ports, storageClassName
-                      or volume requirements. ConfigMaps use data or binaryData instead.
+                    description: Native resource spec. VPA targetRef.name may reference ${nodes.NAME.name}; resourcePolicy containerPolicies
+                      retain and validate minAllowed and maxAllowed CPU/memory quantities before creation.
                   data:
                     type: object
                     additionalProperties:
@@ -69,13 +71,12 @@ spec:
                 required:
                 - apiVersion
                 - kind
-                description: Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator
-                  supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}.
+                description: Native manifest for an owned core resource or, when enabled, autoscaling.k8s.io/v1 VerticalPodAutoscaler.
+                  The operator supplies identity and ownership. String values may reference generated names with ${nodes.NAME.name}.
             required:
             - manifest
-            description: Desired configuration for this Resource resource. Define a reusable namespaced Service,
-              ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership
-              metadata and waits for deletion during graph cleanup.
+            description: Desired configuration for a graph-owned namespaced resource. Optional VPA compatibility validates
+              bounds and projects them into the target application's environment; the external VPA controller remains responsible for resizing.
           status:
             type: object
             x-kubernetes-preserve-unknown-fields: true
@@ -83,5 +84,5 @@ spec:
               or currently publish lifecycle status.
         required:
         - spec
-        description: Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph.
+        description: Define a reusable namespaced core resource or optional VerticalPodAutoscaler owned by a graph.
           The operator generates its name and ownership metadata and waits for deletion during graph cleanup.

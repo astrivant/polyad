@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from polyad.auth.http import Access
     from polyad_types.api.adaptation import AdaptationReport
     from polyad_types.api.requests import ActivationRequest
+    from polyad_types.api.service_level import ServiceLevelReport
     from polyad_types.api.throughput import ThroughputSample
 
 
@@ -51,6 +52,7 @@ def _build_app(
     access: Access | None = None,
     throughput: Callable[[ThroughputSample], dict[str, Any]] | None = None,
     adaptation: Callable[[AdaptationReport], dict[str, Any]] | None = None,
+    service_level: Callable[[ServiceLevelReport], dict[str, Any]] | None = None,
     application: Flask | None = None,
 ) -> Flask:
     """
@@ -69,6 +71,7 @@ def _build_app(
         access (Access | None): Named service/operator credentials and shared request lanes.
         throughput (Callable[[ThroughputSample], dict[str, Any]] | None): Authorized aggregate throughput intake.
         adaptation (Callable[[AdaptationReport], dict[str, Any]] | None): Authorized SDK strategy lifecycle intake.
+        service_level (Callable[[ServiceLevelReport], dict[str, Any]] | None): Authorized Daemon objective observations.
         application (Flask | None): Existing process application for blueprint registration.
 
     Returns:
@@ -128,7 +131,7 @@ def _build_app(
         result = lookup(request_id, True)
         return (jsonify(result), 200) if result is not None else (jsonify(error="composition not found"), 404)
 
-    register_routes(app, activate, activation_lookup, activation_stop, throughput, adaptation)
+    register_routes(app, activate, activation_lookup, activation_stop, throughput, adaptation, service_level)
 
     schema = openapi_document(title, version)
     if not authenticated:

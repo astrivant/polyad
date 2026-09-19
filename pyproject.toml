@@ -29,6 +29,7 @@ dependencies = [
     "psycopg[binary,pool]>=3.3,<4",
     "cryptography>=46,<51",
     "networkx>=3.6,<4",
+    "lupa>=2.8,<3",
     "flask>=3.1,<4",
     "apispec>=6.10,<7",
     "numpy>=2.2,<3",
@@ -79,6 +80,7 @@ pre-commit = "4.6.0"
 pydocstyle = "6.3.0"
 pydoclint = "0.6.6"
 types-networkx = "^3.6.1.20260911"
+types-lupa = ">=2.8.0.20260827,<3"
 types-waitress = ">=3,<4"
 jsonschema = ">=4.26,<5"
 openapi-spec-validator = ">=0.7,<0.9"

@@ -228,6 +228,90 @@
             }
           ],
           "properties": {
+            "serviceLevel": {
+              "type": "object",
+              "description": "Minimum externally observable service contract evaluated from SDK reports; adaptation progress remains independent.",
+              "properties": {
+                "requiredCapabilities": {
+                  "type": "array",
+                  "maxItems": 64,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "description": "Capabilities that must remain available for the service to avoid Unavailable status."
+                },
+                "availability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.999,
+                  "description": "Minimum successful eligible-request ratio in the current accounting window."
+                },
+                "latencyP99Seconds": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Optional inclusive p99 latency objective in seconds."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "minimumThroughputPerSecond": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Optional inclusive completed-work rate objective."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "windowSeconds": {
+                  "type": "integer",
+                  "minimum": 60,
+                  "maximum": 31536000,
+                  "default": 2592000,
+                  "description": "Fixed SLA accounting-window duration."
+                },
+                "sampleMaxAgeSeconds": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3600,
+                  "default": 60,
+                  "description": "Maximum accepted age for application observations."
+                },
+                "adaptation": {
+                  "type": "object",
+                  "description": "Customer-visible transition budgets evaluated separately from Progressing state.",
+                  "properties": {
+                    "maximumDurationSeconds": {
+                      "type": "number",
+                      "minimum": 0,
+                      "default": 60
+                    },
+                    "maximumUnavailableSeconds": {
+                      "type": "number",
+                      "minimum": 0,
+                      "default": 5
+                    },
+                    "maximumFailedAttempts": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1000,
+                      "default": 2
+                    }
+                  }
+                }
+              }
+            },
             "activation": {
               "type": "object",
               "description": "Control how repeated requests start a downstream workload or graph.",
@@ -11197,23 +11281,25 @@
                 "apiVersion": {
                   "type": "string",
                   "enum": [
-                    "v1"
+                    "v1",
+                    "autoscaling.k8s.io/v1"
                   ],
-                  "description": "API version of the owned resource; supported manifests use core v1."
+                  "description": "API version of the owned resource. VPA manifests require the opt-in operator compatibility feature."
                 },
                 "kind": {
                   "type": "string",
                   "enum": [
                     "Service",
                     "ConfigMap",
-                    "PersistentVolumeClaim"
+                    "PersistentVolumeClaim",
+                    "VerticalPodAutoscaler"
                   ],
-                  "description": "Kind of core v1 resource to create: Service, ConfigMap or PersistentVolumeClaim."
+                  "description": "Kind of namespaced resource to create: Service, ConfigMap, PersistentVolumeClaim or VerticalPodAutoscaler."
                 },
                 "spec": {
                   "type": "object",
                   "x-kubernetes-preserve-unknown-fields": true,
-                  "description": "Native spec for a Service or PersistentVolumeClaim, such as selectors, ports, storageClassName or volume requirements. ConfigMaps use data or binaryData instead."
+                  "description": "Native resource spec. VPA targetRef.name may reference ${nodes.NAME.name}; resourcePolicy containerPolicies retain and validate minAllowed and maxAllowed CPU/memory quantities before creation."
                 },
                 "data": {
                   "type": "object",
@@ -11240,19 +11326,19 @@
                 "apiVersion",
                 "kind"
               ],
-              "description": "Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}."
+              "description": "Native manifest for an owned core resource or, when enabled, autoscaling.k8s.io/v1 VerticalPodAutoscaler. The operator supplies identity and ownership. String values may reference generated names with ${nodes.NAME.name}."
             }
           },
           "required": [
             "manifest"
           ],
-          "description": "Desired configuration for this Resource resource. Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup."
+          "description": "Desired configuration for a graph-owned namespaced resource. Optional VPA compatibility validates bounds and projects them into the target application's environment; the external VPA controller remains responsible for resizing."
         }
       },
       "required": [
         "spec"
       ],
-      "description": "Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup."
+      "description": "Define a reusable namespaced core resource or optional VerticalPodAutoscaler owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup."
     }
   },
   "rewrites": {

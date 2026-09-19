@@ -37,7 +37,7 @@ def build(policy: Policy) -> ThresholdStrategy:
             None: The service loop applies this intent only after guard checks.
         """
         policy.coverage["ThresholdStrategy"] += 1
-        policy.proposal = "compact" if policy.read()["memoryReserved"] else profile
+        policy.proposal = "compact" if policy.read()["memoryReserved"] or policy.read().get("resourcePressure", False) else profile
 
     return ThresholdStrategy(
         "backlog",

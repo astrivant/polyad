@@ -15,10 +15,10 @@ import pytest
 
 from polyad_benchmarks import refresh
 from polyad_benchmarks.studies import plotting
-from polyad_benchmarks.studies.descriptions import INTRODUCTIONS, describe
+from polyad_benchmarks.studies.descriptions import INTRODUCTIONS, describe, describe_axis
 
 ROOT = Path(__file__).resolve().parents[2]
-PLOTTED = ("load", "symbiosis", "reachability-state", "reachability-routing")
+PLOTTED = ("load", "symbiosis", "reachability-state", "reachability-routing", "cheeger-reduction")
 
 
 def result_for(study):
@@ -61,6 +61,7 @@ def test_each_plotter_exports_complete_verifiable_artifacts(study, tmp_path):
         assert data.startswith(b"\x89PNG") if name.endswith("png") else b"<svg" in data
         if name.endswith("svg"):
             assert b'id="plot-question"' in data
+            assert b'id="subplot-description"' in data
             assert b"?" in data
     path = tmp_path / result["figures"][0]
     path.write_bytes(b"changed")
@@ -165,6 +166,35 @@ def test_question_subtitles_fit_between_titles_and_panels(size):
             assert all(upper.y0 > lower.y1 for upper, lower in zip(bounds, bounds[1:], strict=False))
             assert all(0 <= box.x0 < box.x1 <= figure.bbox.width for box in bounds)
             figure.clear()
+
+
+@pytest.mark.parametrize("size", [(4.8, 4.8), (8, 3.5)])
+def test_subplot_descriptions_fit_beneath_titles_and_above_panels(size):
+    """
+    Keep each panel explanation between its title and measured plotting area.
+    """
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+
+    figure = Figure(figsize=size, layout="constrained")
+    canvas = FigureCanvasAgg(figure)
+    axis = figure.subplots()
+    description = describe_axis(
+        axis,
+        "Measured service state",
+        "Color reports contract state; outlines identify active worker replacement.",
+    )
+    axis.plot([0, 1], [0, 1])
+    canvas.draw()
+    renderer = canvas.get_renderer()
+    title_bounds = axis.title.get_window_extent(renderer)
+    description_bounds = description.get_window_extent(renderer)
+    panel_bounds = axis.get_window_extent(renderer)
+    assert axis.title.get_gid() == "subplot-title"
+    assert description.get_gid() == "subplot-description"
+    assert title_bounds.y0 > description_bounds.y1
+    assert description_bounds.y0 >= panel_bounds.y1
+    assert 0 <= description_bounds.x0 < description_bounds.x1 <= figure.bbox.width
 
 
 @pytest.mark.parametrize("layout", [None, "constrained"])

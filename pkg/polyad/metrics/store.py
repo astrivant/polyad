@@ -241,6 +241,33 @@ class MetricsStore:
                             continue
                         signals.append(({"kind": obj["kind"], "name": obj["name"], "node": node or "", "signal": signal_name}, value))
                 gauge("workload_signal", "Fresh workload signals and replica controls; deduplicate operator replicas.", signals)
+                service_states = []
+                service_values = []
+                adaptation_values = []
+                service_freshness = []
+                for obj in tracked["objects"]:
+                    service = obj.get("serviceLevel") or {}
+                    if service:
+                        labels = {"kind": obj["kind"], "name": obj["name"]}
+                        service_freshness.append((labels, float(obj.get("serviceLevelFresh", False))))
+                        for state in ("Compliant", "Degraded", "Unavailable"):
+                            service_states.append(({**labels, "state": state}, float(service.get("state") == state)))
+                        for statistic in ("availability", "latencyCompliance", "errorBudgetRemaining"):
+                            if statistic in service:
+                                service_values.append(({**labels, "statistic": statistic}, service[statistic]))
+                        for statistic, value in service.get("counters", {}).items():
+                            service_values.append(({**labels, "statistic": statistic}, value))
+                    adaptation = obj.get("adaptation") or {}
+                    for statistic, value in adaptation.get("statistics", {}).items():
+                        adaptation_values.append(({"kind": obj["kind"], "name": obj["name"], "statistic": statistic}, value))
+                gauge("service_level_state", "Current Daemon service-contract classification.", service_states)
+                gauge(
+                    "service_level_sample_fresh",
+                    "Whether the latest Daemon service observation remains within its age bound.",
+                    service_freshness,
+                )
+                gauge("service_level", "Current service-level ratios and fixed-window counters.", service_values)
+                gauge("adaptation", "Current-generation SDK adaptation attempt and duration totals.", adaptation_values)
                 gauge("graph_shape", "Declared topology nodes, admission edges, breadth and depth of current graph observations.", shape)
                 gauge("graph_status_current", "Whether graph metrics describe the object's current generation.", current_status)
                 gauge("hierarchy_info", "Object membership in parent and root controller hierarchies.", rows)

@@ -127,6 +127,7 @@ def compute_cheeger(
     nodes = list(simple)
     indices = {node: index for index, node in enumerate(nodes)}
     neighbors = [sum(1 << indices[neighbor] for neighbor in simple[node]) for node in nodes]
+    degrees = [value.bit_count() for value in neighbors]
     total = (1 << (n - 1)) - 1
     all_nodes = (1 << n) - 1
     deadline = started + budgets["timeoutSeconds"]
@@ -186,20 +187,40 @@ def compute_cheeger(
 
     subset = cut = 0
     # Fix the last vertex outside each subset: complementary cuts count once.
-    # Every step changes one vertex, so the cut can be updated incrementally.
+    # Python's arbitrary-width integers keep this path correct above 63 vertices,
+    # while int.bit_count() performs the hot population counts in native code.
+    bit_count = int.bit_count
+    max_cuts = int(budgets["maxCuts"])
+    monotonic = time.monotonic
+    next_time_check = 1
+    has_priorities = bool(priorities)
+    has_minimum = minimum is not None
     for step in range(1, total + 1):
-        if evaluated >= budgets["maxCuts"]:
+        if evaluated >= max_cuts:
             return result("CutBudget")
-        if (step == 1 or step % 256 == 0) and time.monotonic() >= deadline:
-            return result("TimeBudget")
+        # Preserve bounded cancellation checks before steps 1, 256, 512, ...
+        if step == next_time_check:
+            if monotonic() >= deadline:
+                return result("TimeBudget")
+            next_time_check = 256 if step == 1 else step + 256
         next_subset = step ^ (step >> 1)
         changed = subset ^ next_subset
         vertex = changed.bit_length() - 1
-        delta = neighbors[vertex].bit_count() - 2 * (neighbors[vertex] & subset).bit_count()
+        delta = degrees[vertex] - 2 * bit_count(neighbors[vertex] & subset)
         cut += delta if next_subset & changed else -delta
         subset = next_subset
-        if subset not in priorities and (reason := observe(subset, cut)):
-            return result(reason)
+        if has_priorities and subset in priorities:
+            continue
+        # Keep the exhaustive hot path inline: a Python function call per cut is
+        # material at the default 524,287-cut ceiling.
+        evaluated += 1
+        size = bit_count(subset)
+        complement_size = n - size
+        value = cut / (size if size < complement_size else complement_size)
+        if best is None or value < best:
+            best, best_subset = value, subset
+        if has_minimum and minimum is not None and value + 1e-9 * max(1.0, abs(value), abs(minimum)) < minimum:
+            return result("MinimumViolated")
     return result("Complete")
 
 

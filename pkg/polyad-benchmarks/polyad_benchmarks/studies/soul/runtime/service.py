@@ -13,7 +13,9 @@ from typing import TYPE_CHECKING
 
 import nature
 import soul
+from polyad_benchmarks.studies.soul.runtime.measurements import ResourceLoop, service_level
 from polyad_benchmarks.studies.soul.runtime.policy import Policy
+from polyad_sdk import container_metrics
 
 if TYPE_CHECKING:
     from multiprocessing.connection import Connection
@@ -56,7 +58,7 @@ class Service:
     Keep business work draining while strategies change admission and worker plans.
     """
 
-    def __init__(self, name: str, capability: str, pipe: Connection, adaptive: bool, delay: float) -> None:
+    def __init__(self, name: str, capability: str, pipe: Connection, adaptive: bool, config: dict[str, Any]) -> None:
         """
         Allocate process ownership and construct the complete policy before startup.
 
@@ -65,9 +67,14 @@ class Service:
             capability (str): Square, increment or fused function required by the parent.
             pipe (Connection): Parent command and result channel.
             adaptive (bool): Apply local profile proposals or retain the fixed profile.
-            delay (float): Simulated I/O time per real worker batch in seconds.
+            config (dict[str, Any]): Work timing, resource loop and service objectives.
         """
-        self.name, self.capability, self.pipe, self.adaptive, self.delay = name, capability, pipe, adaptive, delay
+        self.name, self.capability, self.pipe, self.adaptive = name, capability, pipe, adaptive
+        self.delay = config["workSeconds"]
+        self.service_level_policy = config["serviceLevel"]
+        self.resource_loop = ResourceLoop.from_config(config["resourceLoop"])
+        self.resource_assigned = self.resource_loop.assigned
+        self.resource_used = 0
         self.context = mp.get_context("spawn")
         self.children: list[Worker] = []
         self.owned: list[Worker] = []
@@ -80,6 +87,11 @@ class Service:
         self.last_report = 0.0
         self.completed = 0
         self.accepted: set[int] = set()
+        self.accepted_at: dict[int, float] = {}
+        self.latencies: list[float] = []
+        self.last_completed = 0
+        self.last_sample_time = self.started
+        self.candidate_started: float | None = None
         self.stopping = False
         self.phase = "starting"
         self.policy = Policy(name, self.read)
@@ -112,6 +124,10 @@ class Service:
             "profile": self.profile,
             "projectedWorkers": len(self.children) + additional,
             "memoryReserved": self.settings.get("memoryReserved", 0),
+            "resourceAssignedBytes": self.resource_assigned,
+            "resourceModeledUsageBytes": self.resource_used,
+            "resourceAvailableBytes": max(0, self.resource_assigned - self.resource_used),
+            "resourcePressure": self.resource_used > self.resource_assigned,
             "healthy": self.settings.get("healthy", True),
             "stale": self.settings.get("stale", False),
             "decision": self.settings.get("decision", "Applied"),
@@ -164,10 +180,11 @@ class Service:
                 self.settings = payload
                 self.phase = payload["phase"]
             elif kind == "job":
-                identity, value = payload
+                identity, value, offered_at = payload
                 if identity in self.accepted or self.read()["backlog"] >= 24 or self.stopping:
                     raise RuntimeError("parent exceeded the unique-job or outstanding-work contract")
                 self.accepted.add(identity)
+                self.accepted_at[identity] = offered_at
                 self.pending.append((identity, value))
             else:
                 raise ValueError(f"unsupported control: {kind}")
@@ -192,6 +209,7 @@ class Service:
                     for identity, value in payload:
                         self.pipe.send(("result", (identity, value)))
                         self.completed += 1
+                        self.latencies.append(time.monotonic() - self.accepted_at.pop(identity))
                     child.jobs = ()
                 else:
                     raise RuntimeError("unexpected worker response")
@@ -219,9 +237,14 @@ class Service:
                     child.retiring = True
             return
         proposal = self.policy.proposal if self.adaptive else "interactive"
-        if self.profile == "compact" and not self.read()["memoryReserved"] and self.read()["backlog"] <= 2:
+        if (
+            self.profile == "compact"
+            and not self.read()["memoryReserved"]
+            and not self.read()["resourcePressure"]
+            and self.read()["backlog"] <= 2
+        ):
             self.policy.proposal = proposal = "interactive"
-        if self.read()["memoryReserved"] and self.adaptive:
+        if (self.read()["memoryReserved"] or self.read()["resourcePressure"]) and self.adaptive:
             proposal = "compact"
             # Release surplus old workers before reserving a compact replacement.
             active = [child for child in self.children if not child.retiring and child.profile == self.profile]
@@ -232,6 +255,7 @@ class Service:
             if len(ready) == PROFILES[self.candidate].workers and self.policy.permits("fresh", "decision", "workers", "memory"):
                 previous = self.profile
                 self.profile, self.candidate = self.candidate, None
+                self.candidate_started = None
                 for child in self.children:
                     if child.profile != self.profile:
                         child.retiring = True
@@ -246,6 +270,7 @@ class Service:
         if len(self.children) + count > 4:
             return
         self.candidate = proposal
+        self.candidate_started = time.monotonic()
         self.event("profile_proposed", profile=proposal, overlap=len(self.children) + count)
         for _ in range(count):
             self.spawn(proposal)
@@ -263,6 +288,19 @@ class Service:
             child.jobs = tuple(self.pending.popleft() for _ in range(min(len(self.pending), PROFILES[self.profile].batch)))
             child.pipe.send(child.jobs)
 
+    def reconcile_resources(self) -> None:
+        """
+        Advance the local VPA analogue from measured workers and accepted backlog.
+
+        Returns:
+            None: Current modeled allocation and usage become policy inputs.
+        """
+        now = time.monotonic()
+        assigned, used, changed = self.resource_loop.observe(now, workers=len(self.children), backlog=self.read()["backlog"])
+        self.resource_assigned, self.resource_used = assigned, used
+        if changed:
+            self.event("resource_allocation_changed", assignedMemoryBytes=assigned, modeledUsageBytes=used)
+
     def report(self) -> None:
         """
         Report measurements and application admission decisions to the router.
@@ -272,6 +310,20 @@ class Service:
         """
         data = self.read()
         admitted = bool(self.policy.route_names) and self.policy.permits("fresh", "peer", "permission", "envelope")
+        now = time.monotonic()
+        elapsed = max(1e-9, now - self.last_sample_time)
+        completed_per_second = (self.completed - self.last_completed) / elapsed
+        adapting_seconds = now - self.candidate_started if self.candidate_started is not None else None
+        objective = service_level(
+            serving=admitted and not self.stopping,
+            eligible=self.completed,
+            successful=self.completed,
+            latencies=self.latencies,
+            completed_per_second=completed_per_second,
+            adapting_seconds=adapting_seconds,
+            policy=self.service_level_policy,
+        )
+        cgroup = container_metrics()
         self.pipe.send(
             (
                 "sample",
@@ -293,9 +345,22 @@ class Service:
                     "guards": {name: result.state for name, result in self.policy.assessments.items()},
                     "coverage": dict(self.policy.coverage),
                     "deltas": self.policy.changes,
+                    "serviceLevel": objective,
+                    "adaptationInProgress": self.candidate is not None,
+                    "resourceAssignedBytes": data["resourceAssignedBytes"],
+                    "resourceModeledUsageBytes": data["resourceModeledUsageBytes"],
+                    "resourceAvailableBytes": data["resourceAvailableBytes"],
+                    "cgroup": {
+                        "cpuUsageUsec": cgroup.cpu_usage_usec,
+                        "cpuLimitMillicores": cgroup.cpu_limit_millicores,
+                        "memoryUsageBytes": cgroup.memory_usage_bytes,
+                        "memoryLimitBytes": cgroup.memory_limit_bytes,
+                        "memoryAvailableBytes": cgroup.memory_available_bytes,
+                    },
                 },
             )
         )
+        self.last_completed, self.last_sample_time = self.completed, now
 
     def run(self) -> None:
         """
@@ -308,6 +373,7 @@ class Service:
         while not self.stopping or self.children:
             self.receive()
             self.collect()
+            self.reconcile_resources()
             self.policy.update()
             self.mutate()
             self.dispatch()
@@ -336,7 +402,7 @@ class Service:
         self.pipe.close()
 
 
-def serve(name: str, capability: str, pipe: Connection, adaptive: bool, delay: float) -> None:
+def serve(name: str, capability: str, pipe: Connection, adaptive: bool, config: dict[str, Any]) -> None:
     """
     Own one service and clean up its descendants on interruption or failure.
 
@@ -345,14 +411,14 @@ def serve(name: str, capability: str, pipe: Connection, adaptive: bool, delay: f
         capability (str): Required processing function.
         pipe (Connection): Parent control channel.
         adaptive (bool): Enable admitted worker-profile changes.
-        delay (float): I/O delay per worker dispatch.
+        config (dict[str, Any]): Work timing, resource loop and service objectives.
 
     Returns:
         None: Service shutdown and descendant cleanup finished.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, soul.interrupt)
-    service = Service(name, capability, pipe, adaptive, delay)
+    service = Service(name, capability, pipe, adaptive, config)
     try:
         service.run()
     finally:

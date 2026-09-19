@@ -58,26 +58,28 @@ the Kubernetes Operators Framework for Python.
 
 ## Table of contents
 
-- [Get started](#get-started)
-- [What Polyad abstracts](#what-polyad-abstracts)
-  - [Motivation and inspiration](#motivation-and-inspiration)
-  - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
-  - [Graphs of graphs](#graphs-of-graphs)
-  - [Replica connections](#replica-connections)
-  - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
-  - [Demand-driven adaptation and preparation](#demand-driven-adaptation-and-preparation)
-  - [Constrained compositions](#constrained-compositions)
-  - [Network boundaries](#network-boundaries)
-  - [Graphs across clusters](#graphs-across-clusters)
-  - [Graphs across node groups](#graphs-across-node-groups)
-  - [Workloads calling the operator](#workloads-calling-the-operator)
-  - [Finite pipelines](#finite-pipelines)
-  - [Persistent services and recurrence](#persistent-services-and-recurrence)
-  - [The operator as a Graph](#the-operator-as-a-graph)
-  - [Writing Adaptive Microservices for Polygraphs](#writing-adaptive-microservices-for-polygraphs)
-- [What Polyad is not](#what-polyad-is-not)
-- [License](#license)
-- [References](#references)
+- [Polyad](#polyad)
+  - [Table of contents](#table-of-contents)
+  - [Get started](#get-started)
+  - [What Polyad abstracts](#what-polyad-abstracts)
+    - [Motivation and inspiration](#motivation-and-inspiration)
+    - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
+    - [Graphs of graphs](#graphs-of-graphs)
+    - [Replica connections](#replica-connections)
+    - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
+    - [Demand-driven adaptation and preparation](#demand-driven-adaptation-and-preparation)
+    - [Constrained compositions](#constrained-compositions)
+    - [Network boundaries](#network-boundaries)
+    - [Graphs across clusters](#graphs-across-clusters)
+    - [Graphs across node groups](#graphs-across-node-groups)
+    - [Workloads calling the operator](#workloads-calling-the-operator)
+    - [Finite pipelines](#finite-pipelines)
+    - [Persistent services and recurrence](#persistent-services-and-recurrence)
+    - [The operator as a Graph](#the-operator-as-a-graph)
+    - [Writing Adaptive Microservices for execution in Polygraphs](#writing-adaptive-microservices-for-execution-in-polygraphs)
+  - [What Polyad is not](#what-polyad-is-not)
+  - [License](#license)
+  - [References](#references)
 
 ## Get started
 
@@ -1047,7 +1049,7 @@ Optional [record encryption](docs/deployment/record-encryption.md) uses an
 administrator-provided public key to encrypt JSON payloads inside the operator
 before writing them to either managed or external PostgreSQL databases.
 
-### Writing Adaptive Microservices for Polygraphs
+### Writing Adaptive Microservices for execution in Polygraphs
 
 Application code can participate in adaptation, using available capacity while
 protecting work it has already accepted. The [Soul study](studies/soul/README.md)

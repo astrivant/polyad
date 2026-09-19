@@ -26,6 +26,7 @@ from polyad.compiler.passes.identity import inject_environment, workload_identit
 from polyad.compiler.passes.mutations import PreconditionFailed
 from polyad.compiler.passes.network import configure_pod
 from polyad.compiler.passes.storage import configure_storage
+from polyad.compiler.passes.vertical import compile_vertical_pod_autoscaler, inject_vertical_environment
 from polyad.graph.gates import DelayGate, Gate
 from polyad.graph.temporary import ANNOTATION as CONNECTIONS
 from polyad.graph.temporary import CLEANUP as CONNECTION_CLEANUP
@@ -779,8 +780,32 @@ class Controller:
                     definition_cache[reference_key] = await Controller(remote).definition(node.kind, remote_namespace, node.ref)
                 else:
                     definition_cache[reference_key] = await self.definition(node.kind, namespace, node.ref)
-            definition = definition_cache[reference_key]
-            definitions[node.name] = definition
+            definitions[node.name] = definition_cache[reference_key]
+
+        vertical_policies: dict[str, dict[str, Any]] = {}
+        if os.environ.get("POLYAD_VPA_ENABLED", "false").lower() == "true":
+            vertical_targets = {
+                names[node.name]: definitions[node.name]["spec"].get("controller", "Deployment")
+                for node in graph.nodes
+                if node.kind == "Daemon"
+            }
+            for node in graph.nodes:
+                definition = definitions[node.name]
+                if node.kind != "Resource":
+                    continue
+                manifest = references(copy.deepcopy(definition["spec"]).get("manifest", {}), names)
+                if manifest.get("kind") != "VerticalPodAutoscaler":
+                    continue
+                if manifest.get("apiVersion") != "autoscaling.k8s.io/v1":
+                    raise ValueError("VerticalPodAutoscaler resources require apiVersion autoscaling.k8s.io/v1")
+                vertical_spec = compile_vertical_pod_autoscaler(manifest.get("spec", {}), vertical_targets)
+                target_name = vertical_spec["targetRef"]["name"]
+                if target_name in vertical_policies:
+                    raise ValueError("only one VerticalPodAutoscaler may target a graph node")
+                vertical_policies[target_name] = vertical_spec
+        for node in graph.nodes:
+            cluster = getattr(node, "cluster", None)
+            definition = definitions[node.name]
             if "activation" in definition["spec"]:
                 if cluster:
                     raise ValueError("configure activations inside the remote Graph; remote boundary activation is not supported")
@@ -806,6 +831,8 @@ class Controller:
                 if root_mode:
                     identity["POLYAD_CLUSTER_NAME"] = self.federation.name
                 inject_environment(pod, identity)
+                if names[node.name] in vertical_policies:
+                    inject_vertical_environment(pod, vertical_policies[names[node.name]])
                 inject_credentials(pod, definition, self.federation.name)
                 if node.kind == "Daemon":
                     for container in pod_spec["containers"]:
@@ -838,7 +865,22 @@ class Controller:
                 desired[node.name] = self.child(obj, node.name, kind, runtime, annotations=annotations)
             elif node.kind == "Resource":
                 manifest = spec["manifest"]
-                if manifest["kind"] not in {"Service", "ConfigMap", "PersistentVolumeClaim"}:
+                if manifest.get("kind") == "VerticalPodAutoscaler":
+                    if os.environ.get("POLYAD_VPA_ENABLED", "false").lower() != "true":
+                        raise ValueError("VerticalPodAutoscaler resources require verticalPodAutoscaling.enabled")
+                    if manifest.get("apiVersion") != "autoscaling.k8s.io/v1":
+                        raise ValueError("VerticalPodAutoscaler resources require apiVersion autoscaling.k8s.io/v1")
+                    vertical_targets = {
+                        names[candidate.name]: definitions[candidate.name]["spec"].get("controller", "Deployment")
+                        for candidate in graph.nodes
+                        if candidate.kind == "Daemon"
+                    }
+                    manifest["spec"] = compile_vertical_pod_autoscaler(manifest.get("spec", {}), vertical_targets)
+                elif manifest.get("apiVersion") != "v1" or manifest.get("kind") not in {
+                    "Service",
+                    "ConfigMap",
+                    "PersistentVolumeClaim",
+                }:
                     raise ValueError("resource kind is outside the operator's namespaced allowlist")
                 extra = {key: value for key, value in manifest.items() if key not in {"apiVersion", "kind", "metadata", "spec"}}
                 desired[node.name] = self.child(obj, node.name, manifest["kind"], manifest.get("spec", {}), extra=extra)

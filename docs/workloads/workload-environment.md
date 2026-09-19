@@ -65,6 +65,9 @@ All values are strings. Optional context is the empty string when absent.
 | `POLYAD_POD_IP`, `POLYAD_POD_IPS`, `POLYAD_HOST_IP`, `POLYAD_HOST_IPS` | Primary and dual-stack Pod/node addresses |
 | `POLYAD_CPU_REQUEST_MILLICORES`, `POLYAD_CPU_LIMIT_MILLICORES` | This container's CPU request/limit in millicores |
 | `POLYAD_MEMORY_REQUEST_BYTES`, `POLYAD_MEMORY_LIMIT_BYTES` | This container's memory request/limit in bytes |
+| `POLYAD_VPA_UPDATE_MODE` | Update mode of the graph-owned VPA targeting this container |
+| `POLYAD_VPA_MIN_CPU_MILLICORES`, `POLYAD_VPA_MAX_CPU_MILLICORES` | Validated VPA CPU policy interval in millicores |
+| `POLYAD_VPA_MIN_MEMORY_BYTES`, `POLYAD_VPA_MAX_MEMORY_BYTES` | Validated VPA memory policy interval in bytes |
 | `POLYAD_API_URL`, `POLYAD_EVENTS_URL`, `POLYAD_METRICS_URL`, `POLYAD_CONNECTIONS_URL` | Namespace-qualified internal Service URL for each enabled operator listener |
 
 Kubernetes supplies Pod identity, node and service account fields through the

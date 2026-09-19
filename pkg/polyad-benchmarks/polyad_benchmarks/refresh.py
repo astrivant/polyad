@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 STUDIES = ("load",)
-REACHABILITY_STUDIES = ("symbiosis", "reachability-state", "reachability-routing")
+REACHABILITY_STUDIES = ("symbiosis", "reachability-state", "reachability-routing", "cheeger-reduction")
 PROCESS_STUDIES = ("soul", "nature")
 LOCAL_STUDIES = REACHABILITY_STUDIES + PROCESS_STUDIES
 

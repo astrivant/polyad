@@ -12,6 +12,7 @@ work-sharing example.
 - [Process tree and phases](#process-tree-and-phases)
 - [Strategy modules](#strategy-modules)
 - [Read the results](#read-the-results)
+- [Service-level and resource-loop evidence](#service-level-and-resource-loop-evidence)
 - [Refresh and evidence](#refresh-and-evidence)
 
 ## Run
@@ -108,10 +109,12 @@ The tested state includes the proposed next job. This demonstrates a conservativ
 single-admission check; the [reachability studies](../reachability-state/README.md)
 exercise demand uncertainty and richer dynamics. No JAX solver runs in this study.
 
-Memory inputs are modeled reservations used to exercise the SDK's budget guard;
-they are not measurements of Python RSS. Queue sizes, worker counts, process IDs,
-results and timings are measured. Use real container usage in application code.
-An unavailable path stops new assignments while already accepted work drains.
+Injected memory reservations and the VPA-like allocation are modeled inputs used
+to exercise the SDK's strategies; they are not Python RSS or kernel-enforced
+limits. The separate cgroup fields are live SDK observations when the host
+provides cgroup v2. Queue sizes, worker counts, process IDs, results and timings
+are measured. An unavailable path stops new assignments while already accepted
+work drains.
 
 ## Read the results
 
@@ -129,11 +132,52 @@ and blocked admission; the timelines show the complete experiment.
 
 ![Observed strategy callbacks and guard assessments](figures/strategies.png)
 
+![Measured SLA through worker and admission changes](figures/service-level.png)
+
+![Modeled vertical allocation and SDK-observed cgroup resources](figures/resources.png)
+
 The comparison measures the combined effect of routing and worker adaptation.
 Both runs use the same ceilings, but the adaptive trial may use more workers.
 Read latency alongside completed work and trial duration. Process startup,
 operating-system scheduling and the I/O delay influence the result. Repeat runs
 to estimate variability before changing a production policy.
+
+## Service-level and resource-loop evidence
+
+The service-level plot evaluates the recipe's availability, p99 latency and
+maximum adaptation duration. Population availability counts verified completions
+and explicit rejections from one terminal-job population. Each service separately
+reports whether it admits work, its measured completion latency and whether a
+worker replacement is active. The plot therefore shows infrastructure progress
+and customer-visible state independently: an outlined adaptation point can be
+green, amber or red.
+
+The study evaluates these measurements locally because it deliberately runs
+without Kubernetes or the operator API. Its calculation follows the same state
+precedence as a Daemon report, while the production
+[`ServiceLevelReport`](../../docs/workloads/service-level-computations.md) adds
+UID/generation fencing, fixed-window persistence, freshness and graph-node
+aggregation.
+
+Every service also runs a bounded vertical-allocation controller using the
+`resourceLoop` recipe. It estimates application demand from the real worker count
+and accepted backlog, moves an admitted memory value between explicit minimum and
+maximum bounds, and makes pressure visible to the SDK strategies. The application
+can temporarily choose its compact worker profile while that controller catches
+up. This is the local analogue of following a VPA resize; it does not modify the
+host's kernel controls.
+
+Independently, the service calls the SDK's `container_metrics()` function and
+records live cgroup v2 CPU use, CPU quota, memory use, memory limit and memory
+headroom. Ordinary local child processes normally share their parent's cgroup.
+On macOS or a Linux host without readable cgroup v2 files, values remain absent
+and the graph labels them unavailable. Run the same study in a constrained Linux
+container to populate the kernel-observation panel; in Kubernetes, compare those
+values with VPA's assigned request/limit after each in-place resize.
+
+The separation is deliberate: the VPA-like line is a reproducible control input,
+whereas the cgroup line is an SDK observation. Only the latter claims what the
+process can actually discover from the runtime.
 
 ## Refresh and evidence
 

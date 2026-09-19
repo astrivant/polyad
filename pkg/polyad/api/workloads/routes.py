@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from polyad.api.http.application import Routes
     from polyad_types.api.adaptation import AdaptationReport
+    from polyad_types.api.service_level import ServiceLevelReport
 
 
 def register_routes(
@@ -31,6 +32,7 @@ def register_routes(
     activation_stop: Callable[[str], dict[str, Any] | None] | None,
     throughput: Callable[[ThroughputSample], dict[str, Any]] | None,
     adaptation: Callable[[AdaptationReport], dict[str, Any]] | None = None,
+    service_level: Callable[[ServiceLevelReport], dict[str, Any]] | None = None,
 ) -> None:
     """
     Attach activation and throughput routes without creating another application.
@@ -42,6 +44,7 @@ def register_routes(
         activation_stop (Callable[[str], dict[str, Any] | None] | None): Activation stop handler.
         throughput (Callable[[ThroughputSample], dict[str, Any]] | None): Authorized throughput intake.
         adaptation (Callable[[AdaptationReport], dict[str, Any]] | None): Authorized SDK strategy lifecycle intake.
+        service_level (Callable[[ServiceLevelReport], dict[str, Any]] | None): Authorized service-level observation intake.
 
     Returns:
         None: Routes are attached to the existing blueprint.
@@ -99,3 +102,11 @@ def register_routes(
         from polyad_types.api.adaptation import AdaptationReport
 
         return jsonify(adaptation(converter.structure(request.get_json(), AdaptationReport))), 202
+
+    @app.post("/v1/service-level")
+    def service() -> tuple[Response, int]:
+        if service_level is None:
+            raise Unavailable("service-level observation service is not configured")
+        from polyad_types.api.service_level import ServiceLevelReport
+
+        return jsonify(service_level(converter.structure(request.get_json(), ServiceLevelReport))), 202

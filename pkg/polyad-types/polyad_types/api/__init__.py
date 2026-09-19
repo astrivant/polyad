@@ -20,6 +20,9 @@ from polyad_types.api.requests import CompositionRequest as CompositionRequest
 from polyad_types.api.requests import ConnectionRequest as ConnectionRequest
 from polyad_types.api.requests import ConnectionResponse as ConnectionResponse
 from polyad_types.api.requests import ServiceConnectionRequest as ServiceConnectionRequest
+from polyad_types.api.service_level import AdaptationBudget as AdaptationBudget
+from polyad_types.api.service_level import ServiceLevelPolicy as ServiceLevelPolicy
+from polyad_types.api.service_level import ServiceLevelReport as ServiceLevelReport
 from polyad_types.api.throughput import DemandSample as DemandSample
 from polyad_types.api.throughput import DemandSource as DemandSource
 from polyad_types.api.throughput import ThroughputSample as ThroughputSample

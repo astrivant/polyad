@@ -1,0 +1,12 @@
+{
+  "components": [1, 2, 4, 8],
+  "edgeChurn": [0, 0.03, 0.08, 0.15, 0.25],
+  "fixedComponents": 4,
+  "fixedSupernodes": 8,
+  "fixedTopology": "community",
+  "fixedVertices": 18,
+  "seeds": [11, 29, 47],
+  "supernodes": [2, 4, 6, 8, 10, 12],
+  "topologies": ["path", "cycle", "small-world", "community"],
+  "vertexCounts": [10, 14, 18, 20]
+}

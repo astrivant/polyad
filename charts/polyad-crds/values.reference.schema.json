@@ -350,6 +350,166 @@
                   "description": "Desired configuration for this Daemon resource. Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.",
                   "additionalProperties": false,
                   "properties": {
+                    "serviceLevel": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "description": "Minimum externally observable service contract evaluated from SDK reports; adaptation progress remains independent.",
+                          "additionalProperties": false,
+                          "properties": {
+                            "requiredCapabilities": {
+                              "anyOf": [
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/requiredCapabilities/anyOf/0"
+                                },
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/requiredCapabilities/anyOf/1"
+                                }
+                              ]
+                            },
+                            "availability": {
+                              "anyOf": [
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/availability/anyOf/0"
+                                },
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/availability/anyOf/1"
+                                }
+                              ]
+                            },
+                            "latencyP99Seconds": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/0/anyOf/0/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/0/anyOf/0/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/0/anyOf/1/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/0/anyOf/1/anyOf/1"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/1"
+                                }
+                              ]
+                            },
+                            "minimumThroughputPerSecond": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/0/anyOf/0/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/0/anyOf/0/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/0/anyOf/1/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/0/anyOf/1/anyOf/1"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/1"
+                                }
+                              ]
+                            },
+                            "windowSeconds": {
+                              "anyOf": [
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/windowSeconds/anyOf/0"
+                                },
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/windowSeconds/anyOf/1"
+                                }
+                              ]
+                            },
+                            "sampleMaxAgeSeconds": {
+                              "anyOf": [
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/sampleMaxAgeSeconds/anyOf/0"
+                                },
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/sampleMaxAgeSeconds/anyOf/1"
+                                }
+                              ]
+                            },
+                            "adaptation": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "description": "Customer-visible transition budgets evaluated separately from Progressing state.",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "maximumDurationSeconds": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumDurationSeconds/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumDurationSeconds/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    "maximumUnavailableSeconds": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumUnavailableSeconds/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumUnavailableSeconds/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    "maximumFailedAttempts": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumFailedAttempts/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumFailedAttempts/anyOf/1"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/1"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "$ref": "values.schema.json#/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/1"
+                        }
+                      ]
+                    },
                     "activation": {
                       "anyOf": [
                         {
@@ -6331,7 +6491,7 @@
       "patternProperties": {
         "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
           "type": "object",
-          "description": "Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
+          "description": "Define a reusable namespaced core resource or optional VerticalPodAutoscaler owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
           "additionalProperties": false,
           "properties": {
             "metadata": {
@@ -6391,14 +6551,14 @@
               "anyOf": [
                 {
                   "type": "object",
-                  "description": "Desired configuration for this Resource resource. Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
+                  "description": "Desired configuration for a graph-owned namespaced resource. Optional VPA compatibility validates bounds and projects them into the target application's environment; the external VPA controller remains responsible for resizing.",
                   "additionalProperties": false,
                   "properties": {
                     "manifest": {
                       "anyOf": [
                         {
                           "type": "object",
-                          "description": "Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}.",
+                          "description": "Native manifest for an owned core resource or, when enabled, autoscaling.k8s.io/v1 VerticalPodAutoscaler. The operator supplies identity and ownership. String values may reference generated names with ${nodes.NAME.name}.",
                           "additionalProperties": false,
                           "properties": {
                             "apiVersion": {

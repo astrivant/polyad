@@ -11,6 +11,7 @@ from apispec import APISpec
 from polyad.compiler.passes.schema import structural_schema
 from polyad_types.api.adaptation import AdaptationReport
 from polyad_types.api.requests import COMPOSITION_KINDS
+from polyad_types.api.service_level import ServiceLevelReport
 from polyad_types.api.throughput import ThroughputSample
 from polyad_types.graphs.activation import ActivationPolicy
 from polyad_types.graphs.capacity import CapacityPlan
@@ -53,6 +54,7 @@ def schemas() -> dict[str, dict[str, Any]]:
         "ID": identifier,
         "ThroughputSample": structural_schema(ThroughputSample),
         "AdaptationReport": structural_schema(AdaptationReport),
+        "ServiceLevelReport": structural_schema(ServiceLevelReport),
         "ActivationPolicy": structural_schema(ActivationPolicy),
         "ReplicaConnectivity": structural_schema(ReplicaConnectivity),
         "ActivationRequest": {
@@ -422,6 +424,22 @@ def openapi_document(title: str, version: str) -> dict[str, Any]:
                     "202": {"description": "Strategy lifecycle transition persisted in graph status."},
                     "403": response("Graph tree is not assigned to this credential.", "Error"),
                     "409": response("Graph incarnation or invocation state changed.", "Error"),
+                },
+            }
+        },
+    )
+    spec.path(
+        path="/v1/service-level",
+        operations={
+            "post": {
+                "operationId": "reportServiceLevel",
+                "summary": "Report a Daemon service-level observation window",
+                "requestBody": {"required": True, "content": {"application/json": {"schema": reference("ServiceLevelReport")}}},
+                "responses": {
+                    **errors,
+                    "202": {"description": "Observation accepted and current objectives evaluated."},
+                    "403": response("Graph tree is not assigned to this credential.", "Error"),
+                    "409": response("Graph, Daemon or observation order changed.", "Error"),
                 },
             }
         },

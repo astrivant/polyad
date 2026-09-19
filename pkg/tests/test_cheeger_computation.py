@@ -33,6 +33,17 @@ def test_larger_boundaries_require_explicit_vertex_and_work_budgets():
     assert graph_cheeger(graph, CheegerComputation(maxVertices=21, maxCuts=1048575, timeoutSeconds=15)) == pytest.approx(0.1)
 
 
+def test_default_boundary_completes_every_cut_within_its_runtime_budget():
+    """
+    Protect the supported exact-search ceiling from hot-loop performance regressions.
+    """
+    result = compute_cheeger(nx.path_graph(20))
+    assert result.exact and result.reason == "Complete"
+    assert result.evaluatedCuts == 524287
+    assert result.upperBound == pytest.approx(0.1)
+    assert result.durationSeconds < result.inputs["timeoutSeconds"]
+
+
 def test_priority_cuts_disprove_minima_without_claiming_an_exact_constant():
     """
     A known middle bottleneck gets checked before singleton cuts, with a rejection certificate.

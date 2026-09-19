@@ -33,12 +33,13 @@ polyad-benchmarks-refresh --ci-phase prepare --suite reachability --root .cache/
 polyad-benchmarks-refresh --ci-phase study --study symbiosis --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase study --study reachability-state --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase study --study reachability-routing --root .cache/benchmarks/symbiosis-run-1
+polyad-benchmarks-refresh --ci-phase study --study cheeger-reduction --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/symbiosis-run-1 --publish
 ```
 
 Use a fresh run directory. Preparation records input and source hashes and gives
 each study a run ID. The reachability suite needs no cluster or Kubernetes credentials.
-Finish validates all three selected studies before publication; failed runs
+Finish validates all four selected studies before publication; failed runs
 remain under the chosen directory for inspection.
 The `reachability` extra includes Matplotlib. The study generates `interactions`
 and `guard-cost` in PNG/SVG form; verified publication copies them into `figures/`.

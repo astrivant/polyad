@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from polyad_benchmarks.studies.plotting import save
+from polyad_benchmarks.studies.plotting import describe_axis, save
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -44,15 +44,30 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         axis.set(xticks=range(len(records)), xticklabels=labels)
         axis.legend(fontsize=8)
         axis.margins(y=0.25)
-    axes[0].set(ylabel="Jobs assigned", title="Where accepted work actually ran")
-    axes[1].set(ylabel="Outstanding jobs", title="Measured peaks and modeled queue limits")
+    axes[0].set(ylabel="Jobs assigned")
+    describe_axis(
+        axes[0],
+        "Where accepted work actually ran",
+        "Bars identify the consumer that executed each trial's accepted jobs.",
+    )
+    axes[1].set(ylabel="Outstanding jobs")
+    describe_axis(
+        axes[1],
+        "Measured peaks and modeled queue limits",
+        "Measured outstanding work is compared with every configured queue ceiling.",
+    )
     paths = save(figure, output, "routing", study="reachability-routing")
 
     figure, axes = plt.subplots(1, 3, figsize=(18, 5), layout="constrained")
     completed = [record["completed"] for record in records]
     axes[0].bar(labels, completed, label="Completed", color="#38876e")
     axes[0].bar(labels, [record["rejected"] for record in records], bottom=completed, label="Rejected", color="#b96657")
-    axes[0].set(ylabel="Offered jobs", title="Completion and rejection remain visible")
+    axes[0].set(ylabel="Offered jobs")
+    describe_axis(
+        axes[0],
+        "Completion and rejection remain visible",
+        "Stacked bars keep rejected jobs visible beside verified completions.",
+    )
     axes[0].legend(fontsize=8)
     for axis, key, title in zip(
         axes[1:],
@@ -63,6 +78,12 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         samples = [(index, record[key]) for index, record in enumerate(records) if record[key] is not None]
         bars = axis.bar([index for index, _ in samples], [value for _, value in samples], color="#335c81")
         axis.bar_label(bars, fmt="%.3f", padding=3)
-        axis.set(xticks=range(len(records)), xticklabels=labels, ylabel="Measured seconds", title=title)
+        axis.set(xticks=range(len(records)), xticklabels=labels, ylabel="Measured seconds")
+        description = (
+            "Latency includes only jobs that completed successfully."
+            if key == "meanLatencySeconds"
+            else "Elapsed time covers production, processing and final drain."
+        )
+        describe_axis(axis, title, description)
         axis.margins(y=0.2)
     return paths + save(figure, output, "outcomes", study="reachability-routing", note=f"Run {result['runId']}")

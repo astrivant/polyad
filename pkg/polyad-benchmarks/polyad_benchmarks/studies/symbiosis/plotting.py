@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from polyad_benchmarks.studies.plotting import save
+from polyad_benchmarks.studies.plotting import describe_axis, save
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -43,14 +43,23 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         yticks=range(len(records)),
         yticklabels=labels,
         xlabel=f"Declared capacity effect ({records[0]['model']['unit']}/s)",
-        title="Each participant's modeled benefit or cost",
+    )
+    describe_axis(
+        axes[0],
+        "Each participant's modeled benefit or cost",
+        "Signed effects show capacity gained or consumed by each relationship.",
     )
     axes[0].legend(fontsize=8)
     bars = axes[1].barh(
         labels, [record["margin"] for record in records], color=["#38876e" if record["allowed"] else "#b96657" for record in records]
     )
     axes[1].bar_label(bars, labels=[f"{record['margin']:g} / {'allow' if record['allowed'] else 'block'}" for record in records], padding=4)
-    axes[1].set(xlabel=f"Analytic margin ({records[0]['model']['unit']})", title="Does the whole queue contract hold?")
+    axes[1].set(xlabel=f"Analytic margin ({records[0]['model']['unit']})")
+    describe_axis(
+        axes[1],
+        "Does the whole queue contract hold?",
+        "Positive analytic margin admits the relationship; negative margin blocks it.",
+    )
     axes[1].margins(x=0.35)
     for axis in axes:
         axis.axvline(0, color="#8995a5", linewidth=1)
@@ -58,7 +67,17 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
 
     figure, axes = plt.subplots(1, 2, figsize=(13, 5), layout="constrained")
     axes[0].barh(labels, [record["guard"]["meanSeconds"] * 1e6 for record in records], color="#335c81")
-    axes[0].set(xlabel="Mean measured microseconds per assessment", title="Runtime guard evaluation")
+    axes[0].set(xlabel="Mean measured microseconds per assessment")
+    describe_axis(
+        axes[0],
+        "Runtime guard evaluation",
+        "Measured callback cost shows the service-side price of each assessment.",
+    )
     axes[1].barh(labels, [record["guard"]["artifactBytes"] for record in records], color="#72578b")
-    axes[1].set(xlabel="Serialized bytes", title="Portable envelope size")
+    axes[1].set(xlabel="Serialized bytes")
+    describe_axis(
+        axes[1],
+        "Portable envelope size",
+        "Serialized bytes show the policy artifact carried between environments.",
+    )
     return paths + save(figure, output, "guard-cost", study="symbiosis", note=f"Run {result['runId']}")

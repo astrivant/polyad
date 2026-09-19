@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import nature
+from polyad_benchmarks.studies.soul.runtime.measurements import service_level
 from polyad_benchmarks.studies.soul.runtime.service import serve
 
 if TYPE_CHECKING:
@@ -153,9 +154,7 @@ class PopulationMonitor(ABC):
                 self.event("service_survived", service=name, pid=old[name].process.pid)
                 continue
             parent, child = self.context.Pipe()
-            process = self.context.Process(
-                target=serve, args=(name, placement.capability.name, child, self.adaptive, self.config["workSeconds"])
-            )
+            process = self.context.Process(target=serve, args=(name, placement.capability.name, child, self.adaptive, self.config))
             try:
                 process.start()
             except BaseException:
@@ -313,7 +312,7 @@ class PopulationMonitor(ABC):
                 continue
             self.jobs[identity].update(route=route, stage=stage)
             member.outstanding.add(identity)
-            member.pipe.send(("job", (identity, value)))
+            member.pipe.send(("job", (identity, value, self.jobs[identity]["sent"])))
 
     def frame(self) -> None:
         """
@@ -322,6 +321,18 @@ class PopulationMonitor(ABC):
         Returns:
             None: Append one timestamped frame for topology and time-series figures.
         """
+        terminal = self.completed + self.rejected
+        latencies = [job["finished"] - job["sent"] for job in self.jobs.values() if "finished" in job]
+        elapsed = max(1e-9, time.monotonic() - self.started)
+        objective = service_level(
+            serving=bool(self.routes),
+            eligible=terminal,
+            successful=self.completed,
+            latencies=latencies,
+            completed_per_second=self.completed / elapsed,
+            adapting_seconds=None,
+            policy=self.config["serviceLevel"],
+        )
         self.frames.append(
             {
                 "time": time.monotonic(),
@@ -329,6 +340,7 @@ class PopulationMonitor(ABC):
                 "completed": self.completed,
                 "pending": len(self.pending),
                 "routes": self.routes,
+                "serviceLevel": objective,
                 "services": {
                     name: {
                         **member.sample,
@@ -436,6 +448,8 @@ class PopulationMonitor(ABC):
             "peakServices": self.peak_services,
             "allJoined": True,
             "coverage": dict(coverage),
+            "serviceLevelPolicy": self.config["serviceLevel"],
+            "resourceLoopPolicy": self.config["resourceLoop"],
             "events": self.events,
             "samples": self.samples,
             "frames": self.frames,

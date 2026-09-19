@@ -181,6 +181,7 @@ default values. Schema checks keep annotations in all shipped values files in sy
 | [`values-istio-existing.reference.yaml`](references/values-istio-existing.reference.yaml) | Platform-owned Istio with Gateway API ingress and no control-plane lifecycle ownership | [Existing Istio](../../docs/deployment/istio-features.md#deployment-strategies) |
 | [`values-istio-features.reference.yaml`](references/values-istio-features.reference.yaml) | Proxy telemetry, Sidecar scoping, policy observation and explicit gateway egress | [Optional features](../../docs/deployment/istio-features.md#feature-reference-values) |
 | [`values-istio-traffic.reference.yaml`](references/values-istio-traffic.reference.yaml) | Locality routing, endpoint ejection and long-lived event connection balancing | [Traffic strategies](../../docs/deployment/istio-features.md#traffic-strategy-reference-values) |
+| [`values-vpa.reference.yaml`](references/values-vpa.reference.yaml) | External VPA compatibility, validated resource bounds and application projections | [VPA compatibility](../../docs/deployment/vpa.md) |
 | [`values-observer.reference.yaml`](references/values-observer.reference.yaml) | Read-only observers alongside this release's operator | [Observers](../../docs/deployment/multicluster.md#optional-shared-observers) |
 | [`values-postgresql.reference.yaml`](references/values-postgresql.reference.yaml) | Optional persistent state, database HA and connection-driven KEDA scaling in the release cluster | [PostgreSQL](../../docs/deployment/postgresql.md) |
 | [`values-postgresql-encryption.reference.yaml`](references/values-postgresql-encryption.reference.yaml) | Encrypted volumes for managed state and authentication databases; GKE Cloud KMS example and existing StorageClass alternative | [Encryption at rest](../../docs/deployment/postgresql.md#encryption-at-rest) |
@@ -708,6 +709,12 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 | `observer.resources.requests.memory` | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi. | `1Gi` |
 | `observer.resources.limits.cpu`      | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi. | `1` |
 | `observer.resources.limits.memory`   | **Type: string.** Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi. | `1Gi` |
+
+### Vertical Pod Autoscaler compatibility
+
+| Name                             | Description                                                                                                                                                  | Value   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| `verticalPodAutoscaling.enabled` | **Type: boolean.** Allow graph Resource nodes to own native VPA policies and project their bounds into targeted application containers; does not install VPA | `false` |
 
 ### Advance graph capacity
 

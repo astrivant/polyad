@@ -90,6 +90,7 @@ def test_inventory_and_reconciliation_roles():
         "TemporaryConnection",
         "VirtualService",
         "DestinationRule",
+        "VerticalPodAutoscaler",
     }
     assert RESOURCE_TYPES["Lease"].graph_owned is False
     assert RESOURCE_TYPES["ConfigMap"].api_group == ""
@@ -112,13 +113,14 @@ def test_every_owned_kind_is_counted_in_typed_status():
     assert metrics["resources"]["byKind"] == dict.fromkeys(counted, 1)
 
 
-@pytest.mark.parametrize("mesh,capacity", [(False, False), (False, True), (True, False), (True, True)])
-def test_inventory_respects_optional_api_features(monkeypatch, mesh, capacity):
+@pytest.mark.parametrize("mesh,capacity,vpa", [(False, False, False), (False, True, True), (True, False, True), (True, True, False)])
+def test_inventory_respects_optional_api_features(monkeypatch, mesh, capacity, vpa):
     """
     Disabled integrations must not issue inventory requests against their resource endpoints.
     """
     monkeypatch.setenv("POLYAD_MESH_ENABLED", str(mesh).lower())
     monkeypatch.setenv("POLYAD_CAPACITY_ENABLED", str(capacity).lower())
+    monkeypatch.setenv("POLYAD_VPA_ENABLED", str(vpa).lower())
     requested = []
 
     async def request(self, method, kind, namespace, **kwargs):
@@ -128,10 +130,13 @@ def test_inventory_respects_optional_api_features(monkeypatch, mesh, capacity):
     monkeypatch.setattr(API, "request", request)
     api = object.__new__(API)
     assert asyncio.run(api.owned("test", "owner")) == []
+    assert ("VerticalPodAutoscaler" in requested) is vpa
     expected = set(GRAPH_OWNED_KINDS)
     if not mesh:
         expected -= {"AuthorizationPolicy", "PeerAuthentication", "VirtualService", "DestinationRule"}
     if not capacity:
         expected -= {"Pod", "PodTemplate", "ProvisioningRequest"}
+    if not vpa:
+        expected -= {"VerticalPodAutoscaler"}
     assert set(requested) == expected
     assert len(requested) == len(expected)

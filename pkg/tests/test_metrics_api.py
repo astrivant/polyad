@@ -7,7 +7,7 @@ from __future__ import annotations
 import copy
 import json
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -76,6 +76,43 @@ def samples(store):
     Decode actual Prometheus wire data for assertions.
     """
     return [sample for family in text_string_to_metric_families(store.read()[0].decode()) for sample in family.samples]
+
+
+def test_daemon_service_level_and_adaptation_metrics_are_exported() -> None:
+    """
+    Publish contract state, accounting values and transition totals from current-generation definition status.
+
+    Returns:
+        None: Assertions verify Prometheus names, labels and values.
+    """
+    daemon = graph("consumer", "Daemon")
+    daemon["status"].update(
+        serviceLevel={
+            "observedGeneration": 1,
+            "state": "Degraded",
+            "availability": 0.998,
+            "latencyCompliance": 0.99,
+            "errorBudgetRemaining": 0.2,
+            "sampleDeadline": (datetime.now(UTC) + timedelta(seconds=60)).isoformat(),
+            "counters": {"eligibleRequests": 1000},
+        },
+        adaptation={"observedGeneration": 1, "statistics": {"attempts": 2, "succeeded": 1, "failed": 1, "durationSeconds": 12}},
+    )
+    store = MetricsStore()
+    store.publish(snapshot([daemon]), graph_labels=True)
+    emitted = samples(store)
+    assert (
+        next(sample.value for sample in emitted if sample.name == "polyad_service_level_state" and sample.labels["state"] == "Degraded")
+        == 1
+    )
+    assert next(
+        sample.value for sample in emitted if sample.name == "polyad_service_level" and sample.labels["statistic"] == "availability"
+    ) == pytest.approx(0.998)
+    assert next(sample.value for sample in emitted if sample.name == "polyad_adaptation" and sample.labels["statistic"] == "failed") == 1
+    assert next(sample.value for sample in emitted if sample.name == "polyad_service_level_sample_fresh") == 1
+    daemon["status"]["serviceLevel"]["sampleDeadline"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
+    store.publish(snapshot([daemon]), graph_labels=True)
+    assert next(sample.value for sample in samples(store) if sample.name == "polyad_service_level_sample_fresh") == 0
 
 
 def test_runtime_and_root_capacity_inventory_is_documented_and_freshness_gated():

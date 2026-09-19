@@ -26,7 +26,7 @@ def build(policy: Policy) -> ResourceStrategy:
 
     def pressure(change: Change, current: Environment) -> None:
         """
-        Request a smaller worker implementation when the memory reservation grows.
+        Request a smaller worker implementation under reservation or allocation pressure.
 
         Args:
             change (Change): Triggering resource delta.
@@ -36,7 +36,7 @@ def build(policy: Policy) -> ResourceStrategy:
             None: Record intent; the supervisor checks overlap before committing.
         """
         policy.coverage["ResourceStrategy"] += 1
-        if current.available and policy.read()["memoryReserved"]:
+        if current.available and (policy.read()["memoryReserved"] or policy.read().get("resourcePressure", False)):
             policy.proposal = "compact"
 
     return ResourceStrategy(pressure)

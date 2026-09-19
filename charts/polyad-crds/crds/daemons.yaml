@@ -34,6 +34,64 @@ spec:
               - rule: "!has(self.controller) || self.controller != 'DaemonSet' || ((!has(self.replicas) || self.replicas == 1) && !has(self.statefulSet) && !has(self.activation))"
                 message: DaemonSet uses node eligibility; replicas must be one and statefulSet and activation are unsupported.
             properties:
+              serviceLevel:
+                type: object
+                description: Minimum externally observable service contract evaluated from SDK reports; adaptation progress remains independent.
+                properties:
+                  requiredCapabilities:
+                    type: array
+                    maxItems: 64
+                    uniqueItems: true
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 64
+                    description: Capabilities that must remain available for the service to avoid Unavailable status.
+                  availability:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                    default: 0.999
+                    description: Minimum successful eligible-request ratio in the current accounting window.
+                  latencyP99Seconds:
+                    type: number
+                    nullable: true
+                    minimum: 0
+                    description: Optional inclusive p99 latency objective in seconds.
+                  minimumThroughputPerSecond:
+                    type: number
+                    nullable: true
+                    minimum: 0
+                    description: Optional inclusive completed-work rate objective.
+                  windowSeconds:
+                    type: integer
+                    minimum: 60
+                    maximum: 31536000
+                    default: 2592000
+                    description: Fixed SLA accounting-window duration.
+                  sampleMaxAgeSeconds:
+                    type: integer
+                    minimum: 1
+                    maximum: 3600
+                    default: 60
+                    description: Maximum accepted age for application observations.
+                  adaptation:
+                    type: object
+                    description: Customer-visible transition budgets evaluated separately from Progressing state.
+                    properties:
+                      maximumDurationSeconds:
+                        type: number
+                        minimum: 0
+                        default: 60
+                      maximumUnavailableSeconds:
+                        type: number
+                        minimum: 0
+                        default: 5
+                      maximumFailedAttempts:
+                        type: integer
+                        minimum: 0
+                        maximum: 1000
+                        default: 2
               activation:
                 type: object
                 description: Control how repeated requests start a downstream workload or graph.

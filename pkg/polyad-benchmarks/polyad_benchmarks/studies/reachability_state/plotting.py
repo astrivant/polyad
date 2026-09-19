@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from polyad_benchmarks.studies.plotting import save
+from polyad_benchmarks.studies.plotting import describe_axis, save
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -42,17 +42,32 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         color="#d9ad51",
         label="Rejects reference-accepted state",
     )
-    axes[0].set(xlabel="Probe disagreements with full analytic model", title="Information lost by state reduction")
+    axes[0].set(xlabel="Probe disagreements with full analytic model")
+    describe_axis(
+        axes[0],
+        "Information lost by state reduction",
+        "Bars count optimistic and conservative disagreements with the full state model.",
+    )
     axes[0].legend(fontsize=8, loc="lower right")
     bars = axes[1].barh(labels, [record["resources"]["gridPoints"] for record in records], color="#335c81")
     axes[1].bar_label(bars, labels=[str(record["resources"]["gridPoints"]) for record in records], padding=3)
-    axes[1].set(xscale="log", xlabel="Cartesian grid points (log scale)", title="State dimensions multiply the search space")
+    axes[1].set(xscale="log", xlabel="Cartesian grid points (log scale)")
+    describe_axis(
+        axes[1],
+        "State dimensions multiply the search space",
+        "Grid points grow multiplicatively as state dimensions and resolution increase.",
+    )
     axes[1].margins(x=0.2)
     paths = save(figure, output, "state-tradeoffs", study="reachability-state")
 
     figure, axes = plt.subplots(1, 3, figsize=(19, 6), layout="constrained")
     axes[0].barh(labels, [record["guard"]["meanSeconds"] * 1e6 for record in records], color="#38876e")
-    axes[0].set(xlabel="Mean measured microseconds per call", title="Service-side guard cost")
+    axes[0].set(xlabel="Mean measured microseconds per call")
+    describe_axis(
+        axes[0],
+        "Service-side guard cost",
+        "This is the measured cost of one application-side admission decision.",
+    )
     axes[1].barh(
         [x - 0.18 for x in positions],
         [record["resources"]["estimatedWorkspaceBytes"] for record in records],
@@ -86,9 +101,19 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         axes[2].legend(fontsize=8)
     else:
         axes[2].text(0.5, 0.5, "Numerical analysis disabled\nNo solve measurements", transform=axes[2].transAxes, ha="center")
-    axes[1].set(xscale="log", xlabel="Bytes (log scale)", title="Estimated versus measured memory")
+    axes[1].set(xscale="log", xlabel="Bytes (log scale)")
+    describe_axis(
+        axes[1],
+        "Estimated versus measured memory",
+        "Compare predicted solver workspace with measured peak process RSS when available.",
+    )
     axes[1].legend(fontsize=8)
-    axes[2].set(xlabel="Measured seconds", title="Optional numerical analysis")
+    axes[2].set(xlabel="Measured seconds")
+    describe_axis(
+        axes[2],
+        "Optional numerical analysis",
+        "Wall time includes setup; solve time isolates the numerical stage.",
+    )
     for axis in axes[1:]:
         axis.set(yticks=positions, yticklabels=labels)
     return paths + save(figure, output, "analysis-cost", study="reachability-state", note=f"Run {result['runId']}")

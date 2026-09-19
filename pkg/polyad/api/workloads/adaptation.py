@@ -54,6 +54,11 @@ async def report_adaptation(api: API, namespace: str, report: AdaptationReport, 
 
     current = obj.get("status", {}).get("adaptation", {})
     invocations = dict(current.get("invocations", {})) if current.get("observedGeneration") == meta["generation"] else {}
+    statistics = (
+        dict(current.get("statistics", {}))
+        if current.get("observedGeneration") == meta["generation"]
+        else {"attempts": 0, "succeeded": 0, "failed": 0, "durationSeconds": 0.0}
+    )
     previous = invocations.get(report.invocationId)
     if report.phase == "Running":
         value = {"node": report.node, "strategy": report.strategy, "startedAt": report.observedAt}
@@ -61,11 +66,17 @@ async def report_adaptation(api: API, namespace: str, report: AdaptationReport, 
             raise Conflict("adaptation invocation identity was already used")
         if previous is None:
             invocations[report.invocationId] = value
+            statistics["attempts"] = statistics.get("attempts", 0) + 1
     else:
         if previous is None:
             raise Conflict("adaptation invocation is not active")
         if (previous.get("node"), previous.get("strategy")) != (report.node, report.strategy):
             raise Conflict("adaptation invocation identity does not match")
+        started = datetime.fromisoformat(previous["startedAt"].replace("Z", "+00:00"))
+        statistics["durationSeconds"] = statistics.get("durationSeconds", 0.0) + max(0.0, (observed - started).total_seconds())
+        statistics["succeeded" if report.phase == "Succeeded" else "failed"] = (
+            statistics.get("succeeded" if report.phase == "Succeeded" else "failed", 0) + 1
+        )
         invocations.pop(report.invocationId)
     if len(invocations) > 64:
         raise ValueError("at most 64 adaptation invocations may be active")
@@ -73,6 +84,7 @@ async def report_adaptation(api: API, namespace: str, report: AdaptationReport, 
         "observedGeneration": meta["generation"],
         "inProgress": bool(invocations),
         "invocations": invocations,
+        "statistics": statistics,
         "lastTransition": {
             "invocationId": report.invocationId,
             "node": report.node,

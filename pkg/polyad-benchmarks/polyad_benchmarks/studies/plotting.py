@@ -8,7 +8,9 @@ import hashlib
 import importlib
 from typing import TYPE_CHECKING
 
-from polyad_benchmarks.studies.descriptions import INTRODUCTIONS
+from polyad_benchmarks.studies.descriptions import INTRODUCTIONS, describe_axis
+
+__all__ = ["describe_axis"]
 
 if TYPE_CHECKING:
     from collections.abc import Callable

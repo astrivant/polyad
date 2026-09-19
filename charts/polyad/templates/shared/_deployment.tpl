@@ -275,6 +275,8 @@ spec:
               value: {{ .Values.metrics.graphLabels | quote }}
             - name: POLYAD_CAPACITY_ENABLED
               value: {{ .Values.capacity.enabled | quote }}
+            - name: POLYAD_VPA_ENABLED
+              value: {{ .Values.verticalPodAutoscaling.enabled | quote }}
             {{- if .Values.capacity.enabled }}
             - name: POLYAD_CAPACITY_CLASS
               value: {{ .Values.capacity.provisioningClassName | quote }}

@@ -13,6 +13,7 @@ and business functions.
 - [Composition changes](#composition-changes)
 - [Code and strategies](#code-and-strategies)
 - [Measured results](#measured-results)
+- [SLA and resources across incarnations](#sla-and-resources-across-incarnations)
 - [Repeat the experiment](#repeat-the-experiment)
 
 ## Run
@@ -106,6 +107,10 @@ parent that cleans them up on success or failure.
 
 ![SDK strategies exercised during the experiment](figures/strategies.png)
 
+![Measured SLA while capabilities and workers adapt](figures/service-level.png)
+
+![Modeled vertical allocation and SDK cgroup discovery](figures/resources.png)
+
 The fixed trial keeps the initial square implementations. When the contract asks
 for square-plus-one, it explicitly rejects those jobs instead of returning the
 wrong answer. The adaptive trial can satisfy both contracts. Compare completion
@@ -119,6 +124,31 @@ Lines stop when a process stops reporting and resume with its replacement, so
 retired services leave gaps rather than appearing active throughout the change.
 Memory pressure and connectivity disturbances are controlled inputs; timing,
 queues, process lifecycle and returned values are measured.
+
+## SLA and resources across incarnations
+
+The service-level figure makes the composition algorithm's effect explicit. The
+fixed population becomes unavailable when it cannot produce the enriched output;
+the adaptive population preserves availability by admitting a compatible
+composition. Latency can still become degraded while every value is correct, so
+capability survival and quality remain distinct dimensions. The bottom panel
+tracks each logical service and shows gaps when an incarnation is retired.
+
+Each selected service uses the same local vertical-allocation loop and SDK
+`container_metrics()` sampling described in the
+[Soul resource-loop evidence](../soul/README.md#service-level-and-resource-loop-evidence).
+Natural Selection can replace or retire a service process, so a new incarnation
+starts a new controller and measurement history. Surviving services retain both
+their process identity and their loop while Soul continues changing workers
+inside them. The resource figure relates those process births and deaths to the
+population's worker count and active local adaptations.
+
+This provides a useful pre-cloud boundary test: composition changes, worker
+handoffs, SLA classification and application resource reactions are real local
+process behavior. VPA assignment remains modeled, and real cgroup observations
+remain read-only. A Linux container run is the next fidelity step; an actual VPA
+and Kubernetes in-place resize should replace only the modeled allocation source,
+not the application follow-along or SLA instrumentation.
 
 ## Repeat the experiment
 

@@ -14,6 +14,7 @@ import nature
 from polyad_benchmarks.studies import artifacts
 from polyad_benchmarks.studies.nature.selection import select
 from polyad_benchmarks.studies.runner import validate
+from polyad_benchmarks.studies.soul.runtime.measurements import ResourceLoop, service_level
 from polyad_benchmarks.studies.soul.runtime.policy import Policy
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -109,6 +110,45 @@ def test_observation_loss_and_constraints_pause_then_recover():
     assert policy.proposal == "compact"
 
 
+def test_service_level_and_resource_loop_preserve_measurement_boundaries():
+    """
+    Keep SLA classification and modeled VPA actions deterministic and explicit.
+    """
+    policy = recipe("soul")["serviceLevel"]
+    compliant = service_level(
+        serving=True,
+        eligible=100,
+        successful=100,
+        latencies=[0.1, 0.2],
+        completed_per_second=20,
+        adapting_seconds=None,
+        policy=policy,
+    )
+    unavailable = service_level(
+        serving=False,
+        eligible=100,
+        successful=98,
+        latencies=[0.6],
+        completed_per_second=0,
+        adapting_seconds=2,
+        policy=policy,
+    )
+    assert compliant["state"] == "Compliant"
+    assert unavailable["state"] == "Unavailable"
+    assert set(unavailable["violations"]) == {
+        "serving",
+        "availability",
+        "latencyP99Seconds",
+        "adaptation.maximumDurationSeconds",
+    }
+    loop = ResourceLoop.from_config(recipe("soul")["resourceLoop"])
+    initial = loop.assigned
+    assigned, used, changed = loop.observe(1, workers=4, backlog=24)
+    assert changed and assigned > initial and used > initial
+    assigned, _, changed = loop.observe(1.01, workers=1, backlog=0)
+    assert not changed and assigned > initial
+
+
 def test_artifacts_reject_tampering_and_incomplete_accounting(tmp_path):
     """
     Refuse altered figures and evidence of incomplete process cleanup.
@@ -160,6 +200,20 @@ def test_real_process_population_accounts_for_jobs_and_joins_every_child(study):
     assert all(member.process.exitcode == 0 and not member.outstanding for member in monitor.owned)
     assert all(producer.exitcode == 0 for producer in monitor.producers)
     assert all(sample["workers"] <= 4 and sample["backlog"] <= 24 for sample in result["samples"])
+    assert all(
+        sample["serviceLevel"]["state"] in {"Compliant", "Degraded", "Unavailable"}
+        and sample["resourceAssignedBytes"] > 0
+        and set(sample["cgroup"])
+        == {
+            "cpuUsageUsec",
+            "cpuLimitMillicores",
+            "memoryUsageBytes",
+            "memoryLimitBytes",
+            "memoryAvailableBytes",
+        }
+        for sample in result["samples"]
+    )
+    assert {event["event"] for event in result["events"]} >= {"resource_allocation_changed"}
     if study == "nature":
         events = {event["event"] for event in result["events"]}
         assert {"service_started", "service_replaced", "service_survived", "service_joined"} <= events

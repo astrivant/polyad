@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, build_opener
 
-from polyad_sdk.api.interfaces import AdaptationReporter, ConnectionNegotiator, ThroughputReporter
+from polyad_sdk.api.interfaces import AdaptationReporter, ConnectionNegotiator, ServiceLevelReporter, ThroughputReporter
 from polyad_sdk.events.source import EventSource
 from polyad_sdk.observability import Telemetry
 from polyad_sdk.transport.http import APIError, _NoRedirect
@@ -30,11 +30,12 @@ if TYPE_CHECKING:
         ConnectionRequest,
         ConnectionResponse,
         ServiceConnectionRequest,
+        ServiceLevelReport,
         ThroughputSample,
     )
 
 
-class Client(EventSource, ThroughputReporter, AdaptationReporter, ConnectionNegotiator):
+class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelReporter, ConnectionNegotiator):
     """
     Call Polyad APIs with no implicit mutation retries.
     """
@@ -107,6 +108,18 @@ class Client(EventSource, ThroughputReporter, AdaptationReporter, ConnectionNego
             dict[str, Any]: Current definition adaptation acknowledgement.
         """
         return self._request("POST", "/v1/adaptations", to_dict(report))
+
+    def report_service_level(self, report: ServiceLevelReport) -> dict[str, Any]:
+        """
+        Publish one service-level observation window for a Daemon.
+
+        Args:
+            report (ServiceLevelReport): Fenced availability, quality and capability measurements.
+
+        Returns:
+            dict[str, Any]: Current evaluated service-level status.
+        """
+        return self._request("POST", "/v1/service-level", to_dict(report))
 
     def connect_services(self, request: ServiceConnectionRequest) -> dict[str, Any]:
         """

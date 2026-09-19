@@ -38,6 +38,33 @@ def validate(config: dict[str, Any]) -> None:
         value = config[name]
         if type(value) not in (int, float) or not math.isfinite(value) or not low <= value <= high:
             raise ValueError(f"{name} must be finite and in [{low}, {high}]")
+    service_level = config["serviceLevel"]
+    for name, low, high in (
+        ("availability", 0, 1),
+        ("latencyP99Seconds", 0.001, 60),
+        ("maximumAdaptationSeconds", 0.01, 60),
+    ):
+        value = service_level[name]
+        if type(value) not in (int, float) or not math.isfinite(value) or not low <= value <= high:
+            raise ValueError(f"serviceLevel.{name} must be finite and in [{low}, {high}]")
+    resources = config["resourceLoop"]
+    integer_fields = (
+        "minMemoryBytes",
+        "maxMemoryBytes",
+        "initialMemoryBytes",
+        "stepMemoryBytes",
+        "baseMemoryBytes",
+        "workerMemoryBytes",
+        "queuedJobMemoryBytes",
+    )
+    if any(type(resources[name]) is not int or resources[name] <= 0 for name in integer_fields):
+        raise ValueError("resource-loop byte values must be positive integers")
+    if not resources["minMemoryBytes"] <= resources["initialMemoryBytes"] <= resources["maxMemoryBytes"]:
+        raise ValueError("resource-loop initial memory must be within min and max bounds")
+    for name, low, high in (("targetUtilization", 0.1, 0.9), ("intervalSeconds", 0.05, 10)):
+        value = resources[name]
+        if type(value) not in (int, float) or not math.isfinite(value) or not low <= value <= high:
+            raise ValueError(f"resourceLoop.{name} must be finite and in [{low}, {high}]")
     if [phase["name"] for phase in config["phases"]] != ["before", "surge", "constraints", "after"]:
         raise ValueError("use the four ordered before/surge/constraints/after phases")
     for phase in config["phases"]:

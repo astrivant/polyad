@@ -994,6 +994,12 @@ observer:
       ## @param observer.resources.limits.memory [string] Non-negative Kubernetes resource quantity as a string; quote whole cores such as "1". Examples: 250m, 0.5, 128Mi, 1Gi.
       memory: 1Gi
 
+## @section Vertical Pod Autoscaler compatibility
+## @param verticalPodAutoscaling [object] Optional compatibility with an externally installed Kubernetes Vertical Pod Autoscaler
+verticalPodAutoscaling:
+  ## @param verticalPodAutoscaling.enabled [boolean] Allow graph Resource nodes to own native VPA policies and project their bounds into targeted application containers; does not install VPA
+  enabled: false
+
 ## @section Advance graph capacity
 ## @param capacity [object] Settings for capacity.
 capacity:

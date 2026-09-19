@@ -24,6 +24,9 @@ from polyad_types.api.requests import CompositionRequest as CompositionRequest
 from polyad_types.api.requests import ConnectionRequest as ConnectionRequest
 from polyad_types.api.requests import ConnectionResponse as ConnectionResponse
 from polyad_types.api.requests import ServiceConnectionRequest as ServiceConnectionRequest
+from polyad_types.api.service_level import AdaptationBudget as AdaptationBudget
+from polyad_types.api.service_level import ServiceLevelPolicy as ServiceLevelPolicy
+from polyad_types.api.service_level import ServiceLevelReport as ServiceLevelReport
 from polyad_types.api.throughput import DemandSample as DemandSample
 from polyad_types.api.throughput import DemandSource as DemandSource
 from polyad_types.api.throughput import ThroughputSample as ThroughputSample
@@ -71,6 +74,7 @@ from polyad_types.networking.traffic import TrafficDestination as TrafficDestina
 from polyad_types.networking.traffic import TrafficResilience as TrafficResilience
 from polyad_types.networking.traffic import TrafficRoute as TrafficRoute
 from polyad_types.networking.traffic import TrafficWeights as TrafficWeights
+from polyad_types.resources.autoscaling import VerticalPodAutoscaler as VerticalPodAutoscaler
 from polyad_types.resources.base import Resource as Resource
 from polyad_types.resources.capacity import CapacityNodeStatus as CapacityNodeStatus
 from polyad_types.resources.capacity import CapacityStatus as CapacityStatus

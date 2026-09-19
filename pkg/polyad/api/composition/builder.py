@@ -15,6 +15,7 @@ from polyad.auth.http import Access
 from polyad.auth.policy import public_demo
 from polyad_types.api.adaptation import AdaptationReport
 from polyad_types.api.requests import ActivationRequest, CompositionRequest
+from polyad_types.api.service_level import ServiceLevelReport
 from polyad_types.api.throughput import ThroughputSample
 
 if TYPE_CHECKING:
@@ -41,6 +42,7 @@ class APIBuilder:
         access (Access | None): Named credentials and shared rate/concurrency lanes.
         throughput (Callable[[ThroughputSample], dict[str, Any]] | None): Authorized aggregate throughput intake.
         adaptation (Callable[[AdaptationReport], dict[str, Any]] | None): Authorized SDK strategy lifecycle intake.
+        service_level (Callable[[ServiceLevelReport], dict[str, Any]] | None): Authorized service-level observation intake.
     """
 
     submit: Callable[[CompositionRequest], dict[str, Any]] | None = None
@@ -55,6 +57,7 @@ class APIBuilder:
     access: Access | None = None
     throughput: Callable[[ThroughputSample], dict[str, Any]] | None = None
     adaptation: Callable[[AdaptationReport], dict[str, Any]] | None = None
+    service_level: Callable[[ServiceLevelReport], dict[str, Any]] | None = None
 
     def with_activation_handlers(
         self,
@@ -156,5 +159,6 @@ class APIBuilder:
             access=self.access,
             throughput=self.throughput,
             adaptation=self.adaptation,
+            service_level=self.service_level,
             application=application,
         )

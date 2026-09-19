@@ -160,16 +160,23 @@ def run(root: Path, study: str) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Complete records and local runtime identity, ready for publication checks.
     """
+    from polyad_benchmarks.cheeger_reduction import reduction_study
     from polyad_benchmarks.refresh import write_json
     from polyad_benchmarks.routing_study import rerouting
 
     config = json.loads((root / "inputs" / f"{study}.json").read_text())
-    runners = {"symbiosis": interactions, "reachability-state": state_variables, "reachability-routing": rerouting}
+    runners = {
+        "symbiosis": interactions,
+        "reachability-state": state_variables,
+        "reachability-routing": rerouting,
+        "cheeger-reduction": reduction_study,
+    }
     records = runners[study](config)
     result = {
         "study": study,
         "runId": config["runId"],
         "complete": True,
+        "recipe": config,
         "records": records,
         "environment": {"python": platform.python_version(), "platform": platform.platform(), "machine": platform.machine()},
     }

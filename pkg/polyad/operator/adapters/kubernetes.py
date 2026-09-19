@@ -567,6 +567,7 @@ class API(ResourceAPI):
             None: True,
             "mesh": os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true",
             "capacity": os.environ.get("POLYAD_CAPACITY_ENABLED", "false").lower() == "true",
+            "vpa": os.environ.get("POLYAD_VPA_ENABLED", "false").lower() == "true",
         }
         kinds = tuple(kind for kind in sorted(GRAPH_OWNED_KINDS) if enabled[RESOURCE_TYPES[kind].required_feature])
         for kind in kinds:

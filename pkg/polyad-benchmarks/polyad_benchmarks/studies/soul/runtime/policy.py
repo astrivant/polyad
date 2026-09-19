@@ -168,6 +168,10 @@ class Policy(AdaptiveService):
                         "backlog": data["backlog"],
                         "projectedWorkers": data["projectedWorkers"],
                         "memoryReserved": data["memoryReserved"],
+                        "resourceAssignedBytes": data.get("resourceAssignedBytes", 0),
+                        "resourceModeledUsageBytes": data.get("resourceModeledUsageBytes", 0),
+                        "resourceAvailableBytes": data.get("resourceAvailableBytes", 0),
+                        "resourcePressure": data.get("resourcePressure", False),
                     },
                 },
             )

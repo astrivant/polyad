@@ -166,6 +166,29 @@ a limit is omitted. Environment values are startup snapshots. Application usage
 measurements and live graph observations remain separate. Physical Pod placement
 does not select a remote event authority: pass `cluster=` explicitly when needed.
 
+When optional VPA compatibility targets the workload, `context.vpa` is a
+`VPAConstraints` value with the container's validated CPU/memory minimums,
+maximums and update mode. `context.vpa.clamp("cpu", proposed_millicores)` helps
+keep application concurrency or worker-profile decisions inside that interval.
+The bounds and `context.resources` are startup policy/Downward API snapshots.
+Use `container_metrics()` for current cgroup-v2 values after an in-place resize:
+
+```python
+from polyad_sdk import WorkloadContext, container_metrics
+
+context = WorkloadContext.from_environment()
+sample = container_metrics()
+cpu_ceiling = sample.cpu_limit_millicores
+memory_in_use = sample.memory_usage_bytes
+memory_headroom = sample.memory_available_bytes
+```
+
+The live sample also exposes cumulative `cpu_usage_usec`. Unbounded or
+unavailable cgroup observations are `None`; the helper does not require a
+Kubernetes API token. See the
+[VPA compatibility guide](https://github.com/astrivant/polyad/blob/main/docs/deployment/vpa.md)
+for the manifest and projected environment contract.
+
 ## Adaptive services and deltas
 
 `AdaptiveService` is an abstract base class for Service Symbiosis. Implement
@@ -712,9 +735,17 @@ Actions remain explicit:
   `polyad_types.ThroughputSample` for the configured boundary through the API
   client. The designated reporter supplies aggregation, generation, unit and
   measurement window.
+- `service.report_service_level(report)` submits a typed `ServiceLevelReport`
+  for the projected Daemon definition. The SDK checks its graph and definition
+  identity before sending; the operator repeats UID and generation fences and
+  rejects stale, replayed or overlapping observation windows. Availability,
+  latency, throughput and required capabilities remain independent from the
+  definition's `Progressing` adaptation state.
 
 For cooperative producer/consumer behavior, see
 [Service Symbiosis: writing adaptive microservices](https://github.com/astrivant/polyad/blob/main/docs/workloads/adaptive-microservices.md#use-the-python-sdk).
+The [service-level objective guide](../../docs/workloads/service-level-objectives.md)
+defines accounting and status semantics for adaptive Daemons.
 
 ## Telemetry and subprocess plans
 

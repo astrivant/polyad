@@ -350,6 +350,166 @@
                   "description": "Desired configuration for this Daemon resource. Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.",
                   "additionalProperties": false,
                   "properties": {
+                    "serviceLevel": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "description": "Minimum externally observable service contract evaluated from SDK reports; adaptation progress remains independent.",
+                          "additionalProperties": false,
+                          "properties": {
+                            "requiredCapabilities": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/requiredCapabilities/anyOf/0"
+                                },
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/requiredCapabilities/anyOf/1"
+                                }
+                              ]
+                            },
+                            "availability": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/availability/anyOf/0"
+                                },
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/availability/anyOf/1"
+                                }
+                              ]
+                            },
+                            "latencyP99Seconds": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/0/anyOf/0/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/0/anyOf/0/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/0/anyOf/1/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/0/anyOf/1/anyOf/1"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/latencyP99Seconds/anyOf/1"
+                                }
+                              ]
+                            },
+                            "minimumThroughputPerSecond": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/0/anyOf/0/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/0/anyOf/0/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/0/anyOf/1/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/0/anyOf/1/anyOf/1"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/minimumThroughputPerSecond/anyOf/1"
+                                }
+                              ]
+                            },
+                            "windowSeconds": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/windowSeconds/anyOf/0"
+                                },
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/windowSeconds/anyOf/1"
+                                }
+                              ]
+                            },
+                            "sampleMaxAgeSeconds": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/sampleMaxAgeSeconds/anyOf/0"
+                                },
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/sampleMaxAgeSeconds/anyOf/1"
+                                }
+                              ]
+                            },
+                            "adaptation": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "description": "Customer-visible transition budgets evaluated separately from Progressing state.",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "maximumDurationSeconds": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumDurationSeconds/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumDurationSeconds/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    "maximumUnavailableSeconds": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumUnavailableSeconds/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumUnavailableSeconds/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    "maximumFailedAttempts": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumFailedAttempts/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/0/properties/maximumFailedAttempts/anyOf/1"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/0/properties/adaptation/anyOf/1"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "$ref": "#/definitions/resourceValues/properties/daemons/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/serviceLevel/anyOf/1"
+                        }
+                      ]
+                    },
                     "activation": {
                       "anyOf": [
                         {
@@ -6331,7 +6491,7 @@
       "patternProperties": {
         "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
           "type": "object",
-          "description": "Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
+          "description": "Define a reusable namespaced core resource or optional VerticalPodAutoscaler owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
           "additionalProperties": false,
           "properties": {
             "metadata": {
@@ -6391,14 +6551,14 @@
               "anyOf": [
                 {
                   "type": "object",
-                  "description": "Desired configuration for this Resource resource. Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
+                  "description": "Desired configuration for a graph-owned namespaced resource. Optional VPA compatibility validates bounds and projects them into the target application's environment; the external VPA controller remains responsible for resizing.",
                   "additionalProperties": false,
                   "properties": {
                     "manifest": {
                       "anyOf": [
                         {
                           "type": "object",
-                          "description": "Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}.",
+                          "description": "Native manifest for an owned core resource or, when enabled, autoscaling.k8s.io/v1 VerticalPodAutoscaler. The operator supplies identity and ownership. String values may reference generated names with ${nodes.NAME.name}.",
                           "additionalProperties": false,
                           "properties": {
                             "apiVersion": {
@@ -8608,6 +8768,230 @@
                         }
                       ],
                       "properties": {
+                        "serviceLevel": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "description": "Minimum externally observable service contract evaluated from SDK reports; adaptation progress remains independent.",
+                              "properties": {
+                                "requiredCapabilities": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "maxItems": 64,
+                                      "uniqueItems": true,
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          {
+                                            "type": "string",
+                                            "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                          }
+                                        ]
+                                      },
+                                      "description": "Capabilities that must remain available for the service to avoid Unavailable status."
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                    }
+                                  ],
+                                  "description": "Capabilities that must remain available for the service to avoid Unavailable status."
+                                },
+                                "availability": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1,
+                                      "default": 0.999,
+                                      "description": "Minimum successful eligible-request ratio in the current accounting window."
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                    }
+                                  ],
+                                  "description": "Minimum successful eligible-request ratio in the current accounting window."
+                                },
+                                "latencyP99Seconds": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "description": "Optional inclusive p99 latency objective in seconds."
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Optional inclusive p99 latency objective in seconds."
+                                        },
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                    }
+                                  ]
+                                },
+                                "minimumThroughputPerSecond": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "description": "Optional inclusive completed-work rate objective."
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Optional inclusive completed-work rate objective."
+                                        },
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                    }
+                                  ]
+                                },
+                                "windowSeconds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 60,
+                                      "maximum": 31536000,
+                                      "default": 2592000,
+                                      "description": "Fixed SLA accounting-window duration."
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                    }
+                                  ],
+                                  "description": "Fixed SLA accounting-window duration."
+                                },
+                                "sampleMaxAgeSeconds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 3600,
+                                      "default": 60,
+                                      "description": "Maximum accepted age for application observations."
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                    }
+                                  ],
+                                  "description": "Maximum accepted age for application observations."
+                                },
+                                "adaptation": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "description": "Customer-visible transition budgets evaluated separately from Progressing state.",
+                                      "properties": {
+                                        "maximumDurationSeconds": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "default": 60
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ]
+                                        },
+                                        "maximumUnavailableSeconds": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "default": 5
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ]
+                                        },
+                                        "maximumFailedAttempts": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 1000,
+                                              "default": 2
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      "required": [],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                    }
+                                  ],
+                                  "description": "Customer-visible transition budgets evaluated separately from Progressing state."
+                                }
+                              },
+                              "required": [],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                            }
+                          ],
+                          "description": "Minimum externally observable service contract evaluated from SDK reports; adaptation progress remains independent."
+                        },
                         "activation": {
                           "anyOf": [
                             {
@@ -38035,16 +38419,17 @@
                                     {
                                       "type": "string",
                                       "enum": [
-                                        "v1"
+                                        "v1",
+                                        "autoscaling.k8s.io/v1"
                                       ],
-                                      "description": "API version of the owned resource; supported manifests use core v1."
+                                      "description": "API version of the owned resource. VPA manifests require the opt-in operator compatibility feature."
                                     },
                                     {
                                       "type": "string",
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "API version of the owned resource; supported manifests use core v1."
+                                  "description": "API version of the owned resource. VPA manifests require the opt-in operator compatibility feature."
                                 },
                                 "kind": {
                                   "anyOf": [
@@ -38053,30 +38438,31 @@
                                       "enum": [
                                         "Service",
                                         "ConfigMap",
-                                        "PersistentVolumeClaim"
+                                        "PersistentVolumeClaim",
+                                        "VerticalPodAutoscaler"
                                       ],
-                                      "description": "Kind of core v1 resource to create: Service, ConfigMap or PersistentVolumeClaim."
+                                      "description": "Kind of namespaced resource to create: Service, ConfigMap, PersistentVolumeClaim or VerticalPodAutoscaler."
                                     },
                                     {
                                       "type": "string",
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "Kind of core v1 resource to create: Service, ConfigMap or PersistentVolumeClaim."
+                                  "description": "Kind of namespaced resource to create: Service, ConfigMap, PersistentVolumeClaim or VerticalPodAutoscaler."
                                 },
                                 "spec": {
                                   "anyOf": [
                                     {
                                       "type": "object",
                                       "x-kubernetes-preserve-unknown-fields": true,
-                                      "description": "Native spec for a Service or PersistentVolumeClaim, such as selectors, ports, storageClassName or volume requirements. ConfigMaps use data or binaryData instead."
+                                      "description": "Native resource spec. VPA targetRef.name may reference ${nodes.NAME.name}; resourcePolicy containerPolicies retain and validate minAllowed and maxAllowed CPU/memory quantities before creation."
                                     },
                                     {
                                       "type": "string",
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "Native spec for a Service or PersistentVolumeClaim, such as selectors, ports, storageClassName or volume requirements. ConfigMaps use data or binaryData instead."
+                                  "description": "Native resource spec. VPA targetRef.name may reference ${nodes.NAME.name}; resourcePolicy containerPolicies retain and validate minAllowed and maxAllowed CPU/memory quantities before creation."
                                 },
                                 "data": {
                                   "anyOf": [
@@ -38148,7 +38534,7 @@
                                 "apiVersion",
                                 "kind"
                               ],
-                              "description": "Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}.",
+                              "description": "Native manifest for an owned core resource or, when enabled, autoscaling.k8s.io/v1 VerticalPodAutoscaler. The operator supplies identity and ownership. String values may reference generated names with ${nodes.NAME.name}.",
                               "additionalProperties": false
                             },
                             {
@@ -38156,13 +38542,13 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Core v1 manifest for an owned Service, ConfigMap or PersistentVolumeClaim. The operator supplies resource identity and ownership. String values may reference generated names with ${nodes.NAME.name}."
+                          "description": "Native manifest for an owned core resource or, when enabled, autoscaling.k8s.io/v1 VerticalPodAutoscaler. The operator supplies identity and ownership. String values may reference generated names with ${nodes.NAME.name}."
                         }
                       },
                       "required": [
                         "manifest"
                       ],
-                      "description": "Desired configuration for this Resource resource. Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
+                      "description": "Desired configuration for a graph-owned namespaced resource. Optional VPA compatibility validates bounds and projects them into the target application's environment; the external VPA controller remains responsible for resizing.",
                       "additionalProperties": false
                     },
                     {
@@ -38170,13 +38556,13 @@
                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                     }
                   ],
-                  "description": "Desired configuration for this Resource resource. Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup."
+                  "description": "Desired configuration for a graph-owned namespaced resource. Optional VPA compatibility validates bounds and projects them into the target application's environment; the external VPA controller remains responsible for resizing."
                 }
               },
               "required": [
                 "spec"
               ],
-              "description": "Define a reusable namespaced Service, ConfigMap or PersistentVolumeClaim owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
+              "description": "Define a reusable namespaced core resource or optional VerticalPodAutoscaler owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
               "additionalProperties": false
             }
           },

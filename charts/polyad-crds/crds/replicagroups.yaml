@@ -673,6 +673,10 @@ spec:
                               type: integer
                               description: Owned destination subset policies.
                               minimum: 0
+                            VerticalPodAutoscaler:
+                              type: integer
+                              description: Owned VPA compatibility policies.
+                              minimum: 0
                             Job:
                               type: integer
                               description: Number of owned Job resources.

@@ -16,6 +16,12 @@ if meta.deletionTimestamp ~= nil then
     return health("Progressing", "Waiting for owned resources and finalizers to finish cleanup")
 end
 
+local serviceLevel = status.serviceLevel or {}
+if serviceLevel.observedGeneration == (meta.generation or 1)
+    and (serviceLevel.state == "Degraded" or serviceLevel.state == "Unavailable") then
+    return health("Degraded", "Service contract " .. serviceLevel.state .. " with " .. tostring(#(serviceLevel.violations or {})) .. " objective violation(s)")
+end
+
 if status.observedGeneration == (meta.generation or 1) and status.progressing == true then
     local adaptation = status.adaptation or {}
     local active = adaptation.invocations or {}

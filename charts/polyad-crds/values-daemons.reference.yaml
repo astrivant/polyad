@@ -27,6 +27,28 @@ daemons: {}
 #       annotations: {}
 #     ## @param daemons.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Desired configuration for this Daemon resource. Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.
 #     spec:
+#       ## @param daemons.example.spec.serviceLevel [object, string] Optional. No CRD default; the value shown is illustrative. Minimum externally observable service contract evaluated from SDK reports; adaptation progress remains independent.
+#       serviceLevel:
+#         ## @param daemons.example.spec.serviceLevel.requiredCapabilities [array, string] Optional. No CRD default; the value shown is illustrative. Capabilities that must remain available for the service to avoid Unavailable status.
+#         requiredCapabilities: []
+#         ## @param daemons.example.spec.serviceLevel.availability [number, string] Optional. Default: 0.999. Minimum successful eligible-request ratio in the current accounting window.
+#         availability: 0.999
+#         ## @param daemons.example.spec.serviceLevel.latencyP99Seconds [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         latencyP99Seconds: 0
+#         ## @param daemons.example.spec.serviceLevel.minimumThroughputPerSecond [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         minimumThroughputPerSecond: 0
+#         ## @param daemons.example.spec.serviceLevel.windowSeconds [integer, string] Optional. Default: 2592000. Fixed SLA accounting-window duration.
+#         windowSeconds: 2592000
+#         ## @param daemons.example.spec.serviceLevel.sampleMaxAgeSeconds [integer, string] Optional. Default: 60. Maximum accepted age for application observations.
+#         sampleMaxAgeSeconds: 60
+#         ## @param daemons.example.spec.serviceLevel.adaptation [object, string] Optional. No CRD default; the value shown is illustrative. Customer-visible transition budgets evaluated separately from Progressing state.
+#         adaptation:
+#           ## @param daemons.example.spec.serviceLevel.adaptation.maximumDurationSeconds [number, string] Optional. Default: 60.
+#           maximumDurationSeconds: 60
+#           ## @param daemons.example.spec.serviceLevel.adaptation.maximumUnavailableSeconds [number, string] Optional. Default: 5.
+#           maximumUnavailableSeconds: 5
+#           ## @param daemons.example.spec.serviceLevel.adaptation.maximumFailedAttempts [integer, string] Optional. Default: 2.
+#           maximumFailedAttempts: 2
 #       ## @param daemons.example.spec.activation [object, string] Optional. No CRD default; the value shown is illustrative. Control how repeated requests start a downstream workload or graph.
 #       activation:
 #         ## @param daemons.example.spec.activation.mode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Queue", "Reject", "Coalesce", "Parallel". Busy-target admission policy.

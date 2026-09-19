@@ -4,6 +4,7 @@ Attrs resource trees and cattrs codecs for the Kubernetes compiler.
 
 from __future__ import annotations
 
+from polyad_types.resources.autoscaling import VerticalPodAutoscaler as VerticalPodAutoscaler
 from polyad_types.resources.base import Resource as Resource
 from polyad_types.resources.capacity import CapacityNodeStatus as CapacityNodeStatus
 from polyad_types.resources.capacity import CapacityStatus as CapacityStatus

@@ -321,7 +321,7 @@ def test_daemon_schema_accepts_stateful_storage():
 
 def test_daemon_configmap_reload_is_preserved_on_native_controller():
     """
-    ConfigMap plans can roll opted-in Daemons without restarting finite workloads.
+    Let ConfigMap plans roll opted-in Daemons without restarting finite workloads.
     """
 
     async def run():

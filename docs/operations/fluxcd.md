@@ -63,6 +63,7 @@ and startup to finish.<sup>[\[1\]](https://fluxcd.io/flux/components/kustomize/k
 | Missing/stale observations, admission delays, startup or cleanup | InProgress |
 | Suspended or stopped execution, including a suspended descendant | InProgress |
 | Reusable definition or `templateOnly` graph | Current; no execution is implied |
+| Daemon with a current Degraded or Unavailable service contract | Failed, even while an adaptation is progressing |
 | Applied Rewrite | Current |
 | Composition receipt | Mirrored root lifecycle |
 | Activation receipt | Ready or Completed: Current; Superseded (coalesced into another request): Current; Failed or Rejected: Failed; otherwise InProgress |

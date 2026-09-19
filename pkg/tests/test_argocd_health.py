@@ -10,13 +10,18 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import yaml
+from lupa.lua54 import LuaRuntime
 
 from polyad.operator.observability.graph_status import instance_metrics, observed
 from polyad_types.resources import GROUP, RESOURCE_TYPES
 from tests.test_operator import resource
+
+if TYPE_CHECKING:
+    from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 FLUX_CASES = json.loads((ROOT / "pkg/tests/flux/cases.json").read_text())
@@ -36,16 +41,43 @@ def argocd_config(tmp_path_factory):
 
 def assess(tmp_path, argocd_config, obj):
     """
-    Run the real Argo Lua interpreter without contacting a cluster or opening Lua libraries.
+    Run Argo's interpreter when installed, otherwise execute Polyad Lua through Lupa.
     """
     if shutil.which("argocd") is None:
-        pytest.skip("install argocd using scripts/tooling/install-asdf-tools.sh argocd")
+        if obj.get("apiVersion", "").split("/", 1)[0] != GROUP:
+            pytest.skip("Argo is required to evaluate built-in Kubernetes health checks")
+        return assess_lupa(argocd_config, obj)
     path = tmp_path / "resource.yaml"
     path.write_text(yaml.safe_dump(obj))
     output = subprocess.check_output(
         ["argocd", "admin", "settings", "resource-overrides", "health", str(path), "--argocd-cm-path", str(argocd_config)], text=True
     )
     return yaml.safe_load(output)
+
+
+def assess_lupa(argocd_config: Path, obj: dict[str, Any]) -> dict[str, str]:
+    """
+    Execute a generated Polyad health customization in a restricted Lua runtime.
+
+    Args:
+        argocd_config (Path): Rendered ConfigMap containing per-kind health scripts.
+        obj (dict[str, Any]): Kubernetes resource exposed as Argo's ``obj`` global.
+
+    Returns:
+        dict[str, str]: Argo-compatible uppercase status and message fields.
+    """
+    data = yaml.safe_load(argocd_config.read_text())["data"]
+    source = data[f"resource.customizations.health.{GROUP}_{obj['kind']}"]
+    runtime = LuaRuntime(  # type: ignore[call-arg]
+        register_eval=False,
+        register_builtins=False,
+        unpack_returned_tuples=True,
+        max_memory=8 * 1024 * 1024,
+    )
+    runtime.execute("python = nil; require = nil; package = nil; io = nil; os = nil; debug = nil; dofile = nil; loadfile = nil")
+    runtime.globals()["obj"] = runtime.table_from(obj, recursive=True)
+    result = runtime.execute(source, name=f"@argocd/{obj['kind']}/health.lua", mode="t")
+    return {"STATUS": str(result["status"]), "MESSAGE": str(result["message"])}
 
 
 @pytest.mark.parametrize("case", FLUX_CASES, ids=lambda case: case["name"])
@@ -134,6 +166,23 @@ def test_active_sdk_adaptation_marks_its_daemon_definition_progressing(tmp_path,
     assert "1 active" in result["MESSAGE"]
     obj["metadata"]["generation"] = 2
     assert assess(tmp_path, argocd_config, obj)["STATUS"] == "Healthy"
+
+
+def test_lupa_executes_generated_argocd_health(argocd_config: Path) -> None:
+    """
+    Exercise the embedded fallback even when the Argo CLI is installed.
+
+    Args:
+        argocd_config (Path): Rendered Argo configuration fixture.
+
+    Returns:
+        None: Assertions verify the generated program's embedded execution.
+    """
+    obj = graph()
+    assert assess_lupa(argocd_config, obj) == {
+        "STATUS": "Healthy",
+        "MESSAGE": "Completed; graphs 1, leaves 0, pending 0, ready 0, completed 0, failed 0",
+    }
 
 
 @pytest.mark.parametrize("kind", ["Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule"])

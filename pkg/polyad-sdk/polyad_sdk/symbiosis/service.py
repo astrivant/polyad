@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from polyad_sdk.api.client import Client
-from polyad_sdk.api.interfaces import AdaptationReporter
+from polyad_sdk.api.interfaces import AdaptationReporter, ServiceLevelReporter
 from polyad_sdk.events.filters import Filter
 from polyad_sdk.events.subscriptions import StreamInterrupted
 from polyad_sdk.observability import Telemetry
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from polyad_sdk.events.subscriptions import Subscription
     from polyad_sdk.symbiosis.models import Environment
     from polyad_types import ServiceEndpoint
+    from polyad_types.api.service_level import ServiceLevelReport
     from polyad_types.api.throughput import ThroughputSample
     from polyad_types.events.envelope import Event
     from polyad_types.networking.access import NetworkPort
@@ -95,6 +96,7 @@ class AdaptiveService(ABC):
         *,
         api: ThroughputReporter | None = None,
         adaptations: AdaptationReporter | None = None,
+        service_levels: ServiceLevelReporter | None = None,
         connections: ConnectionNegotiator | None = None,
         strategies: Sequence[AdaptationStrategy] = (),
         require_strategies: bool = True,
@@ -112,6 +114,7 @@ class AdaptiveService(ABC):
             events (EventSource): Authorized events/topology client.
             api (ThroughputReporter | None): Separately authorized throughput reporter.
             adaptations (AdaptationReporter | None): Authorized strategy lifecycle reporter; defaults to api when supported.
+            service_levels (ServiceLevelReporter | None): Authorized SLA reporter; defaults to api when supported.
             connections (ConnectionNegotiator | None): Projected-token client for consent and connection requests.
             strategies (Sequence[AdaptationStrategy]): Ordered application components, copied at construction.
             require_strategies (bool): Require at least one strategy; false accepts undefined behavior for uncovered cases.
@@ -128,6 +131,7 @@ class AdaptiveService(ABC):
         self._strategies = _strategy_components(strategies, require_strategies)
         self.identity, self.events, self.api, self.connections = identity, events, api, connections
         self.adaptations = adaptations if adaptations is not None else (api if isinstance(api, AdaptationReporter) else None)
+        self.service_levels = service_levels if service_levels is not None else (api if isinstance(api, ServiceLevelReporter) else None)
         self.context = context if context is not None else WorkloadContext(identity, node_id=identity.node, runtime_node_name=identity.node)
         if self.context.identity != identity:
             raise ValueError("workload context must match the service identity")
@@ -607,3 +611,30 @@ class AdaptiveService(ABC):
         if (sample.graph, sample.graphUid, sample.kind) != (self.identity.graph, self.identity.graphUid, self.identity.kind):
             raise ValueError("throughput report targets a different graph boundary")
         return self.api.report_throughput(sample)
+
+    def report_service_level(self, report: ServiceLevelReport) -> dict[str, Any]:
+        """
+        Report application-measured service compliance for this Daemon definition.
+
+        Args:
+            report (ServiceLevelReport): Availability, quality and capability measurements for one window.
+
+        Returns:
+            dict[str, Any]: Current operator-evaluated service-level status.
+        """
+        if self.service_levels is None:
+            raise RuntimeError("configure a separately authorized service-level reporter")
+        definition = self.context.definition
+        if definition is None or self.context.definition_generation is None or definition.kind != "Daemon":
+            raise RuntimeError("service-level reporting requires a projected Daemon definition")
+        if (report.graph, report.graphUid, report.graphKind) != (self.identity.graph, self.identity.graphUid, self.identity.kind):
+            raise ValueError("service-level report targets a different graph boundary")
+        if (report.target, report.targetUid, report.targetGeneration) != (
+            definition.name,
+            definition.uid,
+            self.context.definition_generation,
+        ):
+            raise ValueError("service-level report targets a different Daemon definition")
+        if report.node != self.identity.node:
+            raise ValueError("service-level report targets a different logical node")
+        return self.service_levels.report_service_level(report)

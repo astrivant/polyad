@@ -47,6 +47,8 @@ then [run your first workload](introduction/getting-started.md).
 | [Workload topology events](workloads/workload-events.md) | Neighbor discovery, structural notifications, scaling membership and replay recovery |
 | [Service Symbiosis: writing adaptive microservices](workloads/adaptive-microservices.md) | Cooperative producers and consumers across Graphs and PolyGraphs, backpressure, useful throughput and delta-driven Python SDK hooks |
 | [Adaptation strategies for application constraints](workloads/adaptation-strategies.md) | Modular SDK policies for mutation difficulties, independent constraints, pressure-driven profiles and admission |
+| [Service-level objectives for adaptive Daemons](workloads/service-level-objectives.md) | Separate adaptation progress from availability, quality, capability and error-budget accounting |
+| [Service-level computation reference](workloads/service-level-computations.md) | Exact fixed-window formulas, state precedence, adaptation budgets, instance aggregation and worked examples |
 | [SDK telemetry and subprocess plans](workloads/sdk-runtime.md) | OpenTelemetry instrumentation, approved local worker profiles, readiness, replacement, draining and recovery |
 | [Reachability and symbiosis models](workloads/reachability.md) | Service interaction effects, finite queue envelopes, runtime guards, optional HJ analysis and state-variable studies |
 | [Adapting to Kubernetes conditions](workloads/kubernetes-adaptation.md) | Scheduling delays, flaky connectivity, rollouts, memory pressure and recovery mapped to SDK strategies and application actions |
@@ -86,6 +88,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Cross-cluster composition and optional observers](deployment/multicluster.md) | Architecture diagrams for remote ownership, local execution, KEDA scaling, Istio traffic and optional shared readers |
 | [Graph networking and event subscriptions](deployment/networking.md) | Scoped rules, Istio authorization, subscriptions and credential health |
 | [Advanced Istio integration](deployment/istio-features.md) | Route resilience, proxy telemetry, locality, JWT ingress, scoped configuration, egress and policy observation |
+| [Vertical Pod Autoscaler compatibility](deployment/vpa.md) | Native VPA bounds, in-place resize ownership and SDK-visible container resources |
 | [Optional PostgreSQL state storage](deployment/postgresql.md) | Durable graph state, encrypted storage and GKE KMS configuration, database HA and connection-based KEDA scaling |
 | [PostgreSQL record encryption](deployment/record-encryption.md) | Optional encryption before SQL writes, administrator key Secrets, decryption and key rotation |
 | [Dragonfly HA and KEDA](deployment/dragonfly.md) | Bounded cache replica scaling, primary connection metrics and replication readiness |
@@ -103,6 +106,7 @@ then [run your first workload](introduction/getting-started.md).
 | [API keys and request lanes](operations/api-keys.md) | Service/operator groups, credential directions and HA-wide per-key rate/concurrency limits |
 | [Argo CD graph health](operations/argocd.md) | Graph and leaf health, descendant failures and GitOps configuration |
 | [Flux graph health](operations/fluxcd.md) | CEL checks for graph readiness and descendant failures |
+| [Resilience control loops](operations/resilience-control-loops.md) | How SLA evidence, Cheeger bounds, Soul searching, Natural Selection, SDK strategies and autoscalers interact |
 
 ## Development
 

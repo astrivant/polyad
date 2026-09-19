@@ -8,11 +8,13 @@ for how this code runs in a deployed container.
 
 ## Table of contents
 
-- [Responsibilities](#responsibilities)
-- [Reconciliation flow](#reconciliation-flow)
-- [Soul searching entry point](#soul-searching-entry-point)
-- [Imports and optional capabilities](#imports-and-optional-capabilities)
-- [Where to make changes](#where-to-make-changes)
+- [Operator package layout](#operator-package-layout)
+  - [Table of contents](#table-of-contents)
+  - [Responsibilities](#responsibilities)
+  - [Reconciliation flow](#reconciliation-flow)
+  - [Soul searching entry point](#soul-searching-entry-point)
+  - [Imports and optional capabilities](#imports-and-optional-capabilities)
+  - [Where to make changes](#where-to-make-changes)
 
 ## Responsibilities
 
@@ -130,6 +132,18 @@ in [`polyad/sql`](../../pkg/polyad/sql). Both are package resources included in
 wheels and source distributions, loaded through `importlib.resources` without
 depending on the working directory. Keep server-side programs in these artifacts
 and pass runtime values through their existing parameters.
+
+Lupa embeds Lua 5.4 for local validation of code-owned server scripts.
+Redis/Dragonfly scripts are compiled by Lupa in tests, but execute on the data
+server in production so their reads and writes remain atomic. Argo health tests
+likewise use Lupa when the Argo CLI is not installed and retain the real Argo
+interpreter path when it is available. Exact Cheeger enumeration remains in
+Python, where arbitrary-width integer bitsets and the native `int.bit_count()`
+operation avoid a per-batch language bridge and keep one implementation for all
+supported bitset widths. Its boundary-size benchmark is documented in
+[Cheeger tuning](../graphs/cheeger-tuning.md#understand-computation-and-scale).
+Do not pass resource-supplied Lua into the embedded runtime or expose Python,
+filesystem, process, package-loading or network globals to scripts.
 
 ## Where to make changes
 

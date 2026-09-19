@@ -5,6 +5,7 @@ Group complete namespace scans by controller ownership without duplicating subtr
 from __future__ import annotations
 
 from collections import Counter
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from polyad.operator.clusters.remote_scaling import remote_revision
@@ -64,6 +65,13 @@ def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, 
         root = {"kind": current["kind"], "name": current["metadata"]["name"], "uid": current["metadata"]["uid"]} if complete else None
         generation = meta.get("generation", 1)
         metrics = status.get("metrics") or {}
+        service_level = status.get("serviceLevel") or {}
+        try:
+            service_level_fresh = service_level.get("observedGeneration") == generation and datetime.now(UTC) <= datetime.fromisoformat(
+                service_level["sampleDeadline"].replace("Z", "+00:00")
+            )
+        except (KeyError, TypeError, ValueError):
+            service_level_fresh = False
         observed = status.get("observedGeneration") == generation and metrics.get("observedGeneration") == generation
         if obj["kind"] == "ReplicaGroup":
             observed = observed and status.get("remoteScaleRevision", "") == remote_revision(obj)
@@ -138,6 +146,13 @@ def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, 
                 ],
                 "throughput": status.get("throughput")
                 if (status.get("throughput") or {}).get("observedGeneration") == generation
+                else None,
+                "serviceLevel": status.get("serviceLevel")
+                if (status.get("serviceLevel") or {}).get("observedGeneration") == generation
+                else None,
+                "serviceLevelFresh": service_level_fresh,
+                "adaptation": status.get("adaptation")
+                if (status.get("adaptation") or {}).get("observedGeneration") == generation
                 else None,
                 "rollup": metrics.get("rollup") if observed else None,
                 "uses": uses,

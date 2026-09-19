@@ -77,6 +77,12 @@ rules:
     verbs: [get, list, watch, create, delete]
   {{- end }}
 
+  {{- if .Values.verticalPodAutoscaling.enabled }}
+  - apiGroups: [autoscaling.k8s.io]
+    resources: [verticalpodautoscalers]
+    verbs: [get, list, watch, create, update, delete]
+  {{- end }}
+
   {{- if .Values.rootControlPlane.enabled }}
   - apiGroups: [polyad.astrivant.com]
     resources: [operatorpools, remotescales]

@@ -40,8 +40,9 @@ class ResourceType:
         definition (bool): Whether this kind is a reusable definition without independent execution.
         reconciled (bool): Whether the operator schedules reconciliation duties for this kind.
         composable (bool): Whether composition requests may declare this kind.
-        auxiliary (Literal['network', 'capacity', 'activation', 'connection', 'traffic'] | None): Role excluded from graph vertices.
-        required_feature (Literal['mesh', 'capacity'] | None): Operator feature required for graph inventory reads.
+        auxiliary (Literal['network', 'capacity', 'activation', 'connection', 'traffic', 'scaling'] | None):
+            Role excluded from graph vertices.
+        required_feature (Literal['mesh', 'capacity', 'vpa'] | None): Operator feature required for graph inventory reads.
     """
 
     kind: str
@@ -54,8 +55,8 @@ class ResourceType:
     definition: bool = False
     reconciled: bool = False
     composable: bool = False
-    auxiliary: Literal["network", "capacity", "activation", "connection", "traffic"] | None = None
-    required_feature: Literal["mesh", "capacity"] | None = None
+    auxiliary: Literal["network", "capacity", "activation", "connection", "traffic", "scaling"] | None = None
+    required_feature: Literal["mesh", "capacity", "vpa"] | None = None
 
     @property
     def api_group(self) -> str:

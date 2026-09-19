@@ -7,6 +7,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+from polyad_types.resources.autoscaling import VerticalPodAutoscaler
 from polyad_types.resources.infrastructure import Dragonfly, PodTemplateResource, PostgreSQLCluster, ProvisioningRequest
 from polyad_types.resources.istio import AuthorizationPolicy, DestinationRule, PeerAuthentication, VirtualService
 from polyad_types.resources.kubernetes import (
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
     from polyad_types.resources.base import Resource
 
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
+    VerticalPodAutoscaler,
     PostgreSQLCluster,
     Secret,
     CustomResourceDefinition,
