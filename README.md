@@ -74,15 +74,10 @@ the Kubernetes Operators Framework for Python.
   - [Finite pipelines](#finite-pipelines)
   - [Persistent services and recurrence](#persistent-services-and-recurrence)
   - [The operator as a Graph](#the-operator-as-a-graph)
+  - [Adaptive services in action](#adaptive-services-in-action)
 - [What Polyad is not](#what-polyad-is-not)
 - [License](#license)
 - [References](#references)
-
-[![Six services and their child workers before, during and after adapting to load and constraints](studies/soul/figures/topology.png)](studies/soul/figures/topology.png)
-
-*Six services grow and replace child workers under load, then return to their
-baseline. Explore the measured run in the [Soul study](studies/soul/README.md),
-or click the figure for the full-size view.*
 
 ## Get started
 
@@ -1016,6 +1011,38 @@ administrator-provided StorageClass or GKE disks backed by a Cloud KMS key.
 Optional [record encryption](docs/deployment/record-encryption.md) uses an
 administrator-provided public key to encrypt JSON payloads inside the operator
 before writing them to either managed or external PostgreSQL databases.
+
+### Adaptive services in action
+
+Application code can participate in adaptation, using available capacity while
+protecting work it has already accepted. The [Soul study](studies/soul/README.md)
+demonstrates this with six real Python service processes, a load generator and a
+monitoring parent. Each service uses the SDK's adaptation strategies to respond
+to changing demand and controlled disturbances.
+
+[![Six services and their child workers before, during and after adapting to load and constraints](studies/soul/figures/topology.png)](studies/soul/figures/topology.png)
+
+*Build services that put spare capacity to work and release extra workers when
+demand falls. These recorded process graphs show services adding batch workers,
+switching to compact workers under modeled memory pressure and recovering their
+original footprint. Accepted jobs remain tracked through each transition.
+Click the figure to inspect the worker identities and connections.*
+
+The parent routes new jobs toward services with room to accept them. Services
+pause new assignments when observations become unavailable, peers become
+unhealthy or connection permission expires, while draining work already accepted.
+The study compares fixed and adaptive trials under the same offered load and
+resource ceilings, verifies every completed job, and records queue sizes,
+completion latency and process lifecycles.
+
+For developers, the reusable pattern is to keep business processing separate from
+the policies that decide when to accept work, which worker profile to run and how
+to replace it safely. Extend [`AdaptiveService`](pkg/polyad-sdk/README.md#adaptive-services-and-deltas),
+choose [strategies for your application's constraints](docs/workloads/adaptation-strategies.md),
+and measure whether those adaptations improve useful completion and recovery.
+The [study's strategy modules](studies/soul/README.md#strategy-modules) and
+[repeatable run instructions](studies/soul/README.md#run) provide a working starting
+point with before, during and after measurements.
 
 ## What Polyad is not
 
