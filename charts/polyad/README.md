@@ -1,8 +1,12 @@
 # Polyad Helm chart
 
-Deploy the Kubernetes workload scheduler and its shared Dragonfly queue. See the
-[operator guide](../../docs/deployment/operator.md) for graph semantics, replica coordination,
-health metrics, and installation examples.
+Deploy Polyad's graph orchestration control plane with a single operator replica,
+HA replicas or separate gateway, executor and telemetry components. Configure
+multicluster coordination, constrained autoscaling, demand-driven adaptation,
+discovery and event APIs, and the shared Dragonfly queue. Optional integrations
+provide PostgreSQL state storage, KEDA, Istio networking and telemetry collection.
+See the [operator guide](../../docs/deployment/operator.md) for graph semantics,
+replica coordination, health metrics and installation examples.
 
 ## Table of contents
 

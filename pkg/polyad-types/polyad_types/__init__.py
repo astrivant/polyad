@@ -1,5 +1,9 @@
 """
-Public resource, configuration and request models shared by Polyad consumers.
+Define and serialize the shared data exchanged by Polyad operators and applications.
+
+Validated models cover resources, graph rules, replication, networking, API
+requests, discovery, events and observed state. The operator, SDK and benchmarks
+use these definitions, which also supply the generated JSON Schemas.
 """
 
 from __future__ import annotations

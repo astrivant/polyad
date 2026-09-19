@@ -1,9 +1,15 @@
-# Graph based workload scheduling on Kubernetes
+# Graph orchestration and adaptation on Kubernetes
 
-Polyad schedules container workloads through graphs, dependencies, placement
-constraints and admission gates. Storage and application recovery are explicit
-workload responsibilities. A graph's `mode: persistent` describes a long-running
-lifecycle; it does not enable persistent storage or checkpointing.
+Polyad deploys, connects and scales container workloads as graphs within and
+across Kubernetes clusters. It checks graph rules, including Cheeger bounds,
+before applying changes, and uses application demand to select approved
+connection layouts, traffic splits and capacity preparation. Services participate
+through composition, discovery, event and temporary-connection APIs.
+
+Dependencies, placement constraints and activation policies govern workload
+execution. Storage and application recovery are explicit workload responsibilities.
+A graph's `mode: persistent` describes a long-running lifecycle; it does not enable
+persistent storage or checkpointing.
 
 The Kubernetes operator is built on [Kopf](https://docs.kopf.dev/en/stable/),
 the Kubernetes Operators Framework for Python. Kopf supplies resource watches,

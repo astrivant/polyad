@@ -1,7 +1,11 @@
 # Polyad benchmarks
 
-A standalone Python 3.13–3.14 package for repeatable operator experiments. Uses
-`polyad-sdk`; it does not install the operator or grant Kubernetes permissions.
+A standalone Python 3.13–3.14 package for repeatable Polyad load studies. Render
+and submit graph plans through the SDK, run a mock application and bounded load
+generator, and measure activation acceptance and completion. Shared run IDs
+correlate results with logs and traces; refresh commands capture, execute and
+verify study artifacts. Uses `polyad-sdk`; it does not install the operator or
+grant Kubernetes permissions.
 
 ## Table of contents
 

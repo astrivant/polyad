@@ -7,7 +7,10 @@ repository:
   name: polyad
 
   # A short description of the repository that will show up on GitHub
-  description: Kubernetes operator for scheduling and securing workloads as composable graphs
+  description: >-
+    Kubernetes operator and Python SDK for adaptive microservices. Compose graphs
+    across clusters, enforce Cheeger bounds, and adapt topology, traffic and
+    capacity to application demand.
 
   # GitHub supports one homepage URL; use the operator's published package.
   # SDK (after its first release): https://pypi.org/project/polyad-sdk/
@@ -15,7 +18,11 @@ repository:
   homepage: https://pypi.org/project/polyad/
 
   # A comma-separated list of topics to set on the repository
-  topics: Kubernetes, scheduler, operator, controller, api, orchestration, graphs
+  topics: >-
+    kubernetes, kubernetes-operator, python, helm, microservices, distributed-systems,
+    multi-cluster, graph-theory, cheeger-constant, autoscaling, keda, istio,
+    service-discovery, event-driven, adaptive-systems, service-symbiosis,
+    python-sdk, opentelemetry
 
   # Either `true` to make the repository private, or `false` to make it public.
   private: false
@@ -63,12 +70,12 @@ repository:
 labels:
   - name: bug
     color: CC0000
-    description: An issue with the system 🐛.
+    description: Incorrect behavior in the operator, SDK, charts or tooling.
 
   - name: feature
     # If including a `#`, make sure to wrap it with quotes!
     color: '#336699'
-    description: New functionality.
+    description: New orchestration, SDK, deployment or benchmarking capability.
 
   - name: Help Wanted
     # Provide a new name to rename an existing label

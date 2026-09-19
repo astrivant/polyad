@@ -2945,7 +2945,7 @@ testing = ["coverage", "pytest", "pytest-benchmark"]
 [[package]]
 name = "polyad-schemas"
 version = "0.0.1a15"
-description = "Generated JSON Schemas for Polyad models, Kubernetes resources, events and Helm values"
+description = "Versioned JSON Schemas and Python loaders for offline validation of Polyad models, resources, events and Helm values"
 optional = true
 python-versions = ">=3.11,<4"
 groups = ["main"]
@@ -2960,7 +2960,7 @@ url = "pkg/polyad-schemas"
 [[package]]
 name = "polyad-sdk"
 version = "0.0.1a15"
-description = "Typed Python SDK for adaptive services and Polyad operator APIs"
+description = "Python SDK for adaptive microservices: discovery, event deltas, adaptation strategies, managed subprocesses and OpenTelemetry"
 optional = false
 python-versions = ">=3.11,<4"
 groups = ["dev"]
@@ -2981,7 +2981,7 @@ url = "pkg/polyad-sdk"
 [[package]]
 name = "polyad-types"
 version = "0.0.1a15"
-description = "Shared resource, configuration and API models for Polyad"
+description = "Validated Python models and serialization for Polyad resources, graph rules, networking, events and operator APIs"
 optional = false
 python-versions = ">=3.11,<4"
 groups = ["main", "dev"]

@@ -23,7 +23,9 @@ COPY --from=build /src/pkg /src/pkg
 USER 65532:65532
 WORKDIR /tmp
 STOPSIGNAL SIGTERM
-LABEL org.opencontainers.image.source="https://github.com/astrivant/polyad" \
+LABEL org.opencontainers.image.title="Polyad benchmark runner" \
+      org.opencontainers.image.description="Bounded load generator measuring Polyad activation acceptance and completion, with run IDs for correlating results, logs and traces" \
+      org.opencontainers.image.source="https://github.com/astrivant/polyad" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 ENTRYPOINT ["/usr/bin/tini", "--", "python", "-m", "polyad_benchmarks.runner"]
 CMD ["run"]

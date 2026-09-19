@@ -1,6 +1,8 @@
 apiVersion: v2
 name: polyad-benchmarks
-description: Repeatable Polyad activation benchmarks using graph-managed fixtures
+description: >-
+  Deploy graph-managed load-test fixtures and runners, JSON run plans,
+  and optional Prometheus, Grafana and tracing
 type: application
 version: 0.0.1-alpha3
 appVersion: 0.0.1-alpha3

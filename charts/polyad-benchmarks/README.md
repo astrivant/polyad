@@ -1,9 +1,12 @@
 # Polyad benchmark fixtures
 
-An ordinary application Graph containing a private fixture Daemon, discovery
+Deploy repeatable activation load studies with JSON run plans and an application
+Graph containing a private fixture Daemon, discovery
 Service, pulsed batch Workload and pulsed runner Workload. All Polyad resources
 are rendered through the versioned `polyad-crds` dependency, including its defaults
 and cross-field templates. The operator's reserved Graph remains separate.
+Optional dependencies provide plan reloads, Prometheus metrics, Grafana dashboards
+and Tempo/OpenTelemetry tracing for observing each run.
 
 ## Table of contents
 

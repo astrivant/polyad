@@ -275,8 +275,9 @@ def openapi_document(title: str, version: str) -> dict[str, Any]:
         openapi_version="3.1.0",
         info={
             "description": (
-                "Compose Kubernetes workload graphs by ID and audit generated resources. A 202 receipt "
-                "acknowledges durable intent, not admission or execution. "
+                "Submit graph compositions and workload activations, inspect their status and generated "
+                "resources, and report application demand for Soul searching. A 202 receipt records a "
+                "request for asynchronous evaluation; subsequent status reports its admission and execution."
             )
         },
         security=[{"bearerAuth": []}],

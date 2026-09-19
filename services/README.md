@@ -1,7 +1,9 @@
 # Service images
 
-The two benchmark images share the standalone `polyad-benchmarks` package and its Poetry lock.
-The operator image is built from `services/operator/Dockerfile`. All builds use the repository root as their context.
+Container images run the Polyad graph operator, a mock application fixture and
+a benchmark load generator. The two benchmark images share the standalone
+`polyad-benchmarks` package and its Poetry lock. All builds use the repository
+root as their context.
 
 ## Table of contents
 
@@ -12,9 +14,9 @@ The operator image is built from `services/operator/Dockerfile`. All builds use 
 
 | Dockerfile | Entry point | Role |
 | --- | --- | --- |
-| [operator/Dockerfile](operator/Dockerfile) | `polyad.operator.runtime` | Operator production and development targets |
-| [runner/Dockerfile](runner/Dockerfile) | `polyad_benchmarks.runner` | Bounded arrivals and activation completion measurements |
-| [fixture/Dockerfile](fixture/Dockerfile) | `polyad_benchmarks.fixture` | Mock service translating arrivals into pulses; `--once` performs a batch |
+| [operator/Dockerfile](operator/Dockerfile) | `polyad.operator.runtime` | Graph deployment, rule enforcement, demand-driven adaptation, autoscaling coordination and operator APIs; production and development targets |
+| [runner/Dockerfile](runner/Dockerfile) | `polyad_benchmarks.runner` | Bounded arrivals, activation acceptance and completion measurements, and run-correlated results |
+| [fixture/Dockerfile](fixture/Dockerfile) | `polyad_benchmarks.fixture` | Private mock service translating arrivals into graph-scoped activation requests; `--once` performs a finite batch |
 
 The benchmark images use a digest-pinned Python base, pinned Tini, locked Python dependencies,
 a non-root user, and target-platform builds. The fixture listener binds the

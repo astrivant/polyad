@@ -5,7 +5,7 @@
 to its prerequisites, execution budget and scheduling policy. A cooperative workload
 reports progress and responds to pause and cancellation requests at safe boundaries.
 
-Polyad primarily schedules Kubernetes workloads through graphs. This local
+Polyad also orchestrates workload graphs within and across Kubernetes clusters. This local
 backend can request pauses and save checkpoints only when application code
 implements that contract and suitable persistent storage is configured. It does
 not make arbitrary work resumable, and its checkpoints do not transfer Python

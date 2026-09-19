@@ -1,5 +1,8 @@
 """
-Own process signals on the main thread and embed Kopf on a dedicated thread.
+Run Polyad's Kubernetes graph operator with the configured capabilities.
+
+Own process signals on the main thread, embed Kopf on a dedicated thread and
+manage startup and shutdown of the enabled operator services.
 """
 
 from __future__ import annotations

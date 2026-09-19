@@ -72,7 +72,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Development and production containers](deployment/containers.md) | Development and production builds, runtime permissions and image checks |
 | [Operator processes, threads and async tasks](deployment/process-hierarchy.md) | Tini, Python threads, async tasks, shared HTTP workers, observers and graceful shutdown |
 | [Pod context and health binding](deployment/pod-context.md) | Pod-only health listeners, Downward API identity and addresses, node placement and container resource variables |
-| [Graph based workload scheduling on Kubernetes](deployment/operator.md) | Abstractions, admission, lifecycle, coordination and deployment |
+| [Graph orchestration and adaptation on Kubernetes](deployment/operator.md) | Workload deployment, graph constraints, demand-driven adaptation, APIs and replica coordination |
 | [Graph status](deployment/operator.md#graph-instance-status) | Breadth, depth, lifecycle counters and descendant summaries |
 | [Compiler objects](deployment/operator.md#resource-compiler-objects) | Attrs resource and status trees, Kubernetes serialization and generated metrics schemas |
 | [Health and backlog](deployment/operator.md#health) | Pod probes, inbound updates and API write pressure |
@@ -130,6 +130,10 @@ then [run your first workload](introduction/getting-started.md).
 | Reference | Contents |
 | --- | --- |
 | [Polyad scheduling guide](../pkg/polyad/scheduling/README.md) | Cooperative work, checkpoints, policies, rewrites and graph images |
-| [Polyad SDK](../pkg/polyad-sdk/README.md) | Adaptive service deltas, discovery, activation, temporary connections and Soul searching reports without operator dependencies |
-| [Polyad types](../pkg/polyad-types/README.md) | Resource, configuration and request models without operator dependencies |
-| [Polyad Helm chart](../charts/polyad/README.md) | Operator, autoscaling and shared queue settings |
+| [Polyad SDK](../pkg/polyad-sdk/README.md) | Adaptive service deltas and strategies, operator APIs, managed subprocesses and OpenTelemetry |
+| [Polyad types](../pkg/polyad-types/README.md) | Validated resource, graph, networking, event and API models with shared serialization |
+| [Polyad schemas](../pkg/polyad-schemas/README.md) | Versioned model, resource, event and Helm JSON Schemas with offline Python loaders |
+| [Polyad benchmarks](../pkg/polyad-benchmarks/README.md) | API-driven plans, mock fixtures, bounded load generation, activation measurements and study refreshes |
+| [Polyad Helm chart](../charts/polyad/README.md) | Single-replica and HA deployments, multicluster coordination, autoscaling, storage and telemetry |
+| [Polyad CRD chart](../charts/polyad-crds/README.md) | Versioned CRDs and named resource instances with defaults, schemas and cross-resource templates |
+| [Polyad benchmark chart](../charts/polyad-benchmarks/README.md) | Graph-managed fixtures and runners, JSON test plans, metrics, dashboards and tracing |

@@ -6,7 +6,7 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 ARG TINI_VERSION=0.19.0-1+b3
 LABEL org.opencontainers.image.title="Polyad" \
-      org.opencontainers.image.description="Graph-based workload scheduler for Kubernetes" \
+      org.opencontainers.image.description="Kubernetes operator for graph-based applications across clusters, with Cheeger constraints, demand-driven topology and traffic adaptation, and coordinated autoscaling" \
       org.opencontainers.image.authors="Emma Doyle" \
       org.opencontainers.image.vendor="Astrivant" \
       org.opencontainers.image.url="https://github.com/astrivant/polyad" \

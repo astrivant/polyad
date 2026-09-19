@@ -4,7 +4,7 @@ metadata:
   name: polyad
   namespace: {{ .Release.Namespace }}
 spec:
-  description: Polyad and its cluster-level operator dependencies in the load-test cluster
+  description: Polyad operator, benchmark workloads and supporting services for isolated GKE scaling studies
   sourceRepos:
     - https://github.com/astrivant/polyad.git
   destinations:

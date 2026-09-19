@@ -1,6 +1,8 @@
 apiVersion: v2
 name: polyad
-description: Kubernetes operator for scheduling workloads through graphs
+description: >-
+  Deploy Polyad's graph orchestration control plane with single-replica or HA
+  profiles, multicluster coordination, autoscaling and optional storage and telemetry
 type: application
 version: 0.0.1-alpha3
 appVersion: 0.0.1-alpha3

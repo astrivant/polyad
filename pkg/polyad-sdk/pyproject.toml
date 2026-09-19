@@ -1,7 +1,7 @@
 [project]
 name = "polyad-sdk"
 version = "0.0.1a15"
-description = "Typed Python SDK for adaptive services and Polyad operator APIs"
+description = "Python SDK for adaptive microservices: discovery, event deltas, adaptation strategies, managed subprocesses and OpenTelemetry"
 authors = [{name = "Emma Doyle"}]
 readme = {file = "README.md", content-type = "text/markdown"}
 license = "GPL-3.0-only"

@@ -1,5 +1,10 @@
 """
-Access Polyad without installing its operator or Kubernetes dependencies.
+Build adaptive microservices that respond to Polyad graph observations and changes.
+
+Use typed operator APIs, service discovery, event subscriptions and temporary
+connections. AdaptiveService combines observation deltas with application-defined
+strategies; subprocess plans and OpenTelemetry support local worker changes and
+instrumentation. The SDK installs independently of the Kubernetes operator.
 """
 
 from __future__ import annotations

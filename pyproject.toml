@@ -1,7 +1,7 @@
 [project]
 name = "polyad"
 version = "0.0.1a15"
-description = "Kubernetes operator for scheduling workloads through graphs"
+description = "Kubernetes operator for graph-based applications across clusters, with Cheeger constraints, demand-driven topology and traffic adaptation, and coordinated autoscaling"
 authors = [{name = "Emma Doyle"}]
 readme = {file = "README.md", content-type = "text/markdown"}
 license = "GPL-3.0-only"

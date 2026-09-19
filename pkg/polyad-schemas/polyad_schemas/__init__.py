@@ -1,5 +1,9 @@
 """
-Load versioned JSON Schemas without the operator, shared types or validator dependencies.
+Load versioned JSON Schemas for Polyad models, resources, events and Helm values.
+
+Generated artifacts and typed Python loaders support offline validation and
+editor integration. This package has no runtime dependencies; applications
+choose their own JSON Schema validator.
 """
 
 from __future__ import annotations

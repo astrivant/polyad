@@ -1,7 +1,7 @@
 [project]
 name = "polyad-benchmarks"
 version = "0.0.1a15"
-description = "Bounded, repeatable activation load studies for Polyad"
+description = "Repeatable Polyad load studies with API-driven plans, bounded traffic generation, activation measurements and run-correlated results"
 authors = [{name = "Emma Doyle"}]
 readme = {file = "README.md", content-type = "text/markdown"}
 license = "GPL-3.0-only"

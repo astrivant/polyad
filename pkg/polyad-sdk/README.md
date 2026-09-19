@@ -3,9 +3,12 @@
 A typed Python 3.11–3.14 SDK for **Service Symbiosis** and Polyad's operator APIs.
 Service Symbiosis lets microservices discover compatible peers and adapt their
 relationships and work together across Graphs and PolyGraphs.
-Applications receive connection, capacity and decision deltas with current context.
-The same package includes `Client` for composition, activation, discovery, events
-and temporary connections.
+Applications receive connection, capacity, metric and decision deltas with current
+context. `AdaptiveService` combines these observations with modular adaptation
+strategies. Managed subprocess plans provide readiness checks, worker replacement
+and draining; built-in OpenTelemetry support adds traces and metrics.
+The same package includes `Client` for composition, activation, demand reporting,
+discovery, SSE/WebSocket events and temporary connections.
 
 `connect(document)`, `connection(namespace, request_id)` and
 `disconnect(namespace, request_id)` use the separate connections Service and a
