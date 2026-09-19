@@ -12,35 +12,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch
 
+from polyad_benchmarks.studies.plotting import save
+
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
     from matplotlib.axes import Axes
-    from matplotlib.figure import Figure
 
 COLORS = {"before": "#dceee5", "surge": "#f9dfb8", "constraints": "#f3c6ce", "after": "#dce6f7"}
-
-
-def save(figure: Figure, output: Path, name: str) -> list[str]:
-    """
-    Export the same measured figure as a README image and a vector artifact.
-
-    Args:
-        figure (Figure): Completed Matplotlib figure.
-        output (Path): Artifact directory.
-        name (str): Stable figure basename.
-
-    Returns:
-        list[str]: Relative PNG and SVG filenames.
-    """
-    paths = []
-    for suffix in ("png", "svg"):
-        path = output / f"{name}.{suffix}"
-        figure.savefig(path, dpi=160, bbox_inches="tight")
-        paths.append(path.name)
-    plt.close(figure)
-    return paths
 
 
 def shade(axis: Axes, record: dict[str, Any]) -> None:
@@ -131,12 +111,13 @@ def topology(study: str, record: dict[str, Any], output: Path) -> list[str]:
             ha="center",
             fontsize=10,
         )
-    figure.suptitle(
-        f"{study.title()}: observed process graph\n"
-        "Arrows carry parent-relayed IPC jobs; green admits, pink waits. Child workers: purple active/starting, gray retiring.",
-        fontsize=16,
+    return save(
+        figure,
+        output,
+        "topology",
+        study=study,
+        note="Arrows carry parent-relayed IPC jobs; green admits, pink waits. Child workers: purple active/starting, gray retiring.",
     )
-    return save(figure, output, "topology")
 
 
 def timeline(study: str, record: dict[str, Any], output: Path) -> list[str]:
@@ -186,8 +167,13 @@ def timeline(study: str, record: dict[str, Any], output: Path) -> list[str]:
     axes[0, 1].legend(fontsize=8)
     for axis in axes[-1]:
         axis.set_xlabel("Measured seconds since trial start")
-    figure.suptitle(f"{study.title()}: how services cope\nGreen = before, orange = surge, pink = constraints, blue = after", fontsize=16)
-    return save(figure, output, "adaptations")
+    return save(
+        figure,
+        output,
+        "adaptations",
+        study=study,
+        note="Green = before, orange = surge, pink = constraints, blue = after.",
+    )
 
 
 def comparison(study: str, records: list[dict[str, Any]], output: Path) -> list[str]:
@@ -215,12 +201,13 @@ def comparison(study: str, records: list[dict[str, Any]], output: Path) -> list[
         axis.bar_label(bars, fmt="%.2f", padding=4)
         axis.set_title(title)
         axis.margins(y=0.2)
-    figure.suptitle(
-        f"{study.title()}: measured outcomes under the same offered load\n"
-        f"Rejected: fixed {records[0]['rejected']}, adaptive {records[1]['rejected']}; every accepted result verified",
-        fontsize=13,
+    paths = save(
+        figure,
+        output,
+        "outcomes",
+        study=study,
+        note=f"Rejected: fixed {records[0]['rejected']}, adaptive {records[1]['rejected']}; every accepted result verified.",
     )
-    paths = save(figure, output, "outcomes")
     coverage = records[1]["coverage"]
     names = sorted({name.split(":")[0] for name in coverage})
     figure, axis = plt.subplots(figsize=(11, 6), layout="constrained")
@@ -229,9 +216,9 @@ def comparison(study: str, records: list[dict[str, Any]], output: Path) -> list[
         values = [coverage.get(name if state == "callback" else f"{name}:{state}", 0) for name in names]
         axis.barh(names, values, left=left, label=state, color=color)
         left = [a + b for a, b in zip(left, values, strict=True)]
-    axis.set(xlabel="Actual delivered callbacks / guard evaluations", title=f"{study.title()}: exercised SDK strategies")
+    axis.set(xlabel="Actual delivered callbacks / guard evaluations")
     axis.legend()
-    paths += save(figure, output, "strategies")
+    paths += save(figure, output, "strategies", study=study)
     return paths
 
 

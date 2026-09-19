@@ -246,7 +246,9 @@ without claiming that screenshots or Prometheus snapshots were automatically tak
 
 ## Repeat an experiment
 
-Install the package as described in [its README](../../pkg/polyad-benchmarks/README.md).
+Install the package with the optional plotting extra on the refresh machine:
+`pip install './pkg/polyad-benchmarks[plots]'`. The fixture and runner containers
+use the base package. See [package installation](../../pkg/polyad-benchmarks/README.md#install).
 Edit [scenario.json](fixtures/scenario.json) for the namespace, graph, fixture selector and
 overall deadline. It never contains credentials. Set arrival rate and other
 experiment inputs through `polyadResources.variables.run` in the Helm values;
@@ -290,6 +292,19 @@ raw logs, Graph snapshots, definition snapshots, fixture image IDs/node placemen
 receipt status, source hashes and timestamps. No cloud results are checked in until
 an actual run is performed. `summary.json` retains provenance; `--publish` updates
 `studies/load/results.json` only after the whole declared matrix succeeds.
+
+Each completed study also generates `outcomes.png`/`.svg` and
+`latencies.png`/`.svg`. The outcome chart shows terminal phases and skipped
+arrivals. The latency chart separates API acceptance from successful completion,
+with request-order samples and empirical distributions. Failed or timed-out
+requests remain in the outcome counts and do not enter successful completion
+latencies. Missing timings remain unmeasured.
+
+Figures stay beside raw results in `outputs/load/`; verified publication copies
+them to `studies/load/figures/`. The importable renderer is
+`polyad_benchmarks.studies.load.plotting`. Use the
+[saved-result plotting API](../../pkg/polyad-benchmarks/README.md#optional-study-plots)
+to visualize retained results from an unsuccessful run without rerunning cloud work.
 
 Record several runs at each rate. Keep images, processing delay, resource requests
 and batch policy fixed while changing operator worker/replica settings. Correlate

@@ -291,6 +291,11 @@ def study_phase(project: Path, root: Path, study: str, context: str) -> None:
     status: dict[str, Any] = {"study": study, "success": False, "startedAt": datetime.now(UTC).isoformat()}
     try:
         verify_inputs(project, root)
+        if study not in PROCESS_STUDIES:
+            from polyad_benchmarks.studies.plotting import renderer
+
+            # Discover a missing optional dependency before any cluster action.
+            renderer(study)
         if study in PROCESS_STUDIES:
             from polyad_benchmarks.studies.runner import run as run_processes
 
@@ -301,6 +306,13 @@ def study_phase(project: Path, root: Path, study: str, context: str) -> None:
             run(root, study)
         else:
             cluster_study(root, study, context)
+        if study not in PROCESS_STUDIES:
+            from polyad_benchmarks.studies.plotting import render
+
+            output = root / "outputs" / study
+            result = json.loads((output / "results.json").read_text())
+            render(study, result, output)
+            write_json(output / "results.json", result)
         status["success"] = True
     except Exception as error:
         status["error"] = f"{type(error).__name__}: {error}"
@@ -327,6 +339,8 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
     if {path.stem for path in paths} != set(selected_studies(root)):
         raise ValueError("study matrix is incomplete or contains unexpected results")
     results = {}
+    from polyad_benchmarks.studies.plotting import verify as verify_figures
+
     for path in paths:
         status = json.loads(path.read_text())
         if status.get("study") != path.stem or status.get("success") is not True:
@@ -347,6 +361,7 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
             not result["submitted"] or result["skipped"] or result["interrupted"] or result["phases"] != {"Completed": result["submitted"]}
         ):
             raise ValueError("incomplete measurements cannot be published as a successful benchmark")
+        verify_figures(path.stem, result, root / "outputs" / path.stem)
         results[path.stem] = result
     write_json(root / "summary.json", {"provenance": json.loads((root / "provenance.json").read_text()), "studies": results})
     if publish:
@@ -359,12 +374,12 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
                     destination,
                     {"provenance": json.loads((root / "provenance.json").read_text()), "studies": {name: compact(results[name])}},
                 )
-                artifacts = project / "studies" / name / "figures"
-                artifacts.mkdir(exist_ok=True)
-                for filename in results[name]["figures"]:
-                    shutil.copyfile(root / "outputs" / name / filename, artifacts / filename)
             else:
                 shutil.copyfile(root / "summary.json", destination)
+            artifacts = project / "studies" / name / "figures"
+            artifacts.mkdir(exist_ok=True)
+            for filename in results[name]["figures"]:
+                shutil.copyfile(root / "outputs" / name / filename, artifacts / filename)
 
 
 def main() -> None:

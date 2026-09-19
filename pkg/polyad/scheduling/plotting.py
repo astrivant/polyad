@@ -53,7 +53,8 @@ def plot_graph(works: Mapping[str, Work], output: Path, *, title: str) -> None:
     xs = [position[0] for position in positions.values()] or [0]
     axis.set_xlim(min(xs) - 1, max(xs) + 1)
     axis.set_ylim(-max(levels.values(), default=0) - 0.7, 0.7)
-    axis.set_title(title + "\nArrows show which units must finish before their dependents can start.", fontsize=11)
+    figure.suptitle(title, fontsize=14)
+    axis.set_title("Which units must finish before each dependent can start?", fontsize=10, color="#475569")
     axis.axis("off")
     figure.tight_layout()
     output.parent.mkdir(parents=True, exist_ok=True)

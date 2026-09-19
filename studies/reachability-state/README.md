@@ -34,12 +34,24 @@ Use the [local suite refresh commands](../symbiosis/README.md#run), selecting
 `--study reachability-state` for this study phase. Its implementation is
 `polyad_benchmarks.reachability.state_variables`. All artifacts and publication
 checks use the shared refresh protocol.
+The importable `polyad_benchmarks.studies.reachability_state.plotting` module
+generates `state-tradeoffs` and `analysis-cost` as PNG/SVG figures. Matplotlib is
+included in the `reachability` extra; use `plots` for saved results without the
+numerical backend.
 
 ## Interpret results
 
-The [recorded initial results](results.json) retain every representation and
+The [recorded results](results.json) retain every representation and
 resolution. The pooled model accepted three reference-rejected observations;
 dropping readiness accepted one. The full model is the comparison baseline.
+
+![State representation disagreements and Cartesian grid growth](figures/state-tradeoffs.png)
+
+![Guard evaluation cost, solver memory and analysis duration](figures/analysis-cost.png)
+
+The memory panel separates estimated workspace from actual peak process RSS,
+which includes imports and runtime overhead. Disabled numerical analysis leaves
+the solver timing panel explicitly unmeasured.
 
 `optimisticCount` counts observations accepted by a reduced analytic model and
 rejected by the full analytic model. `conservativeCount` counts the reverse.

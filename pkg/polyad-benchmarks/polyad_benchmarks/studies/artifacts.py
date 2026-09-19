@@ -7,11 +7,13 @@ from __future__ import annotations
 import hashlib
 from typing import TYPE_CHECKING
 
+from polyad_benchmarks.studies.plotting import figure_names
+
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
-FIGURES = tuple(f"{name}.{suffix}" for name in ("topology", "adaptations", "outcomes", "strategies") for suffix in ("png", "svg"))
+FIGURES = tuple(figure_names("soul"))
 ARTIFACTS = (*FIGURES, "fixed.json", "adaptive.json")
 
 

@@ -1,4 +1,14 @@
 {
+  "figureRendering": {
+    "renderedAt": "2026-09-19T17:24:33.114461+00:00",
+    "sourceResultSha256": "16850d78fc82a2e09f9b79ee4410e1fa7cc1f8a72934ab5f81a330410bde99a3",
+    "sourceRunId": "load-dc172173bd3d46a799ce85480d90b1ee",
+    "sources": {
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/descriptions.py": "4dc1b81190d92ff36f86d744f8e2b5fc4d1055868b7d385deab09a9ed1636291",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/plotting.py": "895a83de4f84e1860f06e9bf5b18d0bca34ba104cdabf78c459185b297606b91",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/plotting.py": "7a2f1909bf4a98055705a9d4576b0d9eb44c7f8badabba19add37b8ece7aa33a"
+    }
+  },
   "provenance": {
     "inputs": {
       "nature": "ee39814ea56d0c77da8e26daa272c22aee7620c056fd1e5487d7dee36a1b0d07",
@@ -226,16 +236,16 @@
   "studies": {
     "soul": {
       "artifacts": {
-        "adaptations.png": "7a547769d6d1556e7bc24760f4e3e13359f3daa6ff60c498c39c5d85ecfc9d83",
-        "adaptations.svg": "68cd3c36ede71ab44f9b0f5a1ccaed2e08bcad148591056506a7d625b4b32aaf",
+        "adaptations.png": "35e145bfddd626ddf5ceef0fa31bb2b588d205b17f2a3c0c913462a4b3cdc711",
+        "adaptations.svg": "db8f8e9764e9df4719e24be4c655603bf00d4b118fcf281616bcf46ae490aecc",
         "adaptive.json": "5ce3a35cfa41e167f814f5123286af02bc4e245cb5db68e7c4927433b547a9bd",
         "fixed.json": "5a929168179be6bea484e6b209d043a24c9469c3485da75c2d89ed6421b4b105",
-        "outcomes.png": "d49b46c27973cb39f456c72316a3a023e5d3f126d29b680aba11406c7c9e608b",
-        "outcomes.svg": "8317ff0d401c1819efea7bcb99fba0e33cbf3090c4c2513fef68f0897eb08520",
-        "strategies.png": "c8e2e35e3a31470bdbcc4b2b96848d8f3ebe93f592e81fb931c225cdb314983d",
-        "strategies.svg": "40530a44453f766d4a0c0faee8143758779877291df9a56bf9db115be69809bb",
-        "topology.png": "ffa26e9cced43c78b8fba5cb32ce6f89eb33cb6b347c3e8fab90c897a655b23f",
-        "topology.svg": "daa99bf19daf4794a88f99e985d945353584dad470995b714c6823781d3fae97"
+        "outcomes.png": "cf50a6fa1ba45bbd83ce55524cd89acdcde4bd6b86d240172bc5080e5569835e",
+        "outcomes.svg": "9d82fed812ffc122ad9f21ed2ed3f4dead437d0069d0de56065feda2402af099",
+        "strategies.png": "ec74b7230ee483322be8d2f0c937b5a1d10979e9f132ab328d4cc81bbb04997e",
+        "strategies.svg": "b0f28c906d978ef42ac4b7c8ae35c714ed0e1a8e1ac25c300aa8dd4a0ec8c961",
+        "topology.png": "7a07cb7a2b3968a69bd76ccede04c4d18a88d2aa183173aadd19bab0307c1e5f",
+        "topology.svg": "189370e982a21bb280df46f794400598ccdf3a270835037d62737473e36bb7b4"
       },
       "complete": true,
       "environment": {

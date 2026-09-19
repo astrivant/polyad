@@ -40,11 +40,22 @@ Use a fresh run directory. Preparation records input and source hashes and gives
 each study a run ID. The reachability suite needs no cluster or Kubernetes credentials.
 Finish validates all three selected studies before publication; failed runs
 remain under the chosen directory for inspection.
+The `reachability` extra includes Matplotlib. The study generates `interactions`
+and `guard-cost` in PNG/SVG form; verified publication copies them into `figures/`.
+Its importable plotter is `polyad_benchmarks.studies.symbiosis.plotting`.
 
 ## Measurements
 
-The [recorded initial results](results.json) include the complete reachability suite and
+The [recorded results](results.json) include the complete reachability suite and
 its source/input fingerprints. Keep new refresh directories to compare later runs.
+
+![Relationship effects and analytic admission margins](figures/interactions.png)
+
+The first panel keeps each participant's capacity effect visible. The second
+shows whether the combined queue contract holds at the initial state and horizon.
+A benefit to one service can coincide with a blocked overall contract.
+
+![Measured runtime guard cost and envelope size](figures/guard-cost.png)
 
 Results record model fingerprints, analytic queue slack, numerical margins at
 the initial state, grid size, solver versions, peak RSS, import/solve time,

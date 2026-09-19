@@ -234,6 +234,12 @@ def test_refresh_publication_barrier(prepared, damage):
             refresh.finish(ROOT, prepared)
         assert not (prepared / "summary.json").exists()
     else:
+        from polyad_benchmarks.studies.plotting import render
+
+        path = prepared / "outputs/load/results.json"
+        result = json.loads(path.read_text())
+        render("load", result, path.parent)
+        refresh.write_json(path, result)
         refresh.finish(ROOT, prepared)
         assert json.loads((prepared / "summary.json").read_text())["studies"]["load"]["submitted"] == 2
 

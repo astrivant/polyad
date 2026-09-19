@@ -1,9 +1,19 @@
 {
+  "figureRendering": {
+    "renderedAt": "2026-09-19T17:24:48.683474+00:00",
+    "sourceResultSha256": "b499b9bf41bffa6e2a7a882f9afcbbf71980bb1021620b0f04a5e30e1894fbc7",
+    "sourceRunId": "load-824382196d77453793b1543b8eb35fd9",
+    "sources": {
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/descriptions.py": "4dc1b81190d92ff36f86d744f8e2b5fc4d1055868b7d385deab09a9ed1636291",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/plotting.py": "895a83de4f84e1860f06e9bf5b18d0bca34ba104cdabf78c459185b297606b91",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/symbiosis/plotting.py": "65ccebe624236b571a17a08e5f0c9c7934534719b370be5424b89e91d408efa1"
+    }
+  },
   "provenance": {
     "inputs": {
-      "reachability-routing": "2c9f344572d66841c06a70667a67c6cfc788c0edc13e5a757236edfd64df9414",
-      "reachability-state": "099d6e20b78382b618f6f7984d79f1c945c697228017d36deb02b5e1bdf1d86c",
-      "symbiosis": "0cde9c4ee3c0d096fdc0bacc0807071a89590d4a69570b8a425e92ed693cd47a"
+      "reachability-routing": "6e57f01a7c858ddcb556d7155b4ce0b556873b4c4555b86cbf35af6c62eff534",
+      "reachability-state": "fba360d6ff2d187e9901925c65314a7b8b564191f9c586227348c417c23e05ca",
+      "symbiosis": "c27e36ea1a8508b1d0ff5409ffccf260f4f1d4f38e8cb10ee2ff2bc433c6c8be"
     },
     "matrix": {
       "study": [
@@ -12,8 +22,8 @@
         "reachability-routing"
       ]
     },
-    "preparedAt": "2026-09-19T15:25:56.078833+00:00",
-    "revision": "7e1163efff5eef8b2a86eb28002f0f357ffb7c6f",
+    "preparedAt": "2026-09-19T17:15:39.236376+00:00",
+    "revision": "cdd600154d2afd35c42eaf4fae82bdb40994ac67",
     "sources": {
       "charts/polyad-benchmarks/Chart.lock": "05bc84d58f486cfa3d4416e9d4d22f99d86413e7f684adbe07ffa5a79c7b6f4a",
       "charts/polyad-benchmarks/Chart.yaml": "4a90b4ee1a708ae877fa48b58ec16021af7a42838b62c1efea0cb43335ef4e9a",
@@ -88,18 +98,62 @@
       "charts/polyad-crds/values.reference.schema.json": "9ea91b7ffdcfdc166b6da6e7c568409a5662ad33c393b4b5ace03fe9e9b4c979",
       "charts/polyad-crds/values.schema.json": "0c5e143bd4a17e3f98c2497509a8882e495c72f75dc0a1e1d87330a41453611c",
       "charts/polyad-crds/values.yaml": "9f89ccb0a2cd04067f60e1dc86c08145c0fec9277d5d454f6086c392aafa2499",
-      "pkg/polyad-benchmarks/poetry.lock": "8cfc8bb7c9400613c75ec75e39c5be57c30c750e6bcacaa52b322151021aed54",
+      "nature.py": "e0c7b2720c1e6b431a654be11eb966a04b48da57ffd8f6bc498f4bf540dad736",
+      "pkg/polyad-benchmarks/poetry.lock": "bee415da0a9875ec3d1d1ba67cd3f667e74685b33b798998249a09dbb3577257",
       "pkg/polyad-benchmarks/polyad_benchmarks/__init__.py": "b13a88edd90e89ab914ee19b3db8bdf7639d6a533f1eebec07ed3887ef1ae34a",
       "pkg/polyad-benchmarks/polyad_benchmarks/config.py": "88a4db4fb5e2cf415b032174a87ed67f9e0f49248130dd904adcd02cfd3c80b8",
       "pkg/polyad-benchmarks/polyad_benchmarks/fixture.py": "306b5e6e7f2c4c44b082f26dd4dccb4f3281ed03f2158d0d079052ac6dca94ca",
       "pkg/polyad-benchmarks/polyad_benchmarks/identity.py": "944f283a10213187f8bdf9b52d0ed2d937d60f6025f0770603925f14e39c3ca4",
       "pkg/polyad-benchmarks/polyad_benchmarks/plan.py": "9037437e6a15907b2353c277215a143b28c224f2d25d10de78740bbcf6943182",
       "pkg/polyad-benchmarks/polyad_benchmarks/reachability.py": "447422882b3ba77513939a44ede2c055181c060749ea74d6fbd8957af4d3656c",
-      "pkg/polyad-benchmarks/polyad_benchmarks/refresh.py": "039baa367097c01f8cc8abd4319b47c1f20dc9ffa4b1bfcea9c2c9ecd10188ac",
+      "pkg/polyad-benchmarks/polyad_benchmarks/refresh.py": "75940772a48739f2d219e3f495621333bedcbf77feab2aed81838ba1682df8ba",
       "pkg/polyad-benchmarks/polyad_benchmarks/routing_study.py": "d964208bba4374da6dd9b35cc4833b38be3e603b12d63433b2b0ac15172b1af6",
       "pkg/polyad-benchmarks/polyad_benchmarks/runner.py": "75ad599492099f2bf3bfd12c7ba5c2b3d7ecdc3cffadaeb847f07e152828a31f",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/__init__.py": "3b108e4261e0bf5048f4f61d2faedca54223ffc24c1794e89d223dc78506dc75",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/artifacts.py": "82118b8a7f913446f5a418b2bb395643fcdc232a8193ee75022b377980d27c32",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/load/__init__.py": "99a90087388740af2089303b66e5adf04083d83f25a7956f1da79137f02f4ae4",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/load/plotting.py": "7f6acc8e5ba0189d32faf308bd100624acb0efae11fb234d1960ae81fd38761f",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/__main__.py": "f0dbb105611ba5c56f4506c52ff79d533597517850030bbf2015fa560e41d7aa",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/capabilities/__init__.py": "af2fd3fb15a25a8f23547db29b2a8c1dfd6d580750c32ed49bb47c183b5c41d3",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/monitor.py": "bb83fbc53eb0418d54f7f7c360f241e21eb034a6c78d43c39ffda56182ce28da",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/nature/selection/__init__.py": "54db66f141b8f5e9e42e6af50dfb56998bb6bfe9fa90d2b264e2dbae3022cbd6",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/plotting.py": "121d8c5a0a3e7f15ad4db1d8887e5f4c92d0679e3e8e310b2d151c3594c45dd4",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/reachability_routing/__init__.py": "e8bccbd9357afd393ddf3aed296eda89465f867fda392dddcffb734b51373d9a",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/reachability_routing/plotting.py": "c50575c32f721fdaf26439e09a267e3b6718b01c8f97be5abfffc42a43880c55",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/reachability_state/__init__.py": "8ac339d5044bdc2cf76cedfceef03e3011f624c63bbf81faac4876a93ab61d95",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/reachability_state/plotting.py": "5fc938fb93dd484c8755d6f1a6bc28472242ae3d1c52bdb1faee721bcc34a9eb",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/runner.py": "7aa99eb6ecc1be4af50fe01e99ffbfdf1a18510a5851d8b052420a8fc162ba61",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/__main__.py": "65a91376c1dfbd89e4e3b3c02a8ca049f9439252f76ee25a376f58eaff51202d",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/monitor.py": "db42f0446595cc16c1abf9eb8f1e539659ac757604428faa87ab3d1352728f22",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/plotting.py": "2e43fcf7e9d711675c7b6ec1cb5be46680e4954687f2487d77183864bec5f99e",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/runtime/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/runtime/engine.py": "27ff013a2b914f862e17e7176f0177088ce282e39ccf3359e76f42d255eaea89",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/runtime/policy.py": "249cdf47fdfbc4b4d5f12b99c5c4a39a913511c72525f53f25005a1bbf11564d",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/runtime/service.py": "f6280484141b20e1610a34e761f70fad4366b838937c2758012544a7d27ca814",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/__init__.py": "e30a817fc1c6aea30e36b9556ee5c92b5e3f2f325b802a0e678f4dd498277553",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/__init__.py": "ea21b5b1b287708eaafe13722d44a6b2b5446c2311d2c7def710def466810222",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/budget.py": "f9f33d00e617536d201ed61dfdea5a5bac746d5c0b701967e103cca32f23f653",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/memory.py": "5ac2b19773bc75a4d762f7bc49b365d1b49038fbf40200b05b0456a566a03e46",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/resources.py": "c73d509ef3ac7f9572367eb9e1861d6f0939fb605a4c96f0903518402677354c",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/capacity/threshold.py": "c48f8f41ffe89fc5d19e59c2f81080b08f27f00ae78490c77cdc4bd6d041f723",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/decisions/__init__.py": "ea21b5b1b287708eaafe13722d44a6b2b5446c2311d2c7def710def466810222",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/decisions/guard.py": "3fa6d6c9db1a06a1aad151db33934a46d628d687c881e6adf8f209f523a04f20",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/decisions/observations.py": "ae2bd400de18ca587c902cb742551cda86057718d0d1e060161261f6bbb7616e",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/freshness/__init__.py": "d85684b110248abf880e83a4d0d2c44b17169425ea09dca8ec9262592c05a822",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/observation/__init__.py": "ea21b5b1b287708eaafe13722d44a6b2b5446c2311d2c7def710def466810222",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/observation/callbacks.py": "4060d326cdf67b37a7cfb78c139644861a75e419085a31d6da271676cfa532db",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/observation/logging.py": "62a7b0b79abdaed8e3b99224007f3eb04a5d1ff5c6b09544c5b43b51811a15f7",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/reachability/__init__.py": "d6a57f237e587de80cb56e45fd257db3b2301b492b5741583d61286391dd59df",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/routing/__init__.py": "ea21b5b1b287708eaafe13722d44a6b2b5446c2311d2c7def710def466810222",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/routing/connections.py": "0e96f847a3316d24ba15c3612d3d641b922330008b0bad03a2ac5ac6c708937c",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/routing/peers.py": "d17982e6c5e33677f758f46f6c4456e7d3d676fde061b6e12313e2a59cf2565f",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/soul/strategies/routing/topology.py": "ea692d3e811ad9515dce0cc800d61c33f54838ff60c8ba2d74e662d83b570692",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/symbiosis/__init__.py": "a9507f25671c5788592caa3a8ede956daeb1fd53c58d71137ea7351b56d1e56a",
+      "pkg/polyad-benchmarks/polyad_benchmarks/studies/symbiosis/plotting.py": "17497f2fb7163eab15fbc3a323d752ddbdf25e089a7dcb38637737f2d3196864",
       "pkg/polyad-benchmarks/polyad_benchmarks/variables.schema.json": "d7505c5b925cb9debd66c43e2859f17face442c7fe3492ab27bb3db413e43eb7",
-      "pkg/polyad-benchmarks/pyproject.toml": "2770e437b26ded52193c8a89645dff722ca091cb53add3683a97cd4df44b6883",
+      "pkg/polyad-benchmarks/pyproject.toml": "21e3eac67ab5977ce5295b9a9f9f10538015abcab232411bc57d85a59dcd1505",
       "pkg/polyad-sdk/polyad_sdk/__init__.py": "01cbdc0f9eedd421d2fed6e623ccbf061ade931b6456def8324627073c3ff249",
       "pkg/polyad-sdk/polyad_sdk/api/__init__.py": "d1562410cd6174fe20ef0d42c2787a76de53750f8e08efec54da6aca894b050b",
       "pkg/polyad-sdk/polyad_sdk/api/client.py": "29882a032289e77e165731e1cb7b42c47feaef6c1ba085e285c75a3652153ac6",
@@ -175,238 +229,46 @@
       "services/fixture/Dockerfile": "dbe265a6c85c97300ddc47a6fff101cbb9af9333c5213cb636eecc5a5a485c42",
       "services/operator/Dockerfile": "c2b18a78dc6d9bd3ce476678d0091465aa460e2df2f18267807520df0d7b9060",
       "services/runner/Dockerfile": "7cde64a444988a1a76824d3d69ac6a73484588cfbc04320bbf012f5f97c569bf",
+      "soul.py": "d96f8e740c7de2853edd88586dfd93878485c05bee8450298285ee84e6ba33a4",
       "studies/load/fixtures/application.yaml": "5a159b3ce973b5e073b0e486fcf2c2578d23416fc3e8a04ab8ac34db7ea4b366",
       "studies/load/fixtures/gke-values.yaml": "a6cb3b2554deeec74aea06aa88dd9687357ca6c7441d91e9a1f513dfef37556a",
       "studies/load/fixtures/operator-agents-values.yaml": "4d064f954ed46e19ce5294022a464adfd5f98c7055469665c35e3c4f6e67bf44",
       "studies/load/fixtures/operator-values.yaml": "bbc510a732f8c30086b961276ea79ebaf4ea5a6a1c0045081c39a8701f1680c3",
       "studies/load/fixtures/plan.json": "68f06233839660b9d4d34e70922079fdaa375023e92ceada01572d92019b2e88",
       "studies/load/fixtures/scenario.json": "75a50e3c2bb5241883c507df2bcb896569029270eb09ba477a3037e1263c004d",
+      "studies/nature/fixtures/scenario.json": "b3cd65a55c77e235e2a7ab78ba027966453dc076fdf7ddc81272f1cb22d11023",
       "studies/reachability-routing/fixtures/scenario.json": "746146b4e63768dab37c0e215b91103e27f935a0046f41f1c9f4ed2a80245edc",
       "studies/reachability-state/fixtures/scenario.json": "32adc05730e03f80a4f4f4423f3cbbb5cb468f2fd841c49436736ef898bbe4f7",
+      "studies/soul/fixtures/scenario.json": "c2acf4080fa3ae64b25322d5c3320212e15d96ed48df1c7b6bfbde025982d6d5",
       "studies/symbiosis/fixtures/scenario.json": "191c36122632b7d2195a5af992f48ee8671a0ce220eb866fa024124e582d4b45"
     }
   },
   "studies": {
     "reachability-routing": {
+      "artifacts": {
+        "outcomes.png": "fa12dd8b5861ab9ae27a16f5f483c82ec18375b9f371dc5004f04a1478cd98d5",
+        "outcomes.svg": "1205cf9f99ce2f0630ba62db7adafbc66e6a38f2e6fe7383fcb3442541d8cad4",
+        "routing.png": "7cf942b3bb9f38887c71f7a3a1b2eb47aaeb5aa26c94fd9b96f11aa1f4899136",
+        "routing.svg": "2eb17f38df10d02b0ae44c8298bdf836d64859afe5db60da61a2fa61d14c0a8e"
+      },
       "complete": true,
       "environment": {
         "machine": "arm64",
         "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
         "python": "3.13.12"
       },
+      "figures": [
+        "routing.png",
+        "routing.svg",
+        "outcomes.png",
+        "outcomes.svg"
+      ],
       "records": [
         {
           "allJoined": true,
           "artifact": {
-            "created_at": 1789831580.49074,
-            "expires_at": 1789831880.49074,
-            "fingerprint": "2d2225e0c76205370a84788de40799394a66993b42156e155254d6bba956e921",
-            "horizon": 2,
-            "model": {
-              "arrival_bounds": [
-                25,
-                30
-              ],
-              "capacities": [
-                10,
-                35
-              ],
-              "interaction": {
-                "effects": [
-                  0,
-                  0
-                ],
-                "relationship": "neutralism"
-              },
-              "limits": [
-                20,
-                20
-              ],
-              "names": [
-                "busy",
-                "spare"
-              ],
-              "shares": [
-                1.0,
-                0.0
-              ],
-              "targets": [
-                20,
-                20
-              ],
-              "unit": "jobs",
-              "warmup_max": 0
-            },
-            "revision": "process-trial",
-            "version": 1
-          },
-          "assessments": {
-            "blocked": 60
-          },
-          "completed": 38,
-          "consumerProcesses": 2,
-          "elapsedSeconds": 3.9587340829893947,
-          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
-          "meanLatencySeconds": 1.3177612499873106,
-          "mode": "first-consumer",
-          "offered": 60,
-          "peakOutstanding": [
-            20,
-            0
-          ],
-          "predictedAllowed": false,
-          "predictedMargin": -20.0,
-          "producerProcesses": 1,
-          "rejected": 22,
-          "repetition": 0,
-          "routed": [
-            38,
-            0
-          ]
-        },
-        {
-          "allJoined": true,
-          "artifact": {
-            "created_at": 1789831584.718281,
-            "expires_at": 1789831884.718281,
-            "fingerprint": "9dcd7d9b7813e04e3c0245d353fd266054ba54e7c08808030f43510b00d78ca0",
-            "horizon": 2,
-            "model": {
-              "arrival_bounds": [
-                25,
-                30
-              ],
-              "capacities": [
-                10,
-                35
-              ],
-              "interaction": {
-                "effects": [
-                  0,
-                  0
-                ],
-                "relationship": "neutralism"
-              },
-              "limits": [
-                20,
-                20
-              ],
-              "names": [
-                "busy",
-                "spare"
-              ],
-              "shares": [
-                0.25,
-                0.75
-              ],
-              "targets": [
-                20,
-                20
-              ],
-              "unit": "jobs",
-              "warmup_max": 0
-            },
-            "revision": "process-trial",
-            "version": 1
-          },
-          "assessments": {
-            "satisfied": 60
-          },
-          "completed": 60,
-          "consumerProcesses": 2,
-          "elapsedSeconds": 2.0431212498806417,
-          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
-          "meanLatencySeconds": 0.05142010976560414,
-          "mode": "guarded-rerouting",
-          "offered": 60,
-          "peakOutstanding": [
-            1,
-            2
-          ],
-          "predictedAllowed": true,
-          "predictedMargin": 20,
-          "producerProcesses": 1,
-          "rejected": 0,
-          "repetition": 0,
-          "routed": [
-            15,
-            45
-          ]
-        },
-        {
-          "allJoined": true,
-          "artifact": {
-            "created_at": 1789831587.39419,
-            "expires_at": 1789831887.39419,
-            "fingerprint": "9dcd7d9b7813e04e3c0245d353fd266054ba54e7c08808030f43510b00d78ca0",
-            "horizon": 2,
-            "model": {
-              "arrival_bounds": [
-                25,
-                30
-              ],
-              "capacities": [
-                10,
-                35
-              ],
-              "interaction": {
-                "effects": [
-                  0,
-                  0
-                ],
-                "relationship": "neutralism"
-              },
-              "limits": [
-                20,
-                20
-              ],
-              "names": [
-                "busy",
-                "spare"
-              ],
-              "shares": [
-                0.25,
-                0.75
-              ],
-              "targets": [
-                20,
-                20
-              ],
-              "unit": "jobs",
-              "warmup_max": 0
-            },
-            "revision": "process-trial",
-            "version": 1
-          },
-          "assessments": {
-            "satisfied": 60
-          },
-          "completed": 60,
-          "consumerProcesses": 2,
-          "elapsedSeconds": 2.0427958336658776,
-          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
-          "meanLatencySeconds": 0.050940873008221386,
-          "mode": "guarded-rerouting",
-          "offered": 60,
-          "peakOutstanding": [
-            1,
-            2
-          ],
-          "predictedAllowed": true,
-          "predictedMargin": 20,
-          "producerProcesses": 1,
-          "rejected": 0,
-          "repetition": 1,
-          "routed": [
-            15,
-            45
-          ]
-        },
-        {
-          "allJoined": true,
-          "artifact": {
-            "created_at": 1789831589.697002,
-            "expires_at": 1789831889.697002,
+            "created_at": 1789838175.51454,
+            "expires_at": 1789838475.51454,
             "fingerprint": "2d2225e0c76205370a84788de40799394a66993b42156e155254d6bba956e921",
             "horizon": 2,
             "model": {
@@ -452,9 +314,216 @@
           },
           "completed": 39,
           "consumerProcesses": 2,
-          "elapsedSeconds": 4.05325916595757,
+          "elapsedSeconds": 4.031518583185971,
           "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
-          "meanLatencySeconds": 1.33162141772799,
+          "meanLatencySeconds": 1.323879952972325,
+          "mode": "first-consumer",
+          "offered": 60,
+          "peakOutstanding": [
+            20,
+            0
+          ],
+          "predictedAllowed": false,
+          "predictedMargin": -20.0,
+          "producerProcesses": 1,
+          "rejected": 21,
+          "repetition": 0,
+          "routed": [
+            39,
+            0
+          ]
+        },
+        {
+          "allJoined": true,
+          "artifact": {
+            "created_at": 1789838179.868253,
+            "expires_at": 1789838479.868253,
+            "fingerprint": "9dcd7d9b7813e04e3c0245d353fd266054ba54e7c08808030f43510b00d78ca0",
+            "horizon": 2,
+            "model": {
+              "arrival_bounds": [
+                25,
+                30
+              ],
+              "capacities": [
+                10,
+                35
+              ],
+              "interaction": {
+                "effects": [
+                  0,
+                  0
+                ],
+                "relationship": "neutralism"
+              },
+              "limits": [
+                20,
+                20
+              ],
+              "names": [
+                "busy",
+                "spare"
+              ],
+              "shares": [
+                0.25,
+                0.75
+              ],
+              "targets": [
+                20,
+                20
+              ],
+              "unit": "jobs",
+              "warmup_max": 0
+            },
+            "revision": "process-trial",
+            "version": 1
+          },
+          "assessments": {
+            "satisfied": 60
+          },
+          "completed": 60,
+          "consumerProcesses": 2,
+          "elapsedSeconds": 2.0422096671536565,
+          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
+          "meanLatencySeconds": 0.051847775016600886,
+          "mode": "guarded-rerouting",
+          "offered": 60,
+          "peakOutstanding": [
+            1,
+            2
+          ],
+          "predictedAllowed": true,
+          "predictedMargin": 20,
+          "producerProcesses": 1,
+          "rejected": 0,
+          "repetition": 0,
+          "routed": [
+            15,
+            45
+          ]
+        },
+        {
+          "allJoined": true,
+          "artifact": {
+            "created_at": 1789838182.282609,
+            "expires_at": 1789838482.282609,
+            "fingerprint": "9dcd7d9b7813e04e3c0245d353fd266054ba54e7c08808030f43510b00d78ca0",
+            "horizon": 2,
+            "model": {
+              "arrival_bounds": [
+                25,
+                30
+              ],
+              "capacities": [
+                10,
+                35
+              ],
+              "interaction": {
+                "effects": [
+                  0,
+                  0
+                ],
+                "relationship": "neutralism"
+              },
+              "limits": [
+                20,
+                20
+              ],
+              "names": [
+                "busy",
+                "spare"
+              ],
+              "shares": [
+                0.25,
+                0.75
+              ],
+              "targets": [
+                20,
+                20
+              ],
+              "unit": "jobs",
+              "warmup_max": 0
+            },
+            "revision": "process-trial",
+            "version": 1
+          },
+          "assessments": {
+            "satisfied": 60
+          },
+          "completed": 60,
+          "consumerProcesses": 2,
+          "elapsedSeconds": 2.0433780001476407,
+          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
+          "meanLatencySeconds": 0.054759738190720476,
+          "mode": "guarded-rerouting",
+          "offered": 60,
+          "peakOutstanding": [
+            1,
+            2
+          ],
+          "predictedAllowed": true,
+          "predictedMargin": 20,
+          "producerProcesses": 1,
+          "rejected": 0,
+          "repetition": 1,
+          "routed": [
+            15,
+            45
+          ]
+        },
+        {
+          "allJoined": true,
+          "artifact": {
+            "created_at": 1789838184.683914,
+            "expires_at": 1789838484.683914,
+            "fingerprint": "2d2225e0c76205370a84788de40799394a66993b42156e155254d6bba956e921",
+            "horizon": 2,
+            "model": {
+              "arrival_bounds": [
+                25,
+                30
+              ],
+              "capacities": [
+                10,
+                35
+              ],
+              "interaction": {
+                "effects": [
+                  0,
+                  0
+                ],
+                "relationship": "neutralism"
+              },
+              "limits": [
+                20,
+                20
+              ],
+              "names": [
+                "busy",
+                "spare"
+              ],
+              "shares": [
+                1.0,
+                0.0
+              ],
+              "targets": [
+                20,
+                20
+              ],
+              "unit": "jobs",
+              "warmup_max": 0
+            },
+            "revision": "process-trial",
+            "version": 1
+          },
+          "assessments": {
+            "blocked": 60
+          },
+          "completed": 39,
+          "consumerProcesses": 2,
+          "elapsedSeconds": 4.0999580840580165,
+          "evidence": "paced discrete jobs with real process scheduling; compare observations with the fluid approximation",
+          "meanLatencySeconds": 1.3415380107620969,
           "mode": "first-consumer",
           "offered": 60,
           "peakOutstanding": [
@@ -472,24 +541,36 @@
           ]
         }
       ],
-      "runId": "load-f92ac05bac2f4c7583e7b135f883dbd4",
+      "runId": "load-739738111464425585db7327430e3841",
       "study": "reachability-routing"
     },
     "reachability-state": {
+      "artifacts": {
+        "analysis-cost.png": "77ac82bf885f82313fb6bacfeb63bae58aae0f660255dec6f9db029b1c330829",
+        "analysis-cost.svg": "eb338380f854f8b290460df7970bbff669cfe1b1f0c0249ba8317206f016cae2",
+        "state-tradeoffs.png": "62393b7cc0d3987565a817d06c8c76364d04410e08f88864a0d9a5d7bc7bff76",
+        "state-tradeoffs.svg": "14ee3a9cf5eaa2ad88f7c5b4e208afd2248875add8a43cea6e747c5ae46abe19"
+      },
       "complete": true,
       "environment": {
         "machine": "arm64",
         "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
         "python": "3.13.12"
       },
+      "figures": [
+        "state-tradeoffs.png",
+        "state-tradeoffs.svg",
+        "analysis-cost.png",
+        "analysis-cost.svg"
+      ],
       "records": [
         {
           "conservativeCount": 0,
           "dimensions": 1,
           "guard": {
-            "artifactBytes": 435,
+            "artifactBytes": 433,
             "iterations": 1000,
-            "meanSeconds": 1.6679666005074977e-05,
+            "meanSeconds": 3.1911292113363744e-05,
             "states": {
               "satisfied": 1000
             }
@@ -529,14 +610,14 @@
             "computationalDomain": [
               120.0
             ],
-            "cpuSeconds": 1.275602,
+            "cpuSeconds": 1.432818,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 1008,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "27e6d54bcc30198d448d4a4aec19420f0695fcf87a8de141e8801f0572c4bbb1",
             "gridPoints": 9,
-            "importSeconds": 0.5448614996857941,
-            "peakRssBytes": 219037696,
+            "importSeconds": 0.6609133332967758,
+            "peakRssBytes": 215400448,
             "platform": "cpu",
             "positiveGridFraction": 0.4444444444444444,
             "samples": [
@@ -569,13 +650,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.06756391702219844,
+            "solveSeconds": 0.07009379100054502,
             "valueBytes": 36,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.7280628341250122
+            "wallSeconds": 1.8548869169317186
           },
           "optimisticCount": 3,
           "probes": [
@@ -642,7 +723,7 @@
           "guard": {
             "artifactBytes": 433,
             "iterations": 1000,
-            "meanSeconds": 1.682700030505657e-05,
+            "meanSeconds": 1.6564459074288606e-05,
             "states": {
               "satisfied": 1000
             }
@@ -682,14 +763,14 @@
             "computationalDomain": [
               120.0
             ],
-            "cpuSeconds": 1.227901,
+            "cpuSeconds": 1.171913,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 1904,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "27e6d54bcc30198d448d4a4aec19420f0695fcf87a8de141e8801f0572c4bbb1",
             "gridPoints": 17,
-            "importSeconds": 0.4769162079319358,
-            "peakRssBytes": 224133120,
+            "importSeconds": 0.4223413332365453,
+            "peakRssBytes": 217989120,
             "platform": "cpu",
             "positiveGridFraction": 0.47058823529411764,
             "samples": [
@@ -722,13 +803,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.10054837493225932,
+            "solveSeconds": 0.06033908296376467,
             "valueBytes": 68,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.4933400000445545
+            "wallSeconds": 1.3207468749023974
           },
           "optimisticCount": 3,
           "probes": [
@@ -793,9 +874,9 @@
           "conservativeCount": 0,
           "dimensions": 2,
           "guard": {
-            "artifactBytes": 461,
+            "artifactBytes": 463,
             "iterations": 1000,
-            "meanSeconds": 5.082808388397098e-05,
+            "meanSeconds": 1.715179206803441e-05,
             "states": {
               "satisfied": 1000
             }
@@ -841,14 +922,14 @@
               75.0,
               45.0
             ],
-            "cpuSeconds": 1.594241,
+            "cpuSeconds": 1.8664439999999998,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 10368,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "18e9ea188699d36eff582dc40042b17a39ad26200dec360944c9b99c56c52e2a",
             "gridPoints": 81,
-            "importSeconds": 0.4923332091420889,
-            "peakRssBytes": 234405888,
+            "importSeconds": 0.8781825830228627,
+            "peakRssBytes": 227180544,
             "platform": "cpu",
             "positiveGridFraction": 0.07407407407407407,
             "samples": [
@@ -885,13 +966,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.12033199984580278,
+            "solveSeconds": 0.12372195906937122,
             "valueBytes": 324,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.9264609590172768
+            "wallSeconds": 2.457805958110839
           },
           "optimisticCount": 1,
           "probes": [
@@ -960,9 +1041,9 @@
           "conservativeCount": 0,
           "dimensions": 2,
           "guard": {
-            "artifactBytes": 463,
+            "artifactBytes": 461,
             "iterations": 1000,
-            "meanSeconds": 1.8961207941174506e-05,
+            "meanSeconds": 1.8665917217731476e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1008,14 +1089,14 @@
               75.0,
               45.0
             ],
-            "cpuSeconds": 1.618552,
+            "cpuSeconds": 1.5715919999999999,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 36992,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "18e9ea188699d36eff582dc40042b17a39ad26200dec360944c9b99c56c52e2a",
             "gridPoints": 289,
-            "importSeconds": 0.4681917503476143,
-            "peakRssBytes": 243580928,
+            "importSeconds": 0.43998329201713204,
+            "peakRssBytes": 232701952,
             "platform": "cpu",
             "positiveGridFraction": 0.06920415224913495,
             "samples": [
@@ -1052,13 +1133,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.09482150012627244,
+            "solveSeconds": 0.09202870773151517,
             "valueBytes": 1156,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.908319165930152
+            "wallSeconds": 1.7186119998805225
           },
           "optimisticCount": 1,
           "probes": [
@@ -1127,9 +1208,9 @@
           "conservativeCount": 0,
           "dimensions": 3,
           "guard": {
-            "artifactBytes": 463,
+            "artifactBytes": 461,
             "iterations": 1000,
-            "meanSeconds": 2.2500334307551383e-05,
+            "meanSeconds": 1.8500667065382003e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1176,14 +1257,14 @@
               45.0,
               2
             ],
-            "cpuSeconds": 1.804561,
+            "cpuSeconds": 1.919784,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 104976,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "a4e42c9b03b74bfddd606ed94b9795ce7088131e4135b96689489cbc52a7b8db",
             "gridPoints": 729,
-            "importSeconds": 0.47538625029847026,
-            "peakRssBytes": 245219328,
+            "importSeconds": 0.5516759171150625,
+            "peakRssBytes": 230375424,
             "platform": "cpu",
             "positiveGridFraction": 0.01646090534979424,
             "samples": [
@@ -1224,13 +1305,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.16803649999201298,
+            "solveSeconds": 0.13836450036615133,
             "valueBytes": 2916,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 2.0253943749703467
+            "wallSeconds": 2.0716965422034264
           },
           "optimisticCount": 0,
           "probes": [
@@ -1303,9 +1384,9 @@
           "conservativeCount": 0,
           "dimensions": 3,
           "guard": {
-            "artifactBytes": 461,
+            "artifactBytes": 463,
             "iterations": 1000,
-            "meanSeconds": 2.017191704362631e-05,
+            "meanSeconds": 1.9002124667167664e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1352,14 +1433,14 @@
               45.0,
               2
             ],
-            "cpuSeconds": 1.965837,
+            "cpuSeconds": 2.002597,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 707472,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "a4e42c9b03b74bfddd606ed94b9795ce7088131e4135b96689489cbc52a7b8db",
             "gridPoints": 4913,
-            "importSeconds": 0.4844011249952018,
-            "peakRssBytes": 254017536,
+            "importSeconds": 0.527454957831651,
+            "peakRssBytes": 245760000,
             "platform": "cpu",
             "positiveGridFraction": 0.014654996946875637,
             "samples": [
@@ -1400,13 +1481,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.19167729234322906,
+            "solveSeconds": 0.2190799997188151,
             "valueBytes": 19652,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 2.1275444170460105
+            "wallSeconds": 2.023591292090714
           },
           "optimisticCount": 0,
           "probes": [
@@ -1476,16 +1557,28 @@
           }
         }
       ],
-      "runId": "load-a27b283815d0471098771a08f5f96abe",
+      "runId": "load-b0056ce8a2d54d648a87ceae882775d2",
       "study": "reachability-state"
     },
     "symbiosis": {
+      "artifacts": {
+        "guard-cost.png": "a9e77b4ede38ad2fc2ce24c10891f9744e90e88fd5acfc3e0e4192bd99093850",
+        "guard-cost.svg": "b86c370e18a31cfdf6d3d0c4c04b5224fd8d35ea4101b3588b179844a762f777",
+        "interactions.png": "789e814002faedf9a8d013f8cebd5df036a6ba206b27765d46a361ec8b5fd3b9",
+        "interactions.svg": "6526aabb2e5d3d59f369d2b0b5ae32086069ade6561f68eb0b84bb2cb9989b4b"
+      },
       "complete": true,
       "environment": {
         "machine": "arm64",
         "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
         "python": "3.13.12"
       },
+      "figures": [
+        "interactions.png",
+        "interactions.svg",
+        "guard-cost.png",
+        "guard-cost.svg"
+      ],
       "records": [
         {
           "allowed": true,
@@ -1497,7 +1590,7 @@
           "guard": {
             "artifactBytes": 478,
             "iterations": 1000,
-            "meanSeconds": 2.0361749920994044e-05,
+            "meanSeconds": 2.2028541658073662e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1544,14 +1637,14 @@
               90.0,
               90.0
             ],
-            "cpuSeconds": 1.749688,
+            "cpuSeconds": 2.528644,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 36992,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "cc1e43e4022aaed3553a33ea252d06a116d07952eaf067bb97fbab38fdb9ea57",
             "gridPoints": 289,
-            "importSeconds": 0.8909262921661139,
-            "peakRssBytes": 239517696,
+            "importSeconds": 1.7273873332887888,
+            "peakRssBytes": 225558528,
             "platform": "cpu",
             "positiveGridFraction": 0.07612456747404844,
             "samples": [
@@ -1564,13 +1657,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.13517725002020597,
+            "solveSeconds": 0.1933287917636335,
             "valueBytes": 1156,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 2.5809588339179754
+            "wallSeconds": 5.341801791917533
           },
           "relationship": "neutralism"
         },
@@ -1582,9 +1675,9 @@
           ],
           "fingerprint": "187e77943c6a0d0d501159f5e08140f24c1e7c9fe50bd772ac6869da2572ba77",
           "guard": {
-            "artifactBytes": 481,
+            "artifactBytes": 479,
             "iterations": 1000,
-            "meanSeconds": 2.071675006300211e-05,
+            "meanSeconds": 3.451974969357252e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1631,14 +1724,14 @@
               90.0,
               90.0
             ],
-            "cpuSeconds": 1.5859619999999999,
+            "cpuSeconds": 2.8382110000000003,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 36992,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "187e77943c6a0d0d501159f5e08140f24c1e7c9fe50bd772ac6869da2572ba77",
             "gridPoints": 289,
-            "importSeconds": 0.4530448750592768,
-            "peakRssBytes": 238731264,
+            "importSeconds": 1.4921068749390543,
+            "peakRssBytes": 207765504,
             "platform": "cpu",
             "positiveGridFraction": 0.11418685121107267,
             "samples": [
@@ -1651,13 +1744,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.09257379174232483,
+            "solveSeconds": 0.3147215829230845,
             "valueBytes": 1156,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.9042932079173625
+            "wallSeconds": 4.711305916775018
           },
           "relationship": "mutualism"
         },
@@ -1671,7 +1764,7 @@
           "guard": {
             "artifactBytes": 481,
             "iterations": 1000,
-            "meanSeconds": 1.8561874981969593e-05,
+            "meanSeconds": 2.5795457884669304e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1718,14 +1811,14 @@
               90.0,
               90.0
             ],
-            "cpuSeconds": 1.614294,
+            "cpuSeconds": 1.9591859999999999,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 36992,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "463bdab1aaea27c50df8b1634fad20b403704e06390609ed1ae2ac666d7f0a2b",
             "gridPoints": 289,
-            "importSeconds": 0.49904816690832376,
-            "peakRssBytes": 241664000,
+            "importSeconds": 0.7765889996662736,
+            "peakRssBytes": 225460224,
             "platform": "cpu",
             "positiveGridFraction": 0.10034602076124567,
             "samples": [
@@ -1738,13 +1831,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.1315833330154419,
+            "solveSeconds": 0.1254316670820117,
             "valueBytes": 1156,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.8346282080747187
+            "wallSeconds": 2.4689712496474385
           },
           "relationship": "commensalism"
         },
@@ -1756,9 +1849,9 @@
           ],
           "fingerprint": "e267228c3cdc311936f334d4f026130eb6d772739fe22e60be84b31ea3b91905",
           "guard": {
-            "artifactBytes": 481,
+            "artifactBytes": 483,
             "iterations": 1000,
-            "meanSeconds": 1.8910791724920274e-05,
+            "meanSeconds": 1.780600007623434e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1805,14 +1898,14 @@
               90.0,
               90.0
             ],
-            "cpuSeconds": 1.626952,
+            "cpuSeconds": 1.96556,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 36992,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "e267228c3cdc311936f334d4f026130eb6d772739fe22e60be84b31ea3b91905",
             "gridPoints": 289,
-            "importSeconds": 0.47177225025370717,
-            "peakRssBytes": 240336896,
+            "importSeconds": 0.5671128751710057,
+            "peakRssBytes": 227721216,
             "platform": "cpu",
             "positiveGridFraction": 0.031141868512110725,
             "samples": [
@@ -1825,13 +1918,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.17809437541291118,
+            "solveSeconds": 0.15511249983683228,
             "valueBytes": 1156,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.9655239582061768
+            "wallSeconds": 2.54472633311525
           },
           "relationship": "parasitism"
         },
@@ -1845,7 +1938,7 @@
           "guard": {
             "artifactBytes": 483,
             "iterations": 1000,
-            "meanSeconds": 1.8050665967166425e-05,
+            "meanSeconds": 2.22084173001349e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1892,14 +1985,14 @@
               90.0,
               90.0
             ],
-            "cpuSeconds": 1.6308939999999998,
+            "cpuSeconds": 1.737328,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 36992,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "b208da82b4d84235f1e2bb9791da93cd7fc02e0bbd12162ae1897cefaccb9fd4",
             "gridPoints": 289,
-            "importSeconds": 0.48345454223454,
-            "peakRssBytes": 240189440,
+            "importSeconds": 0.4836185001768172,
+            "peakRssBytes": 233422848,
             "platform": "cpu",
             "positiveGridFraction": 0.0,
             "samples": [
@@ -1912,13 +2005,13 @@
                 ]
               }
             ],
-            "solveSeconds": 0.11026579095050693,
+            "solveSeconds": 0.11130012478679419,
             "valueBytes": 1156,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.842647250276059
+            "wallSeconds": 1.9576278342865407
           },
           "relationship": "competition"
         },
@@ -1932,7 +2025,7 @@
           "guard": {
             "artifactBytes": 480,
             "iterations": 1000,
-            "meanSeconds": 4.428345803171396e-05,
+            "meanSeconds": 1.8139792140573263e-05,
             "states": {
               "satisfied": 1000
             }
@@ -1979,14 +2072,14 @@
               90.0,
               90.0
             ],
-            "cpuSeconds": 1.615772,
+            "cpuSeconds": 1.6281450000000002,
             "dtype": "float32",
             "estimatedWorkspaceBytes": 36992,
             "evidence": "numerical queue-overflow study; terminal targets are checked analytically",
             "fingerprint": "acd8ca589b763aca120874966cf3b67c1dc4660c0702bee0fbe532dcc26e3c7a",
             "gridPoints": 289,
-            "importSeconds": 0.4915417078882456,
-            "peakRssBytes": 238370816,
+            "importSeconds": 0.5216379170306027,
+            "peakRssBytes": 232587264,
             "platform": "cpu",
             "positiveGridFraction": 0.01730103806228374,
             "samples": [
@@ -1999,18 +2092,18 @@
                 ]
               }
             ],
-            "solveSeconds": 0.12766933301463723,
+            "solveSeconds": 0.09687374997884035,
             "valueBytes": 1156,
             "versions": {
               "hj_reachability": "0.7.0",
               "jax": "0.11.2"
             },
-            "wallSeconds": 1.873313750140369
+            "wallSeconds": 1.9014140837825835
           },
           "relationship": "amensalism"
         }
       ],
-      "runId": "load-49f7328769b948a5837cecd370544ab4",
+      "runId": "load-824382196d77453793b1543b8eb35fd9",
       "study": "symbiosis"
     }
   }

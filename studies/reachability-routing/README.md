@@ -39,12 +39,23 @@ Use the [local suite refresh commands](../symbiosis/README.md#run), selecting
 `polyad_benchmarks.routing_study`; recipe changes are fingerprinted at preparation.
 This experiment itself uses the standard-library analytic guard and real processes;
 the other suite members add optional HJ comparisons.
+Plotting uses the optional `plots` extra, also included in `reachability`.
+The `polyad_benchmarks.studies.reachability_routing.plotting` module produces
+`routing` and `outcomes` as PNG/SVG figures, published under `figures/`.
 
 ## Read the evidence
 
-The [recorded initial results](results.json) completed 60 of 60 jobs in both
-guarded trials, with no rejections. The first-consumer trials completed 38 and
-39 jobs, rejecting 22 and 21 at the queue limit. All process trees joined.
+The [recorded results](results.json) retain each paired repetition and its source
+fingerprints. The plots keep every repetition separate so scheduling differences
+and rejections remain visible.
+
+![Actual consumer assignments and peak outstanding work](figures/routing.png)
+
+![Completed and rejected jobs, latency and elapsed time by trial](figures/outcomes.png)
+
+Compare completion and rejection counts before interpreting latency: the mean
+covers completed jobs only. Queue limits and assignment counts show whether the
+second consumer's capacity was used.
 
 Each record includes the predicted result, exact envelope artifact, route counts,
 actual completions and rejections, maximum outstanding work per consumer, elapsed

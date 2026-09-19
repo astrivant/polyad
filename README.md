@@ -1035,6 +1035,20 @@ The study compares fixed and adaptive trials under the same offered load and
 resource ceilings, verifies every completed job, and records queue sizes,
 completion latency and process lifecycles.
 
+The [Nature study](studies/nature/README.md) adds composition decisions above
+those local adaptations. When the required output changes, its Natural Selection
+planner chooses which service implementations and connections can deliver it
+within the configured process and cost limits.
+
+[![Service compositions and their child workers before, during and after the required output changes](studies/nature/figures/topology.png)](studies/nature/figures/topology.png)
+
+*Let services contribute in different ways as requirements change. A and F switch
+to implementations that perform both processing steps; B and E keep running and
+connect to new services that supply the second step. C and H retire after draining
+their accepted work. When the original requirement returns, the planner restores
+the original composition. Each selected service continues adapting its own
+workers. Click the figure to follow the process identities and routes.*
+
 For developers, the reusable pattern is to keep business processing separate from
 the policies that decide when to accept work, which worker profile to run and how
 to replace it safely. Extend [`AdaptiveService`](pkg/polyad-sdk/README.md#adaptive-services-and-deltas),

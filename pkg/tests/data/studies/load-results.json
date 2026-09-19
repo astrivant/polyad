@@ -1,0 +1,14 @@
+{
+  "runId": "synthetic-plot-test",
+  "submitted": 4,
+  "scheduled": 5,
+  "skipped": 1,
+  "interrupted": false,
+  "phases": {"Completed": 2, "TimedOut": 1, "TransportError": 1},
+  "requests": [
+    {"requestId": "synthetic-00000", "phase": "Completed", "acceptanceSeconds": 0.1, "elapsedSeconds": 1.5},
+    {"requestId": "synthetic-00001", "phase": "Completed", "acceptanceSeconds": 0.2, "elapsedSeconds": 2.5},
+    {"requestId": "synthetic-00002", "phase": "TimedOut", "acceptanceSeconds": 0.3, "elapsedSeconds": 30},
+    {"requestId": "synthetic-00003", "phase": "TransportError", "elapsedSeconds": 0.5}
+  ]
+}

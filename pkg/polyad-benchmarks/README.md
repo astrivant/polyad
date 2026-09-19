@@ -17,6 +17,7 @@ and process measurements, and plot adaptation before, during and after disturban
 - [Commands](#commands)
 - [Plans and replicas](#plans-and-replicas)
 - [Study lifecycle](#study-lifecycle)
+- [Optional study plots](#optional-study-plots)
 
 ## Install
 
@@ -88,3 +89,42 @@ See [the load study](../../studies/load/README.md) for images, deployment, monit
 raw artifacts, cleanup and interpretation. The [study index](../../studies/README.md)
 explains the shared refresh protocol and its pytest/CI checks. No results represent
 cloud measurements until a study has actually run there.
+
+## Optional study plots
+
+Every study exports PNG and SVG figures from its recorded results. Install plotting
+on the machine running the refresh, or import it to inspect saved measurements:
+
+```sh
+pip install './pkg/polyad-benchmarks[plots]'
+```
+
+The `reachability`, `soul`, `nature` and `process-studies` extras also include
+Matplotlib. The base package keeps plotting imports lazy; ordinary fixture and
+load-generator containers use the base installation. `prepare` and `finish`
+verify artifacts without importing Matplotlib. A study checks for its plotting
+dependency before initiating cluster work.
+
+Plotters live under `polyad_benchmarks.studies.<study_name>.plotting`, using
+underscores for hyphenated study names. The shared import API accepts the full
+raw result JSON saved by a refresh:
+
+```python
+import json
+from pathlib import Path
+from typing import Any
+
+from polyad_benchmarks.studies.plotting import render
+
+source = Path(".cache/benchmarks/refresh-RUN/outputs/load/results.json")
+measurements: dict[str, Any] = json.loads(source.read_text())
+render("load", measurements, Path(".cache/benchmarks/load-plots"))
+```
+
+This renders existing evidence without submitting new requests or running an
+analysis. For Soul and Nature, use full raw results with samples and graph frames;
+their compact published summaries omit those details. Normal refreshes generate
+plots automatically and attach figure names and checksums to `results.json`.
+Finish requires every expected figure to be intact before publishing measurements
+and copying figures to `studies/NAME/figures/`. See the
+[figure inventory](../../studies/README.md#study-figures).

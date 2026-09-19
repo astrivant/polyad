@@ -22,7 +22,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-reachability = ["hj-reachability>=0.7,<0.8"]
+plots = ["matplotlib>=3.10,<4"]
+reachability = ["hj-reachability>=0.7,<0.8", "matplotlib>=3.10,<4"]
 soul = ["matplotlib>=3.10,<4"]
 nature = ["matplotlib>=3.10,<4"]
 process-studies = ["matplotlib>=3.10,<4"]

@@ -27,14 +27,14 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
-      - run: poetry -C pkg/polyad-benchmarks sync
+      - run: poetry -C pkg/polyad-benchmarks sync --extras plots
       - run: bash scripts/tooling/install-helm-tools.sh helm
       - run: helm dependency build charts/polyad-benchmarks
       - run: poetry --project pkg/polyad-benchmarks run python scripts/validation/benchmark-schemas.py
       - name: Exercise harness and refresh barriers offline
         run: |
           mkdir -p .cache/benchmarks/smoke
-          poetry --project pkg/polyad-benchmarks run python -m pytest -c pyproject.toml -o addopts='' pkg/tests/test_benchmarks.py --junitxml=.cache/benchmarks/smoke/pytest.xml
+          poetry --project pkg/polyad-benchmarks run python -m pytest -c pyproject.toml -o addopts='' pkg/tests/test_benchmarks.py pkg/tests/test_study_plotting.py --junitxml=.cache/benchmarks/smoke/pytest.xml
           helm lint charts/polyad-benchmarks
           helm template study charts/polyad-benchmarks -f studies/load/fixtures/gke-values.yaml > .cache/benchmarks/smoke/fixture.yaml
       - uses: actions/upload-artifact@v4
@@ -109,7 +109,7 @@ jobs:
         with:
           python-version: '3.13'
       - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
-      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - run: poetry -C pkg/polyad-benchmarks sync --only main --extras plots
       - uses: actions/download-artifact@v4
         with:
           name: benchmark-prepared
@@ -154,5 +154,6 @@ jobs:
           path: |
             .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
             studies/load/results.json
+            studies/load/figures/
           include-hidden-files: true
           retention-days: 30

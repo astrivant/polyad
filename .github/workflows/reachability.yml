@@ -5,6 +5,7 @@ on:
       - pkg/polyad-sdk/**
       - pkg/polyad-benchmarks/**
       - pkg/tests/test_reachability*
+      - pkg/tests/test_study_plotting.py
       - studies/**
       - .github/workflows/reachability.yml
   push:
@@ -107,4 +108,7 @@ jobs:
             studies/symbiosis/results.json
             studies/reachability-state/results.json
             studies/reachability-routing/results.json
+            studies/symbiosis/figures/
+            studies/reachability-state/figures/
+            studies/reachability-routing/figures/
           include-hidden-files: true
