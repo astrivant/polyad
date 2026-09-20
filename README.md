@@ -348,14 +348,6 @@ demonstrates this with six real Python service processes, a load generator and a
 monitoring parent. Each service uses the SDK's adaptation strategies to respond
 to changing demand and controlled disturbances.
 
-[![Six services and their child workers before, during and after adapting to load and constraints](studies/soul/figures/topology.png)](studies/soul/figures/topology.png)
-
-*Build services that put spare capacity to work and release extra workers when
-demand falls. These recorded process graphs show services adding batch workers,
-switching to compact workers under modeled memory pressure and recovering their
-original footprint. Accepted jobs remain tracked through each transition.
-Click the figure to inspect the worker identities and connections.*
-
 The parent routes new jobs toward services with room to accept them. Services
 pause new assignments when observations become unavailable, peers become
 unhealthy or connection permission expires, while draining work already accepted.
@@ -364,6 +356,14 @@ resource ceilings, verifies every completed job, and records queue sizes,
 completion latency and process lifecycles.
 
 </details>
+
+[![Six services and their child workers before, during and after adapting to load and constraints](studies/soul/figures/topology.png)](studies/soul/figures/topology.png)
+
+*Build services that put spare capacity to work and release extra workers when
+demand falls. These recorded process graphs show services adding batch workers,
+switching to compact workers under modeled memory pressure and recovering their
+original footprint. Accepted jobs remain tracked through each transition.
+Click the figure to inspect the worker identities and connections.*
 
 <details>
 <summary>
@@ -377,6 +377,8 @@ those local adaptations. When the required output changes, its Natural Selection
 planner chooses which service implementations and connections can deliver it
 within the configured process and cost limits.
 
+</details>
+
 [![Service compositions and their child workers before, during and after the required output changes](studies/nature/figures/topology.png)](studies/nature/figures/topology.png)
 
 *Let services contribute in different ways as requirements change. A and F switch
@@ -385,8 +387,6 @@ connect to new services that supply the second step. C and H retire after draini
 their accepted work. When the original requirement returns, the planner restores
 the original composition. Each selected service continues adapting its own
 workers. Click the figure to follow the process identities and routes.*
-
-</details>
 
 ##### Application responsibilities
 
@@ -1135,28 +1135,6 @@ administrator-provided StorageClass or GKE disks backed by a Cloud KMS key.
 Optional [record encryption](docs/deployment/record-encryption.md) uses an
 administrator-provided public key to encrypt JSON payloads inside the operator
 before writing them to either managed or external PostgreSQL databases.
-
-##### Benchmarking the control plane
-
-This is also our starting point for load-testing Polyad's own algorithms and
-watching how it scales. The [Terraform GKE test environment](terraform/README.md)
-installs standalone Argo CD and syncs the self-managed component Graph from this
-repository. The operator and KEDA use the `polyad` pool (2–10 Ubuntu nodes),
-consumers and monitoring use `fixtures`, and load generators use `copolyad`.
-All three share a configurable machine type; GKE services retain their untainted
-`default` pool. The [Argo UI](terraform/README.md#inspect-the-benchmark-application)
-can inspect both the operator and the manually synced benchmark fixture.
-
-The [load study](studies/load/README.md) installs a separate fixture Graph through
-the CRD template chart. Its [`polyad-benchmarks`](pkg/polyad-benchmarks/README.md)
-runner measures API acceptance and Job completion under bounded arrivals, with
-repeatable input snapshots and retained results. [Client plans](studies/load/README.md#plans-and-replica-counts)
-set fixture replicas and run parameters; an optional [monitoring stack](studies/load/README.md#monitoring-and-traces)
-provides Prometheus, Grafana dashboards and operator traces for each study window.
-[Graph diagnostics](docs/operations/metrics.md#graph-diagnostics-for-benchmarks)
-include topology dimensions, spectra, Cheeger inputs/search results and application
-targets on each metrics-serving operator replica.
-See [all studies](studies/README.md).
 
 #### Metrics, traces and GitOps health
 
