@@ -11,8 +11,7 @@ from collections import deque
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import nature
-import soul
+from demo import nature, soul
 from polyad_benchmarks.studies.soul.runtime.measurements import ResourceLoop, service_level
 from polyad_benchmarks.studies.soul.runtime.policy import Policy
 from polyad_sdk import container_metrics

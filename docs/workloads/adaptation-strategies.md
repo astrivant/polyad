@@ -236,7 +236,7 @@ the required HTTP, gRPC or other connection before sending work.
 such as `byKind.Deployment`. Match `maximum` and `reserve` to that metric's unit and graph
 boundary. The SDK's resource view describes the containing graph. A local
 process supervisor can provide its own observation adapter, as in
-[`soul.py`](../../soul.py), or implement a strategy over its local capacity state.
+[`soul.py`](../../demo/soul.py), or implement a strategy over its local capacity state.
 Observed headroom guides admission; atomic reservations prevent concurrent
 operations from spending the same headroom twice.
 
@@ -459,7 +459,7 @@ boolean or nonfinite metrics leave the profile unchanged as well. Additional
 cooldowns, sustained-demand windows and limits on changes belong in the
 supervisor or a custom strategy.
 
-[`soul.py`](../../soul.py) demonstrates those admission, readiness and draining
+[`soul.py`](../../demo/soul.py) demonstrates those admission, readiness and draining
 steps for real child processes. Its application-specific sustained-demand policy
 is described in [the local Soul walkthrough](local-soul-searching.md#writing-an-adaptive-application).
 The operator's [Soul searching policy](../graphs/soul-searching.md) continues to

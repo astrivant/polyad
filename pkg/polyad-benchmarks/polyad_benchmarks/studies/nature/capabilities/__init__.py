@@ -4,7 +4,7 @@ Declare mutable and fixed service capabilities for the larger Nature population.
 
 from __future__ import annotations
 
-import nature
+from demo import nature
 
 __all__ = ("catalog",)
 

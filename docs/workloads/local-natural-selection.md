@@ -13,8 +13,8 @@
 - [Relationship to Copolyad](#relationship-to-copolyad)
 <!-- toc:end -->
 
-[`nature.py`](../../nature.py) runs a parent planner above the worker and policy
-machinery in [`soul.py`](../../soul.py). Natural Selection chooses services,
+[`nature.py`](../../demo/nature.py) runs a parent planner above the worker and policy
+machinery in [`soul.py`](../../demo/soul.py). Natural Selection chooses services,
 capabilities and their composition. Soul searching adapts worker pools inside
 that admitted composition. Both run as real processes with verified work,
 bounded resources and graceful shutdown.
@@ -25,9 +25,9 @@ Keep the two scripts together and use Python 3.13 or 3.14:
 
 ```sh
 python -m pip install ./pkg/polyad-types ./pkg/polyad-sdk
-python nature.py
-python nature.py --jobs 128
-python nature.py --help
+python demo/nature.py
+python demo/nature.py --jobs 128
+python demo/nature.py --help
 ```
 
 The shared `soul.py` module uses the SDK; `poetry install` also supplies this
@@ -42,7 +42,7 @@ demonstrates direct TCP peer connections separately.
 
 ## Read the supervisors
 
-Start at `main()` in [nature.py](../../nature.py). It validates configuration,
+Start at `main()` in [nature.py](../../demo/nature.py). It validates configuration,
 owns the `Nature` supervisor and always closes its population. The rest of the
 experiment follows four short flows:
 

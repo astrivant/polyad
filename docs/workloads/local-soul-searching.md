@@ -15,7 +15,7 @@
 - [From approved profiles to Natural Selection](#from-approved-profiles-to-natural-selection)
 <!-- toc:end -->
 
-[`soul.py`](../../soul.py) is a local Python example built on the SDK's
+[`soul.py`](../../demo/soul.py) is a local Python example built on the SDK's
 [`AdaptiveService` ABC](../../pkg/polyad-sdk/README.md#subclass-contract). Three
 services compute integer squares in child processes. An uneven load leaves
 service 0 busy and spare capacity at service 2. Opening a direct TCP connection
@@ -34,7 +34,7 @@ From the repository root, with Python 3.13 or 3.14:
 
 ```sh
 python -m pip install ./pkg/polyad-types ./pkg/polyad-sdk
-python soul.py
+python demo/soul.py
 ```
 
 `poetry install` also installs the local SDK. No Kubernetes cluster or external
@@ -46,10 +46,10 @@ comparison is printed. Every job computes `(ID + 1)**2` and keeps its original I
 when delegated over TCP. Its owner verifies the final result.
 
 ```sh
-python soul.py --jobs 768 --work-seconds 0.05 --tick 0.02
-python soul.py --mode adaptive  # Only the changing topology
-python soul.py --mode chain     # Only the fixed topology
-python soul.py --help
+python demo/soul.py --jobs 768 --work-seconds 0.05 --tick 0.02
+python demo/soul.py --mode adaptive  # Only the changing topology
+python demo/soul.py --mode chain     # Only the fixed topology
+python demo/soul.py --help
 ```
 
 Each worker dispatch simulates an I/O overhead using `sleep`. Interactive
@@ -59,7 +59,7 @@ Both trials use the same simulation and worker limits.
 
 ## Read the experiment from the root
 
-Start with `main()` at the bottom of [soul.py](../../soul.py). It reads settings
+Start with `main()` at the bottom of [soul.py](../../demo/soul.py). It reads settings
 and runs each trial within a `try/finally` cleanup boundary. The adaptive trial
 runs these phases:
 
@@ -151,7 +151,7 @@ work whose execution outcome is unknown.
 
 ## Compare useful work under the same limits
 
-`python soul.py` starts two fresh process trees sequentially. Both use identical
+`python demo/soul.py` starts two fresh process trees sequentially. Both use identical
 job IDs, input values, warmup timing, worker policies, process ceilings and peer
 budgets. The chain trial shares work on its two existing links. The adaptive
 trial can also open `service-0 -> service-2` under demand.
@@ -234,7 +234,7 @@ peer snapshots without an operator or HTTP server. See the [strategy guide](adap
 
 To change the application, update computation, input checks, capability handshake
 and result validation together. `worker()` accepts a computation function, as
-used by [nature.py](../../nature.py). Preserve readiness, ownership, capacity and
+used by [nature.py](../../demo/nature.py). Preserve readiness, ownership, capacity and
 draining checks around it. For a long-lived service, replace the finite trial's
 completion assertions with application health and lifecycle reporting.
 
@@ -294,7 +294,7 @@ poetry run pytest pkg/tests/test_local_soul.py pkg/tests/test_local_nature.py
 
 ## From approved profiles to Natural Selection
 
-Run [`python nature.py`](../../nature.py) to put a parent Natural Selection
+Run [`python demo/nature.py`](../../demo/nature.py) to put a parent Natural Selection
 planner above the same worker and policy machinery. The
 [local Natural Selection guide](local-natural-selection.md) shows how a new
 required outcome selects capabilities and routes, replaces a service, keeps

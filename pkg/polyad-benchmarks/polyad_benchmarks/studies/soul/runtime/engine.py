@@ -11,7 +11,7 @@ from collections import Counter, deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-import nature
+from demo import nature
 from polyad_benchmarks.studies.soul.runtime.measurements import service_level
 from polyad_benchmarks.studies.soul.runtime.service import serve
 

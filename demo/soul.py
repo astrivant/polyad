@@ -10,11 +10,11 @@ for their results. Each service also adjusts its own workers using Soul searchin
 Run from the repository root with the local SDK installed:
 
     python -m pip install ./pkg/polyad-types ./pkg/polyad-sdk
-    python soul.py                    # Compare chain and adaptive runs
-    python soul.py --mode adaptive    # Just the changing topology
-    python soul.py --mode chain       # Just the fixed topology
-    python soul.py --jobs 768 --peer-window 12
-    python soul.py --help
+    python demo/soul.py                    # Compare chain and adaptive runs
+    python demo/soul.py --mode adaptive    # Just the changing topology
+    python demo/soul.py --mode chain       # Just the fixed topology
+    python demo/soul.py --jobs 768 --peer-window 12
+    python demo/soul.py --help
 
 The default comparison runs both trials sequentially with fresh processes, the
 same job IDs and values, the same worker profiles and the same resource limits.

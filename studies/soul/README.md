@@ -14,7 +14,7 @@
 This study runs six application services, their child workers, a producer and a
 monitoring parent. It exercises the SDK's concrete strategy implementations
 together, then plots the actual process trees, queues, admission decisions and
-completed work. The original [`soul.py`](../../soul.py) remains the smaller TCP
+completed work. The original [`soul.py`](../../demo/soul.py) remains the smaller TCP
 work-sharing example.
 
 ## Run

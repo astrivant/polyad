@@ -58,10 +58,6 @@ def sources(project: Path) -> dict[str, str]:
         dict[str, str]: Relative source paths and SHA-256 hashes.
     """
     result = {}
-    for name in ("soul.py", "nature.py"):
-        path = project / name
-        if path.is_file():
-            result[name] = hashlib.sha256(path.read_bytes()).hexdigest()
 
     # Strategy studies call the production solver: changes invalidate prepared inputs too.
     for path in sorted((project / "pkg/polyad/graph").glob("*.py")):
@@ -70,6 +66,7 @@ def sources(project: Path) -> dict[str, str]:
     # Fingerprint executable sources and recipes, not generated results or
     # figures. Otherwise publishing a result would invalidate its own input set.
     for directory in (
+        "demo",
         "pkg/polyad-benchmarks",
         "pkg/polyad-sdk",
         "pkg/polyad-types",

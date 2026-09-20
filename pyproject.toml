@@ -92,7 +92,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["pkg/tests"]
-pythonpath = ["pkg", "pkg/polyad-sdk", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
+pythonpath = [".", "pkg", "pkg/polyad-sdk", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
 addopts = "-n auto --maxprocesses=8 --dist=worksteal"
 
 [tool.ruff]
@@ -127,7 +127,7 @@ convention = "google"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["pkg", "examples", "soul.py", "nature.py"]
+files = ["pkg", "examples", "demo"]
 exclude = ["^pkg/tests/"]
 
 [[tool.mypy.overrides]]

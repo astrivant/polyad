@@ -20,7 +20,7 @@ import pytest
 
 from polyad_sdk import AdaptiveService, PeerAvailabilityStrategy, Settings, TopologyStrategy
 
-SCRIPT = Path(__file__).resolve().parents[2] / "soul.py"
+SCRIPT = Path(__file__).resolve().parents[2] / "demo/soul.py"
 FAST = ["--work-seconds", "0.02", "--tick", "0.02", "--cooldown", "0.1", "--idle-seconds", "0.15"]
 
 

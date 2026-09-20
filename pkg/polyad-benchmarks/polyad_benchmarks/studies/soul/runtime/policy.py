@@ -9,6 +9,7 @@ from collections import Counter
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from demo.soul import LocalObservations
 from polyad_benchmarks.studies.soul.strategies import freshness, reachability
 from polyad_benchmarks.studies.soul.strategies.capacity import budget, memory, resources, threshold
 from polyad_benchmarks.studies.soul.strategies.decisions import guard, observations
@@ -17,7 +18,6 @@ from polyad_benchmarks.studies.soul.strategies.routing import connections, peers
 from polyad_sdk import AdaptiveService, Settings
 from polyad_sdk.symbiosis.reachability import QueueModel, compile_envelope
 from polyad_types import Event, ServiceEndpoint
-from soul import LocalObservations
 
 if TYPE_CHECKING:
     from collections.abc import Callable

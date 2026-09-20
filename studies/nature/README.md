@@ -15,7 +15,7 @@ This study places Natural Selection above the [Soul process study](../soul/READM
 The parent changes the required result while six services adapt their own workers
 and admission policies. Services survive, receive replacement implementations,
 join the composition or retire according to whether they can help produce that result.
-The original [`nature.py`](../../nature.py) stays unchanged and supplies the planner
+The original [`nature.py`](../../demo/nature.py) stays unchanged and supplies the planner
 and business functions.
 
 ## Run

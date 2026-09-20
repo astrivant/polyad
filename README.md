@@ -101,12 +101,12 @@ named `polyad-types` and exposes `polyad_types`.
 Use [Service Symbiosis](docs/workloads/adaptive-microservices.md) to write
 producers and consumers that cooperate across Graphs and PolyGraphs: discover
 compatible peers, react to connection and capacity deltas, propagate backpressure
-and report useful completion. Run the standalone [`python soul.py`](soul.py)
+and report useful completion. Run the standalone [`python demo/soul.py`](demo/soul.py)
 [local demonstration](docs/workloads/local-soul-searching.md) to watch three service
 processes share queued work over an added TCP connection and roll their child
 workers under load. It compares completion time, latency and backlog against a
 fixed chain with the same load and worker limits.
-Run [`python nature.py`](nature.py) for the [parent Natural Selection demonstration](docs/workloads/local-natural-selection.md):
+Run [`python demo/nature.py`](demo/nature.py) for the [parent Natural Selection demonstration](docs/workloads/local-natural-selection.md):
 changing requirements select capabilities and routes, mutate services, preserve
 useful survivors and retire excluded processes.
 

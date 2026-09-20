@@ -2,8 +2,7 @@ name: Process studies
 on:
   pull_request:
     paths:
-      - soul.py
-      - nature.py
+      - demo/**
       - pkg/polyad-sdk/**
       - pkg/polyad-types/**
       - pkg/polyad-benchmarks/**

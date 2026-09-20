@@ -6,14 +6,14 @@ repos:
     hooks:
       - id: pydocstyle
         args: [--config=pyproject.toml]
-        files: ^(pkg|scripts|examples)/.*\.py$
+        files: ^(pkg|scripts|examples|demo)/.*\.py$
         exclude: ^pkg/tests/
   - repo: https://github.com/jsh9/pydoclint
     rev: 0.6.6
     hooks:
       - id: pydoclint
         args: [--config=pyproject.toml]
-        files: ^(pkg|scripts|examples)/.*\.py$
+        files: ^(pkg|scripts|examples|demo)/.*\.py$
         exclude: ^pkg/tests/
   - repo: https://github.com/bitnami/readme-generator-for-helm
     rev: 4d29f59abac6aeed6fbc2467e24fc17560057bcb # 3.0.1

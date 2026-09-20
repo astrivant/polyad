@@ -640,7 +640,7 @@ Services, with bounded caches, configurable freshness and explicit lifecycle.
 
 ## Run a local process tree
 
-Run [`python soul.py`](../../soul.py) from the repository root to exercise Service
+Run [`python demo/soul.py`](../../demo/soul.py) from the repository root to exercise Service
 Symbiosis with three service processes and a separate load generator. Each
 service rolls between interactive and batch child workers; the services' actual
 TCP topology changes from a chain to a triangle and back. The new connection
@@ -652,7 +652,7 @@ verifies every result and shuts down its tree.
 See the [local example guide](local-soul-searching.md) for diagrams, controls and
 lifecycle evidence.
 
-Run [`python nature.py`](../../nature.py) for the
+Run [`python demo/nature.py`](../../demo/nature.py) for the
 [parent Natural Selection example](local-natural-selection.md). It derives
 compatible service routes from a required outcome, mutates one capability,
 retains useful service identities and drains excluded processes. Soul searching

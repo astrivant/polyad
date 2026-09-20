@@ -23,7 +23,7 @@ substituted; the shipped backends retain their existing configuration and behavi
 | `polyad.graph.Workload` | `work` property and `run(control, checkpoint)` | `polyad.scheduling.Graph`, heartbeat example, `Scheduler` |
 | `polyad.graph.ProcessOwner` | `run(...)`, `stop()` | Application-supplied owners passed to `OperationQueue(owner_factory=...)` |
 | `polyad.scheduling.SchedulingPolicy` | `rank(...)`, `preempt(...)`; optionally `priorities(...)` | `ShortestRemaining`, `FIFO`, `BreadthFirst`, `DepthFirst` |
-| `polyad_sdk.AdaptiveService` | `adapt(change)` | Application subclasses and [`soul.py`](../../soul.py) |
+| `polyad_sdk.AdaptiveService` | `adapt(change)` | Application subclasses and [`soul.py`](../../demo/soul.py) |
 | `polyad_sdk.AdaptationStrategy` | `adapt(change, current)` | Ordered components passed to `AdaptiveService(strategies=...)` |
 | `polyad_sdk.ConstraintStrategy` | `evaluate(current)` | Freshness, peer availability, connection permission, graph/container budget and decision guards |
 | `polyad_sdk.EventSource` | `topology(...)`, `events(...)`, `event_endpoints(...)`; set `url` | `Client`, `Subscription`, `AdaptiveService` |

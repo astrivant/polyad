@@ -20,7 +20,7 @@ from polyad_benchmarks.studies.soul.runtime.engine import PopulationMonitor
 if TYPE_CHECKING:
     from typing import Any
 
-    import nature
+    from demo import nature
 
 __all__ = ("Monitor",)
 

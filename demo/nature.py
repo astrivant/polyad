@@ -31,12 +31,12 @@ service itself creates a new process instance, called an incarnation in the
 code. Every plan has a version number, called its revision, which travels with
 job messages so a service can reject work sent for the wrong plan.
 
-Keep this script beside soul.py and install its local SDK dependency:
+Run from the repository root with the local SDK installed:
 
     python -m pip install ./pkg/polyad-types ./pkg/polyad-sdk
-    python nature.py
-    python nature.py --jobs 128
-    python nature.py --help
+    python demo/nature.py
+    python demo/nature.py --jobs 128
+    python demo/nature.py --help
 
 Reading order
 -------------
@@ -192,12 +192,19 @@ import itertools
 import math
 import multiprocessing as mp
 import signal
+import sys
 import time
 from collections import deque
 from dataclasses import dataclass, field, fields, replace
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-import soul
+if not __package__:
+    # Direct script execution starts with demo/ on sys.path. Resolve the package
+    # from this file, not the working directory, so spawned children can import it.
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from demo import soul  # noqa: E402  # Package import follows the direct-script path bootstrap.
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-import nature
+from demo import nature
 from polyad_benchmarks.studies import artifacts
 from polyad_benchmarks.studies.nature.selection import select
 from polyad_benchmarks.studies.runner import validate

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import threading
 
-import nature
+from demo import nature
 from polyad_benchmarks.studies.nature.capabilities import catalog
 
 __all__ = ("select",)
