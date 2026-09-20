@@ -73,6 +73,7 @@ def test_sdk_reads_all_compiler_projected_identity_and_placement_fields():
         assert getattr(context.pod, item.name) == values[item.metadata["env"]]
     for name in RESOURCE_FIELDS:
         assert getattr(context.resources, name.removeprefix("POLYAD_").lower()) == int(values[name])
+
     # Placement never silently selects a remote event authority.
     assert context.pod.cluster == "west" and context.identity.cluster == ""
     assert WorkloadContext.from_environment(values, cluster="west").identity.cluster == "west"

@@ -58,6 +58,9 @@ class Envelope:
         Returns:
             tuple[bool, float]: Whether all bounds pass, and the smallest queue slack in work units.
         """
+
+        # Both obligations must hold: stay below hard limits during the horizon,
+        # and reach the desired terminal targets by its end. The least slack wins.
         peak, terminal = self.model.bounds(state, self.horizon)
         margin = min(
             *(limit - value for limit, value in zip(self.model.limits, peak, strict=True)),
@@ -102,6 +105,9 @@ class Envelope:
             for key in ("names", "capacities", "limits", "targets", "arrival_bounds", "shares"):
                 model[key] = tuple(model[key])
             envelope = cls(model=QueueModel(**model), **document)
+
+            # Recompute identity from parsed model values; a claimed fingerprint
+            # cannot make changed capacities or routing shares match an old envelope.
             if envelope.model.fingerprint != fingerprint:
                 raise ValueError("envelope model fingerprint differs")
             return envelope

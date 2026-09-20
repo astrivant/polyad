@@ -33,6 +33,7 @@ def workers(tmp_path):
     Construct workers using a concrete readiness and draining protocol.
     """
 
+    # File handshakes prove the child reached readiness or drained, without timing-based guesses.
     def ready(process):
         return (tmp_path / f"{process.pid}.ready").is_file()
 
@@ -123,6 +124,8 @@ def test_failed_replacement_rolls_back_without_losing_old_workers(workers, failu
         result = owner.reconcile()
         assert result.state == "Failed" and "secret" not in result.reason
         assert owner.profile == "old" and owner.active == (original,) and original.returncode is None
+
+        # Failed candidates must be joined and forgotten while the original worker remains usable.
         assert len(owner._owned) == 1
     finally:
         owner.close()

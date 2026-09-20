@@ -147,6 +147,7 @@ def test_mixed_graph_types_roll_up_leaf_work_once():
         assert api.objects[key]["status"]["ready"] is True
         assert api.objects[key]["status"]["completed"] is False
         assert api.objects[key]["status"]["metrics"]["rollup"]["readyLeafNodes"] == 4
+
         # Stable summaries must not produce a status/watch feedback loop.
         calls = len(api.calls)
         await settle(api, 2)
@@ -231,6 +232,7 @@ def test_invalid_child_failure_propagates_and_owner_event_enqueues_parent():
         await settle(api)
         child = next(obj for obj in api.children("Graph") if obj["metadata"].get("ownerReferences"))
         child["status"].update(phase="Invalid", failed=False, ready=False, completed=False)
+
         # Simulate the handler's Invalid publication without executing that child again.
         group = next(obj for obj in api.children("PolyGraph") if obj["metadata"].get("ownerReferences"))
         controller = Controller(api)
@@ -318,6 +320,7 @@ def test_example_completes_with_root_totals():
             for job in api.children("Job"):
                 job["status"] = {"conditions": [{"type": "Complete", "status": "True"}]}
             await settle(api, 1)
+
             # Emulate foreground garbage collection after dependent finalizers finish.
             for child_key, child in list(api.objects.items()):
                 meta = child["metadata"]
@@ -331,6 +334,7 @@ def test_example_completes_with_root_totals():
         assert rollup["graphCount"] == 5
         assert rollup["nestingDepth"] == 3
         assert rollup["resourceCount"] == 7
+
         # Template definitions have no execution status and are excluded from root totals.
         assert all("status" not in obj for obj in api.objects.values() if obj["spec"].get("templateOnly"))
 

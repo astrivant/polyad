@@ -122,6 +122,8 @@ class OutboundClient:
             raise ValueError("credential has been revoked")
         parsed = urlsplit(path)
         decoded = parsed.path
+
+        # Decode repeatedly so nested percent-encoding cannot conceal traversal out of the pinned base URL.
         for _ in range(len(decoded) + 1):
             expanded = unquote(decoded)
             if expanded == decoded:

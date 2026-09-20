@@ -178,6 +178,7 @@ class Directory:
         stream = self.streams.get(cluster)
         if stream is None:
             raise Unavailable("this operator cannot supply events for the requested graph")
+
         # Capture before reading live membership. Replaying concurrent events can
         # duplicate an observation, but cannot leave a read/subscribe gap.
         cursor = await stream.cursor(None)

@@ -67,6 +67,9 @@ class AnalysisBudget:
         """
         if type(dimensions) is not int or not 1 <= dimensions <= 3:
             raise ValueError("this backend supports one to three state axes")
+
+        # Grid cost grows exponentially with state dimensions. Reject oversized
+        # requests before importing JAX or allocating numerical workspace.
         points = self.points_per_axis**dimensions
         workspace = points * 4 * (24 + 4 * dimensions)
         if points > self.max_points or workspace > self.max_workspace_bytes:
@@ -110,6 +113,8 @@ def analyze(
             raise ValueError("numerical sample lies outside the modeled domain")
     from polyad_sdk.symbiosis.reachability._numerical import compute
 
+    # Isolate numerical work in a spawned process so the parent can enforce a
+    # deadline even when a native numerical kernel does not cooperate with cancellation.
     context = multiprocessing.get_context("spawn")
     receive, send = context.Pipe(duplex=False)
     worker = context.Process(target=compute, args=(send, model, horizon, budget, samples))
@@ -130,6 +135,9 @@ def analyze(
             raise TimeoutError("reachability worker did not stop within its deadline")
         if worker.exitcode != 0:
             raise RuntimeError("reachability worker failed after returning a result")
+
+        # A returned payload is insufficient: require clean worker exit and finite
+        # sample margins before presenting the numerical analysis as successful.
         result.update(estimate, wallSeconds=time.monotonic() - started, fingerprint=model.fingerprint)
         if not all(math.isfinite(item["numericalMargin"]) for item in result["samples"]):
             raise RuntimeError("numerical solver produced nonfinite values")

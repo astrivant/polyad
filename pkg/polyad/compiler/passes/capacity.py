@@ -41,6 +41,8 @@ def requests(spec: dict[str, Any], *, overhead: bool = True) -> dict[str, str]:
     peak: dict[str, Decimal] = {}
     for container in spec.get("containers", []):
         add(regular, resources(container))
+
+    # Restartable init sidecars overlap later init steps; ordinary init containers run sequentially.
     for container in spec.get("initContainers", []):
         current = dict(sidecars)
         add(current, resources(container))
@@ -48,6 +50,8 @@ def requests(spec: dict[str, Any], *, overhead: bool = True) -> dict[str, str]:
             sidecars = current
         for key, value in current.items():
             peak[key] = max(peak.get(key, Decimal(0)), value)
+
+    # Scheduling must cover the larger of startup peak and all steady-state containers together.
     add(regular, sidecars)
     for key, value in peak.items():
         regular[key] = max(regular.get(key, Decimal(0)), value)

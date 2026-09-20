@@ -40,6 +40,8 @@ def test_independent_mutations_commute_and_plan_roundtrips():
     assert [(item.left, item.right) for item in plan.independences] == [("ingestion", "reporting")]
     assert converter.structure(converter.unstructure(plan), MutationPlan) == plan
     results = []
+
+    # Check both serial completions as a concrete witness for this disjoint-effects example.
     for order in ((a, b), (b, a)):
         state = {"ingestion": 2, "reporting": 3}
         for mutation in order:

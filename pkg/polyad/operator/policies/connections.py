@@ -103,6 +103,7 @@ async def refresh_network(controller: Controller, root: dict[str, Any], *, revok
             except (ValueError, TypeError, KeyError, Pending, CattrsError):
                 if not revoking:
                     raise
+
                 # Invalid rules or a deleting ancestor must never preserve an
                 # expired allowance. Keep an explicit deny policy until normal
                 # graph reconciliation can rebuild the intended contract.
@@ -225,6 +226,7 @@ async def finish(controller: Controller, receipt: dict[str, Any], graph: dict[st
         if meta["uid"] in grants:
             del grants[meta["uid"]]
             graph = await write_grants(controller, graph, grants)
+
         # Retry policy cleanup even if the graph annotation write succeeded in
         # an earlier attempt whose policy write or acknowledgement failed.
         await refresh_network(controller, graph, revoking=True)
@@ -365,6 +367,7 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         if meta["uid"] not in grants and terminal != "Active":
             await finish(controller, receipt, graph, "Rejected", message)
             return
+
         # Persist revocation before removing the grant: a retry must not restore
         # it if the endpoint returns while network policy cleanup is incomplete.
         receipt = await controller.api.request(
@@ -456,6 +459,7 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
             return
     if terminal == "Active":
         return
+
     # Re-evaluate on policy retries too: a persisted annotation may precede
     # rule edits or workload creation while admission is still pending.
     base = copy.deepcopy(graph)

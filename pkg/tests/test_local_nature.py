@@ -64,6 +64,7 @@ def test_selection_derives_a_mutation_and_a_multistage_route(nature):
     assert selected.describe() == [["A:square-plus-one"], ["B:square", "D:increment"]]
     assert selected.cost == 3 and selected.expansion == 1
     assert nature.natural_selection(nature.ENVIRONMENTS[2], selected.placements, settings) == selected
+
     # Increasing B's cost causes C to survive instead: selection is not a scripted deletion.
     nature.CATALOG = tuple(replace(place, cost=3) if place.name == "B" else place for place in nature.CATALOG)
     alternative = nature.natural_selection(nature.Requirement("enriched", 2, 4), original.placements, settings)

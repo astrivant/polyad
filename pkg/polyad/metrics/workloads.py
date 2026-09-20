@@ -68,6 +68,8 @@ def workload_metric(snapshot: dict[str, Any], kind: str, name: str, metric: str,
         ValueError: A required observation is stale or incomplete.
     """
     inventory = snapshot["inventory"]
+
+    # Unknown demand must not look like zero demand to an autoscaler considering scale-down.
     if not inventory["fresh"]:
         raise ValueError("namespace inventory is stale")
     records = inventory["objects"]
@@ -144,6 +146,8 @@ def workload_metric(snapshot: dict[str, Any], kind: str, name: str, metric: str,
             if metric not in entry["values"]:
                 raise KeyError("unknown workload metric")
             values.append(entry["values"][metric])
+
+    # Validate every contribution before summing; one invalid source invalidates the aggregate.
     if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) for value in values):
         raise ValueError("workload signal is not a finite number")
     return {

@@ -167,6 +167,8 @@ class Coordinator:
         """
         meta = lease["metadata"]
         name, version = meta["name"], meta["resourceVersion"]
+
+        # Time the unchanged version locally; clock skew between replicas cannot expire a lease.
         previous = self.observed.get(name)
         if previous is None or previous[0] != version:
             self.observed[name] = (version, time.monotonic())
@@ -208,6 +210,8 @@ class Coordinator:
             if error.status == 409:
                 return False
             raise
+
+        # Charge request latency against the lease and reserve enough time to finish a write.
         self.deadlines[name] = started + DURATION
         return time.monotonic() < self.deadlines[name] - WRITE_BUDGET
 

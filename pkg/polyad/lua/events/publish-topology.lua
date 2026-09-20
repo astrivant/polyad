@@ -4,6 +4,8 @@ local changed = not previous or cjson.decode(previous).revision ~= ARGV[3]
 if not previous and redis.call('HLEN', KEYS[2]) >= tonumber(ARGV[5]) then
     redis.call('DEL', KEYS[2])
 end
+
+-- Revision changes emit events; unchanged revisions still refresh the latest readable snapshot.
 local id = false
 if changed then
     id = redis.call('XADD', KEYS[1], 'MAXLEN', ARGV[5], '*', 'event', ARGV[4])

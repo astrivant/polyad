@@ -55,6 +55,7 @@ def test_local_refresh_preserves_identity_and_refuses_incomplete_publication(tmp
     with pytest.raises(ValueError, match="incomplete"):
         refresh.finish(ROOT, root)
     config = json.loads((root / "inputs/symbiosis.json").read_text())
+
     # Record an offline test recipe in provenance instead of bypassing verification.
     config["numerical"], config["guardIterations"] = False, 2
     refresh.write_json(root / "inputs/symbiosis.json", config)

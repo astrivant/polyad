@@ -180,6 +180,9 @@ class State:
         Returns:
             Environment: Independent immutable view, with unavailable context explicitly identified.
         """
+
+        # Freshness is evaluated when the application asks for a view, so silence
+        # can make old evidence unavailable even without a new stream event.
         topology = self.topology
         reason = self.reason
         if topology is None:
@@ -188,6 +191,9 @@ class State:
             reason = reason or "topology observation is stale"
         elif not topology["valid"] or topology["templateOnly"] or topology["terminating"] or not topology["node"]["desired"]:
             reason = reason or "topology does not admit new assignments"
+
+        # Expire observations and temporary connections independently. Keep their
+        # absence explicit instead of representing a failed stream as an empty graph.
         observations = {
             uid: item for uid, (received, item) in self.observations.items() if 0 <= now - received <= self.settings.max_age_seconds
         }
@@ -205,6 +211,9 @@ def normalized(value: Any) -> Any:
     Returns:
         Any: Comparison projection retaining actual values and stable record keys.
     """
+
+    # Heartbeat timestamps should not trigger adaptations. Stable identity keys
+    # also prevent harmless ordering changes from looking like topology churn.
     if isinstance(value, Mapping):
         result: dict[str, Any] = {}
         for key, item in value.items():
@@ -249,6 +258,9 @@ def projection(view: Environment) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Stable comparison fields; missing metrics remain missing.
     """
+
+    # Compare the application's decision inputs, not every transport field. This
+    # is the projection used to decide whether a strategy callback needs to run.
     result: dict[str, Any] = {"available": view.available, "reason": view.reason}
     if view.topology is not None:
         topology = view.topology

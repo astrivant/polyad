@@ -144,6 +144,8 @@ class Policy(AdaptiveService):
             return
         data = self.read()
         self.sequence += 1
+
+        # Renewal creates a new receipt incarnation; an expired authorization cannot revive in place.
         if self.permission == "Expired" and data["permission"] != "Expired":
             self.receipt_generation += 1
             self.receipt_uid = f"lease-{self.receipt_generation}"

@@ -103,6 +103,7 @@ def test_fixture_uses_real_http_and_pins_graph_context(monkeypatch, capsys):
             assert result["acceptanceSeconds"] <= result["elapsedSeconds"]
             assert calls == [{"request_id": "sample-00001", "graph": "actual-graph", "graph_uid": "actual-uid", "node": "batch"}]
             monkeypatch.delenv("POLYAD_BENCHMARK_FIXTURE_TOKEN")
+
             # The request cannot use the operator token as its fixture credential.
             monkeypatch.setenv("POLYAD_BENCHMARK_FIXTURE_TOKEN", "fixture-token")
             from polyad_sdk import APIError, Client

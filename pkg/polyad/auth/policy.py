@@ -93,6 +93,8 @@ def inject_credentials(pod: dict[str, Any], definition: dict[str, Any], cluster:
                     if assignment.containers and container["name"] not in assignment.containers:
                         continue
                     environment = container.setdefault("env", [])
+
+                    # Reference the namespace-local Secret; compiled Pod documents contain no token bytes.
                     desired = {
                         "name": assignment.env,
                         "valueFrom": {"secretKeyRef": {"name": assignment.secret or key.existingSecret, "key": key.secretKey}},

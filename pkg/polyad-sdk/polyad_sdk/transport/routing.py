@@ -34,6 +34,9 @@ def addresses(document: dict[str, Any]) -> list[tuple[str, int]]:
     for entry in entries:
         if not isinstance(entry, dict) or not isinstance(entry.get("address"), str):
             raise ValueError("event endpoint requires an IP address")
+
+        # Discovery controls where authenticated connections go. Require numeric
+        # IPs and reject special-use destinations before sending credentials.
         ip = ipaddress.ip_address(entry["address"])
         port = entry.get("port")
         if ip.is_loopback or ip.is_unspecified or ip.is_multicast or ip.is_link_local or ip.is_reserved:
@@ -58,6 +61,8 @@ def opener(endpoint: tuple[str, int]) -> OpenerDirector:
     """
     from polyad_sdk.transport.http import _NoRedirect
 
+    # Change only the TCP destination. The original URL still supplies HTTP Host
+    # and TLS identity, so direct routing does not change which server is trusted.
     def connect(kind: type[HTTPConnection], host: str, **kwargs: Any) -> HTTPConnection:
         connection = kind(host, **kwargs)
 

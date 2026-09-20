@@ -16,6 +16,37 @@ on:
 permissions:
   contents: read
 jobs:
+  cheeger-studies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: pkg/polyad-benchmarks:.
+      MPLCONFIGDIR: .cache/matplotlib
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      VECLIB_MAXIMUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry sync
+      - name: Verify oracle comparisons and production tier observations
+        run: poetry run python -m pytest -o addopts='' pkg/tests/test_cheeger_strategies.py pkg/tests/test_cheeger_computation.py pkg/tests/test_cheeger_reduction.py
+      - name: Record both local Cheeger studies
+        run: |
+          poetry run python -m polyad_benchmarks.refresh --ci-phase prepare --suite cheeger --root .cache/benchmarks/cheeger
+          poetry run python -m polyad_benchmarks.refresh --ci-phase study --study cheeger-reduction --root .cache/benchmarks/cheeger
+          poetry run python -m polyad_benchmarks.refresh --ci-phase study --study cheeger-strategies --root .cache/benchmarks/cheeger
+          poetry run python -m polyad_benchmarks.refresh --ci-phase finish --root .cache/benchmarks/cheeger
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cheeger-studies
+          path: .cache/benchmarks/cheeger/
+          include-hidden-files: true
+          retention-days: 30
   smoke:
     runs-on: ubuntu-latest
     strategy:

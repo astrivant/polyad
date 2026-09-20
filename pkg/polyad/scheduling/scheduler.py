@@ -248,6 +248,8 @@ class Scheduler:
             raise ValueError("rewrite contains duplicate identities")
         if removed - self.states.keys() or added.keys() & (self.states.keys() - removed):
             raise ValueError("rewrite removes unknown units or adds existing identities")
+
+        # Rewrites may reshape future work, but cannot invalidate running or resumable state.
         for name in removed | (links.keys() & self.states.keys()):
             state = self.states[name]
             if state.status != "pending" or state.checkpoint is not None or name in self.active:
@@ -261,6 +263,7 @@ class Scheduler:
             proposed[name] = replace(proposed[name], work=replace(proposed[name].work, requires=requires))
         self._validate({name: state.work for name, state in proposed.items()})
         routes = {name: gate for name, gate in self.routes.items() if name not in removed or name in added}
+
         # Validate recursive containment before publication as well.
         shape_hash(self, tuple((state.work, state.unit) for state in proposed.values()), routes)
         self.states, self.routes = proposed, routes
@@ -429,6 +432,8 @@ class Scheduler:
             if stats.completed < state.statistics.completed:
                 raise ValueError(f"progress moved backwards: {name}")
             elapsed, completed = now - state.observed_at, stats.completed - state.observed_completed
+
+            # Smooth measured progress to avoid scheduling swings from one unusually fast sample.
             if elapsed > 0 and completed > 0:
                 rate = completed / elapsed
                 state.rate = rate if state.rate is None else 0.3 * rate + 0.7 * state.rate
@@ -529,6 +534,8 @@ class Scheduler:
         self.parent_control = control
         self.directory.mkdir(parents=True, exist_ok=True)
         lock = self.directory / "scheduler.lock"
+
+        # Atomic directory creation excludes another scheduler from the same checkpoint journal.
         lock.mkdir()
         pool: ThreadPoolExecutor | None = None
         activated = time.monotonic()

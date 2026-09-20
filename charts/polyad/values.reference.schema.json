@@ -194,6 +194,34 @@
             },
             "timeoutSeconds": {
               "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/timeoutSeconds"
+            },
+            "reduction": {
+              "type": "object",
+              "description": "Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search; graph policies must also opt in.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/enabled"
+                },
+                "maxVertices": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/maxVertices"
+                },
+                "components": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/components"
+                },
+                "supernodes": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/supernodes"
+                },
+                "cache": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/cache"
+                },
+                "cacheEntries": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/cacheEntries"
+                },
+                "maxEdgeChurn": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/maxEdgeChurn"
+                }
+              }
             }
           }
         },
@@ -5363,7 +5391,7 @@
                           "anyOf": [
                             {
                               "type": "object",
-                              "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                              "description": "Budget exact search and optionally try certified quotient reductions first.",
                               "additionalProperties": false,
                               "properties": {
                                 "maxVertices": {
@@ -5466,6 +5494,90 @@
                                     },
                                     {
                                       "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                    }
+                                  ]
+                                },
+                                "reduction": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "enabled": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "maxVertices": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "components": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "supernodes": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "cache": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "cacheEntries": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "maxEdgeChurn": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                     }
                                   ]
                                 }
@@ -6005,7 +6117,7 @@
                                   "anyOf": [
                                     {
                                       "type": "object",
-                                      "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                      "description": "Budget exact search and optionally try certified quotient reductions first.",
                                       "additionalProperties": false,
                                       "properties": {
                                         "maxVertices": {
@@ -6108,6 +6220,90 @@
                                             },
                                             {
                                               "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "reduction": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "enabled": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "maxVertices": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "components": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "supernodes": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "cache": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "cacheEntries": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "maxEdgeChurn": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                             }
                                           ]
                                         }
@@ -7093,7 +7289,7 @@
                                   "anyOf": [
                                     {
                                       "type": "object",
-                                      "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                      "description": "Budget exact search and optionally try certified quotient reductions first.",
                                       "additionalProperties": false,
                                       "properties": {
                                         "maxVertices": {
@@ -7196,6 +7392,90 @@
                                             },
                                             {
                                               "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "reduction": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "enabled": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "maxVertices": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "components": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "supernodes": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "cache": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "cacheEntries": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "maxEdgeChurn": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                             }
                                           ]
                                         }
@@ -8882,7 +9162,7 @@
                                           "anyOf": [
                                             {
                                               "type": "object",
-                                              "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                              "description": "Budget exact search and optionally try certified quotient reductions first.",
                                               "additionalProperties": false,
                                               "properties": {
                                                 "maxVertices": {
@@ -8985,6 +9265,90 @@
                                                     },
                                                     {
                                                       "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "reduction": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "object",
+                                                      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                                      "additionalProperties": false,
+                                                      "properties": {
+                                                        "enabled": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "maxVertices": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "components": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "supernodes": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "cache": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "cacheEntries": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "maxEdgeChurn": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                                     }
                                                   ]
                                                 }

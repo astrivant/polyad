@@ -25,7 +25,8 @@ if TYPE_CHECKING:
 STUDIES = ("load",)
 REACHABILITY_STUDIES = ("symbiosis", "reachability-state", "reachability-routing", "cheeger-reduction")
 PROCESS_STUDIES = ("soul", "nature")
-LOCAL_STUDIES = REACHABILITY_STUDIES + PROCESS_STUDIES
+CHEEGER_STUDIES = ("cheeger-reduction", "cheeger-strategies")
+LOCAL_STUDIES = REACHABILITY_STUDIES + ("cheeger-strategies",) + PROCESS_STUDIES
 
 
 def sources(project: Path) -> dict[str, str]:
@@ -43,6 +44,13 @@ def sources(project: Path) -> dict[str, str]:
         path = project / name
         if path.is_file():
             result[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    # Strategy studies call the production solver: changes invalidate prepared inputs too.
+    for path in sorted((project / "pkg/polyad/graph").glob("*.py")):
+        result[str(path.relative_to(project))] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    # Fingerprint executable sources and recipes, not generated results or
+    # figures. Otherwise publishing a result would invalidate its own input set.
     for directory in (
         "pkg/polyad-benchmarks",
         "pkg/polyad-sdk",
@@ -59,6 +67,7 @@ def sources(project: Path) -> dict[str, str]:
                 result[str(path.relative_to(project))] = hashlib.sha256(path.read_bytes()).hexdigest()
             elif path.is_file() and path.name == "Dockerfile":
                 result[str(path.relative_to(project))] = hashlib.sha256(path.read_bytes()).hexdigest()
+
     return result
 
 
@@ -74,6 +83,9 @@ def write_json(path: Path, value: Any) -> None:
         None: Replace the file atomically inside its output directory.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Readers must see either the previous complete document or the new one,
+    # never a partly written JSON file if execution stops during serialization.
     temporary = path.with_suffix(path.suffix + ".pending")
     temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
     temporary.replace(path)
@@ -93,12 +105,18 @@ def prepare(project: Path, root: Path, studies: tuple[str, ...] = STUDIES) -> di
     """
     if not studies or len(set(studies)) != len(studies) or not set(studies) <= set(STUDIES + LOCAL_STUDIES):
         raise ValueError("select unique registered studies")
+
+    # A run gets a fresh directory and identities before any study starts. All
+    # later phases consume these copies, not recipes that may subsequently change.
     root.mkdir(parents=True, exist_ok=False)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=project, text=True).strip()
     for study in studies:
         config = json.loads((project / "studies" / study / "fixtures" / "scenario.json").read_text())
         config["runId"] = new_run_id()
         write_json(root / "inputs" / f"{study}.json", config)
+
+    # Record both the checkout revision and byte-level source hashes: uncommitted
+    # local changes must be distinguishable even when the Git revision is unchanged.
     provenance = {
         "revision": revision,
         "preparedAt": datetime.now(UTC).isoformat(),
@@ -121,6 +139,9 @@ def selected_studies(root: Path) -> tuple[str, ...]:
         tuple[str, ...]: Registered studies selected at preparation time.
     """
     provenance = json.loads((root / "provenance.json").read_text())
+
+    # The prepared matrix is the publication contract. A missing or unexpected
+    # study must not silently shrink or extend the set of required results.
     selected = tuple(provenance["matrix"]["study"])
     if not selected or len(set(selected)) != len(selected) or not set(selected) <= set(STUDIES + LOCAL_STUDIES):
         raise ValueError("invalid prepared study inventory")
@@ -140,6 +161,9 @@ def verify_inputs(project: Path, root: Path) -> None:
     Returns:
         None: Mismatched inputs raise ValueError before any cluster mutation.
     """
+
+    # Recheck at both execution and publication time so a distributed worker
+    # cannot combine one version's inputs with another version's measurements.
     provenance = json.loads((root / "provenance.json").read_text())
     if provenance["sources"] != sources(project):
         raise ValueError("study sources differ from the prepared snapshot")
@@ -245,6 +269,7 @@ def cluster_study(root: Path, study: str, context: str) -> dict[str, Any]:
                     candidate = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+
                 # Container logs merge stdout/stderr: a late structured event
                 # must not replace the final measurement document.
                 if isinstance(candidate, dict) and {"submitted", "skipped", "interrupted", "phases"} <= candidate.keys():
@@ -288,6 +313,9 @@ def study_phase(project: Path, root: Path, study: str, context: str) -> None:
         raise ValueError("select a prepared study; cloud studies also require an explicit Kubernetes context")
     if (root / "statuses" / f"{study}.json").exists():
         raise ValueError("study already attempted; prepare a new refresh directory")
+
+    # Start pessimistically. A failed measurement or renderer keeps diagnostics
+    # but cannot masquerade as a successfully completed study during finish.
     status: dict[str, Any] = {"study": study, "success": False, "startedAt": datetime.now(UTC).isoformat()}
     try:
         verify_inputs(project, root)
@@ -296,16 +324,26 @@ def study_phase(project: Path, root: Path, study: str, context: str) -> None:
 
             # Discover a missing optional dependency before any cluster action.
             renderer(study)
+
+        # Import only the requested execution backend. Local Cheeger experiments
+        # need the production solver but neither a cluster nor process orchestration.
         if study in PROCESS_STUDIES:
             from polyad_benchmarks.studies.runner import run as run_processes
 
             run_processes(project, root, study)
+        elif study == "cheeger-strategies":
+            from polyad_benchmarks.studies.cheeger_strategies.experiment import run as run_strategies
+
+            run_strategies(root)
         elif study in LOCAL_STUDIES:
             from polyad_benchmarks.reachability import run
 
             run(root, study)
         else:
             cluster_study(root, study, context)
+
+        # Measurements are persisted before rendering. Figure generation consumes
+        # those observations rather than collecting another set of timings.
         if study not in PROCESS_STUDIES:
             from polyad_benchmarks.studies.plotting import render
 
@@ -313,12 +351,15 @@ def study_phase(project: Path, root: Path, study: str, context: str) -> None:
             result = json.loads((output / "results.json").read_text())
             render(study, result, output)
             write_json(output / "results.json", result)
+
         status["success"] = True
     except Exception as error:
         status["error"] = f"{type(error).__name__}: {error}"
         raise
     finally:
         status["finishedAt"] = datetime.now(UTC).isoformat()
+
+        # Save failure status too, so finish can explain why publication is blocked.
         write_json(root / "statuses" / f"{study}.json", status)
 
 
@@ -334,6 +375,9 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
     Returns:
         None: Missing, unexpected or failed results prevent publication.
     """
+
+    # Validate the entire matrix before copying any study into its published
+    # directory. Partial success must not replace a previous complete result set.
     verify_inputs(project, root)
     paths = list((root / "statuses").glob("*.json"))
     if {path.stem for path in paths} != set(selected_studies(root)):
@@ -341,6 +385,8 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
     results = {}
     from polyad_benchmarks.studies.plotting import verify as verify_figures
 
+    # Names alone are insufficient: each result must belong to the prepared
+    # run identity and satisfy its local or cloud completion requirements.
     for path in paths:
         status = json.loads(path.read_text())
         if status.get("study") != path.stem or status.get("success") is not True:
@@ -361,9 +407,16 @@ def finish(project: Path, root: Path, publish: bool = False) -> None:
             not result["submitted"] or result["skipped"] or result["interrupted"] or result["phases"] != {"Completed": result["submitted"]}
         ):
             raise ValueError("incomplete measurements cannot be published as a successful benchmark")
+
+        # Figure inventories and hashes prevent missing or altered plots from
+        # being published alongside otherwise successful numerical measurements.
         verify_figures(path.stem, result, root / "outputs" / path.stem)
         results[path.stem] = result
+
     write_json(root / "summary.json", {"provenance": json.loads((root / "provenance.json").read_text()), "studies": results})
+
+    # Verification alone leaves published studies untouched. Copy only when the
+    # caller explicitly requests publication, retaining the raw run directory.
     if publish:
         for name in results:
             destination = project / "studies" / name / "results.json"
@@ -396,19 +449,23 @@ def main() -> None:
     parser.add_argument("--study", choices=STUDIES + LOCAL_STUDIES, default="load")
     parser.add_argument(
         "--suite",
-        choices=("cluster", "local", "reachability", "process", "all"),
+        choices=("cluster", "local", "reachability", "cheeger", "process", "all"),
         default="cluster",
         help="Study inventory selected during prepare",
     )
     parser.add_argument("--context", default="")
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
+
+    # The same phase functions serve local commands and CI. Preparation emits
+    # the selected matrix so worker jobs cannot invent a different study inventory.
     try:
         if args.ci_phase == "prepare":
             studies = {
                 "cluster": STUDIES,
                 "local": LOCAL_STUDIES,
                 "reachability": REACHABILITY_STUDIES,
+                "cheeger": CHEEGER_STUDIES,
                 "process": PROCESS_STUDIES,
                 "all": STUDIES + LOCAL_STUDIES,
             }[args.suite]

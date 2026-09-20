@@ -1,0 +1,23 @@
+{
+  "fixedVertices": 16,
+  "fixedComponents": 4,
+  "fixedSupernodes": 6,
+  "fixedTopology": "community",
+  "topologies": ["path", "cycle", "small-world", "community"],
+  "seeds": [11, 29, 47],
+  "repetitions": 3,
+  "components": [1, 2, 4, 8],
+  "supernodes": [2, 4, 6, 8, 10],
+  "vertexCounts": [8, 12, 16, 18, 20],
+  "densities": [0.1, 0.25, 0.5, 0.75, 0.9],
+  "edgeReplacement": [0, 0.05, 0.15, 0.3, 0.6],
+  "cacheChurnLimits": [0, 0.05, 0.15, 0.4, 1],
+  "fixedCacheChurnLimit": 0.15,
+  "thresholdRatios": [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 4],
+  "policyKinds": ["minimum", "maximum", "range"],
+  "cacheEntries": [1, 2, 4, 8],
+  "boundaryCount": 4,
+  "maxCuts": [1, 7, 31, 127, 32767],
+  "timeouts": [0.001, 0.01, 1],
+  "timeoutSeconds": 10
+}

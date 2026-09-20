@@ -501,6 +501,8 @@ async def consume_loop() -> None:
                 except Pending:
                     pass  # Rescan will retry the intent after refreshed observations.
             await coordinator.guard()
+
+            # Acknowledge only after reconciliation and a final ownership check have completed.
             await shared.acknowledge(shard, message_id)
         except PulseDeferred as error:
             logger.info("Reconciliation pulse deferred for shard %s; retry after %s seconds", shard, error.retry_after)
@@ -632,6 +634,8 @@ async def cleanup(**_: Any) -> None:
     """
     global initialized, http
     logger.debug("Operator cleanup started; joining listeners, queued work and API transports")
+
+    # Withdraw health first, then stop listeners and workers before closing their transports.
     initialized = False
     if http:
         await http.close()

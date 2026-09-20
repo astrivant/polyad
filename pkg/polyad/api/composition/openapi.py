@@ -52,6 +52,7 @@ def schemas() -> dict[str, dict[str, Any]]:
     }
     return {
         "ID": identifier,
+        # Reuse typed request contracts so validation constraints also appear in API documentation.
         "ThroughputSample": structural_schema(ThroughputSample),
         "AdaptationReport": structural_schema(AdaptationReport),
         "ServiceLevelReport": structural_schema(ServiceLevelReport),

@@ -180,6 +180,8 @@ async def ensure_policies(controller: Controller, obj: dict[str, Any], plans: di
                 replacement["metadata"].setdefault("annotations", {}).update(desired["metadata"]["annotations"])
                 await controller.api.request("PUT", kind, namespace, name, replacement)
                 changed = True
+
+    # Persist guards first, then refresh before workload admission so this pass cannot outrun policy setup.
     if changed:
         raise Pending("network guards persisted; refresh before workload admission")
     children = await controller.api.owned(namespace, uid)

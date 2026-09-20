@@ -57,6 +57,7 @@ def test_rollout_withdraws_unready_or_terminating_peers_then_recovers(runtime):
     peer["executions"].append(dict(old, uid="replacement", terminating=False))
     service.refresh()
     assert results["send"].state == "blocked"
+
     # Local health changes need no invented Kubernetes event: reassess at admission.
     ready.add("replacement")
     assert strategy.evaluate(service.view).satisfied

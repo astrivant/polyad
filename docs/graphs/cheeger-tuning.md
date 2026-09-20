@@ -23,7 +23,7 @@ when the proposed layouts are useful.
 | `GraphRule.spec` | A policy administrator with Kubernetes rule-write permissions | Defines structural limits that admitted changes must respect |
 | `Graph.spec.rules`, `PolyGraph.spec.rules`, `ReplicaGroup.spec.rules` | Application owners | Selects rules with `enforcement: Referenced`; namespace rules still apply |
 | `Graph.spec.throughput`, `PolyGraph.spec.throughput` | Application owners through manifests or composition requests | Configures demand tiers, approved layouts, traffic adjustment and response timing |
-| Helm `operator.cheeger` | Operator administrators | Sets deployment-wide vertex, cut-count and time ceilings; local policies may lower them |
+| Helm `operator.cheeger` | Operator administrators | Sets deployment-wide vertex, cut-count and time ceilings and gates the optional reduction tiers; local policies may only narrow them |
 | Helm `architecture.cheegerMinimum` / `cheegerMaximum` | Operator administrators | Constrains the optional distributed operator component Graph |
 
 The composition API cannot create GraphRules. Throughput targets never relax
@@ -165,7 +165,7 @@ flowchart LR
     store -.- hint["Second priority cut: store versus all other vertices"]
 ```
 
-These preferences direct **search effort**. They do not assign weights to edges,
+These preferences direct **exact-search effort**. They do not assign weights to edges,
 ignore other parts of the graph, or change the Cheeger definition. After preferred
 cuts, exhaustive search covers every remaining partition. A cut with a ratio
 below the hard minimum proves rejection immediately; successful minimum checks
@@ -187,7 +187,8 @@ Exhaustive enumeration takes `2^(n-1)-1` distinct cuts for a connected graph:
 without enumeration. Priority cuts can make rejection much faster, but do not
 reduce the worst-case cost of proving the exact constant.
 
-Operator administrators set deployment-wide ceilings in Helm:
+Operator administrators set deployment-wide ceilings in Helm. Existing behavior
+remains exact-only unless the administrator and an individual policy both opt in:
 
 ```yaml
 operator:
@@ -195,7 +196,36 @@ operator:
     maxVertices: 22
     maxCuts: 2097151
     timeoutSeconds: 15
+    reduction:
+      enabled: true
+      maxVertices: 256
+      components: 4
+      supernodes: 8
+      cache: true
+      cacheEntries: 128
+      maxEdgeChurn: 0.1
 ```
+
+The cluster switch grants permission and establishes ceilings; it does not change
+any GraphRule or throughput policy by itself. A policy author then requests the
+feature below `cheegerComputation`:
+
+```yaml
+cheegerComputation:
+  reduction:
+    enabled: true
+    maxVertices: 128
+    components: 3
+    supernodes: 6
+    cache: true
+    cacheEntries: 64
+    maxEdgeChurn: 0.05
+```
+
+Every requested value must fit the operator ceiling. This separation lets a
+cluster administrator enable the implementation without silently changing
+application admission behavior, while colleagues can opt individual graph
+boundaries into it after studying their error and cost profiles.
 
 This permits a complete 22-vertex enumeration if it also finishes within the time
 budget. Raising the vertex cap alone does not raise the cut or time budgets.
@@ -227,13 +257,32 @@ CPU, or when a supported boundary must exceed 20 vertices. Keep the Python path
 as the semantic oracle and source-install fallback.
 
 The [PCA-guided reduction study](../../studies/cheeger-reduction/README.md)
-measures a separate experimental option: cluster vertices in a reduced adjacency
-embedding and search only cuts formed by unions of those clusters. Its lifted
-cut is a certified upper bound, and a combinatorial-Laplacian bound supplies the
-other side of an uncertainty interval. It is not currently an admission mode.
-Use its accuracy, end-to-end cost and edge-churn plots to decide whether reduced
-witnesses are useful as priority cuts or steady-graph monitoring insurance for
-your topology. A reduced result above a required minimum cannot prove compliance.
+keeps PCA as a comparative heuristic. Production uses Laplacian spectral
+coarsening instead: clusters define a quotient search, every candidate cut is
+lifted and rescored on the original graph to certify an upper bound, and
+`lambda_2 / 2` supplies a conservative lower bound. Cached entries contain only
+cluster membership. Polyad always rescores them on current edges, reuses the
+cached lower bound only when the edge set is identical, and starts a fresh
+reduction when edge churn exceeds `maxEdgeChurn`.
+
+The [strategy selection study](../../studies/cheeger-strategies/README.md) compares
+these runtime tiers against exact references across churn, policy thresholds,
+dimensions, quotient size, density, cache capacity and work budgets. It also
+graphs an event sequence with service joins and departures. Its budget probes
+count reduction work separately: current quotient loops are additional to the
+exact-search `maxCuts` allowance, and cooperative timeouts do not preempt spectral
+preprocessing. Benchmark these costs before increasing quotient size.
+
+The selector follows three cost tiers. It first tries a cached quotient, then a
+fresh spectral reduction, then exact enumeration. Given a policy interval and a
+certificate `[L, U]`, `U < minimum` proves a lower-bound violation,
+`L > maximum` proves an upper-bound violation, and `L >= minimum` together with
+`U <= maximum` proves satisfaction. Every other result is uncertain and spends
+more computation on the next tier. GraphRules can therefore admit or reject on
+a certificate without pretending an approximation is an exact constant.
+Throughput planning still obtains exact numeric constants because it compares
+and publishes concrete current and proposed values; enabling reduction there
+does not replace those values with an estimate.
 
 | `cheegerComputation` field | Default | Allowed values and choice |
 | --- | --- | --- |
@@ -241,9 +290,17 @@ your topology. A reduced result above a required minimum cannot prove compliance
 | `maxCuts` | Inherit operator ceiling, normally `524287` | Integer 1–2,147,483,647. Bounds distinct partitions evaluated, including preferred cuts. |
 | `timeoutSeconds` | Inherit operator ceiling, normally `5` | Number 0.001–300. Bounds cooperative runtime, excluding queue wait. |
 | `priorityCuts` | Empty list | Ordered subsets; up to 64, each containing 1–4,096 distinct names. |
+| `reduction.enabled` | `false` | Requires the Helm administrator gate too; enables cached quotient, fresh spectral and exact fallback tiers. |
+| `reduction.maxVertices` | `256` | Dense spectral safety cap, no greater than the operator value. Larger boundaries skip reduction and retain normal exact-budget behavior. |
+| `reduction.components` | `4` | Nontrivial Laplacian eigenvectors retained, 1–64 and no greater than the operator value. |
+| `reduction.supernodes` | `8` | Quotient vertices searched, 2–64 and no greater than the operator value. Quotient work is `2^(k-1)-1`. |
+| `reduction.cache` | `true` | Reuse only cluster membership when the operator permits it; measurements are recomputed. |
+| `reduction.cacheEntries` | `128` | Process-local LRU bound, 1–4,096 and no greater than the operator value. |
+| `reduction.maxEdgeChurn` | `0.1` | Largest symmetric changed-edge fraction accepted for cached membership reuse, 0–1 and no greater than the operator value. |
 
-Omit a local numeric field, or set it to `null`, to inherit its operator ceiling.
-A local value may reduce that ceiling; attempting to exceed it blocks evaluation.
+Omit a top-level local numeric field, or set it to `null`, to inherit its operator
+ceiling. Reduction fields use the defaults in the table and must all fit the
+administrator's configured ceilings; attempting to exceed one blocks evaluation.
 The fields are available on `GraphRule.spec.cheegerComputation` and
 `Graph/PolyGraph.spec.throughput.cheegerComputation`. Hard-rule search and feedback
 search have separate local preferences, under the same deployment ceilings.
@@ -252,7 +309,15 @@ For the Python API, pass `CheegerComputation(...)` as the second argument to
 
 ```mermaid
 flowchart TD
-    boundary["Check vertex cap and operator ceilings"] --> priority["Evaluate priority cuts in order"]
+    boundary["Check vertex cap and operator ceilings"] --> enabled{"Both reduction switches enabled and policy has bounds?"}
+    enabled -->|Yes| cached["Rescore cached quotient on current edges"]
+    cached --> decided{"Certified interval decides the policy?"}
+    decided -->|No| fresh["Fresh Laplacian reduction and lifted quotient cut"]
+    fresh --> decided2{"Certified interval decides the policy?"}
+    decided -->|Yes| certified["Return certified pass or violation"]
+    decided2 -->|Yes| certified
+    decided2 -->|No| priority
+    enabled -->|No| priority
     priority --> bad{"Cut disproves required minimum?"}
     bad -->|Yes| reject["Reject with witnessed cut"]
     bad -->|No| remaining["Enumerate remaining cuts"]
@@ -261,10 +326,10 @@ flowchart TD
     budget -->|No| exact["Exact constant: compare inclusive bounds"]
 ```
 
-Incomplete computations never populate `measurements.cheeger` with an estimate.
-Rule diagnostics include `cheegerComputation.exact`, `upperBound`, the witnessed
-`cut`, `evaluatedCuts` and a `reason`; rejection messages distinguish budget
-exhaustion from a proven violation. Existing successful status may describe an
+Non-exact computations never populate `measurements.cheeger` with an estimate.
+Rule diagnostics include `cheegerComputation.exact`, `lowerBound`, `upperBound`,
+`stage`, the witnessed `cut`, `evaluatedCuts` and a `reason`; rejection messages
+distinguish budget exhaustion from a proven violation. Existing successful status may describe an
 older observation: check phase and observed generation. Feedback reports
 `status.throughput.phase: ComputationLimited` with diagnostics in `computation`,
 and does not apply an uncertified layout. The Python helper raises

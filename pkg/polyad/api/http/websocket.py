@@ -166,6 +166,7 @@ class WebSocketServer:
             response = self.app(environ, start_response)
             try:
                 iterator = iter(response)
+
                 # The adapter emits headers on its first chunk, including bodyless HEAD/204 responses.
                 yield next(iterator, b"")
                 yield from iterator
@@ -176,6 +177,7 @@ class WebSocketServer:
         if websocket:
             http_scope.update(type="http", method="GET", scheme="https" if scope.get("scheme") == "wss" else "http")
             http_scope["headers"] = [(key, value) for key, value in scope["headers"] if key not in {b"upgrade", b"connection"}]
+
             # Only the explicit subscription route may be upgraded, even with valid credentials.
             if scope["path"] != "/v1/events/ws":
                 http_scope["path"] = "/__polyad_invalid_websocket_route__"

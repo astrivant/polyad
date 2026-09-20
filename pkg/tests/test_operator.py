@@ -87,11 +87,15 @@ class FakeAPI(ResourceAPI):
                 raise ApiException(status=409)
             self.objects[key] = copy.deepcopy(body)
             self.objects[key]["metadata"].update(uid=str(uuid5(NAMESPACE_URL, "/".join(key))), resourceVersion="1", generation=1)
+
+            # Simulate an ambiguous timeout: the resource exists even though its caller saw failure.
             if self.fail_create_after_commit:
                 self.fail_create_after_commit = False
                 raise ApiException(status=504)
             return copy.deepcopy(self.objects[key])
         obj = self.objects[key]
+
+        # A fake server must reject stale writes too, or controller race tests would pass incorrectly.
         if body["metadata"]["resourceVersion"] != obj["metadata"]["resourceVersion"]:
             raise ApiException(status=409)
         if method == "PUT":

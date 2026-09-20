@@ -44,6 +44,8 @@ def test_vpa_bounds_are_validated_and_projected_in_sdk_units():
     pod = {"spec": {"containers": [{"name": "worker", "env": [{"name": "KEEP", "value": "yes"}]}]}}
     inject_vertical_environment(pod, spec)
     environment = {item["name"]: item["value"] for item in pod["spec"]["containers"][0]["env"]}
+
+    # Cross the real manifest-to-environment-to-SDK boundary, including CPU and memory unit conversion.
     bounds = VPAConstraints.from_environment(environment)
     assert bounds.min_cpu_millicores == 100
     assert bounds.max_cpu_millicores == 2000
@@ -86,6 +88,8 @@ def test_live_cgroup_v2_metrics_expose_usage_limits_and_headroom(tmp_path: Path)
     (tmp_path / "cpu.max").write_text("200000 100000\n", encoding="ascii")
     (tmp_path / "memory.current").write_text("1024\n", encoding="ascii")
     (tmp_path / "memory.max").write_text("4096\n", encoding="ascii")
+
+    # Read a synthetic cgroup tree: the test must not depend on, or resize, its host container.
     sample = container_metrics(tmp_path)
     assert sample.cpu_usage_usec == 12345
     assert sample.cpu_limit_millicores == 2000

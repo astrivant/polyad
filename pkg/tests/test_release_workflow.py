@@ -77,6 +77,7 @@ def test_release_preparation_stamps_all_artifacts(tmp_path, tag, package, chart)
         shutil.copyfile(ROOT / name, target)
     project = tmp_path / "pyproject.toml"
     original = tomllib.loads(project.read_text())
+
     # Always exercise stamping a mismatched source version, even on a release checkout.
     project.write_text(project.read_text().replace(f'version = "{original["project"]["version"]}"', 'version = "0.0.0"', 1))
     command = [sys.executable, str(ROOT / ".github/prepare-release.py"), "--tag", tag]

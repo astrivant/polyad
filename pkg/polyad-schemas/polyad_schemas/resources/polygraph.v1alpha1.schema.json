@@ -433,7 +433,7 @@
             },
             "cheegerComputation": {
               "type": "object",
-              "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+              "description": "Budget exact search and optionally try certified quotient reductions first.",
               "properties": {
                 "maxVertices": {
                   "anyOf": [
@@ -489,6 +489,50 @@
                   },
                   "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent.",
                   "maxItems": 64
+                },
+                "reduction": {
+                  "type": "object",
+                  "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                    },
+                    "maxVertices": {
+                      "type": "integer",
+                      "description": "Largest boundary admitted to dense spectral reduction.",
+                      "minimum": 2,
+                      "maximum": 4096
+                    },
+                    "components": {
+                      "type": "integer",
+                      "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                      "minimum": 1,
+                      "maximum": 64
+                    },
+                    "supernodes": {
+                      "type": "integer",
+                      "description": "Maximum quotient vertices searched before exact enumeration.",
+                      "minimum": 2,
+                      "maximum": 64
+                    },
+                    "cache": {
+                      "type": "boolean",
+                      "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                    },
+                    "cacheEntries": {
+                      "type": "integer",
+                      "description": "Maximum process-local partitions retained by the operator.",
+                      "minimum": 1,
+                      "maximum": 4096
+                    },
+                    "maxEdgeChurn": {
+                      "type": "number",
+                      "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
                 }
               }
             },
@@ -1946,6 +1990,9 @@
                     "exact": {
                       "type": "boolean"
                     },
+                    "lowerBound": {
+                      "type": "number"
+                    },
                     "upperBound": {
                       "anyOf": [
                         {
@@ -1968,6 +2015,14 @@
                     },
                     "reason": {
                       "type": "string"
+                    },
+                    "stage": {
+                      "type": "string"
+                    },
+                    "edgeChurn": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
                     },
                     "skippedPriorityCuts": {
                       "type": "integer",
@@ -1998,6 +2053,9 @@
                     "exact": {
                       "type": "boolean"
                     },
+                    "lowerBound": {
+                      "type": "number"
+                    },
                     "upperBound": {
                       "anyOf": [
                         {
@@ -2020,6 +2078,14 @@
                     },
                     "reason": {
                       "type": "string"
+                    },
+                    "stage": {
+                      "type": "string"
+                    },
+                    "edgeChurn": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
                     },
                     "skippedPriorityCuts": {
                       "type": "integer",
@@ -2050,6 +2116,9 @@
                   "exact": {
                     "type": "boolean"
                   },
+                  "lowerBound": {
+                    "type": "number"
+                  },
                   "upperBound": {
                     "anyOf": [
                       {
@@ -2072,6 +2141,14 @@
                   },
                   "reason": {
                     "type": "string"
+                  },
+                  "stage": {
+                    "type": "string"
+                  },
+                  "edgeChurn": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
                   },
                   "skippedPriorityCuts": {
                     "type": "integer",

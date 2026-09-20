@@ -190,6 +190,8 @@ class Controller:
         meta = obj["metadata"]
         if all(_status_value(obj.get("status", {}).get(key)) == _status_value(value) for key, value in values.items()):
             return
+
+        # Merge patches retain omitted keys, so removed children need explicit null tombstones.
         values = copy.deepcopy(values)
         for field in ("nodes", "workloads", "activations"):
             if field in values:
@@ -433,6 +435,8 @@ class Controller:
             if FINALIZER in obj["metadata"].get("finalizers", []):
                 await self.finalizers(obj, remove=True)
             return
+
+        # Persist cleanup responsibility before admitting anything this resource will own.
         if kind in BOUNDARIES | {"Rewrite", "Composition"} and FINALIZER not in obj["metadata"].get("finalizers", []):
             await self.finalizers(obj)
             raise Pending("drain finalizer persisted; refresh before admission")
@@ -505,6 +509,7 @@ class Controller:
         topology({key: value for key, value in spec["topology"].items() if key != "placement"}, spec.get("kind", "Graph"))
         target = await self.definition(spec.get("kind", "Graph"), meta["namespace"], spec["graph"])
         await check_rules(self.api, meta["namespace"], target["kind"], spec["topology"])
+
         # This annotation is committed atomically with the spec and survives a status-write timeout.
         token = meta["uid"]
         if target["metadata"].get("annotations", {}).get(f"{GROUP}/rewrite") != token:
@@ -669,6 +674,8 @@ class Controller:
             return current
         document = asts.to_document(desired)
         pod = execution_pod(document) if kind in {"Job", "Deployment", "StatefulSet", "DaemonSet"} else {}
+
+        # Admission dry-run proves the required sidecar is injectable before creating real work.
         if pod.get("metadata", {}).get("annotations", {}).get("sidecar.istio.io/inject") == "true":
             probe = copy.deepcopy(pod)
             probe.update(apiVersion="v1", kind="Pod")
@@ -746,6 +753,7 @@ class Controller:
             if any(deadline <= datetime.now(UTC) for deadline in deadlines):
                 raise Pending("temporary connection expired before workload mutation")
             rule_reports = await check_live_rules(self.api, obj, candidate=rule_candidate)
+
             # Connectivity loss is not evidence that a remote child has stopped.
             refreshed = await self.federation.children(obj)
             if any(

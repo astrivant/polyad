@@ -113,6 +113,8 @@ def _build_app(
     def compose() -> tuple[Response, int]:
         value = converter.structure(request.get_json(), CompositionRequest)
         identify_request(value.requestId)
+
+        # Validate the entire composition before persisting its receipt; reconciliation creates resources later.
         compile_composition(value, "preview")
         result = submit(value)
         return jsonify(result), 202

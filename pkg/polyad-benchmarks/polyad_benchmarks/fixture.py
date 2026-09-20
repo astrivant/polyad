@@ -60,6 +60,8 @@ class FixtureServer(ThreadingHTTPServer):
             None: Accepted connections run in bounded threads.
         """
         request.settimeout(10)
+
+        # Saturation is an observable rejection, not a growing queue that masks fixture capacity.
         if not self.slots.acquire(blocking=False):
             try:
                 request.sendall(b"HTTP/1.0 503 Service Unavailable\r\nContent-Length: 0\r\n\r\n")
@@ -197,6 +199,7 @@ def main() -> None:
         activation = os.environ.get("POLYAD_ACTIVATION_ID", "")
         print(json.dumps({"completed": True, "activation": activation, "runId": parent_run_id(activation) if activation else None}))
         return
+
     # This is a private benchmark fixture, not an externally exposed application server.
     with FixtureServer((os.environ.get("POLYAD_POD_IP", "127.0.0.1"), args.port)) as server:
         print(json.dumps({"fixture": "ready", "port": args.port}), flush=True)

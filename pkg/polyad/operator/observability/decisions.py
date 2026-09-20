@@ -85,6 +85,7 @@ def decision(
             details["polyad.target.cluster"] = cluster
     if key is not None:
         details.update({"polyad.resource.kind": key[0], "k8s.namespace.name": key[1], "polyad.resource.name": key[2]})
+
     # A graph reconciliation can advance multiple receipts; keep their identities
     # on separate decision spans instead of overwriting the enclosing graph span.
     context = span("polyad.request.decision") if "polyad.request.id" in details else nullcontext()

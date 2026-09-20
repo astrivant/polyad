@@ -61,10 +61,14 @@ def measure_topology(graph: Topology, present: set[str] | None = None) -> Topolo
     admission: nx.DiGraph[str] = nx.DiGraph()
     admission.add_nodes_from(names)
     admission.add_edges_from((edge.node, node.name) for node in nodes for edge in node.requires if edge.node in names)
+
+    # Admission dependencies are a DAG; runtime communication is a separate graph that may cycle.
     flow: nx.DiGraph[str] = nx.DiGraph()
     flow.add_nodes_from(names)
     flow.add_edges_from((edge.source, edge.target) for edge in graph.connections if edge.source in names and edge.target in names)
     components = list(nx.strongly_connected_components(flow))
+
+    # Collapse strongly connected groups before measuring layers, rather than enumerating cycles.
     condensed = nx.condensation(flow, components)
     counts: Counter[str] = Counter(node.kind for node in nodes)
     return TopologyMetrics(

@@ -194,6 +194,34 @@
             },
             "timeoutSeconds": {
               "$ref": "#/definitions/helmValues/properties/operator/properties/cheeger/properties/timeoutSeconds"
+            },
+            "reduction": {
+              "type": "object",
+              "description": "Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search; graph policies must also opt in.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/cheeger/properties/reduction/properties/enabled"
+                },
+                "maxVertices": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/cheeger/properties/reduction/properties/maxVertices"
+                },
+                "components": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/cheeger/properties/reduction/properties/components"
+                },
+                "supernodes": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/cheeger/properties/reduction/properties/supernodes"
+                },
+                "cache": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/cheeger/properties/reduction/properties/cache"
+                },
+                "cacheEntries": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/cheeger/properties/reduction/properties/cacheEntries"
+                },
+                "maxEdgeChurn": {
+                  "$ref": "#/definitions/helmValues/properties/operator/properties/cheeger/properties/reduction/properties/maxEdgeChurn"
+                }
+              }
             }
           }
         },
@@ -5363,7 +5391,7 @@
                           "anyOf": [
                             {
                               "type": "object",
-                              "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                              "description": "Budget exact search and optionally try certified quotient reductions first.",
                               "additionalProperties": false,
                               "properties": {
                                 "maxVertices": {
@@ -5466,6 +5494,90 @@
                                     },
                                     {
                                       "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                    }
+                                  ]
+                                },
+                                "reduction": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "enabled": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "maxVertices": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "components": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "supernodes": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "cache": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "cacheEntries": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "maxEdgeChurn": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                     }
                                   ]
                                 }
@@ -6005,7 +6117,7 @@
                                   "anyOf": [
                                     {
                                       "type": "object",
-                                      "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                      "description": "Budget exact search and optionally try certified quotient reductions first.",
                                       "additionalProperties": false,
                                       "properties": {
                                         "maxVertices": {
@@ -6108,6 +6220,90 @@
                                             },
                                             {
                                               "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "reduction": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "enabled": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "maxVertices": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "components": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "supernodes": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "cache": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "cacheEntries": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "maxEdgeChurn": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                             }
                                           ]
                                         }
@@ -7093,7 +7289,7 @@
                                   "anyOf": [
                                     {
                                       "type": "object",
-                                      "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                      "description": "Budget exact search and optionally try certified quotient reductions first.",
                                       "additionalProperties": false,
                                       "properties": {
                                         "maxVertices": {
@@ -7196,6 +7392,90 @@
                                             },
                                             {
                                               "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "reduction": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "enabled": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "maxVertices": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "components": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "supernodes": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "cache": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "cacheEntries": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "maxEdgeChurn": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                             }
                                           ]
                                         }
@@ -8882,7 +9162,7 @@
                                           "anyOf": [
                                             {
                                               "type": "object",
-                                              "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                              "description": "Budget exact search and optionally try certified quotient reductions first.",
                                               "additionalProperties": false,
                                               "properties": {
                                                 "maxVertices": {
@@ -8985,6 +9265,90 @@
                                                     },
                                                     {
                                                       "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "reduction": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "object",
+                                                      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                                      "additionalProperties": false,
+                                                      "properties": {
+                                                        "enabled": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "maxVertices": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "components": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "supernodes": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "cache": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "cacheEntries": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "maxEdgeChurn": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    },
+                                                    {
+                                                      "$ref": "#/definitions/helmValues/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                                     }
                                                   ]
                                                 }
@@ -11180,7 +11544,8 @@
               "required": [
                 "maxVertices",
                 "maxCuts",
-                "timeoutSeconds"
+                "timeoutSeconds",
+                "reduction"
               ],
               "description": "Deployment-wide ceilings for each Cheeger calculation. Policies inherit these or choose smaller budgets; prioritized search never weakens hard bounds.",
               "properties": {
@@ -11201,6 +11566,60 @@
                   "minimum": 0.001,
                   "maximum": 300,
                   "description": "Cooperative runtime ceiling per calculation, checked between batches. Incomplete search is never an exact constant."
+                },
+                "reduction": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "enabled",
+                    "maxVertices",
+                    "components",
+                    "supernodes",
+                    "cache",
+                    "cacheEntries",
+                    "maxEdgeChurn"
+                  ],
+                  "description": "Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search; graph policies must also opt in.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Allow graph policies to request reduced Cheeger search before exact enumeration."
+                    },
+                    "maxVertices": {
+                      "type": "integer",
+                      "minimum": 2,
+                      "maximum": 4096,
+                      "description": "Largest boundary allowed through the dense spectral reducer."
+                    },
+                    "components": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 64,
+                      "description": "Maximum nontrivial Laplacian eigenvectors retained by a graph policy."
+                    },
+                    "supernodes": {
+                      "type": "integer",
+                      "minimum": 2,
+                      "maximum": 64,
+                      "description": "Maximum quotient vertices searched by a graph policy."
+                    },
+                    "cache": {
+                      "type": "boolean",
+                      "description": "Permit process-local quotient partition reuse with current-edge rescoring."
+                    },
+                    "cacheEntries": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "description": "Maximum cached quotient partitions per operator process."
+                    },
+                    "maxEdgeChurn": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Maximum symmetric changed-edge fraction eligible for cached partition reuse."
+                    }
+                  }
                 }
               }
             },
@@ -35433,7 +35852,7 @@
                               "anyOf": [
                                 {
                                   "type": "object",
-                                  "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                  "description": "Budget exact search and optionally try certified quotient reductions first.",
                                   "properties": {
                                     "maxVertices": {
                                       "anyOf": [
@@ -35589,6 +36008,124 @@
                                         }
                                       ],
                                       "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+                                    },
+                                    "reduction": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                          "properties": {
+                                            "enabled": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "boolean",
+                                                  "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                            },
+                                            "maxVertices": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "integer",
+                                                  "description": "Largest boundary admitted to dense spectral reduction.",
+                                                  "minimum": 2,
+                                                  "maximum": 4096
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Largest boundary admitted to dense spectral reduction."
+                                            },
+                                            "components": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "integer",
+                                                  "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                                                  "minimum": 1,
+                                                  "maximum": 64
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+                                            },
+                                            "supernodes": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "integer",
+                                                  "description": "Maximum quotient vertices searched before exact enumeration.",
+                                                  "minimum": 2,
+                                                  "maximum": 64
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Maximum quotient vertices searched before exact enumeration."
+                                            },
+                                            "cache": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "boolean",
+                                                  "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                            },
+                                            "cacheEntries": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "integer",
+                                                  "description": "Maximum process-local partitions retained by the operator.",
+                                                  "minimum": 1,
+                                                  "maximum": 4096
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Maximum process-local partitions retained by the operator."
+                                            },
+                                            "maxEdgeChurn": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number",
+                                                  "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                                                  "minimum": 0,
+                                                  "maximum": 1
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                            }
+                                          },
+                                          "required": [],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "string",
+                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                        }
+                                      ],
+                                      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
                                     }
                                   },
                                   "required": [],
@@ -35599,7 +36136,7 @@
                                   "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                 }
                               ],
-                              "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+                              "description": "Budget exact search and optionally try certified quotient reductions first."
                             },
                             "scope": {
                               "anyOf": [
@@ -38017,7 +38554,7 @@
                                       "anyOf": [
                                         {
                                           "type": "object",
-                                          "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                          "description": "Budget exact search and optionally try certified quotient reductions first.",
                                           "properties": {
                                             "maxVertices": {
                                               "anyOf": [
@@ -38173,6 +38710,124 @@
                                                 }
                                               ],
                                               "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+                                            },
+                                            "reduction": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                                  "properties": {
+                                                    "enabled": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "boolean",
+                                                          "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                    },
+                                                    "maxVertices": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "integer",
+                                                          "description": "Largest boundary admitted to dense spectral reduction.",
+                                                          "minimum": 2,
+                                                          "maximum": 4096
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Largest boundary admitted to dense spectral reduction."
+                                                    },
+                                                    "components": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "integer",
+                                                          "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                                                          "minimum": 1,
+                                                          "maximum": 64
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+                                                    },
+                                                    "supernodes": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "integer",
+                                                          "description": "Maximum quotient vertices searched before exact enumeration.",
+                                                          "minimum": 2,
+                                                          "maximum": 64
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Maximum quotient vertices searched before exact enumeration."
+                                                    },
+                                                    "cache": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "boolean",
+                                                          "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                    },
+                                                    "cacheEntries": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "integer",
+                                                          "description": "Maximum process-local partitions retained by the operator.",
+                                                          "minimum": 1,
+                                                          "maximum": 4096
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Maximum process-local partitions retained by the operator."
+                                                    },
+                                                    "maxEdgeChurn": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "number",
+                                                          "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                                                          "minimum": 0,
+                                                          "maximum": 1
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                    }
+                                                  },
+                                                  "required": [],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
                                             }
                                           },
                                           "required": [],
@@ -38183,7 +38838,7 @@
                                           "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                         }
                                       ],
-                                      "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+                                      "description": "Budget exact search and optionally try certified quotient reductions first."
                                     },
                                     "maxWeightStep": {
                                       "anyOf": [
@@ -42184,7 +42839,7 @@
                                       "anyOf": [
                                         {
                                           "type": "object",
-                                          "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                          "description": "Budget exact search and optionally try certified quotient reductions first.",
                                           "properties": {
                                             "maxVertices": {
                                               "anyOf": [
@@ -42340,6 +42995,124 @@
                                                 }
                                               ],
                                               "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+                                            },
+                                            "reduction": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                                  "properties": {
+                                                    "enabled": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "boolean",
+                                                          "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                    },
+                                                    "maxVertices": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "integer",
+                                                          "description": "Largest boundary admitted to dense spectral reduction.",
+                                                          "minimum": 2,
+                                                          "maximum": 4096
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Largest boundary admitted to dense spectral reduction."
+                                                    },
+                                                    "components": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "integer",
+                                                          "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                                                          "minimum": 1,
+                                                          "maximum": 64
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+                                                    },
+                                                    "supernodes": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "integer",
+                                                          "description": "Maximum quotient vertices searched before exact enumeration.",
+                                                          "minimum": 2,
+                                                          "maximum": 64
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Maximum quotient vertices searched before exact enumeration."
+                                                    },
+                                                    "cache": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "boolean",
+                                                          "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                    },
+                                                    "cacheEntries": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "integer",
+                                                          "description": "Maximum process-local partitions retained by the operator.",
+                                                          "minimum": 1,
+                                                          "maximum": 4096
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Maximum process-local partitions retained by the operator."
+                                                    },
+                                                    "maxEdgeChurn": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "number",
+                                                          "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                                                          "minimum": 0,
+                                                          "maximum": 1
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                    }
+                                                  },
+                                                  "required": [],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                }
+                                              ],
+                                              "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
                                             }
                                           },
                                           "required": [],
@@ -42350,7 +43123,7 @@
                                           "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                         }
                                       ],
-                                      "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+                                      "description": "Budget exact search and optionally try certified quotient reductions first."
                                     },
                                     "maxWeightStep": {
                                       "anyOf": [
@@ -47534,7 +48307,7 @@
                                               "anyOf": [
                                                 {
                                                   "type": "object",
-                                                  "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                                  "description": "Budget exact search and optionally try certified quotient reductions first.",
                                                   "properties": {
                                                     "maxVertices": {
                                                       "anyOf": [
@@ -47690,6 +48463,124 @@
                                                         }
                                                       ],
                                                       "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+                                                    },
+                                                    "reduction": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "object",
+                                                          "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                                          "properties": {
+                                                            "enabled": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "boolean",
+                                                                  "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                                },
+                                                                {
+                                                                  "type": "string",
+                                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                }
+                                                              ],
+                                                              "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                            },
+                                                            "maxVertices": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "integer",
+                                                                  "description": "Largest boundary admitted to dense spectral reduction.",
+                                                                  "minimum": 2,
+                                                                  "maximum": 4096
+                                                                },
+                                                                {
+                                                                  "type": "string",
+                                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                }
+                                                              ],
+                                                              "description": "Largest boundary admitted to dense spectral reduction."
+                                                            },
+                                                            "components": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "integer",
+                                                                  "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                                                                  "minimum": 1,
+                                                                  "maximum": 64
+                                                                },
+                                                                {
+                                                                  "type": "string",
+                                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                }
+                                                              ],
+                                                              "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+                                                            },
+                                                            "supernodes": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "integer",
+                                                                  "description": "Maximum quotient vertices searched before exact enumeration.",
+                                                                  "minimum": 2,
+                                                                  "maximum": 64
+                                                                },
+                                                                {
+                                                                  "type": "string",
+                                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                }
+                                                              ],
+                                                              "description": "Maximum quotient vertices searched before exact enumeration."
+                                                            },
+                                                            "cache": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "boolean",
+                                                                  "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                                },
+                                                                {
+                                                                  "type": "string",
+                                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                }
+                                                              ],
+                                                              "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                            },
+                                                            "cacheEntries": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "integer",
+                                                                  "description": "Maximum process-local partitions retained by the operator.",
+                                                                  "minimum": 1,
+                                                                  "maximum": 4096
+                                                                },
+                                                                {
+                                                                  "type": "string",
+                                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                }
+                                                              ],
+                                                              "description": "Maximum process-local partitions retained by the operator."
+                                                            },
+                                                            "maxEdgeChurn": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "number",
+                                                                  "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                                                                  "minimum": 0,
+                                                                  "maximum": 1
+                                                                },
+                                                                {
+                                                                  "type": "string",
+                                                                  "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                                }
+                                                              ],
+                                                              "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                            }
+                                                          },
+                                                          "required": [],
+                                                          "additionalProperties": false
+                                                        },
+                                                        {
+                                                          "type": "string",
+                                                          "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                        }
+                                                      ],
+                                                      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
                                                     }
                                                   },
                                                   "required": [],
@@ -47700,7 +48591,7 @@
                                                   "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                                 }
                                               ],
-                                              "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+                                              "description": "Budget exact search and optionally try certified quotient reductions first."
                                             },
                                             "maxWeightStep": {
                                               "anyOf": [

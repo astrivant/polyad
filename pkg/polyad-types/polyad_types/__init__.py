@@ -54,6 +54,7 @@ from polyad_types.graphs.replication import ReplicaTemplate as ReplicaTemplate
 from polyad_types.graphs.replication import Replication as Replication
 from polyad_types.graphs.rules import Cheeger as Cheeger
 from polyad_types.graphs.rules import CheegerComputation as CheegerComputation
+from polyad_types.graphs.rules import CheegerReduction as CheegerReduction
 from polyad_types.graphs.rules import Spectrum as Spectrum
 from polyad_types.graphs.rules import StructuralRule as StructuralRule
 from polyad_types.graphs.topology import Connection as Connection

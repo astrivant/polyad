@@ -36,6 +36,8 @@ def build(policy: Policy) -> ResourceStrategy:
             None: Record intent; the supervisor checks overlap before committing.
         """
         policy.coverage["ResourceStrategy"] += 1
+
+        # Record a preference only; the supervisor still has to admit and safely commit the change.
         if current.available and (policy.read()["memoryReserved"] or policy.read().get("resourcePressure", False)):
             policy.proposal = "compact"
 

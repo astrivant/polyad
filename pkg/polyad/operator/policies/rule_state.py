@@ -236,6 +236,7 @@ async def check_live_rules(
             projected = replica_topology(body)
             if is_target and projected != obj["spec"]:
                 raise Pending("replica intent changed before structural rule evaluation")
+
             # Sibling scale-in has not released capacity until deletion is observed.
             # Keep retiring ordinals in the sibling projection while reserving all
             # requested scale-out ordinals, including a shared source's other uses.
@@ -325,12 +326,14 @@ async def check_live_rules(
     rule_documents = (await api.request("GET", "GraphRule", namespace)).get("items", [])
     reports: list[dict[str, Any]] = []
     await check_rules(api, namespace, root["kind"], spec, definitions=definitions, rule_documents=rule_documents, observations=reports)
+
     # Persist only the reconciling boundary's reports, as before. Repeating all
     # 32 rules at 256 boundaries in every status could exceed Kubernetes object
     # size limits. Ancestor and sibling failures still block the action.
     reports = [report for report in reports if report["path"] == target_path]
     for report in reports:
         report["boundary"] = identities[tuple(tuple(key) for key in report.pop("path"))]
+
     # Reject inputs that changed during the potentially expensive computations.
     # The root-family lease serializes operator actions; external writers still
     # require fresh revision checks immediately before dispatch.

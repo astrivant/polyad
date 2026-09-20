@@ -270,6 +270,7 @@ def test_detachment_never_deletes_helm_resources(monkeypatch):
                 await pools.pool(await local.get("OperatorPool", "test", "west-workers"))
             except Pending:
                 pass
+
             # Kubernetes garbage collection acknowledges deletion separately.
             for key, obj in list(remote.objects.items()):
                 if obj["metadata"].get("deletionTimestamp"):
@@ -306,6 +307,7 @@ def test_helm_worker_waits_for_registration_and_stops_when_detached(monkeypatch)
         await worker.tick()
         await root.tick()
         await worker.tick()
+
         # A joining worker must wait for the previous owner's lease to expire.
         now[0] += DURATION + 1
         await root.tick()

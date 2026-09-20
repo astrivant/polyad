@@ -61,6 +61,8 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         "Positive analytic margin admits the relationship; negative margin blocks it.",
     )
     axes[1].margins(x=0.35)
+
+    # A shared zero reference makes signed capacity effects and admission margins directly readable.
     for axis in axes:
         axis.axvline(0, color="#8995a5", linewidth=1)
     paths = save(figure, output, "interactions", study="symbiosis")

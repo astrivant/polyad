@@ -264,6 +264,7 @@ def test_pool_removal_unlinks_only_its_graph_and_preserves_the_reserved_root(mon
         assert len(after["spec"]["connections"]) == 2
         assert not any(method == "DELETE" for method, _, _ in local.calls)
         assert not remote.calls
+
         # A transiently unreachable peer cannot disappear from the model.
         pools.root.resolve = lambda cluster: (_ for _ in ()).throw(ConnectionError("offline"))
         unchanged = await pools.topology()

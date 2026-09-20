@@ -40,6 +40,7 @@ def compute(
     """
     try:
         started = time.perf_counter()
+
         # Keep this initial study backend on CPU with the float32 storage used
         # by its preflight budget, regardless of the service's JAX environment.
         os.environ["JAX_PLATFORMS"] = "cpu"
@@ -110,6 +111,7 @@ def compute(
 
         box = hj.sets.Box(jnp.zeros(1), jnp.zeros(1))
         dynamics = FixedRouting("max", "min", box, box)
+
         # Include genuinely unsafe states beyond the queue ceilings. A grid
         # ending exactly at the unsafe boundary has no negative target values
         # and can incorrectly erase backward propagation of overflow risk.

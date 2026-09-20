@@ -169,6 +169,7 @@ def test_postgresql_commits_state_rejects_old_scans_and_removes_deleted_graphs()
                 cursor = await connection.execute("SELECT document FROM polyad_graph_state WHERE scope = %s", (scope,))
                 rows = await cursor.fetchall()
                 assert rows == [(state_document(graph),)]
+
             # SQL deletion and a broken insert must roll back together.
             invalid = copy.deepcopy(graph)
             del invalid["metadata"]["uid"]

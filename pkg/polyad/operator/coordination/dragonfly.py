@@ -87,6 +87,8 @@ async def reconcile(api: API, namespace: str, name: str) -> None:
     selector = sts["spec"]["selector"]
     if selector.get("matchExpressions") or not selector.get("matchLabels"):
         raise ValueError("unsupported Dragonfly Pod selector")
+
+    # Change one replica at a time, and wait for replication and rollout convergence between steps.
     if ready and current != desired:
         await api.request(
             "PATCH",

@@ -49,6 +49,7 @@ def merge_placement(*scopes: dict[str, Any] | None) -> dict[str, Any]:
                 raise ValueError("unsupported node affinity field")
             if REQUIRED in incoming:
                 terms = copy.deepcopy(incoming[REQUIRED]["nodeSelectorTerms"])
+
                 # Empty terms select no nodes; they must never become a wildcard during intersection.
                 terms = [term for term in terms if term.get("matchExpressions") or term.get("matchFields")]
                 if REQUIRED in affinity:

@@ -85,13 +85,20 @@ async def observe(api: API, obj: dict[str, Any], graph: Topology, *, now: dateti
     annotations = meta.get("annotations", {})
     search.previous = json.loads(annotations.get(STATE, "{}"))
     state = dict(search.previous)
+
+    # A changed policy or generation invalidates accumulated stabilization
+    # evidence, but recent mutation history still constrains adaptation frequency.
     fingerprint = hashlib.sha256(json.dumps(to_dict(policy), sort_keys=True).encode()).hexdigest()
+
     # Keep rolling change budgets even when the policy or topology is edited.
     changes = [stamp for stamp in state.get("changes", []) if search.clock - stamp < 3600]
     if state.get("policy") != fingerprint or state.get("generation") != meta["generation"]:
         state = {"changes": changes, "lastChange": state.get("lastChange", 0)}
     state.update(policy=fingerprint, generation=meta["generation"], changes=changes)
     search.capacity = await capacity_revision(api, obj)
+
+    # Demand observed before an execution-capacity change cannot prove the new
+    # layout is still underprovisioned. Require evidence from after that change.
     if search.previous.get("capacity") and search.previous["capacity"] != search.capacity:
         state.update(since=0, count=0, settledAfter=search.clock)
     state["capacity"] = search.capacity
@@ -118,6 +125,9 @@ async def expansion(graph: Topology, reports: list[dict[str, Any]] | None = None
     )
     if reports is not None:
         reports.append(result.report())
+
+    # This caller needs a numeric structural measurement, not merely a policy
+    # decision. Do not promote a reduced cut's upper bound to an exact constant.
     if not result.exact:
         raise CheegerIncomplete(result)
     assert result.upperBound is not None

@@ -108,6 +108,7 @@ class ReplicaConnectivity:
         )
         if self.bidirectional:
             edges += [ReplicaConnection(edge.target, edge.source, edge.ports) for edge in edges]
+
         # Reverse edges with different ports retain both grants; identical edges
         # (including already symmetric rings and meshes) need only one declaration.
         return [converter.unstructure(edge) for edge in dict.fromkeys(edges)]

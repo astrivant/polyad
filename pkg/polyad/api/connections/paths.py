@@ -45,6 +45,8 @@ async def path(
     if current is None or current["metadata"]["uid"] != peer.graphUid:
         raise Conflict("endpoint graph is absent or replaced")
     branch, seen, result = peer.node, set(), []
+
+    # Walk verified graph incarnations with a hard bound, carrying the local branch at each ancestor.
     for _ in range(64):
         meta = current["metadata"]
         identity = (cluster, meta["uid"])

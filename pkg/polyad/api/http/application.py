@@ -81,6 +81,7 @@ def create_application() -> Flask:
         Flask: Empty application awaiting enabled route families.
     """
     app = Application(__name__, host_matching=True, static_folder=None)
+
     # Reject malformed paths instead of redirecting to an internal routing host.
     app.url_map.merge_slashes = False
     app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024

@@ -109,6 +109,8 @@ def field(path: str, *, equals: Any = None, regex: str | None = None, exists: bo
     pattern = re.compile(regex) if regex is not None else None
 
     def matches(event: Event) -> bool:
+        # Wildcards fan out at each path component. Retain all candidate leaves
+        # so the final predicate can match any value reached through the path.
         values: list[Any] = [event.data]
         for part in parts:
             following: list[Any] = []
@@ -125,6 +127,9 @@ def field(path: str, *, equals: Any = None, regex: str | None = None, exists: bo
             return bool(values) is exists
         if pattern is not None:
             return any(isinstance(value, str) and pattern.search(value) is not None for value in values)
+
+        # JSON booleans must not match numeric 0/1 just because Python considers
+        # them equal; require both value and concrete type to match.
         return any(type(value) is type(equals) and value == equals for value in values)
 
     return Filter(matches)

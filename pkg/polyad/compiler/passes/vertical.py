@@ -60,6 +60,8 @@ def compile_vertical_pod_autoscaler(spec: dict[str, Any], targets: Mapping[str, 
     if target.get("kind") != targets[target["name"]]:
         raise ValueError("VerticalPodAutoscaler targetRef.kind must match the Daemon controller")
 
+    # Require an explicit lifecycle mode: ambiguous defaults could introduce Pod
+    # replacement into a workload whose adaptation plan expects in-place changes.
     update_policy = spec.get("updatePolicy", {})
     if not isinstance(update_policy, dict):
         raise ValueError("VerticalPodAutoscaler spec.updatePolicy must be an object")
@@ -96,6 +98,8 @@ def compile_vertical_pod_autoscaler(spec: dict[str, Any], targets: Mapping[str, 
         if len(controlled) != len(set(controlled)):
             raise ValueError(f"{path}.controlledResources must not contain duplicates")
 
+        # Compare normalized quantities, not strings: equivalent Kubernetes CPU
+        # and memory units must produce the same ordered resource interval.
         parsed: dict[str, dict[str, Decimal]] = {}
         for bound in ("minAllowed", "maxAllowed"):
             values = policy.get(bound, {})
@@ -120,6 +124,9 @@ def inject_vertical_environment(pod: dict[str, Any], spec: dict[str, Any]) -> No
         None: Matching regular containers are updated in place.
     """
     policies = spec.get("resourcePolicy", {}).get("containerPolicies", [])
+
+    # A named container policy wins over the wildcard. Project only resources
+    # controlled by that policy, using the SDK's integer CPU/memory units.
     wildcard = next((item for item in policies if item["containerName"] == "*"), None)
     update_mode = spec.get("updatePolicy", {}).get("updateMode", "")
     managed_names = {"POLYAD_VPA_UPDATE_MODE", *(item[0] for item in BOUND_ENVIRONMENT.values())}
@@ -132,5 +139,8 @@ def inject_vertical_environment(pod: dict[str, Any], spec: dict[str, Any]) -> No
                 if resource in controlled and resource in policy.get(bound, {}):
                     value = _quantity(policy[bound][resource], f"VerticalPodAutoscaler {bound}.{resource}") * multiplier
                     values[name] = str(int(value))
+
+        # Replace managed names instead of appending duplicates or retaining
+        # stale bounds from an earlier policy compilation.
         projected = [{"name": name, "value": value} for name, value in values.items()]
         container["env"] = projected + [item for item in container.get("env", []) if item["name"] not in managed_names]

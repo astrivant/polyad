@@ -32,6 +32,8 @@ async def public_observation(api: API, obj: dict[str, Any], *, reserved_graph: t
     Returns:
         bool: False for internal resources or unresolved, replaced or cyclic ancestry.
     """
+
+    # Bound all ancestry reads together; malformed ownership must fail closed, not recurse forever.
     remaining = 64
 
     async def visit(current: dict[str, Any], path: frozenset[tuple[str, str, str, str]]) -> bool:
@@ -100,6 +102,8 @@ async def observation_ancestry(
         if current["kind"] in {"Rewrite", "Activation", "TemporaryConnection"}:
             spec = current["spec"]
             references.append({"kind": spec.get("kind", "Graph"), "name": spec["graph"], "uid": spec.get("graphUid", "")})
+
+        # A remote parent's claim needs the reciprocal child entry and the exact parent UID.
         remote_parent = meta.get("annotations", {}).get(f"{GROUP}/remote-parent")
         if remote_parent and resolve is not None:
             parent_cluster, parent_namespace, parent_kind, parent_name, parent_uid, node = json.loads(remote_parent)

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import matplotlib
 
+# File-based rendering also works on headless CI runners without a GUI backend.
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -41,10 +42,14 @@ def _series(
     Returns:
         dict[str, tuple[list[float], list[float]]]: Sorted x values and median y values.
     """
+
+    # Filter first, then group samples by series and x coordinate. This prevents
+    # settings meant to be held constant from being averaged into the same line.
     values: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
     for record in records:
         if select(record):
             values[str(record[group])][float(record[x])].append(float(record[y]))
+
     result = {}
     for name, points in values.items():
         ordered = sorted(points)
@@ -86,6 +91,9 @@ def accuracy(result: dict[str, Any], output: Path) -> list[str]:
     fixed_components = config["fixedComponents"]
     fixed_supernodes = config["fixedSupernodes"]
     figure, axes = plt.subplots(2, 2, figsize=(15, 10), layout="constrained")
+
+    # Vary retained dimensions with quotient size fixed. This isolates embedding
+    # quality from the number of cluster unions the reduced search can examine.
     _lines(
         axes[0, 0],
         _series(
@@ -99,9 +107,11 @@ def accuracy(result: dict[str, Any], output: Path) -> list[str]:
     axes[0, 0].set(xlabel=r"Retained PCA dimensions, $d$", ylabel=r"Median relative error, $(\hat{h}_Q-h)/h$")
     describe_axis(
         axes[0, 0],
-        r"PCA dimension $d$ versus Cheeger error",
-        rf"The quotient size $k={fixed_supernodes}$ is fixed; only retained dimension $d$ changes.",
+        "PCA dimensions versus Cheeger error",
+        rf"The quotient size $k={fixed_supernodes}$ is fixed; only retained PCA dimension $d$ changes.",
     )
+
+    # Reverse the comparison: vary quotient size with the PCA dimension fixed.
     _lines(
         axes[0, 1],
         _series(
@@ -115,9 +125,12 @@ def accuracy(result: dict[str, Any], output: Path) -> list[str]:
     axes[0, 1].set(xlabel=r"Quotient supernodes, $k$", ylabel=r"Median relative error, $(\hat{h}_Q-h)/h$")
     describe_axis(
         axes[0, 1],
-        r"Compression $n\rightarrow k$ versus Cheeger error",
-        rf"The PCA dimension $d={fixed_components}$ is fixed; larger $k$ admits more lifted cuts.",
+        "Compression versus Cheeger error",
+        rf"For fixed $d={fixed_components}$, compression maps $n\rightarrow k$; larger $k$ admits more lifted cuts.",
     )
+
+    # Keep both settings fixed for topology comparisons. Boxplots retain the
+    # spread across seeds that a single median line would conceal.
     selected = [
         row
         for row in records
@@ -132,9 +145,12 @@ def accuracy(result: dict[str, Any], output: Path) -> list[str]:
     axes[1, 0].grid(axis="y", alpha=0.2)
     describe_axis(
         axes[1, 0],
-        rf"Topology sensitivity at $(d,k)=({fixed_components},{fixed_supernodes})$",
-        r"Every family shares the same $d$-dimensional embedding and $k$-supernode budget.",
+        "Topology sensitivity at fixed settings",
+        rf"Every family shares $(d,k)=({fixed_components},{fixed_supernodes})$: the same embedding and supernode budgets.",
     )
+
+    # Variance explains the adjacency representation, not necessarily sparse cuts.
+    # Show its relationship with actual cut error rather than treating it as proof.
     for topology in topologies:
         rows = [row for row in selected if row["topology"] == topology]
         axes[1, 1].scatter(
@@ -151,8 +167,8 @@ def accuracy(result: dict[str, Any], output: Path) -> list[str]:
     axes[1, 1].grid(alpha=0.2)
     describe_axis(
         axes[1, 1],
-        r"Variance $R_d^2$ is not an accuracy guarantee",
-        r"Large $R_d^2$ can coexist with error when clustering merges a minimum cut.",
+        "Variance retained is not an accuracy guarantee",
+        r"Retained variance $R_d^2$ can be large while clustering still merges a minimum cut.",
     )
     return save(
         figure,
@@ -178,6 +194,9 @@ def cost(result: dict[str, Any], output: Path) -> list[str]:
     config = result["recipe"]
     size = [row for row in records if row["sweep"] == "size"]
     figure, axes = plt.subplots(1, 3, figsize=(18, 5), layout="constrained")
+
+    # Compare end-to-end method times on the same size sweep. Reduced time
+    # includes PCA, clustering, quotient enumeration and the spectral lower bound.
     for key, label, color in (
         ("exactDurationSeconds", r"exact $h(G)$ enumeration", "#a44960"),
         ("durationSeconds", r"PCA + $\hat{h}_Q(G)$ + $\lambda_2/2$", "#335c81"),
@@ -192,9 +211,12 @@ def cost(result: dict[str, Any], output: Path) -> list[str]:
     axes[0].grid(alpha=0.2)
     describe_axis(
         axes[0],
-        r"End-to-end cost $t(n)$ as the graph grows",
-        r"Reduced time includes PCA, clustering, $\hat{h}_Q(G)$ and the $\lambda_2/2$ lower bound.",
+        "End-to-end cost as the graph grows",
+        r"Measured $t(n)$ includes PCA, clustering, $\hat{h}_Q(G)$ and the $\lambda_2/2$ lower bound.",
     )
+
+    # With graph size fixed, every increase in k doubles the candidate count
+    # approximately; the horizontal exact-search reference remains unchanged.
     reduction = [
         row
         for row in records
@@ -216,9 +238,13 @@ def cost(result: dict[str, Any], output: Path) -> list[str]:
     axes[1].grid(alpha=0.2)
     describe_axis(
         axes[1],
-        r"Search space: $2^{k-1}-1$ versus $2^{n-1}-1$",
-        r"Clustering replaces an $n$-vertex enumeration with unions of $k$ supernodes.",
+        "Search-space reduction",
+        r"Clustering searches $2^{k-1}-1$ supernode unions instead of $2^{n-1}-1$ vertex cuts.",
     )
+
+    # Interval width is observable without ground truth; actual error needs the
+    # exact reference. Plot both so a conservative certificate is not mistaken
+    # for the error we happened to observe in this experiment.
     intervals = defaultdict(list)
     errors = defaultdict(list)
     for row in reduction:
@@ -241,8 +267,8 @@ def cost(result: dict[str, Any], output: Path) -> list[str]:
     axes[2].grid(alpha=0.2)
     describe_axis(
         axes[2],
-        r"Certificate $[\lambda_2/2,\hat{h}_Q]$ versus observed error",
-        r"The safe width $\hat{h}_Q-\lambda_2/2$ can exceed the measured error $\hat{h}_Q-h$.",
+        "Certificate width versus observed error",
+        r"The interval $[\lambda_2/2,\hat{h}_Q]$ can be wider than measured error $\hat{h}_Q-h$.",
     )
     return save(figure, output, "cost", study="cheeger-reduction")
 
@@ -260,6 +286,9 @@ def stability(result: dict[str, Any], output: Path) -> list[str]:
     """
     records = [row for row in result["records"] if row["sweep"] == "stability"]
     figure, axes = plt.subplots(1, 3, figsize=(20, 5.5), layout="constrained")
+
+    # Both methods see the same changed graph. The cached method retains its old
+    # groups but still measures the cut against current edges.
     for key, label, color in (
         ("cachedRelativeError", "reuse cached partition", "#d47a49"),
         ("relativeError", "refresh PCA partition", "#248266"),
@@ -274,9 +303,12 @@ def stability(result: dict[str, Any], output: Path) -> list[str]:
     axes[0].grid(alpha=0.2)
     describe_axis(
         axes[0],
-        r"Cached error versus $\rho_E$",
-        r"At $\rho_E=0$ the graph is steady; later points preserve $V$ while replacing edges.",
+        "Cached-cut accuracy under graph churn",
+        r"At edge churn $\rho_E=0$ the graph is steady; later points preserve $V$ while replacing edges.",
     )
+
+    # Cached timings omit building the baseline partition; fresh timings include
+    # that work. Keep exact enumeration as a separately measured reference.
     for key, label, color in (
         ("cachedDurationSeconds", "cached quotient search", "#d47a49"),
         ("durationSeconds", "fresh reduction", "#248266"),
@@ -292,9 +324,12 @@ def stability(result: dict[str, Any], output: Path) -> list[str]:
     axes[1].grid(alpha=0.2)
     describe_axis(
         axes[1],
-        r"Runtime $t(\rho_E)$: reuse versus refresh",
-        r"Cached reuse skips PCA but reevaluates every lifted cut on the current edge set $E_t$.",
+        "Cost of reuse, refresh and exact search",
+        r"Runtime $t(\rho_E)$ for cached reuse skips PCA but reevaluates lifted cuts on current edges $E_t$.",
     )
+
+    # Draw each fresh certificate separately, with exact h marked inside it.
+    # Seed-level intervals remain visible instead of being averaged into one band.
     for index, row in enumerate(records):
         axes[2].plot(
             [row["lowerBound"], row["upperBound"]],
@@ -315,8 +350,8 @@ def stability(result: dict[str, Any], output: Path) -> list[str]:
     axes[2].grid(alpha=0.2)
     describe_axis(
         axes[2],
-        r"$\lambda_2/2\leq h(G)\leq\hat{h}_Q(G)$",
-        r"Blue spans $[\lambda_2/2,\hat{h}_Q]$; red marks the exact reference $h(G)$.",
+        "Certified intervals contain the exact value",
+        r"The guarantee is $\lambda_2/2\leq h(G)\leq\hat{h}_Q(G)$; red marks exact $h(G)$.",
     )
     return save(
         figure,
@@ -338,4 +373,6 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
     Returns:
         list[str]: Six PNG/SVG artifacts.
     """
+
+    # Rebuild the figures from recorded measurements without changing their data.
     return accuracy(result, output) + cost(result, output) + stability(result, output)

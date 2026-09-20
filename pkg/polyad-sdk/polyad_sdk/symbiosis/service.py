@@ -283,6 +283,9 @@ class AdaptiveService(ABC):
         reporter = self.adaptations
         definition = self.context.definition
         position = next(index for index, component in enumerate(self._strategies) if component is strategy)
+
+        # Retries of the same strategy/event share an invocation identity, while
+        # Pod and definition identities separate replacement incarnations.
         invocation = str(
             uuid.uuid5(
                 uuid.NAMESPACE_URL,
@@ -321,6 +324,8 @@ class AdaptiveService(ABC):
             )
 
         with self.telemetry.operation("adaptation.strategy", attributes={"strategy": name}):
+            # Publish lifecycle state around the actual callback so operator
+            # status can reflect an adaptation even when the callback fails.
             report("Running")
             try:
                 strategy.adapt(change, self.view)
@@ -394,6 +399,8 @@ class AdaptiveService(ABC):
 
     def _deliver(self, change: Change, cursor: str | None) -> None:
         with self.telemetry.operation("adaptation.delivery", attributes={"baseline": change.baseline}):
+            # Keep the change pending until every callback and checkpoint succeeds.
+            # A retry resumes unfinished hooks instead of replaying completed work.
             self._pending, self._pending_cursor = change, cursor
             if change.baseline or change.deltas:
                 for index, (callback, paths, match) in enumerate(self._hooks):
@@ -414,6 +421,9 @@ class AdaptiveService(ABC):
             if cursor is not None and cursor != self._cursor and self._checkpoint is not None:
                 with self.telemetry.operation("adaptation.checkpoint"):
                     self._checkpoint(cursor)
+
+            # Commit the published view and replay position together only after
+            # delivery succeeds; failures leave enough state to retry this change.
             self._published, self._cursor = change.after, cursor
             self._pending, self._pending_cursor = None, None
             self._handled.clear()
@@ -442,6 +452,9 @@ class AdaptiveService(ABC):
                     raise RuntimeError("retry the pending event before refreshing or resetting")
                 self._deliver(self._pending, self._pending_cursor)
                 return self.view
+
+            # A reset replaces the observation baseline. An ordinary refresh
+            # computes a delta against the last successfully published view.
             baseline = reset or self._state.topology is None
             try:
                 cursor = self._snapshot(self._clock(), reset=reset)
@@ -472,6 +485,9 @@ class AdaptiveService(ABC):
                     raise RuntimeError("retry the pending event before advancing the stream")
                 self._deliver(self._pending, self._pending_cursor)
                 return
+
+            # Validate the event before updating state. Control frames invalidate
+            # availability and require recovery rather than looking like topology.
             event.typed()
             if event.event in {"reset", "unavailable", "copulse"}:
                 with self._lock:
@@ -479,6 +495,9 @@ class AdaptiveService(ABC):
                 raise StreamInterrupted(event)
             if self._cursor is None:
                 raise RuntimeError("refresh topology before dispatching observations")
+
+            # Compare numeric stream positions, not lexical strings: "10-0" must
+            # follow "9-0". Already committed positions must not replay adaptations.
             if event.id and tuple(map(int, event.id.split("-"))) <= tuple(map(int, self._cursor.split("-"))):
                 return
             now = self._clock()
@@ -591,6 +610,9 @@ class AdaptiveService(ABC):
         """
         if self.connections is None:
             raise RuntimeError("configure a separately authorized connections client")
+
+        # Respond only to a currently observed, unexpired receipt; a remembered
+        # identifier alone is not evidence that consent is still actionable.
         receipt = self.view.connections.get(uid)
         if receipt is None:
             raise ValueError("connection receipt is unknown or expired")
@@ -624,6 +646,9 @@ class AdaptiveService(ABC):
         """
         if self.service_levels is None:
             raise RuntimeError("configure a separately authorized service-level reporter")
+
+        # Bind feedback to the projected definition incarnation and generation,
+        # preventing stale workers from describing a replacement Daemon's SLA.
         definition = self.context.definition
         if definition is None or self.context.definition_generation is None or definition.kind != "Daemon":
             raise RuntimeError("service-level reporting requires a projected Daemon definition")

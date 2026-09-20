@@ -85,6 +85,7 @@ def configure_tracing() -> None:
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
     resource = telemetry_resource()
+
     # The SDK reads OTEL_TRACES_SAMPLER, OTEL_RESOURCE_ATTRIBUTES and OTEL_BSP_*.
     # The exporter reads standard OTEL_EXPORTER_OTLP[_TRACES]_* configuration.
     exporter = OTLPSpanExporter()

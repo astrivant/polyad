@@ -37,6 +37,9 @@ async def report_adaptation(api: API, namespace: str, report: AdaptationReport, 
     reserved = (os.environ.get("POLYAD_NAMESPACE", namespace), reserved_name) if reserved_name else None
     if graph is None or not await public_observation(api, graph, reserved_graph=reserved):
         raise Forbidden("adaptation target is unavailable")
+
+    # Authorization covers the graph tree, while UID and generation checks bind
+    # the report to its exact live incarnation rather than a reused object name.
     identity = {"kind": graph["kind"], **graph["metadata"]}
     if grants is not None and not permitted_observation(identity, await observation_ancestry(api, graph), grants):
         raise Forbidden("credential does not authorize this graph tree")
@@ -59,6 +62,9 @@ async def report_adaptation(api: API, namespace: str, report: AdaptationReport, 
         if current.get("observedGeneration") == meta["generation"]
         else {"attempts": 0, "succeeded": 0, "failed": 0, "durationSeconds": 0.0}
     )
+
+    # Running is idempotent for one invocation identity. A terminal report must
+    # refer to an active invocation so completion cannot invent an unstarted attempt.
     previous = invocations.get(report.invocationId)
     if report.phase == "Running":
         value = {"node": report.node, "strategy": report.strategy, "startedAt": report.observedAt}
@@ -80,6 +86,9 @@ async def report_adaptation(api: API, namespace: str, report: AdaptationReport, 
         invocations.pop(report.invocationId)
     if len(invocations) > 64:
         raise ValueError("at most 64 adaptation invocations may be active")
+
+    # Progress remains true while any invocation is active, including overlapping
+    # strategies. One completed callback must not hide another still running.
     adaptation = {
         "observedGeneration": meta["generation"],
         "inProgress": bool(invocations),

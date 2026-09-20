@@ -54,6 +54,8 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         if not samples:
             continue
         axes[0].scatter([item[0] for item in samples], [item[1] for item in samples], label=label, color=color, s=18)
+
+        # The empirical CDF counts measured samples; it does not invent latency for skipped arrivals.
         ordered = sorted(item[1] for item in samples)
         axes[1].step(
             [ordered[0], *ordered],

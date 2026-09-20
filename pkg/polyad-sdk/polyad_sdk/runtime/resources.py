@@ -33,6 +33,8 @@ class ContainerMetrics:
         Returns:
             int | None: Nonnegative memory headroom when both observations are available.
         """
+
+        # Missing or unlimited capacity is unknown, not zero available memory.
         if self.memory_limit_bytes is None or self.memory_usage_bytes is None:
             return None
         return max(0, self.memory_limit_bytes - self.memory_usage_bytes)
@@ -56,19 +58,30 @@ def container_metrics(root: str | Path = "/sys/fs/cgroup") -> ContainerMetrics:
         except (FileNotFoundError, OSError, UnicodeError):
             return None
 
+    # Read on every call: VPA can resize the live cgroup without replacing the
+    # process, while projected environment variables remain startup snapshots.
     memory_current = read("memory.current")
     memory_max = read("memory.max")
     cpu_max = read("cpu.max")
     cpu_stat = read("cpu.stat")
     usage = None
+
+    # CPU usage is a cumulative counter. A utilization rate requires two samples
+    # and elapsed time; this helper deliberately returns the underlying reading.
     if cpu_stat:
         values = dict(line.split(maxsplit=1) for line in cpu_stat.splitlines() if len(line.split(maxsplit=1)) == 2)
         usage = int(values["usage_usec"]) if values.get("usage_usec", "").isdecimal() else None
     cpu_limit = None
+
+    # cpu.max contains quota and period in matching units. Their ratio is CPU
+    # cores; multiply by 1000 for the millicore units used by projected VPA bounds.
     if cpu_max:
         quota, _, period = cpu_max.partition(" ")
         if quota.isdecimal() and period.isdecimal() and int(period) > 0:
             cpu_limit = int(quota) * 1000 // int(period)
+
+    # The kernel's "max" sentinel is not numeric, so an unbounded limit remains
+    # None instead of looking like a real zero-sized allocation.
     return ContainerMetrics(
         cpu_usage_usec=usage,
         cpu_limit_millicores=cpu_limit,

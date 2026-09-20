@@ -85,6 +85,7 @@ def save(figure: Figure, output: Path, name: str, *, study: str, note: str = "")
     output.mkdir(parents=True, exist_ok=True)
     paths = []
     try:
+        # Reserve space for the plain-language explanation before either raster or vector export.
         top = describe(figure, study, name, note=note)
         engine = figure.get_layout_engine()
         if isinstance(engine, ConstrainedLayoutEngine):

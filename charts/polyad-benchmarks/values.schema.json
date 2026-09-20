@@ -19607,7 +19607,7 @@
                           "anyOf": [
                             {
                               "type": "object",
-                              "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                              "description": "Budget exact search and optionally try certified quotient reductions first.",
                               "properties": {
                                 "maxVertices": {
                                   "anyOf": [
@@ -19763,6 +19763,124 @@
                                     }
                                   ],
                                   "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+                                },
+                                "reduction": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                      "properties": {
+                                        "enabled": {
+                                          "anyOf": [
+                                            {
+                                              "type": "boolean",
+                                              "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                        },
+                                        "maxVertices": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "description": "Largest boundary admitted to dense spectral reduction.",
+                                              "minimum": 2,
+                                              "maximum": 4096
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Largest boundary admitted to dense spectral reduction."
+                                        },
+                                        "components": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                                              "minimum": 1,
+                                              "maximum": 64
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+                                        },
+                                        "supernodes": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "description": "Maximum quotient vertices searched before exact enumeration.",
+                                              "minimum": 2,
+                                              "maximum": 64
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Maximum quotient vertices searched before exact enumeration."
+                                        },
+                                        "cache": {
+                                          "anyOf": [
+                                            {
+                                              "type": "boolean",
+                                              "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                        },
+                                        "cacheEntries": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "description": "Maximum process-local partitions retained by the operator.",
+                                              "minimum": 1,
+                                              "maximum": 4096
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Maximum process-local partitions retained by the operator."
+                                        },
+                                        "maxEdgeChurn": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                                              "minimum": 0,
+                                              "maximum": 1
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                        }
+                                      },
+                                      "required": [],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                    }
+                                  ],
+                                  "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
                                 }
                               },
                               "required": [],
@@ -19773,7 +19891,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+                          "description": "Budget exact search and optionally try certified quotient reductions first."
                         },
                         "scope": {
                           "anyOf": [
@@ -22191,7 +22309,7 @@
                                   "anyOf": [
                                     {
                                       "type": "object",
-                                      "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                      "description": "Budget exact search and optionally try certified quotient reductions first.",
                                       "properties": {
                                         "maxVertices": {
                                           "anyOf": [
@@ -22347,6 +22465,124 @@
                                             }
                                           ],
                                           "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+                                        },
+                                        "reduction": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                              "properties": {
+                                                "enabled": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "boolean",
+                                                      "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                },
+                                                "maxVertices": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "description": "Largest boundary admitted to dense spectral reduction.",
+                                                      "minimum": 2,
+                                                      "maximum": 4096
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Largest boundary admitted to dense spectral reduction."
+                                                },
+                                                "components": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                                                      "minimum": 1,
+                                                      "maximum": 64
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+                                                },
+                                                "supernodes": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "description": "Maximum quotient vertices searched before exact enumeration.",
+                                                      "minimum": 2,
+                                                      "maximum": 64
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Maximum quotient vertices searched before exact enumeration."
+                                                },
+                                                "cache": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "boolean",
+                                                      "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                },
+                                                "cacheEntries": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "description": "Maximum process-local partitions retained by the operator.",
+                                                      "minimum": 1,
+                                                      "maximum": 4096
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Maximum process-local partitions retained by the operator."
+                                                },
+                                                "maxEdgeChurn": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                                                      "minimum": 0,
+                                                      "maximum": 1
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                }
+                                              },
+                                              "required": [],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
                                         }
                                       },
                                       "required": [],
@@ -22357,7 +22593,7 @@
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+                                  "description": "Budget exact search and optionally try certified quotient reductions first."
                                 },
                                 "maxWeightStep": {
                                   "anyOf": [
@@ -26358,7 +26594,7 @@
                                   "anyOf": [
                                     {
                                       "type": "object",
-                                      "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                      "description": "Budget exact search and optionally try certified quotient reductions first.",
                                       "properties": {
                                         "maxVertices": {
                                           "anyOf": [
@@ -26514,6 +26750,124 @@
                                             }
                                           ],
                                           "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+                                        },
+                                        "reduction": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                              "properties": {
+                                                "enabled": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "boolean",
+                                                      "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                },
+                                                "maxVertices": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "description": "Largest boundary admitted to dense spectral reduction.",
+                                                      "minimum": 2,
+                                                      "maximum": 4096
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Largest boundary admitted to dense spectral reduction."
+                                                },
+                                                "components": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                                                      "minimum": 1,
+                                                      "maximum": 64
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+                                                },
+                                                "supernodes": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "description": "Maximum quotient vertices searched before exact enumeration.",
+                                                      "minimum": 2,
+                                                      "maximum": 64
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Maximum quotient vertices searched before exact enumeration."
+                                                },
+                                                "cache": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "boolean",
+                                                      "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                },
+                                                "cacheEntries": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "integer",
+                                                      "description": "Maximum process-local partitions retained by the operator.",
+                                                      "minimum": 1,
+                                                      "maximum": 4096
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Maximum process-local partitions retained by the operator."
+                                                },
+                                                "maxEdgeChurn": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                                                      "minimum": 0,
+                                                      "maximum": 1
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                }
+                                              },
+                                              "required": [],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
                                         }
                                       },
                                       "required": [],
@@ -26524,7 +26878,7 @@
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+                                  "description": "Budget exact search and optionally try certified quotient reductions first."
                                 },
                                 "maxWeightStep": {
                                   "anyOf": [
@@ -31708,7 +32062,7 @@
                                           "anyOf": [
                                             {
                                               "type": "object",
-                                              "description": "Budget exact cut search and examine important partitions first without weakening bounds.",
+                                              "description": "Budget exact search and optionally try certified quotient reductions first.",
                                               "properties": {
                                                 "maxVertices": {
                                                   "anyOf": [
@@ -31864,6 +32218,124 @@
                                                     }
                                                   ],
                                                   "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+                                                },
+                                                "reduction": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "object",
+                                                      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers.",
+                                                      "properties": {
+                                                        "enabled": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "boolean",
+                                                              "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Request reduced search before exact enumeration. The operator must also enable it."
+                                                        },
+                                                        "maxVertices": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "integer",
+                                                              "description": "Largest boundary admitted to dense spectral reduction.",
+                                                              "minimum": 2,
+                                                              "maximum": 4096
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Largest boundary admitted to dense spectral reduction."
+                                                        },
+                                                        "components": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "integer",
+                                                              "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.",
+                                                              "minimum": 1,
+                                                              "maximum": 64
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+                                                        },
+                                                        "supernodes": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "integer",
+                                                              "description": "Maximum quotient vertices searched before exact enumeration.",
+                                                              "minimum": 2,
+                                                              "maximum": 64
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Maximum quotient vertices searched before exact enumeration."
+                                                        },
+                                                        "cache": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "boolean",
+                                                              "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Reevaluate a recently cached quotient partition on the current graph first."
+                                                        },
+                                                        "cacheEntries": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "integer",
+                                                              "description": "Maximum process-local partitions retained by the operator.",
+                                                              "minimum": 1,
+                                                              "maximum": 4096
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Maximum process-local partitions retained by the operator."
+                                                        },
+                                                        "maxEdgeChurn": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "number",
+                                                              "description": "Largest changed-edge fraction eligible for cached partition reuse.",
+                                                              "minimum": 0,
+                                                              "maximum": 1
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                        }
+                                                      },
+                                                      "required": [],
+                                                      "additionalProperties": false
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
                                                 }
                                               },
                                               "required": [],
@@ -31874,7 +32346,7 @@
                                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                             }
                                           ],
-                                          "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+                                          "description": "Budget exact search and optionally try certified quotient reductions first."
                                         },
                                         "maxWeightStep": {
                                           "anyOf": [

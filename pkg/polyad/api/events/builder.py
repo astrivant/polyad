@@ -255,6 +255,7 @@ class EventAPIBuilder:
                     return jsonify(error=str(error)), 403
                 except Exception:
                     return jsonify(error="this operator cannot fulfill the requested event subscription"), 503
+
             # Stream slots protect shared HTTP worker capacity even in demo mode.
             if self.stopping.is_set() or not slots.acquire(blocking=False):
                 return jsonify(error="event subscriber capacity exhausted"), 503

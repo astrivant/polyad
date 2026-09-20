@@ -98,6 +98,9 @@ class PeerAvailabilityStrategy(ConstraintStrategy):
         """
         if not current.available:
             return ConstraintAssessment(self.name, "unknown", "Cannot assess peers from unavailable topology")
+
+        # Count logical peers that pass the application's usability predicate,
+        # not every replica address as if it were an independent service.
         count = sum(bool(self._usable(peer)) for peer in current.candidates)
         return ConstraintAssessment(
             self.name, "satisfied" if count >= self._minimum else "blocked", f"Usable logical peers: {count}; required: {self._minimum}"
@@ -158,5 +161,8 @@ class ConnectionPermissionStrategy(ConstraintStrategy):
         receipt = current.connections.get(uid) if uid else None
         if receipt is None:
             return ConstraintAssessment(self.name, "blocked", "Selected connection has no observed unexpired receipt")
+
+        # Discovering a receipt is not permission to use it. Only the observed
+        # Active phase confirms that the connection has completed admission.
         phase = receipt.get("status", {}).get("phase")
         return ConstraintAssessment(self.name, "satisfied" if phase == "Active" else "blocked", f"Connection phase: {phase or 'unknown'}")

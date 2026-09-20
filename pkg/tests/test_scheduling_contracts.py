@@ -93,6 +93,7 @@ def test_persistence_uses_named_class_claim_and_preserves_external_storage():
         assert not api.children("Job")
         claim = api.objects[("PersistentVolumeClaim", "test", "data")]
         claim["spec"]["storageClassName"] = "durable"
+
         # Pending claims are allowed: WaitForFirstConsumer needs a pod before binding.
         await settle(api)
         pod = api.children("Job")[0]["spec"]["template"]["spec"]
@@ -217,6 +218,7 @@ def test_delay_is_persisted_and_recovered_without_blocking_other_nodes():
             await Controller(api).reconcile(root_key)
             assert len(api.children("Job")) == 2
             assert api.objects[root_key]["status"]["delays"]["next"]["notBefore"] == deadline
+
             # Recreating a dependency resets the timer even with the same graph generation.
             first["metadata"]["uid"] = "replacement-first"
             await Controller(api).reconcile(root_key)

@@ -68,6 +68,8 @@ async def reconcile_composition(controller: Controller, obj: dict[str, Any]) -> 
         documents[(root.resource_type.kind, root.metadata.name or "")]["spec"],
         definitions=documents,
     )
+
+    # Definitions must exist and be observed before the executable root can reference them.
     identities = {}
     created = False
     for item_id, desired in manifests.items():
@@ -116,6 +118,8 @@ async def drain_composition(controller: Controller, obj: dict[str, Any]) -> bool
     """
     children = await inventory(controller.api, obj["metadata"]["namespace"], obj["metadata"]["uid"])
     roots = [child for child in children if child["kind"] in asts.BOUNDARY_KINDS and not child["spec"].get("templateOnly", False)]
+
+    # Keep reusable definitions alive until the root and its execution descendants have drained.
     for child in roots or children:
         if not child["metadata"].get("deletionTimestamp"):
             await controller.api.delete(child)

@@ -30,6 +30,7 @@ def _is_ast(cls: Any) -> bool:
 
 
 def _unstructure(value: AST) -> dict[str, Any]:
+    # Extensions survive round trips, but cannot impersonate typed fields or resource identity.
     names = {field.name for field in fields(type(value))} - {"extra"}
     reserved = names | ({"apiVersion", "kind", "spec"} if isinstance(value, Resource) else set())
     if reserved & value.extra.keys():
@@ -37,6 +38,8 @@ def _unstructure(value: AST) -> dict[str, Any]:
     result = copy.deepcopy(value.extra)
     for field in fields(type(value)):
         item = getattr(value, field.name)
+
+        # Omission preserves a field; an explicit null can delete it in a Kubernetes merge patch.
         if field.name != "extra" and (item is not None or field.metadata.get("emit_none", False)):
             result[field.name] = converter.unstructure(item)
     if isinstance(value, Resource):
@@ -70,6 +73,8 @@ def _structure_factory(cls: type[T]) -> Callable[[dict[str, Any], Any], T]:
                 raise ValueError("resource kind or API version does not match its AST")
             if cls is ConfigMap and "spec" in value:
                 raise ValueError("ConfigMap has data fields, not a spec")
+
+        # Validate the modeled contract without discarding native Kubernetes extension fields.
         known = {key: item for key, item in value.items() if key in names}
         known["extra"] = {key: item for key, item in value.items() if key not in names}
         return generated(known, cls)

@@ -131,6 +131,7 @@ class ClusterWorker:
                 await self.root.state.save(self.cluster, self.namespace, ticket, objects, self.sample)
             except Exception:
                 logger.warning("Remote state commit failed; retaining previous durable observation")
+
         # Redis TTL measures transit freshness without trusting a remote worker's wall clock.
         await self.root.shared.client.set(self.root.sample_key(self.cluster), json.dumps(self.sample), ex=max(1, min(15, int(30 - age))))
 

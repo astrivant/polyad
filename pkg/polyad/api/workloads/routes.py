@@ -81,6 +81,8 @@ def register_routes(
         if throughput is None:
             raise Unavailable("throughput service is not configured")
         body = request.get_json()
+
+        # Reject JSON booleans and coercible strings before the general model converter sees counters.
         if not isinstance(body, dict) or type(body.get("generation")) is not int:
             raise ValueError("throughput generation must be an integer")
         if any(type(body.get(name)) not in (int, float) for name in ("offeredPerSecond", "completedPerSecond")):

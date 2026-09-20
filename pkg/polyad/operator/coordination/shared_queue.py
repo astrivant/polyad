@@ -123,6 +123,7 @@ class SharedQueue:
                     if "BUSYGROUP" not in str(error):
                         raise
                 self.groups.add(shard)
+
             # Caller holds the shard Lease; even a zero-idle pending delivery is safe to reclaim.
             pending: Any = await self.client.xautoclaim(stream, self.group, self.consumer, 0, "0-0", count=1)
             messages = pending[1]

@@ -136,6 +136,7 @@ def test_dragonfly_queue_recovery():
             assert await second.client.xlen(second.stream(0)) == 0
             await first.sample_backlog(range(2))
             assert first.backlog([0])["total"] == 0
+
             # Simulate cache loss only for this test's keys, then repopulate from intent.
             await first.client.delete(first.stream(0))
             with pytest.raises(ResponseError):

@@ -79,15 +79,61 @@ class Cheeger:
 
 
 @frozen
+class CheegerReduction:
+    """
+    Configure the opt-in, certificate-preserving Cheeger reduction tiers.
+
+    Attributes:
+        enabled (bool): Request reduced search before exact enumeration. The operator must also enable it.
+        maxVertices (int): Largest boundary admitted to dense spectral reduction.
+        components (int): Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.
+        supernodes (int): Maximum quotient vertices searched before exact enumeration.
+        cache (bool): Reevaluate a recently cached quotient partition on the current graph first.
+        cacheEntries (int): Maximum process-local partitions retained by the operator.
+        maxEdgeChurn (float): Largest changed-edge fraction eligible for cached partition reuse.
+    """
+
+    enabled: bool = False
+    maxVertices: int = field(default=256, metadata={"schema": {"minimum": 2, "maximum": 4096}})
+    components: int = field(default=4, metadata={"schema": {"minimum": 1, "maximum": 64}})
+    supernodes: int = field(default=8, metadata={"schema": {"minimum": 2, "maximum": 64}})
+    cache: bool = True
+    cacheEntries: int = field(default=128, metadata={"schema": {"minimum": 1, "maximum": 4096}})
+    maxEdgeChurn: float = field(default=0.1, metadata={"schema": {"minimum": 0, "maximum": 1}})
+
+    def __attrs_post_init__(self) -> None:
+        """
+        Reject ambiguous switches and unbounded reduction work.
+
+        Returns:
+            None: No return value.
+        """
+        if type(self.enabled) is not bool or type(self.cache) is not bool:
+            raise ValueError("Cheeger reduction enabled and cache must be booleans")
+        if type(self.maxVertices) is not int or not 2 <= self.maxVertices <= 4096:
+            raise ValueError("Cheeger reduction maxVertices must be an integer between 2 and 4096")
+        if type(self.components) is not int or not 1 <= self.components <= 64:
+            raise ValueError("Cheeger reduction components must be an integer between 1 and 64")
+        if type(self.supernodes) is not int or not 2 <= self.supernodes <= 64:
+            raise ValueError("Cheeger reduction supernodes must be an integer between 2 and 64")
+        if type(self.cacheEntries) is not int or not 1 <= self.cacheEntries <= 4096:
+            raise ValueError("Cheeger reduction cacheEntries must be an integer between 1 and 4096")
+        churn = self.maxEdgeChurn
+        if isinstance(churn, bool) or not isinstance(churn, (int, float)) or not math.isfinite(churn) or not 0 <= churn <= 1:
+            raise ValueError("Cheeger reduction maxEdgeChurn must be finite and between zero and one")
+
+
+@frozen
 class CheegerComputation:
     """
-    Budget exact cut search and examine important partitions first without weakening bounds.
+    Budget exact search and optionally try certified quotient reductions first.
 
     Attributes:
         maxVertices (int | None): Boundary vertex cap; null inherits the operator ceiling, normally 20.
         maxCuts (int | None): Unique cut evaluation budget; null inherits the operator ceiling, normally 524287.
         timeoutSeconds (float | None): Cooperative time budget; null inherits the operator ceiling, normally five seconds.
         priorityCuts (tuple[tuple[str, ...], ...]): Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
+        reduction (CheegerReduction): Optional cached quotient and fresh spectral stages before exact enumeration.
     """
 
     maxVertices: int | None = field(default=None, metadata={"schema": {"minimum": 2, "maximum": 4096}})
@@ -107,6 +153,7 @@ class CheegerComputation:
             }
         },
     )
+    reduction: CheegerReduction = field(factory=CheegerReduction)
 
     def __attrs_post_init__(self) -> None:
         """
@@ -146,7 +193,7 @@ class StructuralRule:
         shapes (tuple[Literal['acyclic', 'connected', 'tree', 'planar'], ...]): Required graph properties.
         spectrum (Spectrum | None): Optional undirected spectral constraints, limited to 256 vertices.
         network (NetworkAccess | None): Mandatory or referenced traffic restrictions inherited by graph descendants.
-        cheeger (Cheeger | None): Optional exact edge-expansion bounds.
+        cheeger (Cheeger | None): Optional edge-expansion bounds proven exactly or by a conservative interval.
         cheegerComputation (CheegerComputation): Cut priorities and per-calculation budgets within operator ceilings.
     """
 

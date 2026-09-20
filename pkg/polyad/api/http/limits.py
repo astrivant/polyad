@@ -108,6 +108,7 @@ def install_limits(app: Flask | Routes, policy: RateLimitPolicy) -> Limiter | No
             if not isinstance(request_id, str):
                 raise ValueError("requestId must be a string")
             return str(root_shard("Composition", policy.namespace, request_name(request_id)))
+
         # Schema discovery has a separate bounded namespace budget.
         return "discovery"
 

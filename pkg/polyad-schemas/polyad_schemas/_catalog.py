@@ -16,6 +16,7 @@ CATEGORIES = ("models", "resources", "events", "helm")
 
 
 def _artifacts() -> dict[str, Traversable]:
+    # Package resources also work from wheels; do not assume schemas are ordinary local files.
     return {
         item.name.removesuffix(".schema.json"): item
         for category in CATEGORIES
@@ -47,4 +48,6 @@ def load_schema(name: str) -> dict[str, Any]:
     artifacts = _artifacts()
     if name not in artifacts:
         raise ValueError(f"unknown packaged schema: {name!r}; choose from {', '.join(sorted(artifacts))}")
+
+    # Decode per call so a consumer cannot mutate the next caller's validation contract.
     return cast("dict[str, Any]", json.loads(artifacts[name].read_text(encoding="utf-8")))

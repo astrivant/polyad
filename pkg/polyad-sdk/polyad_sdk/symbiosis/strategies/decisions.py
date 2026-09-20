@@ -59,6 +59,9 @@ class DecisionGuardStrategy(ConstraintStrategy):
         Returns:
             ConstraintAssessment: Whether the observed phase permits the dependent action.
         """
+
+        # A remembered allowed phase cannot authorize new work when the current
+        # environment is unavailable; stale evidence is explicitly unknown.
         decision = current.decision if current.available else None
         phase = decision.get("phase") if decision else None
         if not isinstance(phase, str) or not phase:

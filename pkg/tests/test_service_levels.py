@@ -46,6 +46,8 @@ def sample(observed: datetime, **changes: object) -> ServiceLevelReport:
         "latencyP99Seconds": 0.2,
         "completedPerSecond": 50.0,
     }
+
+    # Start with a compliant sample so each override isolates the objective being exercised.
     baseline.update(changes)
     return ServiceLevelReport(**baseline)  # type: ignore[arg-type]
 

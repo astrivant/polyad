@@ -57,6 +57,7 @@ async def batches(items: Sequence[T], apply: Callable[[T], Awaitable[None]], lim
         """
         await apply(item)
 
+    # Each group is a completion barrier, including cancellation cleanup of sibling callbacks.
     for offset in range(0, len(items), limit):
         async with asyncio.TaskGroup() as group:
             for item in items[offset : offset + limit]:
@@ -134,6 +135,8 @@ class RefreshQueue:
         """
         while True:
             key = await self.queue.get()
+
+            # Detach this turn's waiters; submissions during reconciliation need a subsequent read.
             waiters = self.pending.pop(key)
             self.active.add(key)
             logger.debug("Refresh dequeued kind=%s namespace=%s name=%s waiters=%s remaining=%s", *key, len(waiters), self.queue.qsize())
@@ -153,6 +156,8 @@ class RefreshQueue:
                         waiter.set_result(None)
             finally:
                 self.active.remove(key)
+
+                # Replay changes observed during the active pass without running this key twice.
                 if key in self.pending:
                     self.queue.put_nowait(key)
                 self.last_progress = time.monotonic()

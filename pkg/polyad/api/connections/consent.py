@@ -98,6 +98,8 @@ async def endpoint(
             except Forbidden:
                 continue
         raise Forbidden("caller is not one of the proposal's exact service participants")
+
+    # Consent comes from a live, Pod-bound identity, not possession of a broadly scoped service-account token.
     names = caller.extra.get("authentication.kubernetes.io/pod-name", [])
     uids = caller.extra.get("authentication.kubernetes.io/pod-uid", [])
     if not isinstance(names, (list, tuple)) or not isinstance(uids, (list, tuple)) or len(names) != 1 or len(uids) != 1:
@@ -166,6 +168,8 @@ async def confirmed(
 
     store = ConnectionStore(api, settings)
     result = set()
+
+    # Stored approval is evidence, not permanent permission: recheck ownership and RBAC before using it.
     for node, value in decisions(receipt).items():
         if value["decision"] != "Approve":
             continue

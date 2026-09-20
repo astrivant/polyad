@@ -3,7 +3,7 @@
 <img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoes fading toward the right" width="630" height="140">
 
 Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics)
-is a Kubernetes operator and Python SDK for adaptive microservices. Deploy,
+is a Kubernetes operator and Python SDK for writing and orchestrating adaptive microservices. Deploy,
 connect and scale applications as graphs within and across clusters, enforce
 Cheeger bounds, and adjust topology, traffic and capacity to application demand.
 Compose batch jobs, persistent services and supporting resources into reusable

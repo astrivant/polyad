@@ -36,6 +36,8 @@ def conflicts(left: Mutation, right: Mutation) -> tuple[str, ...]:
     reasons = []
     if not left.effects_complete or not right.effects_complete:
         reasons.append("incomplete effect declaration")
+
+    # Preconditions are reads too: another operation cannot invalidate them inside the same batch.
     left_reads = left.reads + tuple(item.scope for item in left.preconditions)
     right_reads = right.reads + tuple(item.scope for item in right.preconditions)
     for label, first, second in (
@@ -82,6 +84,8 @@ def advance_budgets(batch: tuple[Mutation, ...], budgets: tuple[Budget, ...], us
     for budget in budgets:
         changes = [delta.amount for mutation in batch for delta in mutation.deltas if delta.budget == budget.name]
         current = usage[budget.name]
+
+        # Check both extreme completion orders; releases cannot fund allocations still in flight.
         low = current + sum(min(0, change) for change in changes)
         high = current + sum(max(0, change) for change in changes)
         if low < budget.minimum or high > budget.maximum:
@@ -133,6 +137,8 @@ def compile_mutations(mutations: tuple[Mutation, ...], *, budgets: tuple[Budget,
             reasons[predecessor, mutation.name] = ("explicit dependency",)
     if not nx.is_directed_acyclic_graph(graph):
         raise ValueError("mutation ordering contains a cycle")
+
+    # Establish dependency-compatible order before orienting conflicts, avoiding artificial cycles.
     rank = {name: index for index, name in enumerate(names)}
     ordered_names = tuple(nx.lexicographical_topological_sort(graph, key=rank.__getitem__))
     indexed = {item.name: item for item in mutations}

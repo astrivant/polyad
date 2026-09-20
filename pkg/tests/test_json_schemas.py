@@ -71,6 +71,8 @@ def test_generated_artifacts_match_sources():
     """
     generated = runpy.run_path(str(GENERATOR))["artifacts"]()
     assert set(available_schemas()) == {*generated, "events"}
+
+    # Compare regenerated documents in memory; this test reports drift without repairing fixtures.
     for name, schema in generated.items():
         assert not DeepDiff(schema, load_schema(name)), name
 

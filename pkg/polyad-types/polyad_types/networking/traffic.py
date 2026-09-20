@@ -66,6 +66,8 @@ class TrafficResilience:
         }
         if any(type(value) is not int or not minimum <= value <= maximum for value, minimum, maximum in bounded.values()):
             raise ValueError("traffic resilience limits must be bounded integers")
+
+        # Per-attempt timeouts must fit the enclosing request's deadline when one is configured.
         if not self.retries and self.perTryTimeoutSeconds:
             raise ValueError("per-try timeout requires retries")
         if self.timeoutSeconds and self.perTryTimeoutSeconds > self.timeoutSeconds:
@@ -141,6 +143,8 @@ class TrafficRoute:
         targets = [destination.target for destination in self.destinations]
         if not 2 <= len(targets) <= 16 or len(set(targets)) != len(targets):
             raise ValueError("traffic routes require two through 16 distinct destinations")
+
+        # Disjoint subtrees prevent one pod from receiving two independently weighted identities.
         if any(right.startswith(left + "/") for left in targets for right in targets if left != right):
             raise ValueError("traffic destination subtrees cannot overlap")
         if sum(destination.weight for destination in self.destinations) != 100:

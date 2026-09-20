@@ -72,10 +72,13 @@ def cheeger_result_schema() -> dict[str, Any]:
         "nullable": True,
         "properties": {
             "exact": {"type": "boolean"},
+            "lowerBound": {"type": "number"},
             "upperBound": {"type": "number", "nullable": True},
             "cut": {"type": "array", "items": {"type": "string"}},
             "evaluatedCuts": {"type": "integer", "minimum": 0},
             "reason": {"type": "string"},
+            "stage": {"type": "string"},
+            "edgeChurn": {"type": "number", "minimum": 0, "maximum": 1},
             "skippedPriorityCuts": {"type": "integer", "minimum": 0},
             "durationSeconds": {"type": "number", "minimum": 0},
             "inputs": {"type": "object", "additionalProperties": {"type": "number"}},

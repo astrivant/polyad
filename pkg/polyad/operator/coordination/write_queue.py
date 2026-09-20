@@ -79,6 +79,8 @@ def write_intent(
     """
     if method not in {"POST", "PUT", "PATCH", "DELETE"} or kind in {"TokenReview", "SubjectAccessReview"}:
         return None
+
+    # Server validation has no persistent effect and must not invalidate a real queued write.
     if any(key == "dryRun" and value == "All" for key, value in query or []):
         return None
     document = body if isinstance(body, dict) else {}
@@ -123,6 +125,8 @@ class PendingWrites:
         Returns:
             None: Existing transports are absent from this pending-only registry.
         """
+
+        # Neither conflicting caller is privileged: both must reconcile from a fresh observation.
         tokens = self.targets.setdefault(intent.target, set())
         for other in tokens:
             if other not in self.conflicted and self.entries[other].fingerprint != intent.fingerprint:

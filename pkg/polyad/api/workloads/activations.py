@@ -47,6 +47,8 @@ class ActivationStore:
             dict[str, Any]: Durable receipt; admission is asynchronous.
         """
         name = activation_name(request.requestId)
+
+        # Persist the submitted intent independently of later changes to the caller's model.
         intent = converter.unstructure(request)
         existing = await self.api.get("Activation", self.namespace, name)
         if existing is None:
@@ -74,6 +76,8 @@ class ActivationStore:
             definition = await self.api.get(node["kind"], self.namespace, node["ref"])
             if definition is None or definition["metadata"].get("deletionTimestamp") or "activation" not in definition["spec"]:
                 raise ValueError("downstream definition must declare an activation policy")
+
+            # Validate the opt-in activation contract before binding a receipt to this definition revision.
             converter.structure(definition["spec"]["activation"], ActivationPolicy)
             meta = graph["metadata"]
             desired = asts.Activation(

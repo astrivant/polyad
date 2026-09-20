@@ -30,6 +30,9 @@ def refresh_environment(environ: Mapping[str, str] | None = None) -> dict[str, s
     Returns:
         dict[str, str]: The same exported env dictionary with refreshed contents.
     """
+
+    # Copy before clearing: callers may pass the exported mapping itself. Mutate
+    # that mapping in place so existing `from ... import env` references stay valid.
     snapshot = dict(os.environ if environ is None else environ)
     env.clear()
     env.update(snapshot)

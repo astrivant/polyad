@@ -150,6 +150,8 @@ class APIServer:
         Returns:
             T: Acknowledged result, preserving expected client-facing errors.
         """
+
+        # Reads and uncertain writes have separate budgets; a client timeout does not prove a write failed.
         slots = self.slots if retain else self.read_slots
         if self.stopping.is_set() or not slots.acquire(blocking=False):
             operation.close()

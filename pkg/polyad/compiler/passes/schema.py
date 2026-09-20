@@ -58,6 +58,8 @@ def _schema(annotation: Any, ancestors: tuple[type, ...]) -> dict[str, Any]:
         return {"type": primitives[annotation]}
     if not isinstance(annotation, type) or not has(annotation):
         raise TypeError(f"unsupported structural schema annotation: {annotation}")
+
+    # CRD structural fields are inlined, so recursive model references cannot be expanded safely.
     if annotation in ancestors:
         raise TypeError(f"recursive AST cannot be inlined: {annotation.__name__}")
     hints = get_type_hints(annotation)

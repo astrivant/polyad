@@ -44,6 +44,9 @@ def compile_daemon(spec: dict[str, Any], selector: dict[str, str]) -> asts.Deplo
         raise ValueError("daemon replicas must be a positive integer")
     if type(spec.get("reloadOnSecretChange", False)) is not bool:
         raise ValueError("daemon reloadOnSecretChange must be a boolean")
+
+    # Polyad owns these identity-bearing fields for every controller kind;
+    # controller-specific options may not silently override their values.
     common = {"template": spec["template"], "selector": {"matchLabels": selector}, "replicas": replicas}
     if kind == "DaemonSet":
         if replicas != 1 or "statefulSet" in spec or spec.get("activation"):
@@ -100,6 +103,9 @@ def compile_daemon(spec: dict[str, Any], selector: dict[str, str]) -> asts.Deplo
     claims = options.get("volumeClaimTemplates", [])
     if not isinstance(claims, list):
         raise ValueError("StatefulSet volumeClaimTemplates must be a list")
+
+    # Claim templates create volumes by name, so reject collisions with either
+    # another claim template or an explicitly configured Pod volume.
     names = set()
     volumes = {volume["name"] for volume in spec["template"]["spec"].get("volumes", [])}
     for claim in claims:
@@ -125,6 +131,9 @@ def execution_pod(document: dict[str, Any]) -> dict[str, Any]:
         dict[str, Any]: Independent Pod template including implicit StatefulSet claim volumes.
     """
     pod: dict[str, Any] = copy.deepcopy(document["spec"]["template"])
+
+    # Model the starting StatefulSet ordinal's actual PVC names when evaluating
+    # its execution Pod; claim templates are not ordinary inline Pod volumes.
     if document["kind"] == "StatefulSet":
         ordinal = document["spec"].get("ordinals", {}).get("start", 0)
         for claim in document["spec"].get("volumeClaimTemplates", []):

@@ -45,6 +45,9 @@ pip install ./pkg/polyad-types ./pkg/polyad-sdk ./pkg/polyad-benchmarks
   process-rerouting and PCA Cheeger-reduction studies without a cluster. Install
   `pip install './pkg/polyad-benchmarks[reachability]'` for their optional HJ backend.
   Follow the [local suite commands](../../studies/symbiosis/README.md#run).
+  With the operator package available, `--suite cheeger` runs the PCA comparison
+  and [production strategy study](../../studies/cheeger-strategies/README.md),
+  including churn, policy thresholds, cache pressure and resource budgets.
 - `python -m polyad_benchmarks.studies.soul --output DIRECTORY` and
   `python -m polyad_benchmarks.studies.nature --output DIRECTORY`: run local process
   studies from a checkout containing the unchanged root demos. Install the `soul`

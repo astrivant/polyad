@@ -113,6 +113,9 @@ class Subscription:
         """
         if event.event in {"reset", "unavailable", "copulse"}:
             raise StreamInterrupted(event)
+
+        # Replay may revisit callbacks completed before a different callback
+        # failed. Deduplicate each event/hook pair, not the whole event at once.
         for index, (match, callback) in enumerate(self._hooks):
             identity = event.id, index
             if (event.id and identity in self._handled) or not match(event):
@@ -184,6 +187,8 @@ class Subscription:
     def _resume(self) -> None:
         from polyad_sdk.transport.routing import addresses
 
+        # Rotate replicas while resuming the committed cursor. Jittered backoff
+        # spreads reconnect attempts across subscribers after an outage.
         backoff = 1.0
         while not self._stopped.is_set():
             stream: Iterator[Event] | None = None
@@ -228,6 +233,7 @@ class Subscription:
                             break
                         if event.event == "unavailable":
                             break
+
                         # Callback exceptions and expired replay always escape, even if they resemble transport errors.
                         self.dispatch(event)
                         backoff = 1.0
@@ -251,5 +257,8 @@ class Subscription:
         """
         if not event.id or not action:
             raise ValueError("stable action IDs require an event cursor and action identity")
+
+        # Stable scoped IDs let an event-driven action retry without creating a
+        # distinct request merely because delivery replayed.
         value = "\0".join((self.client.url, self.cluster or "", event.id, action))
         return "event-" + hashlib.sha256(value.encode()).hexdigest()

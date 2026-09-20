@@ -1,9 +1,10 @@
 # PCA-guided Cheeger reduction
 
 This local study asks whether a graph can be compressed before searching its
-Cheeger cuts, and what accuracy and assurance are lost. It is an experiment,
-not a production approximation mode. Polyad's hard structural rules continue to
-require either an exact constant or a witnessed violation.
+Cheeger cuts, and what accuracy and assurance are lost. PCA remains an experimental
+comparison. The companion [strategy selection study](../cheeger-strategies/README.md)
+measures the production opt-in spectral selector, its cache, threshold decisions
+and exact fallback on changing graphs.
 
 ## Table of contents
 
@@ -59,10 +60,10 @@ small enough to solve exactly. They are evaluation metrics, not production
 certificates.
 
 An upper bound below a required minimum proves a violation. An upper bound above
-the minimum does **not** prove compliance. This asymmetry makes the reduction
-useful for early rejection, prioritizing likely cuts, monitoring, and deciding
-when exact recomputation is worthwhile; it must not silently authorize a hard
-admission decision.
+the minimum does **not** prove compliance; a sufficiently large certified lower
+bound can. This asymmetry makes the interval useful for early policy decisions,
+prioritizing likely cuts, monitoring, and deciding when exact recomputation is
+worthwhile. The companion study measures those actual production decisions.
 
 ## Controlled sweeps
 
@@ -104,7 +105,7 @@ schedule refreshes, but should fall back to fresh reduction or exact search when
 - the certified interval crosses a hard policy threshold;
 - edge churn exceeds a calibrated limit;
 - the cached witness degrades materially; or
-- a successful hard-minimum decision requires proof.
+- the lower bound cannot prove a required hard minimum.
 
 ## Run
 
@@ -153,10 +154,9 @@ count generally matters more directly than PCA component count: it determines
 which unions can be searched. Symmetric graphs can also have unstable embeddings
 even when their Cheeger constants are stable.
 
-Before this becomes an optional production feature, require representative graph
-corpora to establish topology-specific churn thresholds, maximum interval width,
-and a real end-to-end speed benefit beyond the current 20-vertex exact ceiling.
-The safe first integration is to emit reduced witnesses as `priorityCuts` for the
-existing exact/budgeted engine. Replacing exact evaluation requires a separate
-API whose result type exposes lower bound, upper bound, method, topology generation
-and cache age so callers cannot confuse it with `CheegerResult.exact=True`.
+Polyad now has an [optional spectral selector](../../docs/graphs/cheeger-tuning.md)
+whose result exposes lower and upper bounds, stage, exactness and cache churn.
+It can settle a hard policy from a certified interval and otherwise escalates to
+exact search. PCA in this study is still a separate heuristic. Use the companion
+study's measured strategy transitions, cost and budget probes before choosing
+deployment settings; neither study establishes a universal safe churn default.

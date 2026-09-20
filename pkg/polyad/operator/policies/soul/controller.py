@@ -56,6 +56,9 @@ async def search_soul(controller: Controller, obj: dict[str, Any], *, now: datet
     state, status, clock = search.state, search.status, search.clock
     changes = state["changes"]
     changed = False
+
+    # Recommendation mode records a decision without mutating the graph.
+    # Adapt mode additionally enforces cooldowns and temporary-connection safety.
     if proposal is not None and policy.mode == "Adapt":
         if active_entries(obj):
             status["phase"] = "TemporaryConnectionsActive"
@@ -64,6 +67,9 @@ async def search_soul(controller: Controller, obj: dict[str, Any], *, now: datet
         else:
             # Admit against the whole live family immediately before the fenced write.
             await check_live_rules(controller.api, obj, candidate=proposal.spec, candidate_is_logical=True)
+
+            # Revalidate capacity and demand freshness immediately before writing;
+            # planning may have taken long enough for the underlying evidence to change.
             if await capacity_revision(controller.api, obj) != search.capacity:
                 return False
             if policy.trafficMode == "Headroom" and await headroom_targets(controller, obj, proposal.sample) != proposal.traffic_targets:
@@ -77,6 +83,9 @@ async def search_soul(controller: Controller, obj: dict[str, Any], *, now: datet
 
     # Commit parameters and their change budget together, then publish the decision.
     state["decision"] = {key: value for key, value in status.items() if key not in {"currentTraffic", "proposedTraffic", "targetTraffic"}}
+
+    # Persist decision memory together with any spec change under the observed
+    # resourceVersion, so concurrent updates cannot silently overwrite each other.
     if state != search.previous:
         meta = obj["metadata"]
         body: dict[str, Any] = {

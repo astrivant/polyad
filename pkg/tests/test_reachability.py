@@ -77,6 +77,8 @@ def test_rerouting_and_readiness_change_the_reachable_contract():
     prepared = Envelope(model(), "rev", 2, 1, 100)
     assert prepared.assess((0, 0))[0]
     assert not replace(prepared, model=model(shares=(1.0, 0.0))).assess((0, 0))[0]
+
+    # Identical steady capacity can be unsafe while replacement workers are still warming up.
     warming = replace(prepared, model=model(warmup_max=2))
     assert not warming.assess((0, 0, 2))[0]
     assert warming.assess((0, 0, 0))[0]

@@ -107,6 +107,8 @@ class RecordCipher:
         """
         key = AESGCM.generate_key(bit_length=256)
         nonce = os.urandom(12)
+
+        # Authenticate the row address too, so moving valid ciphertext to another row is detected.
         aad = _context(table, identity, self.key_id)
         wrapped = self.public.encrypt(
             key, padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=FORMAT.encode())

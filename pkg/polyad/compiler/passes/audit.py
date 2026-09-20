@@ -49,6 +49,8 @@ def trace_child(child: asts.Resource, parent: dict[str, Any], node: Node, defini
     if f"{prefix}/request-id" in values:
         labels[f"{prefix}/request"] = request_name(values[f"{prefix}/request-id"])[12:]
     result = evolve(child, metadata=evolve(child.metadata, labels=labels, annotations={**(child.metadata.annotations or {}), **values}))
+
+    # Copy provenance onto the Pod template too, so execution logs can trace the same definition revision.
     if isinstance(result, (asts.Job, asts.Deployment, asts.StatefulSet, asts.DaemonSet)):
         pod = result.spec.template
         meta = pod.metadata or asts.ObjectMeta()

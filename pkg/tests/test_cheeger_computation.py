@@ -13,8 +13,19 @@ import networkx as nx
 import pytest
 import yaml
 
-from polyad.graph import Cheeger, CheegerComputation, Connection, Node, StructuralRule, Topology, evaluate_rule, graph_cheeger
+from polyad.graph import (
+    Cheeger,
+    CheegerComputation,
+    CheegerReduction,
+    Connection,
+    Node,
+    StructuralRule,
+    Topology,
+    evaluate_rule,
+    graph_cheeger,
+)
 from polyad.graph.cheeger import CheegerIncomplete, compute_cheeger
+from polyad.graph.reduction import clear_reduction_cache
 from polyad.operator.policies.cheeger import computation_limits
 from polyad.operator.policies.rules import RuleViolation, check_rules
 from tests.test_operator import FakeAPI, resource
@@ -119,11 +130,92 @@ def test_operator_ceilings_apply_to_live_rules_and_cannot_be_overridden(monkeypa
     monkeypatch.setenv("POLYAD_CHEEGER_MAX_VERTICES", "21")
     monkeypatch.setenv("POLYAD_CHEEGER_MAX_CUTS", "1048575")
     monkeypatch.setenv("POLYAD_CHEEGER_TIMEOUT_SECONDS", "15")
-    assert graph_cheeger(nx.path_graph(21), limits=computation_limits()) == pytest.approx(0.1)
+    monkeypatch.setenv("POLYAD_CHEEGER_REDUCTION_ENABLED", "true")
+    monkeypatch.setenv("POLYAD_CHEEGER_REDUCTION_SUPERNODES", "6")
+    limits = computation_limits()
+    assert limits.reduction.enabled and limits.reduction.supernodes == 6
+    assert graph_cheeger(nx.path_graph(21), limits=limits) == pytest.approx(0.1)
     graph = {"mode": "persistent", "nodes": [{"name": "a", "kind": "Daemon", "ref": "worker"}]}
     rule = resource("GraphRule", "hard", {"cheeger": {}, "cheegerComputation": {"maxVertices": 22}})
     with pytest.raises(RuleViolation, match="exceeds operator ceiling 21"):
         asyncio.run(check_rules(FakeAPI(rule), "test", "Graph", graph))
+
+
+def test_reduction_requires_both_policy_and_operator_opt_in():
+    """
+    Keep exact-only behavior by default and prevent policy authors from bypassing the cluster gate.
+    """
+    requested = CheegerComputation(reduction=CheegerReduction(enabled=True, supernodes=4))
+    with pytest.raises(ValueError, match="disabled by the operator"):
+        compute_cheeger(nx.complete_graph(8), requested, limits=CheegerComputation(), minimum=3)
+    ordinary = compute_cheeger(nx.complete_graph(8), minimum=3)
+    assert ordinary.exact and ordinary.stage == "ExactEnumeration"
+
+
+def test_fresh_spectral_certificate_can_settle_policy_without_exact_enumeration():
+    """
+    Let proven interval bounds stop work while retaining explicit non-exact status.
+    """
+    clear_reduction_cache()
+    reduction = CheegerReduction(enabled=True, components=3, supernodes=4)
+    result = compute_cheeger(nx.complete_graph(8), CheegerComputation(reduction=reduction), minimum=3, maximum=5)
+    assert not result.exact and result.reason == "BoundsSatisfied"
+    assert result.stage == "FreshSpectralReduction"
+    assert result.lowerBound == pytest.approx(4)
+    assert result.upperBound == pytest.approx(4)
+    assert result.evaluatedCuts == 7
+
+
+def test_cached_partition_is_rescored_and_uncertain_interval_escalates():
+    """
+    Reuse only low-churn partitions and fall through to exact search when bounds cannot decide.
+    """
+    clear_reduction_cache()
+    settings = CheegerComputation(reduction=CheegerReduction(enabled=True, components=3, supernodes=4, maxEdgeChurn=0.5))
+    graph = nx.complete_graph(8)
+    compute_cheeger(graph, settings, minimum=3, maximum=5)
+    cached = compute_cheeger(graph, settings, minimum=3, maximum=5)
+    assert cached.stage == "CachedQuotient" and cached.reason == "BoundsSatisfied"
+    uncertain = compute_cheeger(nx.path_graph(8), settings, minimum=0.1, maximum=2)
+    assert uncertain.exact and uncertain.stage == "ExactEnumeration"
+    assert uncertain.upperBound == pytest.approx(0.25)
+
+
+def test_spectral_lower_bound_can_prove_a_maximum_violation():
+    """
+    Reject a maximum only when the certified lower endpoint exceeds it.
+    """
+    clear_reduction_cache()
+    settings = CheegerComputation(reduction=CheegerReduction(enabled=True, components=3, supernodes=4))
+    result = compute_cheeger(nx.complete_graph(8), settings, maximum=3)
+    assert result.reason == "MaximumViolated"
+    assert result.lowerBound == pytest.approx(4)
+
+
+def test_structural_rule_accepts_a_certified_interval_without_reporting_an_estimate():
+    """
+    Authorize admission from proven bounds while reserving measurements.cheeger for exact values.
+    """
+    clear_reduction_cache()
+    topology = Topology(
+        mode="persistent",
+        nodes=tuple(Node(str(index), "Daemon", str(index)) for index in range(8)),
+        connections=tuple(Connection(str(left), str(right)) for left, right in nx.complete_graph(8).edges()),
+    )
+    reduction = CheegerReduction(enabled=True, components=3, supernodes=4)
+    verdict = evaluate_rule(
+        StructuralRule(
+            relation="connections",
+            cheeger=Cheeger(minimum=3, maximum=5),
+            cheegerComputation=CheegerComputation(reduction=reduction),
+        ),
+        topology,
+        expanded_nodes=8,
+        nesting_depth=1,
+        cheeger_limits=CheegerComputation(reduction=reduction),
+    )
+    assert verdict["allowed"] and "cheeger" not in verdict["measurements"]
+    assert verdict["cheegerComputation"]["reason"] == "BoundsSatisfied"
 
 
 @pytest.mark.parametrize(
@@ -152,6 +244,26 @@ def test_computation_controls_validate_public_inputs(settings):
         CheegerComputation(**settings)
 
 
+@pytest.mark.parametrize(
+    "settings",
+    [
+        {"enabled": 1},
+        {"maxVertices": 1},
+        {"components": 0},
+        {"supernodes": 1},
+        {"cache": "true"},
+        {"cacheEntries": 0},
+        {"maxEdgeChurn": 1.1},
+    ],
+)
+def test_reduction_controls_validate_public_inputs(settings):
+    """
+    Reject invalid administrator and policy reduction settings before spectral work.
+    """
+    with pytest.raises(ValueError):
+        CheegerReduction(**settings)
+
+
 def test_tuning_reference_and_generated_schemas_share_computation_types():
     """
     Validate the complete reference and reject negative targets and malformed search controls at admission.
@@ -161,6 +273,7 @@ def test_tuning_reference_and_generated_schemas_share_computation_types():
     for document in documents:
         crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{document['kind'].lower()}s.yaml").read_text())
         schema = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
+
         # Kubernetes OpenAPI uses the boolean exclusiveMinimum form from draft 4.
         jsonschema.Draft4Validator(schema).validate(document)
     for kind in ("graphs", "polygraphs", "rewrites", "graphrules"):
@@ -174,7 +287,23 @@ def test_tuning_reference_and_generated_schemas_share_computation_types():
             assert not jsonschema.Draft4Validator(bounds).is_valid({"minimum": -1})
             assert len(bounds["x-kubernetes-validations"]) == 2
         validator = jsonschema.Draft4Validator(spec["cheegerComputation"])
-        assert validator.is_valid({"maxVertices": 22, "maxCuts": 2097151, "timeoutSeconds": 15, "priorityCuts": [["a", "b"]]})
+        assert validator.is_valid(
+            {
+                "maxVertices": 22,
+                "maxCuts": 2097151,
+                "timeoutSeconds": 15,
+                "priorityCuts": [["a", "b"]],
+                "reduction": {
+                    "enabled": True,
+                    "maxVertices": 128,
+                    "components": 3,
+                    "supernodes": 6,
+                    "cache": True,
+                    "cacheEntries": 64,
+                    "maxEdgeChurn": 0.05,
+                },
+            }
+        )
         for invalid in ({"maxVertices": True}, {"maxCuts": 0}, {"timeoutSeconds": "5"}, {"priorityCuts": [["a", "a"]]}):
             assert not validator.is_valid(invalid)
 
@@ -185,6 +314,7 @@ def test_solver_diagnostics_survive_kubernetes_status_schema_pruning():
     """
     root = Path(__file__).parents[2]
     report = compute_cheeger(nx.path_graph(list("abc")), CheegerComputation(maxCuts=1)).report()
+
     # JSON serialization converts attrs tuples into the arrays expected by OpenAPI.
     import json
 

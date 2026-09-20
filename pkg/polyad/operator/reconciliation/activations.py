@@ -178,6 +178,7 @@ class Activations:
             for receipt in pending[policy.maxPending :]:
                 await self.save(receipt, "Rejected", message="activation queue limit exceeded")
             pending = pending[: policy.maxPending]
+
             # A terminating execution still occupies concurrency until its finalizers finish.
             draining = sum(
                 receipt.get("status", {}).get("phase") in TERMINAL
@@ -214,6 +215,7 @@ class Activations:
                     )
                 )
             selected[node] = [receipt for receipt in active if receipt.get("status", {}).get("phase") != "Stopping"]
+
             # Keep the latest successful execution observable until the next pulse replaces it.
             if not active and not pending:
                 completed = [
@@ -252,6 +254,7 @@ class Activations:
             for source in aliases[edge.source]
             for target in aliases[edge.target]
         )
+
         # Network guards are compiled from logical names before this scheduling
         # projection. All executions retain those labels; runtime aliases must
         # never become new network identities or widen the original contract.

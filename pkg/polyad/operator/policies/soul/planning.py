@@ -68,6 +68,9 @@ async def propose(controller: Controller, obj: dict[str, Any], search: Search) -
 
     status.update(observedAt=sample.observedAt, offeredPerSecond=sample.offeredPerSecond, completedPerSecond=sample.completedPerSecond)
     status["demandValue"] = demand_value
+
+    # Choose the highest applicable demand tier, then track its complete target:
+    # structural expansion, traffic distribution and capacity form one proposal.
     tier = next((item for item in reversed(policy.tiers) if demand_value >= item.threshold), None)
     target = to_dict(tier.cheeger) if tier else None
     status["target"] = target
@@ -78,6 +81,7 @@ async def propose(controller: Controller, obj: dict[str, Any], search: Search) -
     if tier and policy.trafficMode == "Headroom":
         traffic_targets = await headroom_targets(controller, obj, sample)
         status["targetTraffic"] = converter.unstructure(traffic_targets or ())
+
         # Require sustained direction, while allowing measured magnitudes to vary.
         current_weights = {
             route.name: {destination.target: destination.weight for destination in route.destinations} for route in graph.traffic
@@ -118,6 +122,9 @@ async def propose(controller: Controller, obj: dict[str, Any], search: Search) -
 
     if state.get("target") != target_identity or observed - state.get("observed", 0) > policy.sampleMaxAgeSeconds or not state.get("since"):
         state.update(since=observed, count=0)
+
+    # Reprocessing one sample must not satisfy the sustained-evidence requirement.
+    # Count only strictly newer observations toward the stabilization threshold.
     if observed > state.get("observed", 0):
         state["count"] = min(state.get("count", 0) + 1, policy.minSamples)
     state.update(target=target_identity, observed=observed)
@@ -182,6 +189,9 @@ async def candidate_spec(
             status.update(phase="Recommended", recommendedLayout=layout.name, proposedCheeger=value, computation=None)
             candidate = proposal
             break
+
+    # Apply bounded traffic steps only after the proposed/current layout meets
+    # the structural target; validate the combined candidate against live rules.
     traffic = step_weights(graph, traffic_targets or (), policy.maxWeightStep)
     blocked = False
     if traffic != graph.traffic and (candidate is not None or within(current, tier.cheeger)):

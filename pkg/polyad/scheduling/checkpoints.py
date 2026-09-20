@@ -45,6 +45,8 @@ def save(directory: Path, work: Work, payload: dict[str, object], statistics: St
             stream.write(envelope)
             stream.flush()
             os.fsync(stream.fileno())
+
+        # Publish only flushed contents; a crash before replacement leaves the old checkpoint intact.
         temporary.replace(directory / f"{work.name}.json")
     finally:
         temporary.unlink(missing_ok=True)
@@ -72,6 +74,8 @@ def load(directory: Path, work: Work) -> tuple[dict[str, object], Statistics] | 
     if hashlib.sha256(body.encode()).hexdigest() != envelope["sha256"]:
         raise ValueError("checkpoint checksum mismatch")
     document = json.loads(body)
+
+    # Integrity alone is insufficient: a valid checkpoint must belong to these exact work inputs.
     if document["version"] != 1 or document["name"] != work.name or document["fingerprint"] != work.fingerprint:
         raise ValueError("checkpoint input or implementation changed")
     if not isinstance(document["payload"], dict):

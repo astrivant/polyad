@@ -39,6 +39,9 @@ def _evaluate(
     observed = datetime.fromisoformat(report.observedAt.replace("Z", "+00:00"))
     previous = current.get("lastObservedAt")
     start = observed - timedelta(seconds=report.durationSeconds)
+
+    # Reject overlapping windows before accumulating counters; counting the same
+    # requests twice would distort both availability and error-budget consumption.
     if previous:
         previous_observed = datetime.fromisoformat(previous.replace("Z", "+00:00"))
         if previous_observed >= observed:
@@ -62,6 +65,9 @@ def _evaluate(
     counters["requestsWithinLatencyObjective"] = counters.get("requestsWithinLatencyObjective", 0) + report.requestsWithinLatencyObjective
     counters["unavailableSeconds"] = counters.get("unavailableSeconds", 0.0) + report.unavailableSeconds
     counters["observedSeconds"] = counters.get("observedSeconds", 0.0) + report.durationSeconds
+
+    # Aggregate request counts before forming ratios. Averaging per-window
+    # percentages would incorrectly give tiny and busy windows equal weight.
     eligible = counters["eligibleRequests"]
     availability = counters["successfulRequests"] / eligible if eligible else float(report.serving)
     latency_compliance = counters["requestsWithinLatencyObjective"] / eligible if eligible else float(report.serving)
@@ -96,6 +102,9 @@ def _evaluate(
     ]
     if active_durations and max(active_durations) > policy.adaptation.maximumDurationSeconds:
         violate("adaptation.maximumDurationSeconds", max(active_durations), policy.adaptation.maximumDurationSeconds)
+
+    # Distinguish inability to serve the required capability from degraded
+    # service that still serves requests but misses another contract objective.
     state = "Unavailable" if unavailable else "Degraded" if violations else "Compliant"
     allowed_failures = max(1e-12, 1 - policy.availability)
     consumed = (1 - availability) / allowed_failures
@@ -161,6 +170,9 @@ async def report_service_level(
     status = obj.get("status", {})
     current = status.get("serviceLevel", {})
     instances = dict(current.get("instances", {})) if current.get("observedGeneration") == meta["generation"] else {}
+
+    # One reusable Daemon definition may serve several graph nodes. Keep their
+    # windows separate, then expose the worst instance state on the definition.
     instance_key = f"{report.graphUid}/{report.node}"
     value = _evaluate(policy, report, instances.get(instance_key, {}), status.get("adaptation", {}))
     instances[instance_key] = value

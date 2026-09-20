@@ -30,6 +30,8 @@ async def graph_ancestry(api: API, graph: dict[str, Any]) -> list[dict[str, Any]
     chain = []
     seen = set()
     current = graph
+
+    # Verify each owner UID before exporting ancestry; a reused resource name is a different identity.
     for _ in range(32):
         meta = current["metadata"]
         if meta["uid"] in seen:

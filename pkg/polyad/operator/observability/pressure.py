@@ -130,6 +130,7 @@ async def collect(shared: SharedQueue) -> dict[str, Any]:
             group["replicas"] += 1
             for field in ("requestsPerSecond", "inFlight"):
                 group[field] += entry[field]
+
             # Remote workers have separate scaling authority and must not inflate
             # the root's local Deployment or component ReplicaGroup demand.
             if not entry.get("remoteWorker", False):

@@ -139,6 +139,8 @@ class PopulationMonitor(ABC):
         Returns:
             None: Compatible ready routes are committed before any producer starts.
         """
+
+        # The fixed baseline cannot claim success by silently adopting a newly required capability.
         if self.active and not self.adaptive:
             compatible = self.plan is not None and self.plan.routes[0][-1].capability.output == output
             self.routes = tuple(tuple(place.name for place in route) for route in self.plan.routes) if compatible and self.plan else ()
@@ -172,6 +174,8 @@ class PopulationMonitor(ABC):
                 capability=placement.capability.name,
             )
         self.peak_services = max(self.peak_services, sum(member.process.is_alive() for member in self.owned))
+
+        # Readiness is the commit barrier: route to replacements before retiring the old population.
         self.wait(lambda: all(member.sample.get("readyWorkers", 0) > 0 for member in upcoming.values()))
         self.active, self.plan = upcoming, plan
         self.routes = tuple(tuple(place.name for place in route) for route in plan.routes)
@@ -321,6 +325,8 @@ class PopulationMonitor(ABC):
         Returns:
             None: Append one timestamped frame for topology and time-series figures.
         """
+
+        # In-flight jobs are not terminal failures; the frame uses only settled outcomes so far.
         terminal = self.completed + self.rejected
         latencies = [job["finished"] - job["sent"] for job in self.jobs.values() if "finished" in job]
         elapsed = max(1e-9, time.monotonic() - self.started)

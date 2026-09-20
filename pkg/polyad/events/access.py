@@ -114,6 +114,8 @@ async def parent_allows_worker(api: API, namespace: str) -> bool:
     parent = converter.structure(json.loads(raw), AtlasAccess)
     child = configuration()
     order = list(AccessMode)
+
+    # Compare every configured cluster in both policies, including the local/root default.
     names = {"", *child.clusters, *parent.clusters}
     allowed = all(
         order.index(child.effective(name, capability)) <= order.index(parent.effective(name, capability))

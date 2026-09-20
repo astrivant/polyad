@@ -48,6 +48,9 @@ class ContainerResources:
         Raises:
             ValueError: A supplied resource value is not a nonnegative integer.
         """
+
+        # bool is an int subclass in Python, but True must not become a one-unit
+        # resource allowance; require the exact integer type for these selectors.
         for item in fields(self):
             value = getattr(self, item.name)
             if value is not None and (type(value) is not int or value < 0):
@@ -89,6 +92,9 @@ class ContainerResources:
             request, limit = self.memory_request_bytes, self.memory_limit_bytes
         else:
             raise ValueError("resource must be cpu or memory")
+
+        # A Kubernetes limit can be a node-capacity fallback. Without an explicit
+        # positive request, do not treat that value as promised application capacity.
         if request is None or request <= 0:
             return None
         return min(request, limit) if limit is not None and limit > 0 else request
@@ -128,6 +134,9 @@ class VPAConstraints:
             value = getattr(self, item.name)
             if value is not None and (type(value) is not int or value < 0):
                 raise ValueError(f"{item.name} must be a nonnegative integer or None")
+
+        # Validate each interval only after its units and individual values are
+        # known, so a contradictory minimum/maximum cannot reach an adaptation.
         for resource in ("cpu", "memory"):
             minimum = getattr(self, f"min_{resource}_{'millicores' if resource == 'cpu' else 'bytes'}")
             maximum = getattr(self, f"max_{resource}_{'millicores' if resource == 'cpu' else 'bytes'}")
@@ -169,6 +178,9 @@ class VPAConstraints:
             raise ValueError("resource value must be a nonnegative integer")
         if resource not in {"cpu", "memory"}:
             raise ValueError("resource must be cpu or memory")
+
+        # These are policy bounds, not a claim that the live cgroup has already
+        # received the proposed allocation. Read container_metrics for actual limits.
         unit = "millicores" if resource == "cpu" else "bytes"
         minimum = getattr(self, f"min_{resource}_{unit}")
         maximum = getattr(self, f"max_{resource}_{unit}")
@@ -285,6 +297,9 @@ class WorkloadContext:
             env["POLYAD_GRAPH_UID"],
             env["POLYAD_NODE_NAME"],
         )
+
+        # Correlation ancestry is separate from authority: retain it for context
+        # without granting access to a parent graph or a different namespace.
         root = _reference(env, "ROOT_GRAPH", identity.namespace)
         ancestry = _ancestry(env, identity, root)
         strings = {item.name: env.get(item.metadata["env"], "") for item in fields(cls) if "env" in item.metadata}
@@ -321,6 +336,8 @@ def _integer(env: Mapping[str, str], key: str) -> int | None:
     value = env.get(key, "")
     if not value:
         return None
+
+    # Bound parsing work and report only the key, never the environment value.
     if len(value) > 64 or not value.isascii() or not value.isdecimal():
         raise ValueError(f"{key} must be a nonnegative decimal integer")
     return int(value)
@@ -344,6 +361,9 @@ def _reference(env: Mapping[str, str], prefix: str, namespace: str) -> EventIden
     values = {key: env.get(f"POLYAD_{prefix}_{key.upper()}", "") for key in ("kind", "name", "uid")}
     if not any(values.values()):
         return None
+
+    # Name alone does not identify an incarnation. Either omit the reference
+    # entirely or supply kind, name and UID as one complete identity.
     if not all(values.values()):
         raise ValueError(f"POLYAD_{prefix} requires kind, name and UID together")
     return EventIdentity(namespace=namespace, **values)
@@ -387,6 +407,9 @@ def _ancestry(env: Mapping[str, str], identity: ServiceEndpoint, root: EventIden
         )
     ):
         raise ValueError("projected graph ancestry requires 1 through 32 complete local graph identities")
+
+    # Verify the chain's endpoints and uniqueness after validating each record.
+    # Otherwise a plausible-looking chain could point at the wrong workload.
     result = tuple(EventIdentity(**entry) for entry in entries)
     containing = EventIdentity(kind=identity.kind, namespace=identity.namespace, name=identity.graph, uid=identity.graphUid)
     if result[-1] != containing or (root is not None and result[0] != root) or len({item.uid for item in result}) != len(result):

@@ -49,6 +49,8 @@ def compile_composition(request: CompositionRequest, namespace: str, *, owner_ui
     """
     digest = request.digest()
     by_id = {item.id: item for item in request.objects}
+
+    # Deterministic names make retries converge on the same definitions for a request identity.
     names = {
         item.id: "definition-" + hashlib.sha256(f"{request.requestId}/{item.id}".encode()).hexdigest()[:40] for item in request.objects
     }

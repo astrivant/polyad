@@ -142,6 +142,7 @@ async def ensure_routes(controller: Controller, obj: dict[str, Any]) -> None:
                     for candidate in hosts
                 ):
                     raise ValueError("traffic host already has an administrator or another graph's Istio policy")
+
         # The Service is intentionally supplied by the application; routing does not create DNS or endpoints.
         service = await controller.api.get("Service", namespace, route.service)
         if service is None or service["metadata"].get("deletionTimestamp"):
@@ -195,6 +196,7 @@ async def ensure_routes(controller: Controller, obj: dict[str, Any]) -> None:
             changed = True
     if changed:
         raise Pending("traffic policies persisted; refresh before workload admission")
+
     # Remove the forwarding rule before its subsets when a route is removed.
     children = await controller.api.owned(namespace, meta["uid"])
     for kind in ("VirtualService", "DestinationRule"):

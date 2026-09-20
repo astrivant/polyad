@@ -115,6 +115,8 @@ def state_variables(config: dict[str, Any]) -> list[dict[str, Any]]:
         list[dict[str, Any]]: Resource costs and classifications, including optimistic reduced models.
     """
     full = model_from_config(config)
+
+    # Compare two reductions separately: dropping readiness, then pooling independent queue limits.
     separate = replace(full, warmup_max=0)
     pooled = QueueModel(
         ("pooled",), (sum(full.capacities),), (sum(full.limits),), (sum(full.targets),), full.arrival_bounds, (1.0,), unit=full.unit

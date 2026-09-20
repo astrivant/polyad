@@ -140,6 +140,8 @@ def install(app: Flask | Routes, endpoint: str, token: str | None, access: Acces
                 return jsonify(error="credential does not authorize this API"), 403
             if access.store is not None and not access.store.permitted(group, policy, secret):
                 return jsonify(error="credential has been revoked"), 403
+
+            # Authenticate and authorize first; rejected callers must not consume a valid key's lane.
             permit = access.lanes.acquire(group, policy)
             g.polyad_credential = {"group": group, "name": policy.name}
             g.polyad_key = policy
@@ -164,11 +166,14 @@ def install(app: Flask | Routes, endpoint: str, token: str | None, access: Acces
         if not response.is_streamed:
             access.lanes.release(permit)
             return response
+
+        # Streaming owns the permit for the entire response, not merely until headers are sent.
         original = response.response
         key = g.polyad_key
         group_name = g.polyad_credential["group"]
         authorization = request.headers.get("Authorization", "")
 
+        # Revalidate on each chunk so rotation or revocation also stops already-open streams.
         def stream() -> Iterator[Any]:
             try:
                 for chunk in original:

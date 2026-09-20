@@ -31,6 +31,8 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
     """
     records = result["records"]
     modes = {"first-consumer": "First consumer", "guarded-rerouting": "Guarded split"}
+
+    # Retain each repetition instead of averaging away individual queue-limit breaches.
     labels = [f"{modes[record['mode']]}\nrepeat {record['repetition'] + 1}" for record in records]
     figure, axes = plt.subplots(1, 2, figsize=(14, 5), layout="constrained")
     for index, name in enumerate(records[0]["artifact"]["model"]["names"]):

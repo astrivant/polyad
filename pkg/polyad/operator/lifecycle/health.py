@@ -54,6 +54,8 @@ def credential_token(endpoint: str, *, setting: str = "TOKEN") -> str:
         return os.environ.get(f"POLYAD_{endpoint}_{setting}", "")
     path = Path(filename)
     token = path.read_bytes()
+
+    # Retain a change detector, not another long-lived copy of the Secret's bytes.
     lifecycle.credentials[path] = hashlib.sha256(token).digest()
     return token.decode()
 

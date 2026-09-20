@@ -54,6 +54,8 @@ def service_level(
     Returns:
         dict[str, Any]: State, violations and exact values used by the plots.
     """
+
+    # Empty windows use serving state; zero traffic alone is not evidence of a service outage.
     availability = successful / eligible if eligible else float(serving)
     latency = percentile(latencies, 0.99)
     violations = []
@@ -142,8 +144,12 @@ class ResourceLoop:
         Returns:
             tuple[int, int, bool]: Assigned bytes, modeled use and whether allocation changed.
         """
+
+        # This is a controlled VPA analogue, not a write to the host's actual cgroup allocation.
         used = self.base + workers * self.worker + backlog * self.queued_job
         previous = self.assigned
+
+        # Asymmetric thresholds and a minimum interval keep noisy utilization from causing chatter.
         if now - self.last_change >= self.interval:
             utilization = used / self.assigned
             if utilization > self.target + 0.1:

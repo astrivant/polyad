@@ -46,6 +46,8 @@ def verify(result: dict[str, Any], recipe: dict[str, Any], output: Path) -> None
         raise ValueError("process study recipe or figure inventory changed")
     if result.get("artifacts") != fingerprint(output):
         raise ValueError("process study artifacts changed")
+
+    # A published comparison must include both modes, with all offered jobs accounted for.
     records = result.get("records", [])
     if [record.get("mode") for record in records] != ["fixed", "adaptive"]:
         raise ValueError("process study requires fixed and adaptive measurements")

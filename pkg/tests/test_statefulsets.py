@@ -93,6 +93,7 @@ def test_daemon_secret_reload_is_opt_in_and_preserves_reloader_updates(monkeypat
         assert child["metadata"]["annotations"].get("reloader.stakater.com/search") == expected
         assert "reloader.stakater.com/search" not in child["spec"]["template"]["metadata"].get("annotations", {})
         assert "reloader.stakater.com/search" not in api.children("Job")[0]["metadata"]["annotations"]
+
         # Reloader changes the native Pod template; Polyad retains the owned controller.
         child["spec"]["template"]["spec"]["containers"][0]["env"].append({"name": "STAKATER_SECRET_HASH", "value": "changed"})
         api.calls.clear()

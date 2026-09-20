@@ -105,6 +105,8 @@ def execute(study: str, config: dict[str, Any], output: Path) -> dict[str, Any]:
 
     validate(config)
     records = []
+
+    # Reuse the recipe, not the runtime: each mode owns fresh processes and independent counters.
     for adaptive in (False, True):
         experiment = monitor(config, adaptive)
         try:

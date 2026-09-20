@@ -75,6 +75,9 @@ class ProcessSpec:
             for key, value in environment.items()
         ):
             raise ValueError("environment must contain valid string names and values")
+
+        # Freeze nested inputs too: a frozen dataclass alone would still allow
+        # callers to mutate a supplied list or environment after plan approval.
         object.__setattr__(self, "argv", tuple(self.argv))
         object.__setattr__(self, "environment", MappingProxyType(environment))
 
@@ -132,6 +135,9 @@ class ProcessPlan:
             None: Plans contain only valid, uniquely named process roles and guards.
         """
         _name(self.name)
+
+        # Unique role and guard names give reconciliation an unambiguous mapping
+        # from each approved identity to one specification or constraint.
         processes, guards = tuple(self.processes), tuple(self.guards)
         if any(not isinstance(spec, ProcessSpec) for spec in processes):
             raise TypeError("processes must contain ProcessSpec instances")

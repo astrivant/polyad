@@ -467,6 +467,7 @@ def test_vendored_crd_matches_locked_dependency(tmp_path):
         ["helm", "template", "upstream", str(tmp_path / "dragonfly-operator"), "--show-only", "templates/crds.yaml"], text=True
     )
     assert yaml.safe_load(rendered) == yaml.safe_load((CHART.parent / "polyad-crds/crds/dragonflies.yaml").read_text())
+
     # The converted chart/Python copies are checked together in test_json_schemas.
 
 
@@ -1339,6 +1340,13 @@ def test_cheeger_ceilings_reach_every_executor_profile(profile):
         "operator.cheeger.maxVertices=22",
         "operator.cheeger.maxCuts=2097151",
         "operator.cheeger.timeoutSeconds=15",
+        "operator.cheeger.reduction.enabled=true",
+        "operator.cheeger.reduction.maxVertices=192",
+        "operator.cheeger.reduction.components=3",
+        "operator.cheeger.reduction.supernodes=6",
+        "operator.cheeger.reduction.cache=false",
+        "operator.cheeger.reduction.cacheEntries=64",
+        "operator.cheeger.reduction.maxEdgeChurn=0",
         *(("federation.clusters[0].namespace=test",) if profile == "values-worker.reference.yaml" else ()),
         values_files=(CHART / "references" / profile,) if profile else (),
     )
@@ -1350,6 +1358,13 @@ def test_cheeger_ceilings_reach_every_executor_profile(profile):
         assert env["POLYAD_CHEEGER_MAX_VERTICES"] == "22"
         assert env["POLYAD_CHEEGER_MAX_CUTS"] == "2097151"
         assert env["POLYAD_CHEEGER_TIMEOUT_SECONDS"] == "15"
+        assert env["POLYAD_CHEEGER_REDUCTION_ENABLED"] == "true"
+        assert env["POLYAD_CHEEGER_REDUCTION_MAX_VERTICES"] == "192"
+        assert env["POLYAD_CHEEGER_REDUCTION_COMPONENTS"] == "3"
+        assert env["POLYAD_CHEEGER_REDUCTION_SUPERNODES"] == "6"
+        assert env["POLYAD_CHEEGER_REDUCTION_CACHE"] == "false"
+        assert env["POLYAD_CHEEGER_REDUCTION_CACHE_ENTRIES"] == "64"
+        assert env["POLYAD_CHEEGER_REDUCTION_MAX_EDGE_CHURN"] == "0"
 
 
 def test_component_graph_accepts_the_optional_cheeger_maximum():

@@ -88,6 +88,8 @@ class MetricsStore:
                 "Process-local connection pool occupancy or configured capacity; idle sockets are not demand.",
                 [({"pool": name}, entry[field]) for name, entry in snapshot.get("connectionPools", {}).items()],
             )
+
+        # Publish shared component demand only with freshness evidence; stale values are not zero demand.
         components = snapshot.get("components", {})
         cache = snapshot.get("dragonfly", {})
         if cache.get("enabled"):
@@ -345,6 +347,8 @@ class MetricsStore:
                 gauge(family, GRAPH_HELP[family], rows)
         rendered = generate_latest(registry)
         document = json.dumps(snapshot, allow_nan=False).encode()
+
+        # Swap both encodings together so JSON and Prometheus readers see the same observation.
         with self.lock:
             self.published = time.monotonic(), rendered, document
 

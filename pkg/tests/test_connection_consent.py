@@ -64,6 +64,7 @@ def test_requester_consents_once_and_counterpart_must_approve(monkeypatch, kind)
         assert len(entries(api.objects[kind, "test", "root"])) == 1
         assert {r["resourceAttributes"]["verb"] for r in api.reviews if r["user"] == source.username} == {"connect"}
         assert {r["resourceAttributes"]["verb"] for r in api.reviews if r["user"] == target.username} == {"approve"}
+
         # An explicit refusal revokes even an already active grant; replaying the
         # original proposal cannot silently restore implicit consent.
         await store.respond("test", receipt["name"], ConnectionResponse(receipt["uid"], "Reject"), source)
@@ -298,6 +299,7 @@ def test_concurrent_response_conflict_preserves_other_consent_and_charges_once(m
         source, target = (participant(api, graph, node) for node in ("a", "b"))
         key = ("TemporaryConnection", "test", receipt["name"])
         response = ConnectionResponse(receipt["uid"], "Approve")
+
         # Keep one stale copy, then accept the other endpoint's response.
         stale = copy.deepcopy(api.objects[key])
         await store.respond("test", receipt["name"], response, source)
@@ -312,6 +314,7 @@ def test_concurrent_response_conflict_preserves_other_consent_and_charges_once(m
             await store.respond("test", receipt["name"], ConnectionResponse("stale", "Approve"), target)
         await store.respond("test", receipt["name"], ConnectionResponse(receipt["uid"], "Reject"), target)
         pulse.assert_awaited_once()
+
         # Public receipts never expose the identities retained for revalidation.
         public = json.dumps(ConnectionStore.receipt(api.objects[key]))
         assert CONSENTS not in public and "system:serviceaccount" not in public

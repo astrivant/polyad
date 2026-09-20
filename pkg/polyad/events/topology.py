@@ -98,6 +98,7 @@ async def topology_snapshot(api: API, obj: dict[str, Any], children: list[dict[s
         node["executions"].append(execution)
     for node in nodes.values():
         node["executions"].sort(key=lambda child: (child["kind"], child["name"], child["uid"]))
+
     # Canonicalization prevents reordered declarations and heartbeat revisions
     # from producing structural changes. Ports retain their transport meaning.
     edges = {json.dumps(edge, sort_keys=True, separators=(",", ":")) for edge in connections}

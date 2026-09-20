@@ -27,6 +27,7 @@ _converter = Converter(forbid_extra_keys=True, detailed_validation=False)
 
 
 def _primitive(value: Any, kind: type) -> Any:
+    # bool subclasses int in Python, but the wire contract treats them as different JSON types.
     if type(value) is not kind and not (kind is float and type(value) is int):
         raise ValueError(f"expected {kind.__name__} in event")
     if kind is float and not math.isfinite(cast("float", value)):
@@ -73,10 +74,13 @@ def decode_event(document: dict[str, Any]) -> EventAST:
     name, cursor = document["event"], document["id"]
     if not isinstance(name, str) or name not in EVENT_MODELS or not isinstance(cursor, str):
         raise ValueError("unsupported event type or cursor")
+
+    # Only persisted observations advance replay; heartbeats and resets must not skip events.
     if name in {"graph", "topology", "connection"} and not re.fullmatch(CURSOR_PATTERN, cursor):
         raise ValueError("observation requires a Redis stream cursor")
     if name in {"reset", "unavailable", "heartbeat", "copulse"} and cursor:
         raise ValueError("control events cannot advance the cursor")
+
     # Also reject NaN, infinity and non-JSON values inside explicitly extensible policy objects.
     document = json.loads(json.dumps(document, allow_nan=False))
     try:

@@ -65,6 +65,7 @@ class CapacityManager:
         Returns:
             None: No return value.
         """
+
         # Merge patches need explicit nulls for removed map entries.
         document = asts.to_document(self.state)
         previous = self.obj.get("status", {}).get("capacity") or {}
@@ -236,6 +237,7 @@ class CapacityManager:
         self.state = evolve(self.state, observedGeneration=generation)
         selected = frontier(graph, set(states))
         counts = {name: asts.to_document(desired[name])["spec"].get("replicas", 1) for name in revisions}
+
         # Existing plans remain stable as the frontier advances; never silently underforecast a replica group.
         allocated = 0
         for name, record in self.state.nodes.items():
@@ -287,6 +289,7 @@ class CapacityManager:
                 if await self.cleanup(record.revision):
                     self.ready.add(name)
                 continue
+
             # Every turn re-observes the backing resource; saved Ready is never sufficient.
             await self.observe(name, record, desired[name])
         self.ready.update(name for name in desired if name not in revisions or counts[name] == 0)
@@ -441,6 +444,7 @@ class CapacityManager:
             priority_class=priority_class,
             priority=int(os.environ.get("POLYAD_CAPACITY_PRIORITY", "-5")),
         )
+
         # Deny all Pod traffic. Placeholders have no application labels or service credentials.
         policy = self.helper(
             name,

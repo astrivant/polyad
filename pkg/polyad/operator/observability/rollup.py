@@ -131,6 +131,8 @@ def measure_subtree(
         meta, child_status = child["metadata"], child.get("status", {})
         metrics = child_status.get("metrics") or {}
         rollup = metrics.get("rollup") or {}
+
+        # Fold in a child subtree only when its status, metrics and rollup describe the same generation.
         current = (
             child_status.get("observedGeneration") == meta.get("generation", 1)
             and metrics.get("observedGeneration") == meta.get("generation", 1)
@@ -139,6 +141,8 @@ def measure_subtree(
             and all(key in rollup for key in (*COUNTERS, "graphCount", "unobservedGraphs", "nestingDepth", "observationsComplete"))
             and all(phase in rollup.get("graphsByPhase", {}) for phase in PHASES)
         )
+
+        # Missing evidence contributes an unknown graph, not a deceptively healthy empty subtree.
         if not current:
             result["graphCount"] += 1
             result["unobservedGraphs"] += 1

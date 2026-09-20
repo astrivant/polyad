@@ -265,6 +265,7 @@ class Graph(Workload):
                 for state in scheduler.states.values()
             ],
         }
+
         # Fail before returning if a child supplied non-JSON state.
         json.dumps(payload, allow_nan=False)
         return Outcome(payload)

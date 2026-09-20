@@ -55,16 +55,42 @@ INTRODUCTIONS = {
     },
     "cheeger-reduction": {
         "accuracy": (
-            r"PCA Cheeger reduction: $\hat{h}_Q(G)$ approximation accuracy",
-            r"How do PCA dimension $d$, quotient size $k$ and topology change error against exact $h(G)$?",
+            "PCA Cheeger reduction: approximation accuracy",
+            "How do retained dimensions, quotient size and graph topology change error against exact edge expansion?",
         ),
         "cost": (
-            r"PCA Cheeger reduction: work $N_{cuts}$ and uncertainty",
-            r"When does $2^{k-1}-1$ reduce computation, and how wide is $[\lambda_2/2,\hat{h}_Q]$?",
+            "PCA Cheeger reduction: work and uncertainty",
+            "When does quotient search reduce computation, and how much certified uncertainty remains?",
         ),
         "stability": (
-            r"PCA Cheeger reduction under edge churn $\rho_E$",
-            r"How do cached and refreshed bounds $\hat{h}_Q(G_t)$ behave as a previously stable graph changes?",
+            "PCA Cheeger reduction: cached insurance for steady graphs",
+            "How do cached and refreshed quotient cuts behave as a previously stable graph changes?",
+        ),
+    },
+    "cheeger-strategies": {
+        "churn": (
+            "Cheeger strategies: accuracy and cost under churn",
+            "How do cached spectral cuts, fresh spectral cuts, PCA and the production selector compare on the same changing graphs?",
+        ),
+        "activation": (
+            "Cheeger strategies: when each tier decides",
+            "Which tier finishes as graph churn and the minimum, maximum or two-sided policy threshold change?",
+        ),
+        "parameters": (
+            "Cheeger strategies: controlled parameter comparisons",
+            "How do embedding dimensions, quotient size, original size and density affect error and computation?",
+        ),
+        "cache": (
+            "Cheeger strategies: cache gates and competing boundaries",
+            "When do churn limits and cache capacity cause a boundary to refresh or fall back to exact search?",
+        ),
+        "timeline": (
+            "Cheeger strategies: one changing service boundary",
+            "What does the selector do during steady periods, tighter policy, churn bursts and service membership changes?",
+        ),
+        "controls": (
+            "Cheeger strategies: work limits and decision correctness",
+            "Which controls resolve the policy, which exhaust their budgets, and does every decisive answer match exhaustive truth?",
         ),
     },
     "soul": {
@@ -170,6 +196,8 @@ def describe(figure: Figure, study: str, name: str, *, note: str = "") -> float:
     from matplotlib.backends.backend_agg import FigureCanvasAgg
 
     title, question = INTRODUCTIONS[study][name]
+
+    # Measure rendered text height; a fixed margin would clip longer explanations on smaller figures.
     canvas = FigureCanvasAgg(figure)
     renderer = canvas.get_renderer()  # type: ignore[no-untyped-call]
     width, height = figure.get_figwidth(), figure.get_figheight()

@@ -50,6 +50,8 @@ func TestHealth(t *testing.T) {
 				if check.Kind != obj.GetKind() {
 					continue
 				}
+
+				// Exercise Flux's real CEL semantics rather than duplicating the expression logic in Python.
 				evaluator, err := cel.NewStatusEvaluator(&check.HealthCheckExpressions)
 				if err != nil {
 					t.Fatal(err)

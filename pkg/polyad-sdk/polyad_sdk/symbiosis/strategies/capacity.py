@@ -71,12 +71,18 @@ class ResourceBudgetStrategy(ConstraintStrategy):
         Returns:
             ConstraintAssessment: Whether observed usage plus reserved headroom fits the configured maximum.
         """
+
+        # Walk the configured metric path only through mappings. Missing or stale
+        # observations stay unknown and cannot accidentally grant spare capacity.
         value: object = current.resources if current.available else None
         for part in self._metric:
             value = value.get(part) if isinstance(value, Mapping) else None
         if not _nonnegative(value):
             return ConstraintAssessment(self.name, "unknown", "Resource usage is missing, expired or invalid")
         assert isinstance(value, (int, float))
+
+        # Reserve includes overlap while old and replacement workers coexist;
+        # checking steady-state use alone would over-admit a rolling adaptation.
         fits = value <= self._maximum - self._reserve
         return ConstraintAssessment(
             self.name, "satisfied" if fits else "blocked", f"Usage: {value}; additional reserve: {self._reserve}; ceiling: {self._maximum}"
@@ -145,6 +151,9 @@ class ContainerBudgetStrategy(ConstraintStrategy):
         """
         if not current.available or self._maximum is None:
             return ConstraintAssessment(self.name, "unknown", "No usable topology or positive projected request; supply an explicit budget")
+
+        # The application supplies current aggregate usage, including children.
+        # This guard assesses capacity but does not reserve it for concurrent callers.
         used = self._used()
         if not _nonnegative(used):
             return ConstraintAssessment(self.name, "unknown", "Local resource usage is missing or invalid")
@@ -231,6 +240,9 @@ class ThresholdStrategy(AdaptationStrategy):
         Raises:
             ValueError: The application's committed profile is outside the configured pair.
         """
+
+        # Ignore unrelated events and unavailable state rather than producing
+        # repeated proposals from unchanged or untrustworthy resource evidence.
         if not current.available or not (change.baseline or change.matching("resources") or change.matching("available")):
             return
         value: object = current.resources
@@ -248,6 +260,9 @@ class ThresholdStrategy(AdaptationStrategy):
         active = self._active()
         if active not in (self._idle, self._busy):
             raise ValueError("active profile is outside this strategy's approved pair")
+
+        # Separate thresholds create hysteresis: values between low and high
+        # preserve the committed profile instead of oscillating between workers.
         if active == self._idle and value >= self._high:
             self._propose(self._busy, change, current)
         elif active == self._busy and value <= self._low:

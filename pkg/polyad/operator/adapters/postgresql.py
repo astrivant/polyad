@@ -45,6 +45,7 @@ def state_document(obj: dict[str, Any]) -> dict[str, Any]:
         },
         "status": obj.get("status", {}),
     }
+
     # Workload/Resource/Composition definitions may embed Secrets or plaintext env.
     # Their identity and observed parameters belong here; their manifests remain in Kubernetes.
     if obj["kind"] in {"Graph", "PolyGraph", "ReplicaGroup", "GraphRule", "OperatorPool", "RemoteScale"}:
@@ -154,6 +155,7 @@ class StateStore(StateBackend):
             )
             if await cursor.fetchone() is None:
                 return False
+
             # The row lock above serializes replacements, including a now-empty namespace.
             await connection.execute(statement("state/delete-graphs.sql"), identity)
             async with connection.cursor() as cursor:

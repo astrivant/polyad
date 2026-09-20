@@ -96,6 +96,7 @@ def run(
     count = min(config.max_requests, math.ceil(config.duration * config.rate))
     with ThreadPoolExecutor(max_workers=config.concurrency, thread_name_prefix="load-study") as pool:
         for ordinal in range(count):
+            # Keep arrivals on the original clock; slow responses must not quietly reduce offered load.
             due = started + ordinal / config.rate
             if stop.wait(max(0, due - time.monotonic())):
                 break
@@ -103,6 +104,8 @@ def run(
             outcomes.extend(future.result() for future in done)
             pending -= done
             scheduled += 1
+
+            # Record missed arrivals instead of building an unbounded client-side backlog.
             if len(pending) >= config.concurrency or time.monotonic() - due >= 1 / config.rate:
                 skipped += 1
                 continue

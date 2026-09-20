@@ -40,6 +40,9 @@ class ManagedProcess:
         """
         self.spec = spec
         self._closed = False
+
+        # Launch argv without a shell. A new POSIX session gives descendants a
+        # process group that can be retired together with the immediate child.
         self._process = subprocess.Popen(
             spec.argv, cwd=spec.cwd, env=dict(environment), stdin=subprocess.DEVNULL, start_new_session=os.name == "posix"
         )
@@ -87,6 +90,9 @@ class ManagedProcess:
             return
         if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout < 0:
             raise ValueError("timeout must be finite nonnegative seconds")
+
+        # Offer graceful termination, then kill the group even if its immediate
+        # child has exited: grandchildren may still require cleanup.
         self._signal(kill=False)
         try:
             self._process.wait(timeout=timeout)

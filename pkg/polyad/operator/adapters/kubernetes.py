@@ -204,6 +204,7 @@ class API(ResourceAPI):
                 if before_write is not None:
                     with without_capture():
                         await before_write()
+
                 # Another writer can arrive during validation or lease checks.
                 self.pending_writes.check(token)
                 if not validation.fresh():

@@ -88,6 +88,8 @@ def workload_identity(
     meta, source = graph["metadata"], definition["metadata"]
     ancestry = [{"kind": item["kind"], **{key: item["metadata"][key] for key in ("namespace", "name", "uid")}} for item in ancestors]
     annotations = {}
+
+    # Ancestors are root-first; the closest graph's annotations override inherited request context.
     for item in ancestors:
         annotations.update(item["metadata"].get("annotations", {}))
     graph_annotations = meta.get("annotations", {})

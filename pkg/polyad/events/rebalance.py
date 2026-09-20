@@ -109,6 +109,7 @@ class Rebalancer:
             remaining = max(0, self.drain_deadline - now - self.poll_interval - 1)
             interval = min(interval, remaining / (batches + 1))
         self.batch_size, self.batch_interval, self.batch_reset, self.batch_sent = batch, interval, now, 0
+
         # Jitter separates operators which observe the same membership change together.
         start = now + random.uniform(0, interval)
         for index, identity in enumerate(identities):

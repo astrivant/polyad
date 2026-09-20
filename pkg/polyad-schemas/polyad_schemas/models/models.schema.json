@@ -2509,9 +2509,58 @@
           },
           "maxItems": 64,
           "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+        },
+        "reduction": {
+          "$ref": "#/$defs/polyad_types.graphs.rules.CheegerReduction",
+          "description": "Optional cached quotient and fresh spectral stages before exact enumeration."
         }
       },
-      "description": "Budget exact cut search and examine important partitions first without weakening bounds."
+      "description": "Budget exact search and optionally try certified quotient reductions first."
+    },
+    "polyad_types.graphs.rules.CheegerReduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Request reduced search before exact enumeration. The operator must also enable it."
+        },
+        "maxVertices": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4096,
+          "description": "Largest boundary admitted to dense spectral reduction."
+        },
+        "components": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+        },
+        "supernodes": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64,
+          "description": "Maximum quotient vertices searched before exact enumeration."
+        },
+        "cache": {
+          "type": "boolean",
+          "description": "Reevaluate a recently cached quotient partition on the current graph first."
+        },
+        "cacheEntries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "description": "Maximum process-local partitions retained by the operator."
+        },
+        "maxEdgeChurn": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Largest changed-edge fraction eligible for cached partition reuse."
+        }
+      },
+      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
     },
     "polyad_types.graphs.rules.Spectrum": {
       "type": "object",
@@ -2628,7 +2677,7 @@
               "type": "null"
             }
           ],
-          "description": "Optional exact edge-expansion bounds."
+          "description": "Optional edge-expansion bounds proven exactly or by a conservative interval."
         },
         "cheegerComputation": {
           "$ref": "#/$defs/polyad_types.graphs.rules.CheegerComputation",

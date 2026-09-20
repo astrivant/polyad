@@ -509,6 +509,7 @@ def test_comparison_keeps_identical_work_and_resource_limits():
     assert comparison["source_backlog_reduction_seconds"] == pytest.approx(
         base["source_backlog_seconds"] - changed["source_backlog_seconds"]
     )
+
     # Scheduling noise may change the measured gain; correctness never depends on a timing ratio.
     assert events[-1]["completed"] == 1088 and events[-1]["trials"] == 2
     gone(events)

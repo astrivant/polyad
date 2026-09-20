@@ -76,6 +76,8 @@ async def observe(api: API, cluster: str, namespace: str, kind: str, name: str) 
     children = await api.owned(namespace, obj["metadata"]["uid"])
     metrics = instance_metrics(obj, children)
     topology = await topology_snapshot(api, obj, children)
+
+    # Fence the multi-read snapshot: a replaced or edited parent invalidates the assembled observation.
     current = await api.get(kind, namespace, name)
     meta = obj["metadata"]
     if current is None or any(current["metadata"].get(key) != meta.get(key) for key in ("uid", "resourceVersion")):

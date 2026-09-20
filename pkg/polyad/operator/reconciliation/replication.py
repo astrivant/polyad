@@ -89,6 +89,7 @@ async def reconcile_group(controller: Controller, obj: dict[str, Any]) -> None:
     meta = obj["metadata"]
     policy = converter.structure(obj["spec"], Replication)
     revision = remote_revision(obj)
+
     # CEL health checks can compare the annotation directly without reproducing its hash.
     observed_intent = meta.get("annotations", {}).get(INTENT, "")
     source_revision = ""

@@ -117,6 +117,8 @@ class Service:
             dict[str, Any]: Current policy inputs, including prospective overlap cost.
         """
         target = self.candidate or self.policy.proposal if hasattr(self, "policy") else "interactive"
+
+        # Admission includes temporary replacement overlap, not just the eventual worker count.
         additional = PROFILES[target].workers if target != self.profile and self.candidate is None else 0
         return {
             "backlog": len(self.pending) + sum(len(child.jobs) for child in self.children),
@@ -246,6 +248,7 @@ class Service:
             self.policy.proposal = proposal = "interactive"
         if (self.read()["memoryReserved"] or self.read()["resourcePressure"]) and self.adaptive:
             proposal = "compact"
+
             # Release surplus old workers before reserving a compact replacement.
             active = [child for child in self.children if not child.retiring and child.profile == self.profile]
             for child in active[1:]:

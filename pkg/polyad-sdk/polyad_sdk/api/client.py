@@ -145,6 +145,9 @@ class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelRe
         """
         if type(max_graphs) is not int or not 1 <= max_graphs <= 4096:
             raise ValueError("max_graphs must be from 1 through 4096")
+
+        # Traverse discovered children breadth-first and deduplicate by cluster
+        # and UID. Names can recur, but graph incarnations identify replayed nodes.
         pending: deque[dict[str, Any]] = deque()
         seen: set[tuple[str, str]] = set()
 
@@ -197,6 +200,8 @@ class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelRe
         return self._request("POST", f"/v1/connections/{quote(namespace, safe='')}/{quote(name, safe='')}/response", to_dict(response))
 
     def _authorization_headers(self) -> dict[str, str]:
+        # Read a projected token on each request so rotation does not require
+        # rebuilding the client or restarting the application.
         token = self._token_provider() if self._token_provider else self._token
         if token is not None and (not token or any(char in token for char in "\r\n")):
             raise ValueError("invalid bearer token")
@@ -245,6 +250,8 @@ class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelRe
                 raise APIError(error.code, value if isinstance(value, dict) else {"error": value}) from None
 
     def _request(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        # Read one byte beyond the cap to distinguish a response exactly at the
+        # limit from a truncated oversized document before attempting JSON parsing.
         with self._open(method, path, body) as response:
             raw = response.read(4 * 1024 * 1024 + 1)
         if len(raw) > 4 * 1024 * 1024:
@@ -470,6 +477,8 @@ class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelRe
             return
         path = "/v1/events" + query
         with self._open("GET", path, headers=headers, endpoint=endpoint) as response:
+            # SSE can split one JSON event across multiple data lines. Enforce
+            # the byte budget over the whole event, resetting it at a blank line.
             data: list[str] = []
             event_id, event_type, size = "", "message", 0
             comment = False
@@ -488,6 +497,9 @@ class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelRe
                         yield Event("" if event_type in {"reset", "unavailable", "copulse"} else event_id, event_type, value)
                     elif heartbeats and comment:
                         yield Event("", "heartbeat", {})
+
+                    # Event IDs persist across SSE records unless replaced;
+                    # payload/type/heartbeat state belongs only to the current record.
                     event_type, data, size, comment = "message", [], 0, False
                 elif line.startswith(":"):
                     comment = True

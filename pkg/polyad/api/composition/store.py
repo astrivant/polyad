@@ -65,6 +65,8 @@ class CompositionStore:
                 existing = await self.api.get("Composition", self.namespace, name)
                 if existing is None:
                     raise
+
+        # Idempotency reuses identical intent, never a request ID with a changed payload or deleting receipt.
         if existing["metadata"].get("deletionTimestamp") or read_receipt(existing["spec"]).digest() != request.digest():
             raise Conflict("requestId already identifies different or deleting intent")
         return {

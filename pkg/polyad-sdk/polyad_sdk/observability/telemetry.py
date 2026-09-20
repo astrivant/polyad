@@ -99,6 +99,9 @@ class Telemetry:
                 raise ValueError("SDK exporters require OTLP http/protobuf")
         tracer: trace.TracerProvider = trace.NoOpTracerProvider()
         meter: metrics.MeterProvider = metrics.NoOpMeterProvider()
+
+        # Track only providers created here; shutdown must not tear down tracer
+        # or meter providers supplied and owned by the application.
         owned: list[TracerProvider | MeterProvider] = []
         try:
             if traces or collect_metrics:
@@ -161,6 +164,9 @@ class Telemetry:
         Yields:
             trace.Span: Active span for additional explicitly chosen attributes.
         """
+
+        # Copy labels rather than adding fields to the caller's dictionary.
+        # Monotonic timing is immune to wall-clock adjustments during an operation.
         labels = dict(attributes or {})
         labels["operation"] = name
         started, outcome = time.monotonic(), "success"
@@ -171,6 +177,9 @@ class Telemetry:
                 yield span
             except BaseException as error:
                 outcome = "error"
+
+                # Exception text can contain secrets or request data; export the
+                # class name without automatically recording the full exception.
                 span.set_attribute("error.type", type(error).__name__)
                 span.set_status(trace.StatusCode.ERROR)
                 raise
@@ -213,6 +222,9 @@ class Telemetry:
         Returns:
             None: Repeated calls are harmless; application-owned providers remain active.
         """
+
+        # Detach ownership first so repeated close calls are harmless. Shutdown
+        # still runs if flushing one of the owned exporters raises.
         owned, self._owned = self._owned, []
         try:
             for provider in owned:

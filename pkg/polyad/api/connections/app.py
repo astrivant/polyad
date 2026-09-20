@@ -57,6 +57,8 @@ def build_app(
     """
     app = Routes("connections", application, max_body=65536)
     schema = structural_schema(ConnectionRequest)
+
+    # Keep the public request closed: unknown fields must not become implicit connection authority.
     schema["additionalProperties"] = False
 
     @app.before_request

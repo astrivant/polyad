@@ -28,6 +28,7 @@ def plot_graph(works: Mapping[str, Work], output: Path, *, title: str) -> None:
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from matplotlib.figure import Figure
 
+    # Resolve prerequisites first so vertical position represents dependency depth, not layout randomness.
     levels: dict[str, int] = {}
     while len(levels) < len(works):
         pending = [name for name, work in works.items() if name not in levels and all(parent in levels for parent in work.requires)]

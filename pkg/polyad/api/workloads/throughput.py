@@ -50,6 +50,9 @@ async def report_throughput(api: API, namespace: str, sample: ThroughputSample, 
     policy = topology(obj["spec"], obj["kind"]).throughput
     if policy is None or obj["spec"].get("templateOnly") or sample.unit != policy.unit:
         raise ValueError("throughput target requires an active policy with the same work unit")
+
+    # Validate the policy's chosen signal and unit before persisting feedback;
+    # offered throughput and an application-defined demand signal are not interchangeable.
     policy.demand_value(sample)
     observed = datetime.fromisoformat(sample.observedAt.replace("Z", "+00:00"))
     if not 0 <= (datetime.now(UTC) - observed).total_seconds() <= policy.sampleMaxAgeSeconds:
@@ -57,6 +60,9 @@ async def report_throughput(api: API, namespace: str, sample: ThroughputSample, 
     value = to_dict(sample)
     if len(json.dumps(value, allow_nan=False).encode()) > 64 * 1024:
         raise ValueError("throughput reports must fit within 64 KiB")
+
+    # Identical retries are harmless, but older or conflicting observations must
+    # not replace newer demand evidence used by the adaptation controller.
     previous = json.loads(meta.get("annotations", {}).get(SAMPLE, "null"))
     if previous and datetime.fromisoformat(previous["observedAt"].replace("Z", "+00:00")) >= observed:
         if previous != value:

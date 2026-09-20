@@ -1,5 +1,7 @@
 CREATE TABLE IF NOT EXISTS polyad_state_version (version integer PRIMARY KEY);
 INSERT INTO polyad_state_version VALUES (1) ON CONFLICT DO NOTHING;
+
+-- Current inventory is scoped by control plane and cluster, not just Kubernetes object name.
 CREATE TABLE IF NOT EXISTS polyad_graph_state (
     scope text NOT NULL, cluster text NOT NULL, namespace text NOT NULL,
     kind text NOT NULL, name text NOT NULL, uid text NOT NULL,
@@ -12,6 +14,8 @@ CREATE TABLE IF NOT EXISTS polyad_namespace_state (
     observed_at timestamptz NOT NULL, snapshot jsonb NOT NULL,
     PRIMARY KEY (scope, cluster, namespace)
 );
+
+-- Event history is append-only apart from retention; snapshots above represent current state.
 CREATE TABLE IF NOT EXISTS polyad_event_history (
     scope text NOT NULL, identity text NOT NULL, recorded_at timestamptz NOT NULL DEFAULT now(),
     payload jsonb NOT NULL, PRIMARY KEY (scope, identity)

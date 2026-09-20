@@ -76,18 +76,38 @@ def graph_rows(snapshot: dict[str, Any]) -> dict[str, list[tuple[dict[str, str],
         if not result:
             return
         numbers("graph_cheeger_input", labels, result.get("inputs", {}))
-        values = {key: result.get(key) for key in ("exact", "upperBound", "evaluatedCuts", "skippedPriorityCuts", "durationSeconds")}
+        values = {
+            key: result.get(key)
+            for key in ("exact", "lowerBound", "upperBound", "edgeChurn", "evaluatedCuts", "skippedPriorityCuts", "durationSeconds")
+        }
         if "cut" in result:
             values["cutSize"] = len(result["cut"])
         if result.get("exact") is True:
             values["constant"] = result.get("upperBound")
         numbers("graph_cheeger_result", labels, values, "statistic")
+
         # Error messages may contain unbounded text; expose only known completion categories.
         reason = result.get("reason", "Unknown").split(":", 1)[0]
-        if reason not in {"Complete", "MinimumViolated", "VertexLimit", "CutBudget", "TimeBudget"}:
+        if reason not in {
+            "Complete",
+            "BoundsSatisfied",
+            "MinimumViolated",
+            "MaximumViolated",
+            "VertexLimit",
+            "CutBudget",
+            "TimeBudget",
+        }:
             reason = "Unknown"
         rows["graph_cheeger_calculation_info"].append(
-            ({**labels, "reason": reason, "projection": "simple-undirected-without-self-loops"}, 1)
+            (
+                {
+                    **labels,
+                    "reason": reason,
+                    "stage": str(result.get("stage", "ExactEnumeration")),
+                    "projection": "simple-undirected-without-self-loops",
+                },
+                1,
+            )
         )
 
     for cluster, source in [("", snapshot), *sorted(snapshot.get("clusters", {}).items())]:

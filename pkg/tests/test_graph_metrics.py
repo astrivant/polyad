@@ -112,6 +112,7 @@ def test_instance_metrics_progress_and_idempotence():
         assert metrics["observedTopology"]["nodeCount"] == 1
         assert metrics["execution"]["pendingNodes"] == 3
         assert metrics["execution"]["reservedSlots"] == metrics["execution"]["activeNodes"] == 1
+
         # One pass updates the lifecycle node facts after observing the created Job.
         await controller.reconcile(key)
         calls = len(api.calls)
@@ -206,6 +207,7 @@ def test_nested_metrics_require_current_child_generation():
         assert api.objects[key]["status"]["metrics"]["execution"]["observedNodes"] == 1
         child = next(item for item in api.children("Graph") if item["metadata"].get("ownerReferences"))
         child_key = "Graph", "test", child["metadata"]["name"]
+
         # First persist the finalizer; the next pass can execute the child graph.
         with pytest.raises(Pending):
             await controller.reconcile(child_key)
@@ -243,6 +245,7 @@ def test_invalid_topology_metrics_do_not_mask_validation():
         metrics = api.objects[key]["status"]["metrics"]
         assert metrics["topology"] is None
         assert "admission cycle" in metrics["topologyError"]
+
         # The handler publishes Invalid after the controller propagates the error.
         api.objects[key]["status"].update(phase="Invalid", message="admission cycle")
         calls = len(api.calls)
@@ -334,6 +337,7 @@ def test_emitted_status_matches_crd_schema(kind, filename):
         spec = {"nodes": [{"name": "child", "kind": "Graph", "ref": "template"}]}
     parent = resource(kind, "graph", spec)
     child = resource("Graph", "nested", {"nodes": []})
+
     # Includes null nested metrics and unknown phase before the child reports.
     status = {"phase": "Reconciling", "metrics": instance_metrics(parent, [child])}
     validator.validate(status)

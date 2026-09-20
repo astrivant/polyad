@@ -105,7 +105,11 @@ class ReachabilityStrategy(ConstraintStrategy):
                 raise ValueError("Observation axes do not match the modeled state variables")
             for value in (*observation.state, *observation.uncertainty):
                 finite(value)
+
+            # Assess the pessimistic state: measurement uncertainty and arrivals
+            # since observation both consume slack before the horizon even begins.
             upper = tuple(value + error for value, error in zip(observation.state, observation.uncertainty, strict=True))
+
             # Before dispatch the proposed route may not yet be active. Any one
             # queue could have received all bounded arrivals since observation.
             upper = tuple(

@@ -66,6 +66,22 @@ operator:
     # Rule/throughput cheegerComputation settings may only reduce these ceilings.
     ## @param operator.cheeger.timeoutSeconds [number] Cooperative runtime ceiling per calculation, checked between batches. Incomplete search is never an exact constant.
     timeoutSeconds: 5
+    ## @param operator.cheeger.reduction [object] Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search. A GraphRule or throughput policy must separately set cheegerComputation.reduction.enabled.
+    reduction:
+      ## @param operator.cheeger.reduction.enabled [boolean] Permit policy authors to request the reduction tiers. False preserves exact-only behavior.
+      enabled: false
+      ## @param operator.cheeger.reduction.maxVertices [integer] Largest boundary allowed through dense Laplacian eigendecomposition.
+      maxVertices: 256
+      ## @param operator.cheeger.reduction.components [integer] Maximum nontrivial Laplacian eigenvectors a policy may retain.
+      components: 4
+      ## @param operator.cheeger.reduction.supernodes [integer] Maximum quotient vertices a policy may search.
+      supernodes: 8
+      ## @param operator.cheeger.reduction.cache [boolean] Permit cached partition reuse. Measurements are never reused; partitions are rescored on current edges.
+      cache: true
+      ## @param operator.cheeger.reduction.cacheEntries [integer] Maximum process-local cached partitions.
+      cacheEntries: 128
+      ## @param operator.cheeger.reduction.maxEdgeChurn [number] Maximum changed-edge fraction for cached partition reuse.
+      maxEdgeChurn: 0.1
   ## @param operator.connections [object] Per-process transport budgets; inherited by split components, observers and root-provisioned workers. Upgrade the owning release to apply changes.
   connections:
     ## @param operator.connections.cache [object] Shared asynchronous Redis/Dragonfly cache and coordination pool; bounded to 128 connections by default.

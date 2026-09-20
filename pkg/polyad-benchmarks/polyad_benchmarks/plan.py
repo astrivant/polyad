@@ -45,6 +45,8 @@ def composition_plan(plan: dict[str, Any], chart: Path, namespace: str) -> dict[
     if not isinstance(identity, str):
         raise ValueError("requestId must be a string")
     request_prefix(identity)
+
+    # A retry of one run keeps the same rendered identities; a new run gets an independent release.
     release = "bench-" + hashlib.sha256(identity.encode()).hexdigest()[:20]
     with tempfile.TemporaryDirectory(prefix="polyad-plan-") as directory:
         values = Path(directory) / "values.json"

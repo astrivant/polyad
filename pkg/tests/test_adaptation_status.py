@@ -50,6 +50,8 @@ def test_adaptation_status_brackets_concurrent_invocations():
         status = definition["status"]["adaptation"]
         assert status["inProgress"] and set(status["invocations"]) == {"first", "second"}
         assert definition["status"]["progressing"]
+
+        # Finishing one invocation must not clear Progressing while another adaptation is active.
         await report_adaptation(api, "test", evolve(first, phase="Succeeded", observedAt=datetime.now(UTC).isoformat()), None)
         assert api.objects[("Daemon", "test", "consumer")]["status"]["adaptation"]["inProgress"]
         await report_adaptation(api, "test", evolve(second, phase="Failed", observedAt=datetime.now(UTC).isoformat()), None)

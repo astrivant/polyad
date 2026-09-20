@@ -29,6 +29,7 @@ def _runtime() -> LuaRuntime:
     Returns:
         LuaRuntime: Memory-bounded runtime for code-owned scripts only.
     """
+
     # types-lupa currently omits supported constructor keywords from its stub.
     runtime = LuaRuntime(  # type: ignore[call-arg]
         encoding="utf-8",
@@ -49,6 +50,8 @@ def validate_server_scripts() -> tuple[str, ...]:
         tuple[str, ...]: Validated package-relative script names.
     """
     runtime = _runtime()
+
+    # Redis commands must stay server-side for atomicity; local validation only compiles their syntax.
     for name in _SERVER_SCRIPTS:
         runtime.compile(script(name), name=f"@polyad/lua/{name}", mode="t")
     return _SERVER_SCRIPTS

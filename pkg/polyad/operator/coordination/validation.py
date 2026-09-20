@@ -152,6 +152,8 @@ class Validation:
         Returns:
             None: Failures are retained for the dispatcher to request fresh reconciliation.
         """
+
+        # A validation covers only the generation it started with; concurrent invalidation stays pending.
         started, generation = time.monotonic(), self.generation
         try:
             async with self.slots:

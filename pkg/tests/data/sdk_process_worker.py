@@ -19,6 +19,7 @@ def main() -> None:
     """
     directory = Path(sys.argv[1])
     identity = str(os.getpid())
+
     # Publish readiness only after its payload is complete, even under parallel load.
     staging = directory / f"{identity}.starting"
     staging.write_text(os.environ.get("TRACEPARENT", ""))

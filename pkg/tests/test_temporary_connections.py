@@ -338,6 +338,7 @@ def test_graph_reconciliation_revokes_removed_connection_endpoints(kind, endpoin
         else:
             changed["spec"]["nodes"] = [node for node in changed["spec"]["nodes"] if node["name"] != getattr(request, endpoint)]
         await api.request("PUT", kind, "test", "root", changed)
+
         # Cleanup is independent of the listener's current admission setting.
         monkeypatch.setenv("POLYAD_CONNECTIONS_ENABLED", "false")
         await settle(controller, (kind, "test", "root"))
@@ -484,6 +485,7 @@ def test_dead_connection_cleanup_survives_policy_failure_and_endpoint_return(orp
         current["spec"] = graph["spec"]
         api.request = original
         await api.request("PUT", "Graph", "test", "root", current)
+
         # Normal graph admission now fails, but cleanup must still finish.
         api.objects[("GraphRule", "test", "tight")] = resource("GraphRule", "tight", {"relation": "connections", "cheeger": {"minimum": 2}})
         restarted = Controller(api)
@@ -529,6 +531,7 @@ def test_expiry_rebuilds_policies_after_restart_even_when_rules_block(monkeypatc
         await settle(controller, key)
         _, scopes = await context(api, await api.get("Graph", "test", "root"), "a")
         assert traffic(scopes, "egress")[0]["ports"] == [("TCP", 8080)]
+
         # Simulate restart past the immutable server timestamp deadline.
         stored = api.objects[key]
         stored["metadata"]["creationTimestamp"] = (datetime.now(UTC) - timedelta(seconds=301)).isoformat()
@@ -536,6 +539,7 @@ def test_expiry_rebuilds_policies_after_restart_even_when_rules_block(monkeypatc
         grants = entries(target)
         grants[stored["metadata"]["uid"]]["expiresAt"] = deadline(stored).isoformat()
         target["metadata"]["annotations"][ANNOTATION] = json.dumps(grants)
+
         # The static reverse edge still has h=1; demand h=2 so normal work is blocked.
         api.objects[("GraphRule", "test", "tight")] = resource("GraphRule", "tight", {"relation": "connections", "cheeger": {"minimum": 2}})
         with pytest.raises(RuleViolation):

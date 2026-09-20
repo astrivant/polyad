@@ -100,6 +100,9 @@ class ProcessSupervisor:
         self._environment = dict(sdk_environment if environ is None else environ)
         self._cooldown, self._startup, self._drain = cooldown_seconds, startup_timeout, drain_timeout
         self._stop_timeout, self._poll = stop_timeout, poll_interval
+
+        # Proposal callbacks only update intent under _requests. The separate
+        # execution lock gives one reconciliation exclusive lifecycle ownership.
         self._requests = threading.RLock()
         self._execution = threading.Lock()
         self._desired: str | None = None
@@ -154,6 +157,9 @@ class ProcessSupervisor:
                 raise ValueError("profile is not in the approved plans")
             if self._desired == profile:
                 return False
+
+            # Coalesce proposals into the newest revision. In-flight work checks
+            # this revision before starting or committing replacement processes.
             self._desired = profile
             self._revision += 1
             self._proposal_context = get_current()
@@ -163,6 +169,9 @@ class ProcessSupervisor:
         with self._requests:
             if self._closed or self._revision != revision:
                 raise _Aborted(PlanResult(plan.name, "Superseded", "A newer target or shutdown replaced this proposal"))
+
+        # Re-read admission evidence: topology and constraints may have changed
+        # since the view that originally produced this proposal.
         current = self._view()
         if not current.available:
             raise _Aborted(PlanResult(plan.name, "Blocked", "Current topology does not admit a process change"))
@@ -174,6 +183,9 @@ class ProcessSupervisor:
     def _start(self, spec: ProcessSpec) -> ManagedProcess:
         with self.telemetry.operation("process.start", attributes={"process.role": spec.name}):
             environment = {**self._environment, **spec.environment}
+
+            # Children belong to this launch span, not a stale parent inherited
+            # from the supervisor's own startup environment.
             for key in ("TRACEPARENT", "TRACESTATE"):
                 environment.pop(key, None)
             environment.update(self.telemetry.propagation_environment())
@@ -189,6 +201,8 @@ class ProcessSupervisor:
                 self.telemetry.processes.add(-1)
 
     def _cleanup(self, processes: Sequence[ManagedProcess]) -> None:
+        # Attempt every stop even if one fails; otherwise an early exception
+        # could leave unrelated owned children running without a cleanup attempt.
         error: BaseException | None = None
         for process in processes:
             try:
@@ -216,6 +230,9 @@ class ProcessSupervisor:
     def _apply(self, plan: ProcessPlan, revision: int) -> PlanResult:
         self._admit(plan, revision)
         self._cleanup([process for process in self._owned.values() if process.returncode is not None])
+
+        # Reuse a worker only when its full specification still matches. Changed
+        # roles need a ready replacement before application routing can switch.
         old = self.active
         reusable = {process.spec.name: process for process in old if process.returncode is None}
         kept = {spec.name: reusable[spec.name] for spec in plan.processes if spec.name in reusable and reusable[spec.name].spec == spec}
@@ -224,6 +241,9 @@ class ProcessSupervisor:
             return PlanResult(plan.name, "Unchanged", "The requested composition is already committed")
         if self.profile != plan.name and time.monotonic() - self._committed_at < self._cooldown:
             return PlanResult(plan.name, "Blocked", "Profile cooldown has not elapsed")
+
+        # Count old and new workers together: this is the rolling transition's
+        # peak population, not merely the smaller desired final population.
         if len(self._owned) + len(additions) > self._limit:
             return PlanResult(plan.name, "Blocked", "Old and proposed workers exceed the overlap limit")
         started: list[ManagedProcess] = []
@@ -235,6 +255,9 @@ class ProcessSupervisor:
                 process = self._start(spec)
                 started.append(process)
                 kept[spec.name] = process
+
+            # Wait until every proposed worker is alive and ready, checking
+            # cancellation and admission again throughout the startup interval.
             proposed = tuple(kept[spec.name] for spec in plan.processes)
             while True:
                 self._admit(plan, revision)
@@ -251,6 +274,9 @@ class ProcessSupervisor:
             with self._requests:
                 if self._closed or revision != self._revision:
                     raise _Aborted(PlanResult(plan.name, "Superseded", "A newer target replaced this proposal before activation"))
+
+                # This callback commits routing. Only afterward can old workers
+                # drain without leaving newly admitted work with no destination.
                 self._activate(proposed)
                 self._active, self._profile = proposed, plan.name
                 self._committed_at = time.monotonic()
@@ -258,6 +284,8 @@ class ProcessSupervisor:
             self._retire([process for process in old if process not in proposed and process.pid in self._owned])
             return PlanResult(plan.name, "Applied", "Ready workers activated and previous workers retired")
         finally:
+            # Roll back this attempt's new children, preserving the previous
+            # active population when readiness or admission fails.
             if not committed:
                 self._cleanup(started)
 
@@ -275,6 +303,9 @@ class ProcessSupervisor:
         Raises:
             RuntimeError: Another reconciliation or close is already executing.
         """
+
+        # Lifecycle transactions cannot overlap, even when different application
+        # threads try to reconcile the same coalesced intent.
         if not self._execution.acquire(blocking=False):
             raise RuntimeError("process reconciliation is already active")
         try:

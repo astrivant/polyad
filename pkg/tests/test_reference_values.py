@@ -69,6 +69,7 @@ def test_reference_overlays_only_use_configuration_exposed_by_values_yaml():
             if key not in canonical:
                 missing.append(location)
                 continue
+
             # Empty mappings and arrays are intentionally expanded by the typed
             # reference examples; their entry shapes remain canonical in the schema.
             if canonical[key]:
@@ -134,6 +135,7 @@ def test_nested_value_types_are_rejected_by_both_schemas(value):
     overlay = json.loads((CHART / "values.reference.schema.json").read_text())
     registry = Registry().with_resource("values.schema.json", Resource.from_contents(schema))
     assert not jsonschema.Draft7Validator(overlay, registry=registry).is_valid(value)
+
     # Validate the supplied top-level subtree against the canonical types without
     # unrelated missing defaults obscuring the type failure under examination.
     for key, subtree in value.items():

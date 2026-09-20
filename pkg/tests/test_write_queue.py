@@ -67,6 +67,7 @@ def test_opposing_pending_scales_require_reconciliation_without_writes(kind, cap
         assert state["spec"]["replicas"] == 3
         assert api.writes.snapshot()["total"] == 0
         assert not api.pending_writes.entries and not api.pending_writes.conflicted and not api.pending_writes.targets
+
         # A fresh reconciliation may now choose a single authoritative target.
         await api.request("PATCH", kind, "test", "workers", scale(2))
         assert state["spec"]["replicas"] == 2
@@ -280,6 +281,7 @@ def test_disjoint_targets_do_not_conflict(different):
     async def run():
         api, _ = adapter()
         other = adapter()[0] if different == "cluster" else api
+
         # Separate target state is irrelevant here; each GET proves the same expected fence.
         api.client.call_api.side_effect = lambda *args, **kwargs: {"metadata": {"uid": "original", "resourceVersion": "10"}}
         other.client.call_api.side_effect = api.client.call_api.side_effect

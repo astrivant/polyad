@@ -407,6 +407,7 @@ class ConnectionStore:
             await self.authorize_receipt(caller, value, verb=verb)
             if await endpoint(self.api, caller, value, resolve=self.resolve) != node:
                 raise Forbidden("connection participant changed before recording consent")
+
             # Keep only verified Pod claims, never a bearer token or arbitrary authentication extras.
             current[node] = {
                 "receiptUid": uid,

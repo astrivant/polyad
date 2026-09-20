@@ -130,7 +130,11 @@ def traffic(scopes: list[NetworkScope], direction: str) -> list[dict[str, Any]] 
     Returns:
         list[dict[str, Any]] | None: Effective terms, empty for deny-all, or None for no isolation.
     """
+
+    # None means unrestricted; an empty list means isolation with no allowed peers.
     result = None
+
+    # Intersect ancestor grants: a child can narrow its parent's policy, never widen it.
     for scope in scopes:
         if not getattr(scope.access, "isolate" + direction.title()):
             continue

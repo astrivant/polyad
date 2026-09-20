@@ -99,6 +99,7 @@ def main() -> None:
     Returns:
         None: No return value.
     """
+
     # Import registers handlers before Kopf starts its event loop.
     from polyad.operator.lifecycle import handlers  # noqa: F401
 
@@ -114,6 +115,7 @@ def main() -> None:
     if os.environ.get("POLYAD_ROOT_WORKER", "false").lower() == "true":
         if os.environ.get("POLYAD_ROOT_ENABLED", "false").lower() != "true" or not os.environ.get("KUBECONFIG"):
             parser.error("root workers require root mode and an explicit root kubeconfig")
+
         # Never accidentally coordinate against the cluster hosting this worker Pod.
         os.environ.pop("KUBERNETES_SERVICE_HOST", None)
         os.environ.pop("KUBERNETES_SERVICE_PORT", None)

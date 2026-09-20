@@ -93,6 +93,7 @@ def test_repeated_graph_example_uses_durable_activation_and_fresh_executions():
         receipt["status"]["admittedAt"] = (datetime.now(UTC) - timedelta(seconds=61)).isoformat()
         for _ in range(15):
             await settle(api, 1)
+
             # Finish acknowledged foreground deletion, retaining boundaries until children drain.
             for key, child in list(api.objects.items()):
                 meta = child["metadata"]

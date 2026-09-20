@@ -43,6 +43,8 @@ def test_assignment_stability():
     New replicas only take their own shards; survivor assignments stay stable.
     """
     before = assignment(["a", "b"])
+
+    # Adding c may steal shards, but must not reshuffle existing ownership between a and b.
     after = assignment(["c", "b", "a"])
     assert len(before) == SHARDS
     assert set(before.values()) == {"a", "b"}
@@ -66,6 +68,8 @@ def test_election_contention_and_expiry(monkeypatch):
         winner, loser = (first, second) if results[0] else (second, first)
         winner.owned.add(0)
         assert not await loser.claim("polyad-shard-0")
+
+        # Advance the local lease clock without sleeping, then verify the old owner is fenced out.
         now[0] += DURATION + 1
         assert await loser.claim("polyad-shard-0")
         token = active_shard.set(0)
@@ -101,6 +105,7 @@ def test_replica_rebalance_and_leader_failover(monkeypatch):
         assert first.owned and second.owned
         assert first.owned | second.owned == set(range(SHARDS))
         assert not first.owned & second.owned
+
         # Observe the last renewals before allowing the first process to disappear.
         await second.tick()
         now[0] += DURATION + 1
@@ -176,6 +181,7 @@ def test_finalizer_is_acknowledged_before_children_and_preserves_others():
         with pytest.raises(Pending):
             await controller.reconcile(key)
         assert api.objects[key]["metadata"]["finalizers"] == ["example.com/other", FINALIZER]
+
         # The acknowledged finalizer is followed by a separate, refreshed status patch.
         assert api.calls == [("PATCH", "Graph", "root"), ("PATCH", "Graph", "root")]
         assert api.objects[key]["status"]["metrics"]["resources"]["total"] == 0

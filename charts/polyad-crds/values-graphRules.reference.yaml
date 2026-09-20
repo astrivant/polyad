@@ -27,7 +27,7 @@ graphRules: {}
 #       annotations: {}
 #     ## @param graphRules.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Engineer-controlled structural constraints applied before scheduler admission. Namespace defaults cannot be opted out of by compositions.
 #     spec:
-#       ## @param graphRules.example.spec.cheegerComputation [object, string] Optional. No CRD default; the value shown is illustrative. Budget exact cut search and examine important partitions first without weakening bounds.
+#       ## @param graphRules.example.spec.cheegerComputation [object, string] Optional. No CRD default; the value shown is illustrative. Budget exact search and optionally try certified quotient reductions first.
 #       cheegerComputation:
 #         ## @param graphRules.example.spec.cheegerComputation.maxVertices [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
 #         maxVertices: 2
@@ -37,6 +37,22 @@ graphRules: {}
 #         timeoutSeconds: 0.001
 #         ## @param graphRules.example.spec.cheegerComputation.priorityCuts [array, string] Optional. No CRD default; the value shown is illustrative. Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
 #         priorityCuts: []
+#         ## @param graphRules.example.spec.cheegerComputation.reduction [object, string] Optional. No CRD default; the value shown is illustrative. Configure the opt-in, certificate-preserving Cheeger reduction tiers.
+#         reduction:
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.enabled [boolean, string] Optional. No CRD default; the value shown is illustrative. Request reduced search before exact enumeration. The operator must also enable it.
+#           enabled: false
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.maxVertices [integer, string] Optional. No CRD default; the value shown is illustrative. Largest boundary admitted to dense spectral reduction.
+#           maxVertices: 2
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.components [integer, string] Optional. No CRD default; the value shown is illustrative. Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.
+#           components: 1
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.supernodes [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum quotient vertices searched before exact enumeration.
+#           supernodes: 2
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.cache [boolean, string] Optional. No CRD default; the value shown is illustrative. Reevaluate a recently cached quotient partition on the current graph first.
+#           cache: false
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.cacheEntries [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum process-local partitions retained by the operator.
+#           cacheEntries: 1
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.maxEdgeChurn [number, string] Optional. No CRD default; the value shown is illustrative. Largest changed-edge fraction eligible for cached partition reuse.
+#           maxEdgeChurn: 0
 #       ## @param graphRules.example.spec.scope [string] Optional. Default: "Subtree". Choices: "Boundary", "Subtree". Boundary applies locally; Subtree propagates. Namespace rules select every boundary.
 #       scope: "Subtree"
 #       ## @param graphRules.example.spec.network [object, string] Optional. No CRD default; the value shown is illustrative. Isolate a graph subtree and intersect its exceptions with inherited constraints.

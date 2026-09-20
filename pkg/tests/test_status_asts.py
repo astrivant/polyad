@@ -67,6 +67,7 @@ def test_nullable_status_and_extension_round_trip():
     assert to_document(model)["topology"] is None
     assert to_document(model)["subgraphs"][0]["observedGeneration"] is None
     assert "uid" not in to_document(ObjectMeta(name="graph"))
+
     # Merge patches remove null properties. Reading them back remains supported.
     del original["execution"]
     assert converter.structure(original, GraphMetrics).execution is None
@@ -119,6 +120,7 @@ def test_regeneration_repairs_drift_without_changing_other_fields(tmp_path):
     for name in CRDS:
         source = (ROOT / "charts/polyad-crds/crds" / name).read_text()
         originals[name] = yaml.safe_load(source)
+
         # A valid YAML change within metrics must be noticed by the check hook.
         (tmp_path / name).write_text(source.replace("Metrics cover this scheduling boundary only.", "Stale description."))
     command = [sys.executable, str(ROOT / "scripts/schemas/generate-status-schemas.py"), "--crd-dir", str(tmp_path)]

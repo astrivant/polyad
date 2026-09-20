@@ -98,6 +98,8 @@ class Lanes:
         Returns:
             Permit: A tracked concurrency permit, released after response consumption.
         """
+
+        # Key identity, not token contents, owns the quota so Secret rotation cannot reset it.
         digest = hashlib.sha256(f"{self.namespace}/{group}/{key.name}".encode()).hexdigest()
         permit = Permit(f"polyad:auth:{{{digest}}}")
         result = cast(
@@ -148,6 +150,8 @@ class Lanes:
         while not self.stopping.wait(10):
             with self.lock:
                 active = list(self.active.values())
+
+            # Start deadlines before I/O so a slow renewal never grants extra local lease time.
             started = time.monotonic()
             try:
                 with self.client.pipeline(transaction=False) as pipeline:

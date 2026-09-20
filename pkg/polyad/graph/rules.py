@@ -112,8 +112,16 @@ def evaluate_rule(
     computation = None
     if rule.cheeger is not None:
         try:
-            result = compute_cheeger(graph, rule.cheegerComputation, limits=cheeger_limits, minimum=rule.cheeger.minimum)
+            result = compute_cheeger(
+                graph,
+                rule.cheegerComputation,
+                limits=cheeger_limits,
+                minimum=rule.cheeger.minimum,
+                maximum=rule.cheeger.maximum,
+            )
             computation = result.report()
+
+            # Only exact results become scalar metrics; interval certificates decide policy separately.
             if result.exact:
                 assert result.upperBound is not None
                 actual = result.upperBound
@@ -125,6 +133,10 @@ def evaluate_rule(
                             violations.append(f"cheeger={actual:.12g} violates {'minimum' if lower else 'maximum'} {threshold}")
             elif result.reason == "MinimumViolated":
                 violations.append(f"cheeger<={result.upperBound} violates minimum {rule.cheeger.minimum}; witnessed cut {result.cut}")
+            elif result.reason == "MaximumViolated":
+                violations.append(f"cheeger>={result.lowerBound} violates maximum {rule.cheeger.maximum}; spectral certificate")
+            elif result.reason == "BoundsSatisfied":
+                pass
             else:
                 violations.append(f"Cheeger computation inconclusive: {result.reason} after {result.evaluatedCuts} cuts")
         except ValueError as error:

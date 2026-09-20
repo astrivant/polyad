@@ -38,6 +38,8 @@ class Scope:
         Returns:
             bool: Whether the addressed areas intersect.
         """
+
+        # A write to an ancestor conflicts with reads or writes anywhere in its subtree.
         length = min(len(self.path), len(other.path))
         return self.path[:length] == other.path[:length]
 

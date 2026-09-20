@@ -86,6 +86,7 @@ class EventStore:
         if type(retention) is not int or not 100 <= retention <= 100000:
             raise ValueError("event retention must be between 100 and 100000")
         self.cache = Cache(url, namespace)
+
         # Separate approved public observations from older, unfiltered replay and
         # topology caches. Readers never fall back to the previous namespace stream.
         self.key = f"polyad:{{events:{namespace}}}:public-v1:observations"
@@ -97,6 +98,7 @@ class EventStore:
 
     def _serialize(self, payload: dict[str, Any]) -> str:
         kind = payload["type"] if payload["type"] in {"topology", "connection"} else "graph"
+
         # Redis assigns the cursor after admission. Reserve its maximum supported width.
         event = Event("9" * 20 + "-" + "9" * 20, kind, payload)
         event.typed()

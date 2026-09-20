@@ -64,6 +64,8 @@ def probe(environment, code=STARTUP):
     """
     Use a clean process so imports from other tests cannot hide unwanted loading.
     """
+
+    # Isolate import/startup behavior from whichever features the developer enabled in their shell.
     clean = {key: value for key, value in os.environ.items() if not key.startswith(("POLYAD_", "OTEL_"))}
     clean.update(POLYAD_CACHE_URL="redis://localhost:6379/0", POLYAD_NAMESPACE="test")
     clean.update(environment)
@@ -142,6 +144,7 @@ def test_split_helm_components_only_import_their_endpoint_families():
         assert result["controller"] == (component == "executor")
         assert result["publishes_events"] == (component in {"gateway", "executor"})
         assert result["websockets"] == (component == "gateway")
+
         # The mocked start never serves sockets: imports remain lazy until transport startup.
         assert_absent(result["modules"], "hypercorn", "websockets")
         assert_absent(result["modules"], "psycopg", "flask_limiter", "flask_httpauth", "opentelemetry.sdk")

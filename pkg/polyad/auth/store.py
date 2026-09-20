@@ -78,6 +78,8 @@ class CredentialStore:
         """
         policy = to_dict(key)
         digest = hashlib.sha256(json.dumps(policy, sort_keys=True).encode()).hexdigest()
+
+        # Store a verifier for the high-entropy token, never its bearer value.
         verifier = hashlib.sha256(token.encode()).hexdigest()
         identity = (self.scope, group, key.name)
         with self.lock:

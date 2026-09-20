@@ -94,6 +94,7 @@ class Federation:
         digest = hashlib.sha256(source).hexdigest()
         if name not in self.clients or self.clients[name][0] != digest:
             document = yaml.safe_load(source)
+
             # Projected credentials are data, never executable kubeconfig plugins or host file references.
             if not isinstance(document, dict) or not document.get("current-context"):
                 raise ValueError("remote kubeconfig requires an explicit current-context")

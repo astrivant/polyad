@@ -356,6 +356,8 @@ class Topology:
                     raise ValueError("daemons do not complete, and resources expose readiness; depend on ready or started")
         if self.mode == "finite" and any(node.kind == "Daemon" for node in self.nodes):
             raise ValueError("a graph containing daemons must be persistent")
+
+        # Only admission must be acyclic; connections describe runtime flow and may contain cycles.
         resolved: set[str] = set()
         while len(resolved) < len(names):
             ready = {n.name for n in self.nodes if all(e.node in resolved for e in n.requires)} - resolved

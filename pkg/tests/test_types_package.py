@@ -79,6 +79,8 @@ def test_domain_exports_and_schemas_refer_to_canonical_models():
             defining_module = importlib.import_module(model.__module__)
             assert getattr(defining_module, model.__name__) is model
             discovered.add(f"{model.__module__}.{model.__qualname__}")
+
+    # Exact equality catches both missing schema models and obsolete definitions left after refactors.
     assert set(definitions) == discovered
     assert polyad_types.graphs.Cheeger is Cheeger
     assert polyad_types.graphs.PolyGraph is PolyGraph

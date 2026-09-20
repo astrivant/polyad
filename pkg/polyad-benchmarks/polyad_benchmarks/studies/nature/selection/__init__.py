@@ -30,6 +30,8 @@ def select(output: str, current: dict[str, nature.Placement], settings: nature.S
         nature.Plan: Cheapest compatible composition admitted by the original planner.
     """
     requirement = nature.Requirement(output, 6 if output == "squared" else 4, 7 if output == "squared" else 6)
+
+    # The reused planner reads a module-global catalog; serialize replacement and restore on errors.
     with _PLANNER_LOCK:
         previous = nature.CATALOG
         try:

@@ -135,6 +135,7 @@ class PoolManager:
             },
             owner,
         )
+
         # Keep the Helm-owned bootstrap observation separate from managed
         # components, but contain both within the same operator group Graph.
         root_nodes = [{"name": "bootstrap", "kind": "Graph", "ref": name + "-root-bootstrap"}]
@@ -245,6 +246,7 @@ class PoolManager:
                     attributes={"polyad.target.cluster": getattr(api, "cluster", self.root.federation.name)},
                 )
                 raise ValueError(f"refusing to adopt unmanaged {kind}/{name}")
+
             # API defaulting is retained by merge-patching only declared desired fields.
             digest = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
             if current["metadata"].get("annotations", {}).get(f"{GROUP}/root-revision") == digest and contains(current, body):
@@ -300,6 +302,7 @@ class PoolManager:
             )
             return
         meta = latest["metadata"]
+
         # Registration/finalizer writes can advance resourceVersion within this pass.
         # HPA validates a nonempty selector even for external AverageValue metrics.
         # This root-local identity intentionally selects no remote workload Pods.
@@ -469,6 +472,7 @@ class PoolManager:
                 children = await self.root.federation.children(boundary)
                 if any(child["metadata"].get("labels", {}).get(f"{GROUP}/node") == f"pool-{meta['uid'][:12]}" for child in children):
                     raise Pending("waiting for the unlinked operator Graph and remote workloads to drain")
+
             # Keep workloads, CRDs and storage. Only remove the pool's own execution machinery.
             cleanup_kinds = ("Graph", "Daemon") if existing else ("Deployment", "Graph", "Daemon", "ConfigMap", "Secret")
             for kind in cleanup_kinds:
@@ -534,6 +538,7 @@ class PoolManager:
         desired_image = next(item["image"] for item in source["spec"]["template"]["spec"]["containers"] if item["name"] == "operator")
         if desired_image != os.environ.get("POLYAD_OPERATOR_IMAGE"):
             raise Pending("waiting for a worker running the root's desired image before upgrading remote schemas")
+
         # Shared CRDs are installed/upgraded by this root, never removed with a pool.
         schemas = sorted(Path(os.environ.get("POLYAD_CRD_DIRECTORY", "/opt/polyad/crds")).glob("*.yaml"))
         if not schemas:
@@ -582,6 +587,7 @@ class PoolManager:
         env["POLYAD_POD_CLUSTER"] = {"name": "POLYAD_POD_CLUSTER", "value": spec["cluster"]}
         env["POLYAD_COMPONENT"] = {"name": "POLYAD_COMPONENT", "value": "executor"}
         env["KUBECONFIG"] = {"name": "KUBECONFIG", "value": "/var/run/polyad/root/config"}
+
         # Every Kubernetes request from the replica uses the root credentials or a registered remote adapter.
         revisions = []
         for volume in pod["spec"].get("volumes", []):
@@ -734,6 +740,7 @@ class PoolManager:
                 or any(current["metadata"].get(field) != meta.get(field) for field in ("uid", "generation"))
             ):
                 raise Pending("root scaling intent changed before dispatch")
+
             # The local grant and Pod configuration share the same resourceVersion.
             # A concurrent Helm edit or revocation therefore rejects this write.
             deployment = await remote.request(

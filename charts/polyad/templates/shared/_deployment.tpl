@@ -213,6 +213,20 @@ spec:
               value: {{ .Values.operator.cheeger.maxCuts | int | quote }}
             - name: POLYAD_CHEEGER_TIMEOUT_SECONDS
               value: {{ .Values.operator.cheeger.timeoutSeconds | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_ENABLED
+              value: {{ .Values.operator.cheeger.reduction.enabled | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_MAX_VERTICES
+              value: {{ .Values.operator.cheeger.reduction.maxVertices | int | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_COMPONENTS
+              value: {{ .Values.operator.cheeger.reduction.components | int | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_SUPERNODES
+              value: {{ .Values.operator.cheeger.reduction.supernodes | int | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_CACHE
+              value: {{ .Values.operator.cheeger.reduction.cache | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_CACHE_ENTRIES
+              value: {{ .Values.operator.cheeger.reduction.cacheEntries | int | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_MAX_EDGE_CHURN
+              value: {{ .Values.operator.cheeger.reduction.maxEdgeChurn | quote }}
             - name: POLYAD_RESCAN_INTERVAL_SECONDS
               value: {{ .Values.operator.tuning.rescanIntervalSeconds | quote }}
             - name: POLYAD_CONSUME_INTERVAL_SECONDS

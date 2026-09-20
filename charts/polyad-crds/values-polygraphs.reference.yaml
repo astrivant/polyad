@@ -138,7 +138,7 @@ polygraphs: {}
 #         cooldownSeconds: 1
 #         ## @param polygraphs.example.spec.throughput.maxChangesPerHour [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum successful changes in a rolling hour.
 #         maxChangesPerHour: 1
-#         ## @param polygraphs.example.spec.throughput.cheegerComputation [object, string] Optional. No CRD default; the value shown is illustrative. Budget exact cut search and examine important partitions first without weakening bounds.
+#         ## @param polygraphs.example.spec.throughput.cheegerComputation [object, string] Optional. No CRD default; the value shown is illustrative. Budget exact search and optionally try certified quotient reductions first.
 #         cheegerComputation:
 #           ## @param polygraphs.example.spec.throughput.cheegerComputation.maxVertices [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
 #           maxVertices: 2
@@ -148,6 +148,22 @@ polygraphs: {}
 #           timeoutSeconds: 0.001
 #           ## @param polygraphs.example.spec.throughput.cheegerComputation.priorityCuts [array, string] Optional. No CRD default; the value shown is illustrative. Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
 #           priorityCuts: []
+#           ## @param polygraphs.example.spec.throughput.cheegerComputation.reduction [object, string] Optional. No CRD default; the value shown is illustrative. Configure the opt-in, certificate-preserving Cheeger reduction tiers.
+#           reduction:
+#             ## @param polygraphs.example.spec.throughput.cheegerComputation.reduction.enabled [boolean, string] Optional. No CRD default; the value shown is illustrative. Request reduced search before exact enumeration. The operator must also enable it.
+#             enabled: false
+#             ## @param polygraphs.example.spec.throughput.cheegerComputation.reduction.maxVertices [integer, string] Optional. No CRD default; the value shown is illustrative. Largest boundary admitted to dense spectral reduction.
+#             maxVertices: 2
+#             ## @param polygraphs.example.spec.throughput.cheegerComputation.reduction.components [integer, string] Optional. No CRD default; the value shown is illustrative. Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.
+#             components: 1
+#             ## @param polygraphs.example.spec.throughput.cheegerComputation.reduction.supernodes [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum quotient vertices searched before exact enumeration.
+#             supernodes: 2
+#             ## @param polygraphs.example.spec.throughput.cheegerComputation.reduction.cache [boolean, string] Optional. No CRD default; the value shown is illustrative. Reevaluate a recently cached quotient partition on the current graph first.
+#             cache: false
+#             ## @param polygraphs.example.spec.throughput.cheegerComputation.reduction.cacheEntries [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum process-local partitions retained by the operator.
+#             cacheEntries: 1
+#             ## @param polygraphs.example.spec.throughput.cheegerComputation.reduction.maxEdgeChurn [number, string] Optional. No CRD default; the value shown is illustrative. Largest changed-edge fraction eligible for cached partition reuse.
+#             maxEdgeChurn: 0
 #         ## @param polygraphs.example.spec.throughput.maxWeightStep [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum percentage-point change per destination in one automatic adjustment.
 #         maxWeightStep: 1
 #         ## @param polygraphs.example.spec.throughput.trafficMode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Tiers", "Headroom". Use calibrated tier percentages or measured per-destination sustainable capacity.

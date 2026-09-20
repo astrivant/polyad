@@ -75,6 +75,8 @@ def assess_lupa(argocd_config: Path, obj: dict[str, Any]) -> dict[str, str]:
         max_memory=8 * 1024 * 1024,
     )
     runtime.execute("python = nil; require = nil; package = nil; io = nil; os = nil; debug = nil; dofile = nil; loadfile = nil")
+
+    # Execute the generated customization against an Argo-shaped global, not a Python reimplementation.
     runtime.globals()["obj"] = runtime.table_from(obj, recursive=True)
     result = runtime.execute(source, name=f"@argocd/{obj['kind']}/health.lua", mode="t")
     return {"STATUS": str(result["status"]), "MESSAGE": str(result["message"])}

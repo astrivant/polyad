@@ -79,6 +79,7 @@ def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, 
         duty_root = root
         if obj["kind"] == "Rewrite":
             target = indexed.get((obj["spec"].get("kind", "Graph"), obj["spec"]["graph"]))
+
             # Resolve the target's controller chain separately from the Rewrite's own ownership.
             target_seen: set[str] = set()
             while target is not None:

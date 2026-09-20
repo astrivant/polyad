@@ -32,6 +32,8 @@ def configure_storage(spec: dict[str, Any]) -> Persistence:
     if any(volume.get("name") == name for volume in volumes):
         raise ValueError("polyad-persistence is a reserved volume name")
     volumes.append({"name": name, "persistentVolumeClaim": {"claimName": persistence.claimName}})
+
+    # Initialization and steady-state containers share the same claim and collision checks.
     for container in [*pod.get("initContainers", []), *pod["containers"]]:
         mounts = container.setdefault("volumeMounts", [])
         if any(mount.get("mountPath") == persistence.mountPath for mount in mounts):

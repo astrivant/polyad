@@ -128,6 +128,7 @@ def test_replicas_share_replay_deduplication_and_retention():
             await second.publish(obj, topology=snapshot)
             assert await second.cache.client.xlen(second.key) == before
             assert (await second.topology("Graph", "graph"))["cursor"] == initial["cursor"]
+
             # A changed membership can arrive with the same graph resourceVersion.
             obj["spec"]["nodes"].append({"name": "two", "kind": "Daemon", "ref": "worker"})
             snapshot = await topology_snapshot(FakeAPI(obj), obj)

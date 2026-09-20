@@ -107,7 +107,10 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "D", "TC"]
-ignore = ["D200", "D212"]
+
+# Keep multiline docstrings and allow a blank line before explanatory comments
+# immediately after them. D202 would otherwise remove that visual separation.
+ignore = ["D200", "D202", "D212"]
 extend-select = ["D213"]
 
 [tool.ruff.lint.isort]
@@ -133,7 +136,9 @@ ignore_missing_imports = true
 
 [tool.pydocstyle]
 convention = "google"
-add-ignore = ["D200", "D212"]
+
+# Match Ruff's docstring layout, including spacing before implementation comments.
+add-ignore = ["D200", "D202", "D212"]
 add-select = ["D213"]
 match = ".*\\.py"
 

@@ -81,6 +81,8 @@ def trial(model: QueueModel, count: int, rate: float, horizon: float, guarded: b
         raise ValueError("process trials require two ready consumers with positive capacity and queue limits")
     if not model.arrival_bounds[0] <= rate <= model.arrival_bounds[1]:
         raise ValueError("offered rate lies outside the modeled arrival bounds")
+
+    # Hold consumer capacity fixed; only guarded routing can use the spare consumer's share.
     selected = model if guarded else replace(model, shares=(1.0, 0.0))
     envelope = compile_envelope(selected, "process-trial", horizon=horizon)
     predicted, margin = envelope.assess((0, 0))

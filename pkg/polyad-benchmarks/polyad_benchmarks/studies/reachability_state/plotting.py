@@ -75,6 +75,8 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         label="Estimated solver workspace",
         color="#72578b",
     )
+
+    # Keep omitted numerical runs visibly absent, rather than treating unmeasured time or memory as zero.
     numerical = [(index, record["numerical"]) for index, record in enumerate(records) if "numerical" in record]
     if numerical:
         axes[1].barh(

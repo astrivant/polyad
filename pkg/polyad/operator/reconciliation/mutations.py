@@ -89,6 +89,7 @@ async def execute_mutations(
             attributes={"polyad.request.name": mutation.name},
         )
 
+    # Planning is not a reservation: refresh counters and every precondition at each barrier.
     for names in plan.batches:
         batch = tuple(indexed[name] for name in names)
         if observe_budgets is not None:
@@ -135,5 +136,7 @@ async def execute_mutations(
             raise failures[0]
         if failures:
             raise BaseExceptionGroup("mutation batch failed; refresh before retrying", failures)
+
+        # Only a fully successful batch establishes the expected counter values for the next one.
         usage = advance_budgets(batch, budgets, usage)
     return plan

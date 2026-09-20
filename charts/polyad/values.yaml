@@ -142,6 +142,22 @@ operator:
     maxCuts: 524287
     ## @param operator.cheeger.timeoutSeconds [number] Cooperative time ceiling per calculation (0.001-300 seconds); checked between cut batches, never converts partial results into exact constants
     timeoutSeconds: 5
+    ## @param operator.cheeger.reduction [object] Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search; graph policies must also opt in
+    reduction:
+      ## @param operator.cheeger.reduction.enabled [boolean] Allow graph policies to request reduced Cheeger search before exact enumeration
+      enabled: false
+      ## @param operator.cheeger.reduction.maxVertices [integer] Largest boundary allowed through the dense spectral reducer (2-4096)
+      maxVertices: 256
+      ## @param operator.cheeger.reduction.components [integer] Maximum nontrivial Laplacian eigenvectors retained by a graph policy (1-64)
+      components: 4
+      ## @param operator.cheeger.reduction.supernodes [integer] Maximum quotient vertices searched by a graph policy (2-64)
+      supernodes: 8
+      ## @param operator.cheeger.reduction.cache [boolean] Permit process-local quotient partition reuse; every cached partition is rescored on current edges
+      cache: true
+      ## @param operator.cheeger.reduction.cacheEntries [integer] Maximum cached quotient partitions per operator process (1-4096)
+      cacheEntries: 128
+      ## @param operator.cheeger.reduction.maxEdgeChurn [number] Maximum symmetric changed-edge fraction eligible for cached partition reuse (0-1)
+      maxEdgeChurn: 0.1
   ## @param operator.writeQueue [object] Bound concrete Kubernetes writes separately from coalesced reconciliation hints.
   writeQueue:
     ## @param operator.writeQueue.reconciliationCooldownSeconds [number] Shared per-resource cooldown window before new reconciliation decisions (0-300 seconds); zero disables pacing, expiry and connection consent remain live

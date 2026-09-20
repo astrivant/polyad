@@ -85,7 +85,10 @@ def owned_child(
     if {"apiVersion", "kind", "metadata", "spec", "status"} & extension.keys():
         raise ValueError("child extension fields cannot override identity, ownership, spec or status")
     raw_spec = to_document(spec) if isinstance(spec, (JobSpec, DeploymentSpec, StatefulSetSpec, DaemonSetSpec)) else copy.deepcopy(spec)
+
     # Preserve the pre-AST hash contract: this refactor must not replace existing workloads.
+
+    # Replica count changes scale the existing group; they do not replace its immutable identity.
     hashed_spec = {key: value for key, value in raw_spec.items() if key != "replicas"} if kind == "ReplicaGroup" else raw_spec
     payload = [kind, hashed_spec, extra]
     if annotations:

@@ -90,6 +90,7 @@ def test_marked_definitions_and_compiled_descendants_remain_internal():
         compiled["metadata"]["uid"] = "compiled-uid"
         assert compiled["metadata"]["labels"][INTERNAL] == "true"
         assert not await public_observation(FakeAPI(), compiled)
+
         # Even older descendants without the inherited marker resolve current owners.
         del compiled["metadata"]["labels"][INTERNAL]
         assert not await public_observation(api, compiled)
@@ -137,6 +138,7 @@ def test_applications_on_reserved_shard_and_same_named_remote_graphs_stay_public
         other_namespace["metadata"]["namespace"] = "applications"
         assert await public_observation(api, other_namespace, reserved_graph=reserved)
         remote = resource("Graph", "control-plane")
+
         # A remote store checks its own labels and ancestry, without the root's name reservation.
         assert await public_observation(FakeAPI(remote), remote)
 
@@ -254,6 +256,7 @@ def test_remote_publication_uses_destination_ancestry_and_refreshed_api(monkeypa
             cache.eval.assert_not_awaited()
             await worker.events.publish(application)
             assert json.loads(cache.eval.await_args.args[6])["cluster"] == "west"
+
             # Remote API adapters are replaced as projected credentials rotate.
             nested = child("ReplicaGroup", "application-copies", application)
             assert await worker.events.visible(nested)

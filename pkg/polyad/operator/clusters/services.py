@@ -40,6 +40,8 @@ async def graphs(manager: PoolManager, name: str, owner: str) -> list[dict[str, 
         bindings = {}
         for target in targets:
             validate_bindings({"target": target})
+
+            # Hash the complete binding so similarly named resources still receive distinct vertices.
             identity = json.dumps(target, sort_keys=True)
             label = f"{target['kind'].lower()}-{target['name'].replace('.', '-')[:32]}"
             key = f"{label}-{hashlib.sha256(identity.encode()).hexdigest()[:8]}"

@@ -39,6 +39,8 @@ def install_flask_auth(app: Flask | Routes, keys: Keyring | None, token: str | N
         try:
             candidates = [secret for _, _, secret in keys.read()] if keys else [token or ""]
             matched = False
+
+            # Check all candidates without stopping at the first match, including during rotation.
             for expected in candidates:
                 matched |= bool(supplied) and hmac.compare_digest(supplied.encode(), expected.encode())
             return matched

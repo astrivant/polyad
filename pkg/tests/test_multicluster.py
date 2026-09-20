@@ -332,6 +332,7 @@ def test_observer_reads_never_authorize_or_execute_mutations():
     from openapi_spec_validator import validate
 
     validate(client.get("/openapi.json", headers=headers).json)
+
     # No constructor or kubeconfig is needed: the write guard executes before transport.
     readonly = object.__new__(ObservationAPI)
     for method in ("POST", "PATCH", "PUT", "DELETE"):

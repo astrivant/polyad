@@ -90,6 +90,7 @@ async def check_rules(
             if getattr(node, "cluster", None):
                 if cluster_local:
                     raise RuleViolation("Graph descendants must stay in one cluster; place cross-cluster compositions in a PolyGraph")
+
                 # The remote boundary is a vertex here. Its own operator enforces
                 # destination namespace rules against its live local family.
                 continue
@@ -114,6 +115,7 @@ async def check_rules(
                 evaluate_rule, rules[name], graph, expanded_nodes=expanded, nesting_depth=depth, cheeger_limits=computation_limits()
             )
             meta = documents[name]["metadata"]
+
             # Keep full eigenvalue arrays only when benchmark diagnostics are enabled.
             if report["spectrum"] is not None and os.getenv("POLYAD_METRICS_GRAPH_SPECTRA", "false").lower() != "true":
                 report["spectrum"] = {key: value for key, value in report["spectrum"].items() if key not in {"adjacency", "laplacian"}}

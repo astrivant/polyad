@@ -66,6 +66,8 @@ def topology(study: str, record: dict[str, Any], output: Path) -> list[str]:
         strict=True,
     ):
         frames = [frame for frame in record["frames"] if frame["phase"] == phase]
+
+        # Show the most pressured recorded frame during constraints, and settled frames otherwise.
         frame = (
             max(
                 frames,
@@ -146,6 +148,7 @@ def timeline(study: str, record: dict[str, Any], output: Path) -> list[str]:
     figure, axes = plt.subplots(len(names), 3, figsize=(16, 2.0 * len(names)), sharex=True, layout="constrained")
     for row, name in enumerate(names):
         samples = [sample for sample in record["samples"] if sample["service"] == name]
+
         # A restored logical name is a different process. Keep its lifetime
         # separate so the plot does not invent activity while it was retired.
         for index, pid in enumerate(dict.fromkeys(sample["pid"] for sample in samples)):

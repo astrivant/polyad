@@ -78,6 +78,8 @@ class Interaction:
             raise ValueError("an interaction needs a Relationship and two immutable effects")
         for effect in self.effects:
             finite(effect, minimum=-1e9)
+
+        # Relationship names constrain direction, while the supplied magnitudes determine capacity cost.
         signs = tuple((value > 0) - (value < 0) for value in self.effects)
         expected = {
             Relationship.NEUTRALISM: (0, 0),
@@ -153,6 +155,8 @@ class QueueModel:
             raise ValueError("provide a validated Interaction")
         if len(self.names) != 2 and self.interaction.relationship != Relationship.NEUTRALISM:
             raise ValueError("non-neutral interactions describe exactly two consumers")
+
+        # Signed interaction costs cannot create physically negative service capacity.
         if any(capacity < 0 for capacity in self.effective_capacities):
             raise ValueError("interaction costs exceed the available capacity")
         finite(self.warmup_max)

@@ -122,6 +122,7 @@ async def members(api: API, obj: dict[str, Any]) -> list[dict[str, Any]]:
         return []
     if deployment["metadata"].get("labels", {}).get(INTERNAL) != "true":
         raise ValueError("reserved operator Graph cannot observe a non-internal Deployment")
+
     # Only the returned observation is decorated. The native Deployment retains
     # Helm or OperatorPool ownership and is never adopted or deleted by this Graph.
     deployment["metadata"]["labels"] = {

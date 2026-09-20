@@ -137,9 +137,13 @@ class AtlasAccess:
         """
         if capability not in {"discovery", "connections"}:
             raise ValueError("unknown service access capability")
+
+        # Modes are ordered from narrowest to broadest; every ancestor may only reduce access.
         order = list(AccessMode)
         ceiling = order.index(getattr(self, capability))
         seen = set()
+
+        # Follow explicit parents, rejecting cycles instead of silently granting root privileges.
         while cluster in self.clusters:
             if cluster in seen:
                 raise ValueError("operator access parent chain contains a cycle")

@@ -34,6 +34,8 @@ async def connection_request(store: ConnectionStore, request: ServiceConnectionR
     """
     source = await path(request.source, store.resolve, store.federation.name)
     target = await path(request.target, store.resolve, store.federation.name)
+
+    # Both administrators must allow negotiation; one endpoint's broader scope cannot authorize its peer.
     require_scope("connections", identities(source), identities(target))
     require_scope("connections", identities(target), identities(source))
     same = identities(source)[0] == identities(target)[0]

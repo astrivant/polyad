@@ -23,6 +23,8 @@ def test_flux_configuration_covers_registry():
     command = [sys.executable, str(ROOT / "scripts/gitops/flux-health.py")]
     yaml_document = yaml.safe_load(subprocess.check_output(command, text=True))
     json_document = json.loads(subprocess.check_output([*command, "--json"], text=True))
+
+    # Both output formats must carry the same complete per-kind health contract.
     assert yaml_document == json_document
     assert set(json_document) == {"spec"}
     checks = json_document["spec"]["healthCheckExprs"]

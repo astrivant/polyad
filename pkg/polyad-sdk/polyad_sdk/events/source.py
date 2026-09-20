@@ -112,6 +112,9 @@ class EventSource(ABC):
         Returns:
             Subscription: Register filters and callbacks, then call run on the application's chosen thread.
         """
+
+        # Keep replay recovery and callback bookkeeping shared across HTTP and
+        # alternative event-source implementations.
         from polyad_sdk.events.subscriptions import Subscription
 
         return Subscription(

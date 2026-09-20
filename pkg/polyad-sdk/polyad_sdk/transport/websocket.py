@@ -67,6 +67,9 @@ def events(
                     raw = connection.recv(timeout=timeout)
                 except ConnectionClosedOK:
                     return
+
+                # Bound the payload before decoding it. A successful transport
+                # receive is not sufficient validation of the event envelope.
                 if not isinstance(raw, str):
                     raise ValueError("expected a text WebSocket event")
                 if len(raw.encode("utf-8")) > max_bytes:
@@ -92,5 +95,7 @@ def events(
             body = {"error": "non-JSON error response"}
         raise APIError(error.response.status_code, body if isinstance(body, dict) else {"error": body}) from None
     finally:
+        # Explicit direct-routing sockets need cleanup even if the handshake
+        # failed before the WebSocket context manager took ownership.
         if connection_socket is not None:
             connection_socket.close()

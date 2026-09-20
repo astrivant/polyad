@@ -132,6 +132,7 @@ class MetricsAPIBuilder:
 
         @app.get("/v1/workloads/<kind>/<name>/<metric>")
         def workload(kind: str, name: str, metric: str) -> Response:
+            # Serve a published snapshot instead of turning every telemetry scrape into Kubernetes reads.
             sample = store.read()
             if sample is None or lifecycle.replacement.is_set() or lifecycle.draining.is_set():
                 return Response('{"error":"metrics snapshot unavailable"}', status=503, content_type="application/json")

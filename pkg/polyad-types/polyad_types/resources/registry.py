@@ -89,6 +89,7 @@ RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     ShutdownPolicy,
     Rewrite,
 )
+
 # Immutable projections of the descriptors declared on the resource classes.
 RESOURCE_TYPES = MappingProxyType({cls.resource_type.kind: cls.resource_type for cls in RESOURCE_CLASSES})
 RESOURCE_REGISTRY = MappingProxyType({cls.resource_type.kind: cls for cls in RESOURCE_CLASSES})

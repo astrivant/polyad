@@ -18,7 +18,7 @@ from polyad_benchmarks.studies import plotting
 from polyad_benchmarks.studies.descriptions import INTRODUCTIONS, describe, describe_axis
 
 ROOT = Path(__file__).resolve().parents[2]
-PLOTTED = ("load", "symbiosis", "reachability-state", "reachability-routing", "cheeger-reduction")
+PLOTTED = ("load", "symbiosis", "reachability-state", "reachability-routing", "cheeger-reduction", "cheeger-strategies")
 
 
 def result_for(study):
@@ -96,6 +96,31 @@ def test_load_latencies_do_not_count_timeouts_as_completed_or_invent_acceptance(
     for line in figures["latencies"].axes[1].lines:
         assert line.get_ydata()[0] == 0
         assert line.get_ydata()[-1] == 1
+
+
+def test_strategy_timeline_plots_fresh_work_separately_from_cache_hits(monkeypatch, tmp_path):
+    """
+    Show every returned reduction certificate, not just successful cache lookups.
+    """
+    import matplotlib.pyplot as plt
+
+    from polyad_benchmarks.studies.cheeger_strategies import plotting as strategies
+
+    result = result_for("cheeger-strategies")
+    captured = []
+
+    def capture(figure, *args, **kwargs):
+        captured.append(figure)
+        return []
+
+    monkeypatch.setattr(strategies, "save", capture)
+    try:
+        strategies.timeline(result, tmp_path)
+        shown = {int(collection.get_offsets()[0, 1]) for collection in captured[0].axes[1].collections}
+        assert shown == {0, 1, 2}
+    finally:
+        for figure in captured:
+            plt.close(figure)
 
 
 def test_disabled_numerical_analysis_is_labeled_without_fabricated_timings(monkeypatch, tmp_path):

@@ -52,6 +52,7 @@ def capacity_weights(route: TrafficRoute, capacities: dict[str, float]) -> Traff
     }
     if sum(maximums.values()) < 100:
         return None
+
     # Highest averages apportions exactly 100 integer points, retaining configured
     # minimums and caps. A zero-capacity destination receives only its reserved minimum.
     for _ in range(100 - sum(weights.values())):

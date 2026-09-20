@@ -1,3 +1,4 @@
+-- Prune in bounded batches so retention cleanup does not hold one unbounded delete transaction.
 DELETE FROM polyad_event_history WHERE scope = %s AND identity IN (
     SELECT identity FROM polyad_event_history
     WHERE scope = %s AND recorded_at < now() - %s * interval '1 day'
