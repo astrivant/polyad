@@ -11,6 +11,8 @@ from polyad_schemas._catalog import load_schema
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("schema_for",)
+
 
 def schema_for(model: type | str) -> dict[str, Any]:
     """

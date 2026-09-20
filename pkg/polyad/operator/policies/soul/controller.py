@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 
     from polyad.operator.reconciliation.controller import Controller
 
+__all__ = ("search_soul",)
+
 
 async def search_soul(controller: Controller, obj: dict[str, Any], *, now: datetime | None = None) -> bool:
     """

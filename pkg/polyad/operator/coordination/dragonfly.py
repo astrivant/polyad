@@ -19,6 +19,13 @@ if TYPE_CHECKING:
     from polyad.operator.coordination.leases import Coordinator
     from polyad.operator.coordination.shared_queue import SharedQueue
 
+__all__ = (
+    "connections",
+    "reconcile",
+    "run",
+)
+
+
 logger = logging.getLogger(__name__)
 
 

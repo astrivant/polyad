@@ -9,6 +9,22 @@ from typing import TYPE_CHECKING
 
 import matplotlib
 
+__all__ = (
+    "COLORS",
+    "STAGES",
+    "STAGE_COLORS",
+    "STAGE_NAMES",
+    "activation",
+    "cache",
+    "churn",
+    "controls",
+    "lines",
+    "parameters",
+    "render",
+    "timeline",
+)
+
+
 # Render files without a desktop or display server, including on CI workers.
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt

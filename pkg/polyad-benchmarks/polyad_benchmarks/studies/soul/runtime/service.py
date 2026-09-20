@@ -22,6 +22,14 @@ if TYPE_CHECKING:
     from multiprocessing.process import BaseProcess
     from typing import Any
 
+__all__ = (
+    "PROFILES",
+    "Service",
+    "Worker",
+    "serve",
+)
+
+
 PROFILES = {
     "interactive": soul.INTERACTIVE,
     "batch": soul.BATCH,

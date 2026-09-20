@@ -16,6 +16,13 @@ from polyad_types.graphs.rules import CheegerComputation
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "CheegerIncomplete",
+    "CheegerResult",
+    "compute_cheeger",
+    "graph_cheeger",
+)
+
 
 @frozen
 class CheegerResult:

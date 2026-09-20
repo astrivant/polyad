@@ -22,6 +22,11 @@ if TYPE_CHECKING:
 
     from polyad.operator.adapters.kubernetes import API
 
+__all__ = (
+    "RuleViolation",
+    "check_rules",
+)
+
 
 class RuleViolation(ValueError):
     """

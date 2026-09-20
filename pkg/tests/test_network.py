@@ -86,6 +86,26 @@ def test_connection_grants_select_graph_subtrees():
     assert traffic([resolved], "ingress") == []
 
 
+@pytest.mark.parametrize("port", [50051, 5672, 5671, 6379, 9000])
+def test_workload_tcp_protocols_compile_without_http_restrictions(port):
+    """
+    gRPC, brokers and raw sockets retain exact port and identity gates without invented HTTP filters.
+    """
+    access = NetworkAccess(
+        mesh=True,
+        allowWithin=False,
+        ingress=(
+            TrafficRule(NetworkPeer(namespace="clients"), ports=(NetworkPort(port),), principals=("cluster.local/ns/clients/sa/worker",)),
+        ),
+    )
+    specs = policy_specs({"node": "server"}, [scope(access)])
+    assert specs["PeerAuthentication"]["mtls"] == {"mode": "STRICT"}
+    rule = specs["AuthorizationPolicy"]["rules"][0]
+    assert rule["to"][0]["operation"] == {"ports": [str(port)]}
+    assert rule["from"][0]["source"]["principals"] == ["cluster.local/ns/clients/sa/worker"]
+    assert specs["NetworkPolicy"]["ingress"][0]["ports"] == [{"protocol": "TCP", "port": port}]
+
+
 @pytest.mark.parametrize("boundary", [False, True])
 def test_owner_chain_resolves_scope_and_labels(boundary):
     """

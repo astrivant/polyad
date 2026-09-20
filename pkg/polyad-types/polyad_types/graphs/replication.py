@@ -14,6 +14,16 @@ from polyad_types.networking.access import NetworkPort
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+__all__ = (
+    "RemoteScaleOwner",
+    "ReplicaConnection",
+    "ReplicaConnectivity",
+    "ReplicaSource",
+    "ReplicaTemplate",
+    "Replication",
+    "replica_topology",
+)
+
 
 @frozen
 class ReplicaConnection:

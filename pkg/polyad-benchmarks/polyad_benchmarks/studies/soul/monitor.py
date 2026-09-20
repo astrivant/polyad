@@ -20,6 +20,8 @@ from polyad_benchmarks.studies.soul.runtime.engine import PopulationMonitor
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("Monitor",)
+
 
 class Monitor(PopulationMonitor):
     """

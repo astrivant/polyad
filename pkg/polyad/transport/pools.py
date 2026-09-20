@@ -11,6 +11,13 @@ from weakref import WeakKeyDictionary
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "pressure",
+    "register",
+    "snapshot",
+)
+
+
 _lock = Lock()
 _pools: WeakKeyDictionary[Any, tuple[str, str]] = WeakKeyDictionary()
 

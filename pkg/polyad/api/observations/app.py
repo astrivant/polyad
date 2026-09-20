@@ -28,6 +28,12 @@ if TYPE_CHECKING:
 
     from polyad.auth.http import Access
 
+__all__ = (
+    "ObservationAPI",
+    "build_app",
+    "observe",
+)
+
 
 class ObservationAPI(API):
     """

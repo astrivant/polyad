@@ -21,6 +21,12 @@ if TYPE_CHECKING:
     from multiprocessing.process import BaseProcess
     from typing import Any
 
+__all__ = (
+    "Member",
+    "PopulationMonitor",
+    "produce",
+)
+
 
 def produce(pipe: Connection, count: int, rate: float, offset: int) -> None:
     """

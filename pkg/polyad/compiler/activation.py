@@ -8,6 +8,8 @@ import hashlib
 
 from polyad_types.api.requests import identity
 
+__all__ = ("activation_name",)
+
 
 def activation_name(request_id: str) -> str:
     """

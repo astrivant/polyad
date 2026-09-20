@@ -16,6 +16,12 @@ if TYPE_CHECKING:
     from polyad.graph.gates import DelayGate, Gate
     from polyad.graph.workloads import Work, Workload
 
+__all__ = (
+    "digest",
+    "shape_hash",
+)
+
+
 _visiting: ContextVar[tuple[int, ...]] = ContextVar("polyad_shape_visiting", default=())
 
 

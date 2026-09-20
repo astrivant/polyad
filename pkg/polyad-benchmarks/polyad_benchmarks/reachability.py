@@ -18,6 +18,14 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
+__all__ = (
+    "interactions",
+    "measure_guard",
+    "model_from_config",
+    "run",
+    "state_variables",
+)
+
 
 def model_from_config(config: dict[str, Any]) -> QueueModel:
     """
@@ -162,7 +170,6 @@ def run(root: Path, study: str) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Complete records and local runtime identity, ready for publication checks.
     """
-    from polyad_benchmarks.cheeger_reduction import reduction_study
     from polyad_benchmarks.refresh import write_json
     from polyad_benchmarks.routing_study import rerouting
 
@@ -171,7 +178,6 @@ def run(root: Path, study: str) -> dict[str, Any]:
         "symbiosis": interactions,
         "reachability-state": state_variables,
         "reachability-routing": rerouting,
-        "cheeger-reduction": reduction_study,
     }
     records = runners[study](config)
     result = {

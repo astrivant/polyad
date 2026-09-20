@@ -12,6 +12,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from polyad.sql.encryption import RecordCipher
 
+__all__ = (
+    "record_cipher",
+    "statement",
+)
+
 
 def record_cipher() -> RecordCipher | None:
     """

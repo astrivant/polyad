@@ -27,6 +27,7 @@ from polyad_sdk import (
     ObserveStrategy,
     Settings,
     StreamInterrupted,
+    WorkloadEndpoint,
 )
 from polyad_sdk.events.filters import event_type, field
 from polyad_types import ServiceEndpoint, ThroughputSample
@@ -480,6 +481,32 @@ def test_connection_hooks_consent_and_expiry_are_explicit(runtime):
     assert changes[-1].matching("connections.uid-connection")[0].kind == "removed"
     with pytest.raises(ValueError, match="expired"):
         service.respond("uid-connection", "Approve")
+
+
+def test_workload_factory_rechecks_real_receipt_updates(runtime):
+    """
+    A retained transport factory cannot retain an expired or revoked connection grant.
+    """
+    service, _, clock, _ = runtime
+    service.refresh()
+    event = observation(2)
+    receipt = event.data["connection"]
+    receipt["expiresAt"] = datetime.fromtimestamp(120, UTC).isoformat()
+    receipt["status"]["phase"] = "Active"
+    receipt["target"].update(source="source", target="sink", ports=[{"port": 50051, "protocol": "TCP"}])
+    service.dispatch(event)
+    target = ServiceEndpoint("", "test", "Graph", "pipeline", "uid-pipeline", "sink")
+    client = service.workload(WorkloadEndpoint(target, "grpc://worker"), receipt_uid="uid-connection")
+    client.check()
+    clock.return_value = 120
+    with pytest.raises(PermissionError):
+        client.check()
+    clock.return_value = 101
+    revoked = Event("2-0", "connection", copy.deepcopy(event.data))
+    revoked.data["connection"]["revokeRequested"] = True
+    service.dispatch(revoked)
+    with pytest.raises(PermissionError):
+        client.check()
 
 
 def test_heartbeat_refresh_and_run_restart_retain_successful_cursor(runtime):

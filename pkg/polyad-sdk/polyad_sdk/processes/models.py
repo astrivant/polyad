@@ -19,6 +19,12 @@ if TYPE_CHECKING:
 
     from polyad_sdk.processes.process import ManagedProcess
 
+__all__ = (
+    "PlanResult",
+    "ProcessPlan",
+    "ProcessSpec",
+)
+
 
 def _name(value: str) -> None:
     """

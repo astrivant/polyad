@@ -16,6 +16,14 @@ from urllib.request import ProxyHandler, build_opener
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "check_readiness",
+    "health_endpoint",
+    "main",
+    "pod_address",
+    "read_health",
+)
+
 
 def pod_address() -> str:
     """

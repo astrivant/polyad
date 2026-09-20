@@ -14,7 +14,11 @@ if TYPE_CHECKING:
     from polyad.cache.redis import Cache as Cache
     from polyad.cache.redis import cache_url as cache_url
 
-__all__ = ["Cache", "CacheBackend", "cache_url"]
+__all__ = (
+    "Cache",
+    "CacheBackend",
+    "cache_url",
+)
 
 
 def __getattr__(name: str) -> Any:

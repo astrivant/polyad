@@ -23,6 +23,12 @@ from polyad_sdk import APIError
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "FixtureHandler",
+    "FixtureServer",
+    "main",
+)
+
 
 class FixtureServer(ThreadingHTTPServer):
     """

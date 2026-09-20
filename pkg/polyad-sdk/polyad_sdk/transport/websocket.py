@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from threading import Event as StopEvent
 
+__all__ = ("events",)
+
 
 class _NoRedirect(reconnect):
     def process_redirect(self, exc: Exception) -> Exception:

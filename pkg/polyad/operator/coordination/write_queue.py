@@ -14,6 +14,13 @@ from kubernetes.client.exceptions import ApiException
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "PendingWrites",
+    "WriteConflict",
+    "WriteIntent",
+    "write_intent",
+)
+
 
 class WriteConflict(ApiException):  # type: ignore[misc]  # The Kubernetes client exception has no type stubs.
     """

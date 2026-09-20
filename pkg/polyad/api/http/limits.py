@@ -24,6 +24,11 @@ if TYPE_CHECKING:
     from flask_limiter import Limiter, RequestLimit
     from limits.storage.redis import RedisStorage
 
+__all__ = (
+    "RateLimitPolicy",
+    "install_limits",
+)
+
 
 @frozen(kw_only=True)
 class RateLimitPolicy:

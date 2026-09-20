@@ -9,6 +9,8 @@ from typing import Literal
 
 from attrs import frozen
 
+__all__ = ("AdaptationReport",)
+
 
 @frozen
 class AdaptationReport:

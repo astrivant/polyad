@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING
 
 import matplotlib
 
+__all__ = ("render",)
+
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 

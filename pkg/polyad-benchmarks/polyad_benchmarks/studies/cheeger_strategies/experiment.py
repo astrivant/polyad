@@ -29,6 +29,18 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
+__all__ = (
+    "Experiment",
+    "STRATEGIES",
+    "edge_churn",
+    "named_graph",
+    "numbered_graph",
+    "policy_decision",
+    "rewire",
+    "run",
+    "trace_selector",
+)
+
 
 STRATEGIES = ("Exact", "PCA", "Fresh spectral", "Cached spectral", "Selector")
 

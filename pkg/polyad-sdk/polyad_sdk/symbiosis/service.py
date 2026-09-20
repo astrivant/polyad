@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING, cast
 
 from polyad_sdk.api.client import Client
 from polyad_sdk.api.interfaces import AdaptationReporter, ServiceLevelReporter
+from polyad_sdk.connections import WorkloadClient
+from polyad_sdk.connections.authorization import authorize_connection
 from polyad_sdk.events.filters import Filter
 from polyad_sdk.events.subscriptions import StreamInterrupted
 from polyad_sdk.observability import Telemetry
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
     from typing import Any, Literal, Self
 
     from polyad_sdk.api.interfaces import ConnectionNegotiator, ThroughputReporter
+    from polyad_sdk.connections import WorkloadEndpoint
     from polyad_sdk.events.source import EventSource
     from polyad_sdk.events.subscriptions import Subscription
     from polyad_sdk.symbiosis.models import Environment
@@ -40,6 +43,8 @@ if TYPE_CHECKING:
     from polyad_types.api.throughput import ThroughputSample
     from polyad_types.events.envelope import Event
     from polyad_types.networking.access import NetworkPort
+
+__all__ = ("AdaptiveService",)
 
 
 def _strategy_components(strategies: Sequence[AdaptationStrategy], require_strategies: bool) -> tuple[AdaptationStrategy, ...]:
@@ -580,7 +585,8 @@ class AdaptiveService(ABC):
         The returned connection receipt is a record of the request, with a unique
         ID, status and expiry time. Track its updates through service.view and
         wait for Active before sending work. Your application also checks that
-        the destination is ready and uses its own HTTP, gRPC or other transport.
+        the destination is ready. Use workload() for receipt-checked SDK transports,
+        or apply the same admission checks to an application-owned transport.
 
         Args:
             target (ServiceEndpoint): Destination returned by permitted service discovery.
@@ -596,6 +602,32 @@ class AdaptiveService(ABC):
             raise RuntimeError("configure a separately authorized connections client")
         request = ServiceConnectionRequest(request_id, self.identity, target, ttl_seconds, ports, bidirectional)
         return self.connections.connect_services(request)
+
+    def workload(
+        self, endpoint: WorkloadEndpoint, *, receipt_uid: str, timeout: float = 10, max_message_bytes: int = 1024 * 1024
+    ) -> WorkloadClient:
+        """
+        Bind optional workload transports to a freshly checked connection receipt.
+
+        Construction opens no connection and can precede consent. Each context
+        entry and client.check() reads current observations, identity, direction,
+        expiry and the destination Pod port. It does not obtain new permission.
+
+        Args:
+            endpoint (WorkloadEndpoint): Trusted deployment mapping from destination identity to URI and Pod port.
+            receipt_uid (str): Operator receipt UID returned by connect(), not its request ID.
+            timeout (float): Connection and socket timeout in seconds.
+            max_message_bytes (int): WebSocket and gRPC message bound.
+
+        Returns:
+            WorkloadClient: Lazily opened transports with a current-observation admission guard.
+        """
+
+        def authorize() -> None:
+            # Evaluate the view on every check, never retain a permission snapshot.
+            authorize_connection(self.identity, endpoint, self.view, receipt_uid, self._clock())
+
+        return WorkloadClient(endpoint, timeout=timeout, max_message_bytes=max_message_bytes, authorize=authorize)
 
     def respond(self, uid: str, decision: Literal["Approve", "Reject"]) -> dict[str, Any]:
         """

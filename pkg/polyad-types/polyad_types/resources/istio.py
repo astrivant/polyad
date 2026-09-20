@@ -11,6 +11,13 @@ from attrs import frozen
 from polyad_types.resources.base import SpecResource
 from polyad_types.resources.common import ResourceType
 
+__all__ = (
+    "AuthorizationPolicy",
+    "DestinationRule",
+    "PeerAuthentication",
+    "VirtualService",
+)
+
 
 @frozen(kw_only=True)
 class AuthorizationPolicy(SpecResource):

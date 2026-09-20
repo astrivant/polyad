@@ -27,6 +27,8 @@ if TYPE_CHECKING:
     from polyad.api.connections.store import Caller
     from polyad.api.http.limits import RateLimitPolicy
 
+__all__ = ("build_app",)
+
 
 def build_app(
     authenticate: Callable[[str], Caller],

@@ -22,6 +22,12 @@ if TYPE_CHECKING:
 
     from polyad_types.events.models import EventAST
 
+__all__ = (
+    "CURSOR_PATTERN",
+    "decode_event",
+)
+
+
 CURSOR_PATTERN = r"(?:0|[1-9][0-9]{0,19})-(?:0|[1-9][0-9]{0,19})"
 _converter = Converter(forbid_extra_keys=True, detailed_validation=False)
 

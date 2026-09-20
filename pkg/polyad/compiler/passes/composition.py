@@ -21,6 +21,13 @@ from polyad_types.graphs.topology import topology
 from polyad_types.resources.base import SpecResource
 from polyad_types.serialization import converter
 
+__all__ = (
+    "compile_composition",
+    "read_receipt",
+    "receipt_spec",
+    "request_name",
+)
+
 
 def request_name(request_id: str) -> str:
     """

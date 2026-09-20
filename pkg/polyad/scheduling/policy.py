@@ -15,6 +15,14 @@ if TYPE_CHECKING:
 
     from polyad.graph.workloads import Estimate, Work
 
+__all__ = (
+    "BreadthFirst",
+    "DepthFirst",
+    "FIFO",
+    "SchedulingPolicy",
+    "ShortestRemaining",
+)
+
 
 class SchedulingPolicy(ABC):
     """

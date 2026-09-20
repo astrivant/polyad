@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 
     from polyad_types.resources.mutations import Budget, Mutation, MutationPlan, Scope
 
+__all__ = ("execute_mutations",)
+
 
 async def execute_mutations(
     mutations: tuple[Mutation, ...],

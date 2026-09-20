@@ -19,6 +19,14 @@ if TYPE_CHECKING:
 
     from polyad_types.networking.access import MeshPeer
 
+__all__ = (
+    "NetworkScope",
+    "configure_pod",
+    "policy_specs",
+    "scope_label",
+    "traffic",
+)
+
 
 @frozen
 class NetworkScope:

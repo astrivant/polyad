@@ -32,6 +32,8 @@ if TYPE_CHECKING:
 
     from flask import Flask
 
+__all__ = ("EventAPIBuilder",)
+
 
 @frozen
 class EventAPIBuilder:

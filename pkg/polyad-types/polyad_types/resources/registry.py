@@ -48,6 +48,22 @@ from polyad_types.resources.polyad import (
 if TYPE_CHECKING:
     from polyad_types.resources.base import Resource
 
+__all__ = (
+    "AUXILIARY_KINDS",
+    "BOUNDARY_KINDS",
+    "CAPACITY_KINDS",
+    "COMPOSABLE_KINDS",
+    "DEFINITION_KINDS",
+    "GRAPH_OWNED_KINDS",
+    "NETWORK_POLICY_KINDS",
+    "POLYAD_KINDS",
+    "RECONCILED_KINDS",
+    "RESOURCE_CLASSES",
+    "RESOURCE_REGISTRY",
+    "RESOURCE_TYPES",
+)
+
+
 RESOURCE_CLASSES: tuple[type[Resource], ...] = (
     VerticalPodAutoscaler,
     PostgreSQLCluster,

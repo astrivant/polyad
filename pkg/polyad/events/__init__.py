@@ -13,7 +13,10 @@ if TYPE_CHECKING:
     from polyad.api.events.builder import EventAPIBuilder as EventAPIBuilder
     from polyad.events.store import EventStore as EventStore
 
-__all__ = ["EventAPIBuilder", "EventStore"]
+__all__ = (
+    "EventAPIBuilder",
+    "EventStore",
+)
 
 
 def __getattr__(name: str) -> Any:

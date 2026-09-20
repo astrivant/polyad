@@ -12,6 +12,13 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from matplotlib.text import Text
 
+__all__ = (
+    "INTRODUCTIONS",
+    "describe",
+    "describe_axis",
+)
+
+
 INTRODUCTIONS = {
     "load": {
         "outcomes": (

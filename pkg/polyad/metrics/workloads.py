@@ -11,6 +11,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "GROUP_SIGNALS",
+    "current_observation",
+    "observation_time",
+    "workload_metric",
+)
+
+
 GROUP_SIGNALS = ("replicas", "desiredReplicas", "readyReplicas", "totalReplicas", "instanceCount")
 
 

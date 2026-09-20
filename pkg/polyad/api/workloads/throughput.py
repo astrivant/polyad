@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from polyad_types.api.auth import GraphAccess
     from polyad_types.api.throughput import ThroughputSample
 
+__all__ = ("report_throughput",)
+
 
 async def report_throughput(api: API, namespace: str, sample: ThroughputSample, grants: tuple[GraphAccess, ...] | None) -> dict[str, Any]:
     """

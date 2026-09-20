@@ -16,6 +16,13 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Literal
 
+__all__ = (
+    "ContainerResources",
+    "PodContext",
+    "VPAConstraints",
+    "WorkloadContext",
+)
+
 
 @dataclass(frozen=True)
 class ContainerResources:

@@ -8,6 +8,8 @@ import os
 
 from polyad_types.events.envelope import EventStreamSettings
 
+__all__ = ("settings_from_environment",)
+
 
 def settings_from_environment() -> EventStreamSettings:
     """

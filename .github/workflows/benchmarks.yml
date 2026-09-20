@@ -34,10 +34,9 @@ jobs:
       - run: poetry sync
       - name: Verify oracle comparisons and production tier observations
         run: poetry run python -m pytest -o addopts='' pkg/tests/test_cheeger_strategies.py pkg/tests/test_cheeger_computation.py pkg/tests/test_cheeger_reduction.py
-      - name: Record both local Cheeger studies
+      - name: Record the active Cheeger strategy study
         run: |
           poetry run python -m polyad_benchmarks.refresh --ci-phase prepare --suite cheeger --root .cache/benchmarks/cheeger
-          poetry run python -m polyad_benchmarks.refresh --ci-phase study --study cheeger-reduction --root .cache/benchmarks/cheeger
           poetry run python -m polyad_benchmarks.refresh --ci-phase study --study cheeger-strategies --root .cache/benchmarks/cheeger
           poetry run python -m polyad_benchmarks.refresh --ci-phase finish --root .cache/benchmarks/cheeger
       - uses: actions/upload-artifact@v4

@@ -9,6 +9,9 @@ import threading
 import nature
 from polyad_benchmarks.studies.nature.capabilities import catalog
 
+__all__ = ("select",)
+
+
 _PLANNER_LOCK = threading.Lock()
 
 

@@ -40,6 +40,13 @@ if TYPE_CHECKING:
     from polyad.operator.coordination.queue import Key
     from polyad.operator.lifecycle.tuning import OperatorTuning
 
+__all__ = (
+    "ClusterWorker",
+    "DEFINITIONS",
+    "RootControlPlane",
+)
+
+
 logger = logging.getLogger(__name__)
 DEFINITIONS = ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule")
 

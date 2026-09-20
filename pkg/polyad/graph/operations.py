@@ -25,6 +25,12 @@ if TYPE_CHECKING:
     from subprocess import CompletedProcess
     from typing import TextIO
 
+__all__ = (
+    "Operation",
+    "OperationQueue",
+    "ProcessOwner",
+)
+
 
 class ProcessOwner(ABC):
     """

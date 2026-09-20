@@ -13,6 +13,13 @@ from polyad_types import resources as asts
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "STATEFUL_OPTIONS",
+    "compile_daemon",
+    "execution_pod",
+)
+
+
 STATEFUL_OPTIONS = frozenset(
     {
         "serviceName",

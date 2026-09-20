@@ -15,6 +15,14 @@ if TYPE_CHECKING:
 
     from polyad_types.resources.mutations import Budget, Mutation, Scope
 
+__all__ = (
+    "PreconditionFailed",
+    "advance_budgets",
+    "check_preconditions",
+    "compile_mutations",
+    "conflicts",
+)
+
 
 class PreconditionFailed(ValueError):
     """

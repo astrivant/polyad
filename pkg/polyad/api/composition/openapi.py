@@ -20,6 +20,12 @@ from polyad_types.graphs.replication import ReplicaConnectivity
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "openapi_document",
+    "reference",
+    "schemas",
+)
+
 
 def reference(name: str) -> dict[str, str]:
     """

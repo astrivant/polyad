@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
     from flask import Flask
 
+__all__ = ("APIBuilder",)
+
 
 @frozen
 class APIBuilder:

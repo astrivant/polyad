@@ -124,6 +124,20 @@ operations. Durable state and credentials keep their separate storage paths.
 
 ## Imports and configuration
 
+All modules in the operator, SDK, types, schemas and benchmarks packages declare
+an explicit `__all__`. Public exports contain package-owned types, functions,
+constants and configured objects, plus deliberate re-exports from other Polyad
+packages. Import third-party and standard-library dependencies from their own
+packages; helpers such as `dataclass`, `Path`, `Any` and `numpy` are not Polyad APIs.
+Empty namespace packages declare `__all__ = ()`, and lazy public exports retain
+their existing deferred loading behavior.
+
+`__all__` controls `from module import *`; it is not an access restriction on
+Python module attributes. Explicit imports are still preferred. The
+`public-exports` pre-commit check validates static export lists without importing
+runtime dependencies, and tests verify that every declared name resolves and
+that wildcard imports do not load optional SDK backends.
+
 Importing `polyad.operator.adapters.ResourceAPI`, `StateBackend`, or
 `polyad.cache.CacheBackend` does not load Kubernetes, PostgreSQL or Redis drivers.
 The cache package loads its Redis implementation when `Cache` is requested. SDK

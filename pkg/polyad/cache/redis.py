@@ -17,6 +17,11 @@ from polyad.transport.redis import pool
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "Cache",
+    "cache_url",
+)
+
 
 def cache_url() -> str:
     """

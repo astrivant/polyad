@@ -34,6 +34,8 @@ if TYPE_CHECKING:
         ThroughputSample,
     )
 
+__all__ = ("Client",)
+
 
 class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelReporter, ConnectionNegotiator):
     """

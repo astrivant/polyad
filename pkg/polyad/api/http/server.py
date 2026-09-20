@@ -35,6 +35,12 @@ if TYPE_CHECKING:
     from polyad.metrics.store import MetricsStore
     from polyad.operator.adapters.kubernetes import API
 
+__all__ = (
+    "APIServer",
+    "T",
+)
+
+
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 

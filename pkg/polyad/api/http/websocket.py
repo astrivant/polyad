@@ -24,6 +24,9 @@ if TYPE_CHECKING:
     from hypercorn.config import Sockets
     from hypercorn.typing import ASGIFramework
 
+__all__ = ("WebSocketServer",)
+
+
 logger = logging.getLogger(__name__)
 
 

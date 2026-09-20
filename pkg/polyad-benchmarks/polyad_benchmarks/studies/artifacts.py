@@ -13,6 +13,15 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
+__all__ = (
+    "ARTIFACTS",
+    "FIGURES",
+    "compact",
+    "fingerprint",
+    "verify",
+)
+
+
 FIGURES = tuple(figure_names("soul"))
 ARTIFACTS = (*FIGURES, "fixed.json", "adaptive.json")
 

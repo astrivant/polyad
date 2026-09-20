@@ -31,6 +31,14 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.reconciliation.controller import Controller
 
+__all__ = (
+    "capabilities",
+    "policies",
+    "reconcile",
+    "resolver",
+    "validate",
+)
+
 
 def resolver(controller: Controller, namespace: str) -> Callable[[str], tuple[API, str]]:
     """

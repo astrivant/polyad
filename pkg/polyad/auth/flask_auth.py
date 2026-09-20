@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from polyad.api.http.application import Routes
     from polyad.auth.keys import Keyring
 
+__all__ = ("install_flask_auth",)
+
 
 def install_flask_auth(app: Flask | Routes, keys: Keyring | None, token: str | None) -> None:
     """

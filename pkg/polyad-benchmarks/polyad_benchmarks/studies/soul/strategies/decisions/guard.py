@@ -11,6 +11,8 @@ from polyad_sdk import DecisionGuardStrategy
 if TYPE_CHECKING:
     from polyad_benchmarks.studies.soul.runtime.policy import Policy
 
+__all__ = ("build",)
+
 
 def build(policy: Policy) -> DecisionGuardStrategy:
     """

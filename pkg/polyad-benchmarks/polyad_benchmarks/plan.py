@@ -24,6 +24,12 @@ if TYPE_CHECKING:
 
     from polyad_sdk import Client
 
+__all__ = (
+    "composition_plan",
+    "main",
+    "submit_plan",
+)
+
 
 def composition_plan(plan: dict[str, Any], chart: Path, namespace: str) -> dict[str, Any]:
     """

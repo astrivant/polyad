@@ -18,6 +18,15 @@ if TYPE_CHECKING:
     from polyad.api.connections.store import Caller, ConnectionSettings
     from polyad.operator.adapters.kubernetes import API
 
+__all__ = (
+    "CONSENTS",
+    "TERMINAL",
+    "confirmed",
+    "decisions",
+    "endpoint",
+)
+
+
 CONSENTS = f"{GROUP}/connection-consents"
 TERMINAL = {"Expired", "Revoked", "Rejected"}
 

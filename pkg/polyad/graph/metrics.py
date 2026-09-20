@@ -24,6 +24,11 @@ if TYPE_CHECKING:
 
     from polyad_types.graphs.topology import Topology
 
+__all__ = (
+    "measure_topology",
+    "topology_metrics",
+)
+
 
 def _layers(graph: nx.DiGraph[str] | nx.DiGraph[int]) -> LayerMetrics:
     widths = [len(layer) for layer in nx.topological_generations(graph)]

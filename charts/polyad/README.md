@@ -168,6 +168,7 @@ default values. Schema checks keep annotations in all shipped values files in sy
 
 | Reference file | Configuration and placement | Guide |
 | --- | --- | --- |
+| [`values-workload-protocols.reference.yaml`](references/values-workload-protocols.reference.yaml) | Opt-in workload transport clients and explicit Istio Service port selection | [Workload protocols](../../docs/workloads/workload-protocols.md) |
 | [`values-singular.reference.yaml`](references/values-singular.reference.yaml) | One dense operator and a persistent cache in the release cluster | [Singular](../../docs/deployment/deployment-profiles.md#one-dense-operator) |
 | [`values-ha.reference.yaml`](references/values-ha.reference.yaml) | Replicated dense operators; also opts into cache HA | [HA](../../docs/deployment/deployment-profiles.md#ha-in-one-cluster) |
 | [`values-connection-pools.reference.yaml`](references/values-connection-pools.reference.yaml) | Per-process Redis/PostgreSQL limits and KEDA scaling from active pool demand | [Connection pools](../../docs/operations/performance.md#connection-pools-and-keda) |

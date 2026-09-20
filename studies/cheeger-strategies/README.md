@@ -3,7 +3,7 @@
 This local study runs Polyad's production Cheeger selector on reproducible graph
 snapshots. It compares exact enumeration, adjacency PCA, fresh Laplacian spectral
 reduction, reused spectral partitions, and the complete automatic selector.
-The companion [PCA reduction study](../cheeger-reduction/README.md) keeps its
+The archived [PCA reduction study](../cheeger-reduction-deprecated/README.md) keeps its
 original dimension and compression experiments; this study adds the production
 strategy transitions and administrator controls.
 
@@ -214,8 +214,6 @@ export OMP_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 
 python -m polyad_benchmarks.refresh --ci-phase prepare --suite cheeger \
-  --root .cache/benchmarks/cheeger-RUN
-python -m polyad_benchmarks.refresh --ci-phase study --study cheeger-reduction \
   --root .cache/benchmarks/cheeger-RUN
 python -m polyad_benchmarks.refresh --ci-phase study --study cheeger-strategies \
   --root .cache/benchmarks/cheeger-RUN

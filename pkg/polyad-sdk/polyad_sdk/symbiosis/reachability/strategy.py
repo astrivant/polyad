@@ -17,6 +17,11 @@ if TYPE_CHECKING:
     from polyad_sdk.symbiosis.models import Environment
     from polyad_sdk.symbiosis.reachability.envelope import Envelope
 
+__all__ = (
+    "Observation",
+    "ReachabilityStrategy",
+)
+
 
 @dataclass(frozen=True)
 class Observation:

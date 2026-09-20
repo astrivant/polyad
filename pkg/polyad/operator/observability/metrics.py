@@ -9,6 +9,8 @@ import time
 
 from attrs import define, field
 
+__all__ = ("WriteBacklog",)
+
 
 @define
 class WriteBacklog:

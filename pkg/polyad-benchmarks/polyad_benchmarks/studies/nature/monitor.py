@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
     import nature
 
+__all__ = ("Monitor",)
+
 
 class Monitor(PopulationMonitor):
     """

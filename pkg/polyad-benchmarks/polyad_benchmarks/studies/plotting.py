@@ -10,14 +10,24 @@ from typing import TYPE_CHECKING
 
 from polyad_benchmarks.studies.descriptions import INTRODUCTIONS, describe_axis
 
-__all__ = ["describe_axis"]
-
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
     from typing import Any
 
     from matplotlib.figure import Figure
+
+__all__ = (
+    "FIGURE_NAMES",
+    "describe_axis",
+    "figure_names",
+    "fingerprint",
+    "render",
+    "renderer",
+    "save",
+    "verify",
+)
+
 
 FIGURE_NAMES = {study: tuple(figures) for study, figures in INTRODUCTIONS.items()}
 
@@ -40,7 +50,7 @@ def renderer(study: str) -> Callable[[dict[str, Any], Path], list[str]]:
     Import only the requested plotter and report missing optional dependencies early.
 
     Args:
-        study (str): Study name from the refresh inventory.
+        study (str): Active or archived study with a registered plotter.
 
     Returns:
         Callable[[dict[str, Any], Path], list[str]]: Renderer consuming recorded results.

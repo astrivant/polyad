@@ -63,6 +63,12 @@ repos:
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-docstrings.py
         language: system
         types: [python]
+      - id: public-exports
+        name: Explicit Python package exports
+        entry: bash scripts/tooling/project-python.sh scripts/validation/check-exports.py
+        language: system
+        pass_filenames: false
+        files: '^(pkg/.*\.py|scripts/validation/check-exports\.py|\.pre-commit-config\.yaml)$'
       - id: mermaid-check
         name: Validate Mermaid diagrams
         entry: bash scripts/validation/check-mermaid.sh

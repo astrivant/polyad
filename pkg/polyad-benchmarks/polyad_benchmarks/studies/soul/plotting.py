@@ -9,6 +9,18 @@ from typing import TYPE_CHECKING
 
 import matplotlib
 
+__all__ = (
+    "COLORS",
+    "comparison",
+    "render",
+    "resources",
+    "service_levels",
+    "shade",
+    "timeline",
+    "topology",
+)
+
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch

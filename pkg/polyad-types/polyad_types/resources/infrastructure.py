@@ -12,6 +12,13 @@ from polyad_types.resources.base import Resource, SpecResource
 from polyad_types.resources.common import ResourceType
 from polyad_types.resources.kubernetes import PodTemplate
 
+__all__ = (
+    "Dragonfly",
+    "PodTemplateResource",
+    "PostgreSQLCluster",
+    "ProvisioningRequest",
+)
+
 
 @frozen(kw_only=True)
 class ProvisioningRequest(SpecResource):

@@ -10,6 +10,11 @@ from dataclasses import asdict, dataclass
 
 from polyad_sdk.symbiosis.reachability.models import Interaction, QueueModel, Relationship, finite
 
+__all__ = (
+    "Envelope",
+    "compile_envelope",
+)
+
 
 @dataclass(frozen=True)
 class Envelope:

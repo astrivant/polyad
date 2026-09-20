@@ -19,6 +19,8 @@ from polyad.metrics.workloads import GROUP_SIGNALS, workload_metric
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("MetricsStore",)
+
 
 class MetricsStore:
     """

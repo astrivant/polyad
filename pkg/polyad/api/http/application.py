@@ -20,6 +20,12 @@ if TYPE_CHECKING:
     from flask.sansio.scaffold import T_before_request
     from werkzeug.routing import MapAdapter
 
+__all__ = (
+    "Application",
+    "Routes",
+    "create_application",
+)
+
 
 class Application(Flask):
     """

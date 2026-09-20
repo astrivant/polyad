@@ -25,6 +25,7 @@ safe handoffs, using the `AdaptiveService` abstract base class.
 ## Table of contents
 
 - [Installation](#installation)
+- [Optional workload protocols](#optional-workload-protocols)
 - [Package layout](#package-layout)
 - [Environment and projected defaults](#environment-and-projected-defaults)
 - [Adaptive services and deltas](#adaptive-services-and-deltas)
@@ -65,6 +66,30 @@ pip install ./pkg/polyad-types ./pkg/polyad-sdk
 Release CI builds and publishes `polyad-sdk` separately from `polyad`.
 Once that release is available, install it with `pip install polyad-sdk`.
 
+## Optional workload protocols
+
+Workload connections are explicit opt-ins, separate from the operator HTTP API.
+Install only the native clients your application needs:
+
+```sh
+pip install 'polyad-sdk[grpc]'       # grpcio
+pip install 'polyad-sdk[amqp]'       # Pika / AMQP 0-9-1
+pip install 'polyad-sdk[redis]'      # redis-py
+pip install 'polyad-sdk[protocols]'  # all optional protocol clients
+```
+
+`WorkloadEndpoint` binds a deployment-configured URI to a discovered service
+identity. `AdaptiveService.workload(endpoint, receipt_uid=...)` returns a
+`WorkloadClient` that checks current connection consent before opening
+`http()`, `websocket()`, `grpc_channel()`, `amqp()`, `redis()` or `tcp()` contexts.
+HTTP and raw TCP/TLS need no extra dependency; WebSockets already ship for event
+subscriptions. Importing the SDK does not import optional clients or open sockets.
+
+Call `client.check()` before admitting work on long-lived connections and close
+them on denial; receipt expiry is not a background socket-termination mechanism.
+See [workload protocols](../../docs/workloads/workload-protocols.md) for examples,
+TLS, Istio port declarations, optional chart reference values and limitations.
+
 ## Package layout
 
 The SDK groups implementation modules by responsibility:
@@ -86,6 +111,10 @@ polyad_sdk/
   api/
     client.py                Operator API requests and stream entry points
     interfaces.py            Feedback and connection action ABCs
+  connections/
+    endpoint.py              Workload addresses, Pod ports and Istio declarations
+    authorization.py         Fresh directed TCP consent checks
+    client.py                Opt-in workload protocol clients and cleanup
   events/
     source.py                EventSource ABC and subscription factory
     filters.py               Composable observation filters
@@ -115,6 +144,11 @@ from polyad_sdk.events.filters import event_type, field, graph
 from polyad_sdk.runtime import WorkloadContext, env, refresh_environment
 from polyad_sdk.symbiosis.strategies import FreshnessStrategy, ResourceBudgetStrategy
 ```
+
+Each module declares its public API in `__all__`. Wildcard imports expose only
+those Polyad symbols, not imported dependencies such as `dataclass`, `Path` or
+`Any`. Import dependencies directly from their own packages. Explicit imports
+are preferred; `__all__` does not make other module attributes inaccessible.
 
 Implementation imports use these grouped paths. The WebSocket implementation
 loads when that transport is selected. The single `py.typed` marker at the SDK

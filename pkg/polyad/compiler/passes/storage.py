@@ -12,6 +12,8 @@ from polyad_types.serialization import converter
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("configure_storage",)
+
 
 def configure_storage(spec: dict[str, Any]) -> Persistence:
     """

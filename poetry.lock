@@ -3052,7 +3052,11 @@ polyad-types = "0.0.1a15"
 websockets = ">=17.1,<18"
 
 [package.extras]
+amqp = ["pika (>=1.3,<2)"]
+grpc = ["grpcio (>=1.70,<2)"]
+protocols = ["grpcio (>=1.70,<2)", "pika (>=1.3,<2)", "redis (>=5.2,<7)"]
 reachability = ["hj-reachability (>=0.7,<0.8)"]
+redis = ["redis (>=5.2,<7)"]
 
 [package.source]
 type = "directory"

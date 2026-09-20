@@ -16,6 +16,17 @@ if TYPE_CHECKING:
 
     from opentelemetry.sdk._logs import LoggerProvider
 
+__all__ = (
+    "DecisionFormatter",
+    "LEVELS",
+    "TelemetryHandler",
+    "add_logging_options",
+    "configure_log_export",
+    "configure_logging",
+    "shutdown_log_export",
+)
+
+
 LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 _provider: LoggerProvider | None = None
 _handler: TelemetryHandler | None = None

@@ -18,6 +18,14 @@ from polyad_benchmarks.config import request_prefix
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "grafana_path",
+    "log_event",
+    "new_run_id",
+    "parent_run_id",
+    "plan_hash",
+)
+
 
 def new_run_id() -> str:
     """

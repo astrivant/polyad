@@ -33,7 +33,6 @@ polyad-benchmarks-refresh --ci-phase prepare --suite reachability --root .cache/
 polyad-benchmarks-refresh --ci-phase study --study symbiosis --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase study --study reachability-state --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase study --study reachability-routing --root .cache/benchmarks/symbiosis-run-1
-polyad-benchmarks-refresh --ci-phase study --study cheeger-reduction --root .cache/benchmarks/symbiosis-run-1
 polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/symbiosis-run-1 --publish
 ```
 

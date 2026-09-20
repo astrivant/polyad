@@ -19,6 +19,18 @@ if TYPE_CHECKING:
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
 
+__all__ = (
+    "P",
+    "R",
+    "configure_tracing",
+    "identify_request",
+    "shutdown_tracing",
+    "span",
+    "telemetry_resource",
+    "traced",
+)
+
+
 _provider: TracerProvider | None = None
 _noop = trace.NoOpTracerProvider()
 _instance_id = str(uuid.uuid4())

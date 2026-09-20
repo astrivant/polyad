@@ -22,6 +22,8 @@ from polyad.operator.observability.pressure import demand
 if TYPE_CHECKING:
     from flask import Flask
 
+__all__ = ("MetricsAPIBuilder",)
+
 
 @frozen
 class MetricsAPIBuilder:

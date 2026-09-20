@@ -28,6 +28,13 @@ if TYPE_CHECKING:
     from polyad_types.graphs.topology import Topology
     from polyad_types.networking.traffic import TrafficWeights
 
+__all__ = (
+    "capacity_revision",
+    "expansion",
+    "headroom_targets",
+    "observe",
+)
+
 
 async def observe(api: API, obj: dict[str, Any], graph: Topology, *, now: datetime | None = None) -> Search:
     """

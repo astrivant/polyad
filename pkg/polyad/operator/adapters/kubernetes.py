@@ -32,6 +32,16 @@ from polyad_types.resources import GROUP as GROUP
 from polyad_types.resources import VERSION as VERSION
 from polyad_types.resources import DeleteOptions, UIDPreconditions, encode_body
 
+__all__ = (
+    "API",
+    "BUILTINS",
+    "GROUP",
+    "KINDS",
+    "VERSION",
+    "WORKLOAD_KINDS",
+)
+
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:

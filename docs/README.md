@@ -45,6 +45,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Workload activation and pulses](workloads/activation.md) | Workload pulses, parallel daemons, frequency bounds and the standalone Python SDK |
 | [Workload environment](workloads/workload-environment.md) | Automatic graph identity, ancestry, activation receipts and operator endpoint discovery |
 | [Workload topology events](workloads/workload-events.md) | Neighbor discovery, structural notifications, scaling membership and replay recovery |
+| [Optional workload protocols](workloads/workload-protocols.md) | Opt-in gRPC, AMQP and Redis installs; WebSocket/TCP clients, consent checks and Istio Service ports |
 | [Service Symbiosis: writing adaptive microservices](workloads/adaptive-microservices.md) | Cooperative producers and consumers across Graphs and PolyGraphs, backpressure, useful throughput and delta-driven Python SDK hooks |
 | [Adaptation strategies for application constraints](workloads/adaptation-strategies.md) | Modular SDK policies for mutation difficulties, independent constraints, pressure-driven profiles and admission |
 | [Service-level objectives for adaptive Daemons](workloads/service-level-objectives.md) | Separate adaptation progress from availability, quality, capability and error-budget accounting |

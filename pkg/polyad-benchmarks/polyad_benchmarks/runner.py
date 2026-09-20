@@ -27,6 +27,14 @@ if TYPE_CHECKING:
     from concurrent.futures import Future
     from typing import Any
 
+__all__ = (
+    "TERMINAL",
+    "exercise",
+    "main",
+    "run",
+)
+
+
 TERMINAL = {"Completed", "Failed", "Stopped", "Rejected", "Superseded", "Invalidated"}
 
 

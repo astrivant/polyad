@@ -20,6 +20,15 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
+__all__ = (
+    "T",
+    "converter",
+    "encode_body",
+    "from_document",
+    "to_document",
+)
+
+
 T = TypeVar("T", bound=AST)
 
 converter = Converter(forbid_extra_keys=True, detailed_validation=False)

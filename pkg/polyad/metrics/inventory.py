@@ -16,6 +16,8 @@ from polyad_types.resources import GROUP
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("inventory",)
+
 
 def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, Any]:
     """

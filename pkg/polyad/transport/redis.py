@@ -20,6 +20,8 @@ from polyad.transport.settings import settings
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("pool",)
+
 
 def pool(url: str, name: str, *, asynchronous: bool = False, **options: Any) -> Any:
     """

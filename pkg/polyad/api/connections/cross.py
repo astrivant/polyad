@@ -20,6 +20,11 @@ if TYPE_CHECKING:
     from polyad.api.connections.store import Caller, ConnectionStore
     from polyad_types.api.requests import ServiceConnectionRequest
 
+__all__ = (
+    "authorize_request",
+    "connection_request",
+)
+
 
 async def connection_request(store: ConnectionStore, request: ServiceConnectionRequest) -> ConnectionRequest:
     """

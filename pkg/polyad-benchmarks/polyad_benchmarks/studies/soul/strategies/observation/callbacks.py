@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from polyad_benchmarks.studies.soul.runtime.policy import Policy
     from polyad_sdk import Change, Environment
 
+__all__ = ("build",)
+
 
 def build(policy: Policy) -> CallbackStrategy:
     """

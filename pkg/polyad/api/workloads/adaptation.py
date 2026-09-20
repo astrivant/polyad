@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad_types import AdaptationReport, GraphAccess
 
+__all__ = ("report_adaptation",)
+
 
 async def report_adaptation(api: API, namespace: str, report: AdaptationReport, grants: tuple[GraphAccess, ...] | None) -> dict[str, Any]:
     """

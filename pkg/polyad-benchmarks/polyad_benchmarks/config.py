@@ -11,6 +11,12 @@ from dataclasses import dataclass
 
 from polyad_sdk import Client
 
+__all__ = (
+    "RunConfig",
+    "operator_client",
+    "request_prefix",
+)
+
 
 def operator_client(timeout: float) -> Client:
     """

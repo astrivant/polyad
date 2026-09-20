@@ -15,6 +15,13 @@ import numpy as np
 if TYPE_CHECKING:
     from polyad_types.graphs.rules import CheegerReduction
 
+__all__ = (
+    "ReductionCertificate",
+    "cached_quotient",
+    "clear_reduction_cache",
+    "fresh_spectral_reduction",
+)
+
 
 @dataclass(frozen=True)
 class ReductionCertificate:

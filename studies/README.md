@@ -18,10 +18,13 @@ Repeatable experiments keep their recipes here and their execution code in
 | [Symbiosis](symbiosis/README.md) | Queue envelopes and guard costs for six service interaction categories | Local Python and the optional reachability extra |
 | [Reachability state variables](reachability-state/README.md) | Lost information and computation costs for one-, two- and three-variable models | Local Python and the optional reachability extra |
 | [Reachability rerouting](reachability-routing/README.md) | Predicted queue safety versus real producer/consumer process behavior | Local Python with process creation and optional `plots` extra |
-| [PCA Cheeger reduction](cheeger-reduction/README.md) | Accuracy, cost, certified uncertainty and cached quotient cuts under graph churn | Local Python and the optional reachability extra |
 | [Cheeger strategy selection](cheeger-strategies/README.md) | Production tier activation, churn, thresholds, cache capacity, budgets and accuracy against exact references | Operator checkout, benchmarks package and Matplotlib |
 | [Soul process population](soul/README.md) | SDK strategies, worker growth, rolling replacement, admission and recovery across six services | Checkout and optional `polyad-benchmarks[soul]` extra |
 | [Nature process population](nature/README.md) | Capability replacement, composition, survival and retirement above local adaptation | Checkout and optional `polyad-benchmarks[nature]` extra |
+
+The [deprecated PCA Cheeger reduction study](cheeger-reduction-deprecated/README.md)
+retains its historical recipe, results and figures. It is excluded from all
+refresh suites and CI study runs; use the active Cheeger strategy study instead.
 
 No cloud measurements are bundled initially. Recorded results must come from an
 actual run; the offline smoke checks validate the harness, not operator capacity.
@@ -39,8 +42,8 @@ Following the `hypothesis-helm` study workflow, `polyad-benchmarks-refresh` has
 three phases: `prepare`, `study`, and `finish`. Preparation snapshots input JSON
 and source hashes once. The Python `STUDIES` and `LOCAL_STUDIES` inventories supply
 the prepared matrix; `--suite cluster` is the default, `--suite local` selects
-all seven local experiments. `--suite reachability` selects the four reachability
-experiments, `--suite cheeger` selects the two Cheeger studies,
+all six local experiments. `--suite reachability` selects the three reachability
+experiments, `--suite cheeger` selects the Cheeger strategy study,
 `--suite process` selects Soul and Nature, and `--suite all` includes
 the cloud study as well.
 Study jobs retain independent logs, cluster observations, results and status.
@@ -75,7 +78,7 @@ separately below the question, with space reserved above the measured panels.
 | Symbiosis | `interactions`: effects on each participant and analytic admission margins; `guard-cost`: measured guard time and artifact size |
 | Reachability state | `state-tradeoffs`: disagreements with the full analytic model and grid growth; `analysis-cost`: guard time, memory estimates, measured RSS and optional solver timings |
 | Reachability rerouting | `routing`: actual consumer assignments and queue peaks; `outcomes`: completion, rejection and timing for each repetition |
-| PCA Cheeger reduction | `accuracy`: dimension, compression and topology error; `cost`: runtime, cut work and uncertainty; `stability`: cached and refreshed reductions under churn |
+| PCA Cheeger reduction (deprecated; archived figures only) | `accuracy`: dimension, compression and topology error; `cost`: runtime, cut work and uncertainty; `stability`: cached and refreshed reductions under churn |
 | Cheeger strategy selection | `churn`, `activation`, `parameters`, `cache`, `timeline`, `controls`: paired strategy measurements and actual runtime decisions |
 | Soul and Nature | `topology`, `adaptations`, `outcomes`, `strategies`, `service-level`, `resources`: process graphs, adaptation, outcomes, SDK coverage, SLA and resource response |
 

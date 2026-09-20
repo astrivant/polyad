@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad_types.api.requests import ActivationRequest
 
+__all__ = ("ActivationStore",)
+
 
 class ActivationStore:
     """

@@ -20,6 +20,11 @@ if TYPE_CHECKING:
 
     from polyad.operator.adapters.kubernetes import API
 
+__all__ = (
+    "neighbors",
+    "topology_snapshot",
+)
+
 
 async def topology_snapshot(api: API, obj: dict[str, Any], children: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """

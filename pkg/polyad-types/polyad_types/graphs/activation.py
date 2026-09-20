@@ -8,6 +8,8 @@ from typing import Literal
 
 from attrs import field, frozen
 
+__all__ = ("ActivationPolicy",)
+
 
 @frozen
 class ActivationPolicy:

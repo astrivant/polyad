@@ -13,6 +13,13 @@ from polyad_types.resources import GROUP
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "INTENT",
+    "approved_intent",
+    "remote_revision",
+)
+
+
 INTENT = f"{GROUP}/remote-scale-intent"
 
 

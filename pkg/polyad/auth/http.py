@@ -25,6 +25,11 @@ if TYPE_CHECKING:
     from polyad.auth.lanes import Lanes
     from polyad.auth.store import CredentialStore
 
+__all__ = (
+    "Access",
+    "install",
+)
+
 
 class Access:
     """

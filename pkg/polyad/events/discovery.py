@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from polyad.operator.clusters.federation import Federation
     from polyad_types.api.auth import APIKey, GraphAccess
 
+__all__ = ("Directory",)
+
 
 class Directory:
     """

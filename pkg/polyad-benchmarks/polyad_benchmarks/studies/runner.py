@@ -23,6 +23,13 @@ if TYPE_CHECKING:
 
     from polyad_benchmarks.studies.soul.runtime.engine import PopulationMonitor
 
+__all__ = (
+    "execute",
+    "main",
+    "run",
+    "validate",
+)
+
 
 def validate(config: dict[str, Any]) -> None:
     """

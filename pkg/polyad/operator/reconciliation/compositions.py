@@ -18,6 +18,12 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.reconciliation.controller import Controller
 
+__all__ = (
+    "drain_composition",
+    "inventory",
+    "reconcile_composition",
+)
+
 
 async def inventory(api: API, namespace: str, uid: str) -> list[dict[str, Any]]:
     """

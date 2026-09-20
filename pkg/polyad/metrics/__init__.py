@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from polyad.api.metrics.builder import MetricsAPIBuilder as MetricsAPIBuilder
 
-__all__ = ["MetricsAPIBuilder"]
+__all__ = ("MetricsAPIBuilder",)
 
 
 def __getattr__(name: str) -> Any:

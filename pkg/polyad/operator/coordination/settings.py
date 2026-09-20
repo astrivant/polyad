@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from polyad.operator.coordination.pulses import PulsePolicy
 from polyad.operator.coordination.validation import ValidationSettings
 
+__all__ = ("WorkGraphSettings",)
+
 
 @dataclass(frozen=True)
 class WorkGraphSettings:

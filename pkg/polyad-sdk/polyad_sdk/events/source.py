@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from polyad_sdk.events.subscriptions import Subscription
     from polyad_types.events.envelope import Event
 
+__all__ = ("EventSource",)
+
 
 class EventSource(ABC):
     """

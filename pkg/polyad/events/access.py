@@ -17,6 +17,13 @@ if TYPE_CHECKING:
 
     from polyad.operator.adapters.kubernetes import API
 
+__all__ = (
+    "configuration",
+    "parent_allows_worker",
+    "require_scope",
+    "scope_allows",
+)
+
 
 def configuration() -> AtlasAccess:
     """

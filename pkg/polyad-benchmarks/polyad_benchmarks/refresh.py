@@ -22,11 +22,29 @@ from polyad_benchmarks.runner import TERMINAL
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "CHEEGER_STUDIES",
+    "LOCAL_STUDIES",
+    "PROCESS_STUDIES",
+    "REACHABILITY_STUDIES",
+    "STUDIES",
+    "cluster_study",
+    "finish",
+    "main",
+    "prepare",
+    "selected_studies",
+    "sources",
+    "study_phase",
+    "verify_inputs",
+    "write_json",
+)
+
+
 STUDIES = ("load",)
-REACHABILITY_STUDIES = ("symbiosis", "reachability-state", "reachability-routing", "cheeger-reduction")
+REACHABILITY_STUDIES = ("symbiosis", "reachability-state", "reachability-routing")
 PROCESS_STUDIES = ("soul", "nature")
-CHEEGER_STUDIES = ("cheeger-reduction", "cheeger-strategies")
-LOCAL_STUDIES = REACHABILITY_STUDIES + ("cheeger-strategies",) + PROCESS_STUDIES
+CHEEGER_STUDIES = ("cheeger-strategies",)
+LOCAL_STUDIES = REACHABILITY_STUDIES + CHEEGER_STUDIES + PROCESS_STUDIES
 
 
 def sources(project: Path) -> dict[str, str]:
@@ -61,7 +79,11 @@ def sources(project: Path) -> dict[str, str]:
         "studies",
     ):
         for path in sorted((project / directory).rglob("*")):
-            if directory == "studies" and path.name == "results.json":
+            # Archived study recipes are historical evidence, not active refresh
+            # inputs. Editing an archive must not invalidate a prepared run.
+            if directory == "studies" and (
+                path.name == "results.json" or path.relative_to(project / directory).parts[0].endswith("-deprecated")
+            ):
                 continue
             if path.is_file() and path.suffix in {".py", ".toml", ".lock", ".yaml", ".json"} and "__pycache__" not in path.parts:
                 result[str(path.relative_to(project))] = hashlib.sha256(path.read_bytes()).hexdigest()

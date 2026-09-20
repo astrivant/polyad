@@ -18,6 +18,16 @@ from polyad.transport.redis import pool
 if TYPE_CHECKING:
     from polyad_types.api.auth import APIKey
 
+__all__ = (
+    "ACQUIRE",
+    "LEASE_SECONDS",
+    "LaneFull",
+    "Lanes",
+    "Permit",
+    "RENEW",
+)
+
+
 LEASE_SECONDS = 120
 ACQUIRE = script("authentication/acquire.lua")
 RENEW = script("authentication/renew.lua")

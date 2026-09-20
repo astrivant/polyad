@@ -25,6 +25,16 @@ if TYPE_CHECKING:
     from polyad_types.graphs.capacity import CapacityPlan
     from polyad_types.graphs.topology import Topology
 
+__all__ = (
+    "CAPACITY_LABEL",
+    "CLASS",
+    "CONSUME",
+    "CapacityManager",
+    "DEFAULT_CLASS",
+    "TERMINAL",
+)
+
+
 CAPACITY_LABEL = f"{asts.GROUP}/capacity"
 CONSUME = "autoscaling.x-k8s.io/consume-provisioning-request"
 CLASS = "autoscaling.x-k8s.io/provisioning-class-name"

@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from polyad_sdk.processes.models import ProcessPlan, ProcessSpec
     from polyad_sdk.symbiosis.models import Environment
 
+__all__ = ("ProcessSupervisor",)
+
 
 class _Aborted(Exception):
     def __init__(self, result: PlanResult) -> None:

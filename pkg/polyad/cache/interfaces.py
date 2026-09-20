@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("CacheBackend",)
+
 
 class CacheBackend(ABC):
     """

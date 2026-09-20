@@ -23,6 +23,11 @@ from polyad.transport.settings import postgres_options
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "StateStore",
+    "state_document",
+)
+
 
 def state_document(obj: dict[str, Any]) -> dict[str, Any]:
     """

@@ -13,6 +13,17 @@ from attrs import field, frozen
 if TYPE_CHECKING:
     from polyad_types.events.models import EventAST
 
+__all__ = (
+    "DEFAULT_MAX_EVENT_BYTES",
+    "Event",
+    "EventRebalanceSettings",
+    "EventStreamSettings",
+    "EventTooLarge",
+    "MAX_EVENT_BYTES",
+    "validate_event_limit",
+)
+
+
 DEFAULT_MAX_EVENT_BYTES = 1024 * 1024
 MAX_EVENT_BYTES = 16 * 1024 * 1024
 

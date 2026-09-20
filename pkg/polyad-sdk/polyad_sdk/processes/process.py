@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
     from polyad_sdk.processes.models import ProcessSpec
 
+__all__ = ("ManagedProcess",)
+
 
 class ManagedProcess:
     """

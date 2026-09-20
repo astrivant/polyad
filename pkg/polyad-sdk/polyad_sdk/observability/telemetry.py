@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
     from polyad_sdk.runtime.context import WorkloadContext
 
+__all__ = ("Telemetry",)
+
 
 class Telemetry:
     """

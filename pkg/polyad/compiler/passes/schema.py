@@ -15,6 +15,8 @@ from attrs import NOTHING, fields, has
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("structural_schema",)
+
 
 def structural_schema(model: type) -> dict[str, Any]:
     """

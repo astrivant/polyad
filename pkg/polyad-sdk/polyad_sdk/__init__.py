@@ -14,6 +14,8 @@ from polyad_sdk.api.interfaces import AdaptationReporter as AdaptationReporter
 from polyad_sdk.api.interfaces import ConnectionNegotiator as ConnectionNegotiator
 from polyad_sdk.api.interfaces import ServiceLevelReporter as ServiceLevelReporter
 from polyad_sdk.api.interfaces import ThroughputReporter as ThroughputReporter
+from polyad_sdk.connections import WorkloadClient as WorkloadClient
+from polyad_sdk.connections import WorkloadEndpoint as WorkloadEndpoint
 from polyad_sdk.events.filters import Filter as Filter
 from polyad_sdk.events.source import EventSource as EventSource
 from polyad_sdk.events.subscriptions import StreamInterrupted as StreamInterrupted
@@ -55,3 +57,54 @@ from polyad_sdk.symbiosis.strategies import TopologyStrategy as TopologyStrategy
 from polyad_sdk.transport.http import APIError as APIError
 from polyad_types.api.service_level import ServiceLevelReport as ServiceLevelReport
 from polyad_types.events.envelope import Event as Event
+
+__all__ = (
+    "APIError",
+    "AdaptationReporter",
+    "AdaptationStrategy",
+    "AdaptiveService",
+    "CallbackStrategy",
+    "Change",
+    "Client",
+    "ConnectionNegotiator",
+    "ConnectionPermissionStrategy",
+    "ConstraintAssessment",
+    "ConstraintStrategy",
+    "ContainerBudgetStrategy",
+    "ContainerMetrics",
+    "ContainerResources",
+    "DecisionGuardStrategy",
+    "DecisionStrategy",
+    "Delta",
+    "Environment",
+    "Event",
+    "EventSource",
+    "Filter",
+    "FreshnessStrategy",
+    "ManagedProcess",
+    "ObserveStrategy",
+    "PeerAvailabilityStrategy",
+    "PlanResult",
+    "PodContext",
+    "ProcessPlan",
+    "ProcessSpec",
+    "ProcessSupervisor",
+    "ResourceBudgetStrategy",
+    "ResourceStrategy",
+    "ServiceLevelReport",
+    "ServiceLevelReporter",
+    "Settings",
+    "StreamInterrupted",
+    "Subscription",
+    "Telemetry",
+    "ThresholdStrategy",
+    "ThroughputReporter",
+    "TopologyStrategy",
+    "VPAConstraints",
+    "WorkloadClient",
+    "WorkloadContext",
+    "WorkloadEndpoint",
+    "container_metrics",
+    "env",
+    "refresh_environment",
+)

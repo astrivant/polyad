@@ -17,6 +17,11 @@ if TYPE_CHECKING:
 
     from redis.asyncio import Redis
 
+__all__ = (
+    "PulseDeferred",
+    "PulsePolicy",
+)
+
 
 class PulseDeferred(RuntimeError):
     """

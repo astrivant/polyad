@@ -16,6 +16,8 @@ from polyad_types.resources import GROUP
 if TYPE_CHECKING:
     from polyad.operator.clusters.pools import PoolManager
 
+__all__ = ("graphs",)
+
 
 async def graphs(manager: PoolManager, name: str, owner: str) -> list[dict[str, str]]:
     """

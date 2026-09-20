@@ -11,6 +11,8 @@ from polyad_schemas._catalog import load_schema
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("values_schema",)
+
 
 def values_schema(*, partial: bool = False, chart: str = "polyad") -> dict[str, Any]:
     """

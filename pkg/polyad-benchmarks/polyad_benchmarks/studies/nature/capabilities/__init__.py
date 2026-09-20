@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import nature
 
+__all__ = ("catalog",)
+
 
 def catalog() -> tuple[nature.Placement, ...]:
     """

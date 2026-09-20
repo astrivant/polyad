@@ -20,16 +20,48 @@ from polyad_benchmarks.studies.cheeger_strategies.experiment import Experiment, 
 ROOT = Path(__file__).parents[2]
 
 
-def test_refresh_registers_both_studies_and_fingerprints_production_solver():
+def test_refresh_registers_active_study_and_fingerprints_production_solver():
     """
     Keep the reproducible suite coupled to the actual production algorithm sources.
     """
-    assert refresh.CHEEGER_STUDIES == ("cheeger-reduction", "cheeger-strategies")
+    assert refresh.CHEEGER_STUDIES == ("cheeger-strategies",)
     assert set(refresh.CHEEGER_STUDIES) <= set(refresh.LOCAL_STUDIES)
+    assert "cheeger-reduction" not in refresh.REACHABILITY_STUDIES + refresh.LOCAL_STUDIES
     sources = refresh.sources(ROOT)
     assert "pkg/polyad/graph/cheeger.py" in sources
     assert "pkg/polyad/graph/reduction.py" in sources
     assert "studies/cheeger-strategies/fixtures/scenario.json" in sources
+    assert not any(path.startswith("studies/cheeger-reduction") for path in sources)
+
+
+@pytest.mark.parametrize("study", ["cheeger-reduction", "cheeger-reduction-deprecated"])
+def test_refresh_rejects_deprecated_study_in_new_and_prepared_runs(tmp_path, study):
+    """
+    Neither the original study name nor its archive directory can enter a refresh.
+    """
+    root = tmp_path / "refresh"
+    with pytest.raises(ValueError, match="registered studies"):
+        refresh.prepare(ROOT, root, (study,))
+    assert not root.exists()
+    refresh.write_json(root / "provenance.json", {"matrix": {"study": [study]}, "inputs": {study: "old-digest"}})
+    with pytest.raises(ValueError, match="study inventory"):
+        refresh.selected_studies(root)
+
+
+@pytest.mark.parametrize("suite", ["cluster", "local", "reachability", "cheeger", "process", "all"])
+def test_refresh_cli_suites_exclude_deprecated_study(tmp_path, monkeypatch, capsys, suite):
+    """
+    Every generated local and CI matrix excludes the archived experiment.
+    """
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+    monkeypatch.setattr(
+        sys, "argv", ["refresh", "--ci-phase", "prepare", "--suite", suite, "--project", str(ROOT), "--root", str(tmp_path / suite)]
+    )
+    refresh.main()
+    matrix = json.loads(capsys.readouterr().out)["study"]
+    assert not any(study.startswith("cheeger-reduction") for study in matrix)
+    if suite == "cheeger":
+        assert matrix == ["cheeger-strategies"]
 
 
 def recipe():

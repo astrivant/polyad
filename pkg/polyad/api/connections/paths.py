@@ -20,6 +20,11 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad_types.api.discovery import ServiceEndpoint
 
+__all__ = (
+    "identities",
+    "path",
+)
+
 
 async def path(
     peer: ServiceEndpoint,

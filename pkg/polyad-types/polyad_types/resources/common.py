@@ -8,6 +8,19 @@ from typing import Any, Literal
 
 from attrs import field, frozen
 
+__all__ = (
+    "AST",
+    "DeleteOptions",
+    "GROUP",
+    "ObjectMeta",
+    "OwnerReference",
+    "ResourceType",
+    "StatusPatch",
+    "UIDPreconditions",
+    "VERSION",
+)
+
+
 GROUP = "polyad.astrivant.com"
 VERSION = "v1alpha1"
 

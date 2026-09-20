@@ -12,6 +12,13 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any
 
+__all__ = (
+    "HELP",
+    "graph_rows",
+    "numeric_values",
+)
+
+
 HELP = {
     "graph_topology": "Precomputed declared and observed boundary topology dimensions, including layers and components.",
     "graph_execution": "Current boundary execution and recursive rollup observations; distinguish scope before aggregating.",

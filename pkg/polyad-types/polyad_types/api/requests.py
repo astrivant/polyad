@@ -17,6 +17,19 @@ from polyad_types.networking.access import NetworkPort
 from polyad_types.resources.registry import COMPOSABLE_KINDS
 from polyad_types.serialization import converter
 
+__all__ = (
+    "ActivationRequest",
+    "COMPOSITION_KINDS",
+    "CompositionItem",
+    "CompositionRequest",
+    "ConnectionRequest",
+    "ConnectionResponse",
+    "MAX_TTL",
+    "ServiceConnectionRequest",
+    "identity",
+)
+
+
 COMPOSITION_KINDS = COMPOSABLE_KINDS
 MAX_TTL = 86400
 

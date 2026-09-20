@@ -7,6 +7,8 @@ from __future__ import annotations
 from functools import cache
 from importlib.resources import files
 
+__all__ = ("script",)
+
 
 @cache
 def script(name: str) -> str:

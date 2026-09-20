@@ -11,6 +11,31 @@ from attrs import field, frozen
 from polyad_types.resources.base import Resource, SpecResource
 from polyad_types.resources.common import AST, ObjectMeta, ResourceType
 
+__all__ = (
+    "ConfigMap",
+    "CustomResourceDefinition",
+    "DaemonSet",
+    "DaemonSetSpec",
+    "Deployment",
+    "DeploymentSpec",
+    "DeploymentStrategy",
+    "Job",
+    "JobSpec",
+    "LabelSelector",
+    "Lease",
+    "LeaseSpec",
+    "NetworkPolicy",
+    "PersistentVolumeClaim",
+    "Pod",
+    "PodTemplate",
+    "ReplicaSet",
+    "Secret",
+    "Service",
+    "ServiceAccount",
+    "StatefulSet",
+    "StatefulSetSpec",
+)
+
 
 @frozen(kw_only=True)
 class PodTemplate(AST):

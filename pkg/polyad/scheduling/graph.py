@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from polyad.graph.gates import DelayGate, Gate
     from polyad.scheduling.policy import SchedulingPolicy
 
+__all__ = ("Graph",)
+
 
 class Graph(Workload):
     """

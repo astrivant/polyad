@@ -13,6 +13,14 @@ from threading import Event
 from polyad.auth.keys import Keyring
 from polyad.auth.policy import public_demo
 
+__all__ = (
+    "Lifecycle",
+    "credential_token",
+    "credentials_changed",
+    "lifecycle",
+    "watch_credentials",
+)
+
 
 class Lifecycle:
     """

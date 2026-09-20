@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
     from polyad_types.graphs.topology import Node
 
+__all__ = ("trace_child",)
+
 
 def trace_child(child: asts.Resource, parent: dict[str, Any], node: Node, definition: dict[str, Any]) -> asts.Resource:
     """

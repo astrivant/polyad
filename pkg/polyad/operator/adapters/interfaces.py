@@ -11,6 +11,11 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable
     from typing import Any
 
+__all__ = (
+    "ResourceAPI",
+    "StateBackend",
+)
+
 
 class ResourceAPI(ABC):
     """

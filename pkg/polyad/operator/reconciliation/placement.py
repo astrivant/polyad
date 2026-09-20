@@ -10,6 +10,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "PREFERRED",
+    "REQUIRED",
+    "merge_placement",
+    "place_pod",
+)
+
+
 REQUIRED = "requiredDuringSchedulingIgnoredDuringExecution"
 PREFERRED = "preferredDuringSchedulingIgnoredDuringExecution"
 

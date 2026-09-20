@@ -5,6 +5,7 @@ Verify a standalone schema distribution without operator, types or validator dep
 from __future__ import annotations
 
 import importlib.util
+import pkgutil
 from importlib.metadata import requires
 from importlib.resources import files
 from pathlib import Path
@@ -28,6 +29,12 @@ def main() -> None:
     assert "site-packages" in package.parts, package
     assert (package / "py.typed").is_file()
     assert not requires("polyad-schemas")
+    modules = ("polyad_schemas", *(info.name for info in pkgutil.walk_packages(polyad_schemas.__path__, "polyad_schemas.")))
+    for name in modules:
+        module = importlib.import_module(name)
+        public: dict[str, object] = {}
+        exec(f"from {name} import *", public)
+        assert set(public) - {"__builtins__"} == set(module.__all__)
     for name in ("polyad", "polyad_types", "polyad_sdk", "jsonschema", "attrs", "yaml"):
         assert importlib.util.find_spec(name) is None, name
     for name in available_schemas():

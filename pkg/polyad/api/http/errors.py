@@ -4,6 +4,14 @@ Share expected HTTP operation failures across API domains and listener workers.
 
 from __future__ import annotations
 
+__all__ = (
+    "Conflict",
+    "Forbidden",
+    "RequestError",
+    "Unauthorized",
+    "Unavailable",
+)
+
 
 class RequestError(Exception):
     """

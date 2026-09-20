@@ -11,6 +11,8 @@ from polyad_schemas._catalog import load_schema
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("event_schema",)
+
 
 def event_schema() -> dict[str, Any]:
     """

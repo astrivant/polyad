@@ -109,9 +109,7 @@ jobs:
             studies/symbiosis/results.json
             studies/reachability-state/results.json
             studies/reachability-routing/results.json
-            studies/cheeger-reduction/results.json
             studies/symbiosis/figures/
             studies/reachability-state/figures/
             studies/reachability-routing/figures/
-            studies/cheeger-reduction/figures/
           include-hidden-files: true

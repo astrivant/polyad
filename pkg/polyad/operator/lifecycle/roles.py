@@ -6,6 +6,14 @@ from __future__ import annotations
 
 import os
 
+__all__ = (
+    "ROLES",
+    "executes",
+    "role",
+    "serves",
+)
+
+
 ROLES = frozenset({"dense", "bootstrap", "executor", "gateway", "telemetry"})
 
 

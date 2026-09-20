@@ -22,6 +22,8 @@ from polyad_types.serialization import to_dict
 if TYPE_CHECKING:
     from polyad_types.api.auth import APIKey
 
+__all__ = ("CredentialStore",)
+
 
 class CredentialStore:
     """

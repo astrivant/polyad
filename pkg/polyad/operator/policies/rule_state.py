@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
     from polyad.operator.adapters.kubernetes import API
 
+__all__ = ("check_live_rules",)
+
 
 def _revision(obj: dict[str, Any]) -> dict[str, Any]:
     """

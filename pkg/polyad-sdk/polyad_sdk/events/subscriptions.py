@@ -22,6 +22,11 @@ if TYPE_CHECKING:
     from polyad_sdk.events.source import EventSource
     from polyad_types.events.envelope import Event
 
+__all__ = (
+    "StreamInterrupted",
+    "Subscription",
+)
+
 
 class StreamInterrupted(RuntimeError):
     """

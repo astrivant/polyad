@@ -27,14 +27,16 @@ def result_for(study):
     """
     if study == "load":
         return json.loads((ROOT / "pkg/tests/data/studies/load-results.json").read_text())
-    return json.loads((ROOT / "studies" / study / "results.json").read_text())["studies"][study]
+    directory = "cheeger-reduction-deprecated" if study == "cheeger-reduction" else study
+    return json.loads((ROOT / "studies" / directory / "results.json").read_text())["studies"][study]
 
 
 def test_every_study_has_figures_and_base_imports_stay_light():
     """
     Require plot coverage for every study without loading Matplotlib or numerical backends at base import.
     """
-    assert set(plotting.FIGURE_NAMES) == set(refresh.STUDIES + refresh.LOCAL_STUDIES)
+    # Archived measurements remain renderable without rejoining refresh suites.
+    assert set(plotting.FIGURE_NAMES) == set(refresh.STUDIES + refresh.LOCAL_STUDIES) | {"cheeger-reduction"}
     subprocess.run(
         [
             sys.executable,

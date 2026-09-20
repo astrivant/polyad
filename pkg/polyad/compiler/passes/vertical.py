@@ -14,6 +14,16 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
+__all__ = (
+    "BOUND_ENVIRONMENT",
+    "CONTROLLED_RESOURCES",
+    "TARGET_KINDS",
+    "UPDATE_MODES",
+    "compile_vertical_pod_autoscaler",
+    "inject_vertical_environment",
+)
+
+
 TARGET_KINDS = {"Deployment", "StatefulSet", "DaemonSet"}
 UPDATE_MODES = {"Off", "Initial", "Recreate", "InPlaceOrRecreate", "InPlace"}
 CONTROLLED_RESOURCES = {"cpu", "memory"}

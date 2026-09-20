@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Optional workload protocols; guide: ../../../docs/workloads/workload-protocols.md.
+# Install application clients with polyad-sdk[grpc], [amqp], [redis] or [protocols].
+# These values do NOT deploy brokers, create application Services, or open ports.
+# All defaults below preserve the chart's opt-in behavior. Enable only capabilities
+# needed by the deployment; an existing Istio installation can be managed separately.
+#
+# In application templates, polyad.workloadServicePort accepts:
+#   protocol: http | https | ws | wss | grpc | grpcs | amqp | amqps |
+#             redis | rediss | tcp | tls (required)
+#   port: 1..65535 (required dialed Service port)
+#   targetPort: 1..65535 (optional Pod port; defaults to port)
+#   name: worker (optional DNS-label suffix; defaults to workload)
+# Example include arguments: dict "protocol" "grpc" "port" 50051 "targetPort" 50052
+# Use targetPort in graph edges and temporary TCP grants. Do not label AMQP/Redis
+# as HTTP; the helper selects tcp. Application-encrypted variants select tls,
+# except https/wss use https. Mesh mTLS can independently protect plaintext schemes.
+
+## @param mesh [object] Optional bundled service mesh installation.
+mesh:
+  ## @param mesh.enabled [boolean] Install the bundled Istio components; keep false with a separately managed mesh.
+  enabled: false
+
+## @param connections [object] Optional temporary connection consent API; unnecessary for static edges.
+connections:
+  ## @param connections.enabled [boolean] Enable only after configuring workload RBAC and connection access ceilings.
+  enabled: false
+
+## @param events [object] Optional observations needed for AdaptiveService's receipt freshness checks.
+events:
+  ## @param events.enabled [boolean] Enable with event credentials and authorization when using adaptive receipt-checked clients.
+  enabled: false

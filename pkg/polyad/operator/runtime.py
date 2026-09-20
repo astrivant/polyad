@@ -26,6 +26,11 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from types import FrameType
 
+__all__ = (
+    "OperatorThread",
+    "main",
+)
+
 
 class OperatorThread:
     """

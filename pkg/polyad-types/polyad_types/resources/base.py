@@ -10,6 +10,11 @@ from attrs import frozen
 
 from polyad_types.resources.common import AST, ObjectMeta, ResourceType
 
+__all__ = (
+    "Resource",
+    "SpecResource",
+)
+
 
 @frozen(kw_only=True)
 class Resource(AST):

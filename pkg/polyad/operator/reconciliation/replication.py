@@ -21,6 +21,12 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.reconciliation.controller import Controller
 
+__all__ = (
+    "effective_spec",
+    "reconcile_group",
+    "replica_selector",
+)
+
 
 def replica_selector(uid: str) -> str:
     """

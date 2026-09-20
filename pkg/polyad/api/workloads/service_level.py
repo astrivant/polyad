@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from polyad_types import GraphAccess, ServiceLevelReport
     from polyad_types.api.service_level import ServiceLevelPolicy
 
+__all__ = ("report_service_level",)
+
 
 def _evaluate(
     policy: ServiceLevelPolicy, report: ServiceLevelReport, current: dict[str, Any], adaptation: dict[str, Any]

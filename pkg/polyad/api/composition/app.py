@@ -37,6 +37,12 @@ if TYPE_CHECKING:
     from polyad_types.api.service_level import ServiceLevelReport
     from polyad_types.api.throughput import ThroughputSample
 
+__all__ = (
+    "Conflict",
+    "Unavailable",
+    "create_app",
+)
+
 
 def _build_app(
     submit: Callable[[CompositionRequest], dict[str, Any]],

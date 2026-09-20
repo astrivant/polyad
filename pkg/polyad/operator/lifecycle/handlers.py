@@ -45,6 +45,26 @@ if TYPE_CHECKING:
     from polyad.operator.coordination.queue import Key
     from polyad.operator.reconciliation.controller import Controller
 
+__all__ = (
+    "KINDS",
+    "backlog_loop",
+    "cleanup",
+    "component_loop",
+    "connection_sweep_loop",
+    "consume_loop",
+    "coordination_loop",
+    "handle",
+    "health",
+    "metrics_loop",
+    "publish",
+    "publish_observation",
+    "reconcile",
+    "rescan_loop",
+    "startup",
+    "write_backlog",
+)
+
+
 queue: RefreshQueue | None = None
 controller: Controller | None = None
 coordinator: Coordinator | None = None

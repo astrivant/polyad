@@ -10,6 +10,8 @@ from urllib.request import HTTPRedirectHandler
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("APIError",)
+
 
 class APIError(RuntimeError):
     """

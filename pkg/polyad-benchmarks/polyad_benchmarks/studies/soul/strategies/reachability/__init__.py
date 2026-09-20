@@ -12,6 +12,8 @@ from polyad_sdk.symbiosis.reachability import Observation, ReachabilityStrategy
 if TYPE_CHECKING:
     from polyad_benchmarks.studies.soul.runtime.policy import Policy
 
+__all__ = ("build",)
+
 
 def build(policy: Policy) -> ReachabilityStrategy:
     """

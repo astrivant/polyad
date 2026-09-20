@@ -14,6 +14,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+__all__ = (
+    "env",
+    "refresh_environment",
+)
+
+
 env: dict[str, str] = dict(os.environ)
 
 

@@ -23,6 +23,13 @@ if TYPE_CHECKING:
 
     from polyad.operator.reconciliation.controller import Controller
 
+__all__ = (
+    "KINDS",
+    "ensure_routes",
+    "target_selector",
+)
+
+
 KINDS = frozenset({"VirtualService", "DestinationRule"})
 
 

@@ -11,6 +11,8 @@ from polyad_schemas._catalog import load_schema
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = ("resource_schema",)
+
 
 def resource_schema(kind: str, version: str = "v1alpha1", *, group: str = "polyad.astrivant.com") -> dict[str, Any]:
     """

@@ -29,6 +29,11 @@ if TYPE_CHECKING:
     from polyad.graph.workloads import Outcome, Work, Workload
     from polyad.scheduling.policy import SchedulingPolicy
 
+__all__ = (
+    "Scheduler",
+    "State",
+)
+
 
 @dataclass
 class State:

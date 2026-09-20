@@ -18,6 +18,8 @@ from polyad_types.serialization import from_dict
 if TYPE_CHECKING:
     from polyad_types.api.auth import APIKey
 
+__all__ = ("Keyring",)
+
 
 class Keyring:
     """

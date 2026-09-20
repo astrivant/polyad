@@ -28,6 +28,13 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.reconciliation.controller import Controller
 
+__all__ = (
+    "POLICY_KINDS",
+    "context",
+    "ensure_policies",
+)
+
+
 POLICY_KINDS = asts.NETWORK_POLICY_KINDS
 
 

@@ -11,6 +11,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+__all__ = (
+    "Finalizer",
+    "ShutdownContract",
+    "ShutdownState",
+)
+
 
 @dataclass(frozen=True)
 class ShutdownState:

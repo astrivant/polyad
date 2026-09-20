@@ -8,6 +8,9 @@ from lupa.lua54 import LuaRuntime
 
 from polyad.lua import script
 
+__all__ = ("validate_server_scripts",)
+
+
 _MEMORY_LIMIT = 8 * 1024 * 1024
 _SERVER_SCRIPTS = (
     "authentication/acquire.lua",

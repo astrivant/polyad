@@ -31,6 +31,12 @@ if TYPE_CHECKING:
     from polyad_types.graphs.topology import ThroughputTier
     from polyad_types.networking.traffic import TrafficWeights
 
+__all__ = (
+    "candidate_spec",
+    "propose",
+    "within",
+)
+
 
 async def propose(controller: Controller, obj: dict[str, Any], search: Search) -> Proposal | None:
     """

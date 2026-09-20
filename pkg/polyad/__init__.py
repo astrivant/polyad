@@ -6,3 +6,7 @@ autoscaling and uses application demand to adjust approved topology, traffic
 and capacity settings. It exposes composition, discovery, connection and event
 APIs alongside metrics and traces. Local graph scheduling is also available.
 """
+
+from __future__ import annotations
+
+__all__ = ()

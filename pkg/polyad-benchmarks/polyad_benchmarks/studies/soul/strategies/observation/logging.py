@@ -12,6 +12,8 @@ from polyad_sdk import ObserveStrategy
 if TYPE_CHECKING:
     from polyad_benchmarks.studies.soul.runtime.policy import Policy
 
+__all__ = ("build",)
+
 
 def build(policy: Policy) -> ObserveStrategy:
     """

@@ -11,6 +11,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from polyad.graph.workloads import Workload
 
+__all__ = (
+    "Rewrite",
+    "RewriteRegistry",
+)
+
 
 @dataclass(frozen=True)
 class Rewrite:

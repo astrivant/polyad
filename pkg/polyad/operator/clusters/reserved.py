@@ -20,6 +20,17 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.reconciliation.controller import Controller
 
+__all__ = (
+    "DEPLOYMENT",
+    "KINDS",
+    "RESOURCES",
+    "members",
+    "reconcile",
+    "service_members",
+    "validate_bindings",
+)
+
+
 DEPLOYMENT = f"{GROUP}/observed-operator-deployment"
 RESOURCES = f"{GROUP}/observed-local-services"
 KINDS = frozenset({"Deployment", "StatefulSet", "DaemonSet", "Service", "Dragonfly", "Cluster"})

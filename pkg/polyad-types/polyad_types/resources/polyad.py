@@ -11,6 +11,25 @@ from attrs import frozen
 from polyad_types.resources.base import SpecResource
 from polyad_types.resources.common import GROUP, VERSION, ResourceType
 
+__all__ = (
+    "Activation",
+    "Composition",
+    "Daemon",
+    "DragonflyPool",
+    "Gate",
+    "Graph",
+    "GraphRule",
+    "OperatorPool",
+    "PolyGraph",
+    "RemoteScale",
+    "ReplicaGroup",
+    "ResourceDefinition",
+    "Rewrite",
+    "ShutdownPolicy",
+    "TemporaryConnection",
+    "Workload",
+)
+
 
 @frozen(kw_only=True)
 class Graph(SpecResource):

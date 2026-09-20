@@ -10,6 +10,14 @@ from typing import TYPE_CHECKING
 
 import matplotlib
 
+__all__ = (
+    "accuracy",
+    "cost",
+    "render",
+    "stability",
+)
+
+
 # File-based rendering also works on headless CI runners without a GUI backend.
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt

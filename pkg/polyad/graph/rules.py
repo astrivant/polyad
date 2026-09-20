@@ -19,6 +19,13 @@ if TYPE_CHECKING:
     from polyad_types.graphs.rules import CheegerComputation, StructuralRule
     from polyad_types.graphs.topology import Topology
 
+__all__ = (
+    "evaluate_rule",
+    "graph_cheeger",
+    "graph_spectrum",
+    "relation_graph",
+)
+
 
 def relation_graph(topology: Topology, relation: str) -> nx.DiGraph[str]:
     """

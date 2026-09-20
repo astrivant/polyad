@@ -40,8 +40,12 @@ def main() -> None:
     }.items():
         module = importlib.import_module(f"polyad_types.{namespace}")
         assert all(getattr(module, name) is getattr(polyad_types, name) for name in names)
-    for module in pkgutil.walk_packages(polyad_types.__path__, "polyad_types."):
-        importlib.import_module(module.name)
+    modules = ("polyad_types", *(info.name for info in pkgutil.walk_packages(polyad_types.__path__, "polyad_types.")))
+    for name in modules:
+        module = importlib.import_module(name)
+        public: dict[str, object] = {}
+        exec(f"from {name} import *", public)
+        assert set(public) - {"__builtins__"} == set(module.__all__)
     for name in ("polyad", "polyad_sdk", "kopf", "kubernetes", "redis", "flask", "numpy", "networkx"):
         assert importlib.util.find_spec(name) is None, name
     rule = from_dict({"minimum": 1}, Cheeger)

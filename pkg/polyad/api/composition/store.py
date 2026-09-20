@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.interfaces import ResourceAPI
     from polyad_types.api.requests import CompositionRequest
 
+__all__ = ("CompositionStore",)
+
 
 class CompositionStore:
     """

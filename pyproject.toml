@@ -134,6 +134,10 @@ exclude = ["^pkg/tests/"]
 module = ["kubernetes.*", "flask_httpauth"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["grpc.*", "pika.*"]
+ignore_missing_imports = true
+
 [tool.pydocstyle]
 convention = "google"
 

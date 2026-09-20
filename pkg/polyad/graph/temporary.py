@@ -12,6 +12,17 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+__all__ = (
+    "ANNOTATION",
+    "CLEANUP",
+    "MAX_CONNECTIONS",
+    "active_entries",
+    "deadline",
+    "entries",
+    "overlay",
+)
+
+
 ANNOTATION = "polyad.astrivant.com/temporary-connections"
 CLEANUP = "polyad.astrivant.com/connection-cleanup-pending"
 MAX_CONNECTIONS = 128

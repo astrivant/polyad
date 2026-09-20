@@ -71,6 +71,7 @@ def main() -> None:
         "observability": ("Telemetry",),
         "processes": ("ProcessSpec", "ProcessPlan", "ProcessSupervisor", "ManagedProcess", "PlanResult"),
         "symbiosis": ("AdaptiveService", "Change", "Delta", "Environment", "Settings"),
+        "connections": ("WorkloadClient", "WorkloadEndpoint"),
         "symbiosis.strategies": (
             "AdaptationStrategy",
             "ConstraintStrategy",
@@ -91,9 +92,13 @@ def main() -> None:
     }.items():
         module = importlib.import_module(f"polyad_sdk.{namespace}")
         assert all(getattr(module, name) is getattr(polyad_sdk, name) for name in names)
-    for module in pkgutil.walk_packages(polyad_sdk.__path__, "polyad_sdk."):
-        importlib.import_module(module.name)
-    for name in ("polyad", "kopf", "kubernetes", "redis", "flask", "numpy", "networkx"):
+    modules = ("polyad_sdk", *(info.name for info in pkgutil.walk_packages(polyad_sdk.__path__, "polyad_sdk.")))
+    for name in modules:
+        module = importlib.import_module(name)
+        public: dict[str, object] = {}
+        exec(f"from {name} import *", public)
+        assert set(public) - {"__builtins__"} == set(module.__all__)
+    for name in ("polyad", "kopf", "kubernetes", "redis", "grpc", "pika", "flask", "numpy", "networkx"):
         assert importlib.util.find_spec(name) is None, name
     assert inspect.isabstract(AdaptiveService)
     assert inspect.isabstract(AdaptationStrategy) and inspect.isabstract(ConstraintStrategy)

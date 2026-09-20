@@ -18,6 +18,13 @@ if TYPE_CHECKING:
 
     from polyad_types.networking.access import NetworkAccess
 
+__all__ = (
+    "ANNOTATION",
+    "access",
+    "grants",
+)
+
+
 ANNOTATION = "polyad.astrivant.com/service-connections"
 
 

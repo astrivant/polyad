@@ -35,6 +35,11 @@ if TYPE_CHECKING:
         Resource,
     )
 
+__all__ = (
+    "child_name",
+    "owned_child",
+)
+
 
 def child_name(parent: ObjectMeta, node: str) -> str:
     """

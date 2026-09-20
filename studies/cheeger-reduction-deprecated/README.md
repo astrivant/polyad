@@ -1,4 +1,8 @@
-# PCA-guided Cheeger reduction
+# PCA-guided Cheeger reduction (deprecated)
+
+This study is archived and excluded from all refresh suites and CI study runs.
+Its recipe, recorded results and figures are retained unchanged for reference.
+Use the active [Cheeger strategy study](../cheeger-strategies/README.md) for new runs.
 
 This local study asks whether a graph can be compressed before searching its
 Cheeger cuts, and what accuracy and assurance are lost. PCA remains an experimental
@@ -109,21 +113,10 @@ schedule refreshes, but should fall back to fresh reduction or exact search when
 
 ## Run
 
-Run the study through the same immutable-input and artifact-verification protocol
-as the other local studies:
-
-```sh
-python -m polyad_benchmarks.refresh \
-  --ci-phase prepare --suite reachability \
-  --root .cache/benchmarks/cheeger-reduction
-
-python -m polyad_benchmarks.refresh \
-  --ci-phase study --study cheeger-reduction \
-  --root .cache/benchmarks/cheeger-reduction
-```
-
-When preparing the whole reachability suite, run its other matrix entries before
-`finish`. The implementation is
+This archived study is no longer accepted by the refresh CLI. Historical result
+identifiers and provenance paths retain their original `cheeger-reduction` name.
+The computation helpers remain available because the active strategy study shares
+them. The original implementation is
 `polyad_benchmarks.cheeger_reduction.reduction_study`; plotting is isolated in
 `polyad_benchmarks.studies.cheeger_reduction.plotting`.
 

@@ -12,6 +12,13 @@ if TYPE_CHECKING:
     from importlib.resources.abc import Traversable
     from typing import Any
 
+__all__ = (
+    "CATEGORIES",
+    "available_schemas",
+    "load_schema",
+)
+
+
 CATEGORIES = ("models", "resources", "events", "helm")
 
 

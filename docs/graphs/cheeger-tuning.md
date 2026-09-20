@@ -256,7 +256,7 @@ behind the same result contract only when repeated production
 CPU, or when a supported boundary must exceed 20 vertices. Keep the Python path
 as the semantic oracle and source-install fallback.
 
-The [PCA-guided reduction study](../../studies/cheeger-reduction/README.md)
+The [deprecated PCA-guided reduction study](../../studies/cheeger-reduction-deprecated/README.md)
 keeps PCA as a comparative heuristic. Production uses Laplacian spectral
 coarsening instead: clusters define a quotient search, every candidate cut is
 lifted and rescored on the original graph to certify an upper bound, and

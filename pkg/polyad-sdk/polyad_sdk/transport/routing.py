@@ -14,6 +14,11 @@ if TYPE_CHECKING:
     from typing import Any
     from urllib.request import OpenerDirector, Request
 
+__all__ = (
+    "addresses",
+    "opener",
+)
+
 
 def addresses(document: dict[str, Any]) -> list[tuple[str, int]]:
     """

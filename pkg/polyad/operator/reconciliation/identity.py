@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
     from polyad.operator.adapters.kubernetes import API
 
+__all__ = ("graph_ancestry",)
+
 
 async def graph_ancestry(api: API, graph: dict[str, Any]) -> list[dict[str, Any]]:
     """

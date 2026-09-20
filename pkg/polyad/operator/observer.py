@@ -16,6 +16,11 @@ from polyad.operator.lifecycle.health import credential_token
 from polyad.operator.observability.logging import add_logging_options, configure_log_export, configure_logging, shutdown_log_export
 from polyad.operator.observability.tracing import configure_tracing, shutdown_tracing
 
+__all__ = (
+    "main",
+    "run",
+)
+
 
 async def run() -> None:
     """

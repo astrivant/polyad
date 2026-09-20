@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
     from polyad.graph import Work
 
+__all__ = ("plot_graph",)
+
 
 def plot_graph(works: Mapping[str, Work], output: Path, *, title: str) -> None:
     """

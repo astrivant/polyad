@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from polyad_types.api.adaptation import AdaptationReport
     from polyad_types.api.service_level import ServiceLevelReport
 
+__all__ = ("register_routes",)
+
 
 def register_routes(
     app: Routes,

@@ -15,6 +15,15 @@ if TYPE_CHECKING:
 
     from polyad_types.graphs.topology import Node
 
+__all__ = (
+    "POD_FIELDS",
+    "RESOURCE_FIELDS",
+    "inject_environment",
+    "pod_environment",
+    "workload_identity",
+)
+
+
 POD_FIELDS = {
     "POLYAD_POD_NAME": "metadata.name",
     "POLYAD_POD_UID": "metadata.uid",

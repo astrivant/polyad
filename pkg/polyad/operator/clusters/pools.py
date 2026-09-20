@@ -37,6 +37,17 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.clusters.root import RootControlPlane
 
+__all__ = (
+    "ATTACHMENT",
+    "FINALIZER",
+    "OWNER",
+    "PoolManager",
+    "REGISTERED",
+    "SCALING",
+    "contains",
+)
+
+
 logger = logging.getLogger(__name__)
 OWNER = f"{GROUP}/root-owner"
 FINALIZER = f"{GROUP}/remote-operator"
