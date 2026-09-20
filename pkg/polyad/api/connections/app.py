@@ -15,6 +15,7 @@ from polyad.auth.policy import public_demo
 from polyad.compiler.passes.schema import structural_schema
 from polyad.exceptions.api import Conflict, Forbidden, Unauthorized, Unavailable
 from polyad.exceptions.coordination import PulseDeferred
+from polyad_types.api.capabilities import CapabilityAdvertisement, CapabilityContract
 from polyad_types.api.requests import ConnectionRequest, ConnectionResponse, ServiceConnectionRequest
 from polyad_types.serialization import converter
 
@@ -38,6 +39,7 @@ def build_app(
     *,
     services: Callable[[ServiceConnectionRequest, Caller], dict[str, Any]] | None = None,
     respond: Callable[[str, str, ConnectionResponse, Caller], dict[str, Any] | None] | None = None,
+    advertise: Callable[[CapabilityAdvertisement, Caller], dict[str, Any]] | None = None,
     limits: RateLimitPolicy | None = None,
     application: Flask | None = None,
 ) -> Flask:
@@ -51,6 +53,7 @@ def build_app(
         revoke (Callable[[str, str, Caller], dict[str, Any] | None]): Authorized early revocation.
         services (Callable[[ServiceConnectionRequest, Caller], dict[str, Any]] | None): Exact-service negotiation callback.
         respond (Callable[[str, str, ConnectionResponse, Caller], dict[str, Any] | None] | None): Endpoint consent callback.
+        advertise (Callable[[CapabilityAdvertisement, Caller], dict[str, Any]] | None): Pod-owned, TTL-bound sharing contract callback.
         limits (RateLimitPolicy | None): Optional shared HTTP request budget.
         application (Flask | None): Existing process application for blueprint registration.
 
@@ -101,6 +104,15 @@ def build_app(
         if not isinstance(ports, list) or any(not isinstance(port, dict) or type(port.get("port")) is not int for port in ports):
             raise ValueError("ports must be a list of destination ports with integer port numbers")
         return jsonify(submit(converter.structure(value, ConnectionRequest), g.caller)), 202
+
+    @app.post("/v1/capabilities")
+    def publish_capabilities() -> tuple[Response, int]:
+        if advertise is None:
+            raise Unavailable("capability advertisement is unavailable")
+        value = request.get_json()
+        if not isinstance(value, dict):
+            raise ValueError("advertisement must be a JSON object")
+        return jsonify(advertise(converter.structure(value, CapabilityAdvertisement), g.caller)), 200
 
     @app.post("/v1/connections/atlas")
     def create_service_connection() -> tuple[Response, int]:
@@ -178,9 +190,26 @@ def build_app(
                         "ConnectionRequest": schema,
                         "ConnectionResponse": structural_schema(ConnectionResponse),
                         "ServiceConnectionRequest": structural_schema(ServiceConnectionRequest),
+                        "CapabilityAdvertisement": structural_schema(CapabilityAdvertisement),
+                        "CapabilityContract": structural_schema(CapabilityContract),
                     },
                 },
                 "paths": {
+                    "/v1/capabilities": {
+                        "post": {
+                            "description": (
+                                "Replace this verified Pod's TTL sharing contract; empty capabilities withdraw it. Requires advertise RBAC."
+                            ),
+                            "requestBody": {
+                                "required": True,
+                                "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CapabilityAdvertisement"}}},
+                            },
+                            "responses": {
+                                **responses,
+                                "200": {"description": "Server-timed capability contract or withdrawal acknowledgement"},
+                            },
+                        }
+                    },
                     "/v1/connections/atlas": {
                         "post": {
                             "description": "Negotiate exact services at a common application boundary owned by this operator.",

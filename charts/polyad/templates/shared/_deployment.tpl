@@ -227,6 +227,10 @@ spec:
               value: {{ .Values.operator.cheeger.reduction.cacheEntries | int | quote }}
             - name: POLYAD_CHEEGER_REDUCTION_MAX_EDGE_CHURN
               value: {{ .Values.operator.cheeger.reduction.maxEdgeChurn | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_STRATEGY
+              value: {{ .Values.operator.cheeger.reduction.strategy | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_TARGET_SECONDS
+              value: {{ .Values.operator.cheeger.reduction.targetSeconds | quote }}
             - name: POLYAD_RESCAN_INTERVAL_SECONDS
               value: {{ .Values.operator.tuning.rescanIntervalSeconds | quote }}
             - name: POLYAD_CONSUME_INTERVAL_SECONDS

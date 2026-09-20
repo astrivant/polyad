@@ -328,7 +328,16 @@ async def check_live_rules(
         raise Pending("scaling target is no longer part of its owner's topology")
     rule_documents = (await api.request("GET", "GraphRule", namespace)).get("items", [])
     reports: list[dict[str, Any]] = []
-    await check_rules(api, namespace, root["kind"], spec, definitions=definitions, rule_documents=rule_documents, observations=reports)
+    await check_rules(
+        api,
+        namespace,
+        root["kind"],
+        spec,
+        definitions=definitions,
+        rule_documents=rule_documents,
+        observations=reports,
+        cache_scope=root["metadata"]["uid"],
+    )
 
     # Persist only the reconciling boundary's reports, as before. Repeating all
     # 32 rules at 256 boundaries in every status could exceed Kubernetes object

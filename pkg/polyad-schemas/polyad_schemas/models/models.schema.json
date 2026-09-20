@@ -258,6 +258,268 @@
         "namespace"
       ]
     },
+    "polyad_types.api.capabilities.CapabilityAdvertisement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "$ref": "#/$defs/polyad_types.api.discovery.ServiceEndpoint",
+          "description": "Exact graph incarnation and logical service."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/polyad_types.api.capabilities.CapabilityOffer"
+          },
+          "maxItems": 32,
+          "description": "Unique work types sharing one provider pool; empty withdraws the contract."
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 16,
+          "description": "Application group selectors, never authorization claims."
+        },
+        "resources": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.api.capabilities.ResourceAvailability"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional disclosure of one shared container resource pool."
+        },
+        "ttlSeconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 300,
+          "description": "Server-timed lifetime from 5 through 300 seconds."
+        }
+      },
+      "description": "Replace one Pod's complete TTL-bound offer contract for a logical service.",
+      "required": [
+        "endpoint",
+        "capabilities"
+      ]
+    },
+    "polyad_types.api.capabilities.CapabilityContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "advertisement": {
+          "$ref": "#/$defs/polyad_types.api.capabilities.CapabilityAdvertisement",
+          "description": "Provider's complete declared sharing policy."
+        },
+        "podName": {
+          "type": "string",
+          "description": "Verified publishing Pod name."
+        },
+        "podUid": {
+          "type": "string",
+          "description": "Exact replica incarnation; siblings advertise independently."
+        },
+        "observedAt": {
+          "type": "number",
+          "description": "Server receipt time in UTC Unix seconds."
+        },
+        "expiresAt": {
+          "type": "number",
+          "description": "Server expiry time in UTC Unix seconds."
+        }
+      },
+      "description": "Return a server-timed, Pod-fenced advertisement discovered through graph grants.",
+      "required": [
+        "advertisement",
+        "podName",
+        "podUid",
+        "observedAt",
+        "expiresAt"
+      ]
+    },
+    "polyad_types.api.capabilities.CapabilityOffer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Application-defined work type, such as image.resize."
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Work unit counted per second, such as images or bytes."
+        },
+        "availablePerSecond": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Estimated additional sustainable throughput."
+        },
+        "sharePerSecond": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum throughput the application wishes to share."
+        },
+        "availableConcurrency": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "minimum": 0,
+          "description": "Additional simultaneous work slots, if known."
+        },
+        "shareConcurrency": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "minimum": 0,
+          "description": "Maximum simultaneous slots offered to peers, if known."
+        }
+      },
+      "description": "State both spare capacity and the provider's willingness to share one work type.",
+      "required": [
+        "name",
+        "unit",
+        "availablePerSecond",
+        "sharePerSecond"
+      ]
+    },
+    "polyad_types.api.capabilities.ResourceAvailability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "container": {
+          "type": "string",
+          "description": "Container sampled by the provider; empty when not projected."
+        },
+        "cpuLimitMillicores": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Live CPU quota; not spare CPU or a utilization rate."
+        },
+        "cpuUsageUsec": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Cumulative cgroup CPU time, not CPU availability."
+        },
+        "memoryLimitBytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Live memory ceiling."
+        },
+        "memoryUsageBytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Live cgroup memory usage."
+        },
+        "cpuRequestMillicores": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Startup request, which can lag in-place resizing."
+        },
+        "memoryRequestBytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Startup memory request, not a live allocation."
+        },
+        "vpaMinCpuMillicores": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Projected VPA CPU lower bound."
+        },
+        "vpaMaxCpuMillicores": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Projected VPA CPU upper bound."
+        },
+        "vpaMinMemoryBytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Projected VPA memory lower bound."
+        },
+        "vpaMaxMemoryBytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Projected VPA memory upper bound."
+        }
+      },
+      "description": "Disclose one container's resource observations, not an independent pool per work type."
+    },
     "polyad_types.api.discovery.AtlasAccess": {
       "type": "object",
       "additionalProperties": false,
@@ -2558,6 +2820,19 @@
           "minimum": 0,
           "maximum": 1,
           "description": "Largest changed-edge fraction eligible for cached partition reuse."
+        },
+        "strategy": {
+          "enum": [
+            "AdaptivePID",
+            "CacheFirst"
+          ],
+          "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+        },
+        "targetSeconds": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 300,
+          "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
         }
       },
       "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."

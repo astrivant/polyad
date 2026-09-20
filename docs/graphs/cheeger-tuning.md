@@ -34,6 +34,40 @@ and [composition requests](../apis/composition-requests.md).
 
 ## Set useful structural bounds
 
+When both operator and graph policy opt into Cheeger reduction, `AdaptivePID`
+is the preferred default scheduler. It periodically refreshes the spectral
+partition; a slower outer PID adjusts the requested cache-use fraction against
+the administrator's `operator.cheeger.reduction.targetSeconds` (default 0.0015).
+This is a soft computation-time objective, not a timeout or CPU reservation.
+Choose `strategy: CacheFirst` at either level to retain legacy cache-first ordering.
+The operator's time target governs when operator limits are supplied.
+Set fractional goals in a values file or with Helm
+`--set-json operator.cheeger.reduction.targetSeconds=0.002`; plain `--set`
+parses fractional values as strings, which the numeric schema rejects.
+
+The two loops use the same controller implementation as the
+[strategy study](../../studies/cheeger-strategies/README.md), with anti-windup,
+refresh intervals bounded to 1-8 observations, and a cache target bounded to
+0-0.8. The outer loop updates every four completed calculations, including
+necessary exact fallback. Cache attempts count as the inner controller's failure
+signal, not as mathematical failure. Hard churn guards and certificate thresholds
+always take precedence, so a requested cache fraction may be unattainable.
+
+Histories are process-local and bounded by `cacheEntries`, independently of the
+partition cache. Runtime graph UID, boundary path, rule and relation isolate
+independent policies; membership, dimensions, quotient size, churn gate or time-goal
+changes start new history. Concurrent
+evaluations do not double-update one history. Failover starts cold and changes
+efficiency, not certificate validity. Standalone `compute_cheeger` callers should
+pass a distinct `cache_scope` for each independent boundary.
+
+The [Helm reference](../../charts/polyad/references/values-cheeger.reference.yaml)
+lists the controls. Reduction remains disabled by default. Numeric callers such
+as Soul's exact expansion measurements still enumerate exactly; the scheduler
+does not substitute an estimate for that scalar. `cheegerComputation.scheduler` exposes
+both loop states when active. Benchmark preference is not a claim of universal
+latency improvement, and an infeasible time goal can saturate the cache target.
+
 | Field under `GraphRule.spec` | Choice and consequence |
 | --- | --- |
 | `cheeger.minimum` | Nonnegative inclusive lower bound; raise it to reject sparse bottlenecks. Omit for no lower bound. |
@@ -275,8 +309,9 @@ count reduction work separately: current quotient loops are additional to the
 exact-search `maxCuts` allowance, and cooperative timeouts do not preempt spectral
 preprocessing. Benchmark these costs before increasing quotient size.
 
-The selector follows three cost tiers. It first tries a cached quotient, then a
-fresh spectral reduction, then exact enumeration. Given a policy interval and a
+The selector retains three cost tiers: cached quotient, fresh spectral reduction,
+then exact enumeration. The preferred adaptive scheduler can skip the cache tier
+when a refresh is due; `CacheFirst` always tries permitted reuse first. Given a policy interval and a
 certificate `[L, U]`, `U < minimum` proves a lower-bound violation,
 `L > maximum` proves an upper-bound violation, and `L >= minimum` together with
 `U <= maximum` proves satisfaction. Every other result is uncertain and spends
@@ -299,10 +334,13 @@ does not replace those values with an estimate.
 | `reduction.cache` | `true` | Reuse only cluster membership when the operator permits it; measurements are recomputed. |
 | `reduction.cacheEntries` | `128` | Process-local LRU bound, 1–4,096 and no greater than the operator value. |
 | `reduction.maxEdgeChurn` | `0.1` | Largest symmetric changed-edge fraction accepted for cached membership reuse, 0–1 and no greater than the operator value. |
+| `reduction.strategy` | `AdaptivePID` | Adaptive refresh with a computation-time-driven cache target. Either operator or policy may choose `CacheFirst` to restore legacy ordering. Inactive when caching is disabled. |
+| `reduction.targetSeconds` | `0.0015` | Soft mean computation-time goal, 0.000001–300 seconds. The operator's value takes precedence over local policy; this is not a hard limit. |
 
 Omit a top-level local numeric field, or set it to `null`, to inherit its operator
-ceiling. Reduction fields use the defaults in the table and must all fit the
-administrator's configured ceilings; attempting to exceed one blocks evaluation.
+ceiling. Reduction resource allowances use the defaults in the table and must fit
+the administrator's ceilings; attempting to exceed one blocks evaluation.
+Scheduler choice and time-goal precedence follow the explicit rules above.
 The fields are available on `GraphRule.spec.cheegerComputation` and
 `Graph/PolyGraph.spec.throughput.cheegerComputation`. Hard-rule search and feedback
 search have separate local preferences, under the same deployment ceilings.
@@ -312,7 +350,9 @@ For the Python API, pass `CheegerComputation(...)` as the second argument to
 ```mermaid
 flowchart TD
     boundary["Check vertex cap and operator ceilings"] --> enabled{"Both reduction switches enabled and policy has bounds?"}
-    enabled -->|Yes| cached["Rescore cached quotient on current edges"]
+    enabled -->|Yes| schedule{"Cache disabled or adaptive refresh due?"}
+    schedule -->|No| cached["Rescore cached quotient on current edges"]
+    schedule -->|Yes| fresh
     cached --> decided{"Certified interval decides the policy?"}
     decided -->|No| fresh["Fresh Laplacian reduction and lifted quotient cut"]
     fresh --> decided2{"Certified interval decides the policy?"}

@@ -8,6 +8,9 @@
 - [Published graphs](#published-graphs)
 - [What accuracy means](#what-accuracy-means)
 - [Experimental axes](#experimental-axes)
+- [PID-controlled refresh experiment](#pid-controlled-refresh-experiment)
+- [Adaptive cache-target experiment](#adaptive-cache-target-experiment)
+- [Measuring CPU expense](#measuring-cpu-expense)
 - [Churn and cache semantics](#churn-and-cache-semantics)
 - [Current runtime limits exposed by the study](#current-runtime-limits-exposed-by-the-study)
 - [Reproduce](#reproduce)
@@ -15,7 +18,13 @@
 
 This local study runs Polyad's production Cheeger selector on reproducible graph
 snapshots. It compares exact enumeration, adjacency PCA, fresh Laplacian spectral
-reduction, reused spectral partitions, and the complete automatic selector.
+reduction, reused spectral partitions, PID-controlled spectral refresh, and both
+adaptive and cache-first complete selectors. **Adaptive-target PID is now the
+preferred scheduler when Cheeger reduction is enabled.** Reduction itself remains
+opt-in at both operator and policy levels; `strategy: CacheFirst` at either level
+retains legacy ordering. The production scheduler and study use the same PID
+implementation. See the [operator values reference](../../charts/polyad/references/values-cheeger.reference.yaml)
+and [configuration guide](../../docs/graphs/cheeger-tuning.md).
 The archived [PCA reduction study](../cheeger-reduction-deprecated/README.md) keeps its
 original dimension and compression experiments; this study adds the production
 strategy transitions and administrator controls.
@@ -29,33 +38,64 @@ observations, reconstructable graph snapshots, recipes and source hashes.
 
 | Figure | Question | Controlled variables |
 | --- | --- | --- |
-| [Churn](figures/churn.svg) | How accurate and expensive is each strategy as edges change? | Same snapshot, policy, dimensions and quotient size for all methods |
+| [Churn](figures/churn.svg) | How accurate and expensive is each strategy, including PID refresh, as edges change? | Same snapshots, policy, dimensions and quotient size; baseline-only warmup for adaptive comparisons |
 | [Activation](figures/activation.svg) | Which tier settles a minimum, maximum or two-sided policy? | Fixed graph family, seed and cache gate; vary churn and threshold |
 | [Parameters](figures/parameters.svg) | How do dimensions, supernodes, graph size and density affect the result? | One plotted axis at a time; unplotted settings fixed |
 | [Cache](figures/cache.svg) | How do churn gates and competing graph boundaries affect reuse? | Same policy grid for each churn gate; four distinct boundaries for capacity |
 | [Timeline](figures/timeline.svg) | What happens during steady periods, churn, policy changes, joins and departures? | One persistent cache and an ordered event sequence |
 | [Controls](figures/controls.svg) | Which budgets resolve the policy, and are decisive answers correct? | Same difficult minimum for work-limit probes |
+| [PID feedback](figures/pid-feedback.svg) | Can a slower PID adjust the cache target to a computation-time goal? | Same ordered snapshots, inner gains and initial target; change churn and time goal in separate phases |
+| [PID CPU cost](figures/pid-cost.svg) | How much CPU work does each feedback strategy consume relative to fresh spectral? | Same seed, repetition and observation; process CPU time measured separately from wall time |
+| [CPU parameter costs](figures/cpu-cost.svg) | How do churn, graph size and quotient size change CPU expense? | Same controlled slices as the accuracy plots; distinguish occupied cores from integrated CPU work |
 
 ## Findings from the published local run
 
-The run contains **6,969 measurements across 101 distinct named graph snapshots**,
-including 1,800 threshold-and-churn-gate trials. Repeated timings and isomorphic
+The run contains **14,028 measurements across 101 distinct named graph snapshots**,
+including 3,600 threshold-and-churn-gate trials across both selectors. Repeated timings and isomorphic
 named boundaries are not independent topologies. All sampled certificates
-contained the exact reference; all 4,308 decisive answers agreed with it. The
-remaining 2,661 observations were explicitly unresolved, mainly reduced-method
+contained the exact reference; all 8,652 decisive answers agreed with it. The
+remaining 5,376 observations were explicitly unresolved, mainly reduced-method
 comparators that could not certify the requested minimum.
 
 - **Reuse degrades under churn.** At 60% requested edge replacement, the pooled
   median cached-cut relative error was 91.7%, versus 41.7% for PCA and 7.1% for
   fresh spectral reduction. These are pooled medians, not worst-case bounds;
   the raw records retain the full spread.
-- **Thresholds decide whether the cheap tiers are useful.** Across the threshold
-  grid, cached cuts settled 538 calls, fresh reduction settled 666, and exact
-  search finished 596. These are experimental-grid counts, not expected
+- **PID trades reuse for scheduled refreshes.** Across 180 additional
+  observations, the controller attempted cache reuse 108 times and scheduled
+  fresh reduction 72 times. Its pooled median cut error at 60% replacement was
+  7.1%, matching fresh reduction because it refreshed at that step. It did not
+  reach its zero-cache target in this short replay. A newer partition is not
+  always a better one: at 30% replacement, its median error was 55.0%, versus
+  43.8% for the original cached partition. This is a refresh-policy experiment,
+  not evidence of uniformly better cuts or a tuned controller.
+- **An adaptive target does not guarantee faster computation.** The preserved
+  feedback replay contains 2,880 observations. In its 0.3 ms goal phase, the
+  adaptive controller requested a median cache rate of 24.4%; both controllers
+  actually attempted reuse on 50.0% of calls. Median method times were 0.442 ms
+  for the adaptive target and 0.443 ms for the fixed target. Both missed the goal.
+  This run does not establish a consistent latency advantage. Time goals, short
+  windows and integer observation schedules can produce similar actions despite
+  different requested rates.
+- **CPU occupancy is not total expense.** All four feedback comparators occupied
+  approximately 1000m while computing. Median CPU work per calculation was
+  0.303 millicore-seconds for cached spectral, 0.402 for fixed-target PID,
+  0.426 for adaptive-target PID and 0.481 for fresh spectral. Median paired CPU
+  ratios against fresh spectral were 0.631, 0.787 and 0.813 respectively.
+  These CPU-only comparisons do not assert equal cut accuracy or policy power.
+- **The raw adaptive comparator can retain inaccurate cuts.** After baseline-only
+  warmup, its pooled median error at 60% requested replacement was 91.7%, like
+  the raw cached comparator. It does not see accuracy feedback. The complete
+  adaptive selector still enforces churn guards and certified decisions; its
+  median cut error in the same slice was zero after necessary exact fallback.
+- **Thresholds decide whether the cheap tiers are useful.** Per selector, across
+  the threshold grid, cached cuts settled 538 calls, fresh reduction settled 666,
+  and exact search finished 596. The two selectors matched because every probe
+  starts with a cold controller. These are experimental-grid counts, not expected
   production frequencies.
 - **The selector is not always faster than exact-only.** In the unchanged-graph
   comparison, the minimum policy still required exact enumeration in 33 of 36
-  calls. Trying both reduced tiers first added overhead. A good upper witness
+  calls for each selector. Trying reduced tiers first added overhead. A good upper witness
   alone cannot prove a minimum; its lower bound must also reach the threshold.
 - **More dimensions need not improve clustering.** With six supernodes on the
   community cases, eight spectral dimensions worsened median cut accuracy
@@ -86,6 +126,12 @@ versions and numerical-library thread controls.
 ![Strategy transitions over time](figures/timeline.png)
 
 ![Budget behavior and decision correctness](figures/controls.png)
+
+![Adaptive cache targets, measured latency and cut accuracy](figures/pid-feedback.png)
+
+![CPU occupancy, integrated work and relative expense for the same feedback replay](figures/pid-cost.png)
+
+![CPU expense under controlled churn, graph-size and quotient-size sweeps](figures/cpu-cost.png)
 
 ## What accuracy means
 
@@ -144,6 +190,8 @@ The complete executable recipe is [scenario.json](fixtures/scenario.json).
 | Cooperative timeout | 1 ms, 10 ms and 1 second |
 | Additional controls | Reduction disabled, cache disabled, spectral size cap, boundary size cap and a priority cut |
 | Graph seeds / timing repeats | Three seeds; three repeats for matched method comparisons |
+| PID refresh controls | Gains $K_p=0.6$, $K_i=0.4$, $K_d=0.2$; zero target cache attempts; initial interval 4 observations, bounded to [1, 8] |
+| Adaptive comparison controls | 1.5 ms soft goal; 12 baseline-only warmup observations; initial cache target 0.25, bounded to [0, 0.8] |
 
 Dimension and quotient settings are crossed in the raw data. The parameter plots
 hold one fixed when showing the other's effect. Density plots use random graphs
@@ -159,11 +207,201 @@ with the same baseline cache state. The timeline and cache-capacity sweep instea
 preserve cache history across calls. Their distinction matters when interpreting
 how often a refresh occurs.
 
+The **Adaptive selector (preferred)** legend is the production `Selector` record:
+it uses the adaptive scheduler, honors churn and resource gates, and performs
+exact fallback when certificates cannot resolve a policy. **Cache-first selector**
+uses the same safety logic with legacy ordering. Both appear in the activation,
+cache, timeline and control comparisons. The threshold grid starts with a cold
+controller and a primed partition, so it mainly isolates threshold and churn
+effects, not steady-state feedback.
+The cache figure's threshold panels and the controls figure's decision bars show
+the preferred selector; their capacity, runtime and cut-work comparisons include
+both complete selectors.
+
+The **Adaptive-target PID** line is the raw cached/fresh comparator: it never
+performs hidden exact fallback and uses a permissive churn gate. It also appears
+in churn, dimension, quotient-size, graph-size and density sweeps. For these
+independent comparisons, the adaptive comparator and both full selectors receive
+12 baseline-only warmup calls before measuring the query. Controller warmup sees
+no future graph or oracle error; selectors use the same baseline policy. Warmup
+is real work but excluded from the measured warm-query cost, and its count is
+recorded as `warmupObservations`. The persistent feedback and timeline plots
+instead show the whole measured trajectory without this warmup.
+
 For the timeline, `baselineId` and the top-level `edgeChurn` describe the previous
 event, not necessarily the older snapshot that created a cached partition.
 Each recorded reducer attempt separately retains its returned certificate's
 `edgeChurn`; a cache miss has no certificate and reports null. Fresh reduction is
 never labeled a cache hit.
+
+## PID-controlled refresh experiment
+
+The brown **PID cached spectral** legend entry retains the original causal, discrete PID
+controller to the churn comparison. Its objective takes **going to cache as a
+controller failure**, including a successful cache hit. This does not mean the
+cached certificate is incorrect. It measures whether the refresh schedule
+avoided falling back to a cached partition. A cache miss also counts as failure
+and triggers real fresh work; both attempted tiers are recorded and timed.
+
+Each independent topology, seed and timing repetition starts with the same
+primed baseline as the other methods. The controller then consumes the five
+`edgeReplacement` snapshots **in recipe order**, retaining its partition and PID
+state between levels. Repetitions reset both. One tick means one observation,
+not one second, and the controller sees no exact Cheeger value, cut error,
+policy verdict, future graph or measured runtime.
+
+Let $f_t=1$ when the current call attempts cache reuse, otherwise $f_t=0$.
+With the configured target $f^*$ and unit sample spacing:
+
+$$e_t=f_t-f^*,\qquad I_t^{candidate}=I_{t-1}+e_t,\qquad D_t=e_t-e_{t-1}.$$
+
+The next refresh interval is:
+
+$$T_{t+1}=\operatorname{clip}(T_0-K_p e_t-K_i I_t-K_d D_t,\ T_{min},\ T_{max}).$$
+
+The first derivative is zero. Conditional integration keeps the previous
+integral when accepting the candidate would push the interval beyond a bound
+in the direction of the error. This is
+[clamping anti-windup](https://www.mathworks.com/help/simulink/slref/anti-windup-control-using-a-pid-controller.html).
+The action for observation $t$ uses the **previously selected** interval $T_t$:
+refresh when the partition age plus one reaches that interval, otherwise try
+the cache. Successful refresh resets age to zero, including refresh after a
+miss. The current observation can only change subsequent scheduling.
+
+Both the raw cached comparator and PID use a permissive churn gate of 1 so a
+static churn threshold cannot be mistaken for PID control. The ordinary
+**Adaptive selector (preferred)** still enforces the configured production gate. PID returns the
+cached or fresh certificate it actually computed; it does **not** silently
+enumerate exact cuts when a policy remains unresolved. Every certificate and
+decisive answer is audited against the independent reference afterward.
+
+The last two churn subplots show the selected next interval and the observed
+fractions of scheduled refreshes, cache attempts and miss-triggered refreshes.
+Those fractions are means of event indicators; the other lines are medians
+with interquartile bands. The raw `pid` records preserve error, integral,
+derivative, anti-windup state, before/after interval and age, and actual actions.
+Reported method time includes controller overhead and all attempted work.
+
+The optional `pidRefresh` object in [scenario.json](fixtures/scenario.json)
+exposes `enabled`, `proportionalGain`, `integralGain`, `derivativeGain`,
+`targetCacheRate`, `initialInterval`, `minInterval` and `maxInterval`. Set
+`enabled: false`, or omit the object, to skip the legacy zero-target trajectory.
+These are experiment settings, not Helm values or production API fields.
+
+**Interpretation and limits:** a zero cache-attempt target rewards fresh work,
+not computational savings. Bounded intervals and binary feedback can oscillate;
+they do not guarantee convergence or an optimal schedule. The schedule is driven
+by cache events, not by the plotted churn coordinate itself. This short ordered
+replay is not a steady-state control evaluation or a gain-tuning exercise.
+PID trajectories run separately from the shuffled independent comparisons, so
+timing-order effects remain possible. Better accuracy or more fresh work here
+does not demonstrate a better production selector, resource controller or SLA.
+
+## Adaptive cache-target experiment
+
+The original six-panel `pid-feedback` replay is retained. It compares
+**Adaptive-target PID** with **Fixed-target PID**,
+always-cached partitions and always-fresh spectral reduction. Both inner PIDs
+start with cache target 0.25 and identical refresh gains, intervals and baseline
+partitions. This is a separate paired replay, not a change to the original
+zero-target PID line in the churn figure.
+
+The outer loop observes real computation time and updates the cache target every
+four completed inner observations. The inner loop continues updating after each
+query. This follows the separation of faster inner and slower outer feedback in
+[cascade control](https://www.mathworks.com/help/control/ug/designing-cascade-control-system-with-pi-controllers.html),
+but the chosen four-observation cadence is an experimental setting, not a proof
+of closed-loop stability.
+
+For one complete window $j$, let $\overline{\tau}_j$ be mean measured inner
+calculation time and $\tau_j^*$ the configured computation-time goal:
+
+$$\epsilon_j=\frac{\overline{\tau}_j}{\tau_j^*}-1,$$
+
+$$q_{j+1}=\operatorname{clip}\left(q_0+K_p^{outer}\epsilon_j+K_i^{outer}\sum_{i\le j}\epsilon_i+K_d^{outer}(\epsilon_j-\epsilon_{j-1}),\ q_{min},\ q_{max}\right).$$
+
+Positive error requests more cache reuse; negative error permits more fresh
+work. The same conditional-integration anti-windup rule prevents accumulation
+past the target bounds. No outer update occurs until a complete window exists.
+A changed time goal discards an incomplete window and resets the derivative
+reference, while retaining the integral. Changing the inner cache target also
+adjusts its derivative reference to avoid a setpoint-induced derivative kick.
+Only subsequent graph queries use the new target.
+
+The recipe holds the community topology family, 16 vertices, four spectral
+dimensions and six supernodes fixed. Each trajectory contains five phases of
+16 observations:
+
+| Phase | Requested edge replacement | Mean-time goal |
+| --- | --- | --- |
+| Steady | 0% | 1.5 ms |
+| Churn only | 30% | 1.5 ms |
+| Tighter time goal | 30% | 0.3 ms |
+| More time headroom | 30% | 1.5 ms |
+| Topology recovery | 0% | 1.5 ms |
+
+Each method receives the same snapshots and phase goals. Entire trajectories
+are shuffled between independent seeds and timing repeats; state is reset
+between trajectories, not between phases. The outer PID uses gains 0.2, 0.05
+and 0.02, with cache-target bounds [0, 0.8]. All parameters are in the optional
+`pidFeedback` recipe object; omit it or set `enabled: false` to skip this replay.
+
+The six plots show total method time against its goal, requested and achieved
+cache rates, inner refresh intervals, cut error against exact enumeration,
+outer window error and actual fresh-reduction fractions. Rates are means across
+trajectories; other solid lines are medians with middle-50% bands. Observed cache
+rates use trailing four-observation windows, including shorter startup windows.
+Outer error is plotted only where the controller actually updated.
+
+Raw `outerPid` records retain the measured feedback duration, goal, update flag,
+window length and mean, normalized error, integral, derivative, saturation
+handling and before/after cache targets. Its feedback clock excludes the
+independent oracle and outer bookkeeping; the plotted total method duration
+includes both controllers' bookkeeping. No recorded latency is synthesized or
+rescaled to make a controller appear effective.
+
+The computation-time goal is **not a timeout, work budget or application SLA**.
+Hardware, competing processes and timing noise can change the target trajectory
+between runs. Cached quotient search itself may exceed a tight goal, and the
+bounded actuator cannot fix that. This loop cannot see cut accuracy or prove a
+policy: certified intervals are audited afterward, unresolved answers remain
+`Unknown`, and neither experimental PID invokes hidden exact fallback. A lower
+latency can come at the cost of worse cuts or wider intervals. These plots are
+evidence for tuning, not proof of a universal performance advantage. Selecting
+the adaptive scheduler as the preferred opt-in strategy does not change the
+certificates, exact fallback, administrator ceilings or reduction feature gates.
+
+## Measuring CPU expense
+
+The adjacent `pid-cost` figure uses the same feedback observations as
+`pid-feedback`. Every strategy measurement records wall duration $W$ using
+`time.perf_counter()` and process CPU duration $C$ using `time.process_time()`.
+The second CPU figure applies the same measurements to churn, graph size and
+quotient size, including both complete selectors.
+
+$$\text{average millicores}=1000\frac{C}{W},\qquad
+\text{millicore-seconds per calculation}=1000C.$$
+
+Average millicores answers how many cores were occupied **while that calculation
+was running**. Integrated millicore-seconds answers how much CPU work it consumed.
+Two single-threaded methods can both use roughly 1000m, while one consumes ten
+times less work because it finishes ten times sooner. The relative-cost panel
+plots $C_{method}/C_{fresh}$ against fresh spectral at the same seed, repetition
+and observation; it does not divide independently pooled medians.
+
+CPU time includes the Python process's native threads, so multicore numerical
+work can exceed 1000m. The published recipe requests single-thread numerical
+libraries. These are local process measurements, not Kubernetes resource requests,
+limits, cgroup throttling measurements or an estimate of cluster-wide CPU demand.
+To estimate sustained demand, multiply measured millicore-seconds per calculation
+by an independently measured calculation rate per second. This study does not
+invent that workload rate.
+
+Timing covers all attempted method work and PID bookkeeping. Independent oracle
+enumeration, cache priming, baseline warmup, result auditing and plotting are
+outside the clocks. CPU-clock resolution and descheduling make submillisecond
+ratios noisy; the shaded bands show observed spread. Old results without CPU
+measurements are explicitly labeled as uncollected, never assigned zero cost.
 
 ## Churn and cache semantics
 
@@ -188,8 +426,9 @@ Cache priming and the independent oracle are outside the comparison timing.
 Fresh reduction includes eigendecomposition, clustering and quotient search;
 selector timing includes every attempted tier and lightweight study tracing.
 The cold start in the timeline includes its initial reduction. The cache-capacity
-chart excludes the first filling round. Method order is deterministically shuffled
-between repeats to reduce ordering bias. Timing bands show the middle 50% of
+chart excludes the first filling round. The seven independent methods are shuffled
+between repeats to reduce ordering bias; the legacy PID follows its separate ordered replay.
+Timing bands show the middle 50% of
 measurements, not confidence intervals; repeated deterministic graphs add timing
 samples, not independent evidence of accuracy.
 
@@ -238,5 +477,5 @@ Choose a fresh run directory. The selector experiment requires the operator's
 `polyad` package or checkout as well as `polyad-benchmarks` and Matplotlib. It
 uses no Kubernetes API, cloud account or service process. The prepare/finish
 protocol hashes the production graph solver along with study code and inputs,
-then verifies all twelve figure artifacts before publication. Runtime versions
+then verifies all eighteen figure artifacts before publication. Runtime versions
 and configured numerical-library thread limits are recorded with the results.

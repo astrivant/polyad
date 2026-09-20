@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# GraphRule cheegerComputation.reduction.enabled must also be true.
+# Guide: ../../../docs/graphs/cheeger-tuning.md
+# PID changes scheduling only. Inconclusive certificates still require exact search.
+## @param operator [object] Operator-owned structural computation controls.
+operator:
+  ## @param operator.cheeger [object] Hard per-calculation limits, separate from the soft PID time goal.
+  cheeger:
+    ## @param operator.cheeger.maxVertices [integer] Largest original boundary allowed into a calculation.
+    maxVertices: 20
+    ## @param operator.cheeger.maxCuts [integer] Exact-cut allowance; quotient cuts are additional work.
+    maxCuts: 524287
+    ## @param operator.cheeger.timeoutSeconds [number] Cooperative exact-search deadline, not spectral preemption.
+    timeoutSeconds: 5
+    ## @param operator.cheeger.reduction [object] Opt in to certificate-preserving estimation.
+    reduction:
+      ## @param operator.cheeger.reduction.enabled [boolean] Administrator opt-in; chart defaults remain false.
+      enabled: true
+      ## @param operator.cheeger.reduction.strategy [string] Preferred AdaptivePID; choose CacheFirst for legacy scheduling.
+      strategy: AdaptivePID
+      ## @param operator.cheeger.reduction.targetSeconds [number] Soft mean calculation-time objective, not a latency guarantee.
+      targetSeconds: 0.0015
+      ## @param operator.cheeger.reduction.maxVertices [integer] Dense spectral boundary size ceiling.
+      maxVertices: 256
+      ## @param operator.cheeger.reduction.components [integer] Spectral embedding dimension ceiling.
+      components: 4
+      ## @param operator.cheeger.reduction.supernodes [integer] Quotient search size ceiling.
+      supernodes: 8
+      ## @param operator.cheeger.reduction.cache [boolean] Cache partitions and maintain adaptive refresh history.
+      cache: true
+      ## @param operator.cheeger.reduction.cacheEntries [integer] Independent finite capacities for partitions and PID histories.
+      cacheEntries: 128
+      ## @param operator.cheeger.reduction.maxEdgeChurn [number] Churn guard still applies regardless of the requested cache rate.
+      maxEdgeChurn: 0.1

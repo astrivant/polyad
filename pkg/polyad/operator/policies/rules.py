@@ -5,6 +5,8 @@ Refresh structural policies and validate a complete graph family before admissio
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 import os
 from typing import TYPE_CHECKING
@@ -40,6 +42,7 @@ async def check_rules(
     definitions: dict[tuple[str, str], dict[str, Any]] | None = None,
     rule_documents: list[dict[str, Any]] | None = None,
     observations: list[dict[str, Any]] | None = None,
+    cache_scope: str = "",
 ) -> list[dict[str, Any]]:
     """
     Apply mandatory and inherited rules to every referenced boundary using refreshed definitions.
@@ -52,6 +55,7 @@ async def check_rules(
         definitions (dict[tuple[str, str], dict[str, Any]] | None): Not-yet-created composition definitions for preflight.
         rule_documents (list[dict[str, Any]] | None): Fresh rule snapshot when the caller also verifies revisions.
         observations (list[dict[str, Any]] | None): Optional collector for verdicts at every visited boundary.
+        cache_scope (str): Persisted root UID when available; preflight falls back to a content-isolated identity.
 
     Returns:
         list[dict[str, Any]]: Root rule verdicts with persisted rule identities and measurements.
@@ -66,6 +70,7 @@ async def check_rules(
     cache = dict(definitions or {})
     visited_nodes = 0
     boundaries = 0
+    scope = cache_scope or hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()
 
     async def visit(
         boundary_kind: str, body: dict[str, Any], path: tuple[tuple[str, str], ...], inherited: set[str], cluster_local: bool = False
@@ -112,7 +117,13 @@ async def check_rules(
         reports = []
         for name in sorted(selected):
             report = await asyncio.to_thread(
-                evaluate_rule, rules[name], graph, expanded_nodes=expanded, nesting_depth=depth, cheeger_limits=computation_limits()
+                evaluate_rule,
+                rules[name],
+                graph,
+                expanded_nodes=expanded,
+                nesting_depth=depth,
+                cheeger_limits=computation_limits(),
+                cache_scope=json.dumps([namespace, kind, scope, path, documents[name]["metadata"]["uid"], rules[name].relation]),
             )
             meta = documents[name]["metadata"]
 

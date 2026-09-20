@@ -5,8 +5,12 @@ Apply deployment-wide Cheeger computation ceilings to policy and feedback evalua
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING, cast
 
 from polyad_types.graphs.rules import CheegerComputation, CheegerReduction
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 __all__ = ("computation_limits",)
 
@@ -44,5 +48,7 @@ def computation_limits() -> CheegerComputation:
             cache=_boolean("POLYAD_CHEEGER_REDUCTION_CACHE", True),
             cacheEntries=int(os.getenv("POLYAD_CHEEGER_REDUCTION_CACHE_ENTRIES", "128")),
             maxEdgeChurn=float(os.getenv("POLYAD_CHEEGER_REDUCTION_MAX_EDGE_CHURN", "0.1")),
+            strategy=cast("Literal['AdaptivePID', 'CacheFirst']", os.getenv("POLYAD_CHEEGER_REDUCTION_STRATEGY", "AdaptivePID")),
+            targetSeconds=float(os.getenv("POLYAD_CHEEGER_REDUCTION_TARGET_SECONDS", "0.0015")),
         ),
     )

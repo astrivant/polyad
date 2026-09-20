@@ -118,10 +118,118 @@ def test_strategy_timeline_plots_fresh_work_separately_from_cache_hits(monkeypat
     monkeypatch.setattr(strategies, "save", capture)
     try:
         strategies.timeline(result, tmp_path)
-        shown = {int(collection.get_offsets()[0, 1]) for collection in captured[0].axes[1].collections}
-        assert shown == {0, 1, 2}
+        stages = [
+            axis for axis in captured[0].axes if [label.get_text() for label in axis.get_yticklabels()] == list(strategies.STAGE_NAMES)
+        ]
+        assert stages
+        for axis in stages:
+            shown = {int(collection.get_offsets()[0, 1]) for collection in axis.collections}
+            assert shown == {0, 1, 2}
     finally:
         for figure in captured:
+            plt.close(figure)
+
+
+def test_churn_adds_pid_legend_and_plots_observed_refresh_feedback(monkeypatch, tmp_path):
+    """
+    Render the additional comparator from real observations, including its control signal.
+    """
+    import matplotlib.pyplot as plt
+
+    from polyad.graph.reduction import clear_reduction_cache
+    from polyad_benchmarks.studies.cheeger_strategies import plotting as strategies
+    from polyad_benchmarks.studies.cheeger_strategies.experiment import Experiment
+
+    config = json.loads((ROOT / "studies/cheeger-strategies/fixtures/scenario.json").read_text())
+    config.update(fixedVertices=8, fixedComponents=2, fixedSupernodes=4, topologies=["path"], seeds=[11], repetitions=1)
+    experiment = Experiment(config)
+    figures = []
+    monkeypatch.setattr(strategies, "save", lambda figure, *args, **kwargs: figures.append(figure) or [])
+    try:
+        experiment.pid_churn()
+        strategies.churn({"records": experiment.records, "recipe": config}, tmp_path)
+        assert len(figures[0].axes) == 6
+        for index in (0, 1, 2):
+            assert "PID cached spectral" in figures[0].axes[index].get_legend_handles_labels()[1]
+        intervals = figures[0].axes[4].lines[0].get_ydata()
+        assert list(intervals) == pytest.approx([row["pid"]["intervalAfter"] for row in experiment.records])
+        events = {line.get_label(): list(line.get_ydata()) for line in figures[0].axes[5].lines}
+        assert events["Cache fallback (PID failure)"] == [row["pid"]["failure"] for row in experiment.records]
+        assert events["Scheduled fresh reduction"] == [row["pid"]["refreshScheduled"] for row in experiment.records]
+
+        # Archived results without PID observations retain their original layout.
+        strategies.churn({"records": []}, tmp_path)
+        assert len(figures[1].axes) == 4
+    finally:
+        clear_reduction_cache()
+        for figure in figures:
+            plt.close(figure)
+
+
+def test_outer_pid_plots_measured_targets_and_sparse_window_feedback(monkeypatch, tmp_path):
+    """
+    Plot real controller state without filling missing outer-loop observations with zero.
+    """
+    import matplotlib.pyplot as plt
+
+    from polyad.graph.reduction import clear_reduction_cache
+    from polyad_benchmarks.studies.cheeger_strategies import plotting as strategies
+    from polyad_benchmarks.studies.cheeger_strategies.experiment import Experiment
+
+    config = json.loads((ROOT / "studies/cheeger-strategies/fixtures/scenario.json").read_text())
+    config.update(fixedVertices=8, fixedComponents=2, fixedSupernodes=4, seeds=[11], repetitions=1)
+    config["pidFeedback"]["observationsPerPhase"] = 4
+    experiment = Experiment(config)
+    figures = []
+    monkeypatch.setattr(strategies, "save", lambda figure, *args, **kwargs: figures.append(figure) or [])
+    try:
+        experiment.pid_feedback()
+        strategies.pid_feedback({"records": experiment.records, "recipe": config}, tmp_path)
+        figure = figures[0]
+        assert len(figure.axes) == 6
+        labels = figure.axes[0].get_legend_handles_labels()[1]
+        assert {"Fixed-target PID", "Adaptive-target PID", "Computation-time goal"} <= set(labels)
+        target = next(line for line in figure.axes[1].lines if line.get_label() == "Adaptive-target PID")
+        rows = [row for row in experiment.records if row["strategy"] == "Adaptive-target PID"]
+        assert list(target.get_ydata()) == [row["pid"]["targetCacheRate"] for row in rows]
+        updates = [row for row in rows if row["outerPid"]["updated"]]
+        errors = next(line for line in figure.axes[4].lines if line.get_label() == "Adaptive-target PID")
+        assert list(errors.get_xdata()) == [row["step"] for row in updates]
+        assert list(errors.get_ydata()) == [row["outerPid"]["normalizedError"] for row in updates]
+        strategies.pid_feedback({"records": []}, tmp_path)
+        assert all(any("not collected" in text.get_text() for text in axis.texts) for axis in figures[1].axes)
+    finally:
+        clear_reduction_cache()
+        for figure in figures:
+            plt.close(figure)
+
+
+def test_cpu_companions_plot_measured_work_and_paired_relative_cost(monkeypatch, tmp_path):
+    """
+    Keep CPU work separate from occupied cores and do not invent archived measurements.
+    """
+    import matplotlib.pyplot as plt
+
+    from polyad_benchmarks.studies.cheeger_strategies import costs
+
+    recipe = {"fixedComponents": 2, "fixedTopology": "path"}
+    shared = {"sweep": "pid-feedback", "seed": 11, "repeat": 0, "step": 0, "phaseStep": 0, "durationSeconds": 0.002}
+    rows = [
+        {**shared, "strategy": "Fresh spectral", "cpuSeconds": 0.002, "averageMillicores": 1000, "millicoreSeconds": 2},
+        {**shared, "strategy": "Adaptive-target PID", "cpuSeconds": 0.001, "averageMillicores": 500, "millicoreSeconds": 1},
+    ]
+    figures = []
+    monkeypatch.setattr(costs, "save", lambda figure, *args, **kwargs: figures.append(figure) or [])
+    try:
+        costs.cpu_cost({"records": rows, "recipe": recipe}, tmp_path)
+        assert len(figures[0].axes) == 4 and len(figures[1].axes) == 6
+        for panel, value in ((1, 500), (2, 1), (3, 0.5)):
+            line = next(line for line in figures[0].axes[panel].lines if line.get_label() == "Adaptive-target PID")
+            assert list(line.get_ydata()) == [value]
+        costs.cpu_cost({"records": [{**shared, "strategy": "Fresh spectral"}], "recipe": recipe}, tmp_path)
+        assert all(any("not collected" in text.get_text() for text in axis.texts) for axis in figures[2].axes)
+    finally:
+        for figure in figures:
             plt.close(figure)
 
 

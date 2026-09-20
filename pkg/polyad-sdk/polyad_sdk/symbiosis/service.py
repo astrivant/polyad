@@ -16,7 +16,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from polyad_sdk.api.client import Client
-from polyad_sdk.api.interfaces import AdaptationReporter, ServiceLevelReporter
+from polyad_sdk.api.interfaces import AdaptationReporter, CapabilityAdvertiser, ServiceLevelReporter
+from polyad_sdk.capabilities import resource_availability
 from polyad_sdk.connections import WorkloadClient
 from polyad_sdk.connections.authorization import authorize_connection
 from polyad_sdk.events.filters import Filter
@@ -28,6 +29,7 @@ from polyad_sdk.symbiosis.models import Change, Settings, differences
 from polyad_sdk.symbiosis.state import State, projection
 from polyad_sdk.symbiosis.strategies import AdaptationStrategy, ConstraintStrategy
 from polyad_types import AdaptationReport, ConnectionResponse, ServiceConnectionRequest
+from polyad_types.api.capabilities import CapabilityAdvertisement
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -39,6 +41,7 @@ if TYPE_CHECKING:
     from polyad_sdk.events.subscriptions import Subscription
     from polyad_sdk.symbiosis.models import Environment
     from polyad_types import ServiceEndpoint
+    from polyad_types.api.capabilities import CapabilityContract, CapabilityOffer
     from polyad_types.api.service_level import ServiceLevelReport
     from polyad_types.api.throughput import ThroughputSample
     from polyad_types.events.envelope import Event
@@ -103,6 +106,7 @@ class AdaptiveService(ABC):
         adaptations: AdaptationReporter | None = None,
         service_levels: ServiceLevelReporter | None = None,
         connections: ConnectionNegotiator | None = None,
+        advertisements: CapabilityAdvertiser | None = None,
         strategies: Sequence[AdaptationStrategy] = (),
         require_strategies: bool = True,
         context: WorkloadContext | None = None,
@@ -121,6 +125,7 @@ class AdaptiveService(ABC):
             adaptations (AdaptationReporter | None): Authorized strategy lifecycle reporter; defaults to api when supported.
             service_levels (ServiceLevelReporter | None): Authorized SLA reporter; defaults to api when supported.
             connections (ConnectionNegotiator | None): Projected-token client for consent and connection requests.
+            advertisements (CapabilityAdvertiser | None): Explicit sharing-contract publisher; defaults to connections when supported.
             strategies (Sequence[AdaptationStrategy]): Ordered application components, copied at construction.
             require_strategies (bool): Require at least one strategy; false accepts undefined behavior for uncovered cases.
             context (WorkloadContext | None): Projected startup context; explicit construction defaults to identity only.
@@ -137,6 +142,9 @@ class AdaptiveService(ABC):
         self.identity, self.events, self.api, self.connections = identity, events, api, connections
         self.adaptations = adaptations if adaptations is not None else (api if isinstance(api, AdaptationReporter) else None)
         self.service_levels = service_levels if service_levels is not None else (api if isinstance(api, ServiceLevelReporter) else None)
+        self.advertisements = (
+            advertisements if advertisements is not None else (connections if isinstance(connections, CapabilityAdvertiser) else None)
+        )
         self.context = context if context is not None else WorkloadContext(identity, node_id=identity.node, runtime_node_name=identity.node)
         if self.context.identity != identity:
             raise ValueError("workload context must match the service identity")
@@ -665,6 +673,51 @@ class AdaptiveService(ABC):
         if (sample.graph, sample.graphUid, sample.kind) != (self.identity.graph, self.identity.graphUid, self.identity.kind):
             raise ValueError("throughput report targets a different graph boundary")
         return self.api.report_throughput(sample)
+
+    def advertise_capabilities(
+        self,
+        capabilities: Sequence[CapabilityOffer],
+        *,
+        labels: Mapping[str, str] | None = None,
+        ttl_seconds: int = 30,
+        include_resources: bool = False,
+    ) -> CapabilityContract:
+        """
+        Explicitly publish current sharing budgets for this service's Pod replica.
+
+        Args:
+            capabilities (Sequence[CapabilityOffer]): Work rates and optional slots assessed by the application.
+            labels (Mapping[str, str] | None): Application groups visible within existing discovery grants.
+            ttl_seconds (int): Server-timed lifetime, from 5 through 300 seconds.
+            include_resources (bool): Opt in to live cgroup observations and projected VPA bounds.
+
+        Returns:
+            CapabilityContract: Published contract; the application owns refresh scheduling and admission.
+        """
+        if self.advertisements is None:
+            raise RuntimeError("configure an authorized capability advertiser")
+        if type(include_resources) is not bool:
+            raise ValueError("include_resources must be boolean")
+        return self.advertisements.advertise_capabilities(
+            CapabilityAdvertisement(
+                self.identity,
+                tuple(capabilities),
+                dict(labels or {}),
+                resource_availability(self.context) if include_resources else None,
+                ttl_seconds,
+            )
+        )
+
+    def withdraw_capabilities(self) -> dict[str, Any]:
+        """
+        Stop advertising this Pod's capacity without withdrawing sibling replicas.
+
+        Returns:
+            dict[str, Any]: Withdrawal acknowledgement; active work still needs application-owned draining.
+        """
+        if self.advertisements is None:
+            raise RuntimeError("configure an authorized capability advertiser")
+        return self.advertisements.withdraw_capabilities(self.identity)
 
     def report_service_level(self, report: ServiceLevelReport) -> dict[str, Any]:
         """

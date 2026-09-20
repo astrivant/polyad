@@ -13,10 +13,13 @@ from attrs import asdict, evolve, field, frozen
 # Preserve existing import paths while keeping each exception defined centrally.
 from polyad.exceptions.graph import CheegerIncomplete as CheegerIncomplete
 from polyad.graph.reduction import cached_quotient, fresh_spectral_reduction
+from polyad.graph.refresh import begin_refresh, finish_refresh
 from polyad_types.graphs.rules import CheegerComputation
 
 if TYPE_CHECKING:
     from typing import Any
+
+    from polyad.graph.refresh import RefreshTicket
 
 __all__ = (
     "CheegerIncomplete",
@@ -43,6 +46,7 @@ class CheegerResult:
         skippedPriorityCuts (int): Configured subsets absent from or equal to the whole boundary.
         durationSeconds (float): Elapsed wall time for this calculation, including projection.
         inputs (dict[str, int | float]): Effective budgets, ceilings, reduction state and graph dimensions.
+        scheduler (dict[str, object]): Causal PID diagnostics; empty when adaptive scheduling is inactive.
     """
 
     exact: bool
@@ -56,6 +60,7 @@ class CheegerResult:
     skippedPriorityCuts: int = 0
     durationSeconds: float = 0.0
     inputs: dict[str, int | float] = field(factory=dict)
+    scheduler: dict[str, object] = field(factory=dict)
 
     def report(self) -> dict[str, Any]:
         """
@@ -74,6 +79,7 @@ def compute_cheeger(
     limits: CheegerComputation | None = None,
     minimum: float | None = None,
     maximum: float | None = None,
+    cache_scope: str = "",
 ) -> CheegerResult:
     """
     Evaluate configured cuts before an exhaustive Gray-code traversal under bounded work.
@@ -84,6 +90,7 @@ def compute_cheeger(
         limits (CheegerComputation | None): Optional administrator ceilings; local requests cannot exceed them.
         minimum (float | None): Stop early when a witnessed cut disproves this inclusive hard minimum.
         maximum (float | None): Use certified lower bounds to disprove this inclusive hard maximum.
+        cache_scope (str): Stable boundary identity isolating controllers and partitions; set it for independent graphs.
 
     Returns:
         CheegerResult: Exact constant, a certified violation, or an explicitly incomplete search.
@@ -115,6 +122,11 @@ def compute_cheeger(
                 raise ValueError(f"Cheeger reduction {name}={getattr(reduction, name)} exceeds operator ceiling {getattr(allowed, name)}")
         if reduction.cache and not allowed.cache:
             raise ValueError("Cheeger reduction cache is disabled by the operator")
+        reduction = evolve(
+            reduction,
+            strategy="CacheFirst" if "CacheFirst" in (reduction.strategy, allowed.strategy) else "AdaptivePID",
+            targetSeconds=allowed.targetSeconds,
+        )
 
     # Carry the effective configuration into every return path so an incomplete
     # answer can be explained using the limits that actually governed this call.
@@ -131,8 +143,14 @@ def compute_cheeger(
         "reductionEnabled": int(reduction.enabled),
     }
 
+    ticket: RefreshTicket | None = None
+    cache_attempted = refreshed = False
+
     def finish(value: CheegerResult) -> CheegerResult:
-        return evolve(value, durationSeconds=time.perf_counter() - timed, inputs=dict(inputs))
+        scheduler = (
+            finish_refresh(ticket, time.perf_counter() - timed, cache_attempted=cache_attempted, refreshed=refreshed) if ticket else {}
+        )
+        return evolve(value, durationSeconds=time.perf_counter() - timed, inputs=dict(inputs), scheduler=scheduler)
 
     if len(graph) > budgets["maxVertices"]:
         return finish(CheegerResult(False, 0.0, None, (), 0, f"VertexLimit: at most {budgets['maxVertices']} vertices per boundary"))
@@ -140,6 +158,7 @@ def compute_cheeger(
     # This metric counts connections, not weights or directions. Parallel edges
     # collapse to one connection, and self-loops cannot cross a cut.
     simple: nx.Graph[str] = nx.Graph()
+    simple.graph["cheegerCacheScope"] = cache_scope
     simple.add_nodes_from(graph)
     simple.add_edges_from(graph.edges())
     simple.remove_edges_from(nx.selfloop_edges(simple))
@@ -183,10 +202,16 @@ def compute_cheeger(
     # callers without thresholds deliberately continue to the exact-search path.
     if reduction.enabled and (minimum is not None or maximum is not None) and len(simple) <= reduction.maxVertices:
         certificates = []
+        if reduction.cache and reduction.strategy == "AdaptivePID":
+            ticket = begin_refresh(simple, reduction)
+            inputs["adaptivePID"] = 1
+            inputs["targetSeconds"] = reduction.targetSeconds
 
         # Tier 1 reuses a partition, but rescores its cuts against today's edges.
-        if reduction.cache and (cached := cached_quotient(simple, reduction)) is not None:
-            certificates.append(cached)
+        if reduction.cache and not (ticket and ticket.scheduled):
+            cache_attempted = True
+            if (cached := cached_quotient(simple, reduction)) is not None:
+                certificates.append(cached)
         for certificate in certificates:
             inputs["reductionEvaluatedCuts"] = certificate.evaluatedCuts
             if reason := decision(certificate.lowerBound, certificate.upperBound):
@@ -206,6 +231,7 @@ def compute_cheeger(
         # Tier 2 rebuilds the spectral partition when reuse is unavailable or
         # its interval cannot decide the policy. Retain these bounds for fallback.
         fresh = fresh_spectral_reduction(simple, reduction)
+        refreshed = True
         inputs["reductionEvaluatedCuts"] = fresh.evaluatedCuts
         reduction_lower, reduction_upper, reduction_cut = fresh.lowerBound, fresh.upperBound, fresh.cut
         if reason := decision(fresh.lowerBound, fresh.upperBound):

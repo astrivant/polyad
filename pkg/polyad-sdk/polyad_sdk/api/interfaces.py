@@ -11,13 +11,48 @@ if TYPE_CHECKING:
     from typing import Any
 
     from polyad_types import AdaptationReport, ConnectionResponse, ServiceConnectionRequest, ServiceLevelReport, ThroughputSample
+    from polyad_types.api.capabilities import CapabilityAdvertisement, CapabilityContract
+    from polyad_types.api.discovery import ServiceEndpoint
 
 __all__ = (
     "AdaptationReporter",
+    "CapabilityAdvertiser",
     "ConnectionNegotiator",
     "ServiceLevelReporter",
     "ThroughputReporter",
 )
+
+
+class CapabilityAdvertiser(ABC):
+    """
+    Publish expiring offers using an explicitly authorized Pod identity.
+    """
+
+    @abstractmethod
+    def advertise_capabilities(self, advertisement: CapabilityAdvertisement) -> CapabilityContract:
+        """
+        Replace this Pod's complete sharing policy and refresh its server-timed TTL.
+
+        Args:
+            advertisement (CapabilityAdvertisement): Nonempty work offers for this exact service.
+
+        Returns:
+            CapabilityContract: Verified replica identity and server-assigned expiry.
+        """
+        ...
+
+    @abstractmethod
+    def withdraw_capabilities(self, endpoint: ServiceEndpoint) -> dict[str, Any]:
+        """
+        Withdraw this Pod's offer without affecting sibling replicas.
+
+        Args:
+            endpoint (ServiceEndpoint): Exact advertised service identity.
+
+        Returns:
+            dict[str, Any]: Withdrawal acknowledgement, including when no offer remains.
+        """
+        ...
 
 
 class ServiceLevelReporter(ABC):

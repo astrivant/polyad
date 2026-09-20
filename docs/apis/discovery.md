@@ -104,6 +104,13 @@ per-branch errors. Workload specifications, Secret contents and Pod token claims
 are never returned. The directory reads current Kubernetes state; a missing or
 replaced UID cannot resolve to a new incarnation silently.
 
+Services can also publish [TTL-bound capability contracts](../workloads/capability-contracts.md)
+describing work types, available capacity and willing sharing limits. Records
+include per-Pod `contracts`; `client.offers(capabilities=("image.resize",),
+labels={"team": "media"})` filters those contracts within the same graph grants.
+They expire independently of topology and require polling, not event replay.
+Publication requires separate Pod-bound authentication and `advertise` RBAC.
+
 ## Subscribe with filters and hooks
 
 Read `discover()` first, then subscribe to each relevant cluster using the

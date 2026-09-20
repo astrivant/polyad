@@ -11,9 +11,11 @@ from __future__ import annotations
 
 from polyad_sdk.api.client import Client as Client
 from polyad_sdk.api.interfaces import AdaptationReporter as AdaptationReporter
+from polyad_sdk.api.interfaces import CapabilityAdvertiser as CapabilityAdvertiser
 from polyad_sdk.api.interfaces import ConnectionNegotiator as ConnectionNegotiator
 from polyad_sdk.api.interfaces import ServiceLevelReporter as ServiceLevelReporter
 from polyad_sdk.api.interfaces import ThroughputReporter as ThroughputReporter
+from polyad_sdk.capabilities import resource_availability as resource_availability
 from polyad_sdk.connections import WorkloadClient as WorkloadClient
 from polyad_sdk.connections import WorkloadEndpoint as WorkloadEndpoint
 from polyad_sdk.events.filters import Filter as Filter
@@ -55,10 +57,20 @@ from polyad_sdk.symbiosis.strategies import ResourceBudgetStrategy as ResourceBu
 from polyad_sdk.symbiosis.strategies import ResourceStrategy as ResourceStrategy
 from polyad_sdk.symbiosis.strategies import ThresholdStrategy as ThresholdStrategy
 from polyad_sdk.symbiosis.strategies import TopologyStrategy as TopologyStrategy
+from polyad_types.api.capabilities import CapabilityAdvertisement as CapabilityAdvertisement
+from polyad_types.api.capabilities import CapabilityContract as CapabilityContract
+from polyad_types.api.capabilities import CapabilityOffer as CapabilityOffer
+from polyad_types.api.capabilities import ResourceAvailability as ResourceAvailability
 from polyad_types.api.service_level import ServiceLevelReport as ServiceLevelReport
 from polyad_types.events.envelope import Event as Event
 
 __all__ = (
+    "CapabilityAdvertisement",
+    "CapabilityContract",
+    "CapabilityOffer",
+    "ResourceAvailability",
+    "CapabilityAdvertiser",
+    "resource_availability",
     "APIError",
     "AdaptationReporter",
     "AdaptationStrategy",

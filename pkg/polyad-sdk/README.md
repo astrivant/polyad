@@ -5,6 +5,7 @@
 
 - [Installation](#installation)
 - [Optional workload protocols](#optional-workload-protocols)
+- [TTL-bound capability contracts](#ttl-bound-capability-contracts)
 - [Package layout](#package-layout)
 - [Environment and projected defaults](#environment-and-projected-defaults)
 - [Adaptive services and deltas](#adaptive-services-and-deltas)
@@ -84,6 +85,20 @@ Call `client.check()` before admitting work on long-lived connections and close
 them on denial; receipt expiry is not a background socket-termination mechanism.
 See [workload protocols](../../docs/workloads/workload-protocols.md) for examples,
 TLS, Istio port declarations, optional chart reference values and limitations.
+
+## TTL-bound capability contracts
+
+Services can publish work types, spare capacity and willing sharing limits using
+`CapabilityOffer`, `CapabilityAdvertisement` and `Client.advertise_capabilities()`.
+`Client.offers()` selects fresh peer contracts by labels and work types within
+existing discovery grants. `AdaptiveService` provides publication and withdrawal
+helpers, with optional live cgroup and VPA disclosure via `resource_availability()`.
+
+Each Ready Pod owns one short-lived contract. Publishing requires a Pod-bound
+token and graph-specific `advertise` RBAC; labels do not grant access. No extra
+dependency, background renewal, resource reservation or automatic scheduling is
+introduced. See [capability contracts](../../docs/workloads/capability-contracts.md)
+for setup, shared-budget semantics, refresh, expiry and examples.
 
 ## Package layout
 

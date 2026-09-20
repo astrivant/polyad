@@ -77,7 +77,7 @@ INTRODUCTIONS = {
     "cheeger-strategies": {
         "churn": (
             "Cheeger strategies: accuracy and cost under churn",
-            "How do cached spectral cuts, fresh spectral cuts, PCA and the production selector compare on the same changing graphs?",
+            "How do cached cuts, PID-controlled refresh, fresh spectral cuts, PCA and the selector compare as graphs change?",
         ),
         "activation": (
             "Cheeger strategies: when each tier decides",
@@ -98,6 +98,18 @@ INTRODUCTIONS = {
         "controls": (
             "Cheeger strategies: work limits and decision correctness",
             "Which controls resolve the policy, which exhaust their budgets, and does every decisive answer match exhaustive truth?",
+        ),
+        "pid-feedback": (
+            "Cheeger strategies: adaptive cache targets and refresh feedback",
+            "Can a slower time-feedback PID adjust cache reuse without hiding its refresh costs or cut errors?",
+        ),
+        "pid-cost": (
+            "Cheeger strategies: CPU expense of cache-target feedback",
+            "How much CPU work does each controller consume, and how does that differ from occupied millicores while it computes?",
+        ),
+        "cpu-cost": (
+            "Cheeger strategies: CPU work across controlled graph changes",
+            "How do churn, graph size and quotient size change CPU cost per calculation and average occupied cores?",
         ),
     },
     "soul": {

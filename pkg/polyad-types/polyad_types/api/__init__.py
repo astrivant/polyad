@@ -10,6 +10,10 @@ from polyad_types.api.auth import Authentication as Authentication
 from polyad_types.api.auth import CredentialAssignment as CredentialAssignment
 from polyad_types.api.auth import GraphAccess as GraphAccess
 from polyad_types.api.auth import KeyDirection as KeyDirection
+from polyad_types.api.capabilities import CapabilityAdvertisement as CapabilityAdvertisement
+from polyad_types.api.capabilities import CapabilityContract as CapabilityContract
+from polyad_types.api.capabilities import CapabilityOffer as CapabilityOffer
+from polyad_types.api.capabilities import ResourceAvailability as ResourceAvailability
 from polyad_types.api.discovery import AccessMode as AccessMode
 from polyad_types.api.discovery import AtlasAccess as AtlasAccess
 from polyad_types.api.discovery import ServiceAccess as ServiceAccess
@@ -29,6 +33,10 @@ from polyad_types.api.throughput import ThroughputSample as ThroughputSample
 from polyad_types.api.throughput import TrafficSample as TrafficSample
 
 __all__ = (
+    "CapabilityAdvertisement",
+    "CapabilityContract",
+    "CapabilityOffer",
+    "ResourceAvailability",
     "APIKey",
     "AccessMode",
     "ActivationRequest",

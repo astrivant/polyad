@@ -18,6 +18,7 @@ _SERVER_SCRIPTS = (
     "coordination/backlog.lua",
     "coordination/publish.lua",
     "coordination/pulse.lua",
+    "events/capabilities.lua",
     "events/publish-topology.lua",
     "events/publish.lua",
     "events/read.lua",

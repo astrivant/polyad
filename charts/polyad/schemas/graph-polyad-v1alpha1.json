@@ -531,6 +531,20 @@
                       "description": "Largest changed-edge fraction eligible for cached partition reuse.",
                       "minimum": 0,
                       "maximum": 1
+                    },
+                    "strategy": {
+                      "type": "string",
+                      "enum": [
+                        "AdaptivePID",
+                        "CacheFirst"
+                      ],
+                      "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                    },
+                    "targetSeconds": {
+                      "type": "number",
+                      "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied.",
+                      "minimum": 1e-06,
+                      "maximum": 300
                     }
                   }
                 }
@@ -2046,6 +2060,10 @@
                       "additionalProperties": {
                         "type": "number"
                       }
+                    },
+                    "scheduler": {
+                      "type": "object",
+                      "x-kubernetes-preserve-unknown-fields": true
                     }
                   }
                 },
@@ -2109,6 +2127,10 @@
                       "additionalProperties": {
                         "type": "number"
                       }
+                    },
+                    "scheduler": {
+                      "type": "object",
+                      "x-kubernetes-preserve-unknown-fields": true
                     }
                   }
                 },
@@ -2172,6 +2194,10 @@
                     "additionalProperties": {
                       "type": "number"
                     }
+                  },
+                  "scheduler": {
+                    "type": "object",
+                    "x-kubernetes-preserve-unknown-fields": true
                   },
                   "layout": {
                     "type": "string"

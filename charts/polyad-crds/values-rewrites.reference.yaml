@@ -172,6 +172,10 @@ rewrites: {}
 #               cacheEntries: 1
 #               ## @param rewrites.example.spec.topology.throughput.cheegerComputation.reduction.maxEdgeChurn [number, string] Optional. No CRD default; the value shown is illustrative. Largest changed-edge fraction eligible for cached partition reuse.
 #               maxEdgeChurn: 0
+#               ## @param rewrites.example.spec.topology.throughput.cheegerComputation.reduction.strategy [string] Optional. No CRD default; the value shown is illustrative. Choices: "AdaptivePID", "CacheFirst". Preferred scheduler; either operator or policy can select legacy CacheFirst.
+#               strategy: "AdaptivePID"
+#               ## @param rewrites.example.spec.topology.throughput.cheegerComputation.reduction.targetSeconds [number, string] Optional. No CRD default; the value shown is illustrative. Soft mean computation-time goal; the operator value governs when administrator limits are supplied.
+#               targetSeconds: 1e-06
 #           ## @param rewrites.example.spec.topology.throughput.maxWeightStep [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum percentage-point change per destination in one automatic adjustment.
 #           maxWeightStep: 1
 #           ## @param rewrites.example.spec.topology.throughput.trafficMode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Tiers", "Headroom". Use calibrated tier percentages or measured per-destination sustainable capacity.

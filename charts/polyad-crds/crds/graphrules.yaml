@@ -103,6 +103,18 @@ spec:
                         description: Largest changed-edge fraction eligible for cached partition reuse.
                         minimum: 0
                         maximum: 1
+                      strategy:
+                        type: string
+                        enum:
+                        - AdaptivePID
+                        - CacheFirst
+                        description: Preferred scheduler; either operator or policy can select legacy CacheFirst.
+                      targetSeconds:
+                        type: number
+                        description: Soft mean computation-time goal; the operator value governs when administrator
+                          limits are supplied.
+                        minimum: 1.0e-06
+                        maximum: 300
               scope:
                 type: string
                 enum:

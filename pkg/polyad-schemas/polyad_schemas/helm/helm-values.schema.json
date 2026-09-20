@@ -809,7 +809,9 @@
                 "supernodes",
                 "cache",
                 "cacheEntries",
-                "maxEdgeChurn"
+                "maxEdgeChurn",
+                "strategy",
+                "targetSeconds"
               ],
               "description": "Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search; graph policies must also opt in.",
               "properties": {
@@ -850,6 +852,20 @@
                   "minimum": 0,
                   "maximum": 1,
                   "description": "Maximum symmetric changed-edge fraction eligible for cached partition reuse."
+                },
+                "strategy": {
+                  "type": "string",
+                  "enum": [
+                    "AdaptivePID",
+                    "CacheFirst"
+                  ],
+                  "description": "Preferred scheduler after reduction opt-in; either operator or graph policy may select CacheFirst."
+                },
+                "targetSeconds": {
+                  "type": "number",
+                  "minimum": 1e-06,
+                  "maximum": 300,
+                  "description": "Administrator-owned soft mean computation-time goal, not a hard timeout or CPU allocation."
                 }
               }
             }
@@ -25347,6 +25363,38 @@
                                             }
                                           ],
                                           "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                        },
+                                        "strategy": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "enum": [
+                                                "AdaptivePID",
+                                                "CacheFirst"
+                                              ],
+                                              "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                                        },
+                                        "targetSeconds": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied.",
+                                              "minimum": 1e-06,
+                                              "maximum": 300
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
                                         }
                                       },
                                       "required": [],
@@ -28049,6 +28097,38 @@
                                                     }
                                                   ],
                                                   "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                },
+                                                "strategy": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "enum": [
+                                                        "AdaptivePID",
+                                                        "CacheFirst"
+                                                      ],
+                                                      "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                                                },
+                                                "targetSeconds": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied.",
+                                                      "minimum": 1e-06,
+                                                      "maximum": 300
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
                                                 }
                                               },
                                               "required": [],
@@ -32334,6 +32414,38 @@
                                                     }
                                                   ],
                                                   "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                },
+                                                "strategy": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "enum": [
+                                                        "AdaptivePID",
+                                                        "CacheFirst"
+                                                      ],
+                                                      "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                                                },
+                                                "targetSeconds": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied.",
+                                                      "minimum": 1e-06,
+                                                      "maximum": 300
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
                                                 }
                                               },
                                               "required": [],
@@ -37802,6 +37914,38 @@
                                                             }
                                                           ],
                                                           "description": "Largest changed-edge fraction eligible for cached partition reuse."
+                                                        },
+                                                        "strategy": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "string",
+                                                              "enum": [
+                                                                "AdaptivePID",
+                                                                "CacheFirst"
+                                                              ],
+                                                              "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+                                                        },
+                                                        "targetSeconds": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "number",
+                                                              "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied.",
+                                                              "minimum": 1e-06,
+                                                              "maximum": 300
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
                                                         }
                                                       },
                                                       "required": [],

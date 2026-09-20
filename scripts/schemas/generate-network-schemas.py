@@ -82,6 +82,7 @@ def cheeger_result_schema() -> dict[str, Any]:
             "skippedPriorityCuts": {"type": "integer", "minimum": 0},
             "durationSeconds": {"type": "number", "minimum": 0},
             "inputs": {"type": "object", "additionalProperties": {"type": "number"}},
+            "scheduler": {"type": "object", "x-kubernetes-preserve-unknown-fields": True},
         },
     }
 

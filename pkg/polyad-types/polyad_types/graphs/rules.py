@@ -101,6 +101,8 @@ class CheegerReduction:
         cache (bool): Reevaluate a recently cached quotient partition on the current graph first.
         cacheEntries (int): Maximum process-local partitions retained by the operator.
         maxEdgeChurn (float): Largest changed-edge fraction eligible for cached partition reuse.
+        strategy (Literal['AdaptivePID', 'CacheFirst']): Preferred scheduler; either operator or policy can select legacy CacheFirst.
+        targetSeconds (float): Soft mean computation-time goal; the operator value governs when administrator limits are supplied.
     """
 
     enabled: bool = False
@@ -110,6 +112,8 @@ class CheegerReduction:
     cache: bool = True
     cacheEntries: int = field(default=128, metadata={"schema": {"minimum": 1, "maximum": 4096}})
     maxEdgeChurn: float = field(default=0.1, metadata={"schema": {"minimum": 0, "maximum": 1}})
+    strategy: Literal["AdaptivePID", "CacheFirst"] = "AdaptivePID"
+    targetSeconds: float = field(default=0.0015, metadata={"schema": {"minimum": 0.000001, "maximum": 300}})
 
     def __attrs_post_init__(self) -> None:
         """
@@ -131,6 +135,11 @@ class CheegerReduction:
         churn = self.maxEdgeChurn
         if isinstance(churn, bool) or not isinstance(churn, (int, float)) or not math.isfinite(churn) or not 0 <= churn <= 1:
             raise ValueError("Cheeger reduction maxEdgeChurn must be finite and between zero and one")
+        if self.strategy not in {"AdaptivePID", "CacheFirst"}:
+            raise ValueError("Cheeger reduction strategy must be AdaptivePID or CacheFirst")
+        target = self.targetSeconds
+        if type(target) not in (int, float) or not math.isfinite(target) or not 0.000001 <= target <= 300:
+            raise ValueError("Cheeger reduction targetSeconds must be finite and between 0.000001 and 300")
 
 
 @frozen

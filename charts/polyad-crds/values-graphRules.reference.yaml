@@ -53,6 +53,10 @@ graphRules: {}
 #           cacheEntries: 1
 #           ## @param graphRules.example.spec.cheegerComputation.reduction.maxEdgeChurn [number, string] Optional. No CRD default; the value shown is illustrative. Largest changed-edge fraction eligible for cached partition reuse.
 #           maxEdgeChurn: 0
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.strategy [string] Optional. No CRD default; the value shown is illustrative. Choices: "AdaptivePID", "CacheFirst". Preferred scheduler; either operator or policy can select legacy CacheFirst.
+#           strategy: "AdaptivePID"
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.targetSeconds [number, string] Optional. No CRD default; the value shown is illustrative. Soft mean computation-time goal; the operator value governs when administrator limits are supplied.
+#           targetSeconds: 1e-06
 #       ## @param graphRules.example.spec.scope [string] Optional. Default: "Subtree". Choices: "Boundary", "Subtree". Boundary applies locally; Subtree propagates. Namespace rules select every boundary.
 #       scope: "Subtree"
 #       ## @param graphRules.example.spec.network [object, string] Optional. No CRD default; the value shown is illustrative. Isolate a graph subtree and intersect its exceptions with inherited constraints.

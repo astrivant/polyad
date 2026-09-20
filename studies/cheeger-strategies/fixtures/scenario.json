@@ -19,5 +19,37 @@
   "boundaryCount": 4,
   "maxCuts": [1, 7, 31, 127, 32767],
   "timeouts": [0.001, 0.01, 1],
-  "timeoutSeconds": 10
+  "timeoutSeconds": 10,
+  "preferredTimeTargetSeconds": 0.0015,
+  "preferredWarmupObservations": 12,
+  "pidRefresh": {
+    "enabled": true,
+    "proportionalGain": 0.6,
+    "integralGain": 0.4,
+    "derivativeGain": 0.2,
+    "targetCacheRate": 0,
+    "initialInterval": 4,
+    "minInterval": 1,
+    "maxInterval": 8
+  },
+  "pidFeedback": {
+    "enabled": true,
+    "observationsPerPhase": 16,
+    "controller": {
+      "updateEvery": 4,
+      "proportionalGain": 0.2,
+      "integralGain": 0.05,
+      "derivativeGain": 0.02,
+      "initialCacheRate": 0.25,
+      "minCacheRate": 0,
+      "maxCacheRate": 0.8
+    },
+    "phases": [
+      {"name": "Steady", "replacement": 0, "timeTargetSeconds": 0.0015},
+      {"name": "Churn only", "replacement": 0.3, "timeTargetSeconds": 0.0015},
+      {"name": "Tighter time goal", "replacement": 0.3, "timeTargetSeconds": 0.0003},
+      {"name": "More time headroom", "replacement": 0.3, "timeTargetSeconds": 0.0015},
+      {"name": "Topology recovery", "replacement": 0, "timeTargetSeconds": 0.0015}
+    ]
+  }
 }

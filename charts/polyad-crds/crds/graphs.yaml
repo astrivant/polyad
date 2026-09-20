@@ -442,6 +442,18 @@ spec:
                             description: Largest changed-edge fraction eligible for cached partition reuse.
                             minimum: 0
                             maximum: 1
+                          strategy:
+                            type: string
+                            enum:
+                            - AdaptivePID
+                            - CacheFirst
+                            description: Preferred scheduler; either operator or policy can select legacy CacheFirst.
+                          targetSeconds:
+                            type: number
+                            description: Soft mean computation-time goal; the operator value governs when administrator
+                              limits are supplied.
+                            minimum: 1.0e-06
+                            maximum: 300
                   maxWeightStep:
                     type: integer
                     description: Maximum percentage-point change per destination in one automatic adjustment.
@@ -1566,6 +1578,9 @@ spec:
                         type: object
                         additionalProperties:
                           type: number
+                      scheduler:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
                   currentComputation:
                     type: object
                     nullable: true
@@ -1602,6 +1617,9 @@ spec:
                         type: object
                         additionalProperties:
                           type: number
+                      scheduler:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
                   candidateComputations:
                     type: array
                     items:
@@ -1639,6 +1657,9 @@ spec:
                           type: object
                           additionalProperties:
                             type: number
+                        scheduler:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         layout:
                           type: string
                   mode:

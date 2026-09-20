@@ -17,6 +17,7 @@ from polyad_types.resources import BOUNDARY_KINDS
 if TYPE_CHECKING:
     from typing import Any
 
+    from polyad.events.capabilities import AdvertisementStore
     from polyad.events.store import EventStore
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.clusters.federation import Federation
@@ -30,7 +31,15 @@ class Directory:
     Read only current permitted graph identities and public runtime metadata.
     """
 
-    def __init__(self, api: API, namespace: str, federation: Federation, streams: dict[str, EventStore]) -> None:
+    def __init__(
+        self,
+        api: API,
+        namespace: str,
+        federation: Federation,
+        streams: dict[str, EventStore],
+        *,
+        advertisements: AdvertisementStore | None = None,
+    ) -> None:
         """
         Share administrator-registered transports and existing event streams.
 
@@ -39,8 +48,10 @@ class Directory:
             namespace (str): Local operator namespace.
             federation (Federation): Registered cluster resolver; no caller-supplied URLs.
             streams (dict[str, EventStore]): Available local and root-held cluster event streams.
+            advertisements (AdvertisementStore | None): Optional expiring contract registry at this discovery authority.
         """
         self.api, self.namespace, self.federation, self.streams = api, namespace, federation, streams
+        self.advertisements = advertisements
 
     def resolve(self, cluster: str) -> tuple[API, str]:
         """
@@ -194,6 +205,18 @@ class Directory:
         snapshot = await topology_snapshot(api, obj, list(unique.values()))
         if not snapshot["valid"]:
             raise Unavailable("graph topology cannot currently fulfill discovery")
+        contracts = []
+
+        # Read offers only after all graph grants and bilateral discovery scopes
+        # have passed. Selectors never expand these permissions.
+        if (
+            self.advertisements is not None
+            and not snapshot["terminating"]
+            and not obj["spec"].get("suspend")
+            and obj.get("status", {}).get("phase") != "Stopped"
+            and not snapshot["templateOnly"]
+        ):
+            contracts = await self.advertisements.contracts(path[0], api)
         services, branches = [], []
         for node in snapshot["nodes"]:
             if not node["desired"]:
@@ -203,6 +226,7 @@ class Directory:
                     "graph": path[0],
                     "node": node,
                     "revision": snapshot["revision"],
+                    "contracts": [item for item in contracts if item["advertisement"]["endpoint"]["node"] == node["name"]],
                     "endpoint": {
                         "cluster": cluster,
                         "namespace": target.namespace,

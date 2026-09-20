@@ -6,23 +6,32 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from collections import deque
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, build_opener
 
-from polyad_sdk.api.interfaces import AdaptationReporter, ConnectionNegotiator, ServiceLevelReporter, ThroughputReporter
+from polyad_sdk.api.interfaces import (
+    AdaptationReporter,
+    CapabilityAdvertiser,
+    ConnectionNegotiator,
+    ServiceLevelReporter,
+    ThroughputReporter,
+)
 from polyad_sdk.events.source import EventSource
 from polyad_sdk.exceptions.api import APIError
 from polyad_sdk.observability import Telemetry
 from polyad_sdk.transport.http import _NoRedirect
 from polyad_types import ActivationRequest, to_dict
+from polyad_types.api.capabilities import CapabilityAdvertisement, CapabilityContract
 from polyad_types.events.envelope import DEFAULT_MAX_EVENT_BYTES, Event, EventStreamSettings, validate_event_limit
 from polyad_types.exceptions.events import EventTooLarge
+from polyad_types.serialization import from_dict
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Mapping, Sequence
     from threading import Event as StopEvent
     from typing import Any, Literal
 
@@ -32,6 +41,7 @@ if TYPE_CHECKING:
         ConnectionRequest,
         ConnectionResponse,
         ServiceConnectionRequest,
+        ServiceEndpoint,
         ServiceLevelReport,
         ThroughputSample,
     )
@@ -39,7 +49,7 @@ if TYPE_CHECKING:
 __all__ = ("Client",)
 
 
-class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelReporter, ConnectionNegotiator):
+class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelReporter, ConnectionNegotiator, CapabilityAdvertiser):
     """
     Call Polyad APIs with no implicit mutation retries.
     """
@@ -136,6 +146,78 @@ class Client(EventSource, ThroughputReporter, AdaptationReporter, ServiceLevelRe
             dict[str, Any]: Durable proposal awaiting peer approval and policy admission.
         """
         return self._request("POST", "/v1/connections/atlas", to_dict(request))
+
+    def advertise_capabilities(self, advertisement: CapabilityAdvertisement) -> CapabilityContract:
+        """
+        Replace this Pod's complete TTL-bound contract through the connections listener.
+
+        Args:
+            advertisement (CapabilityAdvertisement): Application-assessed capacity and sharing limits; must be nonempty.
+
+        Returns:
+            CapabilityContract: Server-timed offer, not a reservation or a network connection.
+        """
+        if not advertisement.capabilities:
+            raise ValueError("use withdraw_capabilities to remove the contract")
+        return from_dict(self._request("POST", "/v1/capabilities", to_dict(advertisement)), CapabilityContract)
+
+    def withdraw_capabilities(self, endpoint: ServiceEndpoint) -> dict[str, Any]:
+        """
+        Remove only this authenticated Pod's contract through the connections listener.
+
+        Args:
+            endpoint (ServiceEndpoint): Exact graph incarnation and logical service.
+
+        Returns:
+            dict[str, Any]: Idempotent withdrawal acknowledgement.
+        """
+        return self._request("POST", "/v1/capabilities", to_dict(CapabilityAdvertisement(endpoint, ())))
+
+    def offers(
+        self,
+        *,
+        capabilities: Sequence[str] = (),
+        labels: Mapping[str, str] | None = None,
+        available_only: bool = True,
+        max_graphs: int = 256,
+    ) -> Iterator[CapabilityContract]:
+        """
+        Discover authorized replica offers matching all requested labels and work types.
+
+        Args:
+            capabilities (Sequence[str]): Required capability names; empty accepts any advertised type.
+            labels (Mapping[str, str] | None): Exact, conjunctive application group selectors.
+            available_only (bool): Require positive offered rates and nonzero slots for each requested type.
+            max_graphs (int): Existing directory traversal bound, from 1 through 4096.
+
+        Yields:
+            CapabilityContract: Fresh matching contract; rates for different work types share the same provider pool.
+        """
+        if isinstance(capabilities, (str, bytes)) or any(not isinstance(item, str) or not item for item in capabilities):
+            raise ValueError("capabilities must be a sequence of nonempty names")
+        if type(available_only) is not bool:
+            raise ValueError("available_only must be boolean")
+        selectors = dict(labels or {})
+        if any(not isinstance(key, str) or not isinstance(value, str) for key, value in selectors.items()):
+            raise ValueError("label selectors must be strings")
+        required = set(capabilities)
+        for service in self.services(max_graphs=max_graphs):
+            for value in service.get("contracts", []):
+                contract = from_dict(value, CapabilityContract)
+                offer = contract.advertisement
+
+                # Recheck expiry at yield time, including after a paused iterator.
+                # Labels filter already-authorized discovery; they confer no access.
+                if contract.expiresAt <= time.time() or any(offer.labels.get(key) != item for key, item in selectors.items()):
+                    continue
+                candidates = {item.name: item for item in offer.capabilities}
+                if not required <= candidates.keys():
+                    continue
+                selected = [candidates[name] for name in required] if required else list(candidates.values())
+                usable = [item.offered_per_second > 0 and item.offered_concurrency != 0 for item in selected]
+                if available_only and not (all(usable) if required else any(usable)):
+                    continue
+                yield contract
 
     def services(self, *, max_graphs: int = 256) -> Iterator[dict[str, Any]]:
         """

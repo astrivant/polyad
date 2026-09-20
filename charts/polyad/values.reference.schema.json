@@ -220,6 +220,12 @@
                 },
                 "maxEdgeChurn": {
                   "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/maxEdgeChurn"
+                },
+                "strategy": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/strategy"
+                },
+                "targetSeconds": {
+                  "$ref": "values.schema.json#/properties/operator/properties/cheeger/properties/reduction/properties/targetSeconds"
                 }
               }
             }
@@ -5573,6 +5579,26 @@
                                               "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
                                             }
                                           ]
+                                        },
+                                        "strategy": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/1"
+                                            }
+                                          ]
+                                        },
+                                        "targetSeconds": {
+                                          "anyOf": [
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/0"
+                                            },
+                                            {
+                                              "$ref": "values.schema.json#/properties/polyadResources/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
+                                            }
+                                          ]
                                         }
                                       }
                                     },
@@ -6297,6 +6323,26 @@
                                                     },
                                                     {
                                                       "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "strategy": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "targetSeconds": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
                                                     }
                                                   ]
                                                 }
@@ -7469,6 +7515,26 @@
                                                     },
                                                     {
                                                       "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "strategy": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/1"
+                                                    }
+                                                  ]
+                                                },
+                                                "targetSeconds": {
+                                                  "anyOf": [
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/0"
+                                                    },
+                                                    {
+                                                      "$ref": "values.schema.json#/properties/polyadResources/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
                                                     }
                                                   ]
                                                 }
@@ -9342,6 +9408,26 @@
                                                             },
                                                             {
                                                               "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "strategy": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/1"
+                                                            }
+                                                          ]
+                                                        },
+                                                        "targetSeconds": {
+                                                          "anyOf": [
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/0"
+                                                            },
+                                                            {
+                                                              "$ref": "values.schema.json#/properties/polyadResources/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
                                                             }
                                                           ]
                                                         }

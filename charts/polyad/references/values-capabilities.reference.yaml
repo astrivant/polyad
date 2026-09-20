@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Opt-in TTL-bound sharing contracts reuse the connections and events listeners.
+# Guide: ../../../docs/workloads/capability-contracts.md
+# Provision advertise RBAC and Pod-bound tokens separately. Reading requires a
+# named discovery key with home/graphs; combine with authentication reference values.
+# TTL (5-300 seconds), capability rates and labels are SDK contract fields, not
+# chart settings. No advertisement or resource disclosure starts automatically.
+## @param connections [object] Existing authenticated publication listener.
+connections:
+  ## @param connections.enabled [boolean] Enable projected-token intake on port 8093.
+  enabled: true
+  ## @param connections.scope [string] Limit publishers and target graphs to the operator namespace.
+  scope: OperatorNamespace
+## @param events [object] Existing named-key discovery listener.
+events:
+  ## @param events.enabled [boolean] Enable scoped directory reads on port 8091.
+  enabled: true
+## @param operator [object] Existing administrator service visibility ceilings.
+operator:
+  ## @param operator.serviceAccess [object] Labels cannot widen these access boundaries.
+  serviceAccess:
+    ## @param operator.serviceAccess.discovery [string] Allow granted services in related graph branches.
+    discovery: GraphTree

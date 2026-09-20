@@ -31,6 +31,8 @@ if TYPE_CHECKING:
     from flask import Response
 
     from polyad.api.connections.store import ConnectionSettings
+    from polyad.cache import Cache
+    from polyad.events.capabilities import AdvertisementStore
     from polyad.events.store import EventStore
     from polyad.metrics.store import MetricsStore
     from polyad.operator.adapters.kubernetes import API
@@ -73,6 +75,7 @@ class APIServer:
         self.lock = Lock()
         self.pending: set[Future[Any]] = set()
         self.closers: list[Callable[[], None]] = []
+        self.capability_caches: dict[str, Cache] = {}
         self.background: list[asyncio.Task[None]] = []
 
     def start(self, *, host: str = "0.0.0.0", ports: dict[str, int] | None = None) -> None:
@@ -231,6 +234,8 @@ class APIServer:
         await asyncio.gather(*(asyncio.wrap_future(future) for future in pending), return_exceptions=True)
         for close in self.closers:
             close()
+        for cache in self.capability_caches.values():
+            await cache.close()
         self.api.client.close()
         for routes in self.app.extensions["polyad.routes"].values():
             limiter = routes.extensions.get("polyad.limiter")
@@ -285,6 +290,23 @@ class APIServer:
         )
         self.ports["composition"] = 8090
 
+    def _advertisements(self, namespace: str) -> AdvertisementStore:
+        """
+        Share one contract backend between publication and discovery at this authority.
+
+        Args:
+            namespace (str): Operator namespace isolating the registry from other authorities.
+
+        Returns:
+            AdvertisementStore: Registry whose cache connections close with this HTTP runtime.
+        """
+        from polyad.cache import Cache, cache_url
+        from polyad.events.capabilities import AdvertisementStore
+
+        if namespace not in self.capability_caches:
+            self.capability_caches[namespace] = Cache(cache_url(), namespace)
+        return AdvertisementStore(self.capability_caches[namespace])
+
     def connections(self, settings: ConnectionSettings) -> None:
         """
         Register temporary connections with separate service-account authentication.
@@ -299,6 +321,7 @@ class APIServer:
         from polyad.api.connections.store import ConnectionStore
 
         store = ConnectionStore(self.api, settings)
+        advertisements = self._advertisements(settings.operator_namespace)
         self.closers.append(store.federation.close)
         connection_app(
             lambda token: self.invoke(store.authenticate(token, request.headers.get("X-Polyad-Cluster", ""))),
@@ -307,6 +330,7 @@ class APIServer:
             lambda namespace, identity, caller: self.invoke(store.revoke(namespace, identity, caller)),
             services=lambda value, caller: self.invoke(store.connect_services(value, caller)),
             respond=lambda namespace, identity, response, caller: self.invoke(store.respond(namespace, identity, response, caller)),
+            advertise=lambda value, caller: self.invoke(advertisements.publish(value, caller, store)),
             limits=RateLimitPolicy.from_environment(settings.operator_namespace + ":connections"),
             application=self.app,
         )
@@ -344,7 +368,9 @@ class APIServer:
 
         federation = Federation(self.api)
         self.closers.append(federation.close)
-        directory = Directory(self.api, namespace, federation, {federation.name: store, **(clusters or {})})
+        directory = Directory(
+            self.api, namespace, federation, {federation.name: store, **(clusters or {})}, advertisements=self._advertisements(namespace)
+        )
         policy = configuration()
         event_settings = settings_from_environment()
         rebalance = Rebalancer(policy, poll_interval=event_settings.pollIntervalSeconds) if policy.enabled else None

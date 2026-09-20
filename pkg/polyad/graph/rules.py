@@ -82,7 +82,13 @@ def graph_spectrum(graph: nx.DiGraph[str]) -> dict[str, Any]:
 
 
 def evaluate_rule(
-    rule: StructuralRule, topology: Topology, *, expanded_nodes: int, nesting_depth: int, cheeger_limits: CheegerComputation | None = None
+    rule: StructuralRule,
+    topology: Topology,
+    *,
+    expanded_nodes: int,
+    nesting_depth: int,
+    cheeger_limits: CheegerComputation | None = None,
+    cache_scope: str = "",
 ) -> dict[str, Any]:
     """
     Evaluate inclusive bounds, required shapes and optional spectral constraints.
@@ -93,6 +99,7 @@ def evaluate_rule(
         expanded_nodes (int): Node occurrences across this boundary and all referenced subgraph instances.
         nesting_depth (int): Maximum boundary nesting, counting this boundary as one.
         cheeger_limits (CheegerComputation | None): Operator ceilings for every selected rule calculation.
+        cache_scope (str): Stable graph boundary and rule identity for independent adaptive histories.
 
     Returns:
         dict[str, Any]: Measurements, violations and the policy verdict.
@@ -125,6 +132,7 @@ def evaluate_rule(
                 limits=cheeger_limits,
                 minimum=rule.cheeger.minimum,
                 maximum=rule.cheeger.maximum,
+                cache_scope=cache_scope,
             )
             computation = result.report()
 

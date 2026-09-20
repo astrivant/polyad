@@ -56,7 +56,7 @@ class _CacheEntry:
 
 # Vertex identities and reduction settings identify a reusable partition. Edge
 # sets live in the entry so topology changes can be measured against its origin.
-_CACHE: OrderedDict[tuple[tuple[str, ...], int, int], _CacheEntry] = OrderedDict()
+_CACHE: OrderedDict[tuple[str, tuple[str, ...], int, int], _CacheEntry] = OrderedDict()
 _CACHE_LOCK = RLock()
 
 
@@ -190,7 +190,7 @@ def cached_quotient(graph: nx.Graph[str], settings: CheegerReduction) -> Reducti
         ReductionCertificate | None: Current-graph certificate, or null when reuse is unsafe.
     """
     nodes = tuple(sorted(graph))
-    key = (nodes, settings.components, min(settings.supernodes, len(nodes)))
+    key = (graph.graph.get("cheegerCacheScope", ""), nodes, settings.components, min(settings.supernodes, len(nodes)))
     current = _edges(graph)
 
     # Hold the lock only while consulting and updating cache bookkeeping. Entries
@@ -240,7 +240,7 @@ def fresh_spectral_reduction(graph: nx.Graph[str], settings: CheegerReduction) -
     upper, cut, evaluated = _quotient_cut(graph, nodes, labels)
     lower = max(0.0, float(eigenvalues[1]) / 2)
     current = _edges(graph)
-    key = (nodes, settings.components, clusters)
+    key = (graph.graph.get("cheegerCacheScope", ""), nodes, settings.components, clusters)
 
     # Keep the newest partition at the end and evict the least recently used
     # entry first when multiple graph boundaries compete for the cache.
@@ -263,3 +263,6 @@ def clear_reduction_cache() -> None:
     """
     with _CACHE_LOCK:
         _CACHE.clear()
+    from polyad.graph.refresh import clear_refresh_cache
+
+    clear_refresh_cache()

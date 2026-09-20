@@ -20,6 +20,7 @@ __all__ = (
     "controls",
     "lines",
     "parameters",
+    "pid_feedback",
     "render",
     "timeline",
 )
@@ -40,7 +41,17 @@ if TYPE_CHECKING:
 
 # Method colors compare whole algorithms; stage colors show the selector's
 # internal path. Keep both mappings stable across every panel in the study.
-COLORS = {"Exact": "#334155", "PCA": "#ad5389", "Fresh spectral": "#248266", "Cached spectral": "#dd862b", "Selector": "#377cbb"}
+COLORS = {
+    "Exact": "#334155",
+    "PCA": "#ad5389",
+    "Fresh spectral": "#248266",
+    "Cached spectral": "#dd862b",
+    "PID cached spectral": "#8b5e3c",
+    "Fixed-target PID": "#377cbb",
+    "Adaptive-target PID": "#7546b0",
+    "Selector": "#377cbb",
+    "Cache-first selector": "#64748b",
+}
 STAGES = {"CachedQuotient": 0, "FreshSpectralReduction": 1, "ExactEnumeration": 2}
 STAGE_NAMES = ("Cached quotient", "Fresh spectral", "Exact search")
 STAGE_COLORS = ("#f1b458", "#4fb19a", "#588fcb")
@@ -73,11 +84,21 @@ def lines(axis: Any, rows: list[dict[str, Any]], x: str, y: str, *, group: str =
     for label, points in sorted(values.items()):
         xs = sorted(points)
         quantiles = np.array([np.quantile(points[value], [0.25, 0.5, 0.75]) for value in xs])
-        line = axis.plot(xs, quantiles[:, 1], marker="o", markersize=4, label=label, color=COLORS.get(label))[0]
+        display = "Adaptive selector (preferred)" if label == "Selector" else label
+        line = axis.plot(
+            xs,
+            quantiles[:, 1],
+            marker="o",
+            markersize=4,
+            label=display,
+            color=COLORS.get(label),
+            linewidth=2.6 if label in {"Selector", "Adaptive-target PID"} else 1.5,
+        )[0]
         axis.fill_between(xs, quantiles[:, 0], quantiles[:, 2], color=line.get_color(), alpha=0.12)
 
     axis.grid(alpha=0.18)
-    axis.legend(fontsize=8)
+    if values:
+        axis.legend(fontsize=8)
 
 
 def churn(result: dict[str, Any], output: Path) -> list[str]:
@@ -92,7 +113,8 @@ def churn(result: dict[str, Any], output: Path) -> list[str]:
         list[str]: PNG and SVG paths.
     """
     rows = [row for row in result["records"] if row["sweep"] == "churn"]
-    figure, axes = plt.subplots(2, 2, figsize=(16, 11), layout="constrained")
+    controlled = [row for row in rows if "pid" in row]
+    figure, axes = plt.subplots(3 if controlled else 2, 2, figsize=(16, 16 if controlled else 11), layout="constrained")
 
     # Reuse the same paired samples for error, total runtime and interval width.
     # Only time uses a logarithmic axis; zero error and zero width remain visible.
@@ -108,7 +130,7 @@ def churn(result: dict[str, Any], output: Path) -> list[str]:
             axes[0, 1],
             "durationSeconds",
             "Measured time for the whole method",
-            r"Selector time includes every tier attempted; cache priming is excluded.",
+            r"All attempted work and PID updates are timed; baseline priming is excluded.",
             "Time per calculation (seconds)",
         ),
         (
@@ -133,12 +155,176 @@ def churn(result: dict[str, Any], output: Path) -> list[str]:
     describe_axis(
         axes[1, 1], "Requested versus achieved churn", "Connectivity and finite edge counts limit which replacements are possible."
     )
+
+    # Preserve archived renderability: never fabricate controller observations
+    # when a recipe predates the optional PID comparator or has it disabled.
+    if controlled:
+        intervals = [{**row, "nextInterval": row["pid"]["intervalAfter"]} for row in controlled]
+        lines(axes[2, 0], intervals, "replacement", "nextInterval")
+        axes[2, 0].set(xlabel=r"Requested edge replacement fraction $r$", ylabel=r"Next refresh interval $T_{t+1}$ (observations)")
+        describe_axis(
+            axes[2, 0],
+            "How the PID changes the refresh schedule",
+            r"One tick per snapshot; a cache attempt is failure $f_t=1$, even on a valid hit.",
+        )
+
+        # Rates are means of event indicators, not medians. Cached certificates
+        # and fallback refreshes remain distinct, even though both incur failure.
+        replacements = sorted({row["replacement"] for row in controlled})
+        for field, label, color in (
+            ("refreshScheduled", "Scheduled fresh reduction", COLORS["PID cached spectral"]),
+            ("cacheAttempted", "Cache fallback (PID failure)", COLORS["Cached spectral"]),
+            ("missRefresh", "Refresh after cache miss", COLORS["Fresh spectral"]),
+        ):
+            if not any(row["strategy"] == "PID cached spectral" for row in controlled):
+                continue
+            rates = []
+            for fraction in replacements:
+                selected = [row for row in controlled if row["replacement"] == fraction and row["strategy"] == "PID cached spectral"]
+                rates.append(
+                    np.mean(
+                        [
+                            row["pid"]["cacheAttempted"] and row["pid"]["refreshed"] if field == "missRefresh" else row["pid"][field]
+                            for row in selected
+                        ]
+                    )
+                )
+            axes[2, 1].plot(replacements, rates, marker="o", label=label, color=color)
+        adaptive = [row for row in controlled if row["strategy"] == "Adaptive-target PID"]
+        if adaptive:
+            for field, label, style in (
+                ("refreshScheduled", "Adaptive target: refresh", "-"),
+                ("cacheAttempted", "Adaptive target: cache", "--"),
+            ):
+                fractions = sorted({row["replacement"] for row in adaptive})
+                rates = [np.mean([row["pid"][field] for row in adaptive if row["replacement"] == fraction]) for fraction in fractions]
+                axes[2, 1].plot(fractions, rates, marker="o", label=label, color=COLORS["Adaptive-target PID"], linestyle=style)
+        axes[2, 1].set(xlabel=r"Requested edge replacement fraction $r$", ylabel=r"Observed event fraction", ylim=(-0.05, 1.05))
+        axes[2, 1].grid(alpha=0.18)
+        axes[2, 1].legend(fontsize=8)
+        describe_axis(
+            axes[2, 1],
+            "When refreshes and cache fallbacks happen",
+            r"A cache attempt is failure, not an invalid certificate; the target is configured in the recipe.",
+        )
     return save(
         figure,
         output,
         "churn",
         study="cheeger-strategies",
-        note="Lines: medians. Bands: middle 50% of samples across families, seeds and timing repeats; not confidence bounds.",
+        note=(
+            "Bands: middle 50%. Legacy PID follows ordered churn; adaptive-target comparisons learn from baseline-only warmup."
+            if controlled
+            else "Lines: medians. Bands: middle 50% of samples across families, seeds and timing repeats; not confidence bounds."
+        ),
+    )
+
+
+def pid_feedback(result: dict[str, Any], output: Path) -> list[str]:
+    """
+    Show measured two-loop feedback without conflating time goals with guarantees.
+
+    Args:
+        result (dict[str, Any]): Paired, persistent feedback trajectories.
+        output (Path): Destination for PNG and SVG figures.
+
+    Returns:
+        list[str]: Feedback figure artifacts, including an explicit disabled view.
+    """
+    rows = [row for row in result["records"] if row["sweep"] == "pid-feedback"]
+    figure, axes = plt.subplots(3, 2, figsize=(17, 16), layout="constrained")
+    specifications = (
+        ("Measured computation time", r"Real method time, including controller overhead; the dashed goal is not a hard budget.", "Seconds"),
+        (
+            "How much cache reuse the controllers request",
+            r"Solid: target $q_t$. Dashed: cache-attempt fraction in the trailing window.",
+            r"Cache-attempt fraction $q$",
+        ),
+        (
+            "How the inner refresh schedule responds",
+            r"Both inner PIDs use the same gains and bounds; only their cache targets differ.",
+            r"Next interval $T_{t+1}$ (observations)",
+        ),
+        (
+            "Accuracy against the independent exact result",
+            r"Neither PID sees $h(G)$; these errors are audited after the measured computation.",
+            r"Relative cut error $(U-h)/h$",
+        ),
+        (
+            "The time error driving the outer PID",
+            r"Positive window error requests more reuse; negative error permits more fresh work.",
+            r"Window error $(\overline{\tau}-\tau^*)/\tau^*$",
+        ),
+        (
+            "How often fresh work actually happens",
+            r"Mean event fractions across trajectories; a changed target does not guarantee the requested rate.",
+            r"Fresh reduction fraction",
+        ),
+    )
+    for axis, (title, description, ylabel) in zip(axes.flat, specifications, strict=True):
+        describe_axis(axis, title, description)
+        axis.set(xlabel=r"Graph observation $t$", ylabel=ylabel)
+        if not rows:
+            axis.text(0.5, 0.5, "Optional feedback experiment not collected", ha="center", va="center", transform=axis.transAxes)
+    if not rows:
+        return save(figure, output, "pid-feedback", study="cheeger-strategies")
+
+    lines(axes[0, 0], rows, "step", "durationSeconds")
+    schedule = {row["step"]: row["timeTargetSeconds"] for row in rows}
+    steps = sorted(schedule)
+    axes[0, 0].step(steps, [schedule[step] for step in steps], where="post", color="#111827", linestyle="--", label="Computation-time goal")
+    axes[0, 0].set_yscale("log")
+    axes[0, 0].legend(fontsize=8)
+
+    controlled = [{**row, "target": row["pid"]["targetCacheRate"], "interval": row["pid"]["intervalAfter"]} for row in rows if "pid" in row]
+    lines(axes[0, 1], controlled, "step", "target")
+    lines(axes[1, 0], controlled, "step", "interval")
+    lines(axes[1, 1], rows, "step", "relativeError")
+
+    # Reconstruct achieved cache rates within each independent trajectory, not
+    # across pooled observations from unrelated repetitions or graph seeds.
+    windows = result["recipe"]["pidFeedback"]["controller"]["updateEvery"]
+    histories: dict[tuple[str, int, int], list[dict[str, Any]]] = defaultdict(list)
+    for row in controlled:
+        histories[(row["strategy"], row["seed"], row["repeat"])].append(row)
+    observed: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for (strategy, _, _), history in histories.items():
+        history.sort(key=lambda row: row["step"])
+        for index, row in enumerate(history):
+            window = history[max(0, index + 1 - windows) : index + 1]
+            observed[strategy][row["step"]].append(float(np.mean([sample["pid"]["failure"] for sample in window])))
+    for strategy, samples in sorted(observed.items()):
+        times = sorted(samples)
+        axes[0, 1].plot(
+            times, [np.mean(samples[step]) for step in times], linestyle="--", color=COLORS[strategy], label=f"{strategy}: observed"
+        )
+    axes[0, 1].set_ylim(-0.05, 1.05)
+    axes[0, 1].legend(fontsize=7)
+
+    # Missing outer updates remain missing. Do not fabricate zero error between
+    # windows or present a controller setpoint as measured latency achievement.
+    updates = [{**row, "timeError": row["outerPid"]["normalizedError"]} for row in rows if "outerPid" in row]
+    lines(axes[2, 0], updates, "step", "timeError")
+    axes[2, 0].axhline(0, color="#64748b", linestyle=":")
+    refreshes: dict[str, dict[int, list[bool]]] = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        refreshes[row["strategy"]][row["step"]].append(row["stage"] == "FreshSpectralReduction")
+    for strategy, events in sorted(refreshes.items()):
+        times = sorted(events)
+        axes[2, 1].plot(times, [np.mean(events[step]) for step in times], color=COLORS[strategy], label=strategy)
+    axes[2, 1].set_ylim(-0.05, 1.05)
+    axes[2, 1].legend(fontsize=8)
+
+    # Vertical boundaries make separately controlled churn and latency-target
+    # changes visible on every outcome, including delayed controller responses.
+    phases = {row["step"]: row["phase"] for row in rows if row["phaseStep"] == 0}
+    for axis in axes.flat:
+        for step in sorted(phases)[1:]:
+            axis.axvline(step, color="#94a3b8", alpha=0.4, linestyle=":")
+        axis.grid(alpha=0.18)
+    note = "; ".join(f"{step}: {name}" for step, name in sorted(phases.items()))
+    return save(
+        figure, output, "pid-feedback", study="cheeger-strategies", note=f"Phase starts: {note}. Bands: middle 50%, not confidence bounds."
     )
 
 
@@ -162,47 +348,51 @@ def activation(result: dict[str, Any], output: Path) -> list[str]:
         for row in result["records"]
         if row["sweep"] == "threshold" and row["seed"] == config["seeds"][0] and row["cacheChurnLimit"] == config["fixedCacheChurnLimit"]
     ]
-    figure, axes = plt.subplots(1, 3, figsize=(18, 7), layout="constrained")
+    methods = [method for method in ("Selector", "Cache-first selector") if any(row["strategy"] == method for row in rows)]
+    figure, axes = plt.subplots(len(methods), 3, figsize=(19, 7 * len(methods)), squeeze=False, layout="constrained")
     cmap = ListedColormap(STAGE_COLORS)
-    for axis, kind in zip(axes, config["policyKinds"], strict=True):
-        selected = [row for row in rows if row["policyKind"] == kind]
+    for row_index, method in enumerate(methods):
+        for axis, kind in zip(axes[row_index], config["policyKinds"], strict=True):
+            selected = [row for row in rows if row["policyKind"] == kind and row["strategy"] == method]
 
-        # Color encodes the finishing tier; the overlaid symbol independently
-        # records pass, violation or unknown. Unmeasured cells remain missing.
-        grid = np.full((len(config["thresholdRatios"]), len(config["edgeReplacement"])), np.nan)
-        for row in selected:
-            i = config["thresholdRatios"].index(row["thresholdRatio"])
-            j = config["edgeReplacement"].index(row["replacement"])
-            grid[i, j] = STAGES[row["stage"]]
-            axis.text(
-                j,
-                i,
-                "+" if row["decision"] == "Pass" else "×" if row["decision"] == "Violate" else "?",
-                ha="center",
-                va="center",
-                fontsize=14,
+            # Color encodes the finishing tier; the overlaid symbol independently
+            # records pass, violation or unknown. Unmeasured cells remain missing.
+            grid = np.full((len(config["thresholdRatios"]), len(config["edgeReplacement"])), np.nan)
+            for row in selected:
+                i = config["thresholdRatios"].index(row["thresholdRatio"])
+                j = config["edgeReplacement"].index(row["replacement"])
+                grid[i, j] = STAGES[row["stage"]]
+                axis.text(
+                    j,
+                    i,
+                    "+" if row["decision"] == "Pass" else "×" if row["decision"] == "Violate" else "?",
+                    ha="center",
+                    va="center",
+                    fontsize=14,
+                )
+
+            # Stages are categories, so use discrete color boundaries rather than
+            # interpolating them as if an intermediate strategy existed.
+            axis.imshow(grid, cmap=cmap, norm=BoundaryNorm([-0.5, 0.5, 1.5, 2.5], 3), origin="lower", aspect="auto")
+            axis.set(
+                xticks=range(len(config["edgeReplacement"])),
+                xticklabels=config["edgeReplacement"],
+                yticks=range(len(config["thresholdRatios"])),
+                yticklabels=config["thresholdRatios"],
+                xlabel="Requested edge replacement",
+                ylabel=r"Threshold / exact reference $\theta/h$",
             )
-
-        # Stages are categories, so use discrete color boundaries rather than
-        # interpolating them as if an intermediate strategy existed.
-        axis.imshow(grid, cmap=cmap, norm=BoundaryNorm([-0.5, 0.5, 1.5, 2.5], 3), origin="lower", aspect="auto")
-        axis.set(
-            xticks=range(len(config["edgeReplacement"])),
-            xticklabels=config["edgeReplacement"],
-            yticks=range(len(config["thresholdRatios"])),
-            yticklabels=config["thresholdRatios"],
-            xlabel="Requested edge replacement",
-            ylabel=r"Threshold / exact reference $\theta/h$",
-        )
-        describe_axis(
-            axis,
-            {"minimum": "Required minimum", "maximum": "Allowed maximum", "range": "Required interval"}[kind],
-            {
-                "minimum": r"Policy: $h\geq\theta$. Exact search proves minima left unresolved by $L$.",
-                "maximum": r"Policy: $h\leq\theta$. A lifted witness $U\leq\theta$ can settle it early.",
-                "range": r"Policy: $0.9\theta\leq h\leq1.1\theta$. Both endpoints must be certified.",
-            }[kind],
-        )
+            describe_axis(
+                axis,
+                ("Adaptive selector (preferred)" if method == "Selector" else method)
+                + ": "
+                + {"minimum": "Required minimum", "maximum": "Allowed maximum", "range": "Required interval"}[kind],
+                {
+                    "minimum": r"Policy: $h\geq\theta$. Exact search proves minima left unresolved by $L$.",
+                    "maximum": r"Policy: $h\leq\theta$. A lifted witness $U\leq\theta$ can settle it early.",
+                    "range": r"Policy: $0.9\theta\leq h\leq1.1\theta$. Both endpoints must be certified.",
+                }[kind],
+            )
 
     figure.legend(
         handles=[Patch(color=color, label=label) for label, color in zip(STAGE_NAMES, STAGE_COLORS, strict=True)],
@@ -324,7 +514,7 @@ def cache(result: dict[str, Any], output: Path) -> list[str]:
         list[str]: PNG and SVG paths.
     """
     figure, axes = plt.subplots(2, 2, figsize=(16, 11), layout="constrained")
-    rows = [row for row in result["records"] if row["sweep"] == "threshold"]
+    rows = [row for row in result["records"] if row["sweep"] == "threshold" and row["strategy"] == "Selector"]
     gates = sorted({row["cacheChurnLimit"] for row in rows})
 
     # A stacked bar partitions the same policy grid by its finishing tier.
@@ -372,9 +562,18 @@ def cache(result: dict[str, Any], output: Path) -> list[str]:
     ):
         if field == "cacheHitFraction":
             entries = sorted({row["cacheEntries"] for row in capacity})
-            axis.plot(
-                entries, [np.mean([row["cacheHitFraction"] for row in capacity if row["cacheEntries"] == n]) for n in entries], marker="o"
-            )
+            for method in sorted({row["strategy"] for row in capacity}):
+                axis.plot(
+                    entries,
+                    [
+                        np.mean([row["cacheHitFraction"] for row in capacity if row["cacheEntries"] == n and row["strategy"] == method])
+                        for n in entries
+                    ],
+                    marker="o",
+                    label="Adaptive selector (preferred)" if method == "Selector" else method,
+                    color=COLORS[method],
+                )
+            axis.legend(fontsize=8)
         else:
             lines(axis, capacity, "cacheEntries", field)
             axis.set_yscale("log")
@@ -403,61 +602,66 @@ def timeline(result: dict[str, Any], output: Path) -> list[str]:
     # Preserve one seed's event order. Pooling timelines would mix different
     # cache histories and obscure which actual event caused a strategy change.
     rows = [row for row in result["records"] if row["sweep"] == "timeline" and row["seed"] == result["recipe"]["seeds"][0]]
-    figure, axes = plt.subplots(3, 1, figsize=(16, 14), layout="constrained")
-    steps = [row["step"] for row in rows]
-    axes[0].fill_between(
-        steps,
-        [row["lowerBound"] for row in rows],
-        [row["upperBound"] for row in rows],
-        alpha=0.2,
-        color="#377cbb",
-        label=r"Certificate $[L,U]$",
-    )
-    axes[0].plot(steps, [row["exactValue"] for row in rows], marker="o", color=COLORS["Exact"], label=r"Exact reference $h$")
-    for kind, marker in (("minimum", "^"), ("maximum", "v")):
-        selected = [row for row in rows if kind in row["policy"]]
-        axes[0].scatter([row["step"] for row in selected], [row["policy"][kind] for row in selected], marker=marker, label=kind, s=65)
-    axes[0].set(ylabel="Expansion and policy bound")
+    all_rows = rows
+    methods = [method for method in ("Selector", "Cache-first selector") if any(row["strategy"] == method for row in rows)]
+    figure, matrix = plt.subplots(3, len(methods), figsize=(12 * len(methods), 14), squeeze=False, layout="constrained")
+    for column, method in enumerate(methods):
+        axes = matrix[:, column]
+        rows = [row for row in all_rows if row["strategy"] == method]
+        steps = [row["step"] for row in rows]
+        axes[0].fill_between(
+            steps,
+            [row["lowerBound"] for row in rows],
+            [row["upperBound"] for row in rows],
+            alpha=0.2,
+            color="#377cbb",
+            label=r"Certificate $[L,U]$",
+        )
+        axes[0].plot(steps, [row["exactValue"] for row in rows], marker="o", color=COLORS["Exact"], label=r"Exact reference $h$")
+        for kind, marker in (("minimum", "^"), ("maximum", "v")):
+            selected = [row for row in rows if kind in row["policy"]]
+            axes[0].scatter([row["step"] for row in selected], [row["policy"][kind] for row in selected], marker=marker, label=kind, s=65)
+        axes[0].set(ylabel="Expansion and policy bound")
 
-    # Changed edges can reset the cached lower bound to zero. A symmetric-log
-    # scale retains that zero while accommodating much larger policy thresholds.
-    axes[0].set_yscale("symlog", linthresh=0.25)
-    axes[0].legend(ncol=4, fontsize=8)
-    describe_axis(
-        axes[0],
-        "Certified interval through change",
-        "Minimum probes use study truth to force a difficult threshold; wide maximums test reuse.",
-    )
+        # Changed edges can reset the cached lower bound to zero. A symmetric-log
+        # scale retains that zero while accommodating much larger policy thresholds.
+        axes[0].set_yscale("symlog", linthresh=0.25)
+        axes[0].legend(ncol=4, fontsize=8)
+        describe_axis(
+            axes[0],
+            ("Adaptive selector (preferred)" if method == "Selector" else method) + ": certified interval",
+            "Minimum probes use study truth to force a difficult threshold; wide maximums test reuse.",
+        )
 
-    # Plot every tier that returned a certificate, including fresh work that is
-    # not a cache hit. The larger outlined marker identifies the finishing tier.
-    for row in rows:
-        visited = [attempt["stage"] for attempt in row["attempts"] if attempt["certificateReturned"]]
-        if row["stage"] == "ExactEnumeration":
-            visited.append("ExactEnumeration")
-        for stage in visited:
-            axes[1].scatter(
-                row["step"],
-                STAGES[stage],
-                s=200 if stage == row["stage"] else 80,
-                color=STAGE_COLORS[STAGES[stage]],
-                edgecolors="black" if stage == row["stage"] else "none",
-            )
-    axes[1].set(yticks=range(3), yticklabels=STAGE_NAMES, ylim=(-0.5, 2.5))
-    describe_axis(
-        axes[1], "Every tier that actually ran", "Large outlined dots finish the decision; smaller dots show earlier work in that call."
-    )
+        # Plot every tier that returned a certificate, including fresh work that is
+        # not a cache hit. The larger outlined marker identifies the finishing tier.
+        for row in rows:
+            visited = [attempt["stage"] for attempt in row["attempts"] if attempt["certificateReturned"]]
+            if row["stage"] == "ExactEnumeration":
+                visited.append("ExactEnumeration")
+            for stage in visited:
+                axes[1].scatter(
+                    row["step"],
+                    STAGES[stage],
+                    s=200 if stage == row["stage"] else 80,
+                    color=STAGE_COLORS[STAGES[stage]],
+                    edgecolors="black" if stage == row["stage"] else "none",
+                )
+        axes[1].set(yticks=range(3), yticklabels=STAGE_NAMES, ylim=(-0.5, 2.5))
+        describe_axis(
+            axes[1], "Every tier that actually ran", "Large outlined dots finish the decision; smaller dots show earlier work in that call."
+        )
 
-    # Use the whole call's elapsed time, not only its last tier's duration.
-    axes[2].bar(steps, [row["durationSeconds"] for row in rows], color=[STAGE_COLORS[STAGES[row["stage"]]] for row in rows])
-    axes[2].set(ylabel="Measured time (seconds)", yscale="log")
-    describe_axis(axes[2], "Cost at each event", "Cache state persists through the sequence, including returning service membership.")
+        # Use the whole call's elapsed time, not only its last tier's duration.
+        axes[2].bar(steps, [row["durationSeconds"] for row in rows], color=[STAGE_COLORS[STAGES[row["stage"]]] for row in rows])
+        axes[2].set(ylabel="Measured time (seconds)", yscale="log")
+        describe_axis(axes[2], "Cost at each event", "Cache state persists through the sequence, including returning service membership.")
 
-    # All three panels share event positions and labels for vertical comparison.
-    for axis in axes:
-        axis.set(xticks=steps, xticklabels=[f"{row['step']}: {row['event']}" for row in rows])
-        axis.tick_params(axis="x", rotation=30, labelsize=8)
-        axis.grid(alpha=0.15)
+        # All three panels share event positions and labels for vertical comparison.
+        for axis in axes:
+            axis.set(xticks=steps, xticklabels=[f"{row['step']}: {row['event']}" for row in rows])
+            axis.tick_params(axis="x", rotation=30, labelsize=8)
+            axis.grid(alpha=0.15)
     return save(
         figure,
         output,
@@ -486,7 +690,10 @@ def controls(result: dict[str, Any], output: Path) -> list[str]:
     # is neither a successful policy pass nor proof that the policy was violated.
     left = np.zeros(len(cases))
     for decision, color in (("Pass", "#248266"), ("Violate", "#ad5389"), ("Unknown", "#c8cdd4")):
-        fractions = [np.mean([row["decision"] == decision for row in rows if row["case"] == name]) for name in cases]
+        fractions = [
+            np.mean([row["decision"] == decision for row in rows if row["case"] == name and row["strategy"] == "Selector"])
+            for name in cases
+        ]
         axes[0, 0].barh(cases, fractions, left=left, label=decision, color=color)
         left += fractions
     axes[0, 0].legend(fontsize=8)
@@ -524,7 +731,7 @@ def controls(result: dict[str, Any], output: Path) -> list[str]:
     # Reuse paired churn trials for a fair decision comparison. A method may
     # have cut-value error yet decide correctly, or be accurate but inconclusive.
     comparisons = [row for row in result["records"] if row["sweep"] == "churn"]
-    methods = list(COLORS)
+    methods = [method for method in COLORS if any(row["strategy"] == method for row in comparisons)]
     counts = []
     for method in methods:
         selected = [row for row in comparisons if row["strategy"] == method]
@@ -570,6 +777,10 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
         list[str]: Complete PNG/SVG inventory.
     """
 
+    from polyad_benchmarks.studies.cheeger_strategies.costs import cpu_cost
+
     # Rendering consumes saved observations only; it never reruns the algorithms
     # or substitutes new timings while rebuilding a figure.
-    return [path for plot in (churn, activation, parameters, cache, timeline, controls) for path in plot(result, output)]
+    return [
+        path for plot in (churn, activation, parameters, cache, timeline, controls, pid_feedback, cpu_cost) for path in plot(result, output)
+    ]
