@@ -19,8 +19,9 @@ from websockets.sync.client import connect
 
 from polyad.api.events.builder import EventAPIBuilder
 from polyad.api.http.server import APIServer
-from polyad.events.store import CursorExpired
-from polyad_sdk import APIError, Client
+from polyad.exceptions.events import CursorExpired
+from polyad_sdk import Client
+from polyad_sdk.exceptions.api import APIError
 from tests.test_temporary_connections import ConnectionAPI
 
 

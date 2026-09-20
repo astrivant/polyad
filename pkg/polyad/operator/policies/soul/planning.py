@@ -13,9 +13,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.traffic import step_weights
-from polyad.graph.cheeger import CheegerIncomplete
+from polyad.exceptions.graph import CheegerIncomplete
+from polyad.exceptions.policies import RuleViolation
 from polyad.operator.policies.rule_state import check_live_rules
-from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.policies.soul.contracts import SAMPLE, Proposal
 from polyad.operator.policies.soul.observations import expansion, headroom_targets
 from polyad_types.api.throughput import ThroughputSample

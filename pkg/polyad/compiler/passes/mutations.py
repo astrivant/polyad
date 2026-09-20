@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.compiler import PreconditionFailed as PreconditionFailed
 from polyad_types.resources.mutations import Independence, MutationPlan, Ordering
 
 if TYPE_CHECKING:
@@ -22,12 +24,6 @@ __all__ = (
     "compile_mutations",
     "conflicts",
 )
-
-
-class PreconditionFailed(ValueError):
-    """
-    Require refreshed state before admitting a mutation with stale observations.
-    """
 
 
 def conflicts(left: Mutation, right: Mutation) -> tuple[str, ...]:

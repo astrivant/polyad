@@ -16,12 +16,13 @@ from deepdiff import DeepDiff
 
 from polyad.compiler.passes.network import scope_label
 from polyad.compiler.passes.traffic import capacity_weights, route_specs, step_weights
+from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.policies.rule_state import check_live_rules
-from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.policies.soul.contracts import SAMPLE
 from polyad.operator.policies.soul.controller import search_soul
 from polyad.operator.policies.traffic import ensure_routes
-from polyad.operator.reconciliation.controller import Controller, Pending, child_name
+from polyad.operator.reconciliation.controller import Controller, child_name
 from polyad_types import ThroughputSample, TrafficDestination, TrafficResilience, TrafficRoute, TrafficSample, TrafficWeights
 from polyad_types.graphs.topology import topology
 from polyad_types.resources import encode_body, to_document

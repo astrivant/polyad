@@ -13,6 +13,7 @@ from flask import g, jsonify, request
 from polyad.auth.keys import Keyring
 from polyad.auth.policy import LISTENERS, endpoint_scope, public_demo
 from polyad.cache import cache_url
+from polyad.exceptions.auth import LaneFull
 from polyad_types.api.auth import KeyDirection
 
 if TYPE_CHECKING:
@@ -125,7 +126,6 @@ def install(app: Flask | Routes, endpoint: str, token: str | None, access: Acces
                 return jsonify(error="unauthorized"), 401
             return None
         assert access is not None
-        from polyad.auth.lanes import LaneFull
 
         try:
             match = None

@@ -29,6 +29,7 @@ def main() -> None:
     assert "site-packages" in package.parts, package
     assert (package / "py.typed").is_file()
     assert not requires("polyad-schemas")
+    assert importlib.import_module("polyad_schemas.exceptions").__all__ == ()
     modules = ("polyad_schemas", *(info.name for info in pkgutil.walk_packages(polyad_schemas.__path__, "polyad_schemas.")))
     for name in modules:
         module = importlib.import_module(name)

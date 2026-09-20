@@ -1,5 +1,35 @@
 # Replication and KEDA
 
+<!-- toc:start -->
+<details>
+<summary>Table of contents</summary>
+
+- [Declare a scalable abstraction](#declare-a-scalable-abstraction)
+- [Examples at each scaling level](#examples-at-each-scaling-level)
+  - [Example: Daemon replicas](#example-daemon-replicas)
+  - [Example: Graph replicas](#example-graph-replicas)
+  - [Example: PolyGraph replicas](#example-polygraph-replicas)
+  - [Example: nested ReplicaGroups](#example-nested-replicagroups)
+- [Connections between copies](#connections-between-copies)
+  - [Graph and PolyGraph connections](#graph-and-polygraph-connections)
+  - [Reading the networking diagrams](#reading-the-networking-diagrams)
+  - [Independent](#independent)
+  - [Chain](#chain)
+  - [Ring](#ring)
+  - [Star](#star)
+  - [FullMesh](#fullmesh)
+  - [Custom](#custom)
+  - [Bidirectional connections](#bidirectional-connections)
+  - [Scaling and topology changes](#scaling-and-topology-changes)
+- [Independent instances and all uses of a definition](#independent-instances-and-all-uses-of-a-definition)
+- [Connect KEDA](#connect-keda)
+- [Metric scopes and freshness](#metric-scopes-and-freshness)
+- [Constraints before scaling](#constraints-before-scaling)
+- [Scheduling and cleanup](#scheduling-and-cleanup)
+
+</details>
+<!-- toc:end -->
+
 ReplicaGroups can also replicate PolyGraph templates that place child Graphs in
 remote clusters. Each copy owns its complete composition, while destination
 operators enforce cluster-local rules. See
@@ -35,31 +65,6 @@ This diagram shows one cluster. The
 [multicluster scaling diagram](../deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling)
 extends it to PolyGraph copies that own remote Graphs, with separate destination
 operators and local rule checks.
-
-## Table of contents
-
-- [Declare a scalable abstraction](#declare-a-scalable-abstraction)
-- [Examples at each scaling level](#examples-at-each-scaling-level)
-  - [Example: Daemon replicas](#example-daemon-replicas)
-  - [Example: Graph replicas](#example-graph-replicas)
-  - [Example: PolyGraph replicas](#example-polygraph-replicas)
-  - [Example: nested ReplicaGroups](#example-nested-replicagroups)
-- [Connections between copies](#connections-between-copies)
-  - [Graph and PolyGraph connections](#graph-and-polygraph-connections)
-  - [Reading the networking diagrams](#reading-the-networking-diagrams)
-  - [Independent](#independent)
-  - [Chain](#chain)
-  - [Ring](#ring)
-  - [Star](#star)
-  - [FullMesh](#fullmesh)
-  - [Custom](#custom)
-  - [Bidirectional connections](#bidirectional-connections)
-  - [Scaling and topology changes](#scaling-and-topology-changes)
-- [Independent instances and all uses of a definition](#independent-instances-and-all-uses-of-a-definition)
-- [Connect KEDA](#connect-keda)
-- [Metric scopes and freshness](#metric-scopes-and-freshness)
-- [Constraints before scaling](#constraints-before-scaling)
-- [Scheduling and cleanup](#scheduling-and-cleanup)
 
 ## Declare a scalable abstraction
 

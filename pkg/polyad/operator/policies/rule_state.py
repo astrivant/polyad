@@ -9,10 +9,12 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.traffic import subset_name
+from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph.temporary import ANNOTATION, active_entries, overlay
 from polyad.operator.clusters.remote_scaling import approved_intent
 from polyad.operator.coordination.contracts import expires_before
-from polyad.operator.policies.rules import RuleViolation, check_rules
+from polyad.operator.policies.rules import check_rules
 from polyad_types.graphs.replication import Replication, replica_topology
 from polyad_types.graphs.topology import topology
 from polyad_types.resources import AUXILIARY_KINDS, BOUNDARY_KINDS, GROUP, VERSION
@@ -113,7 +115,6 @@ async def check_live_rules(
     Returns:
         list[dict[str, Any]]: Current-boundary verdicts after every family constraint passes.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     namespace = obj["metadata"]["namespace"]
     target_uid = obj["metadata"]["uid"]

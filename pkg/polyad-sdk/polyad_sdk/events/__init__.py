@@ -11,8 +11,8 @@ from polyad_sdk.events.filters import field as field
 from polyad_sdk.events.filters import graph as graph
 from polyad_sdk.events.filters import phase as phase
 from polyad_sdk.events.source import EventSource as EventSource
-from polyad_sdk.events.subscriptions import StreamInterrupted as StreamInterrupted
 from polyad_sdk.events.subscriptions import Subscription as Subscription
+from polyad_sdk.exceptions.events import StreamInterrupted as StreamInterrupted
 from polyad_types.events.envelope import Event as Event
 
 __all__ = (

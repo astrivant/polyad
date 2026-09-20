@@ -67,6 +67,9 @@ def main() -> None:
     for namespace, names in {
         "api": ("Client", "APIError", "ConnectionNegotiator", "ThroughputReporter"),
         "events": ("EventSource", "Filter", "Subscription", "StreamInterrupted", "Event"),
+        "exceptions": ("APIError", "StreamInterrupted"),
+        "exceptions.api": ("APIError",),
+        "exceptions.events": ("StreamInterrupted",),
         "runtime": ("env", "refresh_environment", "WorkloadContext", "PodContext", "ContainerResources"),
         "observability": ("Telemetry",),
         "processes": ("ProcessSpec", "ProcessPlan", "ProcessSupervisor", "ManagedProcess", "PlanResult"),

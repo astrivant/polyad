@@ -7,27 +7,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.request import HTTPRedirectHandler
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad_sdk.exceptions.api import APIError as APIError
+
 if TYPE_CHECKING:
     from typing import Any
 
 __all__ = ("APIError",)
-
-
-class APIError(RuntimeError):
-    """
-    Expose HTTP status and JSON error details without embedding credentials.
-    """
-
-    def __init__(self, status: int, body: dict[str, Any]) -> None:
-        """
-        Retain the server response for explicit retry decisions.
-
-        Args:
-            status (int): HTTP status code.
-            body (dict[str, Any]): Parsed response body.
-        """
-        self.status, self.body = status, body
-        super().__init__(f"Polyad API returned HTTP {status}")
 
 
 class _NoRedirect(HTTPRedirectHandler):

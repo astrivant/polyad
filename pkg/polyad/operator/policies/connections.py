@@ -14,14 +14,15 @@ from cattrs.errors import CattrsError
 
 from polyad.api.connections.consent import confirmed, decisions
 from polyad.api.connections.store import FINALIZER, ConnectionSettings
-from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.compiler.passes.network import NetworkScope
+from polyad.exceptions.api import Conflict, Forbidden, Unavailable
+from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph.temporary import ANNOTATION, CLEANUP, MAX_CONNECTIONS, active_entries, deadline, entries, overlay
 from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.network import context, ensure_policies
 from polyad.operator.policies.rule_state import check_live_rules
-from polyad.operator.policies.rules import RuleViolation
 from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types import resources as asts
 from polyad_types.api.requests import ConnectionRequest
@@ -88,7 +89,6 @@ async def refresh_network(controller: Controller, root: dict[str, Any], *, revok
     Returns:
         None: Policies are observed after writes before a receipt becomes terminal.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     pending = [root]
     seen: set[str] = set()
@@ -157,7 +157,6 @@ async def cleanup_connections(controller: Controller, graph: dict[str, Any]) -> 
     Returns:
         dict[str, Any]: Fresh boundary after cleanup; incomplete policy writes remain pending.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     meta = graph["metadata"]
 
@@ -287,7 +286,6 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
     Returns:
         None: Admission, policy observation or cleanup advances one durable step.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     meta, spec = receipt["metadata"], receipt["spec"]
     request = converter.structure({key: value for key, value in spec.items() if key != "requester"}, ConnectionRequest)

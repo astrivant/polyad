@@ -15,16 +15,18 @@ from openapi_spec_validator import validate
 
 from polyad.api.connections.app import build_app
 from polyad.api.connections.store import AUDIENCE, FINALIZER, Caller, ConnectionSettings, ConnectionStore
-from polyad.api.http.errors import Conflict, Forbidden, Unauthorized
 from polyad.compiler.passes.network import NetworkScope, traffic
 from polyad.events.topology import topology_snapshot
+from polyad.exceptions.api import Conflict, Forbidden, Unauthorized
+from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph import NetworkAccess
 from polyad.graph.temporary import ANNOTATION, CLEANUP, deadline, entries, overlay
 from polyad.operator.policies.network import context, ensure_policies
 from polyad.operator.policies.rule_state import check_live_rules
-from polyad.operator.policies.rules import RuleViolation
-from polyad.operator.reconciliation.controller import Controller, Pending
-from polyad_sdk import APIError, Client
+from polyad.operator.reconciliation.controller import Controller
+from polyad_sdk import Client
+from polyad_sdk.exceptions.api import APIError
 from polyad_types import resources as asts
 from polyad_types.api.requests import ConnectionRequest, ConnectionResponse
 from polyad_types.graphs.topology import topology

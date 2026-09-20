@@ -21,7 +21,8 @@ from polyad.api.events.builder import EventAPIBuilder
 from polyad.events.store import EventStore
 from polyad_schemas import event_schema
 from polyad_sdk import Client
-from polyad_types import Event, EventStreamSettings, EventTooLarge, decode_event, to_dict
+from polyad_types import Event, EventStreamSettings, decode_event, to_dict
+from polyad_types.exceptions.events import EventTooLarge
 from tests.test_chart import CHART, render
 from tests.test_client import Adapter
 from tests.test_operator import resource

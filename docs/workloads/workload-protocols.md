@@ -1,5 +1,15 @@
 # Optional workload connection protocols
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Choose an optional install](#choose-an-optional-install)
+- [Connect after permission is active](#connect-after-permission-is-active)
+- [Application APIs and lifecycle](#application-apis-and-lifecycle)
+- [Declare the protocol to Istio](#declare-the-protocol-to-istio)
+- [Adaptation and service-level measurements](#adaptation-and-service-level-measurements)
+<!-- toc:end -->
+
 The SDK can open HTTP(S), WebSocket, gRPC, AMQP 0-9-1, Redis and raw TCP/TLS
 connections between workloads. These are **application connections**, not new
 operator API protocols. Installing a client does not deploy a broker, expose a

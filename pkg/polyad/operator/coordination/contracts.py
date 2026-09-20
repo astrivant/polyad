@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from polyad.compiler.registry import RECONCILED_KINDS
-from polyad.operator.coordination.write_queue import WriteConflict
+from polyad.exceptions.kubernetes import WriteConflict
 from polyad_types.resources import GROUP, VERSION
 
 if TYPE_CHECKING:

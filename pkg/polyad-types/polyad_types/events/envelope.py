@@ -10,6 +10,9 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from attrs import field, frozen
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad_types.exceptions.events import EventTooLarge as EventTooLarge
+
 if TYPE_CHECKING:
     from polyad_types.events.models import EventAST
 
@@ -74,12 +77,6 @@ class EventStreamSettings:
             or not 0.05 <= self.pollIntervalSeconds <= 5
         ):
             raise ValueError("event pollIntervalSeconds must be a finite number from 0.05 through 5")
-
-
-class EventTooLarge(ValueError):
-    """
-    Reject an event that exceeds the selected byte budget without truncating its payload.
-    """
 
 
 @frozen

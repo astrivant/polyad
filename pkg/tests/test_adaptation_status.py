@@ -10,8 +10,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from attrs import evolve
 
-from polyad.api.http.errors import Conflict
 from polyad.api.workloads.adaptation import report_adaptation
+from polyad.exceptions.api import Conflict
 from polyad_types import AdaptationReport
 from tests.test_operator import FakeAPI, resource
 

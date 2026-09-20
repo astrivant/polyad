@@ -1,15 +1,17 @@
 # Central schema sources
 
-One generation pipeline produces chart validation files and the standalone
-`polyad-schemas` distribution. Edit the canonical source for a contract, then
-regenerate both copies. Generated JSON files are never independent sources.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Source ownership](#source-ownership)
 - [Regenerate and check](#regenerate-and-check)
 - [Refresh upstream contracts](#refresh-upstream-contracts)
 - [Distribution formats](#distribution-formats)
+<!-- toc:end -->
+
+One generation pipeline produces chart validation files and the standalone
+`polyad-schemas` distribution. Edit the canonical source for a contract, then
+regenerate both copies. Generated JSON files are never independent sources.
 
 ## Source ownership
 

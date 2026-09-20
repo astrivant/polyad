@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING
 from flask import jsonify
 
 from polyad.api.http.application import Routes
-from polyad.api.http.errors import Unavailable
 from polyad.auth.http import install
 from polyad.auth.policy import public_demo
 from polyad.events.topology import topology_snapshot
+from polyad.exceptions.api import Unavailable
 from polyad.metrics.workloads import current_observation
 from polyad.operator.adapters.kubernetes import API
 from polyad.operator.observability.graph_status import instance_metrics

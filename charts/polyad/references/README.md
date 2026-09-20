@@ -1,5 +1,11 @@
 # Polyad values references
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Polyad values references](#polyad-values-references)
+<!-- toc:end -->
+
 These files are optional, composable examples. Helm does not load them
 automatically. Pass selected files with `--values`, followed by your own
 environment-specific overlay.

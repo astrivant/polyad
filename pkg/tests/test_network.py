@@ -10,9 +10,11 @@ import copy
 import pytest
 
 from polyad.compiler.passes.network import NetworkScope, configure_pod, policy_specs, scope_label, traffic
+from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph import NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
 from polyad.operator.policies.network import context
-from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types import resources as asts
 from tests.test_operator import FakeAPI, resource, template
 
@@ -204,7 +206,7 @@ def test_referenced_structural_rules_obey_their_scope(scope_name):
     """
     Boundary-scoped references do not silently constrain reusable descendants.
     """
-    from polyad.operator.policies.rules import RuleViolation, check_rules
+    from polyad.operator.policies.rules import check_rules
 
     async def run():
         rule = resource("GraphRule", "one-node", {"enforcement": "Referenced", "scope": scope_name, "limits": {"nodes": 1}})

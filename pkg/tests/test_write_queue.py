@@ -12,8 +12,9 @@ from unittest.mock import Mock
 
 import pytest
 
+from polyad.exceptions.kubernetes import WriteConflict
 from polyad.operator.adapters.kubernetes import API
-from polyad.operator.coordination.write_queue import WriteConflict, write_intent
+from polyad.operator.coordination.write_queue import write_intent
 
 
 def adapter(*, replicas=3):

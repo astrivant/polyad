@@ -18,12 +18,13 @@ from kubernetes.client.exceptions import ApiException
 from opentelemetry import trace
 
 from polyad.compiler.registry import GRAPH_OWNED_KINDS, RESOURCE_TYPES
+from polyad.exceptions.kubernetes import WriteConflict
 from polyad.operator.adapters.interfaces import ResourceAPI
 from polyad.operator.coordination.contracts import active_contract, without_capture
 from polyad.operator.coordination.dispatch import DispatchGraph, admission
 from polyad.operator.coordination.settings import WorkGraphSettings
 from polyad.operator.coordination.validation import ValidationQueue, invalidate
-from polyad.operator.coordination.write_queue import PendingWrites, WriteConflict, write_intent
+from polyad.operator.coordination.write_queue import PendingWrites, write_intent
 from polyad.operator.observability.decisions import decision
 from polyad.operator.observability.metrics import WriteBacklog
 from polyad.operator.observability.tracing import traced

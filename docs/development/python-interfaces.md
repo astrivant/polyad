@@ -1,18 +1,20 @@
 # Python extension interfaces
 
-Polyad exposes abstract base classes for application behavior, scheduling and
-infrastructure adapters. Subclass the relevant contract and implement its required
-methods. Python rejects incomplete subclasses before they can start workers or
-open connections. Consumers use these contracts where implementations can be
-substituted; the shipped backends retain their existing configuration and behavior.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Public contracts](#public-contracts)
 - [Local execution and scheduling](#local-execution-and-scheduling)
 - [SDK observation and actions](#sdk-observation-and-actions)
 - [Operator adapters](#operator-adapters)
 - [Imports and configuration](#imports-and-configuration)
+<!-- toc:end -->
+
+Polyad exposes abstract base classes for application behavior, scheduling and
+infrastructure adapters. Subclass the relevant contract and implement its required
+methods. Python rejects incomplete subclasses before they can start workers or
+open connections. Consumers use these contracts where implementations can be
+substituted; the shipped backends retain their existing configuration and behavior.
 
 ## Public contracts
 
@@ -137,6 +139,12 @@ Python module attributes. Explicit imports are still preferred. The
 `public-exports` pre-commit check validates static export lists without importing
 runtime dependencies, and tests verify that every declared name resolves and
 that wildcard imports do not load optional SDK backends.
+
+Custom exceptions are defined centrally in each distribution's `exceptions/`
+package and grouped by domain. Import, for example,
+`polyad_sdk.exceptions.api.APIError` or `polyad.exceptions.reconciliation.Pending`.
+Existing exception import paths remain aliases of these canonical classes; see
+the [exception categories and compatibility guide](exceptions.md).
 
 Importing `polyad.operator.adapters.ResourceAPI`, `StateBackend`, or
 `polyad.cache.CacheBackend` does not load Kubernetes, PostgreSQL or Redis drivers.

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from polyad.exceptions.reconciliation import Pending
 from polyad_types.resources import BOUNDARY_KINDS, GROUP, VERSION
 
 if TYPE_CHECKING:
@@ -27,7 +28,6 @@ async def graph_ancestry(api: API, graph: dict[str, Any]) -> list[dict[str, Any]
     Returns:
         list[dict[str, Any]]: Root-to-leaf chain including the containing graph.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     chain = []
     seen = set()

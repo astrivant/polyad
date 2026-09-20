@@ -1,12 +1,7 @@
 # Local Natural Selection: mutation, survival and retirement
 
-[`nature.py`](../../nature.py) runs a parent planner above the worker and policy
-machinery in [`soul.py`](../../soul.py). Natural Selection chooses services,
-capabilities and their composition. Soul searching adapts worker pools inside
-that admitted composition. Both run as real processes with verified work,
-bounded resources and graceful shutdown.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Run the example](#run-the-example)
 - [Read the supervisors](#read-the-supervisors)
@@ -16,6 +11,13 @@ bounded resources and graceful shutdown.
 - [Readiness, revision fences and death](#readiness-revision-fences-and-death)
 - [Controls and evidence](#controls-and-evidence)
 - [Relationship to Copolyad](#relationship-to-copolyad)
+<!-- toc:end -->
+
+[`nature.py`](../../nature.py) runs a parent planner above the worker and policy
+machinery in [`soul.py`](../../soul.py). Natural Selection chooses services,
+capabilities and their composition. Soul searching adapts worker pools inside
+that admitted composition. Both run as real processes with verified work,
+bounded resources and graceful shutdown.
 
 ## Run the example
 

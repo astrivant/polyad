@@ -1,5 +1,15 @@
 # Composition API service
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Enable the service](#enable-the-service)
+- [Optional Gateway API routing](#optional-gateway-api-routing)
+- [Shared shard rate limits](#shared-shard-rate-limits)
+- [OpenAPI schema](#openapi-schema)
+- [Workload activation](#workload-activation)
+<!-- toc:end -->
+
 The optional composition service accepts graph requests and exposes their status
 and resource audit. This guide covers service deployment, authentication, routing,
 rate limits and schema discovery.
@@ -10,14 +20,6 @@ constraints applied before admission. The HTTP API cannot create or modify rules
 Its bearer credential authorizes workload creation and audit reads in the operator
 namespace. Configure per-user access and tenant isolation through workload RBAC,
 Pod Security and resource quotas.
-
-## Table of contents
-
-- [Enable the service](#enable-the-service)
-- [Optional Gateway API routing](#optional-gateway-api-routing)
-- [Shared shard rate limits](#shared-shard-rate-limits)
-- [OpenAPI schema](#openapi-schema)
-- [Workload activation](#workload-activation)
 
 ## Enable the service
 

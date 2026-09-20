@@ -14,9 +14,10 @@ import pytest
 from openapi_spec_validator import validate
 
 from polyad.api.events.builder import EventAPIBuilder
-from polyad.events.store import CursorExpired, EventStore
+from polyad.events.store import EventStore
 from polyad.events.topology import topology_snapshot
 from polyad.events.visibility import public_observation
+from polyad.exceptions.events import CursorExpired
 from polyad.operator.lifecycle import health as health_state
 from tests.test_operator import FakeAPI, resource
 

@@ -1,5 +1,28 @@
 # Graph orchestration and adaptation on Kubernetes
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Daemons change the graph's contract](#daemons-change-the-graphs-contract)
+- [API and Python abstractions](#api-and-python-abstractions)
+- [Scheduling a graph onto a resource slice](#scheduling-a-graph-onto-a-resource-slice)
+- [Interruptible execution](#interruptible-execution)
+- [Workload persistence](#workload-persistence)
+- [Delay gates](#delay-gates)
+- [Resource compiler objects](#resource-compiler-objects)
+  - [Graph observation objects](#graph-observation-objects)
+- [Repeated execution](#repeated-execution)
+- [Reconciliation and shutdown](#reconciliation-and-shutdown)
+- [Graph instance status](#graph-instance-status)
+  - [Composing graph types with PolyGraph](#composing-graph-types-with-polygraph)
+- [Debug logging](#debug-logging)
+- [Health](#health)
+  - [Backlog metrics](#backlog-metrics)
+- [Replicas, shared queues and autoscaling](#replicas-shared-queues-and-autoscaling)
+- [Build, install and exercise](#build-install-and-exercise)
+- [Structural policy and composition API](#structural-policy-and-composition-api)
+<!-- toc:end -->
+
 Polyad deploys, connects and scales container workloads as graphs within and
 across Kubernetes clusters. It checks graph rules, including Cheeger bounds,
 before applying changes, and uses application demand to select approved
@@ -25,27 +48,6 @@ Graph families retain fresh local rule checks at execution. The optional
 [independent federation pattern](multicluster.md#execution-and-observation) and
 [read-only observers](multicluster.md#optional-shared-observers) are documented
 separately.
-
-## Table of contents
-
-- [Daemons change the graph's contract](#daemons-change-the-graphs-contract)
-- [API and Python abstractions](#api-and-python-abstractions)
-- [Scheduling a graph onto a resource slice](#scheduling-a-graph-onto-a-resource-slice)
-- [Interruptible execution](#interruptible-execution)
-- [Workload persistence](#workload-persistence)
-- [Delay gates](#delay-gates)
-- [Resource compiler objects](#resource-compiler-objects)
-  - [Graph observation objects](#graph-observation-objects)
-- [Repeated execution](#repeated-execution)
-- [Reconciliation and shutdown](#reconciliation-and-shutdown)
-- [Graph instance status](#graph-instance-status)
-  - [Composing graph types with PolyGraph](#composing-graph-types-with-polygraph)
-- [Debug logging](#debug-logging)
-- [Health](#health)
-  - [Backlog metrics](#backlog-metrics)
-- [Replicas, shared queues and autoscaling](#replicas-shared-queues-and-autoscaling)
-- [Build, install and exercise](#build-install-and-exercise)
-- [Structural policy and composition API](#structural-policy-and-composition-api)
 
 ## Daemons change the graph's contract
 

@@ -15,10 +15,11 @@ from deepdiff import DeepDiff
 from kubernetes.client.exceptions import ApiException
 
 from polyad.events.visibility import INTERNAL, public_observation
+from polyad.exceptions.coordination import NotOwner
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.clusters.pools import ATTACHMENT, FINALIZER, REGISTERED, SCALING
 from polyad.operator.clusters.reserved import DEPLOYMENT
-from polyad.operator.coordination.leases import DURATION, Coordinator, NotOwner, active_shard
-from polyad.operator.reconciliation.controller import Pending
+from polyad.operator.coordination.leases import DURATION, Coordinator, active_shard
 from tests.test_chart import render
 from tests.test_coordination import LeaseAPI
 from tests.test_operator import resource

@@ -1,5 +1,23 @@
 # Transistor gates and decision programs
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Existing building blocks and the addition](#existing-building-blocks-and-the-addition)
+- [Three ports and one durable decision](#three-ports-and-one-durable-decision)
+- [Risk scores and how to compute them](#risk-scores-and-how-to-compute-them)
+  - [A starting calculation](#a-starting-calculation)
+  - [Evidence, calibration and replay](#evidence-calibration-and-replay)
+- [Proposed configuration](#proposed-configuration)
+- [Requests, facts and provenance](#requests-facts-and-provenance)
+- [Composing decisions into a program](#composing-decisions-into-a-program)
+- [Language and compiler direction](#language-and-compiler-direction)
+- [Admission, durability and recovery](#admission-durability-and-recovery)
+- [Graph constraints, federation and scaling](#graph-constraints-federation-and-scaling)
+- [Decision events and observability](#decision-events-and-observability)
+- [Delivery stages and acceptance criteria](#delivery-stages-and-acceptance-criteria)
+<!-- toc:end -->
+
 **Status: design proposal, not implemented.** The Gate variant, decision bindings,
 receipts, endpoints and authoring syntax below are proposed extensions. Existing
 Boolean gates and activation policies retain their current behavior.
@@ -37,22 +55,6 @@ The recommended language direction is a **Python authoring library with
 compiled into a decision plan whose input types are checked, alongside Polyad resources. This
 gives users a programming interface without requiring a new general-purpose
 language or executing their Python inside the operator.
-
-## Table of contents
-
-- [Existing building blocks and the addition](#existing-building-blocks-and-the-addition)
-- [Three ports and one durable decision](#three-ports-and-one-durable-decision)
-- [Risk scores and how to compute them](#risk-scores-and-how-to-compute-them)
-  - [A starting calculation](#a-starting-calculation)
-  - [Evidence, calibration and replay](#evidence-calibration-and-replay)
-- [Proposed configuration](#proposed-configuration)
-- [Requests, facts and provenance](#requests-facts-and-provenance)
-- [Composing decisions into a program](#composing-decisions-into-a-program)
-- [Language and compiler direction](#language-and-compiler-direction)
-- [Admission, durability and recovery](#admission-durability-and-recovery)
-- [Graph constraints, federation and scaling](#graph-constraints-federation-and-scaling)
-- [Decision events and observability](#decision-events-and-observability)
-- [Delivery stages and acceptance criteria](#delivery-stages-and-acceptance-criteria)
 
 ## Existing building blocks and the addition
 

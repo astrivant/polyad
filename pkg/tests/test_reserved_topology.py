@@ -14,11 +14,12 @@ import pytest
 from deepdiff import DeepDiff
 
 from polyad.events.visibility import INTERNAL, public_observation
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.clusters.federation import Federation
 from polyad.operator.clusters.pools import REGISTERED
 from polyad.operator.clusters.reserved import DEPLOYMENT
 from polyad.operator.coordination.leases import Coordinator, root_shard
-from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types.resources import GROUP
 from tests.test_coordination import LeaseAPI
 from tests.test_operator import resource, template

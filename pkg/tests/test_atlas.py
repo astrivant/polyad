@@ -15,18 +15,20 @@ import pytest
 from attrs import evolve
 
 from polyad.api.connections.store import ConnectionSettings, ConnectionStore
-from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.events.access import require_scope, scope_allows
 from polyad.events.discovery import Directory
 from polyad.events.store import EventStore
 from polyad.events.visibility import public_observation
+from polyad.exceptions.api import Conflict, Forbidden, Unavailable
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph.service_connections import grants
 from polyad.graph.temporary import entries
 from polyad.operator.clusters.federation import INVENTORY, PARENT, REMOTE, Federation
 from polyad.operator.policies.connections import reconcile_connection
-from polyad.operator.reconciliation.controller import Controller, Pending
-from polyad_sdk import Client, StreamInterrupted
+from polyad.operator.reconciliation.controller import Controller
+from polyad_sdk import Client
 from polyad_sdk.events.filters import connection_pending, event_type, field, graph, phase
+from polyad_sdk.exceptions.events import StreamInterrupted
 from polyad_types import APIKey, ConnectionResponse, Event, GraphAccess, ServiceConnectionRequest, ServiceEndpoint
 from polyad_types.api.auth import KeyDirection
 from polyad_types.api.discovery import AccessMode, AtlasAccess, ServiceAccess

@@ -1,5 +1,15 @@
 # Workload controllers and storage
 
+<!-- toc:start -->
+**Table of contents**
+
+- [StatefulSet configuration](#statefulset-configuration)
+- [Three storage paths](#three-storage-paths)
+- [Retention and revisions](#retention-and-revisions)
+- [Replication, rules and capacity](#replication-rules-and-capacity)
+- [DaemonSet execution](#daemonset-execution)
+<!-- toc:end -->
+
 A `Daemon` can execute as a Kubernetes Deployment, StatefulSet or DaemonSet. Choose
 `spec.controller: StatefulSet` when its Pods need stable identities and separate
 persistent claims. Deployment remains the default. Finite `Workload` definitions
@@ -31,14 +41,6 @@ flowchart LR
     ordinal0 --> claim0["data-setname-0 PVC"]
     ordinal1 --> claim1["data-setname-1 PVC"]
 ```
-
-## Table of contents
-
-- [StatefulSet configuration](#statefulset-configuration)
-- [Three storage paths](#three-storage-paths)
-- [Retention and revisions](#retention-and-revisions)
-- [Replication, rules and capacity](#replication-rules-and-capacity)
-- [DaemonSet execution](#daemonset-execution)
 
 ## StatefulSet configuration
 

@@ -1,5 +1,18 @@
 # API keys and request lanes
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Configuration](#configuration)
+- [Shared admission and rotation](#shared-admission-and-rotation)
+- [Outbound calls](#outbound-calls)
+- [KEDA and metrics](#keda-and-metrics)
+- [Graph access and workload assignments](#graph-access-and-workload-assignments)
+- [Optional authentication database](#optional-authentication-database)
+- [Demonstrations without authentication](#demonstrations-without-authentication)
+- [Optional Flask authentication adapter](#optional-flask-authentication-adapter)
+<!-- toc:end -->
+
 Configure any number of keys in two groups: `authentication.services` for
 application services and `authentication.operators` for peer operators and
 infrastructure callers such as KEDA. There is no application-level key-count
@@ -17,17 +30,6 @@ cache. A bidirectional key uses **one combined budget** for both directions,
 including calls handled by different listeners. Group and key name determine
 the lane; equal names in different groups are independent. Group membership
 alone grants no additional API permissions.
-
-## Table of contents
-
-- [Configuration](#configuration)
-- [Shared admission and rotation](#shared-admission-and-rotation)
-- [Outbound calls](#outbound-calls)
-- [KEDA and metrics](#keda-and-metrics)
-- [Graph access and workload assignments](#graph-access-and-workload-assignments)
-- [Optional authentication database](#optional-authentication-database)
-- [Demonstrations without authentication](#demonstrations-without-authentication)
-- [Optional Flask authentication adapter](#optional-flask-authentication-adapter)
 
 ## Configuration
 

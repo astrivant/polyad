@@ -1,5 +1,21 @@
 # Comparing Cheeger bounds and throughput targets
 
+<!-- toc:start -->
+**Table of contents**
+
+- [One metric, two responsibilities](#one-metric-two-responsibilities)
+- [The same graph, different decisions](#the-same-graph-different-decisions)
+- [Rebalancing traffic without changing Cheeger](#rebalancing-traffic-without-changing-cheeger)
+- [Observe, Adapt and conflicting bounds](#observe-adapt-and-conflicting-bounds)
+- [Coordinating topology with replica scaling](#coordinating-topology-with-replica-scaling)
+- [Nested Graphs and subgraph replication](#nested-graphs-and-subgraph-replication)
+  - [What each boundary measures](#what-each-boundary-measures)
+  - [Replicating the whole child](#replicating-the-whole-child)
+  - [When both levels use Soul searching](#when-both-levels-use-soul-searching)
+- [Hierarchy and reserved operator graphs](#hierarchy-and-reserved-operator-graphs)
+- [Configuration and observations](#configuration-and-observations)
+<!-- toc:end -->
+
 Polyad uses the same structural Cheeger measurement for two different policies:
 **GraphRules define permitted topology**, while **throughput policies select a
 desired topology in response to measured application demand**.
@@ -17,20 +33,6 @@ within the same bounds, including Headroom adjustments before an aggregate short
 With [`trigger: Demand`](load-profiles.md), approved profiles can change connections,
 traffic and capacity lookahead under sustained positive demand while completed
 throughput keeps up. Hard rules and replica-scaling ownership remain independent.
-
-## Table of contents
-
-- [One metric, two responsibilities](#one-metric-two-responsibilities)
-- [The same graph, different decisions](#the-same-graph-different-decisions)
-- [Rebalancing traffic without changing Cheeger](#rebalancing-traffic-without-changing-cheeger)
-- [Observe, Adapt and conflicting bounds](#observe-adapt-and-conflicting-bounds)
-- [Coordinating topology with replica scaling](#coordinating-topology-with-replica-scaling)
-- [Nested Graphs and subgraph replication](#nested-graphs-and-subgraph-replication)
-  - [What each boundary measures](#what-each-boundary-measures)
-  - [Replicating the whole child](#replicating-the-whole-child)
-  - [When both levels use Soul searching](#when-both-levels-use-soul-searching)
-- [Hierarchy and reserved operator graphs](#hierarchy-and-reserved-operator-graphs)
-- [Configuration and observations](#configuration-and-observations)
 
 ## One metric, two responsibilities
 

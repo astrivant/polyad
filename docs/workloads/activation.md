@@ -1,5 +1,16 @@
 # Workload activation and pulses
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Terms used in this guide](#terms-used-in-this-guide)
+- [Policy on the downstream definition](#policy-on-the-downstream-definition)
+- [Parallel daemons and replica bounds](#parallel-daemons-and-replica-bounds)
+- [Frequency bounds](#frequency-bounds)
+- [API and standalone Python SDK](#api-and-standalone-python-sdk)
+- [Durability, cleanup and limits](#durability-cleanup-and-limits)
+<!-- toc:end -->
+
 A daemon can become ready while continuing to run. Downstream nodes can already
 depend on that readiness using `condition: ready`. **Activation adds a separate
 application signal:** a service announces that a batch, request or next phase of
@@ -12,15 +23,6 @@ must be persistent. A node with this policy waits for a pulse, then still checks
 its dependencies, gates, slots, placement, storage and capacity requirements.
 Definitions without a policy keep their existing automatic
 [admission behavior](../introduction/concepts.md#conditions-and-admission).
-
-## Table of contents
-
-- [Terms used in this guide](#terms-used-in-this-guide)
-- [Policy on the downstream definition](#policy-on-the-downstream-definition)
-- [Parallel daemons and replica bounds](#parallel-daemons-and-replica-bounds)
-- [Frequency bounds](#frequency-bounds)
-- [API and standalone Python SDK](#api-and-standalone-python-sdk)
-- [Durability, cleanup and limits](#durability-cleanup-and-limits)
 
 ## Terms used in this guide
 

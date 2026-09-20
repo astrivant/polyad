@@ -1,5 +1,16 @@
 # Soul searching: application throughput and graph structure
 
+<!-- toc:start -->
+**Table of contents**
+
+- [How the controls fit together](#how-the-controls-fit-together)
+- [Calibrate the relationship](#calibrate-the-relationship)
+- [Configure a bounded policy](#configure-a-bounded-policy)
+- [Automatic traffic-weight adjustments](#automatic-traffic-weight-adjustments)
+- [Report measurements](#report-measurements)
+- [Bounds, observations and scalability](#bounds-observations-and-scalability)
+<!-- toc:end -->
+
 **Soul searching** is Polyad's **bounded topology optimizer** for a `Graph` or
 `PolyGraph`. It runs as a feedback controller, using application demand and throughput reports
 to recommend or apply approved connection layouts
@@ -21,15 +32,6 @@ For side-by-side graph examples and orchestration diagrams, see
 [comparing Cheeger bounds and throughput targets](cheeger-orchestration.md).
 For policies active in both a parent and child, see
 [nested Graphs and subgraph replication](cheeger-orchestration.md#nested-graphs-and-subgraph-replication).
-
-## Table of contents
-
-- [How the controls fit together](#how-the-controls-fit-together)
-- [Calibrate the relationship](#calibrate-the-relationship)
-- [Configure a bounded policy](#configure-a-bounded-policy)
-- [Automatic traffic-weight adjustments](#automatic-traffic-weight-adjustments)
-- [Report measurements](#report-measurements)
-- [Bounds, observations and scalability](#bounds-observations-and-scalability)
 
 ## How the controls fit together
 

@@ -1,5 +1,15 @@
 # Polyad benchmarks
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Install](#install)
+- [Commands](#commands)
+- [Plans and replicas](#plans-and-replicas)
+- [Study lifecycle](#study-lifecycle)
+- [Optional study plots](#optional-study-plots)
+<!-- toc:end -->
+
 A standalone Python 3.13–3.14 package for repeatable Polyad load studies. Render
 and submit graph plans through the SDK, run a mock application and bounded load
 generator, and measure activation acceptance and completion. Shared run IDs
@@ -10,14 +20,6 @@ grant Kubernetes permissions.
 Optional [Soul](../../studies/soul/README.md) and [Nature](../../studies/nature/README.md)
 process studies exercise SDK strategies and capability changes, retain real job
 and process measurements, and plot adaptation before, during and after disturbances.
-
-## Table of contents
-
-- [Install](#install)
-- [Commands](#commands)
-- [Plans and replicas](#plans-and-replicas)
-- [Study lifecycle](#study-lifecycle)
-- [Optional study plots](#optional-study-plots)
 
 ## Install
 

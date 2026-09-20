@@ -13,11 +13,13 @@ from unittest.mock import AsyncMock
 import pytest
 
 from polyad.api.events.builder import EventAPIBuilder
-from polyad.events.store import EventStore, TopologyReplaced
+from polyad.events.store import EventStore
 from polyad.events.topology import neighbors, topology_snapshot
+from polyad.exceptions.events import TopologyReplaced
 from polyad.operator.lifecycle import handlers
 from polyad.operator.reconciliation.controller import Controller
-from polyad_sdk import APIError, Client
+from polyad_sdk import Client
+from polyad_sdk.exceptions.api import APIError
 from polyad_types.resources import GROUP
 from tests.test_client import Adapter
 from tests.test_operator import FakeAPI, resource, template

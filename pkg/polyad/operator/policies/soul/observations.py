@@ -11,7 +11,9 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.traffic import capacity_weights
-from polyad.graph.cheeger import CheegerIncomplete, compute_cheeger
+from polyad.exceptions.graph import CheegerIncomplete
+from polyad.exceptions.reconciliation import Pending
+from polyad.graph.cheeger import compute_cheeger
 from polyad.graph.rules import relation_graph
 from polyad.operator.policies.cheeger import computation_limits
 from polyad.operator.policies.soul.contracts import STATE, Search
@@ -195,7 +197,6 @@ async def headroom_targets(controller: Controller, obj: dict[str, Any], sample: 
         tuple[TrafficWeights, ...] | None: Desired splits, or None for missing, replaced or unusable replica measurements.
     """
     from polyad.operator.policies.traffic import target_selector
-    from polyad.operator.reconciliation.controller import Pending
 
     graph = topology(obj["spec"], obj["kind"])
     reports = {(item.route, item.target): item for item in sample.traffic}

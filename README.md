@@ -1,5 +1,30 @@
 # Polyad
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Get started](#get-started)
+- [What Polyad abstracts](#what-polyad-abstracts)
+  - [Motivation and inspiration](#motivation-and-inspiration)
+  - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
+  - [Graphs of graphs](#graphs-of-graphs)
+  - [Writing Adaptive Microservices for execution in Polygraphs](#writing-adaptive-microservices-for-execution-in-polygraphs)
+  - [Replica connections](#replica-connections)
+  - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
+  - [Demand-driven adaptation and preparation](#demand-driven-adaptation-and-preparation)
+  - [Constrained compositions](#constrained-compositions)
+  - [Network boundaries](#network-boundaries)
+  - [Graphs across clusters](#graphs-across-clusters)
+  - [Graphs across node groups](#graphs-across-node-groups)
+  - [Workloads calling the operator](#workloads-calling-the-operator)
+  - [Finite pipelines](#finite-pipelines)
+  - [Persistent services and recurrence](#persistent-services-and-recurrence)
+  - [The operator as a Graph](#the-operator-as-a-graph)
+- [What Polyad is not](#what-polyad-is-not)
+- [License](#license)
+- [References](#references)
+<!-- toc:end -->
+
 <img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoes fading toward the right" width="630" height="140">
 
 Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics)
@@ -55,31 +80,6 @@ the Kubernetes Operators Framework for Python.
   [OpenTelemetry traces and decision logs](docs/operations/tracing.md).
   The [write pipeline](docs/development/write-pipeline.md) coalesces duplicate mutations,
   checks dependencies before dispatch and returns stale decisions to reconciliation.
-
-## Table of contents
-
-- [Polyad](#polyad)
-  - [Table of contents](#table-of-contents)
-  - [Get started](#get-started)
-  - [What Polyad abstracts](#what-polyad-abstracts)
-    - [Motivation and inspiration](#motivation-and-inspiration)
-    - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
-    - [Graphs of graphs](#graphs-of-graphs)
-    - [Replica connections](#replica-connections)
-    - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
-    - [Demand-driven adaptation and preparation](#demand-driven-adaptation-and-preparation)
-    - [Constrained compositions](#constrained-compositions)
-    - [Network boundaries](#network-boundaries)
-    - [Graphs across clusters](#graphs-across-clusters)
-    - [Graphs across node groups](#graphs-across-node-groups)
-    - [Workloads calling the operator](#workloads-calling-the-operator)
-    - [Finite pipelines](#finite-pipelines)
-    - [Persistent services and recurrence](#persistent-services-and-recurrence)
-    - [The operator as a Graph](#the-operator-as-a-graph)
-    - [Writing Adaptive Microservices for execution in Polygraphs](#writing-adaptive-microservices-for-execution-in-polygraphs)
-  - [What Polyad is not](#what-polyad-is-not)
-  - [License](#license)
-  - [References](#references)
 
 ## Get started
 
@@ -254,6 +254,52 @@ Read about [graphs of graphs](docs/introduction/concepts.md#graphs-of-graphs).
 
 </details>
 
+### Writing Adaptive Microservices for execution in Polygraphs
+
+Application code can participate in adaptation, using available capacity while
+protecting work it has already accepted. The [Soul study](studies/soul/README.md)
+demonstrates this with six real Python service processes, a load generator and a
+monitoring parent. Each service uses the SDK's adaptation strategies to respond
+to changing demand and controlled disturbances.
+
+[![Six services and their child workers before, during and after adapting to load and constraints](studies/soul/figures/topology.png)](studies/soul/figures/topology.png)
+
+*Build services that put spare capacity to work and release extra workers when
+demand falls. These recorded process graphs show services adding batch workers,
+switching to compact workers under modeled memory pressure and recovering their
+original footprint. Accepted jobs remain tracked through each transition.
+Click the figure to inspect the worker identities and connections.*
+
+The parent routes new jobs toward services with room to accept them. Services
+pause new assignments when observations become unavailable, peers become
+unhealthy or connection permission expires, while draining work already accepted.
+The study compares fixed and adaptive trials under the same offered load and
+resource ceilings, verifies every completed job, and records queue sizes,
+completion latency and process lifecycles.
+
+The [Nature study](studies/nature/README.md) adds composition decisions above
+those local adaptations. When the required output changes, its Natural Selection
+planner chooses which service implementations and connections can deliver it
+within the configured process and cost limits.
+
+[![Service compositions and their child workers before, during and after the required output changes](studies/nature/figures/topology.png)](studies/nature/figures/topology.png)
+
+*Let services contribute in different ways as requirements change. A and F switch
+to implementations that perform both processing steps; B and E keep running and
+connect to new services that supply the second step. C and H retire after draining
+their accepted work. When the original requirement returns, the planner restores
+the original composition. Each selected service continues adapting its own
+workers. Click the figure to follow the process identities and routes.*
+
+For developers, the reusable pattern is to keep business processing separate from
+the policies that decide when to accept work, which worker profile to run and how
+to replace it safely. Extend [`AdaptiveService`](pkg/polyad-sdk/README.md#adaptive-services-and-deltas),
+choose [strategies for your application's constraints](docs/workloads/adaptation-strategies.md),
+and measure whether those adaptations improve useful completion and recovery.
+The [study's strategy modules](studies/soul/README.md#strategy-modules) and
+[repeatable run instructions](studies/soul/README.md#run) provide a working starting
+point with before, during and after measurements.
+
 ### Replica connections
 
 Each ReplicaGroup can choose its own [connection mode](docs/graphs/replication.md#connections-between-copies).
@@ -263,7 +309,7 @@ another combines daemon replicas in a [Star](docs/graphs/replication.md#star) wi
 [FullMesh](docs/graphs/replication.md#fullmesh). Edges between enclosing graphs and groups
 are declared separately at their [network boundaries](docs/deployment/networking.md#isolating-a-subgraph).
 
-<details open>
+<details>
 <summary>Example: three replica layouts and connections across subgraphs</summary>
 
 ```mermaid
@@ -1048,52 +1094,6 @@ administrator-provided StorageClass or GKE disks backed by a Cloud KMS key.
 Optional [record encryption](docs/deployment/record-encryption.md) uses an
 administrator-provided public key to encrypt JSON payloads inside the operator
 before writing them to either managed or external PostgreSQL databases.
-
-### Writing Adaptive Microservices for execution in Polygraphs
-
-Application code can participate in adaptation, using available capacity while
-protecting work it has already accepted. The [Soul study](studies/soul/README.md)
-demonstrates this with six real Python service processes, a load generator and a
-monitoring parent. Each service uses the SDK's adaptation strategies to respond
-to changing demand and controlled disturbances.
-
-[![Six services and their child workers before, during and after adapting to load and constraints](studies/soul/figures/topology.png)](studies/soul/figures/topology.png)
-
-*Build services that put spare capacity to work and release extra workers when
-demand falls. These recorded process graphs show services adding batch workers,
-switching to compact workers under modeled memory pressure and recovering their
-original footprint. Accepted jobs remain tracked through each transition.
-Click the figure to inspect the worker identities and connections.*
-
-The parent routes new jobs toward services with room to accept them. Services
-pause new assignments when observations become unavailable, peers become
-unhealthy or connection permission expires, while draining work already accepted.
-The study compares fixed and adaptive trials under the same offered load and
-resource ceilings, verifies every completed job, and records queue sizes,
-completion latency and process lifecycles.
-
-The [Nature study](studies/nature/README.md) adds composition decisions above
-those local adaptations. When the required output changes, its Natural Selection
-planner chooses which service implementations and connections can deliver it
-within the configured process and cost limits.
-
-[![Service compositions and their child workers before, during and after the required output changes](studies/nature/figures/topology.png)](studies/nature/figures/topology.png)
-
-*Let services contribute in different ways as requirements change. A and F switch
-to implementations that perform both processing steps; B and E keep running and
-connect to new services that supply the second step. C and H retire after draining
-their accepted work. When the original requirement returns, the planner restores
-the original composition. Each selected service continues adapting its own
-workers. Click the figure to follow the process identities and routes.*
-
-For developers, the reusable pattern is to keep business processing separate from
-the policies that decide when to accept work, which worker profile to run and how
-to replace it safely. Extend [`AdaptiveService`](pkg/polyad-sdk/README.md#adaptive-services-and-deltas),
-choose [strategies for your application's constraints](docs/workloads/adaptation-strategies.md),
-and measure whether those adaptations improve useful completion and recovery.
-The [study's strategy modules](studies/soul/README.md#strategy-modules) and
-[repeatable run instructions](studies/soul/README.md#run) provide a working starting
-point with before, during and after measurements.
 
 ## What Polyad is not
 

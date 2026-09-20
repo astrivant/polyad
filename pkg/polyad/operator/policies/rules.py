@@ -9,6 +9,9 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.policies import RuleViolation as RuleViolation
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph.rules import evaluate_rule
 from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.cheeger import computation_limits
@@ -26,12 +29,6 @@ __all__ = (
     "RuleViolation",
     "check_rules",
 )
-
-
-class RuleViolation(ValueError):
-    """
-    Reject a graph family that violates an engineer-defined structural rule.
-    """
 
 
 async def check_rules(
@@ -105,8 +102,6 @@ async def check_rules(
             if key not in cache:
                 definition = await api.get(node.kind, namespace, node.ref)
                 if definition is None or definition["metadata"].get("deletionTimestamp"):
-                    from polyad.operator.reconciliation.controller import Pending
-
                     raise Pending(f"waiting for graph definition: {node.kind}/{node.ref}")
                 cache[key] = definition
             count, levels, _ = await visit(

@@ -1,5 +1,16 @@
 # Helm deployment profiles
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Combine reference values](#combine-reference-values)
+- [One dense operator](#one-dense-operator)
+- [HA in one cluster](#ha-in-one-cluster)
+- [HA with a management cluster](#ha-with-a-management-cluster)
+- [Helm-installed downstream operator workers](#helm-installed-downstream-operator-workers)
+- [Source layout and switching profiles](#source-layout-and-switching-profiles)
+<!-- toc:end -->
+
 Set the chart's top-level `ha` Boolean: `false` (the default) runs one dense
 operator; `true` runs at least two replicas. `architecture.mode` and
 `rootControlPlane.enabled` configure optional layouts within HA.
@@ -22,15 +33,6 @@ retain their own meanings. KEDA can use an existing installation or the
 [optional chart dependency](local-services.md#install-keda-with-the-chart), enabled
 separately with `keda.install: true`. Other infrastructure prerequisites remain
 listed in their feature guides.
-
-## Table of contents
-
-- [Combine reference values](#combine-reference-values)
-- [One dense operator](#one-dense-operator)
-- [HA in one cluster](#ha-in-one-cluster)
-- [HA with a management cluster](#ha-with-a-management-cluster)
-- [Helm-installed downstream operator workers](#helm-installed-downstream-operator-workers)
-- [Source layout and switching profiles](#source-layout-and-switching-profiles)
 
 ## Combine reference values
 

@@ -1,16 +1,18 @@
 # Pod context and health binding
 
-Polyad's health listener binds to its primary Pod IP. Kubernetes supplies that IP
-and the Pod's execution context through the Downward API, independently of trace
-or log export. Operator Pods and graph-managed workloads receive the same context
-selectors; each kubelet resolves them for its own containers.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Health checks](#health-checks)
 - [Environment variables](#environment-variables)
 - [Placement and lifecycle](#placement-and-lifecycle)
 - [Deployment coverage](#deployment-coverage)
+<!-- toc:end -->
+
+Polyad's health listener binds to its primary Pod IP. Kubernetes supplies that IP
+and the Pod's execution context through the Downward API, independently of trace
+or log export. Operator Pods and graph-managed workloads receive the same context
+selectors; each kubelet resolves them for its own containers.
 
 ## Health checks
 

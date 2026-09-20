@@ -1,5 +1,17 @@
 # Root control plane
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Authority and execution](#authority-and-execution)
+- [Install and register clusters](#install-and-register-clusters)
+- [Configuration](#configuration)
+- [KEDA from the root](#keda-from-the-root)
+- [Reports, disconnection and deletion](#reports-disconnection-and-deletion)
+- [Reserved operator hierarchy](#reserved-operator-hierarchy)
+- [Reserved graphs for node workers](#reserved-graphs-for-node-workers)
+<!-- toc:end -->
+
 The root can use the default dense Deployment or the
 [distributed component Graph](components.md), keeping bootstrap authority in the
 management cluster. [Optional PostgreSQL](postgresql.md) persists observations
@@ -26,16 +38,6 @@ The [graph rollout and rotation proposal](../proposals/rotations.md) describes h
 could coordinate versioned changes in either direction through this hierarchy,
 with breadth-first waves or depth-first branches. Ordered rollout requests and
 their graph policy bindings are proposed extensions, not current root behavior.
-
-## Table of contents
-
-- [Authority and execution](#authority-and-execution)
-- [Install and register clusters](#install-and-register-clusters)
-- [Configuration](#configuration)
-- [KEDA from the root](#keda-from-the-root)
-- [Reports, disconnection and deletion](#reports-disconnection-and-deletion)
-- [Reserved operator hierarchy](#reserved-operator-hierarchy)
-- [Reserved graphs for node workers](#reserved-graphs-for-node-workers)
 
 ## Authority and execution
 

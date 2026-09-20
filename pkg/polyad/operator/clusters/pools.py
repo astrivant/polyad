@@ -18,17 +18,17 @@ import yaml  # type: ignore[import-untyped]
 
 from polyad.compiler.passes.identity import inject_environment
 from polyad.events.visibility import INTERNAL, public_observation
+from polyad.exceptions.coordination import NotOwner
+from polyad.exceptions.kubernetes import WriteConflict
+from polyad.exceptions.reconciliation import Pending
 from polyad.metrics.workloads import current_observation
 from polyad.operator.clusters.remote_scaling import INTENT, remote_revision
 from polyad.operator.clusters.reserved import DEPLOYMENT
 from polyad.operator.clusters.services import graphs as service_graphs
 from polyad.operator.coordination.contracts import capture_decision
-from polyad.operator.coordination.leases import NotOwner
-from polyad.operator.coordination.write_queue import WriteConflict
 from polyad.operator.observability.decisions import decision, status_decisions
 from polyad.operator.observability.tracing import traced
 from polyad.operator.policies.rule_state import check_live_rules
-from polyad.operator.reconciliation.controller import Pending
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:

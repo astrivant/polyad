@@ -9,9 +9,10 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from polyad.exceptions.coordination import NotOwner
 from polyad.operator.adapters.kubernetes import API
 from polyad.operator.coordination.contracts import capture_decision
-from polyad.operator.coordination.leases import WRITE_BUDGET, NotOwner
+from polyad.operator.coordination.leases import WRITE_BUDGET
 
 if TYPE_CHECKING:
     from typing import Any

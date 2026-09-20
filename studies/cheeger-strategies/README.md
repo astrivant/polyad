@@ -1,5 +1,18 @@
 # Cheeger strategy selection under graph change
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Questions and figures](#questions-and-figures)
+- [Findings from the published local run](#findings-from-the-published-local-run)
+- [Published graphs](#published-graphs)
+- [What accuracy means](#what-accuracy-means)
+- [Experimental axes](#experimental-axes)
+- [Churn and cache semantics](#churn-and-cache-semantics)
+- [Current runtime limits exposed by the study](#current-runtime-limits-exposed-by-the-study)
+- [Reproduce](#reproduce)
+<!-- toc:end -->
+
 This local study runs Polyad's production Cheeger selector on reproducible graph
 snapshots. It compares exact enumeration, adjacency PCA, fresh Laplacian spectral
 reduction, reused spectral partitions, and the complete automatic selector.

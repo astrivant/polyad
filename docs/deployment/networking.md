@@ -1,5 +1,18 @@
 # Graph networking and event subscriptions
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Selection, scope and inheritance](#selection-scope-and-inheritance)
+- [Isolating a subgraph](#isolating-a-subgraph)
+- [Cross-namespace peers and HTTP authorization](#cross-namespace-peers-and-http-authorization)
+- [Enforcement and lifecycle](#enforcement-and-lifecycle)
+- [Optional chart networking](#optional-chart-networking)
+- [Workload access to operator APIs](#workload-access-to-operator-apis)
+- [Event subscriptions](#event-subscriptions)
+- [Credentials, health and process signals](#credentials-health-and-process-signals)
+<!-- toc:end -->
+
 A graph can group workloads that should communicate freely with one another,
 while exposing only a few connections to the rest of an application. A subgraph
 is a useful boundary for that group. Polyad compiles its traffic contract into
@@ -25,17 +38,6 @@ covers how traffic contracts are compiled, enforced and operated.
 For optional percentage routing **between graph replicas**, see
 [traffic balancing](../graphs/traffic-balancing.md). It compiles source-scoped
 Istio routes independently of these network permissions and the structural Cheeger bounds.
-
-## Table of contents
-
-- [Selection, scope and inheritance](#selection-scope-and-inheritance)
-- [Isolating a subgraph](#isolating-a-subgraph)
-- [Cross-namespace peers and HTTP authorization](#cross-namespace-peers-and-http-authorization)
-- [Enforcement and lifecycle](#enforcement-and-lifecycle)
-- [Optional chart networking](#optional-chart-networking)
-- [Workload access to operator APIs](#workload-access-to-operator-apis)
-- [Event subscriptions](#event-subscriptions)
-- [Credentials, health and process signals](#credentials-health-and-process-signals)
 
 ## Selection, scope and inheritance
 

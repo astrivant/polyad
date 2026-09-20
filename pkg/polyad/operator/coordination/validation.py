@@ -12,8 +12,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from weakref import WeakSet
 
+from polyad.exceptions.kubernetes import WriteConflict
 from polyad.operator.coordination.contracts import without_capture
-from polyad.operator.coordination.write_queue import WriteConflict
 
 if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API

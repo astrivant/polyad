@@ -20,6 +20,7 @@ import yaml
 from polyad_benchmarks import fixture, plan, refresh, runner
 from polyad_benchmarks.config import RunConfig
 from polyad_benchmarks.identity import new_run_id, plan_hash
+from polyad_sdk.exceptions.api import APIError
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -106,7 +107,7 @@ def test_fixture_uses_real_http_and_pins_graph_context(monkeypatch, capsys):
 
             # The request cannot use the operator token as its fixture credential.
             monkeypatch.setenv("POLYAD_BENCHMARK_FIXTURE_TOKEN", "fixture-token")
-            from polyad_sdk import APIError, Client
+            from polyad_sdk import Client
 
             with pytest.raises(APIError) as error:
                 Client(f"http://127.0.0.1:{server.server_port}", "wrong").activate(

@@ -11,9 +11,9 @@ import pytest
 from attrs import evolve
 
 from polyad.api.composition.builder import APIBuilder
-from polyad.api.http.errors import Conflict
 from polyad.api.workloads.adaptation import report_adaptation
 from polyad.api.workloads.service_level import report_service_level
+from polyad.exceptions.api import Conflict
 from polyad_types import AdaptationReport, ServiceLevelPolicy, ServiceLevelReport, to_dict
 from tests.test_operator import FakeAPI, resource
 

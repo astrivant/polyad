@@ -8,8 +8,8 @@ import os
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from polyad.api.http.errors import Conflict, Forbidden
 from polyad.events.visibility import observation_ancestry, permitted_observation, public_observation
+from polyad.exceptions.api import Conflict, Forbidden
 from polyad_types.resources import ObjectMeta, StatusPatch
 
 if TYPE_CHECKING:

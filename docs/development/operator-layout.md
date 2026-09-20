@@ -1,20 +1,20 @@
 # Operator package layout
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Responsibilities](#responsibilities)
+- [Reconciliation flow](#reconciliation-flow)
+- [Soul searching entry point](#soul-searching-entry-point)
+- [Imports and optional capabilities](#imports-and-optional-capabilities)
+- [Where to make changes](#where-to-make-changes)
+<!-- toc:end -->
+
 `pkg/polyad/operator` groups implementation modules by responsibility. The
 `runtime.py` and `observer.py` entrypoints launch their respective processes;
 the packages below own startup, reconciliation, policy enforcement and supporting
 services. See the [process and thread hierarchy](../deployment/process-hierarchy.md)
 for how this code runs in a deployed container.
-
-## Table of contents
-
-- [Operator package layout](#operator-package-layout)
-  - [Table of contents](#table-of-contents)
-  - [Responsibilities](#responsibilities)
-  - [Reconciliation flow](#reconciliation-flow)
-  - [Soul searching entry point](#soul-searching-entry-point)
-  - [Imports and optional capabilities](#imports-and-optional-capabilities)
-  - [Where to make changes](#where-to-make-changes)
 
 ## Responsibilities
 

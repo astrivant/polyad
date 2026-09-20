@@ -1,5 +1,15 @@
 # Mutation plans
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Describe effects and shared bounds](#describe-effects-and-shared-bounds)
+- [Ordering and evidence](#ordering-and-evidence)
+- [Execute a plan](#execute-a-plan)
+- [Queued Kubernetes write conflicts](#queued-kubernetes-write-conflicts)
+- [Operator integration and limits](#operator-integration-and-limits)
+<!-- toc:end -->
+
 A workload graph describes what should run. A mutation plan describes changes to
 that graph or its resources, and which changes may execute together. For example,
 scaling ingestion and reporting can share a batch when their effects are independent
@@ -13,14 +23,6 @@ they do not add a CRD or accept executable callbacks through the composition API
 See [mutation diagram patterns](mutation-diagrams.md) for independence squares,
 retry and refinement triangles, joinability diamonds, commuting cubes and compiler
 preservation, with their assumptions and current implementation limits.
-
-## Table of contents
-
-- [Describe effects and shared bounds](#describe-effects-and-shared-bounds)
-- [Ordering and evidence](#ordering-and-evidence)
-- [Execute a plan](#execute-a-plan)
-- [Queued Kubernetes write conflicts](#queued-kubernetes-write-conflicts)
-- [Operator integration and limits](#operator-integration-and-limits)
 
 ## Describe effects and shared bounds
 

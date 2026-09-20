@@ -1,17 +1,19 @@
 # Encrypt PostgreSQL records in the operator
 
-Set `postgresql.recordEncryption.enabled: true` to encrypt JSON payloads **before
-the operator sends them to PostgreSQL**. This is optional, disabled by default,
-and works with managed or external state and authentication databases. It can be
-combined with [volume encryption](postgresql.md#encryption-at-rest).
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Configure key Secrets](#configure-key-secrets)
 - [What is encrypted](#what-is-encrypted)
 - [Read encrypted records](#read-encrypted-records)
 - [Rotate keys and migrate existing data](#rotate-keys-and-migrate-existing-data)
 - [Deployment and failure behavior](#deployment-and-failure-behavior)
+<!-- toc:end -->
+
+Set `postgresql.recordEncryption.enabled: true` to encrypt JSON payloads **before
+the operator sends them to PostgreSQL**. This is optional, disabled by default,
+and works with managed or external state and authentication databases. It can be
+combined with [volume encryption](postgresql.md#encryption-at-rest).
 
 ## Configure key Secrets
 

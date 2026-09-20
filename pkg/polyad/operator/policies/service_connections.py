@@ -12,9 +12,10 @@ from typing import TYPE_CHECKING
 
 from polyad.api.connections.consent import decisions
 from polyad.api.connections.paths import identities, path
-from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.compiler.passes.network import NetworkScope, traffic
 from polyad.events.access import configuration, require_scope
+from polyad.exceptions.api import Conflict, Forbidden, Unavailable
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph.service_connections import ANNOTATION, grants
 from polyad.graph.temporary import deadline
 from polyad.operator.coordination.contracts import expires_before
@@ -192,7 +193,7 @@ async def reconcile(controller: Controller, receipt: dict[str, Any], *, remove: 
         None: Every destination has acknowledged its policies; pending work retries from fresh reads.
     """
     from polyad.operator.policies.connections import refresh_network
-    from polyad.operator.reconciliation.controller import Controller, Pending
+    from polyad.operator.reconciliation.controller import Controller
 
     resolve = resolver(controller, receipt["metadata"]["namespace"])
     proposed = {} if remove else policies(receipt)

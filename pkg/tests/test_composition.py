@@ -11,10 +11,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from attrs import frozen
 
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph import GraphNode, Node, PolyGraph
 from polyad.operator.coordination.leases import Coordinator
 from polyad.operator.lifecycle import handlers
-from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types import resources as asts
 from polyad_types.graphs.topology import topology
 from polyad_types.serialization import converter

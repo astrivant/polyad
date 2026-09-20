@@ -1,12 +1,7 @@
 # Reachability and symbiosis models
 
-An application can have spare capacity and still be unable to move work to it
-before a queue fills. Reachability analysis asks whether its permitted actions
-can achieve the required behavior in time. The SDK supplies explicit service
-interaction models, compact queue envelopes and a guard for checking a routing
-choice against one of those envelopes.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Viability and the adaptation envelope](#viability-and-the-adaptation-envelope)
 - [Describe a service relationship](#describe-a-service-relationship)
@@ -16,6 +11,13 @@ choice against one of those envelopes.
 - [Resource requirements](#resource-requirements)
 - [Study the state variables](#study-the-state-variables)
 - [References](#references)
+<!-- toc:end -->
+
+An application can have spare capacity and still be unable to move work to it
+before a queue fills. Reachability analysis asks whether its permitted actions
+can achieve the required behavior in time. The SDK supplies explicit service
+interaction models, compact queue envelopes and a guard for checking a routing
+choice against one of those envelopes.
 
 ## Viability and the adaptation envelope
 

@@ -94,6 +94,13 @@ import sys
 packages = {'polyad', 'polyad_sdk', 'polyad_types', 'polyad_schemas', 'polyad_benchmarks'}
 for name in sys.argv[1:]:
     module = importlib.import_module(name)
+
+    # Private control-flow exceptions belong in the same central namespaces as
+    # public failures. Re-exports must retain the defining package's class.
+    for value in vars(module).values():
+        if inspect.isclass(value) and issubclass(value, BaseException) and value.__module__ == name:
+            assert '.exceptions.' in name, (name, value.__name__)
+
     namespace = {}
     exec(f'from {name} import *', namespace)
     assert set(namespace) - {'__builtins__'} == set(module.__all__), name

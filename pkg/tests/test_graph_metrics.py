@@ -10,9 +10,10 @@ import copy
 import pytest
 from kubernetes.client.exceptions import ApiException
 
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph import topology_metrics
 from polyad.operator.observability.graph_status import instance_metrics
-from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types.graphs.topology import topology
 from tests.test_operator import FakeAPI, resource, template
 

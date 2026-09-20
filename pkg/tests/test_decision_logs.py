@@ -16,10 +16,11 @@ from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.sampling import ALWAYS_OFF, ALWAYS_ON
 
+from polyad.exceptions.policies import RuleViolation
 from polyad.operator.observability import logging as diagnostics
 from polyad.operator.observability import tracing
 from polyad.operator.observability.decisions import decision, decision_context
-from polyad.operator.policies.rules import RuleViolation, check_rules
+from polyad.operator.policies.rules import check_rules
 from polyad.operator.reconciliation.controller import Controller
 from tests.test_chart import render
 from tests.test_operator import FakeAPI, resource

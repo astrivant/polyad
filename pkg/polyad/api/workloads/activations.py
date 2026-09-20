@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.http.errors import Conflict, Unavailable
 from polyad.compiler.activation import activation_name
+from polyad.exceptions.api import Conflict, Unavailable
 from polyad_types import resources as asts
 from polyad_types.graphs.activation import ActivationPolicy
 from polyad_types.serialization import converter

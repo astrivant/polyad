@@ -1,5 +1,13 @@
 # Service-level objectives for adaptive Daemons
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Declare the contract](#declare-the-contract)
+- [Report observations from the SDK](#report-observations-from-the-sdk)
+- [Interpret status](#interpret-status)
+<!-- toc:end -->
+
 Polyad evaluates customer-visible service quality independently from deployment
 and adaptation progress. A Daemon can therefore be `Progressing` while its
 service is `Compliant`, `Degraded` or `Unavailable`. An adaptation is not counted

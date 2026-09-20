@@ -14,6 +14,7 @@ from polyad.api.workloads.activations import ActivationStore
 from polyad.compiler.activation import activation_name
 from polyad.compiler.passes.children import child_name
 from polyad.compiler.passes.identity import inject_environment
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.observability.graph_status import observed
 from polyad_types import resources as asts
 from polyad_types.api.requests import ActivationRequest
@@ -83,8 +84,6 @@ class Activations:
         )
         latest = await self.controller.api.get("Activation", receipt["metadata"]["namespace"], receipt["metadata"]["name"])
         if latest is None or latest["metadata"]["uid"] != receipt["metadata"]["uid"]:
-            from polyad.operator.reconciliation.controller import Pending
-
             raise Pending("activation receipt changed; refresh before execution")
         receipt.clear()
         receipt.update(latest)

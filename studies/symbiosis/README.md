@@ -1,15 +1,17 @@
 # Symbiosis: costs and benefits of service relationships
 
-Compare six explicit interaction models under identical demand, routing and
-queue budgets. Measure when helping one participant reduces the other service's
-ability to satisfy its contract. The effects are configured capacity bounds,
-not inferred biological behavior.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Recipe](#recipe)
 - [Run](#run)
 - [Measurements](#measurements)
+<!-- toc:end -->
+
+Compare six explicit interaction models under identical demand, routing and
+queue budgets. Measure when helping one participant reduces the other service's
+ability to satisfy its contract. The effects are configured capacity bounds,
+not inferred biological behavior.
 
 ## Recipe
 

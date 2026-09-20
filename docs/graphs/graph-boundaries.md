@@ -1,5 +1,12 @@
 # Graph boundaries
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Repeated execution](#repeated-execution)
+- [Placement and storage](#placement-and-storage)
+<!-- toc:end -->
+
 Polyad has three graph boundary types:
 
 | Type | Purpose |
@@ -15,11 +22,6 @@ Cross-cluster placement, Istio transport and shared read-only observers are
 independent optional extensions. PolyGraphs manage remote child Graph intent;
 destination operators execute it and enforce local GraphRules. Observers share
 state without participating in execution. See [multicluster configuration](../deployment/multicluster.md).
-
-## Table of contents
-
-- [Repeated execution](#repeated-execution)
-- [Placement and storage](#placement-and-storage)
 
 ## Repeated execution
 

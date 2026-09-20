@@ -14,16 +14,17 @@ from attrs import evolve, field, frozen
 from flask import Response, g, jsonify, request, stream_with_context
 
 from polyad.api.http.application import Routes
-from polyad.api.http.errors import Forbidden, Unavailable
 from polyad.api.http.limits import RateLimitPolicy, install_limits
 from polyad.auth.http import Access, install
 from polyad.auth.policy import public_demo
 from polyad.events.rebalance import Rebalancer
-from polyad.events.store import CursorExpired, TopologyReplaced
 from polyad.events.visibility import permitted_observation
+from polyad.exceptions.api import Forbidden, Unavailable
+from polyad.exceptions.events import CursorExpired, TopologyReplaced
 from polyad_types.api.auth import APIKey, GraphAccess
 from polyad_types.events.envelope import Event as Observation
-from polyad_types.events.envelope import EventStreamSettings, EventTooLarge
+from polyad_types.events.envelope import EventStreamSettings
+from polyad_types.exceptions.events import EventTooLarge
 from polyad_types.resources import BOUNDARY_KINDS
 
 if TYPE_CHECKING:

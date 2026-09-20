@@ -1,12 +1,7 @@
 # Atlas discovery and service connections
 
-The **atlas** is the reserved root PolyGraph, named `<root-release>-atlas`. It
-contains the root operator Graph and each attached operator group's Graph. That
-operator tree manages application graphs in registered clusters. Services can
-discover permitted application branches through the root's existing events API.
-The atlas's own infrastructure remains hidden from application event streams.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Access modes and inherited ceilings](#access-modes-and-inherited-ceilings)
 - [Discover current services](#discover-current-services)
@@ -14,6 +9,13 @@ The atlas's own infrastructure remains hidden from application event streams.
 - [Negotiate across graph and cluster boundaries](#negotiate-across-graph-and-cluster-boundaries)
 - [Rejection, drift and cleanup](#rejection-drift-and-cleanup)
 - [Administrator configuration](#administrator-configuration)
+<!-- toc:end -->
+
+The **atlas** is the reserved root PolyGraph, named `<root-release>-atlas`. It
+contains the root operator Graph and each attached operator group's Graph. That
+operator tree manages application graphs in registered clusters. Services can
+discover permitted application branches through the root's existing events API.
+The atlas's own infrastructure remains hidden from application event streams.
 
 ## Access modes and inherited ceilings
 

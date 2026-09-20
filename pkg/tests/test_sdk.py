@@ -26,10 +26,10 @@ from polyad_sdk import (
     Event,
     ObserveStrategy,
     Settings,
-    StreamInterrupted,
     WorkloadEndpoint,
 )
 from polyad_sdk.events.filters import event_type, field
+from polyad_sdk.exceptions.events import StreamInterrupted
 from polyad_types import ServiceEndpoint, ThroughputSample
 from polyad_types.events.models import EventIdentity
 from polyad_types.networking.access import NetworkPort

@@ -1,5 +1,13 @@
 # Dragonfly HA and KEDA
 
+<!-- toc:start -->
+**Table of contents**
+
+- [What scales](#what-scales)
+- [How requests reach Dragonfly](#how-requests-reach-dragonfly)
+- [Access and upgrades](#access-and-upgrades)
+<!-- toc:end -->
+
 Bundled Dragonfly HA uses KEDA by default. Provide an existing KEDA installation
 or enable the [optional chart dependency](local-services.md#install-keda-with-the-chart)
 alongside `dragonfly.ha.enabled`. Set `dragonfly.autoscaling.enabled: false` for a fixed
@@ -26,12 +34,6 @@ dragonfly:
 configured bounds. Both bounds accept 2–9 instances. Provide enough eligible
 nodes or zones and persistent storage for the maximum; required anti-affinity
 can leave extra instances Pending when that capacity is unavailable.
-
-## Table of contents
-
-- [What scales](#what-scales)
-- [How requests reach Dragonfly](#how-requests-reach-dragonfly)
-- [Access and upgrades](#access-and-upgrades)
 
 ## What scales
 

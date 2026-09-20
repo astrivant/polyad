@@ -1,5 +1,11 @@
 # Vertical Pod Autoscaler compatibility
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Application contract](#application-contract)
+<!-- toc:end -->
+
 Polyad can own a native `autoscaling.k8s.io/v1` `VerticalPodAutoscaler` beside a
 graph workload. The integration is disabled by default and does not install the
 VPA controller. Enable it with `verticalPodAutoscaling.enabled=true` only after

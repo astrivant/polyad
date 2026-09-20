@@ -11,12 +11,13 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.api import create_app
-from polyad.api.composition.app import Conflict
 from polyad.api.composition.store import CompositionStore
 from polyad.compiler.passes.composition import compile_composition, read_receipt, receipt_spec, request_name
+from polyad.exceptions.api import Conflict
+from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.coordination.leases import Coordinator
-from polyad.operator.policies.rules import RuleViolation
-from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types import resources as asts
 from polyad_types.api.requests import CompositionRequest
 from polyad_types.serialization import converter

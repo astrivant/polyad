@@ -12,9 +12,10 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.api.metrics.builder import MetricsAPIBuilder
+from polyad.exceptions.coordination import NotOwner
 from polyad.metrics.store import MetricsStore
 from polyad.operator.coordination import dragonfly
-from polyad.operator.coordination.leases import Coordinator, NotOwner
+from polyad.operator.coordination.leases import Coordinator
 from tests.test_coordination import LeaseAPI
 from tests.test_metrics_api import samples, snapshot
 from tests.test_operator import resource

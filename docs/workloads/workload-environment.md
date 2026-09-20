@@ -1,16 +1,18 @@
 # Workload environment
 
-Every Job, Deployment and StatefulSet compiled from a Workload or Daemon definition
-receives graph context automatically. It is available in all declared application
-containers, init containers and native sidecars. This includes workloads inside
-nested graphs, ReplicaGroups and activation runs.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Activate a downstream workload](#activate-a-downstream-workload)
 - [Variables](#variables)
 - [SDK defaults](#sdk-defaults)
 - [Configuration and lifecycle](#configuration-and-lifecycle)
+<!-- toc:end -->
+
+Every Job, Deployment and StatefulSet compiled from a Workload or Daemon definition
+receives graph context automatically. It is available in all declared application
+containers, init containers and native sidecars. This includes workloads inside
+nested graphs, ReplicaGroups and activation runs.
 
 ## Activate a downstream workload
 

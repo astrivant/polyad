@@ -1,5 +1,14 @@
 # Authentication and external credentials
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Connect KEDA with a Secret](#connect-keda-with-a-secret)
+- [Populate Secrets with ESO](#populate-secrets-with-eso)
+- [Restart consumers after rotation](#restart-consumers-after-rotation)
+- [Namespace, transport and rotation](#namespace-transport-and-rotation)
+<!-- toc:end -->
+
 For multiple service and operator credentials, see [API keys and request lanes](api-keys.md).
 Those keys support inbound, outbound and bidirectional use, with independent
 rate and concurrency budgets across HA replicas. This guide covers the existing
@@ -10,13 +19,6 @@ bearer token protects every route on that listener, including workload metrics
 and OpenAPI. This credential grants read-only access to the operator namespace's
 metrics; it does not authorize composition submissions or event subscriptions.
 Use separate credentials for those APIs.
-
-## Table of contents
-
-- [Connect KEDA with a Secret](#connect-keda-with-a-secret)
-- [Populate Secrets with ESO](#populate-secrets-with-eso)
-- [Restart consumers after rotation](#restart-consumers-after-rotation)
-- [Namespace, transport and rotation](#namespace-transport-and-rotation)
 
 ## Connect KEDA with a Secret
 

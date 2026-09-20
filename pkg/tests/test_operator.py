@@ -13,11 +13,12 @@ from uuid import NAMESPACE_URL, uuid5
 import pytest
 from kubernetes.client.exceptions import ApiException
 
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph import Node, Placement, Topology
 from polyad.operator.adapters import ResourceAPI
 from polyad.operator.adapters.kubernetes import GROUP, VERSION
 from polyad.operator.coordination.queue import RefreshQueue
-from polyad.operator.reconciliation.controller import FINALIZER, Controller, Pending, observed
+from polyad.operator.reconciliation.controller import FINALIZER, Controller, observed
 from polyad.operator.runtime import OperatorThread
 from polyad_types.graphs.topology import topology
 from polyad_types.resources import encode_body

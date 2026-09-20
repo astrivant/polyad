@@ -1,5 +1,18 @@
 # Graph-scoped rollouts and rotations
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Policies paired with graphs](#policies-paired-with-graphs)
+- [Sparsity and event notifications](#sparsity-and-event-notifications)
+- [Direction and traversal are separate choices](#direction-and-traversal-are-separate-choices)
+- [Secret rotation has preparation, adoption and retirement](#secret-rotation-has-preparation-adoption-and-retirement)
+- [Admission, KEDA and graph constraints](#admission-keda-and-graph-constraints)
+- [Root coordination, recovery and overlap](#root-coordination-recovery-and-overlap)
+- [Rolling the operator itself](#rolling-the-operator-itself)
+- [Implementation boundaries](#implementation-boundaries)
+<!-- toc:end -->
+
 **Status: design proposal.** The `RolloutPolicy`, `Rollout` and graph bindings
 below are proposed APIs, not installed CRDs or supported configuration yet.
 Current [Secret reloads](../operations/authentication.md#restart-consumers-after-rotation) act
@@ -15,17 +28,6 @@ The initial scope should adopt already provisioned credential revisions.
 Creating and revoking credentials in an external provider requires a separate,
 explicit integration that changes the provider's password or revokes its
 certificate. Secret synchronization distributes the resulting credentials.
-
-## Table of contents
-
-- [Policies paired with graphs](#policies-paired-with-graphs)
-- [Sparsity and event notifications](#sparsity-and-event-notifications)
-- [Direction and traversal are separate choices](#direction-and-traversal-are-separate-choices)
-- [Secret rotation has preparation, adoption and retirement](#secret-rotation-has-preparation-adoption-and-retirement)
-- [Admission, KEDA and graph constraints](#admission-keda-and-graph-constraints)
-- [Root coordination, recovery and overlap](#root-coordination-recovery-and-overlap)
-- [Rolling the operator itself](#rolling-the-operator-itself)
-- [Implementation boundaries](#implementation-boundaries)
 
 ## Policies paired with graphs
 

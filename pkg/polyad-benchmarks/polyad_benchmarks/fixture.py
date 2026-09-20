@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from polyad_benchmarks.config import operator_client
 from polyad_benchmarks.identity import log_event, parent_run_id
-from polyad_sdk import APIError
+from polyad_sdk.exceptions.api import APIError
 
 if TYPE_CHECKING:
     from typing import Any

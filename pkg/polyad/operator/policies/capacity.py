@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from attrs import evolve
 
 from polyad.compiler.passes.capacity import frontier, placeholder, requests
+from polyad.exceptions.reconciliation import Pending
 from polyad_types import resources as asts
 from polyad_types.serialization import converter
 
@@ -89,8 +90,6 @@ class CapacityManager:
             or latest["metadata"].get("uid") != self.obj["metadata"].get("uid")
             or latest["metadata"].get("generation") != self.obj["metadata"].get("generation")
         ):
-            from polyad.operator.reconciliation.controller import Pending
-
             raise Pending("capacity intent changed; refresh before admission")
         self.obj.clear()
         self.obj.update(latest)
@@ -214,8 +213,6 @@ class CapacityManager:
         if graph.capacity is None:
             if self.state.nodes or (os.environ.get("POLYAD_CAPACITY_ENABLED", "false").lower() == "true" and await self.children()):
                 if not await self.cleanup():
-                    from polyad.operator.reconciliation.controller import Pending
-
                     raise Pending("releasing disabled capacity plan")
                 self.state = asts.CapacityStatus(observedGeneration=self.obj["metadata"]["generation"])
                 await self.save()

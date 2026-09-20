@@ -1,5 +1,14 @@
 # Dense and distributed operator deployments
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Install](#install)
+- [The operator's own Graph](#the-operators-own-graph)
+- [Scaling and structural bounds](#scaling-and-structural-bounds)
+- [Recovery and root-managed clusters](#recovery-and-root-managed-clusters)
+<!-- toc:end -->
+
 The [HA deployment profile](deployment-profiles.md) defaults to
 `architecture.mode: Dense`, running coordination, reconciliation and
 enabled HTTP services together in each operator Pod. Multiple replicas share
@@ -28,13 +37,6 @@ uses the same image with an explicit `POLYAD_COMPONENT` role. Dense deployments
 retain all responsibilities. A Daemon definition has `replicas: 1`; each
 ReplicaGroup copy becomes a separate one-Pod Deployment, so scaling passes
 through graph admission at every copy boundary.
-
-## Table of contents
-
-- [Install](#install)
-- [The operator's own Graph](#the-operators-own-graph)
-- [Scaling and structural bounds](#scaling-and-structural-bounds)
-- [Recovery and root-managed clusters](#recovery-and-root-managed-clusters)
 
 ## Install
 

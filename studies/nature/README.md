@@ -1,13 +1,7 @@
 # Nature: composition changes above adaptive services
 
-This study places Natural Selection above the [Soul process study](../soul/README.md).
-The parent changes the required result while six services adapt their own workers
-and admission policies. Services survive, receive replacement implementations,
-join the composition or retire according to whether they can help produce that result.
-The original [`nature.py`](../../nature.py) stays unchanged and supplies the planner
-and business functions.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Run](#run)
 - [Composition changes](#composition-changes)
@@ -15,6 +9,14 @@ and business functions.
 - [Measured results](#measured-results)
 - [SLA and resources across incarnations](#sla-and-resources-across-incarnations)
 - [Repeat the experiment](#repeat-the-experiment)
+<!-- toc:end -->
+
+This study places Natural Selection above the [Soul process study](../soul/README.md).
+The parent changes the required result while six services adapt their own workers
+and admission policies. Services survive, receive replacement implementations,
+join the composition or retire according to whether they can help produce that result.
+The original [`nature.py`](../../nature.py) stays unchanged and supplies the planner
+and business functions.
 
 ## Run
 

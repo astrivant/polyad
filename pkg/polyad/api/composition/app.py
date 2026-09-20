@@ -12,14 +12,14 @@ from werkzeug.exceptions import HTTPException
 
 from polyad.api.composition.openapi import openapi_document
 from polyad.api.http.application import Routes
-from polyad.api.http.errors import Conflict as Conflict
-from polyad.api.http.errors import Forbidden
-from polyad.api.http.errors import Unavailable as Unavailable
 from polyad.api.http.limits import install_limits
 from polyad.api.workloads.routes import register_routes
 from polyad.auth.http import install
 from polyad.auth.policy import public_demo
 from polyad.compiler.passes.composition import compile_composition
+from polyad.exceptions.api import Conflict as Conflict
+from polyad.exceptions.api import Forbidden
+from polyad.exceptions.api import Unavailable as Unavailable
 from polyad.operator.observability.tracing import identify_request
 from polyad_types.api.requests import CompositionRequest, identity
 from polyad_types.serialization import converter

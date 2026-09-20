@@ -98,3 +98,9 @@ repos:
         types: [python]
         pass_filenames: false
         always_run: true
+      - id: documentation-contents
+        name: Documentation tables of contents
+        entry: bash scripts/tooling/project-python.sh scripts/documentation/update-contents.py
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -1,14 +1,7 @@
 # Development toolchain
 
-Polyad uses pre-commit checks and four-space indentation for Python and shell
-scripts. `.tool-versions` pins the local and CI tools; `.python-version` keeps
-the Python 3.13 interpreter selected for development. The operator supports
-Python 3.13 and 3.14; the standalone SDK, types and schemas packages support Python
-3.11 through 3.14. CI runs operator tests on both supported versions and checks
-the standalone wheels on each supported version. `.editorconfig` supplies
-editor indentation.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Setup](#setup)
 - [Formatting and checks](#formatting-and-checks)
@@ -19,6 +12,15 @@ editor indentation.
 - [Verified Helm chart builds](#verified-helm-chart-builds)
 - [Helm documentation](#helm-documentation)
 - [Compose artifact on main](#compose-artifact-on-main)
+<!-- toc:end -->
+
+Polyad uses pre-commit checks and four-space indentation for Python and shell
+scripts. `.tool-versions` pins the local and CI tools; `.python-version` keeps
+the Python 3.13 interpreter selected for development. The operator supports
+Python 3.13 and 3.14; the standalone SDK, types and schemas packages support Python
+3.11 through 3.14. CI runs operator tests on both supported versions and checks
+the standalone wheels on each supported version. `.editorconfig` supplies
+editor indentation.
 
 ## Setup
 
@@ -53,6 +55,13 @@ tools in isolated environments. The Mermaid wrapper runs `npm ci` from its
 lockfile when the dependencies or Node version change.
 
 ## Formatting and checks
+
+The documentation hook refreshes tables of contents across all repository Markdown
+on every commit, even when no Markdown file is staged. Archived runs and third-party
+sources are excluded. If the hook updates files, stage them and retry the commit.
+Run it manually with `pre-commit run documentation-contents --all-files`; use
+`bash scripts/tooling/project-python.sh scripts/documentation/update-contents.py --check`
+to check without writing.
 
 ```bash
 bash scripts/tooling/project-python.sh -m ruff check --fix pkg examples

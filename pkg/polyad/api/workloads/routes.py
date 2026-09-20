@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from flask import jsonify, request
 
-from polyad.api.http.errors import Unavailable
+from polyad.exceptions.api import Unavailable
 from polyad.operator.observability.tracing import identify_request
 from polyad_types.api.requests import ActivationRequest, identity
 from polyad_types.api.throughput import ThroughputSample

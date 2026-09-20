@@ -1,12 +1,7 @@
 # Optional PostgreSQL state storage
 
-PostgreSQL is **disabled by default**. Dense and distributed deployments both
-work without it. Enable `postgresql.enabled` to persist graph state and tracked
-parameters in a managed CloudNativePG database or an existing PostgreSQL database.
-Dragonfly continues to hold reconciliation queues, event replay, rate limits and
-short-lived component observations. KEDA reads the operator's metrics endpoint.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Install the database operator](#install-the-database-operator)
 - [Encryption at rest](#encryption-at-rest)
@@ -21,6 +16,13 @@ short-lived component observations. KEDA reads the operator's metrics endpoint.
 - [Scale PostgreSQL with operator connection counts](#scale-postgresql-with-operator-connection-counts)
 - [Existing PostgreSQL](#existing-postgresql)
 - [Event history and authentication storage](#event-history-and-authentication-storage)
+<!-- toc:end -->
+
+PostgreSQL is **disabled by default**. Dense and distributed deployments both
+work without it. Enable `postgresql.enabled` to persist graph state and tracked
+parameters in a managed CloudNativePG database or an existing PostgreSQL database.
+Dragonfly continues to hold reconciliation queues, event replay, rate limits and
+short-lived component observations. KEDA reads the operator's metrics endpoint.
 
 ## Install the database operator
 

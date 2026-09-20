@@ -13,9 +13,10 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.compiler.passes.capacity import frontier, placeholder, requests
 from polyad.compiler.passes.schema import structural_schema
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph import CapacityPlan, Dependency, Node, Topology
 from polyad.operator.policies.capacity import CONSUME
-from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.controller import Controller
 from polyad_types import resources as asts
 from polyad_types.serialization import converter
 from tests.test_operator import FakeAPI, resource, template

@@ -20,7 +20,7 @@ from polyad_sdk.api.interfaces import AdaptationReporter, ServiceLevelReporter
 from polyad_sdk.connections import WorkloadClient
 from polyad_sdk.connections.authorization import authorize_connection
 from polyad_sdk.events.filters import Filter
-from polyad_sdk.events.subscriptions import StreamInterrupted
+from polyad_sdk.exceptions.events import StreamInterrupted
 from polyad_sdk.observability import Telemetry
 from polyad_sdk.runtime.context import WorkloadContext
 from polyad_sdk.runtime.environment import env as sdk_environment

@@ -18,8 +18,13 @@ from redis.exceptions import ResponseError
 from polyad.cache import Cache
 from polyad.events.settings import settings_from_environment
 from polyad.events.topology import neighbors
+from polyad.exceptions.events import CursorExpired as CursorExpired
+
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.events import TopologyReplaced as TopologyReplaced
 from polyad.lua import script
-from polyad_types.events.envelope import Event, EventTooLarge
+from polyad_types.events.envelope import Event
+from polyad_types.exceptions.events import EventTooLarge
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
@@ -48,18 +53,6 @@ PUBLISH_TOPOLOGY = script("events/publish-topology.lua")
 
 SNAPSHOT = script("events/snapshot.lua")
 logger = logging.getLogger(__name__)
-
-
-class TopologyReplaced(ValueError):
-    """
-    Reject a snapshot belonging to a replacement graph incarnation.
-    """
-
-
-class CursorExpired(ValueError):
-    """
-    Require a fresh Kubernetes/API snapshot after the bounded replay window expires.
-    """
 
 
 class EventStore:

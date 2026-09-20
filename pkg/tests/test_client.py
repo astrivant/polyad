@@ -12,7 +12,9 @@ from urllib.error import HTTPError
 import pytest
 
 from polyad.api import APIBuilder
-from polyad_sdk import APIError, Client
+from polyad_sdk import Client
+from polyad_sdk.exceptions.api import APIError
+from polyad_sdk.exceptions.events import StreamInterrupted
 from polyad_types import CompositionItem, CompositionRequest, Event, to_dict
 
 
@@ -20,7 +22,6 @@ def test_websocket_client_headers_checkpoints_and_cleanup(monkeypatch):
     """
     Preserve cluster selection and rotating headers while callbacks checkpoint only observations.
     """
-    from polyad_sdk import StreamInterrupted
     from polyad_sdk.events.filters import event_type
     from polyad_sdk.transport import websocket
 

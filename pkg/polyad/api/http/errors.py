@@ -1,8 +1,16 @@
 """
-Share expected HTTP operation failures across API domains and listener workers.
+Retain legacy HTTP exception imports; definitions live in polyad.exceptions.api.
 """
 
 from __future__ import annotations
+
+from polyad.exceptions.api import Conflict as Conflict
+from polyad.exceptions.api import Forbidden as Forbidden
+
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.api import RequestError as RequestError
+from polyad.exceptions.api import Unauthorized as Unauthorized
+from polyad.exceptions.api import Unavailable as Unavailable
 
 __all__ = (
     "Conflict",
@@ -11,33 +19,3 @@ __all__ = (
     "Unauthorized",
     "Unavailable",
 )
-
-
-class RequestError(Exception):
-    """
-    Preserve an expected client-facing failure across the asynchronous HTTP bridge.
-    """
-
-
-class Conflict(RequestError, ValueError):
-    """
-    Reject a request ID that already identifies different or deleting intent.
-    """
-
-
-class Unauthorized(RequestError):
-    """
-    Reject an invalid or unauthenticated service-account credential.
-    """
-
-
-class Forbidden(RequestError):
-    """
-    Reject callers outside the configured scope or Kubernetes authorization.
-    """
-
-
-class Unavailable(RuntimeError):
-    """
-    Report an uncertain submission without encouraging a new request identity.
-    """

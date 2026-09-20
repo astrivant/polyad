@@ -1,17 +1,20 @@
 # Repository scripts
 
-Utilities are grouped by responsibility. CI, pre-commit and documentation use
-these paths directly.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Groups](#groups)
 - [Running checks](#running-checks)
+<!-- toc:end -->
+
+Utilities are grouped by responsibility. CI, pre-commit and documentation use
+these paths directly.
 
 ## Groups
 
 | Directory | Purpose |
 | --- | --- |
+| [documentation](documentation/) | Refresh tables of contents across repository Markdown without opening each page in an editor. |
 | [tooling](tooling/) | Select the checkout's Python, read tool version pins, and install local or CI tools. |
 | [validation](validation/) | Check docstrings, shell scripts, Helm values, Kubernetes manifests and Mermaid diagrams. The Mermaid Node package lives in `validation/mermaid/`. |
 | [schemas](schemas/) | Generate chart and Python schemas from the [central catalog](../schemas/README.md), check drift, and render Helm documentation. |

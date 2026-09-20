@@ -12,6 +12,8 @@ from uuid import uuid4
 
 from redis import Redis
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.auth import LaneFull as LaneFull
 from polyad.lua import script
 from polyad.transport.redis import pool
 
@@ -31,22 +33,6 @@ __all__ = (
 LEASE_SECONDS = 120
 ACQUIRE = script("authentication/acquire.lua")
 RENEW = script("authentication/renew.lua")
-
-
-class LaneFull(Exception):
-    """
-    Reject a request before dispatch when its shared lane has no remaining budget.
-    """
-
-    def __init__(self, retry_after: int) -> None:
-        """
-        Carry a bounded retry hint without identifying secret credentials.
-
-        Args:
-            retry_after (int): Seconds before the caller should attempt admission again.
-        """
-        super().__init__("credential lane capacity exhausted")
-        self.retry_after = retry_after
 
 
 class Permit:

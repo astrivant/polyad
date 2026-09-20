@@ -1,14 +1,16 @@
 # Reachability: selecting state variables
 
-Measure the cost and consequence of describing the same service pair with one,
-two or three state variables. A smaller model may hide a busy consumer or a
-consumer that has not become ready.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Representations](#representations)
 - [Run](#run)
 - [Interpret results](#interpret-results)
+<!-- toc:end -->
+
+Measure the cost and consequence of describing the same service pair with one,
+two or three state variables. A smaller model may hide a busy consumer or a
+consumer that has not become ready.
 
 ## Representations
 

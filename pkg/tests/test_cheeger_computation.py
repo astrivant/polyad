@@ -13,6 +13,8 @@ import networkx as nx
 import pytest
 import yaml
 
+from polyad.exceptions.graph import CheegerIncomplete
+from polyad.exceptions.policies import RuleViolation
 from polyad.graph import (
     Cheeger,
     CheegerComputation,
@@ -24,10 +26,10 @@ from polyad.graph import (
     evaluate_rule,
     graph_cheeger,
 )
-from polyad.graph.cheeger import CheegerIncomplete, compute_cheeger
+from polyad.graph.cheeger import compute_cheeger
 from polyad.graph.reduction import clear_reduction_cache
 from polyad.operator.policies.cheeger import computation_limits
-from polyad.operator.policies.rules import RuleViolation, check_rules
+from polyad.operator.policies.rules import check_rules
 from tests.test_operator import FakeAPI, resource
 
 

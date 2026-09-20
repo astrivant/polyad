@@ -1,5 +1,17 @@
 # Graph concepts
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Conditions and admission](#conditions-and-admission)
+- [Graphs of graphs](#graphs-of-graphs)
+- [Constrained compositions](#constrained-compositions)
+- [Network boundaries](#network-boundaries)
+- [Graphs across node groups](#graphs-across-node-groups)
+- [Finite pipelines](#finite-pipelines)
+- [Persistent services and recurrence](#persistent-services-and-recurrence)
+<!-- toc:end -->
+
 [Documentation](../README.md) · [Visual overview](../../README.md#what-polyad-abstracts)
 
 A **graph** describes a system as nodes and the relationships between them.
@@ -37,16 +49,6 @@ services inside these graphs cooperate: discover compatible peers, react to
 relationship and capacity changes, share work within admission budgets and
 report useful completion. The [Python SDK](../../pkg/polyad-sdk/README.md)
 provides the observation and control interface for this application model.
-
-## Table of contents
-
-- [Conditions and admission](#conditions-and-admission)
-- [Graphs of graphs](#graphs-of-graphs)
-- [Constrained compositions](#constrained-compositions)
-- [Network boundaries](#network-boundaries)
-- [Graphs across node groups](#graphs-across-node-groups)
-- [Finite pipelines](#finite-pipelines)
-- [Persistent services and recurrence](#persistent-services-and-recurrence)
 
 ## Conditions and admission
 

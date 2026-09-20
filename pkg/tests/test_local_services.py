@@ -13,9 +13,10 @@ import pytest
 from deepdiff import DeepDiff
 
 from polyad.events.visibility import INTERNAL, public_observation
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.adapters.kubernetes import API
 from polyad.operator.clusters.reserved import RESOURCES, members
-from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.controller import Controller
 from tests.test_chart import render
 from tests.test_operator import resource
 from tests.test_reserved_topology import operator_deployment

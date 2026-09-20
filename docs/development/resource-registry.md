@@ -1,5 +1,12 @@
 # Supported resource registry
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Metadata](#metadata)
+- [Extending the catalog](#extending-the-catalog)
+<!-- toc:end -->
+
 `polyad.compiler.registry` is the public catalog of Kubernetes resource types
 understood by Polyad. It links each kind to its immutable metadata and attrs AST
 class. API routing, graph inventory, resource counts, composition eligibility,
@@ -17,11 +24,6 @@ for kind in sorted(GRAPH_OWNED_KINDS):
     descriptor = RESOURCE_TYPES[kind]
     print(kind, descriptor.boundary, descriptor.auxiliary)
 ```
-
-## Table of contents
-
-- [Metadata](#metadata)
-- [Extending the catalog](#extending-the-catalog)
 
 ## Metadata
 

@@ -18,8 +18,9 @@ from flask import Flask, Response
 from polyad.api import APIBuilder
 from polyad.auth.http import Access, install
 from polyad.auth.keys import Keyring
-from polyad.auth.lanes import LaneFull, Lanes, Permit
+from polyad.auth.lanes import Lanes, Permit
 from polyad.auth.outbound import NoRedirect, OutboundClient
+from polyad.exceptions.auth import LaneFull
 from polyad_types import APIKey, KeyDirection
 from polyad_types.api.auth import Authentication
 from polyad_types.serialization import from_dict

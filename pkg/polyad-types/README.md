@@ -1,13 +1,7 @@
 # Polyad types
 
-Shared Python 3.11–3.14 models for Polyad resources, graph rules, replication,
-networking, API requests, discovery, events and observed state. The operator,
-Python SDK and benchmarks use these definitions for constructor validation and
-serialization; they also supply the generated JSON Schemas. A `py.typed` marker
-makes the models available to type checkers.
-Its only dependencies are attrs, cattrs and typing-extensions.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Installation](#installation)
 - [Example](#example)
@@ -18,6 +12,14 @@ Its only dependencies are attrs, cattrs and typing-extensions.
 - [Event syntax trees and schemas](#event-syntax-trees-and-schemas)
 - [Client integration](#client-integration)
 - [Publishing](#publishing)
+<!-- toc:end -->
+
+Shared Python 3.11–3.14 models for Polyad resources, graph rules, replication,
+networking, API requests, discovery, events and observed state. The operator,
+Python SDK and benchmarks use these definitions for constructor validation and
+serialization; they also supply the generated JSON Schemas. A `py.typed` marker
+makes the models available to type checkers.
+Its only dependencies are attrs, cattrs and typing-extensions.
 
 ## Installation
 

@@ -1,5 +1,18 @@
 # Advance capacity planning
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Enable the integration](#enable-the-integration)
+- [Describe a forecast](#describe-a-forecast)
+- [Scheduling demand and placement](#scheduling-demand-and-placement)
+- [Backend selection and handoff](#backend-selection-and-handoff)
+  - [ProvisioningRequest](#provisioningrequest)
+  - [Placeholder Pods](#placeholder-pods)
+- [Ownership, cancellation and expiry](#ownership-cancellation-and-expiry)
+- [Status and limits](#status-and-limits)
+<!-- toc:end -->
+
 [Documentation](../README.md)
 
 Polyad can signal upcoming demand to a node autoscaler while upstream work is
@@ -16,17 +29,6 @@ and gates until both their admission conditions and capacity checks pass.
 Pod budgets from sustained application demand. Enable `trigger: Demand` for
 preparation before a throughput shortfall. This adjusts planning within fixed
 ceilings; existing KEDA/HPA replica scaling remains separate.
-
-## Table of contents
-
-- [Enable the integration](#enable-the-integration)
-- [Describe a forecast](#describe-a-forecast)
-- [Scheduling demand and placement](#scheduling-demand-and-placement)
-- [Backend selection and handoff](#backend-selection-and-handoff)
-  - [ProvisioningRequest](#provisioningrequest)
-  - [Placeholder Pods](#placeholder-pods)
-- [Ownership, cancellation and expiry](#ownership-cancellation-and-expiry)
-- [Status and limits](#status-and-limits)
 
 ## Enable the integration
 

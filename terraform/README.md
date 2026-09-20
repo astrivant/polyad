@@ -1,13 +1,7 @@
 # GKE environment for Polyad scaling experiments
 
-Create an isolated GKE cluster, install Argo CD, and let it sync Polyad from this
-public repository. This is the foundation for future load tests of
-[the operator's own Graph](../README.md#the-operator-as-a-graph): it provisions
-the services and exposes their scaling signals. The same standalone Argo CD UI
-includes a manually synced [benchmark fixture chart and load study](../studies/load/README.md),
-with monitoring and tracing. Producers, consumers and the operator have separate node pools.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [What runs](#what-runs)
 - [Create the environment](#create-the-environment)
@@ -18,6 +12,14 @@ with monitoring and tracing. Producers, consumers and the operator have separate
 - [Configuration](#configuration)
 - [Ownership and teardown](#ownership-and-teardown)
 - [Validate without a cloud account](#validate-without-a-cloud-account)
+<!-- toc:end -->
+
+Create an isolated GKE cluster, install Argo CD, and let it sync Polyad from this
+public repository. This is the foundation for future load tests of
+[the operator's own Graph](../README.md#the-operator-as-a-graph): it provisions
+the services and exposes their scaling signals. The same standalone Argo CD UI
+includes a manually synced [benchmark fixture chart and load study](../studies/load/README.md),
+with monitoring and tracing. Producers, consumers and the operator have separate node pools.
 
 ## What runs
 

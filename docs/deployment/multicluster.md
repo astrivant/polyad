@@ -1,5 +1,20 @@
 # Cross-cluster composition and optional observers
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Root-managed execution](#root-managed-execution)
+- [Execution and observation](#execution-and-observation)
+- [Placement and ownership](#placement-and-ownership)
+- [GraphRules, Cheeger bounds and scaling](#graphrules-cheeger-bounds-and-scaling)
+- [Istio across different networks](#istio-across-different-networks)
+  - [Configurable gateway listener](#configurable-gateway-listener)
+  - [Mesh prerequisites](#mesh-prerequisites)
+- [Remote traffic rules](#remote-traffic-rules)
+- [Same-network clusters](#same-network-clusters)
+- [Optional shared observers](#optional-shared-observers)
+<!-- toc:end -->
+
 A `Graph` executes within one Kubernetes cluster. A `PolyGraph` composes Graphs,
 ReplicaGroups and other PolyGraphs; its Graph and PolyGraph nodes can select a
 registered destination cluster. Nested PolyGraphs describe regions, groups of
@@ -18,19 +33,6 @@ Helm settings configure placement, networking and observation:
 Management needs access to remote Kubernetes APIs. Application traffic needs a
 working network and, for Polyad's remote traffic policies, Istio. Observers expose
 state for services and monitoring; they have no execution authority.
-
-## Table of contents
-
-- [Root-managed execution](#root-managed-execution)
-- [Execution and observation](#execution-and-observation)
-- [Placement and ownership](#placement-and-ownership)
-- [GraphRules, Cheeger bounds and scaling](#graphrules-cheeger-bounds-and-scaling)
-- [Istio across different networks](#istio-across-different-networks)
-  - [Configurable gateway listener](#configurable-gateway-listener)
-  - [Mesh prerequisites](#mesh-prerequisites)
-- [Remote traffic rules](#remote-traffic-rules)
-- [Same-network clusters](#same-network-clusters)
-- [Optional shared observers](#optional-shared-observers)
 
 ## Root-managed execution
 

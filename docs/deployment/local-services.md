@@ -1,11 +1,7 @@
 # Local services in the root Graph
 
-With `rootControlPlane.enabled: true`, the root operator Graph represents the
-whole local chart installation. KEDA, cache, databases and optional supporting
-services belong inside that Graph alongside the bootstrap and managed pipeline.
-Remote operator groups remain peers in the enclosing reserved PolyGraph.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [What belongs to the root Graph](#what-belongs-to-the-root-graph)
 - [Install KEDA with the chart](#install-keda-with-the-chart)
@@ -13,6 +9,12 @@ Remote operator groups remain peers in the enclosing reserved PolyGraph.
 - [Use existing KEDA](#use-existing-keda)
 - [Health, ownership and constraints](#health-ownership-and-constraints)
 - [Inventory and permissions](#inventory-and-permissions)
+<!-- toc:end -->
+
+With `rootControlPlane.enabled: true`, the root operator Graph represents the
+whole local chart installation. KEDA, cache, databases and optional supporting
+services belong inside that Graph alongside the bootstrap and managed pipeline.
+Remote operator groups remain peers in the enclosing reserved PolyGraph.
 
 ## What belongs to the root Graph
 

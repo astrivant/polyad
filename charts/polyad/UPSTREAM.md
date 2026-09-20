@@ -1,5 +1,11 @@
 # Dragonfly dependency provenance
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Refresh the dependency and CRD together](#refresh-the-dependency-and-crd-together)
+<!-- toc:end -->
+
 Polyad installs [Dragonfly](https://github.com/dragonflydb/dragonfly) through the
 [official Kubernetes operator](https://github.com/dragonflydb/dragonfly-operator).
 `Chart.yaml` pins operator chart **v1.6.1**; `Chart.lock` locks its resolution.
@@ -18,10 +24,6 @@ even when the bundled cache is disabled, like the other APIs shipped here.
 converted served-version `openAPIV3Schema` as JSON. The same source produces
 the standalone Python schema through the [central pipeline](../../schemas/README.md). The CI Kubeconform wrapper uses
 it alongside Kubernetes schemas to validate the managed Dragonfly instance.
-
-## Table of contents
-
-- [Refresh the dependency and CRD together](#refresh-the-dependency-and-crd-together)
 
 ## Refresh the dependency and CRD together
 

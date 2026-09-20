@@ -1,13 +1,15 @@
 # Generated validation schemas
 
-These Draft 7 schemas support chart checks through
-`scripts/validation/kubeconform.sh`; they do not install APIs into a cluster.
-Every JSON file and upstream license notice here is generated.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Source of truth](#source-of-truth)
 - [Regenerate and validate](#regenerate-and-validate)
+<!-- toc:end -->
+
+These Draft 7 schemas support chart checks through
+`scripts/validation/kubeconform.sh`; they do not install APIs into a cluster.
+Every JSON file and upstream license notice here is generated.
 
 ## Source of truth
 

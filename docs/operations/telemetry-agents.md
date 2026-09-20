@@ -1,11 +1,7 @@
 # Collect metrics, logs and traces
 
-The operator chart can install **Grafana Alloy** for all three signals, or
-**Prometheus Agent** for metrics only. Both discover changing Pod endpoints and
-remote-write samples to an existing Prometheus-compatible backend. Collection is
-disabled by default and does not add another Python API server.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Choose a collector](#choose-a-collector)
 - [What gets collected](#what-gets-collected)
@@ -14,6 +10,12 @@ disabled by default and does not add another Python API server.
 - [Benchmark deployment](#benchmark-deployment)
 - [Additional targets and clusters](#additional-targets-and-clusters)
 - [References](#references)
+<!-- toc:end -->
+
+The operator chart can install **Grafana Alloy** for all three signals, or
+**Prometheus Agent** for metrics only. Both discover changing Pod endpoints and
+remote-write samples to an existing Prometheus-compatible backend. Collection is
+disabled by default and does not add another Python API server.
 
 ## Choose a collector
 

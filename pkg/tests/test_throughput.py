@@ -18,9 +18,9 @@ from attrs import evolve
 from cattrs.errors import CattrsError
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.http.errors import Conflict, Forbidden
 from polyad.api.workloads.throughput import report_throughput
-from polyad.operator.policies.rules import RuleViolation
+from polyad.exceptions.api import Conflict, Forbidden
+from polyad.exceptions.policies import RuleViolation
 from polyad.operator.policies.soul import controller as soul_searching
 from polyad.operator.policies.soul.contracts import SAMPLE, STATE
 from polyad.operator.policies.soul.controller import search_soul

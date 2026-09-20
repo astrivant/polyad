@@ -16,10 +16,10 @@ import pytest
 from kubernetes.client.exceptions import ApiException
 
 from polyad.compiler.registry import RESOURCE_TYPES
+from polyad.exceptions.kubernetes import WriteConflict
 from polyad.operator.adapters.kubernetes import API
 from polyad.operator.coordination.contracts import capture_decision, expires_before
 from polyad.operator.coordination.validation import ValidationQueue, ValidationSettings, invalidate
-from polyad.operator.coordination.write_queue import WriteConflict
 from tests.test_operator import resource
 
 

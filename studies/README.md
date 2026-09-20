@@ -1,14 +1,16 @@
 # Benchmark studies
 
-Repeatable experiments keep their recipes here and their execution code in
-[`polyad-benchmarks`](../pkg/polyad-benchmarks/README.md).
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Studies](#studies)
 - [Refresh protocol](#refresh-protocol)
 - [Study figures](#study-figures)
 - [Tests and CI](#tests-and-ci)
+<!-- toc:end -->
+
+Repeatable experiments keep their recipes here and their execution code in
+[`polyad-benchmarks`](../pkg/polyad-benchmarks/README.md).
 
 ## Studies
 

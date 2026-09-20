@@ -1,14 +1,8 @@
 # Polyad Helm chart
 
-Deploy Polyad's graph orchestration control plane with a single operator replica,
-HA replicas or separate gateway, executor and telemetry components. Configure
-multicluster coordination, constrained autoscaling, demand-driven adaptation,
-discovery and event APIs, and the shared Dragonfly queue. Optional integrations
-provide PostgreSQL state storage, KEDA, Istio networking and telemetry collection.
-See the [operator guide](../../docs/deployment/operator.md) for graph semantics,
-replica coordination, health metrics and installation examples.
-
-## Table of contents
+<!-- toc:start -->
+<details>
+<summary>Table of contents</summary>
 
 - [Installation](#installation)
 - [Reference values](#reference-values)
@@ -34,9 +28,21 @@ replica coordination, health metrics and installation examples.
   - [Shared Istio namespace](#shared-istio-namespace)
   - [Cross-cluster PolyGraph management](#cross-cluster-polygraph-management)
   - [Optional shared graph observers](#optional-shared-graph-observers)
+  - [Vertical Pod Autoscaler compatibility](#vertical-pod-autoscaler-compatibility)
   - [Advance graph capacity](#advance-graph-capacity)
   - [Root control plane](#root-control-plane)
   - [Telemetry collectors](#telemetry-collectors)
+
+</details>
+<!-- toc:end -->
+
+Deploy Polyad's graph orchestration control plane with a single operator replica,
+HA replicas or separate gateway, executor and telemetry components. Configure
+multicluster coordination, constrained autoscaling, demand-driven adaptation,
+discovery and event APIs, and the shared Dragonfly queue. Optional integrations
+provide PostgreSQL state storage, KEDA, Istio networking and telemetry collection.
+See the [operator guide](../../docs/deployment/operator.md) for graph semantics,
+replica coordination, health metrics and installation examples.
 
 ## Installation
 

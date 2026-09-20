@@ -1,11 +1,7 @@
 # Load: activation acceptance and completion
 
-Measure how the real operator responds to a bounded stream of activation requests
-inside one application Graph. Each request produces an Activation receipt and,
-if admitted, a short-lived Kubernetes Job. This study measures control-plane
-reconciliation, activation acceptance and Job completion under increasing load.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Study artifacts](#study-artifacts)
 - [Fixture graph](#fixture-graph)
@@ -16,6 +12,12 @@ reconciliation, activation acceptance and Job completion under increasing load.
 - [Repeat an experiment](#repeat-an-experiment)
 - [Read measurements](#read-measurements)
 - [Cleanup](#cleanup)
+<!-- toc:end -->
+
+Measure how the real operator responds to a bounded stream of activation requests
+inside one application Graph. Each request produces an Activation receipt and,
+if admitted, a short-lived Kubernetes Job. This study measures control-plane
+reconciliation, activation acceptance and Job completion under increasing load.
 
 ## Study artifacts
 

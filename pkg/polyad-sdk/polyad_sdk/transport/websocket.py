@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK, InvalidStatus
 from websockets.sync.client import reconnect
 
-from polyad_sdk.transport.http import APIError
-from polyad_types.events.envelope import Event, EventTooLarge
+from polyad_sdk.exceptions.api import APIError
+from polyad_types.events.envelope import Event
+from polyad_types.exceptions.events import EventTooLarge
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

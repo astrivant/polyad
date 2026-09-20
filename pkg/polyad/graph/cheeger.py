@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 import networkx as nx
 from attrs import asdict, evolve, field, frozen
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.graph import CheegerIncomplete as CheegerIncomplete
 from polyad.graph.reduction import cached_quotient, fresh_spectral_reduction
 from polyad_types.graphs.rules import CheegerComputation
 
@@ -63,22 +65,6 @@ class CheegerResult:
             dict[str, Any]: JSON-compatible diagnostics for status and logs.
         """
         return asdict(self)
-
-
-class CheegerIncomplete(ValueError):
-    """
-    Refuse to return a partial cut search as an exact Cheeger constant.
-    """
-
-    def __init__(self, result: CheegerResult) -> None:
-        """
-        Preserve the search certificate for callers that expose decision diagnostics.
-
-        Args:
-            result (CheegerResult): Incomplete search result.
-        """
-        self.result = result
-        super().__init__(f"Cheeger computation incomplete: {result.reason} after {result.evaluatedCuts} cuts")
 
 
 def compute_cheeger(

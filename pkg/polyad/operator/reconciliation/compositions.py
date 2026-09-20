@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.composition import compile_composition, read_receipt, request_name
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.observability.graph_status import observed
 from polyad.operator.policies.rules import check_rules
 from polyad_types import resources as asts
@@ -58,7 +59,6 @@ async def reconcile_composition(controller: Controller, obj: dict[str, Any]) -> 
     Returns:
         None: No return value.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     request = read_receipt(obj["spec"])
     if obj["metadata"]["name"] != request_name(request.requestId):

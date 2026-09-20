@@ -9,6 +9,8 @@ import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.coordination import PulseDeferred as PulseDeferred
 from polyad.lua import script
 
 if TYPE_CHECKING:
@@ -21,22 +23,6 @@ __all__ = (
     "PulseDeferred",
     "PulsePolicy",
 )
-
-
-class PulseDeferred(RuntimeError):
-    """
-    Retain desired work until its shared cooldown window permits another decision.
-    """
-
-    def __init__(self, seconds: float) -> None:
-        """
-        Report a bounded delay without retaining a mutation payload.
-
-        Args:
-            seconds (float): Remaining shared cooldown window.
-        """
-        self.retry_after = max(1, math.ceil(seconds))
-        super().__init__("administrator pulse cooldown is active; retry from fresh state")
 
 
 @dataclass(frozen=True)

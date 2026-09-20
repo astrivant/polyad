@@ -23,10 +23,14 @@ from polyad.compiler.passes.children import child_name as compile_child_name
 from polyad.compiler.passes.children import owned_child
 from polyad.compiler.passes.daemon import compile_daemon, execution_pod
 from polyad.compiler.passes.identity import inject_environment, workload_identity
-from polyad.compiler.passes.mutations import PreconditionFailed
 from polyad.compiler.passes.network import configure_pod
 from polyad.compiler.passes.storage import configure_storage
 from polyad.compiler.passes.vertical import compile_vertical_pod_autoscaler, inject_vertical_environment
+from polyad.exceptions.compiler import PreconditionFailed
+from polyad.exceptions.kubernetes import WriteConflict
+
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.reconciliation import Pending as Pending
 from polyad.graph.gates import DelayGate, Gate
 from polyad.graph.temporary import ANNOTATION as CONNECTIONS
 from polyad.graph.temporary import CLEANUP as CONNECTION_CLEANUP
@@ -35,7 +39,6 @@ from polyad.metrics.workloads import current_observation, observation_time
 from polyad.operator.adapters.kubernetes import GROUP
 from polyad.operator.clusters.federation import REMOTE, Federation
 from polyad.operator.coordination.contracts import capture_decision
-from polyad.operator.coordination.write_queue import WriteConflict
 from polyad.operator.observability.decisions import decision, status_decisions
 from polyad.operator.observability.graph_status import instance_metrics
 from polyad.operator.observability.graph_status import observed as observed
@@ -87,23 +90,6 @@ def _status_value(value: Any) -> Any:
     if isinstance(value, list):
         return [_status_value(item) for item in value]
     return value
-
-
-class Pending(Exception):
-    """
-    Require a later refreshed observation before proceeding.
-    """
-
-    def __init__(self, message: str, *, phase: str = "Reconciling") -> None:
-        """
-        Carry the lifecycle phase while waiting for another observation.
-
-        Args:
-            message (str): Explanation of the blocking observation.
-            phase (str): Graph phase to publish while the attempt remains pending.
-        """
-        super().__init__(message)
-        self.phase = phase
 
 
 def child_name(parent: dict[str, Any], node: str) -> str:

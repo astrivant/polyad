@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 from opentelemetry.context import get_current
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad_sdk.exceptions.processes import _Aborted
 from polyad_sdk.observability import Telemetry
 from polyad_sdk.processes.models import PlanResult
 from polyad_sdk.processes.process import ManagedProcess
@@ -23,11 +25,6 @@ if TYPE_CHECKING:
     from polyad_sdk.symbiosis.models import Environment
 
 __all__ = ("ProcessSupervisor",)
-
-
-class _Aborted(Exception):
-    def __init__(self, result: PlanResult) -> None:
-        self.result = result
 
 
 class ProcessSupervisor:

@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.coordination.leases import Coordinator, root_shard
 from polyad.operator.lifecycle.roles import executes, role, serves
 from polyad.operator.observability.pressure import Pressure, demand
@@ -138,7 +139,7 @@ def test_rendered_service_graph_creates_component_deployments_and_enforces_its_b
     """
     Exercise actual graph reconciliation and block a requested group expansion over the parent budget.
     """
-    from polyad.operator.reconciliation.controller import Controller, Pending
+    from polyad.operator.reconciliation.controller import Controller
     from tests.test_chart import render
     from tests.test_operator import FakeAPI, resource
 

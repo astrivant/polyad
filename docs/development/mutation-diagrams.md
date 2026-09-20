@@ -1,18 +1,7 @@
 # Mutation diagram patterns
 
-[Documentation](../README.md) · [Mutation plans and execution](mutations.md)
-
-A mutation diagram compares ways of changing an application. Each vertex is a
-**configuration**, such as a graph with particular replica counts. Each arrow is
-a **mutation** or a sequence of mutations. These vertices are not workload nodes:
-one vertex may describe an entire application containing many graphs.
-
-A diagram **commutes** when the compared paths represent the same transformation
-under a stated notion of equivalence. Drawing two paths into the same box is a
-claim to justify, not evidence by itself. Here, "classes" means diagram patterns;
-most are not Python classes or automatically verified relations in Polyad.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Choose what counts as equivalent](#choose-what-counts-as-equivalent)
 - [Catalog](#catalog)
@@ -27,6 +16,19 @@ most are not Python classes or automatically verified relations in Polyad.
   - [Capacity makes one path inadmissible](#capacity-makes-one-path-inadmissible)
   - [Compensation and retained effects](#compensation-and-retained-effects)
 - [Map diagrams to the library](#map-diagrams-to-the-library)
+<!-- toc:end -->
+
+[Documentation](../README.md) · [Mutation plans and execution](mutations.md)
+
+A mutation diagram compares ways of changing an application. Each vertex is a
+**configuration**, such as a graph with particular replica counts. Each arrow is
+a **mutation** or a sequence of mutations. These vertices are not workload nodes:
+one vertex may describe an entire application containing many graphs.
+
+A diagram **commutes** when the compared paths represent the same transformation
+under a stated notion of equivalence. Drawing two paths into the same box is a
+claim to justify, not evidence by itself. Here, "classes" means diagram patterns;
+most are not Python classes or automatically verified relations in Polyad.
 
 ## Choose what counts as equivalent
 

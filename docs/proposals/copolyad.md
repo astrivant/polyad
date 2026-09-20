@@ -1,5 +1,21 @@
 # Copolyad: deriving graphs from desired outcomes
 
+<!-- toc:start -->
+**Table of contents**
+
+- [What changes when the starting point is an outcome](#what-changes-when-the-starting-point-is-an-outcome)
+- [Relationship to existing Polyad capabilities](#relationship-to-existing-polyad-capabilities)
+- [From local capabilities to Natural Selection](#from-local-capabilities-to-natural-selection)
+- [Natural Selection takes precedence](#natural-selection-takes-precedence)
+- [Example: make incoming records searchable](#example-make-incoming-records-searchable)
+- [Outcome requests and capability contracts](#outcome-requests-and-capability-contracts)
+- [Natural Selection, admission and feedback](#natural-selection-admission-and-feedback)
+- [Authority, concurrency and recovery](#authority-concurrency-and-recovery)
+- [Cheeger bounds and application guarantees](#cheeger-bounds-and-application-guarantees)
+- [Delivery stages and acceptance criteria](#delivery-stages-and-acceptance-criteria)
+- [Open design questions](#open-design-questions)
+<!-- toc:end -->
+
 **Status: cluster architecture proposal with a [runnable local planner](../workloads/local-natural-selection.md).** Copolyad would plan application
 compositions from desired outcomes and service capability contracts, then submit
 those compositions to Polyad for admission and execution. The contracts and
@@ -14,20 +30,6 @@ proposal and project concept; Natural Selection names the algorithm.
 Polyad starts with an application graph and its rules, then coordinates how it
 is deployed, connected and adapted. Copolyad would start with the result an
 application needs and work backward to discover which graph could produce it.
-
-## Table of contents
-
-- [What changes when the starting point is an outcome](#what-changes-when-the-starting-point-is-an-outcome)
-- [Relationship to existing Polyad capabilities](#relationship-to-existing-polyad-capabilities)
-- [From local capabilities to Natural Selection](#from-local-capabilities-to-natural-selection)
-- [Natural Selection takes precedence](#natural-selection-takes-precedence)
-- [Example: make incoming records searchable](#example-make-incoming-records-searchable)
-- [Outcome requests and capability contracts](#outcome-requests-and-capability-contracts)
-- [Natural Selection, admission and feedback](#natural-selection-admission-and-feedback)
-- [Authority, concurrency and recovery](#authority-concurrency-and-recovery)
-- [Cheeger bounds and application guarantees](#cheeger-bounds-and-application-guarantees)
-- [Delivery stages and acceptance criteria](#delivery-stages-and-acceptance-criteria)
-- [Open design questions](#open-design-questions)
 
 ## What changes when the starting point is an outcome
 

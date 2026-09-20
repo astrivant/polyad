@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.network import NetworkScope, policy_specs, scope_label
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph.service_connections import access as service_access
 from polyad.graph.service_connections import grants as service_grants
 from polyad.graph.temporary import active_entries, overlay
@@ -50,7 +51,6 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
     Returns:
         tuple[dict[str, str], list[NetworkScope]]: Trusted membership labels and inherited policy scopes.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     namespace = obj["metadata"]["namespace"]
     inventory = await api.request("GET", "GraphRule", namespace)
@@ -144,7 +144,6 @@ async def ensure_policies(controller: Controller, obj: dict[str, Any], plans: di
     Returns:
         None: Admission may proceed after every desired policy was freshly observed.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     namespace, uid = obj["metadata"]["namespace"], obj["metadata"]["uid"]
     wanted = set()

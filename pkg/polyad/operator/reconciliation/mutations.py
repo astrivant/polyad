@@ -8,7 +8,8 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-from polyad.compiler.passes.mutations import PreconditionFailed, advance_budgets, check_preconditions, compile_mutations
+from polyad.compiler.passes.mutations import advance_budgets, check_preconditions, compile_mutations
+from polyad.exceptions.compiler import PreconditionFailed
 from polyad.operator.coordination.dispatch import Admission, Batch, admission
 from polyad.operator.coordination.settings import WorkGraphSettings
 from polyad.operator.observability.decisions import decision

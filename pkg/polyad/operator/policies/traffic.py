@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.network import scope_label
 from polyad.compiler.passes.traffic import route_specs
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.rule_state import check_live_rules
 from polyad.operator.reconciliation.replication import effective_spec
@@ -49,7 +50,7 @@ async def target_selector(
     Returns:
         dict[str, str]: Intersection of membership labels along the selected subtree.
     """
-    from polyad.operator.reconciliation.controller import Pending, child_name
+    from polyad.operator.reconciliation.controller import child_name
 
     current = obj
     labels = {}
@@ -110,7 +111,6 @@ async def ensure_routes(controller: Controller, obj: dict[str, Any]) -> None:
     Returns:
         None: Admission proceeds only after routing writes have been freshly observed.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     graph = topology(obj["spec"], obj["kind"])
     enabled = os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true"

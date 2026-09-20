@@ -1,5 +1,16 @@
 # Operator performance and autoscaling
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Resource baseline and right-sizing](#resource-baseline-and-right-sizing)
+- [Autoscaling response](#autoscaling-response)
+- [Connection pools and KEDA](#connection-pools-and-keda)
+- [Worker cadence](#worker-cadence)
+- [Write admission and validation](#write-admission-and-validation)
+- [KEDA-managed targets](#keda-managed-targets)
+<!-- toc:end -->
+
 Operator tuning lives under `operator` in the chart values. Scaling controls
 change how many replicas run; polling controls change how often each replica
 checks for work and publishes observations. Both affect response time and the
@@ -11,15 +22,6 @@ It also exposes `operator.cheeger` computation ceilings; see
 for how they bound per-rule and application-feedback work.
 The [metric inventory](metrics.md#metric-inventory-and-scope) lists every exposed
 family, its scope and the feature required to publish it.
-
-## Table of contents
-
-- [Resource baseline and right-sizing](#resource-baseline-and-right-sizing)
-- [Autoscaling response](#autoscaling-response)
-- [Connection pools and KEDA](#connection-pools-and-keda)
-- [Worker cadence](#worker-cadence)
-- [Write admission and validation](#write-admission-and-validation)
-- [KEDA-managed targets](#keda-managed-targets)
 
 ## Resource baseline and right-sizing
 

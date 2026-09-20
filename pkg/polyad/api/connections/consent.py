@@ -8,7 +8,7 @@ import json
 import os
 from typing import TYPE_CHECKING
 
-from polyad.api.http.errors import Forbidden
+from polyad.exceptions.api import Forbidden
 from polyad_types.resources import BOUNDARY_KINDS, GROUP, RESOURCE_TYPES
 
 if TYPE_CHECKING:

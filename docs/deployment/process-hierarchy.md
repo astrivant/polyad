@@ -1,16 +1,7 @@
 # Operator processes, threads and async tasks
 
-Each Polyad operator container runs **Tini as PID 1 and one Python process**.
-Within Python, the main thread owns process signals, `polyad-kopf` runs the
-operator's asyncio event loop, and optional HTTP workers share one Flask
-application. Graphs, shards and Kubernetes workloads do not each get a Python
-process or thread inside the operator.
-
-Kopf's health listener binds only to the Pod IP supplied through the Downward API.
-The [Pod context guide](pod-context.md) lists node and resource variables and the
-short-lived probe command used for readiness and administrator diagnostics.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Container and thread hierarchy](#container-and-thread-hierarchy)
 - [API module organization](#api-module-organization)
@@ -20,6 +11,17 @@ short-lived probe command used for readiness and administrator diagnostics.
 - [Observer process](#observer-process)
 - [Signals and shutdown](#signals-and-shutdown)
 - [Source map and diagnostics](#source-map-and-diagnostics)
+<!-- toc:end -->
+
+Each Polyad operator container runs **Tini as PID 1 and one Python process**.
+Within Python, the main thread owns process signals, `polyad-kopf` runs the
+operator's asyncio event loop, and optional HTTP workers share one Flask
+application. Graphs, shards and Kubernetes workloads do not each get a Python
+process or thread inside the operator.
+
+Kopf's health listener binds only to the Pod IP supplied through the Downward API.
+The [Pod context guide](pod-context.md) lists node and resource variables and the
+short-lived probe command used for readiness and administrator diagnostics.
 
 ## Container and thread hierarchy
 

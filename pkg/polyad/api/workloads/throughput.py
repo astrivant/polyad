@@ -9,8 +9,8 @@ import os
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from polyad.api.http.errors import Conflict, Forbidden
 from polyad.events.visibility import observation_ancestry, permitted_observation, public_observation
+from polyad.exceptions.api import Conflict, Forbidden
 from polyad.operator.policies.soul.contracts import SAMPLE
 from polyad_types.graphs.topology import topology
 from polyad_types.serialization import to_dict

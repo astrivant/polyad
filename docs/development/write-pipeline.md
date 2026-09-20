@@ -1,10 +1,7 @@
 # Kubernetes write pipeline
 
-Polyad queues decisions with their observed dependencies, validates them ahead of
-dispatch, and returns stale decisions to reconciliation. Desired state and the existing
-shared reconciliation streams remain the source of recoverable work.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [From decisions to writes](#from-decisions-to-writes)
 - [Dependency contracts](#dependency-contracts)
@@ -17,6 +14,11 @@ shared reconciliation streams remain the source of recoverable work.
   - [Deployment propagation](#deployment-propagation)
 - [Failure and cancellation](#failure-and-cancellation)
 - [Scope and consistency limits](#scope-and-consistency-limits)
+<!-- toc:end -->
+
+Polyad queues decisions with their observed dependencies, validates them ahead of
+dispatch, and returns stale decisions to reconciliation. Desired state and the existing
+shared reconciliation streams remain the source of recoverable work.
 
 ## From decisions to writes
 

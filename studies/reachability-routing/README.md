@@ -1,15 +1,17 @@
 # Reachability: predicted and measured rerouting
 
-Exercise the SDK queue guard with one producer process and two consumer
-processes. Compare sending everything to the first consumer with an approved
-25/75 split that uses the second consumer's spare capacity. The workload and
-number of consumer processes stay fixed.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Process experiment](#process-experiment)
 - [Run](#run)
 - [Read the evidence](#read-the-evidence)
+<!-- toc:end -->
+
+Exercise the SDK queue guard with one producer process and two consumer
+processes. Compare sending everything to the first consumer with an approved
+25/75 split that uses the second consumer's spare capacity. The workload and
+number of consumer processes stay fixed.
 
 ## Process experiment
 

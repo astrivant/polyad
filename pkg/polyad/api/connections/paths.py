@@ -7,8 +7,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from polyad.api.http.errors import Conflict, Forbidden, Unavailable
 from polyad.events.visibility import public_observation
+from polyad.exceptions.api import Conflict, Forbidden, Unavailable
 from polyad.operator.clusters.federation import INVENTORY, PARENT
 from polyad_types.graphs.topology import topology
 from polyad_types.resources import BOUNDARY_KINDS, GROUP, VERSION

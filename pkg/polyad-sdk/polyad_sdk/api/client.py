@@ -14,10 +14,12 @@ from urllib.request import Request, build_opener
 
 from polyad_sdk.api.interfaces import AdaptationReporter, ConnectionNegotiator, ServiceLevelReporter, ThroughputReporter
 from polyad_sdk.events.source import EventSource
+from polyad_sdk.exceptions.api import APIError
 from polyad_sdk.observability import Telemetry
-from polyad_sdk.transport.http import APIError, _NoRedirect
+from polyad_sdk.transport.http import _NoRedirect
 from polyad_types import ActivationRequest, to_dict
-from polyad_types.events.envelope import DEFAULT_MAX_EVENT_BYTES, Event, EventStreamSettings, EventTooLarge, validate_event_limit
+from polyad_types.events.envelope import DEFAULT_MAX_EVENT_BYTES, Event, EventStreamSettings, validate_event_limit
+from polyad_types.exceptions.events import EventTooLarge
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator

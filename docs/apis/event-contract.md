@@ -1,10 +1,7 @@
 # Event syntax trees, schemas and limits
 
-Polyad publishes a typed contract for the events that workloads consume. The
-same event AST applies to SSE and WebSocket subscriptions; the transport changes
-the framing, not graph visibility, consent permissions or replay semantics.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Import the contract](#import-the-contract)
 - [Supported event trees](#supported-event-trees)
@@ -13,6 +10,11 @@ the framing, not graph visibility, consent permissions or replay semantics.
 - [Administrator tuning](#administrator-tuning)
 - [Client receive limits](#client-receive-limits)
 - [Oversized events and recovery](#oversized-events-and-recovery)
+<!-- toc:end -->
+
+Polyad publishes a typed contract for the events that workloads consume. The
+same event AST applies to SSE and WebSocket subscriptions; the transport changes
+the framing, not graph visibility, consent permissions or replay semantics.
 
 ## Import the contract
 

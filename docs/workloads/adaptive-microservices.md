@@ -1,5 +1,22 @@
 # Service Symbiosis: writing adaptive microservices
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Who controls what](#who-controls-what)
+- [Producers and consumers](#producers-and-consumers)
+- [Cooperate across Graphs and PolyGraphs](#cooperate-across-graphs-and-polygraphs)
+- [Define the work contract](#define-the-work-contract)
+- [Define the adaptation envelope](#define-the-adaptation-envelope)
+- [Discover neighbors and react to change](#discover-neighbors-and-react-to-change)
+- [Distribute work within available capacity](#distribute-work-within-available-capacity)
+- [Report useful work and headroom](#report-useful-work-and-headroom)
+- [Negotiate connections and drain work](#negotiate-connections-and-drain-work)
+- [Use the Python SDK](#use-the-python-sdk)
+- [Run a local process tree](#run-a-local-process-tree)
+- [Exercise the contract under load](#exercise-the-contract-under-load)
+<!-- toc:end -->
+
 **Service Symbiosis** is Polyad's approach to building microservices that discover
 compatible peers and adapt their relationships and work together within Graphs
 and PolyGraphs. Services can perform different jobs: an ingester, an enrichment
@@ -30,21 +47,6 @@ application code; [Soul searching](../graphs/soul-searching.md) uses the reporte
 demand to adapt permitted graph structure and traffic. Polyad checks current
 GraphRules and permissions before admitting changes. This guide defines the
 application contract and [shows how to connect it to the SDK](#use-the-python-sdk).
-
-## Table of contents
-
-- [Who controls what](#who-controls-what)
-- [Producers and consumers](#producers-and-consumers)
-- [Cooperate across Graphs and PolyGraphs](#cooperate-across-graphs-and-polygraphs)
-- [Define the work contract](#define-the-work-contract)
-- [Define the adaptation envelope](#define-the-adaptation-envelope)
-- [Discover neighbors and react to change](#discover-neighbors-and-react-to-change)
-- [Distribute work within available capacity](#distribute-work-within-available-capacity)
-- [Report useful work and headroom](#report-useful-work-and-headroom)
-- [Negotiate connections and drain work](#negotiate-connections-and-drain-work)
-- [Use the Python SDK](#use-the-python-sdk)
-- [Run a local process tree](#run-a-local-process-tree)
-- [Exercise the contract under load](#exercise-the-contract-under-load)
 
 ## Who controls what
 

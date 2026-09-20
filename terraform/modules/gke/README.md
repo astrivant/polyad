@@ -1,14 +1,16 @@
 # GKE test cluster module
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Inputs and outputs](#inputs-and-outputs)
+- [Capacity and identity](#capacity-and-identity)
+<!-- toc:end -->
+
 Called by the [Terraform root module](../../README.md); it creates one zonal GKE
 Standard cluster and four pools: untainted `default`, `polyad` for the operator,
 `fixtures` for consumers and supporting services, and `copolyad` for load
 generators. All pools use `UBUNTU_CONTAINERD`.
-
-## Table of contents
-
-- [Inputs and outputs](#inputs-and-outputs)
-- [Capacity and identity](#capacity-and-identity)
 
 ## Inputs and outputs
 

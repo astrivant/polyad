@@ -1,18 +1,20 @@
 # Polyad schemas
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Installation](#installation)
+- [Modules](#modules)
+- [Example](#example)
+- [Sources and releases](#sources-and-releases)
+<!-- toc:end -->
+
 Versioned JSON Schemas and typed Python loaders for Polyad's shared models,
 Kubernetes and integration resources, event streams and Helm values. Generated
 from the project's shared models and schema catalog, these artifacts support
 offline validation and editor integration. Python 3.11–3.14 is supported.
 This package has no runtime dependencies and does not install the operator,
 SDK, shared Python types or a JSON Schema validator.
-
-## Table of contents
-
-- [Installation](#installation)
-- [Modules](#modules)
-- [Example](#example)
-- [Sources and releases](#sources-and-releases)
 
 ## Installation
 

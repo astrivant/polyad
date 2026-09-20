@@ -1,5 +1,14 @@
 # Argo CD graph health
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Install into an existing Argo CD release](#install-into-an-existing-argo-cd-release)
+- [What the health checks report](#what-the-health-checks-report)
+- [Finding each leaf](#finding-each-leaf)
+- [Validate locally](#validate-locally)
+<!-- toc:end -->
+
 Polyad supplies Argo CD health checks for executable graphs, nested graphs,
 composition receipts and reusable definitions. Each graph's health includes its
 observed descendants, so a failed leaf can degrade the root application.
@@ -7,13 +16,6 @@ observed descendants, so a failed leaf can degrade the root application.
 Argo CD evaluates custom health checks against one resource at a time. Polyad's
 [status rollups](../deployment/operator.md#graph-instance-status) carry the descendant observations
 that make this possible.<sup>[\[1\]](https://argo-cd.readthedocs.io/en/stable/operator-manual/health/#health-checks)</sup>
-
-## Table of contents
-
-- [Install into an existing Argo CD release](#install-into-an-existing-argo-cd-release)
-- [What the health checks report](#what-the-health-checks-report)
-- [Finding each leaf](#finding-each-leaf)
-- [Validate locally](#validate-locally)
 
 ## Install into an existing Argo CD release
 

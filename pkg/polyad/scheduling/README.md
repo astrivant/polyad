@@ -1,5 +1,23 @@
 # Polyad scheduling guide
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Module responsibilities](#module-responsibilities)
+- [Scheduling and feedback](#scheduling-and-feedback)
+- [Cooperative execution](#cooperative-execution)
+- [Logs and diagrams](#logs-and-diagrams)
+- [Composing graphs](#composing-graphs)
+- [Repeated execution](#repeated-execution)
+- [Shutdown conditions and finalizers](#shutdown-conditions-and-finalizers)
+- [Graph traversal ordering](#graph-traversal-ordering)
+- [Try a live graph rewrite](#try-a-live-graph-rewrite)
+  - [What the rewrites produce](#what-the-rewrites-produce)
+- [Boolean routing rules](#boolean-routing-rules)
+- [Transactional graph rewrites](#transactional-graph-rewrites)
+- [Recursive shape hashes](#recursive-shape-hashes)
+<!-- toc:end -->
+
 `polyad.scheduling` is Polyad's local Python execution scheduler. It runs cooperative
 `polyad.graph.Workload` implementations in worker threads, admitting work according
 to its prerequisites, execution budget and scheduling policy. A cooperative workload
@@ -15,22 +33,6 @@ Each workload exposes a `Work` description: stable name, input/implementation fi
 slots, memory reservation, initial statistics, and whether it supports checkpoints. Unknown durations and costs are represented
 by `None`. Existing `polyad.graph.Operation` commands expose statistics too, but remain non-preemptible in `OperationQueue`.
 Applications using OperationQueue retain their subprocess execution model.
-
-## Table of contents
-
-- [Module responsibilities](#module-responsibilities)
-- [Scheduling and feedback](#scheduling-and-feedback)
-- [Cooperative execution](#cooperative-execution)
-- [Logs and diagrams](#logs-and-diagrams)
-- [Composing graphs](#composing-graphs)
-- [Repeated execution](#repeated-execution)
-- [Shutdown conditions and finalizers](#shutdown-conditions-and-finalizers)
-- [Graph traversal ordering](#graph-traversal-ordering)
-- [Try a live graph rewrite](#try-a-live-graph-rewrite)
-  - [What the rewrites produce](#what-the-rewrites-produce)
-- [Boolean routing rules](#boolean-routing-rules)
-- [Transactional graph rewrites](#transactional-graph-rewrites)
-- [Recursive shape hashes](#recursive-shape-hashes)
 
 ## Module responsibilities
 

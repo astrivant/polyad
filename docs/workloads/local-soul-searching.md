@@ -1,5 +1,20 @@
 # Local Soul searching: processes and network topology
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Run the example](#run-the-example)
+- [Read the experiment from the root](#read-the-experiment-from-the-root)
+- [Three processes change their topology](#three-processes-change-their-topology)
+- [Work sharing through SDK strategies](#work-sharing-through-sdk-strategies)
+- [Compare useful work under the same limits](#compare-useful-work-under-the-same-limits)
+- [Each service changes its processing tree](#each-service-changes-its-processing-tree)
+- [Writing an adaptive application](#writing-an-adaptive-application)
+- [Cheeger bounds at two boundaries](#cheeger-bounds-at-two-boundaries)
+- [Controls and evidence](#controls-and-evidence)
+- [From approved profiles to Natural Selection](#from-approved-profiles-to-natural-selection)
+<!-- toc:end -->
+
 [`soul.py`](../../soul.py) is a local Python example built on the SDK's
 [`AdaptiveService` ABC](../../pkg/polyad-sdk/README.md#subclass-contract). Three
 services compute integer squares in child processes. An uneven load leaves
@@ -12,19 +27,6 @@ load, worker profiles and process limits. Each service can also replace its
 interactive worker with batch workers, then return to one worker after the load
 finishes. The script's opening documentation includes ASCII diagrams and a
 reading guide.
-
-## Table of contents
-
-- [Run the example](#run-the-example)
-- [Read the experiment from the root](#read-the-experiment-from-the-root)
-- [Three processes change their topology](#three-processes-change-their-topology)
-- [Work sharing through SDK strategies](#work-sharing-through-sdk-strategies)
-- [Compare useful work under the same limits](#compare-useful-work-under-the-same-limits)
-- [Each service changes its processing tree](#each-service-changes-its-processing-tree)
-- [Writing an adaptive application](#writing-an-adaptive-application)
-- [Cheeger bounds at two boundaries](#cheeger-bounds-at-two-boundaries)
-- [Controls and evidence](#controls-and-evidence)
-- [From approved profiles to Natural Selection](#from-approved-profiles-to-natural-selection)
 
 ## Run the example
 

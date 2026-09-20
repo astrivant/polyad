@@ -16,10 +16,10 @@ from waitress.server import create_server
 from waitress.task import ThreadedTaskDispatcher
 
 from polyad.api.http.application import create_application
-from polyad.api.http.errors import RequestError, Unavailable
 from polyad.api.http.limits import RateLimitPolicy
 from polyad.auth.http import Access
-from polyad.operator.coordination.pulses import PulseDeferred
+from polyad.exceptions.api import RequestError, Unavailable
+from polyad.exceptions.coordination import PulseDeferred
 from polyad.operator.lifecycle.health import lifecycle
 from polyad.operator.observability.pressure import pressure
 

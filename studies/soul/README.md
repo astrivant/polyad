@@ -1,12 +1,7 @@
 # Soul: a population adapting under constraints
 
-This study runs six application services, their child workers, a producer and a
-monitoring parent. It exercises the SDK's concrete strategy implementations
-together, then plots the actual process trees, queues, admission decisions and
-completed work. The original [`soul.py`](../../soul.py) remains the smaller TCP
-work-sharing example.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Run](#run)
 - [Process tree and phases](#process-tree-and-phases)
@@ -14,6 +9,13 @@ work-sharing example.
 - [Read the results](#read-the-results)
 - [Service-level and resource-loop evidence](#service-level-and-resource-loop-evidence)
 - [Refresh and evidence](#refresh-and-evidence)
+<!-- toc:end -->
+
+This study runs six application services, their child workers, a producer and a
+monitoring parent. It exercises the SDK's concrete strategy implementations
+together, then plots the actual process trees, queues, admission decisions and
+completed work. The original [`soul.py`](../../soul.py) remains the smaller TCP
+work-sharing example.
 
 ## Run
 

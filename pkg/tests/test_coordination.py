@@ -11,9 +11,11 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
+from polyad.exceptions.coordination import NotOwner
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.adapters.kubernetes import API
-from polyad.operator.coordination.leases import DURATION, SHARDS, Coordinator, NotOwner, active_shard, assignment
-from polyad.operator.reconciliation.controller import FINALIZER, Controller, Pending
+from polyad.operator.coordination.leases import DURATION, SHARDS, Coordinator, active_shard, assignment
+from polyad.operator.reconciliation.controller import FINALIZER, Controller
 from tests.test_operator import FakeAPI, resource
 
 

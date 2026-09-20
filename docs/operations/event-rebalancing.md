@@ -1,12 +1,7 @@
 # Event connection rebalancing and copulses
 
-A WebSocket or SSE subscription stays attached to the operator replica that
-accepted it. Adding replicas gives new subscriptions more capacity; existing
-subscriptions need to reconnect to use that capacity. A **copulse** is an
-operator instruction to reconnect an event stream, keeping the last completed
-application checkpoint.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Enable and tune](#enable-and-tune)
 - [Scale-out and subscription migration](#scale-out-and-subscription-migration)
@@ -16,6 +11,13 @@ application checkpoint.
 - [Administrator-triggered rolls](#administrator-triggered-rolls)
 - [Scale-down and shutdown](#scale-down-and-shutdown)
 - [Scope and failure behavior](#scope-and-failure-behavior)
+<!-- toc:end -->
+
+A WebSocket or SSE subscription stays attached to the operator replica that
+accepted it. Adding replicas gives new subscriptions more capacity; existing
+subscriptions need to reconnect to use that capacity. A **copulse** is an
+operator instruction to reconnect an event stream, keeping the last completed
+application checkpoint.
 
 ## Enable and tune
 

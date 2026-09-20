@@ -1,5 +1,19 @@
 # Workload topology events
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Application stream boundary](#application-stream-boundary)
+- [Changes that notify workloads](#changes-that-notify-workloads)
+- [Connection consent events](#connection-consent-events)
+- [Proposed rollout events](#proposed-rollout-events)
+- [Read current neighbors](#read-current-neighbors)
+- [Subscribe from a workload](#subscribe-from-a-workload)
+- [WebSocket subscriptions](#websocket-subscriptions)
+- [Rebalancing subscriptions](#rebalancing-subscriptions)
+- [Nested graphs](#nested-graphs)
+<!-- toc:end -->
+
 Workloads can discover graph neighbors and receive notifications when structure
 or execution membership changes. **ReplicaGroup scaling counts as a topology
 change**: it adds or removes vertices, and connected replication modes can change
@@ -27,18 +41,6 @@ and an administrator-assigned `home` graph. The parent operator's
 [discovery mode](../apis/discovery.md#access-modes-and-inherited-ceilings) bounds those grants. A key sees
 only its assigned trees, including verified descendants when enabled. Remote
 operator PolyGraphs and their descendants remain private.
-
-## Table of contents
-
-- [Application stream boundary](#application-stream-boundary)
-- [Changes that notify workloads](#changes-that-notify-workloads)
-- [Connection consent events](#connection-consent-events)
-- [Proposed rollout events](#proposed-rollout-events)
-- [Read current neighbors](#read-current-neighbors)
-- [Subscribe from a workload](#subscribe-from-a-workload)
-- [WebSocket subscriptions](#websocket-subscriptions)
-- [Rebalancing subscriptions](#rebalancing-subscriptions)
-- [Nested graphs](#nested-graphs)
 
 ## Application stream boundary
 

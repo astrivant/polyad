@@ -1,20 +1,8 @@
 # Graph rules
 
-`GraphRule` defines which graphs Polyad may admit and which traffic their workloads
-may exchange. Administrators create rules in the operator namespace; end-users
-select optional rules through a graph's `spec.rules`, including in
-[composition requests](../apis/composition-requests.md). Namespace rules apply automatically.
-Every selected structural constraint must pass before new work is admitted or
-a replica scaling action is dispatched. `PolyGraph` supports `spec.rules` exactly
-as `Graph` and `ReplicaGroup` do.
-
-Only policy administrators should have write access to `graphrules`. The operator's
-Role grants read access, and the composition HTTP API cannot create or modify rules.
-The operator enforces these policies during graph admission and when compiling
-workload networking resources. Cluster admission controllers govern direct Pod
-requests from other clients.
-
-## Table of contents
+<!-- toc:start -->
+<details>
+<summary>Table of contents</summary>
 
 - [Configuration reference](#configuration-reference)
 - [Selection and measurement](#selection-and-measurement)
@@ -58,6 +46,23 @@ requests from other clients.
 - [PolyGraphs and autoscaling](#polygraphs-and-autoscaling)
 - [Admission, reporting and computation limits](#admission-reporting-and-computation-limits)
 - [Application throughput targets](#application-throughput-targets)
+
+</details>
+<!-- toc:end -->
+
+`GraphRule` defines which graphs Polyad may admit and which traffic their workloads
+may exchange. Administrators create rules in the operator namespace; end-users
+select optional rules through a graph's `spec.rules`, including in
+[composition requests](../apis/composition-requests.md). Namespace rules apply automatically.
+Every selected structural constraint must pass before new work is admitted or
+a replica scaling action is dispatched. `PolyGraph` supports `spec.rules` exactly
+as `Graph` and `ReplicaGroup` do.
+
+Only policy administrators should have write access to `graphrules`. The operator's
+Role grants read access, and the composition HTTP API cannot create or modify rules.
+The operator enforces these policies during graph admission and when compiling
+workload networking resources. Cluster admission controllers govern direct Pod
+requests from other clients.
 
 ## Configuration reference
 

@@ -1,14 +1,16 @@
 # Service images
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Images](#images)
+- [Build](#build)
+<!-- toc:end -->
+
 Container images run the Polyad graph operator, a mock application fixture and
 a benchmark load generator. The two benchmark images share the standalone
 `polyad-benchmarks` package and its Poetry lock. All builds use the repository
 root as their context.
-
-## Table of contents
-
-- [Images](#images)
-- [Build](#build)
 
 ## Images
 

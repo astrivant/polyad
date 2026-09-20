@@ -36,6 +36,8 @@ def main() -> None:
         "graphs": ("Cheeger", "Topology", "Replication", "CapacityPlan"),
         "networking": ("NetworkPort", "NetworkAccess", "TrafficRoute"),
         "events": ("Event", "EventAST", "decode_event", "EventStreamSettings"),
+        "exceptions": ("EventTooLarge",),
+        "exceptions.events": ("EventTooLarge",),
         "resources": ("Graph", "Daemon", "Deployment", "ObjectMeta"),
     }.items():
         module = importlib.import_module(f"polyad_types.{namespace}")

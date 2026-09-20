@@ -1,11 +1,7 @@
 # Polyad documentation
 
-[Polyad overview and diagrams](../README.md)
-
-Browse guides by category. Start with [graph concepts](introduction/concepts.md),
-then [run your first workload](introduction/getting-started.md).
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Introduction](#introduction)
 - [Graphs and scaling](#graphs-and-scaling)
@@ -16,6 +12,12 @@ then [run your first workload](introduction/getting-started.md).
 - [Development](#development)
 - [Proposals](#proposals)
 - [Package and chart references](#package-and-chart-references)
+<!-- toc:end -->
+
+[Polyad overview and diagrams](../README.md)
+
+Browse guides by category. Start with [graph concepts](introduction/concepts.md),
+then [run your first workload](introduction/getting-started.md).
 
 ## Introduction
 
@@ -114,6 +116,7 @@ then [run your first workload](introduction/getting-started.md).
 | Guide | Contents |
 | --- | --- |
 | [Python extension interfaces](development/python-interfaces.md) | Public ABCs for workloads, process ownership, scheduling, SDK transports and operator adapters |
+| [Categorized Python exceptions](development/exceptions.md) | Central exception definitions, category imports, compatibility aliases and dependency isolation |
 | [Supported resource registry](development/resource-registry.md) | Supported kinds, AST models, API identities and scheduling capabilities |
 | [Operator package layout](development/operator-layout.md) | Lifecycle, reconciliation, the central Soul searching decision pipeline, policies, coordination, clusters, observability and adapters |
 | [Mutation plans](development/mutations.md) | Explicit effects, independence evidence, shared bounds and ordered execution |

@@ -35,7 +35,6 @@ from polyad_types.events.codec import decode_event as decode_event
 from polyad_types.events.envelope import Event as Event
 from polyad_types.events.envelope import EventRebalanceSettings as EventRebalanceSettings
 from polyad_types.events.envelope import EventStreamSettings as EventStreamSettings
-from polyad_types.events.envelope import EventTooLarge as EventTooLarge
 from polyad_types.events.models import ConnectionEvent as ConnectionEvent
 from polyad_types.events.models import ControlEvent as ControlEvent
 from polyad_types.events.models import CopulseEvent as CopulseEvent
@@ -43,6 +42,7 @@ from polyad_types.events.models import EventAST as EventAST
 from polyad_types.events.models import GraphEvent as GraphEvent
 from polyad_types.events.models import HeartbeatEvent as HeartbeatEvent
 from polyad_types.events.models import TopologyEvent as TopologyEvent
+from polyad_types.exceptions.events import EventTooLarge as EventTooLarge
 from polyad_types.graphs.activation import ActivationPolicy as ActivationPolicy
 from polyad_types.graphs.capacity import CapacityPlan as CapacityPlan
 from polyad_types.graphs.capacity import CapacityTuning as CapacityTuning

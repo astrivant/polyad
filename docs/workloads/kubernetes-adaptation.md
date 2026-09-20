@@ -1,10 +1,7 @@
 # Adapting services to Kubernetes conditions
 
-Service Symbiosis lets application code change how it accepts, routes and
-processes work while Kubernetes changes the resources around it. This guide maps
-common conditions to SDK strategies and concrete microservice responses.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Choose the observation source](#choose-the-observation-source)
 - [Map conditions to adaptations](#map-conditions-to-adaptations)
@@ -13,6 +10,11 @@ common conditions to SDK strategies and concrete microservice responses.
 - [Mutate local processing safely](#mutate-local-processing-safely)
 - [Implement a strategy component](#implement-a-strategy-component)
 - [Measure recovery](#measure-recovery)
+<!-- toc:end -->
+
+Service Symbiosis lets application code change how it accepts, routes and
+processes work while Kubernetes changes the resources around it. This guide maps
+common conditions to SDK strategies and concrete microservice responses.
 
 ## Choose the observation source
 

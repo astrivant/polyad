@@ -1,15 +1,7 @@
 # Temporary connections
 
-Services can request a directed connection between existing nodes of a `Graph`,
-`PolyGraph`, or `ReplicaGroup` for a bounded lifetime. Polyad records each request,
-obtains the participating services' consent through [events](../workloads/workload-events.md),
-checks the live graph family's [GraphRules](../graphs/graph-rules.md), adds admitted edges
-to the instance's effective topology, and removes their grants after expiry.
-The graph's reusable specification is unchanged. For endpoints in different graph
-or cluster boundaries, see [Atlas discovery and negotiation](discovery.md). It adds
-exact service identities, inherited operator access modes and per-participant events.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Enable the endpoint and choose its scope](#enable-the-endpoint-and-choose-its-scope)
 - [Authenticate workloads](#authenticate-workloads)
@@ -19,6 +11,16 @@ exact service identities, inherited operator access modes and per-participant ev
 - [Meaning at each graph layer](#meaning-at-each-graph-layer)
 - [Deadline, retries and cleanup](#deadline-retries-and-cleanup)
 - [Implementation boundaries](#implementation-boundaries)
+<!-- toc:end -->
+
+Services can request a directed connection between existing nodes of a `Graph`,
+`PolyGraph`, or `ReplicaGroup` for a bounded lifetime. Polyad records each request,
+obtains the participating services' consent through [events](../workloads/workload-events.md),
+checks the live graph family's [GraphRules](../graphs/graph-rules.md), adds admitted edges
+to the instance's effective topology, and removes their grants after expiry.
+The graph's reusable specification is unchanged. For endpoints in different graph
+or cluster boundaries, see [Atlas discovery and negotiation](discovery.md). It adds
+exact service identities, inherited operator access modes and per-participant events.
 
 ## Enable the endpoint and choose its scope
 

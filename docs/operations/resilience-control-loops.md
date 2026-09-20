@@ -1,5 +1,19 @@
 # Resilience control loops: interactions and tradeoffs
 
+<!-- toc:start -->
+**Table of contents**
+
+- [The control hierarchy](#the-control-hierarchy)
+- [What each mechanism controls](#what-each-mechanism-controls)
+- [Cheeger is a constraint, not an SLA](#cheeger-is-a-constraint-not-an-sla)
+- [Soul searching and the SLA loop](#soul-searching-and-the-sla-loop)
+- [Natural Selection and Soul searching](#natural-selection-and-soul-searching)
+- [SDK strategies, VPA and in-place resize](#sdk-strategies-vpa-and-in-place-resize)
+- [Common conflicts and safeguards](#common-conflicts-and-safeguards)
+- [Safe operating pattern](#safe-operating-pattern)
+- [Tradeoff summary](#tradeoff-summary)
+<!-- toc:end -->
+
 Polyad's resilience comes from composing several bounded mechanisms, not from a
 single score. Cheeger rules constrain structure, Soul searching responds to
 measured graph demand, Natural Selection chooses capability compositions, SDK

@@ -1,5 +1,21 @@
 # Advanced Istio integration
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Values reference files](#values-reference-files)
+- [Deployment strategies](#deployment-strategies)
+- [Traffic strategy reference values](#traffic-strategy-reference-values)
+- [Feature reference values](#feature-reference-values)
+- [Graph route resilience](#graph-route-resilience)
+- [Proxy telemetry](#proxy-telemetry)
+- [Local-first multicluster traffic](#local-first-multicluster-traffic)
+- [Ingress JWT and Gateway API](#ingress-jwt-and-gateway-api)
+- [Proxy configuration scoping](#proxy-configuration-scoping)
+- [Explicit external destinations and egress gateway](#explicit-external-destinations-and-egress-gateway)
+- [Authorization observation](#authorization-observation)
+<!-- toc:end -->
+
 Polyad keeps every advanced mesh behavior opt-in. Enabling `mesh.enabled` alone
 retains the existing strict-mTLS, graph authorization and weighted-routing
 behavior. The controls below add resilience, proxy telemetry, locality, ingress

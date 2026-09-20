@@ -10,8 +10,9 @@ import pytest
 from openapi_spec_validator import validate
 
 from polyad.api.metrics.builder import MetricsAPIBuilder
+from polyad.exceptions.reconciliation import Pending
 from polyad.metrics.store import MetricsStore
-from polyad.operator.reconciliation.controller import Controller, Pending
+from polyad.operator.reconciliation.controller import Controller
 from polyad.operator.reconciliation.replication import replica_selector
 from tests.test_metrics_api import snapshot
 from tests.test_operator import FakeAPI, resource, template

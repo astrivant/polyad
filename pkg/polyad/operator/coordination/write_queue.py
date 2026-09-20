@@ -9,7 +9,9 @@ import json
 from typing import TYPE_CHECKING
 
 from attrs import define, field, frozen
-from kubernetes.client.exceptions import ApiException
+
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.kubernetes import WriteConflict as WriteConflict
 
 if TYPE_CHECKING:
     from typing import Any
@@ -20,23 +22,6 @@ __all__ = (
     "WriteIntent",
     "write_intent",
 )
-
-
-class WriteConflict(ApiException):  # type: ignore[misc]  # The Kubernetes client exception has no type stubs.
-    """
-    Return queued decisions to reconciliation without dispatching their effects.
-    """
-
-    def __init__(self, reason: str, *, status: int = 409) -> None:
-        """
-        Carry a stable conflict reason without retaining request payloads.
-
-        Args:
-            reason (str): Machine-readable explanation for refusing dispatch.
-            status (int): Retryable conflict or backpressure HTTP status.
-        """
-        self.conflict_reason = reason
-        super().__init__(status=status, reason="Queued write refused; refresh observations and reconcile current desired state")
 
 
 @frozen

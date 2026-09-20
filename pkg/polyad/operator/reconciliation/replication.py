@@ -8,6 +8,7 @@ import copy
 import hashlib
 from typing import TYPE_CHECKING
 
+from polyad.exceptions.reconciliation import Pending
 from polyad.metrics.workloads import current_observation, observation_time
 from polyad.operator.clusters.remote_scaling import INTENT, approved_intent, remote_revision
 from polyad.operator.observability.graph_status import observed
@@ -52,7 +53,6 @@ async def effective_spec(api: API, obj: dict[str, Any]) -> tuple[dict[str, Any],
     Returns:
         tuple[dict[str, Any], int | None]: Effective replication specification and source generation.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     spec = copy.deepcopy(obj["spec"])
     policy = converter.structure(spec, Replication)

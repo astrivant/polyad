@@ -19,10 +19,11 @@ from kubernetes.client.exceptions import ApiException
 from polyad.cache import cache_url
 from polyad.compiler.registry import DEFINITION_KINDS, GRAPH_OWNED_KINDS, RECONCILED_KINDS, RESOURCE_TYPES
 from polyad.events.visibility import observation_ancestry, public_observation
+from polyad.exceptions.coordination import NotOwner, PulseDeferred
+from polyad.exceptions.reconciliation import Pending
 from polyad.metrics.inventory import inventory
 from polyad.operator.adapters.kubernetes import API, GROUP, VERSION
-from polyad.operator.coordination.leases import SHARDS, Coordinator, NotOwner, active_shard
-from polyad.operator.coordination.pulses import PulseDeferred
+from polyad.operator.coordination.leases import SHARDS, Coordinator, active_shard
 from polyad.operator.coordination.queue import RefreshQueue, batches
 from polyad.operator.coordination.settings import WorkGraphSettings
 from polyad.operator.coordination.shared_queue import SharedQueue
@@ -399,7 +400,6 @@ async def reconcile(key: Key) -> None:
     Returns:
         None: No return value.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     global last_api_success
     assert controller is not None and coordinator is not None
@@ -489,7 +489,6 @@ async def consume_loop() -> None:
     Returns:
         None: No return value.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     assert coordinator is not None and shared is not None and queue is not None
 

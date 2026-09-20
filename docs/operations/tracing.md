@@ -1,12 +1,7 @@
 # OpenTelemetry traces and decision logs
 
-Polyad includes the OpenTelemetry Python API, SDK and OTLP/HTTP trace and log
-exporters as operator dependencies. Both exports are opt-in and disabled by default. Tracing uses the
-existing Flask application and exports batches in a background thread; it does
-not start another API server. Metrics remain available through the existing
-Prometheus endpoint for KEDA.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Enable tracing](#enable-tracing)
 - [Span coverage and propagation](#span-coverage-and-propagation)
@@ -16,6 +11,13 @@ Prometheus endpoint for KEDA.
   - [Coverage and severity](#coverage-and-severity)
 - [Export configuration and lifecycle](#export-configuration-and-lifecycle)
 - [References](#references)
+<!-- toc:end -->
+
+Polyad includes the OpenTelemetry Python API, SDK and OTLP/HTTP trace and log
+exporters as operator dependencies. Both exports are opt-in and disabled by default. Tracing uses the
+existing Flask application and exports batches in a background thread; it does
+not start another API server. Metrics remain available through the existing
+Prometheus endpoint for KEDA.
 
 ## Enable tracing
 

@@ -1,12 +1,7 @@
 # Soul searching: approved load profiles and preparation
 
-Soul searching can prepare for sustained incoming demand before completed
-throughput falls behind. An administrator defines demand tiers containing a
-Cheeger target, optional traffic percentages and optional capacity lookahead.
-Polyad selects among those approved profiles; hard GraphRules and resource
-ceilings remain fixed.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Separate control loops](#separate-control-loops)
 - [Define demand](#define-demand)
@@ -14,6 +9,13 @@ ceilings remain fixed.
 - [Configure approved profiles](#configure-approved-profiles)
 - [Limits and failure behavior](#limits-and-failure-behavior)
 - [Report demand and inspect decisions](#report-demand-and-inspect-decisions)
+<!-- toc:end -->
+
+Soul searching can prepare for sustained incoming demand before completed
+throughput falls behind. An administrator defines demand tiers containing a
+Cheeger target, optional traffic percentages and optional capacity lookahead.
+Polyad selects among those approved profiles; hard GraphRules and resource
+ceilings remain fixed.
 
 ## Separate control loops
 

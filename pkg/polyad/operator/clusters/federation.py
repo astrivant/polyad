@@ -16,6 +16,7 @@ import yaml  # type: ignore[import-untyped]
 from attrs import evolve
 from kubernetes import client, config
 
+from polyad.exceptions.reconciliation import Pending
 from polyad.operator.adapters.kubernetes import API
 from polyad.operator.observability.decisions import decision
 from polyad_types import resources as asts
@@ -174,7 +175,6 @@ class Federation:
         Returns:
             None: All required addresses were already durably recorded.
         """
-        from polyad.operator.reconciliation.controller import Pending
 
         meta = parent["metadata"]
         inventory = json.loads(meta.get("annotations", {}).get(INVENTORY, "[]"))

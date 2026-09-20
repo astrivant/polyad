@@ -1,5 +1,21 @@
 # Adaptation strategies for application constraints
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Start with a producer and consumer](#start-with-a-producer-and-consumer)
+- [Choose an application adaptation](#choose-an-application-adaptation)
+- [Choose an SDK strategy](#choose-an-sdk-strategy)
+  - [Observation and callback strategies](#observation-and-callback-strategies)
+- [Choose checks for common changes](#choose-checks-for-common-changes)
+- [Wait for permission to use a new connection](#wait-for-permission-to-use-a-new-connection)
+- [Compose independent constraints](#compose-independent-constraints)
+- [Default local capacity from projected environment](#default-local-capacity-from-projected-environment)
+- [Propose a bounded profile change](#propose-a-bounded-profile-change)
+- [Write a strategy](#write-a-strategy)
+- [Delivery, recovery and admission](#delivery-recovery-and-admission)
+<!-- toc:end -->
+
 An **adaptation strategy** is a component that helps your service respond when
 the services around it or its available resources change. For example, a producer
 can stop sending to a consumer that is shutting down, use a newly available
@@ -22,20 +38,6 @@ for a modeled queue contract. It checks whether an approved routing split can
 keep queues bounded and meet its terminal target, using a current artifact and
 application measurements. See [reachability guards](reachability.md#use-a-reachability-guard)
 for interaction models, assumptions and optional numerical studies.
-
-## Table of contents
-
-- [Start with a producer and consumer](#start-with-a-producer-and-consumer)
-- [Choose an application adaptation](#choose-an-application-adaptation)
-- [Choose an SDK strategy](#choose-an-sdk-strategy)
-  - [Observation and callback strategies](#observation-and-callback-strategies)
-- [Choose checks for common changes](#choose-checks-for-common-changes)
-- [Wait for permission to use a new connection](#wait-for-permission-to-use-a-new-connection)
-- [Compose independent constraints](#compose-independent-constraints)
-- [Default local capacity from projected environment](#default-local-capacity-from-projected-environment)
-- [Propose a bounded profile change](#propose-a-bounded-profile-change)
-- [Write a strategy](#write-a-strategy)
-- [Delivery, recovery and admission](#delivery-recovery-and-admission)
 
 ## Start with a producer and consumer
 

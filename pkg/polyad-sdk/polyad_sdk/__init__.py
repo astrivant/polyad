@@ -18,8 +18,9 @@ from polyad_sdk.connections import WorkloadClient as WorkloadClient
 from polyad_sdk.connections import WorkloadEndpoint as WorkloadEndpoint
 from polyad_sdk.events.filters import Filter as Filter
 from polyad_sdk.events.source import EventSource as EventSource
-from polyad_sdk.events.subscriptions import StreamInterrupted as StreamInterrupted
 from polyad_sdk.events.subscriptions import Subscription as Subscription
+from polyad_sdk.exceptions.api import APIError as APIError
+from polyad_sdk.exceptions.events import StreamInterrupted as StreamInterrupted
 from polyad_sdk.observability import Telemetry as Telemetry
 from polyad_sdk.processes import ManagedProcess as ManagedProcess
 from polyad_sdk.processes import PlanResult as PlanResult
@@ -54,7 +55,6 @@ from polyad_sdk.symbiosis.strategies import ResourceBudgetStrategy as ResourceBu
 from polyad_sdk.symbiosis.strategies import ResourceStrategy as ResourceStrategy
 from polyad_sdk.symbiosis.strategies import ThresholdStrategy as ThresholdStrategy
 from polyad_sdk.symbiosis.strategies import TopologyStrategy as TopologyStrategy
-from polyad_sdk.transport.http import APIError as APIError
 from polyad_types.api.service_level import ServiceLevelReport as ServiceLevelReport
 from polyad_types.events.envelope import Event as Event
 

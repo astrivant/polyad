@@ -1,12 +1,7 @@
 # SDK telemetry and subprocess plans
 
-The SDK supplies OpenTelemetry instrumentation and a process supervisor for
-turning adaptation decisions into local worker compositions. Engineers define
-approved plans, readiness and draining protocols, then let their strategies
-propose a plan by name. The same telemetry instance connects observation,
-adaptation and worker lifecycle records.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Runtime components](#runtime-components)
 - [Trace operations and collect metrics](#trace-operations-and-collect-metrics)
@@ -17,6 +12,13 @@ adaptation and worker lifecycle records.
 - [Readiness, commit and draining](#readiness-commit-and-draining)
 - [Concurrency, recovery and shutdown](#concurrency-recovery-and-shutdown)
 - [Run the example](#run-the-example)
+<!-- toc:end -->
+
+The SDK supplies OpenTelemetry instrumentation and a process supervisor for
+turning adaptation decisions into local worker compositions. Engineers define
+approved plans, readiness and draining protocols, then let their strategies
+propose a plan by name. The same telemetry instance connects observation,
+adaptation and worker lifecycle records.
 
 ## Runtime components
 

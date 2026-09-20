@@ -7,10 +7,10 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from polyad.api.http.errors import Forbidden, Unavailable
 from polyad.events.access import configuration, require_scope
 from polyad.events.topology import topology_snapshot
 from polyad.events.visibility import observation_ancestry, permitted_observation, public_observation
+from polyad.exceptions.api import Forbidden, Unavailable
 from polyad_types.api.discovery import AccessMode
 from polyad_types.resources import BOUNDARY_KINDS
 

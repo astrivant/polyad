@@ -1,12 +1,7 @@
 # Practical Cheeger tuning
 
-Configure **hard structural bounds** through GraphRules and **application-driven
-targets** through each Graph or PolyGraph's throughput policy. Both use the same
-exact, unweighted edge-expansion calculation. Start with `Observe`, calibrate
-targets against application measurements, then enable bounded `Adapt` changes
-when the proposed layouts are useful.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Choose who controls each setting](#choose-who-controls-each-setting)
 - [Set useful structural bounds](#set-useful-structural-bounds)
@@ -15,6 +10,13 @@ when the proposed layouts are useful.
 - [Tune the operator component graph](#tune-the-operator-component-graph)
 - [Prioritize important cuts](#prioritize-important-cuts)
 - [Understand computation and scale](#understand-computation-and-scale)
+<!-- toc:end -->
+
+Configure **hard structural bounds** through GraphRules and **application-driven
+targets** through each Graph or PolyGraph's throughput policy. Both use the same
+exact, unweighted edge-expansion calculation. Start with `Observe`, calibrate
+targets against application measurements, then enable bounded `Adapt` changes
+when the proposed layouts are useful.
 
 ## Choose who controls each setting
 

@@ -20,14 +20,16 @@ from polyad.api.connections.app import build_app
 from polyad.api.connections.consent import CONSENTS, confirmed, endpoint
 from polyad.api.connections.store import ConnectionSettings, ConnectionStore
 from polyad.api.events.builder import EventAPIBuilder
-from polyad.api.http.errors import Conflict, Forbidden
 from polyad.events.store import EventStore
 from polyad.events.visibility import public_observation
+from polyad.exceptions.api import Conflict, Forbidden
+from polyad.exceptions.coordination import PulseDeferred
 from polyad.graph.temporary import entries
-from polyad.operator.coordination.pulses import PulseDeferred, PulsePolicy
+from polyad.operator.coordination.pulses import PulsePolicy
 from polyad.operator.coordination.shared_queue import SharedQueue
 from polyad.operator.reconciliation.controller import Controller
-from polyad_sdk import APIError, Client
+from polyad_sdk import Client
+from polyad_sdk.exceptions.api import APIError
 from polyad_types import ConnectionResponse
 from polyad_types.resources import GROUP
 from tests.test_authentication import access, header, registry

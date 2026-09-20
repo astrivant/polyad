@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING
 
 from kubernetes.client.exceptions import ApiException
 
+# Preserve existing import paths while keeping each exception defined centrally.
+from polyad.exceptions.coordination import NotOwner as NotOwner
 from polyad.operator.adapters.kubernetes import GROUP
 from polyad.operator.lifecycle.roles import role
 from polyad.operator.observability.decisions import decision, decision_context
@@ -63,12 +65,6 @@ def root_shard(kind: str, namespace: str, name: str) -> int:
         int: Fixed shard shared by intake and reconciliation.
     """
     return int.from_bytes(hashlib.sha256(f"{namespace}/{kind}/{name}".encode()).digest()[:8]) % SHARDS
-
-
-class NotOwner(Exception):
-    """
-    Stop a pass when this replica cannot prove shard ownership.
-    """
 
 
 def assignment(members: list[str], shards: int = SHARDS) -> dict[str, str]:

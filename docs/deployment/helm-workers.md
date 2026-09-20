@@ -1,5 +1,16 @@
 # Helm-installed downstream operators
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Ownership and scaling choices](#ownership-and-scaling-choices)
+- [Prepare credentials and configuration](#prepare-credentials-and-configuration)
+- [Install and attach](#install-and-attach)
+- [Keep scaling local](#keep-scaling-local)
+- [Switch authority and upgrade](#switch-authority-and-upgrade)
+- [Disconnection and detachment](#disconnection-and-detachment)
+<!-- toc:end -->
+
 Cluster administrators can install execution workers with Helm and attach them
 to an existing [root control plane](root-control-plane.md). Choose who sets their
 replica count: the root and its KEDA scaler, or the downstream administrator.
@@ -10,15 +21,6 @@ planner or start another composition, event or metrics server.
 [Discovery access ceilings](../apis/discovery.md#administrator-configuration)
 also apply to manually installed workers; use the root policy tree and narrow it
 as needed. Workers do not forward unsupported requests or expose their own APIs.
-
-## Table of contents
-
-- [Ownership and scaling choices](#ownership-and-scaling-choices)
-- [Prepare credentials and configuration](#prepare-credentials-and-configuration)
-- [Install and attach](#install-and-attach)
-- [Keep scaling local](#keep-scaling-local)
-- [Switch authority and upgrade](#switch-authority-and-upgrade)
-- [Disconnection and detachment](#disconnection-and-detachment)
 
 ## Ownership and scaling choices
 

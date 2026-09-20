@@ -1,5 +1,16 @@
 # Balance traffic between workload and graph replicas
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Connections, percentages and replicas](#connections-percentages-and-replicas)
+- [Configure a fixed split](#configure-a-fixed-split)
+- [Choose an automatic balancing mode](#choose-an-automatic-balancing-mode)
+- [Report per-replica measurements](#report-per-replica-measurements)
+- [Bounds and stabilization](#bounds-and-stabilization)
+- [Scaling, ownership and limitations](#scaling-ownership-and-limitations)
+<!-- toc:end -->
+
 Polyad can optionally ask Istio to divide incoming requests among downstream
 **Workload, Daemon, Graph or PolyGraph replicas**, through each replica's service entrypoint.
 For example, send 60% of incoming pipeline work to `workers/replica-0` and 40% to
@@ -11,15 +22,6 @@ provide an Istio sidecar mesh, and opt the application graph into `spec.traffic`
 Omitting `traffic` leaves routing to the application and its existing infrastructure.
 Optional per-route circuit breaking, endpoint ejection, retries and timeouts are
 described in [advanced Istio integration](../deployment/istio-features.md#graph-route-resilience).
-
-## Table of contents
-
-- [Connections, percentages and replicas](#connections-percentages-and-replicas)
-- [Configure a fixed split](#configure-a-fixed-split)
-- [Choose an automatic balancing mode](#choose-an-automatic-balancing-mode)
-- [Report per-replica measurements](#report-per-replica-measurements)
-- [Bounds and stabilization](#bounds-and-stabilization)
-- [Scaling, ownership and limitations](#scaling-ownership-and-limitations)
 
 ## Connections, percentages and replicas
 

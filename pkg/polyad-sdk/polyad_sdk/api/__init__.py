@@ -9,7 +9,7 @@ from polyad_sdk.api.interfaces import AdaptationReporter as AdaptationReporter
 from polyad_sdk.api.interfaces import ConnectionNegotiator as ConnectionNegotiator
 from polyad_sdk.api.interfaces import ServiceLevelReporter as ServiceLevelReporter
 from polyad_sdk.api.interfaces import ThroughputReporter as ThroughputReporter
-from polyad_sdk.transport.http import APIError as APIError
+from polyad_sdk.exceptions.api import APIError as APIError
 
 __all__ = (
     "APIError",

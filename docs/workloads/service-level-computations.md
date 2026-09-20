@@ -1,5 +1,18 @@
 # Service-level computation reference
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Inputs and trust boundary](#inputs-and-trust-boundary)
+- [Fixed-window fold](#fixed-window-fold)
+- [Error budget](#error-budget)
+- [Objective evaluation and state precedence](#objective-evaluation-and-state-precedence)
+- [Adaptation accounting](#adaptation-accounting)
+- [Multiple graph nodes and freshness](#multiple-graph-nodes-and-freshness)
+- [Worked example](#worked-example)
+- [Metrics and GitOps health](#metrics-and-gitops-health)
+<!-- toc:end -->
+
 Polyad evaluates a Daemon's application-reported service outcomes separately
 from Kubernetes readiness, graph adaptation progress and structural health. This
 reference defines the implemented computation. It is intentionally precise

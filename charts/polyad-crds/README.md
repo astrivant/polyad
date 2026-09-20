@@ -1,11 +1,7 @@
 # Polyad CRDs and named resources
 
-Install Polyad's versioned CRDs and generate named resource instances from Helm
-values, with defaults, schema validation and cross-resource `tpl` references.
-This chart can run independently or as the operator and benchmark charts'
-`polyadResources` dependency. It does not install an operator.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Installation and upgrades](#installation-and-upgrades)
 - [Named instances and defaults](#named-instances-and-defaults)
@@ -15,6 +11,12 @@ This chart can run independently or as the operator and benchmark charts'
 - [Parameters](#parameters)
   - [Resource generation](#resource-generation)
   - [Named resources](#named-resources)
+<!-- toc:end -->
+
+Install Polyad's versioned CRDs and generate named resource instances from Helm
+values, with defaults, schema validation and cross-resource `tpl` references.
+This chart can run independently or as the operator and benchmark charts'
+`polyadResources` dependency. It does not install an operator.
 
 ## Installation and upgrades
 

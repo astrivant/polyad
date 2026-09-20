@@ -1,5 +1,14 @@
 # Composition requests
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Request lifecycle](#request-lifecycle)
+- [Compose by ID](#compose-by-id)
+- [Durability, ordering and audit](#durability-ordering-and-audit)
+- [Related APIs](#related-apis)
+<!-- toc:end -->
+
 A composition request describes an executable graph and its reusable definitions
 using request-local IDs. The operator records a durable receipt, checks applicable
 [graph rules](../graphs/graph-rules.md), and materializes the graph in its namespace.
@@ -11,13 +20,6 @@ For authentication, deployment, routing, rate limits and OpenAPI discovery, see
 workload creation and audit reads in the operator namespace; it does not provide
 per-user identities or tenant isolation. Apply workload RBAC, Pod Security and
 resource quotas for that namespace.
-
-## Table of contents
-
-- [Request lifecycle](#request-lifecycle)
-- [Compose by ID](#compose-by-id)
-- [Durability, ordering and audit](#durability-ordering-and-audit)
-- [Related APIs](#related-apis)
 
 ## Request lifecycle
 

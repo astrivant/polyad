@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from cattrs.errors import CattrsError
 
+from polyad.exceptions.reconciliation import Pending
 from polyad.graph.temporary import overlay
 from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types.graphs.topology import topology
@@ -38,7 +39,6 @@ async def topology_snapshot(api: API, obj: dict[str, Any], children: list[dict[s
     Returns:
         dict[str, Any]: Canonical, revisioned snapshot with no Pod templates or credentials.
     """
-    from polyad.operator.reconciliation.controller import Pending
 
     meta = obj["metadata"]
     spec = obj["spec"]

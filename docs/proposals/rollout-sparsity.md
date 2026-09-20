@@ -1,17 +1,19 @@
 # Rollout sparsity and events
 
-**Status: design proposal, not implemented configuration.** This extends the
-[graph rollout and rotation proposal](rotations.md). Sparsity controls how often
-new rollout operations may begin. It is independent of graph edge density,
-Cheeger bounds, batch concurrency and ordinary reconciliation frequency.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Configure frequency limits](#configure-frequency-limits)
 - [Inheritance and durable accounting](#inheritance-and-durable-accounting)
 - [Repeated triggers and deadlines](#repeated-triggers-and-deadlines)
 - [Events for decisions and execution](#events-for-decisions-and-execution)
 - [Required implementation and verification](#required-implementation-and-verification)
+<!-- toc:end -->
+
+**Status: design proposal, not implemented configuration.** This extends the
+[graph rollout and rotation proposal](rotations.md). Sparsity controls how often
+new rollout operations may begin. It is independent of graph edge density,
+Cheeger bounds, batch concurrency and ordinary reconciliation frequency.
 
 ## Configure frequency limits
 

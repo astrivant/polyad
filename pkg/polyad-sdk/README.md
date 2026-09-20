@@ -1,28 +1,8 @@
 # Polyad SDK
 
-A typed Python 3.11–3.14 SDK for **Service Symbiosis** and Polyad's operator APIs.
-Service Symbiosis lets microservices discover compatible peers and adapt their
-relationships and work together across Graphs and PolyGraphs.
-Applications receive connection, capacity, metric and decision deltas with current
-context. `AdaptiveService` combines these observations with modular adaptation
-strategies. Managed subprocess plans provide readiness checks, worker replacement
-and draining; built-in OpenTelemetry support adds traces and metrics.
-The same package includes `Client` for composition, activation, demand reporting,
-discovery, SSE/WebSocket events and temporary connections.
-
-`connect(document)`, `connection(namespace, request_id)` and
-`disconnect(namespace, request_id)` use the separate connections Service and a
-projected service-account token. See the [temporary connections guide](https://github.com/astrivant/polyad/blob/main/docs/apis/temporary-connections.md)
-for token rotation, namespace scope, TTL and cleanup semantics.
-It uses the shared [polyad-types](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/README.md) models and
-does not install the operator.
-
-For application behavior around these APIs, see
-[Service Symbiosis: writing adaptive microservices](https://github.com/astrivant/polyad/blob/main/docs/workloads/adaptive-microservices.md):
-cooperative producers and consumers, graph-level capacity, backpressure and
-safe handoffs, using the `AdaptiveService` abstract base class.
-
-## Table of contents
+<!-- toc:start -->
+<details>
+<summary>Table of contents</summary>
 
 - [Installation](#installation)
 - [Optional workload protocols](#optional-workload-protocols)
@@ -54,6 +34,31 @@ safe handoffs, using the `AdaptiveService` abstract base class.
 - [Remote clusters](#remote-clusters)
 - [Report throughput to Soul searching](#report-throughput-to-soul-searching)
 - [Publishing](#publishing)
+
+</details>
+<!-- toc:end -->
+
+A typed Python 3.11–3.14 SDK for **Service Symbiosis** and Polyad's operator APIs.
+Service Symbiosis lets microservices discover compatible peers and adapt their
+relationships and work together across Graphs and PolyGraphs.
+Applications receive connection, capacity, metric and decision deltas with current
+context. `AdaptiveService` combines these observations with modular adaptation
+strategies. Managed subprocess plans provide readiness checks, worker replacement
+and draining; built-in OpenTelemetry support adds traces and metrics.
+The same package includes `Client` for composition, activation, demand reporting,
+discovery, SSE/WebSocket events and temporary connections.
+
+`connect(document)`, `connection(namespace, request_id)` and
+`disconnect(namespace, request_id)` use the separate connections Service and a
+projected service-account token. See the [temporary connections guide](https://github.com/astrivant/polyad/blob/main/docs/apis/temporary-connections.md)
+for token rotation, namespace scope, TTL and cleanup semantics.
+It uses the shared [polyad-types](https://github.com/astrivant/polyad/blob/main/pkg/polyad-types/README.md) models and
+does not install the operator.
+
+For application behavior around these APIs, see
+[Service Symbiosis: writing adaptive microservices](https://github.com/astrivant/polyad/blob/main/docs/workloads/adaptive-microservices.md):
+cooperative producers and consumers, graph-level capacity, backpressure and
+safe handoffs, using the `AdaptiveService` abstract base class.
 
 ## Installation
 
@@ -119,6 +124,10 @@ polyad_sdk/
     source.py                EventSource ABC and subscription factory
     filters.py               Composable observation filters
     subscriptions.py         Hook delivery, replay and checkpointing
+  exceptions/
+    api.py                   APIError and HTTP response diagnostics
+    events.py                StreamInterrupted and stream recovery signals
+    processes.py             Private process-supervisor control flow
   runtime/
     environment.py           Shared import-time environment snapshot
     context.py               Typed workload, Pod and resource context
@@ -129,7 +138,7 @@ polyad_sdk/
     process.py               Child process and process-group ownership
     supervisor.py            Admission, readiness, replacement and draining
   transport/
-    http.py                  HTTP errors and redirect restrictions
+    http.py                  Redirect restrictions and legacy APIError import
     routing.py               Trusted endpoint selection and TLS identity
     websocket.py             Optional WebSocket stream transport
 ```
@@ -141,6 +150,8 @@ remain available. Feature packages expose their own public interfaces:
 from polyad_sdk.api import Client, ConnectionNegotiator, ThroughputReporter
 from polyad_sdk.events import EventSource, Filter, Subscription
 from polyad_sdk.events.filters import event_type, field, graph
+from polyad_sdk.exceptions.api import APIError
+from polyad_sdk.exceptions.events import StreamInterrupted
 from polyad_sdk.runtime import WorkloadContext, env, refresh_environment
 from polyad_sdk.symbiosis.strategies import FreshnessStrategy, ResourceBudgetStrategy
 ```
@@ -149,6 +160,12 @@ Each module declares its public API in `__all__`. Wildcard imports expose only
 those Polyad symbols, not imported dependencies such as `dataclass`, `Path` or
 `Any`. Import dependencies directly from their own packages. Explicit imports
 are preferred; `__all__` does not make other module attributes inaccessible.
+
+Custom exceptions are defined once under `polyad_sdk.exceptions`, grouped by
+domain. The exception root also exports `APIError` and `StreamInterrupted`;
+existing SDK-root and implementation-module imports remain identical aliases.
+Shared event validation uses `polyad_types.exceptions.events.EventTooLarge`.
+See [exception categories and compatibility](../../docs/development/exceptions.md).
 
 Implementation imports use these grouped paths. The WebSocket implementation
 loads when that transport is selected. The single `py.typed` marker at the SDK

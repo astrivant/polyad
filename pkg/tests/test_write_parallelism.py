@@ -10,11 +10,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from polyad.exceptions.kubernetes import WriteConflict
 from polyad.operator.coordination.contracts import capture_decision
 from polyad.operator.coordination.dispatch import DispatchGraph
 from polyad.operator.coordination.queue import RefreshQueue
 from polyad.operator.coordination.validation import ValidationQueue, ValidationSettings
-from polyad.operator.coordination.write_queue import WriteConflict
 from polyad.operator.reconciliation.mutations import execute_mutations
 from polyad_types.resources import Mutation, Scope
 from tests.test_operator import resource

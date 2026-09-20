@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from attrs import field, frozen
 from kubernetes.client.exceptions import ApiException
 
-from polyad.api.http.errors import Conflict, Forbidden, Unauthorized, Unavailable
+from polyad.exceptions.api import Conflict, Forbidden, Unauthorized, Unavailable
 from polyad.graph.temporary import deadline
 from polyad.operator.coordination.pulses import PulsePolicy
 from polyad_types import resources as asts

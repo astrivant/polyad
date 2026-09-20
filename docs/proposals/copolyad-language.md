@@ -1,16 +1,7 @@
 # Copolyad contracts and the Natural Selection IR
 
-**Status: design proposal, not implemented.** This document makes the
-[Copolyad proposal](copolyad.md) concrete with an authoring language and
-intermediate representations (IRs): typed data structures that compilers and
-planners exchange. All syntax, types and version strings below are illustrative;
-these documents cannot be submitted to today's Polyad APIs or installed as CRDs.
-
-The proposed language describes **what is needed**, **what each capability can
-provide** and **which choices are permitted**. Natural Selection searches those
-contracts and produces a candidate plan. Polyad retains admission and execution.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Language and compilation boundaries](#language-and-compilation-boundaries)
 - [Typed ports and semantic contracts](#typed-ports-and-semantic-contracts)
@@ -21,6 +12,17 @@ contracts and produces a candidate plan. Polyad retains admission and execution.
 - [Plan IR and Polyad lowering](#plan-ir-and-polyad-lowering)
 - [Validation and implementation stages](#validation-and-implementation-stages)
 - [References](#references)
+<!-- toc:end -->
+
+**Status: design proposal, not implemented.** This document makes the
+[Copolyad proposal](copolyad.md) concrete with an authoring language and
+intermediate representations (IRs): typed data structures that compilers and
+planners exchange. All syntax, types and version strings below are illustrative;
+these documents cannot be submitted to today's Polyad APIs or installed as CRDs.
+
+The proposed language describes **what is needed**, **what each capability can
+provide** and **which choices are permitted**. Natural Selection searches those
+contracts and produces a candidate plan. Polyad retains admission and execution.
 
 ## Language and compilation boundaries
 

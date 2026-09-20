@@ -1,11 +1,7 @@
 # Getting started
 
-[Documentation](../README.md)
-
-Run the commands below from the repository root. Choose the Kubernetes
-operator for container workloads, or the local scheduler for Python work.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Install](#install)
 - [Python library](#python-library)
@@ -15,6 +11,12 @@ operator for container workloads, or the local scheduler for Python work.
   - [Quick start: Kubernetes](#quick-start-kubernetes)
 - [Examples](#examples)
 - [Development](#development)
+<!-- toc:end -->
+
+[Documentation](../README.md)
+
+Run the commands below from the repository root. Choose the Kubernetes
+operator for container workloads, or the local scheduler for Python work.
 
 ## Install
 

@@ -1,5 +1,17 @@
 # PCA-guided Cheeger reduction (deprecated)
 
+<!-- toc:start -->
+**Table of contents**
+
+- [Method](#method)
+- [What is certified](#what-is-certified)
+- [Controlled sweeps](#controlled-sweeps)
+- [Steady-graph insurance](#steady-graph-insurance)
+- [Run](#run)
+- [Interpret the plots](#interpret-the-plots)
+- [Limitations and production criteria](#limitations-and-production-criteria)
+<!-- toc:end -->
+
 This study is archived and excluded from all refresh suites and CI study runs.
 Its recipe, recorded results and figures are retained unchanged for reference.
 Use the active [Cheeger strategy study](../cheeger-strategies/README.md) for new runs.
@@ -9,16 +21,6 @@ Cheeger cuts, and what accuracy and assurance are lost. PCA remains an experimen
 comparison. The companion [strategy selection study](../cheeger-strategies/README.md)
 measures the production opt-in spectral selector, its cache, threshold decisions
 and exact fallback on changing graphs.
-
-## Table of contents
-
-- [Method](#method)
-- [What is certified](#what-is-certified)
-- [Controlled sweeps](#controlled-sweeps)
-- [Steady-graph insurance](#steady-graph-insurance)
-- [Run](#run)
-- [Interpret the plots](#interpret-the-plots)
-- [Limitations and production criteria](#limitations-and-production-criteria)
 
 ## Method
 

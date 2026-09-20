@@ -13,8 +13,9 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from kubernetes.client.exceptions import ApiException
 
+from polyad.exceptions.coordination import NotOwner
 from polyad.operator.adapters.kubernetes import API
-from polyad.operator.coordination.leases import Coordinator, NotOwner
+from polyad.operator.coordination.leases import Coordinator
 from polyad.operator.coordination.queue import RefreshQueue
 from polyad.operator.coordination.shared_queue import SharedQueue
 from polyad.operator.observability.metrics import WriteBacklog

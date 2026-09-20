@@ -1,11 +1,7 @@
 # Importable JSON Schemas
 
-`polyad-schemas` ships generated JSON Schemas for the contracts shared by the
-operator and client. It has no runtime dependencies. Applications, editors and build tools can load the same versioned
-contracts without installing the operator or contacting a cluster. The JSON files
-are included in both wheels and source distributions.
-
-## Table of contents
+<!-- toc:start -->
+**Table of contents**
 
 - [Install and import](#install-and-import)
 - [Modules](#modules)
@@ -14,6 +10,12 @@ are included in both wheels and source distributions.
 - [Use the files directly](#use-the-files-directly)
 - [Validation boundaries](#validation-boundaries)
 - [Regenerate artifacts](#regenerate-artifacts)
+<!-- toc:end -->
+
+`polyad-schemas` ships generated JSON Schemas for the contracts shared by the
+operator and client. It has no runtime dependencies. Applications, editors and build tools can load the same versioned
+contracts without installing the operator or contacting a cluster. The JSON files
+are included in both wheels and source distributions.
 
 ## Install and import
 
