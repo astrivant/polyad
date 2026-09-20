@@ -7,7 +7,7 @@
 - [What Polyad abstracts](#what-polyad-abstracts)
   - [Motivation and inspiration](#motivation-and-inspiration)
   - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
-  - [Graphs of graphs](#graphs-of-graphs)
+  - [Polygraphs: graphs of graphs](#polygraphs-graphs-of-graphs)
   - [Writing Adaptive Microservices for execution in Polygraphs](#writing-adaptive-microservices-for-execution-in-polygraphs)
   - [Replica connections](#replica-connections)
   - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
@@ -207,7 +207,7 @@ Its [adaptation envelope](docs/workloads/adaptive-microservices.md#define-the-ad
 records which changes it can absorb, how quickly it recovers and which constraints
 it must preserve.
 
-### Graphs of graphs
+### Polygraphs: graphs of graphs
 
 Compose smaller workflows into an application with `PolyGraph`. Each child
 reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/introduction/concepts.md#graphs-of-graphs)</sup>
