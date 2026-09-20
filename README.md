@@ -335,12 +335,7 @@ Read about [composition requests](docs/apis/composition-requests.md) and [GraphR
 
 #### Writing Adaptive Microservices for execution in Polygraphs
 
-<details>
-<summary>
-
 ##### Soul searching: adapt a service's workers
-
-</summary>
 
 Application code can participate in adaptation, using available capacity while
 protecting work it has already accepted. The [Soul study](studies/soul/README.md)
@@ -355,8 +350,6 @@ The study compares fixed and adaptive trials under the same offered load and
 resource ceilings, verifies every completed job, and records queue sizes,
 completion latency and process lifecycles.
 
-</details>
-
 [![Six services and their child workers before, during and after adapting to load and constraints](studies/soul/figures/topology.png)](studies/soul/figures/topology.png)
 
 *Build services that put spare capacity to work and release extra workers when
@@ -365,19 +358,12 @@ switching to compact workers under modeled memory pressure and recovering their
 original footprint. Accepted jobs remain tracked through each transition.
 Click the figure to inspect the worker identities and connections.*
 
-<details>
-<summary>
-
 ##### Natural Selection: adapt service compositions
-
-</summary>
 
 The [Nature study](studies/nature/README.md) adds composition decisions above
 those local adaptations. When the required output changes, its Natural Selection
 planner chooses which service implementations and connections can deliver it
 within the configured process and cost limits.
-
-</details>
 
 [![Service compositions and their child workers before, during and after the required output changes](studies/nature/figures/topology.png)](studies/nature/figures/topology.png)
 
