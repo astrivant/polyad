@@ -168,6 +168,10 @@ graphs: {}
 #             strategy: "AdaptivePID"
 #             ## @param graphs.example.spec.throughput.cheegerComputation.reduction.targetSeconds [number, string] Optional. No CRD default; the value shown is illustrative. Soft mean computation-time goal; the operator value governs when administrator limits are supplied.
 #             targetSeconds: 1e-06
+#             ## @param graphs.example.spec.throughput.cheegerComputation.reduction.feedback [string] Optional. No CRD default; the value shown is illustrative. Choices: "CertificateGap", "ComputationTime". Adaptive PID objective; the administrator chooses the effective signal.
+#             feedback: "CertificateGap"
+#             ## @param graphs.example.spec.throughput.cheegerComputation.reduction.targetRelativeError [number, string] Optional. No CRD default; the value shown is illustrative. Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.
+#             targetRelativeError: 1e-06
 #         ## @param graphs.example.spec.throughput.maxWeightStep [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum percentage-point change per destination in one automatic adjustment.
 #         maxWeightStep: 1
 #         ## @param graphs.example.spec.throughput.trafficMode [string] Optional. No CRD default; the value shown is illustrative. Choices: "Tiers", "Headroom". Use calibrated tier percentages or measured per-destination sustainable capacity.

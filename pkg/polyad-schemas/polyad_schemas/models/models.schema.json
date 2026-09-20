@@ -2833,6 +2833,19 @@
           "minimum": 1e-06,
           "maximum": 300,
           "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+        },
+        "feedback": {
+          "enum": [
+            "CertificateGap",
+            "ComputationTime"
+          ],
+          "description": "Adaptive PID objective; the administrator chooses the effective signal."
+        },
+        "targetRelativeError": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 100,
+          "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
         }
       },
       "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."

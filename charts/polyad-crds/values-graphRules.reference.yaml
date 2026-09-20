@@ -57,6 +57,10 @@ graphRules: {}
 #           strategy: "AdaptivePID"
 #           ## @param graphRules.example.spec.cheegerComputation.reduction.targetSeconds [number, string] Optional. No CRD default; the value shown is illustrative. Soft mean computation-time goal; the operator value governs when administrator limits are supplied.
 #           targetSeconds: 1e-06
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.feedback [string] Optional. No CRD default; the value shown is illustrative. Choices: "CertificateGap", "ComputationTime". Adaptive PID objective; the administrator chooses the effective signal.
+#           feedback: "CertificateGap"
+#           ## @param graphRules.example.spec.cheegerComputation.reduction.targetRelativeError [number, string] Optional. No CRD default; the value shown is illustrative. Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.
+#           targetRelativeError: 1e-06
 #       ## @param graphRules.example.spec.scope [string] Optional. Default: "Subtree". Choices: "Boundary", "Subtree". Boundary applies locally; Subtree propagates. Namespace rules select every boundary.
 #       scope: "Subtree"
 #       ## @param graphRules.example.spec.network [object, string] Optional. No CRD default; the value shown is illustrative. Isolate a graph subtree and intersect its exceptions with inherited constraints.

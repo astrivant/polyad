@@ -21,6 +21,7 @@
   "timeouts": [0.001, 0.01, 1],
   "timeoutSeconds": 10,
   "preferredTimeTargetSeconds": 0.0015,
+  "preferredRelativeError": 0.25,
   "preferredWarmupObservations": 12,
   "pidRefresh": {
     "enabled": true,
@@ -31,6 +32,17 @@
     "initialInterval": 4,
     "minInterval": 1,
     "maxInterval": 8
+  },
+  "pidAccuracy": {
+    "enabled": true,
+    "observationsPerPhase": 16,
+    "phases": [
+      {"name": "Steady", "replacement": 0, "timeTargetSeconds": 0.0015, "relativeErrorTarget": 1},
+      {"name": "Churn only", "replacement": 0.3, "timeTargetSeconds": 0.0015, "relativeErrorTarget": 1},
+      {"name": "Tighter accuracy goal", "replacement": 0.3, "timeTargetSeconds": 0.0015, "relativeErrorTarget": 0.1},
+      {"name": "Looser accuracy goal", "replacement": 0.3, "timeTargetSeconds": 0.0015, "relativeErrorTarget": 4},
+      {"name": "Topology recovery", "replacement": 0, "timeTargetSeconds": 0.0015, "relativeErrorTarget": 0.25}
+    ]
   },
   "pidFeedback": {
     "enabled": true,

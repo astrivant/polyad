@@ -162,6 +162,10 @@ operator:
       strategy: AdaptivePID
       ## @param operator.cheeger.reduction.targetSeconds [number] Soft mean computation-time goal for adaptive cache targeting (0.000001-300 seconds); not a timeout or CPU reservation
       targetSeconds: 0.0015
+      ## @param operator.cheeger.reduction.feedback [string] Adaptive PID feedback: CertificateGap targets certified uncertainty; ComputationTime retains latency feedback
+      feedback: CertificateGap
+      ## @param operator.cheeger.reduction.targetRelativeError [number] Soft certified relative-error goal (0.000001-100); 0.25 means 25 percent, not a hard accuracy guarantee
+      targetRelativeError: 0.25
   ## @param operator.writeQueue [object] Bound concrete Kubernetes writes separately from coalesced reconciliation hints.
   writeQueue:
     ## @param operator.writeQueue.reconciliationCooldownSeconds [number] Shared per-resource cooldown window before new reconciliation decisions (0-300 seconds); zero disables pacing, expiry and connection consent remain live

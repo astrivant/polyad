@@ -23,7 +23,7 @@ from polyad_benchmarks.studies.cheeger_strategies.experiment import (
     rewire,
     trace_selector,
 )
-from polyad_benchmarks.studies.cheeger_strategies.pid import CacheTargetConfig, CacheTargetPID, RefreshConfig, RefreshPID
+from polyad_benchmarks.studies.cheeger_strategies.pid import AccuracyTargetPID, CacheTargetConfig, CacheTargetPID, RefreshConfig, RefreshPID
 
 ROOT = Path(__file__).parents[2]
 
@@ -94,6 +94,7 @@ def recipe():
         "thresholdRatios": [0.25, 1, 2],
         "cacheEntries": [1, 4],
         "pidFeedback": {**config["pidFeedback"], "observationsPerPhase": 4},
+        "pidAccuracy": {**config["pidAccuracy"], "observationsPerPhase": 4},
     }
 
 
@@ -172,6 +173,7 @@ def test_all_sweeps_keep_oracle_certificates_and_cut_witnesses_consistent():
         experiment.controls()
         experiment.timeline()
         experiment.pid_feedback()
+        experiment.pid_accuracy()
     finally:
         clear_reduction_cache()
     assert {row["sweep"] for row in experiment.records} == {
@@ -184,6 +186,7 @@ def test_all_sweeps_keep_oracle_certificates_and_cut_witnesses_consistent():
         "cache-capacity",
         "timeline",
         "pid-feedback",
+        "pid-accuracy",
     }
     assert {row["stage"] for row in experiment.records if row["sweep"] == "timeline"} == {
         "CachedQuotient",
@@ -197,6 +200,9 @@ def test_all_sweeps_keep_oracle_certificates_and_cut_witnesses_consistent():
         assert row["cpuSeconds"] > 0
         assert row["averageMillicores"] == pytest.approx(1000 * row["cpuSeconds"] / row["durationSeconds"])
         assert row["millicoreSeconds"] == pytest.approx(1000 * row["cpuSeconds"])
+        if "accuracyPid" in row:
+            assert row["accuracyPid"]["observedGap"] == pytest.approx(row["certificateGap"])
+            assert row["accuracyPid"]["relativeErrorTarget"] == row.get("relativeErrorTarget", 0.25)
         if row["upperBound"] is not None:
             snapshot = experiment.graphs[row["graphId"]]
             graph = nx.Graph(snapshot["edges"])
@@ -510,3 +516,26 @@ def test_outer_pid_replay_is_optional(block):
     experiment = Experiment(config)
     experiment.pid_feedback()
     assert not experiment.records
+
+
+def test_accuracy_comparator_matches_runtime_scheduling_for_the_same_certificates():
+    """
+    Study refresh decisions follow the production controller without using study truth.
+    """
+    experiment = Experiment(recipe())
+    graph = experiment.graph("path", 8, 11)
+    settings = experiment.settings(maxEdgeChurn=1)
+    experiment.prime(graph, settings)
+    runtime = [trace_selector(graph, settings, {"maximum": 8}) for _ in range(12)]
+    experiment.prime(graph, settings)
+    accuracy = AccuracyTargetPID(CacheTargetConfig())
+    inner = RefreshPID(RefreshConfig(targetCacheRate=accuracy.target))
+    try:
+        for reference in runtime:
+            report = pid_report(graph, settings.reduction, inner, force_refresh=accuracy.target == 0)
+            feedback = accuracy.observe(report["lowerBound"], report["upperBound"], settings.reduction.targetRelativeError)
+            inner.set_target(accuracy.target)
+            assert report["stage"] == reference["stage"]
+            assert feedback == reference["scheduler"]["outer"]
+    finally:
+        clear_reduction_cache()

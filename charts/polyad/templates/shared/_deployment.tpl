@@ -231,6 +231,10 @@ spec:
               value: {{ .Values.operator.cheeger.reduction.strategy | quote }}
             - name: POLYAD_CHEEGER_REDUCTION_TARGET_SECONDS
               value: {{ .Values.operator.cheeger.reduction.targetSeconds | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_FEEDBACK
+              value: {{ .Values.operator.cheeger.reduction.feedback | quote }}
+            - name: POLYAD_CHEEGER_REDUCTION_TARGET_RELATIVE_ERROR
+              value: {{ .Values.operator.cheeger.reduction.targetRelativeError | quote }}
             - name: POLYAD_RESCAN_INTERVAL_SECONDS
               value: {{ .Values.operator.tuning.rescanIntervalSeconds | quote }}
             - name: POLYAD_CONSUME_INTERVAL_SECONDS

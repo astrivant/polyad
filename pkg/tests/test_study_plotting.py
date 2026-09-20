@@ -204,6 +204,42 @@ def test_outer_pid_plots_measured_targets_and_sparse_window_feedback(monkeypatch
             plt.close(figure)
 
 
+def test_accuracy_feedback_plots_certificates_and_audited_tail_separately(monkeypatch, tmp_path):
+    """
+    Show the controller's actual signal and independently checked error without mixing them.
+    """
+    import matplotlib.pyplot as plt
+
+    from polyad.graph.reduction import clear_reduction_cache
+    from polyad_benchmarks.studies.cheeger_strategies import quality
+    from polyad_benchmarks.studies.cheeger_strategies.experiment import Experiment
+
+    config = json.loads((ROOT / "studies/cheeger-strategies/fixtures/scenario.json").read_text())
+    config.update(fixedVertices=8, fixedComponents=2, fixedSupernodes=4, seeds=[11], repetitions=1)
+    config["pidAccuracy"]["observationsPerPhase"] = 4
+    experiment = Experiment(config)
+    figures = []
+    monkeypatch.setattr(quality, "save", lambda figure, *args, **kwargs: figures.append(figure) or [])
+    try:
+        experiment.pid_accuracy()
+        quality.pid_accuracy({"records": experiment.records, "recipe": config}, tmp_path)
+        rows = [row for row in experiment.records if row["strategy"] == "Accuracy-target PID"]
+        assert len(figures[0].axes) == 6
+        for index, field in ((0, "certificateGap"), (1, "relativeError"), (4, "durationSeconds"), (5, "millicoreSeconds")):
+            line = next(line for line in figures[0].axes[index].lines if line.get_label() == "Accuracy-target PID")
+            assert list(line.get_ydata()) == pytest.approx([row[field] for row in rows])
+        updates = [row for row in rows if row["accuracyPid"]["updated"]]
+        line = next(line for line in figures[0].axes[3].lines if line.get_label() == "Accuracy-target PID")
+        assert list(line.get_xdata()) == [row["step"] for row in updates]
+        assert list(line.get_ydata()) == [row["accuracyPid"]["normalizedError"] for row in updates]
+        quality.pid_accuracy({"records": []}, tmp_path)
+        assert all(any("not collected" in text.get_text() for text in axis.texts) for axis in figures[1].axes)
+    finally:
+        clear_reduction_cache()
+        for figure in figures:
+            plt.close(figure)
+
+
 def test_cpu_companions_plot_measured_work_and_paired_relative_cost(monkeypatch, tmp_path):
     """
     Keep CPU work separate from occupied cores and do not invent archived measurements.

@@ -35,27 +35,48 @@ and [composition requests](../apis/composition-requests.md).
 ## Set useful structural bounds
 
 When both operator and graph policy opt into Cheeger reduction, `AdaptivePID`
-is the preferred default scheduler. It periodically refreshes the spectral
-partition; a slower outer PID adjusts the requested cache-use fraction against
-the administrator's `operator.cheeger.reduction.targetSeconds` (default 0.0015).
-This is a soft computation-time objective, not a timeout or CPU reservation.
+is the preferred default scheduler. Its default `feedback: CertificateGap`
+uses a slower outer PID to reduce cache reuse when the reduced certificate is
+too uncertain. The administrator's `targetRelativeError` defaults to `0.25`,
+meaning a soft 25% relative-error objective. It is not a promised accuracy bound.
+Choose `feedback: ComputationTime` to retain the original outer loop, driven by
+`targetSeconds` (default 0.0015), a soft time goal rather than a timeout or CPU reservation.
 Choose `strategy: CacheFirst` at either level to retain legacy cache-first ordering.
-The operator's time target governs when operator limits are supplied.
+The operator's feedback mode and both targets govern when operator limits are supplied.
 Set fractional goals in a values file or with Helm
 `--set-json operator.cheeger.reduction.targetSeconds=0.002`; plain `--set`
 parses fractional values as strings, which the numeric schema rejects.
 
-The two loops use the same controller implementation as the
+Both modes use the same controller implementations as the
 [strategy study](../../studies/cheeger-strategies/README.md), with anti-windup,
 refresh intervals bounded to 1-8 observations, and a cache target bounded to
-0-0.8. The outer loop updates every four completed calculations, including
-necessary exact fallback. Cache attempts count as the inner controller's failure
+0-0.8. The outer loop updates every four completed calculations. Accuracy feedback
+uses the last **reduced** certificate, before exact fallback could conceal its
+uncertainty; time feedback includes necessary exact fallback. Cache attempts count as the inner controller's failure
 signal, not as mathematical failure. Hard churn guards and certificate thresholds
 always take precedence, so a requested cache fraction may be unattainable.
+When the accuracy loop requests zero reuse, the scheduler refreshes every query
+instead of waiting for the inner interval. The existing time mode is unchanged.
+
+For a certificate $L\leq h\leq U$, the observable signal is
+$g=(U-L)/U$. When $L>0$, the unknown relative cut error satisfies
+$(U-h)/h\leq(U-L)/L=g/(1-g)$. Thus a relative-error objective $r^*$
+maps to the normalized-gap objective $g^*=r^*/(1+r^*)$. A positive upper
+witness with zero lower bound has $g=1$ and no finite relative-error guarantee;
+a certified zero constant has gap zero. Missing upper bounds mean full uncertainty.
+
+The accuracy PID uses $e=1-\overline{g}/g^*$: excess uncertainty lowers its cache
+target. A mean window meeting the goal does **not** certify every query or bound
+mean relative error, because the transformation is nonlinear; inspect
+each report's `objectiveMet` and `relativeErrorBound` for the reduced certificate.
+Those fields describe pre-fallback bounds, not necessarily the final exact result.
+Fresh spectral work can still produce loose bounds. The PID neither guarantees
+convergence nor changes quotient size or spends extra exact-search work to force
+the goal; existing policy certificates still decide whether exact fallback is needed.
 
 Histories are process-local and bounded by `cacheEntries`, independently of the
 partition cache. Runtime graph UID, boundary path, rule and relation isolate
-independent policies; membership, dimensions, quotient size, churn gate or time-goal
+independent policies; membership, dimensions, quotient size, churn gate, feedback mode or either goal
 changes start new history. Concurrent
 evaluations do not double-update one history. Failover starts cold and changes
 efficiency, not certificate validity. Standalone `compute_cheeger` callers should
@@ -66,7 +87,8 @@ lists the controls. Reduction remains disabled by default. Numeric callers such
 as Soul's exact expansion measurements still enumerate exactly; the scheduler
 does not substitute an estimate for that scalar. `cheegerComputation.scheduler` exposes
 both loop states when active. Benchmark preference is not a claim of universal
-latency improvement, and an infeasible time goal can saturate the cache target.
+latency or accuracy improvement. Infeasible goals can saturate the cache target;
+accuracy feedback may pay for fresh work without obtaining a tighter certificate.
 
 | Field under `GraphRule.spec` | Choice and consequence |
 | --- | --- |
@@ -334,13 +356,15 @@ does not replace those values with an estimate.
 | `reduction.cache` | `true` | Reuse only cluster membership when the operator permits it; measurements are recomputed. |
 | `reduction.cacheEntries` | `128` | Process-local LRU bound, 1–4,096 and no greater than the operator value. |
 | `reduction.maxEdgeChurn` | `0.1` | Largest symmetric changed-edge fraction accepted for cached membership reuse, 0–1 and no greater than the operator value. |
-| `reduction.strategy` | `AdaptivePID` | Adaptive refresh with a computation-time-driven cache target. Either operator or policy may choose `CacheFirst` to restore legacy ordering. Inactive when caching is disabled. |
-| `reduction.targetSeconds` | `0.0015` | Soft mean computation-time goal, 0.000001–300 seconds. The operator's value takes precedence over local policy; this is not a hard limit. |
+| `reduction.strategy` | `AdaptivePID` | Adaptive refresh with the selected feedback objective. Either operator or policy may choose `CacheFirst` to restore legacy ordering. Inactive when caching is disabled. |
+| `reduction.feedback` | `CertificateGap` | Targets certified uncertainty. `ComputationTime` retains the original time-targeted outer loop. Operator-owned when limits are supplied. |
+| `reduction.targetRelativeError` | `0.25` | Soft relative-error goal, 0.000001–100; 0.25 means 25%. The operator's value takes precedence; this is not a hard bound on each query. |
+| `reduction.targetSeconds` | `0.0015` | Soft mean computation-time goal in `ComputationTime` mode, 0.000001–300 seconds. Operator-owned; not a hard limit. |
 
 Omit a top-level local numeric field, or set it to `null`, to inherit its operator
 ceiling. Reduction resource allowances use the defaults in the table and must fit
 the administrator's ceilings; attempting to exceed one blocks evaluation.
-Scheduler choice and time-goal precedence follow the explicit rules above.
+Scheduler choice, feedback mode and goal precedence follow the explicit rules above.
 The fields are available on `GraphRule.spec.cheegerComputation` and
 `Graph/PolyGraph.spec.throughput.cheegerComputation`. Hard-rule search and feedback
 search have separate local preferences, under the same deployment ceilings.

@@ -9,6 +9,7 @@ import pytest
 from attrs import evolve
 
 from polyad.graph.cheeger import compute_cheeger
+from polyad.graph.pid import AccuracyTargetPID, CacheTargetConfig, certificate_gap
 from polyad.graph.reduction import clear_reduction_cache
 from polyad.graph.refresh import begin_refresh, finish_refresh
 from polyad.operator.policies.cheeger import computation_limits
@@ -100,7 +101,7 @@ def test_administrator_owns_time_goal_and_can_disable_pid(monkeypatch):
     """
     graph = nx.complete_graph(list("abcdefgh"))
     local = settings(targetSeconds=1)
-    limits = settings(targetSeconds=0.02)
+    limits = settings(targetSeconds=0.02, feedback="ComputationTime")
     report = compute_cheeger(graph, local, limits=limits, maximum=8)
     assert report.scheduler["outer"]["timeTargetSeconds"] == 0.02
     assert not compute_cheeger(graph, local, limits=settings(strategy="CacheFirst"), maximum=8).scheduler
@@ -131,7 +132,7 @@ def test_outer_updates_use_completed_time_and_skip_concurrent_stale_tickets():
     Versioned updates avoid holding locks during computation or counting one history twice.
     """
     graph = nx.complete_graph(list("abcdefgh"))
-    config = settings().reduction
+    config = settings(feedback="ComputationTime").reduction
     first, concurrent = begin_refresh(graph, config), begin_refresh(graph, config)
     assert not finish_refresh(first, 0.015, cache_attempted=True, refreshed=True)["updateSkipped"]
     assert finish_refresh(concurrent, 0.015, cache_attempted=True, refreshed=True)["updateSkipped"]
@@ -163,3 +164,113 @@ def test_invalid_scheduler_configuration_is_rejected(changes):
     """
     with pytest.raises(ValueError):
         CheegerReduction(**changes)
+
+
+@pytest.mark.parametrize("lower,upper,gap", [(0, None, 1), (0, 0, 0), (0, 3, 1), (2, 2, 0), (2, 2.5, 0.2)])
+def test_accuracy_signal_handles_missing_and_zero_bounds(lower, upper, gap):
+    """
+    Missing or zero lower bounds are never mistaken for precise positive estimates.
+    """
+    assert certificate_gap(lower, upper) == pytest.approx(gap)
+
+
+def test_accuracy_pid_responds_to_uncertainty_without_time_or_oracle_inputs():
+    """
+    High uncertainty requests fresh work and tight certificates permit reuse.
+    """
+    uncertain = AccuracyTargetPID(CacheTargetConfig())
+    precise = AccuracyTargetPID(CacheTargetConfig())
+    for _ in range(4):
+        bad = uncertain.observe(0, 1, 0.25)
+        good = precise.observe(1, 1, 0.25)
+    assert bad["observedGap"] == 1 and bad["relativeErrorBound"] is None
+    assert bad["normalizedError"] < 0 and bad["targetAfter"] == 0 and bad["antiWindup"]
+    assert good["normalizedError"] > 0 and good["targetAfter"] > 0.25
+    for _ in range(100):
+        saturated = uncertain.observe(0, 1, 0.25)
+    assert saturated["integral"] == 0 and uncertain.target == 0
+
+
+def test_accuracy_goal_has_a_certified_relative_error_interpretation():
+    """
+    A per-observation target hit bounds all exact constants inside that interval.
+    """
+    controller = AccuracyTargetPID(CacheTargetConfig())
+    report = controller.observe(2, 2.5, 0.25)
+    assert report["objectiveMet"] and report["relativeErrorBound"] == pytest.approx(0.25)
+    for truth in (2, 2.1, 2.5):
+        assert (2.5 - truth) / truth <= report["relativeErrorBound"]
+
+
+def test_accuracy_goal_change_discards_mixed_windows_and_recovers_from_saturation():
+    """
+    Setpoint changes cannot mix incompatible objectives or create derivative kicks.
+    """
+    controller = AccuracyTargetPID(CacheTargetConfig())
+    for _ in range(4):
+        controller.observe(0, 1, 0.25)
+    assert controller.target == 0
+    for _ in range(3):
+        controller.observe(1, 1, 0.25)
+    report = controller.observe(1, 1, 1)
+    assert report["windowReset"] and report["samples"] == 1 and not report["updated"]
+    for _ in range(3):
+        report = controller.observe(1, 1, 1)
+    assert report["updated"] and report["derivative"] == 0 and controller.target > 0
+
+
+def test_production_accuracy_feedback_does_not_hide_poor_estimates_behind_exact_fallback():
+    """
+    The controller sees pre-fallback uncertainty even when the final scalar is exact.
+    """
+    graph = nx.path_graph(list("abcdefgh"))
+    reports = [compute_cheeger(graph, settings(), minimum=0.25) for _ in range(8)]
+    assert all(item.exact and item.lowerBound == item.upperBound for item in reports)
+    assert all(item.scheduler["feedback"] == "CertificateGap" for item in reports)
+    assert all(item.scheduler["outer"]["observedGap"] > 0 for item in reports)
+    assert all(item.scheduler["refreshScheduled"] for item in reports[4:])
+    assert all(item.scheduler["outer"]["targetAfter"] == 0 for item in reports[3:])
+
+
+def test_admin_accuracy_settings_override_policy_and_reset_history(monkeypatch):
+    """
+    A workload cannot replace the administrator's error objective with a time goal.
+    """
+    graph = nx.complete_graph(list("abcdefgh"))
+    report = compute_cheeger(graph, settings(feedback="ComputationTime"), limits=settings(targetRelativeError=0.1), maximum=8)
+    assert report.scheduler["feedback"] == "CertificateGap"
+    assert report.scheduler["outer"]["relativeErrorTarget"] == 0.1
+    fresh = compute_cheeger(graph, settings(targetRelativeError=0.5), maximum=8)
+    assert fresh.scheduler["inner"]["ageBefore"] == 0
+    monkeypatch.setenv("POLYAD_CHEEGER_REDUCTION_FEEDBACK", "CertificateGap")
+    monkeypatch.setenv("POLYAD_CHEEGER_REDUCTION_TARGET_RELATIVE_ERROR", "0.1")
+    assert computation_limits().reduction.targetRelativeError == 0.1
+
+
+@pytest.mark.parametrize(
+    "changes", [{"feedback": "unknown"}, {"targetRelativeError": 0}, {"targetRelativeError": True}, {"targetRelativeError": float("inf")}]
+)
+def test_invalid_accuracy_settings_are_rejected(changes):
+    """
+    Enforce finite, bounded and unambiguous public controller settings.
+    """
+    with pytest.raises(ValueError):
+        CheegerReduction(**changes)
+
+
+@pytest.mark.parametrize("lower,upper", [(-1, 1), (float("nan"), 1), (1, float("inf")), (1, float("nan")), (2, 1)])
+def test_invalid_certificates_cannot_enter_accuracy_feedback(lower, upper):
+    """
+    Reject invalid input instead of letting NaN or inverted bounds poison PID history.
+    """
+    with pytest.raises(ValueError):
+        certificate_gap(lower, upper)
+
+
+@pytest.mark.parametrize("target", [0, -1, True, float("nan"), float("inf")])
+def test_accuracy_controller_rejects_invalid_objectives(target):
+    """
+    Validate direct controller callers as well as public graph-policy settings.
+    """
+    with pytest.raises(ValueError):
+        AccuracyTargetPID(CacheTargetConfig()).observe(1, 2, target)

@@ -103,6 +103,8 @@ class CheegerReduction:
         maxEdgeChurn (float): Largest changed-edge fraction eligible for cached partition reuse.
         strategy (Literal['AdaptivePID', 'CacheFirst']): Preferred scheduler; either operator or policy can select legacy CacheFirst.
         targetSeconds (float): Soft mean computation-time goal; the operator value governs when administrator limits are supplied.
+        feedback (Literal['CertificateGap', 'ComputationTime']): Adaptive PID objective; the administrator chooses the effective signal.
+        targetRelativeError (float): Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.
     """
 
     enabled: bool = False
@@ -114,6 +116,8 @@ class CheegerReduction:
     maxEdgeChurn: float = field(default=0.1, metadata={"schema": {"minimum": 0, "maximum": 1}})
     strategy: Literal["AdaptivePID", "CacheFirst"] = "AdaptivePID"
     targetSeconds: float = field(default=0.0015, metadata={"schema": {"minimum": 0.000001, "maximum": 300}})
+    feedback: Literal["CertificateGap", "ComputationTime"] = "CertificateGap"
+    targetRelativeError: float = field(default=0.25, metadata={"schema": {"minimum": 0.000001, "maximum": 100}})
 
     def __attrs_post_init__(self) -> None:
         """
@@ -140,6 +144,11 @@ class CheegerReduction:
         target = self.targetSeconds
         if type(target) not in (int, float) or not math.isfinite(target) or not 0.000001 <= target <= 300:
             raise ValueError("Cheeger reduction targetSeconds must be finite and between 0.000001 and 300")
+        if self.feedback not in {"CertificateGap", "ComputationTime"}:
+            raise ValueError("Cheeger reduction feedback must be CertificateGap or ComputationTime")
+        accuracy = self.targetRelativeError
+        if type(accuracy) not in (int, float) or not math.isfinite(accuracy) or not 0.000001 <= accuracy <= 100:
+            raise ValueError("Cheeger reduction targetRelativeError must be finite and between 0.000001 and 100")
 
 
 @frozen

@@ -111,6 +111,10 @@ INTRODUCTIONS = {
             "Cheeger strategies: CPU work across controlled graph changes",
             "How do churn, graph size and quotient size change CPU cost per calculation and average occupied cores?",
         ),
+        "pid-accuracy": (
+            "Cheeger strategies: accuracy-targeted PID feedback",
+            "Can certified uncertainty guide refreshes, and what does that cost compared with time-targeted feedback?",
+        ),
     },
     "soul": {
         "topology": (

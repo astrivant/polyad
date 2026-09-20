@@ -3551,6 +3551,26 @@
                                           "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
                                         }
                                       ]
+                                    },
+                                    "feedback": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    "targetRelativeError": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
+                                        }
+                                      ]
                                     }
                                   }
                                 },
@@ -4295,6 +4315,26 @@
                                                 },
                                                 {
                                                   "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
+                                                }
+                                              ]
+                                            },
+                                            "feedback": {
+                                              "anyOf": [
+                                                {
+                                                  "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                                },
+                                                {
+                                                  "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                                }
+                                              ]
+                                            },
+                                            "targetRelativeError": {
+                                              "anyOf": [
+                                                {
+                                                  "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                                },
+                                                {
+                                                  "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
                                                 }
                                               ]
                                             }
@@ -5487,6 +5527,26 @@
                                                 },
                                                 {
                                                   "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
+                                                }
+                                              ]
+                                            },
+                                            "feedback": {
+                                              "anyOf": [
+                                                {
+                                                  "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                                },
+                                                {
+                                                  "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                                }
+                                              ]
+                                            },
+                                            "targetRelativeError": {
+                                              "anyOf": [
+                                                {
+                                                  "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                                },
+                                                {
+                                                  "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
                                                 }
                                               ]
                                             }
@@ -7380,6 +7440,26 @@
                                                         },
                                                         {
                                                           "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
+                                                        }
+                                                      ]
+                                                    },
+                                                    "feedback": {
+                                                      "anyOf": [
+                                                        {
+                                                          "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                                        },
+                                                        {
+                                                          "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                                        }
+                                                      ]
+                                                    },
+                                                    "targetRelativeError": {
+                                                      "anyOf": [
+                                                        {
+                                                          "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                                        },
+                                                        {
+                                                          "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
                                                         }
                                                       ]
                                                     }
@@ -28340,6 +28420,38 @@
                                             }
                                           ],
                                           "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+                                        },
+                                        "feedback": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "enum": [
+                                                "CertificateGap",
+                                                "ComputationTime"
+                                              ],
+                                              "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                        },
+                                        "targetRelativeError": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.",
+                                              "minimum": 1e-06,
+                                              "maximum": 100
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
                                         }
                                       },
                                       "required": [],
@@ -31074,6 +31186,38 @@
                                                     }
                                                   ],
                                                   "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+                                                },
+                                                "feedback": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "enum": [
+                                                        "CertificateGap",
+                                                        "ComputationTime"
+                                                      ],
+                                                      "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                },
+                                                "targetRelativeError": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.",
+                                                      "minimum": 1e-06,
+                                                      "maximum": 100
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
                                                 }
                                               },
                                               "required": [],
@@ -35391,6 +35535,38 @@
                                                     }
                                                   ],
                                                   "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+                                                },
+                                                "feedback": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "enum": [
+                                                        "CertificateGap",
+                                                        "ComputationTime"
+                                                      ],
+                                                      "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                },
+                                                "targetRelativeError": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.",
+                                                      "minimum": 1e-06,
+                                                      "maximum": 100
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
                                                 }
                                               },
                                               "required": [],
@@ -40891,6 +41067,38 @@
                                                             }
                                                           ],
                                                           "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+                                                        },
+                                                        "feedback": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "string",
+                                                              "enum": [
+                                                                "CertificateGap",
+                                                                "ComputationTime"
+                                                              ],
+                                                              "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                        },
+                                                        "targetRelativeError": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "number",
+                                                              "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.",
+                                                              "minimum": 1e-06,
+                                                              "maximum": 100
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
                                                         }
                                                       },
                                                       "required": [],

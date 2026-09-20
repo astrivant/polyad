@@ -3551,6 +3551,26 @@
                                           "$ref": "values.schema.json#/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
                                         }
                                       ]
+                                    },
+                                    "feedback": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                        }
+                                      ]
+                                    },
+                                    "targetRelativeError": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "values.schema.json#/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                        },
+                                        {
+                                          "$ref": "values.schema.json#/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
+                                        }
+                                      ]
                                     }
                                   }
                                 },
@@ -4295,6 +4315,26 @@
                                                 },
                                                 {
                                                   "$ref": "values.schema.json#/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
+                                                }
+                                              ]
+                                            },
+                                            "feedback": {
+                                              "anyOf": [
+                                                {
+                                                  "$ref": "values.schema.json#/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                                },
+                                                {
+                                                  "$ref": "values.schema.json#/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                                }
+                                              ]
+                                            },
+                                            "targetRelativeError": {
+                                              "anyOf": [
+                                                {
+                                                  "$ref": "values.schema.json#/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                                },
+                                                {
+                                                  "$ref": "values.schema.json#/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
                                                 }
                                               ]
                                             }
@@ -5487,6 +5527,26 @@
                                                 },
                                                 {
                                                   "$ref": "values.schema.json#/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
+                                                }
+                                              ]
+                                            },
+                                            "feedback": {
+                                              "anyOf": [
+                                                {
+                                                  "$ref": "values.schema.json#/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                                },
+                                                {
+                                                  "$ref": "values.schema.json#/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                                }
+                                              ]
+                                            },
+                                            "targetRelativeError": {
+                                              "anyOf": [
+                                                {
+                                                  "$ref": "values.schema.json#/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                                },
+                                                {
+                                                  "$ref": "values.schema.json#/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
                                                 }
                                               ]
                                             }
@@ -7380,6 +7440,26 @@
                                                         },
                                                         {
                                                           "$ref": "values.schema.json#/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
+                                                        }
+                                                      ]
+                                                    },
+                                                    "feedback": {
+                                                      "anyOf": [
+                                                        {
+                                                          "$ref": "values.schema.json#/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                                        },
+                                                        {
+                                                          "$ref": "values.schema.json#/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                                        }
+                                                      ]
+                                                    },
+                                                    "targetRelativeError": {
+                                                      "anyOf": [
+                                                        {
+                                                          "$ref": "values.schema.json#/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                                        },
+                                                        {
+                                                          "$ref": "values.schema.json#/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/throughput/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
                                                         }
                                                       ]
                                                     }

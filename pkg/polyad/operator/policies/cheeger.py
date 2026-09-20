@@ -50,5 +50,7 @@ def computation_limits() -> CheegerComputation:
             maxEdgeChurn=float(os.getenv("POLYAD_CHEEGER_REDUCTION_MAX_EDGE_CHURN", "0.1")),
             strategy=cast("Literal['AdaptivePID', 'CacheFirst']", os.getenv("POLYAD_CHEEGER_REDUCTION_STRATEGY", "AdaptivePID")),
             targetSeconds=float(os.getenv("POLYAD_CHEEGER_REDUCTION_TARGET_SECONDS", "0.0015")),
+            feedback=cast("Literal['CertificateGap', 'ComputationTime']", os.getenv("POLYAD_CHEEGER_REDUCTION_FEEDBACK", "CertificateGap")),
+            targetRelativeError=float(os.getenv("POLYAD_CHEEGER_REDUCTION_TARGET_RELATIVE_ERROR", "0.25")),
         ),
     )

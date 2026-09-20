@@ -20,6 +20,10 @@ operator:
       strategy: AdaptivePID
       ## @param operator.cheeger.reduction.targetSeconds [number] Soft mean calculation-time objective, not a latency guarantee.
       targetSeconds: 0.0015
+      ## @param operator.cheeger.reduction.feedback [string] Prefer certificate-gap feedback; ComputationTime preserves the original time-targeted outer loop.
+      feedback: CertificateGap
+      ## @param operator.cheeger.reduction.targetRelativeError [number] Soft certified relative-error objective, not a promised error or a policy threshold.
+      targetRelativeError: 0.25
       ## @param operator.cheeger.reduction.maxVertices [integer] Dense spectral boundary size ceiling.
       maxVertices: 256
       ## @param operator.cheeger.reduction.components [integer] Spectral embedding dimension ceiling.

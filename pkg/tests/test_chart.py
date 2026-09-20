@@ -37,7 +37,13 @@ def render(*settings, values_files=()):
     for setting in settings:
         flag = "--set-string" if setting.startswith(("dragonfly.existingSecret=", "istioEastWestGateway.labels.")) else "--set"
         if setting.startswith(
-            ("operator.tuning.", "operator.cheeger.reduction.targetSeconds=", "tracing.samplingRatio=", "events.pollIntervalSeconds=")
+            (
+                "operator.tuning.",
+                "operator.cheeger.reduction.targetSeconds=",
+                "operator.cheeger.reduction.targetRelativeError=",
+                "tracing.samplingRatio=",
+                "events.pollIntervalSeconds=",
+            )
         ):
             flag = "--set-json"
         command.extend([flag, setting])
@@ -1351,6 +1357,8 @@ def test_cheeger_ceilings_reach_every_executor_profile(profile):
         "operator.cheeger.reduction.maxEdgeChurn=0",
         "operator.cheeger.reduction.strategy=CacheFirst",
         "operator.cheeger.reduction.targetSeconds=0.002",
+        "operator.cheeger.reduction.feedback=ComputationTime",
+        "operator.cheeger.reduction.targetRelativeError=0.1",
         *(("federation.clusters[0].namespace=test",) if profile == "values-worker.reference.yaml" else ()),
         values_files=(CHART / "references" / profile,) if profile else (),
     )
@@ -1371,6 +1379,8 @@ def test_cheeger_ceilings_reach_every_executor_profile(profile):
         assert env["POLYAD_CHEEGER_REDUCTION_MAX_EDGE_CHURN"] == "0"
         assert env["POLYAD_CHEEGER_REDUCTION_STRATEGY"] == "CacheFirst"
         assert env["POLYAD_CHEEGER_REDUCTION_TARGET_SECONDS"] == "0.002"
+        assert env["POLYAD_CHEEGER_REDUCTION_FEEDBACK"] == "ComputationTime"
+        assert env["POLYAD_CHEEGER_REDUCTION_TARGET_RELATIVE_ERROR"] == "0.1"
 
 
 def test_cheeger_preferred_default_remains_opt_in():
@@ -1383,6 +1393,8 @@ def test_cheeger_preferred_default_remains_opt_in():
     assert env["POLYAD_CHEEGER_REDUCTION_ENABLED"] == "false"
     assert env["POLYAD_CHEEGER_REDUCTION_STRATEGY"] == "AdaptivePID"
     assert env["POLYAD_CHEEGER_REDUCTION_TARGET_SECONDS"] == "0.0015"
+    assert env["POLYAD_CHEEGER_REDUCTION_FEEDBACK"] == "CertificateGap"
+    assert env["POLYAD_CHEEGER_REDUCTION_TARGET_RELATIVE_ERROR"] == "0.25"
 
 
 def test_component_graph_accepts_the_optional_cheeger_maximum():

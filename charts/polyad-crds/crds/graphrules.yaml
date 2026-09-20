@@ -115,6 +115,18 @@ spec:
                           limits are supplied.
                         minimum: 1.0e-06
                         maximum: 300
+                      feedback:
+                        type: string
+                        enum:
+                        - CertificateGap
+                        - ComputationTime
+                        description: Adaptive PID objective; the administrator chooses the effective signal.
+                      targetRelativeError:
+                        type: number
+                        description: Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy
+                          guarantee.
+                        minimum: 1.0e-06
+                        maximum: 100
               scope:
                 type: string
                 enum:

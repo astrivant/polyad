@@ -49,6 +49,7 @@ COLORS = {
     "PID cached spectral": "#8b5e3c",
     "Fixed-target PID": "#377cbb",
     "Adaptive-target PID": "#7546b0",
+    "Accuracy-target PID": "#bd5636",
     "Selector": "#377cbb",
     "Cache-first selector": "#64748b",
 }
@@ -84,7 +85,7 @@ def lines(axis: Any, rows: list[dict[str, Any]], x: str, y: str, *, group: str =
     for label, points in sorted(values.items()):
         xs = sorted(points)
         quantiles = np.array([np.quantile(points[value], [0.25, 0.5, 0.75]) for value in xs])
-        display = "Adaptive selector (preferred)" if label == "Selector" else label
+        display = "Accuracy selector (preferred)" if label == "Selector" else label
         line = axis.plot(
             xs,
             quantiles[:, 1],
@@ -92,7 +93,7 @@ def lines(axis: Any, rows: list[dict[str, Any]], x: str, y: str, *, group: str =
             markersize=4,
             label=display,
             color=COLORS.get(label),
-            linewidth=2.6 if label in {"Selector", "Adaptive-target PID"} else 1.5,
+            linewidth=2.6 if label in {"Selector", "Accuracy-target PID"} else 1.5,
         )[0]
         axis.fill_between(xs, quantiles[:, 0], quantiles[:, 2], color=line.get_color(), alpha=0.12)
 
@@ -190,15 +191,17 @@ def churn(result: dict[str, Any], output: Path) -> list[str]:
                     )
                 )
             axes[2, 1].plot(replacements, rates, marker="o", label=label, color=color)
-        adaptive = [row for row in controlled if row["strategy"] == "Adaptive-target PID"]
-        if adaptive:
+        for method in ("Adaptive-target PID", "Accuracy-target PID"):
+            adaptive = [row for row in controlled if row["strategy"] == method]
+            if not adaptive:
+                continue
             for field, label, style in (
-                ("refreshScheduled", "Adaptive target: refresh", "-"),
-                ("cacheAttempted", "Adaptive target: cache", "--"),
+                ("refreshScheduled", method + ": refresh", "-"),
+                ("cacheAttempted", method + ": cache", "--"),
             ):
                 fractions = sorted({row["replacement"] for row in adaptive})
                 rates = [np.mean([row["pid"][field] for row in adaptive if row["replacement"] == fraction]) for fraction in fractions]
-                axes[2, 1].plot(fractions, rates, marker="o", label=label, color=COLORS["Adaptive-target PID"], linestyle=style)
+                axes[2, 1].plot(fractions, rates, marker="o", label=label, color=COLORS[method], linestyle=style)
         axes[2, 1].set(xlabel=r"Requested edge replacement fraction $r$", ylabel=r"Observed event fraction", ylim=(-0.05, 1.05))
         axes[2, 1].grid(alpha=0.18)
         axes[2, 1].legend(fontsize=8)
@@ -242,12 +245,12 @@ def pid_feedback(result: dict[str, Any], output: Path) -> list[str]:
         ),
         (
             "How the inner refresh schedule responds",
-            r"Both inner PIDs use the same gains and bounds; only their cache targets differ.",
+            r"Shared inner gains; the accuracy loop can request zero reuse and refresh every call.",
             r"Next interval $T_{t+1}$ (observations)",
         ),
         (
             "Accuracy against the independent exact result",
-            r"Neither PID sees $h(G)$; these errors are audited after the measured computation.",
+            r"No PID sees $h(G)$; these errors are audited after the measured computation.",
             r"Relative cut error $(U-h)/h$",
         ),
         (
@@ -384,7 +387,7 @@ def activation(result: dict[str, Any], output: Path) -> list[str]:
             )
             describe_axis(
                 axis,
-                ("Adaptive selector (preferred)" if method == "Selector" else method)
+                ("Accuracy selector (preferred)" if method == "Selector" else method)
                 + ": "
                 + {"minimum": "Required minimum", "maximum": "Allowed maximum", "range": "Required interval"}[kind],
                 {
@@ -570,7 +573,7 @@ def cache(result: dict[str, Any], output: Path) -> list[str]:
                         for n in entries
                     ],
                     marker="o",
-                    label="Adaptive selector (preferred)" if method == "Selector" else method,
+                    label="Accuracy selector (preferred)" if method == "Selector" else method,
                     color=COLORS[method],
                 )
             axis.legend(fontsize=8)
@@ -629,7 +632,7 @@ def timeline(result: dict[str, Any], output: Path) -> list[str]:
         axes[0].legend(ncol=4, fontsize=8)
         describe_axis(
             axes[0],
-            ("Adaptive selector (preferred)" if method == "Selector" else method) + ": certified interval",
+            ("Accuracy selector (preferred)" if method == "Selector" else method) + ": certified interval",
             "Minimum probes use study truth to force a difficult threshold; wide maximums test reuse.",
         )
 
@@ -778,9 +781,12 @@ def render(result: dict[str, Any], output: Path) -> list[str]:
     """
 
     from polyad_benchmarks.studies.cheeger_strategies.costs import cpu_cost
+    from polyad_benchmarks.studies.cheeger_strategies.quality import pid_accuracy
 
     # Rendering consumes saved observations only; it never reruns the algorithms
     # or substitutes new timings while rebuilding a figure.
     return [
-        path for plot in (churn, activation, parameters, cache, timeline, controls, pid_feedback, cpu_cost) for path in plot(result, output)
+        path
+        for plot in (churn, activation, parameters, cache, timeline, controls, pid_feedback, cpu_cost, pid_accuracy)
+        for path in plot(result, output)
     ]

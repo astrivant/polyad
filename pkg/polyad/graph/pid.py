@@ -7,7 +7,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-__all__ = ("CacheTargetConfig", "CacheTargetPID", "RefreshConfig", "RefreshPID")
+__all__ = ("AccuracyTargetPID", "CacheTargetConfig", "CacheTargetPID", "RefreshConfig", "RefreshPID", "certificate_gap")
 
 
 @dataclass(frozen=True)
@@ -181,11 +181,11 @@ class RefreshPID:
 @dataclass(frozen=True)
 class CacheTargetConfig:
     """
-    Bound a slower outer PID that adjusts cache reuse to a computation-time target.
+    Bound a slower outer PID that adjusts cache reuse from time or certificate feedback.
 
     Attributes:
         updateEvery (int): Inner observations averaged before one outer update.
-        proportionalGain (float): Immediate cache-target change per normalized latency error.
+        proportionalGain (float): Immediate cache-target change per normalized objective error.
         integralGain (float): Cache-target change per accumulated window error.
         derivativeGain (float): Cache-target change per change in window error.
         initialCacheRate (float): Initial and bias cache-attempt target.
@@ -203,7 +203,7 @@ class CacheTargetConfig:
 
     def __post_init__(self) -> None:
         """
-        Validate bounded feedback before collecting noisy wall-clock measurements.
+        Validate bounded feedback before collecting time or certificate measurements.
 
         Returns:
             None: Reject invalid rates, gains and update cadences.
@@ -315,6 +315,136 @@ class CacheTargetPID:
             **report,
             "updated": True,
             "meanDurationSeconds": mean,
+            "normalizedError": error,
+            "integral": self._integral,
+            "derivative": derivative,
+            "antiWindup": windup,
+            "targetAfter": self.target,
+        }
+
+
+def certificate_gap(lower: float, upper: float | None) -> float:
+    """
+    Normalize certified uncertainty without using an exact reference or dividing by zero.
+
+    Args:
+        lower (float): Finite nonnegative lower bound on the current graph's constant.
+        upper (float | None): Finite nonnegative upper witness, or missing when work is incomplete.
+
+    Returns:
+        float: Width divided by the upper bound, in [0, 1]; missing upper bounds mean full uncertainty.
+    """
+    if not math.isfinite(lower) or lower < 0:
+        raise ValueError("certificate lower bound must be finite and nonnegative")
+    if upper is None:
+        return 1.0
+    if not math.isfinite(upper) or upper < 0 or lower > upper + 1e-9 * max(1, lower, upper):
+        raise ValueError("certificate upper bound must be finite, nonnegative and at least the lower bound")
+
+    # A certified zero constant has zero uncertainty, unlike a positive witness
+    # with a zero lower bound, which has no finite relative-error guarantee.
+    return max(0.0, (upper - lower) / upper) if upper else 0.0
+
+
+class AccuracyTargetPID:
+    """
+    Reduce cache reuse when certified uncertainty exceeds an accuracy objective.
+
+    The signal is not actual estimation error. For h in [L, U], a gap
+    g = (U-L)/U bounds (U-h)/h by g/(1-g), provided g < 1. Therefore a
+    desired relative-error bound r corresponds to g <= r/(1+r).
+
+    Attributes:
+        config (CacheTargetConfig): Outer gains, cache-rate bounds and observation window.
+        target (float): Cache-attempt target for future queries; zero requests fresh work every query.
+    """
+
+    config: CacheTargetConfig
+    target: float
+
+    def __init__(self, config: CacheTargetConfig) -> None:
+        """
+        Start an independent accuracy controller without any oracle observations.
+
+        Args:
+            config (CacheTargetConfig): Validated gains, cache bounds and update cadence.
+        """
+        self.config = config
+        self.target = config.initialCacheRate
+        self._gaps: list[float] = []
+        self._relative_target: float | None = None
+        self._integral = 0.0
+        self._previous_error: float | None = None
+
+    def observe(self, lower: float, upper: float | None, relative_target: float) -> dict[str, float | int | bool | None]:
+        """
+        Learn from the reduced certificate before exact fallback can conceal its uncertainty.
+
+        Args:
+            lower (float): Lower bound of the last reduced certificate on current edges.
+            upper (float | None): Upper witness of that certificate, not an independent oracle.
+            relative_target (float): Positive finite soft relative-error objective, such as 0.25 for 25 percent.
+
+        Returns:
+            dict[str, float | int | bool | None]: Observed gap, bound, objective and causal PID update.
+        """
+        if isinstance(relative_target, bool) or not math.isfinite(relative_target) or relative_target <= 0:
+            raise ValueError("accuracy PID requires a positive finite relative-error target")
+        gap = certificate_gap(lower, upper)
+        gap_target = relative_target / (1 + relative_target)
+        reset = self._relative_target != relative_target
+        if reset:
+            self._gaps.clear()
+            self._previous_error = None
+        self._relative_target = relative_target
+        self._gaps.append(gap)
+        report: dict[str, float | int | bool | None] = {
+            "observedGap": gap,
+            "relativeErrorBound": gap / (1 - gap) if gap < 1 else None,
+            "relativeErrorTarget": relative_target,
+            "gapTarget": gap_target,
+            "objectiveMet": gap <= gap_target,
+            "targetBefore": self.target,
+            "targetAfter": self.target,
+            "updated": False,
+            "windowReset": reset,
+            "samples": len(self._gaps),
+            "meanGap": None,
+            "normalizedError": None,
+            "integral": self._integral,
+            "derivative": None,
+            "antiWindup": False,
+        }
+        config = self.config
+        if len(self._gaps) < config.updateEvery:
+            return report
+
+        # Reverse the time controller's direction: excessive uncertainty must
+        # reduce reuse, not reward the faster but poorly certified cached cut.
+        mean = sum(self._gaps) / len(self._gaps)
+        self._gaps.clear()
+        error = 1 - mean / gap_target
+        derivative = 0.0 if self._previous_error is None else error - self._previous_error
+        candidate_integral = self._integral + error if config.integralGain else 0.0
+        requested = (
+            config.initialCacheRate
+            + config.proportionalGain * error
+            + config.integralGain * candidate_integral
+            + config.derivativeGain * derivative
+        )
+
+        # Clamp the requested actuator while freezing outward integral growth.
+        # Persistent bad certificates can request zero reuse; this schedules
+        # fresh work, but cannot promise that fresh spectral bounds will improve.
+        windup = (requested < config.minCacheRate and error < 0) or (requested > config.maxCacheRate and error > 0)
+        if not windup:
+            self._integral = candidate_integral
+        self.target = min(config.maxCacheRate, max(config.minCacheRate, requested))
+        self._previous_error = error
+        return {
+            **report,
+            "updated": True,
+            "meanGap": mean,
             "normalizedError": error,
             "integral": self._integral,
             "derivative": derivative,

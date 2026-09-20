@@ -811,7 +811,9 @@
                 "cacheEntries",
                 "maxEdgeChurn",
                 "strategy",
-                "targetSeconds"
+                "targetSeconds",
+                "feedback",
+                "targetRelativeError"
               ],
               "description": "Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search; graph policies must also opt in.",
               "properties": {
@@ -866,6 +868,20 @@
                   "minimum": 1e-06,
                   "maximum": 300,
                   "description": "Administrator-owned soft mean computation-time goal, not a hard timeout or CPU allocation."
+                },
+                "feedback": {
+                  "type": "string",
+                  "enum": [
+                    "CertificateGap",
+                    "ComputationTime"
+                  ],
+                  "description": "Administrator-owned adaptive PID signal; certified uncertainty is preferred, computation time remains selectable."
+                },
+                "targetRelativeError": {
+                  "type": "number",
+                  "minimum": 1e-06,
+                  "maximum": 100,
+                  "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a promised accuracy bound."
                 }
               }
             }
@@ -25395,6 +25411,38 @@
                                             }
                                           ],
                                           "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+                                        },
+                                        "feedback": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "enum": [
+                                                "CertificateGap",
+                                                "ComputationTime"
+                                              ],
+                                              "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                        },
+                                        "targetRelativeError": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.",
+                                              "minimum": 1e-06,
+                                              "maximum": 100
+                                            },
+                                            {
+                                              "type": "string",
+                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                            }
+                                          ],
+                                          "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
                                         }
                                       },
                                       "required": [],
@@ -28129,6 +28177,38 @@
                                                     }
                                                   ],
                                                   "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+                                                },
+                                                "feedback": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "enum": [
+                                                        "CertificateGap",
+                                                        "ComputationTime"
+                                                      ],
+                                                      "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                },
+                                                "targetRelativeError": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.",
+                                                      "minimum": 1e-06,
+                                                      "maximum": 100
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
                                                 }
                                               },
                                               "required": [],
@@ -32446,6 +32526,38 @@
                                                     }
                                                   ],
                                                   "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+                                                },
+                                                "feedback": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "enum": [
+                                                        "CertificateGap",
+                                                        "ComputationTime"
+                                                      ],
+                                                      "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                },
+                                                "targetRelativeError": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number",
+                                                      "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.",
+                                                      "minimum": 1e-06,
+                                                      "maximum": 100
+                                                    },
+                                                    {
+                                                      "type": "string",
+                                                      "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                    }
+                                                  ],
+                                                  "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
                                                 }
                                               },
                                               "required": [],
@@ -37946,6 +38058,38 @@
                                                             }
                                                           ],
                                                           "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+                                                        },
+                                                        "feedback": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "string",
+                                                              "enum": [
+                                                                "CertificateGap",
+                                                                "ComputationTime"
+                                                              ],
+                                                              "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Adaptive PID objective; the administrator chooses the effective signal."
+                                                        },
+                                                        "targetRelativeError": {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "number",
+                                                              "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.",
+                                                              "minimum": 1e-06,
+                                                              "maximum": 100
+                                                            },
+                                                            {
+                                                              "type": "string",
+                                                              "pattern": "\\{\\{[\\s\\S]*\\}\\}"
+                                                            }
+                                                          ],
+                                                          "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
                                                         }
                                                       },
                                                       "required": [],

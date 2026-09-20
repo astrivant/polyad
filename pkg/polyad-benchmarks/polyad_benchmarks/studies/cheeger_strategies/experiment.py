@@ -21,6 +21,7 @@ from attrs import asdict as attributes
 from attrs import evolve
 
 from polyad.graph import cheeger as solver
+from polyad.graph.pid import AccuracyTargetPID, certificate_gap
 from polyad.graph.reduction import cached_quotient, clear_reduction_cache, fresh_spectral_reduction
 from polyad_benchmarks.cheeger_reduction import approximate_cut, exact_cut, graph_case
 from polyad_benchmarks.studies.cheeger_strategies.pid import CacheTargetConfig, CacheTargetPID, RefreshConfig, RefreshPID
@@ -45,7 +46,16 @@ __all__ = (
 )
 
 
-STRATEGIES = ("Exact", "PCA", "Fresh spectral", "Cached spectral", "Selector", "Cache-first selector", "Adaptive-target PID")
+STRATEGIES = (
+    "Exact",
+    "PCA",
+    "Fresh spectral",
+    "Cached spectral",
+    "Selector",
+    "Cache-first selector",
+    "Adaptive-target PID",
+    "Accuracy-target PID",
+)
 
 
 def numbered_graph(graph: nx.Graph[str]) -> nx.Graph[int]:
@@ -236,7 +246,7 @@ def trace_selector(graph: nx.Graph[str], settings: CheegerComputation, policy: d
     }
 
 
-def pid_report(graph: nx.Graph[str], settings: CheegerReduction, controller: RefreshPID) -> dict[str, Any]:
+def pid_report(graph: nx.Graph[str], settings: CheegerReduction, controller: RefreshPID, *, force_refresh: bool = False) -> dict[str, Any]:
     """
     Time the real cached or fresh reducer chosen by a causal refresh controller.
 
@@ -244,11 +254,12 @@ def pid_report(graph: nx.Graph[str], settings: CheegerReduction, controller: Ref
         graph (nx.Graph[str]): Current boundary; no exact reference is passed in.
         settings (CheegerReduction): Identical partition dimensions and quotient size.
         controller (RefreshPID): State retained across one ordered churn trajectory.
+        force_refresh (bool): Honor an accuracy controller's saturated request for zero reuse.
 
     Returns:
         dict[str, Any]: Current certificate, all attempted work and controller telemetry.
     """
-    scheduled = controller.refresh_due()
+    scheduled = force_refresh or controller.refresh_due()
     attempts: list[dict[str, Any]] = []
     certificate = None
 
@@ -323,16 +334,22 @@ class Experiment:
         # Older recipes remain valid and omit the optional, study-only comparator.
         self._pid_config = RefreshConfig(**config["pidRefresh"]) if "pidRefresh" in config else None
         self._feedback = config.get("pidFeedback", {})
+        self._accuracy = config.get("pidAccuracy", {})
         self._outer_config = None
-        if self._feedback.get("enabled", False):
+        for controls in (self._feedback, self._accuracy):
+            if not controls.get("enabled", False):
+                continue
             self._outer_config = CacheTargetConfig(**self._feedback.get("controller", {}))
-            observations = self._feedback["observationsPerPhase"]
-            phases = self._feedback["phases"]
+            observations = controls["observationsPerPhase"]
+            phases = controls["phases"]
             if type(observations) is not int or not self._outer_config.updateEvery <= observations <= 128 or not 1 <= len(phases) <= 12:
                 raise ValueError("PID feedback requires bounded phases with at least one complete outer window each")
             for phase in phases:
                 if not 0 <= phase["replacement"] <= 1 or not math.isfinite(phase["timeTargetSeconds"]) or phase["timeTargetSeconds"] <= 0:
                     raise ValueError("PID feedback requires valid churn and positive finite time targets")
+                accuracy_target = phase.get("relativeErrorTarget", config.get("preferredRelativeError", 0.25))
+                if isinstance(accuracy_target, bool) or not math.isfinite(accuracy_target) or not 0.000001 <= accuracy_target <= 100:
+                    raise ValueError("PID feedback requires a finite relative-error target between 0.000001 and 100")
 
         self.config = config
         self.records: list[dict[str, Any]] = []
@@ -372,6 +389,7 @@ class Experiment:
                 "supernodes": self.config["fixedSupernodes"],
                 "maxEdgeChurn": self.config["fixedCacheChurnLimit"],
                 "targetSeconds": self.config.get("preferredTimeTargetSeconds", 0.0015),
+                "targetRelativeError": self.config.get("preferredRelativeError", 0.25),
                 **overrides,
             }
         )
@@ -427,6 +445,7 @@ class Experiment:
         *,
         controller: RefreshPID | None = None,
         outer: CacheTargetPID | None = None,
+        accuracy: AccuracyTargetPID | None = None,
     ) -> None:
         """
         Measure one strategy and audit its certificate and policy answer against exhaustive truth.
@@ -440,6 +459,7 @@ class Experiment:
             strategy (str): Named baseline, selector or PID cached spectral comparator.
             controller (RefreshPID | None): Independent PID trajectory state, if selected.
             outer (CacheTargetPID | None): Slower computation-time feedback, if selected.
+            accuracy (AccuracyTargetPID | None): Alternative certificate-gap feedback; never fed oracle error.
 
         Returns:
             None: Append a checked measurement without aggregating away variability.
@@ -458,10 +478,10 @@ class Experiment:
         # and reduction so its measured work covers exhaustive enumeration.
         if strategy in {"Selector", "Cache-first selector"}:
             report = trace_selector(graph, settings, policy)
-        elif strategy in {"PID cached spectral", "Fixed-target PID", "Adaptive-target PID"}:
+        elif strategy in {"PID cached spectral", "Fixed-target PID", "Adaptive-target PID", "Accuracy-target PID"}:
             if controller is None:
                 raise ValueError("PID cached spectral requires its own trajectory controller")
-            report = pid_report(graph, settings.reduction, controller)
+            report = pid_report(graph, settings.reduction, controller, force_refresh=accuracy is not None and accuracy.target == 0)
         elif strategy == "Exact":
             report = solver.compute_cheeger(graph, evolve(settings, reduction=CheegerReduction())).report()
         elif strategy == "PCA":
@@ -493,6 +513,14 @@ class Experiment:
             report["outerPid"] = outer.observe(duration, context.get("timeTargetSeconds", settings.reduction.targetSeconds))
             controller.set_target(outer.target)
             duration = time.perf_counter() - started
+        if accuracy is not None:
+            if controller is None or outer is not None:
+                raise ValueError("accuracy PID requires an inner controller and replaces the time-target outer loop")
+            report["accuracyPid"] = accuracy.observe(
+                report["lowerBound"], report["upperBound"], context.get("relativeErrorTarget", settings.reduction.targetRelativeError)
+            )
+            controller.set_target(accuracy.target)
+            duration = time.perf_counter() - started
         cpu_duration = time.process_time() - cpu_started
 
         # Compare the interval's mathematical conclusion with the actual runtime
@@ -521,6 +549,7 @@ class Experiment:
                 **context,
                 **({"pid": report["pid"]} if "pid" in report else {}),
                 **({"outerPid": report["outerPid"]} if "outerPid" in report else {}),
+                **({"accuracyPid": report["accuracyPid"]} if "accuracyPid" in report else {}),
                 **({"scheduler": report["scheduler"]} if report.get("scheduler") else {}),
                 "strategy": strategy,
                 "graphId": identity,
@@ -549,6 +578,7 @@ class Experiment:
                 "cut": report["cut"],
                 "relativeError": (upper - truth) / truth if upper is not None and truth else None,
                 "intervalWidth": upper - lower if upper is not None else None,
+                "certificateGap": certificate_gap(lower, upper),
                 "durationSeconds": duration,
                 "cpuSeconds": cpu_duration,
                 "averageMillicores": 1000 * cpu_duration / duration if duration > 0 else None,
@@ -588,6 +618,7 @@ class Experiment:
             for strategy in order:
                 self.prime(baseline, settings)
                 inner, outer = None, None
+                accuracy = None
                 warmups = 0
                 if strategy == "Adaptive-target PID":
                     outer = CacheTargetPID(self._outer_config or CacheTargetConfig())
@@ -601,6 +632,14 @@ class Experiment:
                         pid_report(baseline, settings.reduction, inner)
                         outer.observe(time.perf_counter() - started, settings.reduction.targetSeconds)
                         inner.set_target(outer.target)
+                elif strategy == "Accuracy-target PID":
+                    accuracy = AccuracyTargetPID(self._outer_config or CacheTargetConfig())
+                    inner = RefreshPID(replace(self._pid_config or RefreshConfig(), targetCacheRate=accuracy.target))
+                    warmups = self.config.get("preferredWarmupObservations", 12)
+                    for _ in range(warmups):
+                        report = pid_report(baseline, settings.reduction, inner, force_refresh=accuracy.target == 0)
+                        accuracy.observe(report["lowerBound"], report["upperBound"], settings.reduction.targetRelativeError)
+                        inner.set_target(accuracy.target)
                 elif strategy in {"Selector", "Cache-first selector"}:
                     warmups = self.config.get("preferredWarmupObservations", 12)
                     options = (
@@ -623,6 +662,7 @@ class Experiment:
                     strategy,
                     controller=inner,
                     outer=outer,
+                    accuracy=accuracy,
                 )
 
     def comparisons(self) -> None:
@@ -721,17 +761,38 @@ class Experiment:
         Returns:
             None: Retain paired trajectories, real latencies and both feedback histories.
         """
-        if self._outer_config is None:
+        self._feedback_replay("pid-feedback", self._feedback)
+
+    def pid_accuracy(self) -> None:
+        """
+        Vary accuracy goals independently of churn and the original time objective.
+
+        Returns:
+            None: Preserve actual error, certified uncertainty and the CPU price of each response.
+        """
+        self._feedback_replay("pid-accuracy", self._accuracy)
+
+    def _feedback_replay(self, sweep: str, controls: dict[str, Any]) -> None:
+        """
+        Replay paired snapshots without giving any controller the independent oracle.
+
+        Args:
+            sweep (str): Output series identity for separate time and accuracy experiments.
+            controls (dict[str, Any]): Validated phases and observation count.
+
+        Returns:
+            None: Record every query, including warmup transients and saturated objectives.
+        """
+        if self._outer_config is None or not controls.get("enabled", False):
             return
         config = self.config
-        controls = self._feedback
         inner_config = replace(self._pid_config or RefreshConfig(), targetCacheRate=self._outer_config.initialCacheRate)
         settings = self.settings(maxEdgeChurn=1)
         for seed in config["seeds"]:
             baseline = self.graph(config["fixedTopology"], config["fixedVertices"], seed)
             policy = {"minimum": self.snapshot(baseline)[1] * 0.75}
             for repeat in range(config["repetitions"]):
-                strategies = ["Cached spectral", "Fresh spectral", "Fixed-target PID", "Adaptive-target PID"]
+                strategies = ["Cached spectral", "Fresh spectral", "Fixed-target PID", "Adaptive-target PID", "Accuracy-target PID"]
                 random.Random(seed + repeat).shuffle(strategies)
                 for strategy in strategies:
                     # Each method gets the same complete sequence and its own
@@ -740,6 +801,7 @@ class Experiment:
                     self.prime(baseline, settings)
                     inner = RefreshPID(inner_config) if strategy.endswith("PID") else None
                     outer = CacheTargetPID(self._outer_config) if strategy == "Adaptive-target PID" else None
+                    accuracy = AccuracyTargetPID(self._outer_config) if strategy == "Accuracy-target PID" else None
                     for phase_index, phase in enumerate(controls["phases"]):
                         graph = rewire(baseline, phase["replacement"], seed)
                         for sample in range(controls["observationsPerPhase"]):
@@ -749,7 +811,7 @@ class Experiment:
                                 settings,
                                 policy,
                                 {
-                                    "sweep": "pid-feedback",
+                                    "sweep": sweep,
                                     "topology": config["fixedTopology"],
                                     "seed": seed,
                                     "repeat": repeat,
@@ -759,10 +821,12 @@ class Experiment:
                                     "phaseStep": sample,
                                     "replacement": phase["replacement"],
                                     "timeTargetSeconds": phase["timeTargetSeconds"],
+                                    "relativeErrorTarget": phase.get("relativeErrorTarget", settings.reduction.targetRelativeError),
                                 },
                                 strategy,
                                 controller=inner,
                                 outer=outer,
+                                accuracy=accuracy,
                             )
 
     def thresholds(self) -> None:
@@ -944,7 +1008,14 @@ def run(root: Path) -> dict[str, Any]:
     # Every sweep must finish before marking the study complete. Always remove
     # study-created cache entries, including when a certificate audit fails.
     try:
-        for sweep in (experiment.comparisons, experiment.thresholds, experiment.controls, experiment.timeline, experiment.pid_feedback):
+        for sweep in (
+            experiment.comparisons,
+            experiment.thresholds,
+            experiment.controls,
+            experiment.timeline,
+            experiment.pid_feedback,
+            experiment.pid_accuracy,
+        ):
             sweep()
             print(f"cheeger-strategies: {sweep.__name__}: {len(experiment.records)} measurements", flush=True)
     finally:

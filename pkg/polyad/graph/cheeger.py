@@ -126,6 +126,8 @@ def compute_cheeger(
             reduction,
             strategy="CacheFirst" if "CacheFirst" in (reduction.strategy, allowed.strategy) else "AdaptivePID",
             targetSeconds=allowed.targetSeconds,
+            feedback=allowed.feedback,
+            targetRelativeError=allowed.targetRelativeError,
         )
 
     # Carry the effective configuration into every return path so an incomplete
@@ -145,10 +147,21 @@ def compute_cheeger(
 
     ticket: RefreshTicket | None = None
     cache_attempted = refreshed = False
+    feedback_lower = 0.0
+    feedback_upper: float | None = None
 
     def finish(value: CheegerResult) -> CheegerResult:
         scheduler = (
-            finish_refresh(ticket, time.perf_counter() - timed, cache_attempted=cache_attempted, refreshed=refreshed) if ticket else {}
+            finish_refresh(
+                ticket,
+                time.perf_counter() - timed,
+                cache_attempted=cache_attempted,
+                refreshed=refreshed,
+                lower=feedback_lower,
+                upper=feedback_upper,
+            )
+            if ticket
+            else {}
         )
         return evolve(value, durationSeconds=time.perf_counter() - timed, inputs=dict(inputs), scheduler=scheduler)
 
@@ -206,6 +219,8 @@ def compute_cheeger(
             ticket = begin_refresh(simple, reduction)
             inputs["adaptivePID"] = 1
             inputs["targetSeconds"] = reduction.targetSeconds
+            inputs["accuracyFeedback"] = int(reduction.feedback == "CertificateGap")
+            inputs["targetRelativeError"] = reduction.targetRelativeError
 
         # Tier 1 reuses a partition, but rescores its cuts against today's edges.
         if reduction.cache and not (ticket and ticket.scheduled):
@@ -213,6 +228,7 @@ def compute_cheeger(
             if (cached := cached_quotient(simple, reduction)) is not None:
                 certificates.append(cached)
         for certificate in certificates:
+            feedback_lower, feedback_upper = certificate.lowerBound, certificate.upperBound
             inputs["reductionEvaluatedCuts"] = certificate.evaluatedCuts
             if reason := decision(certificate.lowerBound, certificate.upperBound):
                 return finish(
@@ -232,6 +248,7 @@ def compute_cheeger(
         # its interval cannot decide the policy. Retain these bounds for fallback.
         fresh = fresh_spectral_reduction(simple, reduction)
         refreshed = True
+        feedback_lower, feedback_upper = fresh.lowerBound, fresh.upperBound
         inputs["reductionEvaluatedCuts"] = fresh.evaluatedCuts
         reduction_lower, reduction_upper, reduction_cut = fresh.lowerBound, fresh.upperBound, fresh.cut
         if reason := decision(fresh.lowerBound, fresh.upperBound):
