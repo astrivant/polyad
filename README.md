@@ -388,12 +388,7 @@ workers. Click the figure to follow the process identities and routes.*
 
 </details>
 
-<details>
-<summary>
-
 ##### Application responsibilities
-
-</summary>
 
 For developers, the reusable pattern is to keep business processing separate from
 the policies that decide when to accept work, which worker profile to run and how
@@ -403,8 +398,6 @@ and measure whether those adaptations improve useful completion and recovery.
 The [study's strategy modules](studies/soul/README.md#strategy-modules) and
 [repeatable run instructions](studies/soul/README.md#run) provide a working starting
 point with before, during and after measurements.
-
-</details>
 
 #### Workloads calling the operator
 
@@ -501,12 +494,7 @@ Read about [workload API access](docs/deployment/networking.md#workload-access-t
 
 #### Autoscaling the hierarchy
 
-<details>
-<summary>
-
 ##### Choose the scaling target
-
-</summary>
 
 [KEDA can autoscale different levels of the hierarchy](docs/graphs/replication.md#connect-keda)
 by targeting a ReplicaGroup's Kubernetes `/scale` subresource. The group's
@@ -525,14 +513,7 @@ and scale copies of the whole processing graph as demand for complete pipelines
 grows. Scale one group instance independently, or scale a shared definition to
 update every inheriting instance; see [instance and shared scaling](docs/graphs/replication.md#independent-instances-and-all-uses-of-a-definition).
 
-</details>
-
-<details>
-<summary>
-
 ##### Check constraints before scale changes
-
-</summary>
 
 Before creating or retiring copies, Polyad refreshes the owning graph family's
 topology and checks replica bounds and applicable GraphRules, including structural
@@ -541,14 +522,7 @@ constraints can block its application. Target the ReplicaGroup to use these
 checks: directly autoscaling a generated Deployment or StatefulSet bypasses graph
 admission. See [constraints before scaling](docs/graphs/replication.md#constraints-before-scaling).
 
-</details>
-
-<details>
-<summary>
-
 ##### Coordinate routing and remote replicas
-
-</summary>
 
 When percentage routing is configured, a positive traffic assignment also blocks
 removing its destination. Drain its share to zero before scale-in; newly added
@@ -560,16 +534,9 @@ Each destination can independently scale its own local groups. The
 [multicluster scaling diagram](docs/deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling)
 shows where each cluster refreshes live values and enforces its own rules.
 
-</details>
-
 #### Demand-driven adaptation and preparation
 
-<details>
-<summary>
-
 ##### Define the demand signal
-
-</summary>
 
 [Soul searching](docs/graphs/soul-searching.md) lets a Graph or PolyGraph respond
 to application demand within administrator-approved profiles. Demand defaults to
@@ -581,14 +548,7 @@ includes the Graph, its GraphRule and its Workload/Daemon definitions. An author
 application reporter supplies the measurements; configuring a signal does not
 automatically scrape it.
 
-</details>
-
-<details>
-<summary>
-
 ##### Select approved adaptation profiles
-
-</summary>
 
 A profile combines a separate application Cheeger target with optional
 [traffic percentages](docs/graphs/traffic-balancing.md) and capacity preparation
@@ -603,14 +563,7 @@ ahead instead of one. Fresh samples, stabilization, cooldowns and change budgets
 govern those adjustments. Every change must satisfy live GraphRules and the fixed
 graph and operator capacity ceilings.
 
-</details>
-
-<details>
-<summary>
-
 ##### Separate control-loop responsibilities
-
-</summary>
 
 | Control | Responsibility |
 | --- | --- |
@@ -629,8 +582,6 @@ the [preparation sequence diagram](docs/graphs/load-profiles.md#from-incoming-de
 and the [runnable example](examples/load-profiles.yaml). For the distinction between
 hard structural bounds and application targets, see
 [comparing Cheeger controls](docs/graphs/cheeger-orchestration.md).
-
-</details>
 
 ### Connectivity and placement
 
@@ -1151,12 +1102,7 @@ and [deployable example](examples/components/values.yaml).
 
 </details>
 
-<details>
-<summary>
-
 ##### Downstream operators and shared services
-
-</summary>
 
 Adding an OperatorPool in a registered downstream cluster automatically links its
 Graph into the [reserved root PolyGraph](docs/deployment/root-control-plane.md#reserved-operator-hierarchy).
@@ -1176,14 +1122,7 @@ Administrators can also [install downstream workers with Helm](docs/deployment/h
 and attach their existing Deployments. Helm retains installation and upgrades;
 each attachment explicitly chooses root/KEDA or downstream replica scaling.
 
-</details>
-
-<details>
-<summary>
-
 ##### Optional durable state
-
-</summary>
 
 [PostgreSQL is optional](docs/deployment/postgresql.md), disabled by default, and stores
 graph observations and tracked parameters when enabled. Its optional
@@ -1197,14 +1136,7 @@ Optional [record encryption](docs/deployment/record-encryption.md) uses an
 administrator-provided public key to encrypt JSON payloads inside the operator
 before writing them to either managed or external PostgreSQL databases.
 
-</details>
-
-<details>
-<summary>
-
 ##### Benchmarking the control plane
-
-</summary>
 
 This is also our starting point for load-testing Polyad's own algorithms and
 watching how it scales. The [Terraform GKE test environment](terraform/README.md)
@@ -1225,8 +1157,6 @@ provides Prometheus, Grafana dashboards and operator traces for each study windo
 include topology dimensions, spectra, Cheeger inputs/search results and application
 targets on each metrics-serving operator replica.
 See [all studies](studies/README.md).
-
-</details>
 
 #### Metrics, traces and GitOps health
 
