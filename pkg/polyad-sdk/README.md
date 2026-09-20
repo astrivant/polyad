@@ -1,8 +1,7 @@
 # Polyad SDK
 
 <!-- toc:start -->
-<details>
-<summary>Table of contents</summary>
+**Table of contents**
 
 - [Installation](#installation)
 - [Optional workload protocols](#optional-workload-protocols)
@@ -10,13 +9,6 @@
 - [Environment and projected defaults](#environment-and-projected-defaults)
 - [Adaptive services and deltas](#adaptive-services-and-deltas)
   - [Snapshots and permission to act](#snapshots-and-permission-to-act)
-    - [Environment fields](#environment-fields)
-    - [Topology and neighbor fields](#topology-and-neighbor-fields)
-    - [Resource reports and decisions](#resource-reports-and-decisions)
-    - [Temporary connection fields](#temporary-connection-fields)
-    - [Change and Delta fields](#change-and-delta-fields)
-    - [Reading a delta in application code](#reading-a-delta-in-application-code)
-    - [Freshness and permission checks](#freshness-and-permission-checks)
   - [Subclass contract](#subclass-contract)
   - [Adaptation strategies](#adaptation-strategies)
   - [Identity, permissions and freshness](#identity-permissions-and-freshness)
@@ -34,8 +26,6 @@
 - [Remote clusters](#remote-clusters)
 - [Report throughput to Soul searching](#report-throughput-to-soul-searching)
 - [Publishing](#publishing)
-
-</details>
 <!-- toc:end -->
 
 A typed Python 3.11–3.14 SDK for **Service Symbiosis** and Polyad's operator APIs.

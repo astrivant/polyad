@@ -1,8 +1,7 @@
 # Polyad
 
 <!-- toc:start -->
-<details>
-<summary>Table of contents</summary>
+**Table of contents**
 
 - [Get started](#get-started)
   - [Deploy and configure](#deploy-and-configure)
@@ -11,52 +10,17 @@
 - [Why Polyad exists](#why-polyad-exists)
   - [Motivation and inspiration](#motivation-and-inspiration)
   - [Problems that grow with the application](#problems-that-grow-with-the-application)
-    - [Coordinating dependent services](#coordinating-dependent-services)
-    - [Request latency](#request-latency)
-    - [Recovery and cascading failures](#recovery-and-cascading-failures)
   - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
-    - [Respond close to the work](#respond-close-to-the-work)
-    - [Coordinate graph-wide changes](#coordinate-graph-wide-changes)
-    - [Measure the adaptation envelope](#measure-the-adaptation-envelope)
 - [What Polyad abstracts](#what-polyad-abstracts)
   - [Application composition](#application-composition)
-    - [Polygraphs: graphs of graphs](#polygraphs-graphs-of-graphs)
-    - [Constrained compositions](#constrained-compositions)
   - [Adaptive microservices](#adaptive-microservices)
-    - [Writing Adaptive Microservices for execution in Polygraphs](#writing-adaptive-microservices-for-execution-in-polygraphs)
-      - [Soul searching: adapt a service's workers](#soul-searching-adapt-a-services-workers)
-      - [Natural Selection: adapt service compositions](#natural-selection-adapt-service-compositions)
-      - [Application responsibilities](#application-responsibilities)
-    - [Workloads calling the operator](#workloads-calling-the-operator)
   - [Scaling and capacity](#scaling-and-capacity)
-    - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
-      - [Choose the scaling target](#choose-the-scaling-target)
-      - [Check constraints before scale changes](#check-constraints-before-scale-changes)
-      - [Coordinate routing and remote replicas](#coordinate-routing-and-remote-replicas)
-    - [Demand-driven adaptation and preparation](#demand-driven-adaptation-and-preparation)
-      - [Define the demand signal](#define-the-demand-signal)
-      - [Select approved adaptation profiles](#select-approved-adaptation-profiles)
-      - [Separate control-loop responsibilities](#separate-control-loop-responsibilities)
   - [Connectivity and placement](#connectivity-and-placement)
-    - [Replica connections](#replica-connections)
-    - [Network boundaries](#network-boundaries)
-    - [Graphs across clusters](#graphs-across-clusters)
-    - [Graphs across node groups](#graphs-across-node-groups)
   - [Workload lifecycles](#workload-lifecycles)
-    - [Finite pipelines](#finite-pipelines)
-    - [Persistent services and recurrence](#persistent-services-and-recurrence)
   - [Control plane and operations](#control-plane-and-operations)
-    - [The operator as a Graph](#the-operator-as-a-graph)
-      - [Managed service components](#managed-service-components)
-      - [Downstream operators and shared services](#downstream-operators-and-shared-services)
-      - [Optional durable state](#optional-durable-state)
-      - [Benchmarking the control plane](#benchmarking-the-control-plane)
-    - [Metrics, traces and GitOps health](#metrics-traces-and-gitops-health)
 - [What Polyad is not](#what-polyad-is-not)
 - [License](#license)
 - [References](#references)
-
-</details>
 <!-- toc:end -->
 
 <img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoes fading toward the right" width="630" height="140">
@@ -274,7 +238,7 @@ In the diagrams below, green marks work and graph summaries, amber marks
 constraints or recurrence, and gray marks resources and containing boundaries.
 
 <details open>
-<summary>Example: nested graphs reporting to an application root</summary>
+<summary><strong>Example:</strong> nested graphs reporting to an application root</summary>
 
 ```mermaid
 ---
@@ -319,7 +283,7 @@ Kubernetes resources. `GraphRule` lets engineers constrain what users can
 schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/graphs/graph-rules.md#structural-limits)</sup><sup>[\[6\]](docs/apis/composition-requests.md#durability-ordering-and-audit)</sup>
 
 <details>
-<summary>Example: reusable graph definitions with structural constraints</summary>
+<summary><strong>Example:</strong> reusable graph definitions with structural constraints</summary>
 
 ```mermaid
 ---
@@ -446,7 +410,7 @@ runs, giving a compatible node autoscaler advance notice. Dependencies and gates
 still decide when the next stage starts.<sup>[\[16\]](docs/graphs/capacity.md)</sup>
 
 <details>
-<summary>Example: API access, event streams and advance capacity requests</summary>
+<summary><strong>Example:</strong> API access, event streams and advance capacity requests</summary>
 
 ```mermaid
 ---
@@ -617,7 +581,7 @@ another combines daemon replicas in a [Star](docs/graphs/replication.md#star) wi
 are declared separately at their [network boundaries](docs/deployment/networking.md#isolating-a-subgraph).
 
 <details>
-<summary>Example: three replica layouts and connections across subgraphs</summary>
+<summary><strong>Example:</strong> three replica layouts and connections across subgraphs</summary>
 
 ```mermaid
 ---
@@ -728,7 +692,7 @@ PolyGraph copy receives its share through its entrypoint workloads. Try the
 percentages with the [Tiers and Headroom feedback modes](docs/graphs/traffic-balancing.md#choose-an-automatic-balancing-mode).
 
 <details>
-<summary>Example: subgraph connections and cross-namespace authorization</summary>
+<summary><strong>Example:</strong> subgraph connections and cross-namespace authorization</summary>
 
 ```mermaid
 ---
@@ -791,7 +755,7 @@ targets. See the [deployment architecture](docs/deployment/root-control-plane.md
 and [complete configuration example](examples/root-control-plane/values.yaml).
 
 <details open>
-<summary>Example: nested PolyGraphs composing three clusters</summary>
+<summary><strong>Example:</strong> nested PolyGraphs composing three clusters</summary>
 
 ```mermaid
 ---
@@ -855,7 +819,7 @@ or accelerators. Here, three graphs share two worker groups while coordinated
 operator replicas and their shared Dragonfly cache run on a third.<sup>[\[9\]](docs/deployment/operator.md#scheduling-a-graph-onto-a-resource-slice)</sup><sup>[\[10\]](docs/deployment/operator.md#replicas-shared-queues-and-autoscaling)</sup>
 
 <details>
-<summary>Example: three graphs across two worker groups</summary>
+<summary><strong>Example:</strong> three graphs across two worker groups</summary>
 
 ```mermaid
 ---
@@ -924,7 +888,7 @@ gates that wait for a condition or delay. Ordinary Graph placement can select
 spot capacity; applications choose how to handle interruption and storage.<sup>[\[11\]](docs/introduction/concepts.md#finite-pipelines)</sup><sup>[\[12\]](docs/deployment/operator.md#delay-gates)</sup>
 
 <details>
-<summary>Example: parallel spot workloads behind an admission gate</summary>
+<summary><strong>Example:</strong> parallel spot workloads behind an admission gate</summary>
 
 ```mermaid
 ---
@@ -990,7 +954,7 @@ requests. A producer or timer supplies each pulse; the application owns iteratio
 limits, stop conditions and durable shared state.<sup>[\[13\]](docs/deployment/operator.md#repeated-execution)</sup>
 
 <details>
-<summary>Example: persistent services with repeated graph activations</summary>
+<summary><strong>Example:</strong> persistent services with repeated graph activations</summary>
 
 Solid arrows show startup or execution progression; dashed arrows show data flow
 or a new activation request.

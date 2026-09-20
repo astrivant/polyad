@@ -1,8 +1,7 @@
 # Polyad Helm chart
 
 <!-- toc:start -->
-<details>
-<summary>Table of contents</summary>
+**Table of contents**
 
 - [Installation](#installation)
 - [Reference values](#reference-values)
@@ -32,8 +31,6 @@
   - [Advance graph capacity](#advance-graph-capacity)
   - [Root control plane](#root-control-plane)
   - [Telemetry collectors](#telemetry-collectors)
-
-</details>
 <!-- toc:end -->
 
 Deploy Polyad's graph orchestration control plane with a single operator replica,

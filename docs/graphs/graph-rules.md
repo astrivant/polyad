@@ -1,8 +1,7 @@
 # Graph rules
 
 <!-- toc:start -->
-<details>
-<summary>Table of contents</summary>
+**Table of contents**
 
 - [Configuration reference](#configuration-reference)
 - [Selection and measurement](#selection-and-measurement)
@@ -46,8 +45,6 @@
 - [PolyGraphs and autoscaling](#polygraphs-and-autoscaling)
 - [Admission, reporting and computation limits](#admission-reporting-and-computation-limits)
 - [Application throughput targets](#application-throughput-targets)
-
-</details>
 <!-- toc:end -->
 
 `GraphRule` defines which graphs Polyad may admit and which traffic their workloads

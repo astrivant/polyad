@@ -67,17 +67,17 @@ def heading_inventory(document: str) -> list[tuple[int, int, str, str]]:
     return headings
 
 
-def with_contents(document: str, *, max_depth: int = 6) -> str:
+def with_contents(document: str, *, max_depth: int = 3) -> str:
     """
     Insert or refresh contents from ATX headings outside fenced code and HTML comments.
 
     Args:
         document (str): Markdown source, optionally containing our generated contents block.
-        max_depth (int): Deepest heading level to include; reports can limit this to chart headings.
+        max_depth (int): Deepest heading level to include; defaults to main sections and their immediate subsections.
 
     Returns:
-        str: Markdown with linked sections through the requested depth after its title. Long lists
-            are collapsible; pages without sections link to their title.
+        str: Markdown with visible linked contents after its title. Deeper headings remain in
+            the document body; pages without included sections link to their title.
     """
     document = re.sub(r"<!-- toc:start -->.*?<!-- toc:end -->\n*", "", document, flags=re.DOTALL)
     lines = document.splitlines(keepends=True)
@@ -101,10 +101,10 @@ def with_contents(document: str, *, max_depth: int = 6) -> str:
     for _, level, label, anchor in sections:
         label = html.escape(label, quote=False).replace("[", "\\[").replace("]", "\\]")
         entries.append(f"{'  ' * (level - minimum)}- [{label}](#{anchor})")
-    block = [START, "<details>", "<summary>Table of contents</summary>", ""] if len(entries) > 20 else [START, "**Table of contents**", ""]
+    # Keep the overview visible. Heading depth controls its detail instead of
+    # hiding navigation inside an expandable section when the list grows.
+    block = [START, "**Table of contents**", ""]
     block.extend(entries)
-    if len(entries) > 20:
-        block.extend(["", "</details>"])
     block.extend([END, "", ""])
     position = title[0] + 1 if title else 0
     while position < len(lines) and not lines[position].strip():
@@ -141,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         if not path.is_file() or any(part in {"third_party", "runs"} or part.endswith("-runs") for part in path.parts):
             continue
         original = path.read_text()
-        updated = with_contents(original, max_depth=3 if "reports" in path.parts else 6)
+        updated = with_contents(original)
         if updated != original:
             changed.append(path)
             if not args.check:

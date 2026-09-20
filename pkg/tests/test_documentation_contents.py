@@ -80,29 +80,31 @@ def test_contents_update_removed_and_new_sections() -> None:
     assert with_contents("Plain text without headings.\n") == "Plain text without headings.\n"
 
 
-def test_contents_collapse_long_reports() -> None:
+def test_contents_keep_long_overviews_visible() -> None:
     """
-    Keep chart-heavy reports navigable without pushing the summary far down the page.
+    Keep every main section linked without hiding a long overview inside details.
 
     Returns:
         None: Generated contents match the visible sections and remain stable.
     """
     document = "# Charts\n\n" + "".join(f"## Chart {index}\n\n" for index in range(21))
     result = with_contents(document)
-    assert "<summary>Table of contents</summary>" in result
+    contents = result.split("<!-- toc:end -->", 1)[0]
+    assert "**Table of contents**" in contents
+    assert "<details" not in contents and "<summary" not in contents
     assert "- [Chart 20](#chart-20)" in result
     assert with_contents(result) == result
 
 
-def test_contents_include_deep_sections_and_keep_reports_brief(tmp_path: Path) -> None:
+def test_contents_limit_guides_and_reports_to_main_sections(tmp_path: Path) -> None:
     """
-    Keep guide subsections discoverable while limiting scan reports to chart headings.
+    Show the same shallow overview in guides and reports without removing deep body headings.
 
     Args:
         tmp_path (Path): Maintained guide and report locations.
 
     Returns:
-        None: Guide contents cover all levels; report contents omit individual errors and remain stable.
+        None: Contents include levels two and three, preserve the document body and remain stable.
     """
     document = dedent(
         """
@@ -122,14 +124,52 @@ def test_contents_include_deep_sections_and_keep_reports_brief(tmp_path: Path) -
     report.write_text(document)
     assert main([str(guide), str(report)]) == 0
     contents, body = guide.read_text().split("<!-- toc:end -->", 1)
-    assert "    - [Errors](#errors)" in contents
-    assert "      - [Examples](#examples)" in contents
-    assert "        - [Reproduction](#reproduction)" in contents
+    assert "- [Testing](#testing)" in contents
+    assert "  - [Charts](#charts)" in contents
+    assert all(f"[{label}]" not in contents for label in ("Errors", "Examples", "Reproduction"))
     assert body.lstrip() == document.split("\n\n", 1)[1]
     assert report.read_text() == with_contents(document, max_depth=3)
+    assert report.read_text() == guide.read_text()
     report_contents = report.read_text().split("<!-- toc:end -->", 1)[0]
     assert "[Charts](#charts)" in report_contents and "[Errors](#errors)" not in report_contents
     assert main(["--check", str(guide), str(report)]) == 0
+
+
+def test_contents_preserve_anchors_allocated_by_omitted_headings() -> None:
+    """
+    Count every rendered heading when assigning anchors, including headings absent from contents.
+
+    Returns:
+        None: Main-section links still resolve when an earlier deeper heading has the same label.
+    """
+    document = "# Guide\n\n## Setup\n\n### Steps\n\n#### Repeat\n\n## Repeat\n\n"
+    result = with_contents(document)
+    contents = result.split("<!-- toc:end -->", 1)[0]
+    assert "[Repeat](#repeat-1)" in contents
+    assert "[Repeat](#repeat)" not in contents
+    shallow = with_contents(document, max_depth=2).split("<!-- toc:end -->", 1)[0]
+    assert "[Steps]" not in shallow
+    assert "[Repeat](#repeat-1)" in shallow
+
+
+def test_contents_unwrap_previous_overviews_but_preserve_collapsible_examples() -> None:
+    """
+    Replace the old generated wrapper without touching authored details in the document body.
+
+    Returns:
+        None: Contents stay visible, example markup stays intact and repeated updates are stable.
+    """
+    body = "## Setup\n\n### Steps\n\n#### Detail\n\n<details>\n<summary>Example</summary>\n\nCode.\n\n</details>\n"
+    previous = (
+        "# Guide\n\n<!-- toc:start -->\n<details>\n<summary>Table of contents</summary>\n\n"
+        "- [Setup](#setup)\n  - [Steps](#steps)\n    - [Detail](#detail)\n\n</details>\n<!-- toc:end -->\n\n" + body
+    )
+    result = with_contents(previous)
+    contents, remaining = result.split("<!-- toc:end -->", 1)
+    assert "<details" not in contents and "<summary" not in contents
+    assert "[Detail]" not in contents
+    assert remaining.lstrip() == body
+    assert with_contents(result) == result
 
 
 def test_contents_command_check_and_archive_exclusions(tmp_path: Path) -> None:

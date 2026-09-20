@@ -1,8 +1,7 @@
 # Replication and KEDA
 
 <!-- toc:start -->
-<details>
-<summary>Table of contents</summary>
+**Table of contents**
 
 - [Declare a scalable abstraction](#declare-a-scalable-abstraction)
 - [Examples at each scaling level](#examples-at-each-scaling-level)
@@ -26,8 +25,6 @@
 - [Metric scopes and freshness](#metric-scopes-and-freshness)
 - [Constraints before scaling](#constraints-before-scaling)
 - [Scheduling and cleanup](#scheduling-and-cleanup)
-
-</details>
 <!-- toc:end -->
 
 ReplicaGroups can also replicate PolyGraph templates that place child Graphs in
