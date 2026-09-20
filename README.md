@@ -135,12 +135,7 @@ and capacity planning.
 
 ### Problems that grow with the application
 
-<details>
-<summary>
-
 #### Coordinating dependent services
-
-</summary>
 
 Deploying a distributed application means deciding how its services connect,
 which work can run together, and how those relationships should change as demand
@@ -153,14 +148,7 @@ for the whole application as its parts grow, shrink or span more clusters.
 Polyad aims to make that coordination repeatable, with room for applications to
 adapt within boundaries their administrators can trust.
 
-</details>
-
-<details>
-<summary>
-
 #### Request latency
-
-</summary>
 
 Growth puts pressure on both **request latency** and **recovery time**, especially
 when it adds interconnected dependencies and increases resource utilization.
@@ -169,14 +157,7 @@ component, and shared resources accumulate queues. Dean and Barroso's
 [*The Tail at Scale*](https://research.google/pubs/the-tail-at-scale/) explains
 how occasional delays can become a dominant performance problem at larger scales.
 
-</details>
-
-<details>
-<summary>
-
 #### Recovery and cascading failures
-
-</summary>
 
 Recovery can also become slower and more involved. An overloaded service can
 shift work onto its neighbors, while retries add more demand to struggling
@@ -185,16 +166,9 @@ new Pods or nodes to become ready, and caches to warm. Google's account of
 [cascading failures](https://sre.google/sre-book/addressing-cascading-failures/)
 describes how these effects can reinforce one another.
 
-</details>
-
 ### How Polyad addresses these problems
 
-<details>
-<summary>
-
 #### Respond close to the work
-
-</summary>
 
 Growth also creates opportunities for parallelism and spare capacity. Dividing
 work into well-defined boundaries lets individual requests and recovery decisions
@@ -215,14 +189,7 @@ services use their existing resources while additional infrastructure is being
 prepared. Services can also request [temporary connections](docs/apis/temporary-connections.md)
 and new compositions within their permissions.
 
-</details>
-
-<details>
-<summary>
-
 #### Coordinate graph-wide changes
-
-</summary>
 
 [Graphs and PolyGraphs](docs/introduction/concepts.md) make related workloads and
 their connections reusable deployment units. [GraphRules](docs/graphs/graph-rules.md)
@@ -241,14 +208,7 @@ bottlenecks, while [capacity preparation](docs/graphs/load-profiles.md) gives
 upcoming stages and node autoscalers notice of future demand. Application
 measurements and load tests establish useful targets for each boundary.
 
-</details>
-
-<details>
-<summary>
-
 #### Measure the adaptation envelope
-
-</summary>
 
 The same approach applies to a small producer-consumer pair and an application
 spread across clusters: respond close to the work, report what happened, and
@@ -260,8 +220,6 @@ Its [adaptation envelope](docs/workloads/adaptive-microservices.md#define-the-ad
 records which changes it can absorb, how quickly it recovers and which constraints
 it must preserve.
 
-</details>
-
 ## What Polyad abstracts
 
 A **graph** groups related work and describes how its parts depend on each other.
@@ -271,12 +229,7 @@ a service graph might keep consumers and their supporting resources running.<sup
 
 ### Application composition
 
-<details>
-<summary>
-
 #### Polygraphs: graphs of graphs
-
-</summary>
 
 Compose smaller workflows into an application with `PolyGraph`. Each child
 reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/introduction/concepts.md#graphs-of-graphs)</sup>
@@ -323,14 +276,7 @@ Read about [graphs of graphs](docs/introduction/concepts.md#graphs-of-graphs).
 
 </details>
 
-</details>
-
-<details>
-<summary>
-
 #### Constrained compositions
-
-</summary>
 
 Build workflows from reusable definitions and trace each instance to its
 Kubernetes resources. `GraphRule` lets engineers constrain what users can
@@ -385,18 +331,16 @@ Read about [composition requests](docs/apis/composition-requests.md) and [GraphR
 
 </details>
 
-</details>
-
 ### Adaptive microservices
+
+#### Writing Adaptive Microservices for execution in Polygraphs
 
 <details>
 <summary>
 
-#### Writing Adaptive Microservices for execution in Polygraphs
+##### Soul searching: adapt a service's workers
 
 </summary>
-
-##### Soul searching: adapt a service's workers
 
 Application code can participate in adaptation, using available capacity while
 protecting work it has already accepted. The [Soul study](studies/soul/README.md)
@@ -419,7 +363,14 @@ The study compares fixed and adaptive trials under the same offered load and
 resource ceilings, verifies every completed job, and records queue sizes,
 completion latency and process lifecycles.
 
+</details>
+
+<details>
+<summary>
+
 ##### Natural Selection: adapt service compositions
+
+</summary>
 
 The [Nature study](studies/nature/README.md) adds composition decisions above
 those local adaptations. When the required output changes, its Natural Selection
@@ -435,7 +386,14 @@ their accepted work. When the original requirement returns, the planner restores
 the original composition. Each selected service continues adapting its own
 workers. Click the figure to follow the process identities and routes.*
 
+</details>
+
+<details>
+<summary>
+
 ##### Application responsibilities
+
+</summary>
 
 For developers, the reusable pattern is to keep business processing separate from
 the policies that decide when to accept work, which worker profile to run and how
@@ -448,12 +406,7 @@ point with before, during and after measurements.
 
 </details>
 
-<details>
-<summary>
-
 #### Workloads calling the operator
-
-</summary>
 
 Running workloads can submit their next graph, read its status and subscribe to
 graph events through the operator's optional APIs. Services route requests to
@@ -544,18 +497,16 @@ Read about [workload API access](docs/deployment/networking.md#workload-access-t
 
 </details>
 
-</details>
-
 ### Scaling and capacity
+
+#### Autoscaling the hierarchy
 
 <details>
 <summary>
 
-#### Autoscaling the hierarchy
+##### Choose the scaling target
 
 </summary>
-
-##### Choose the scaling target
 
 [KEDA can autoscale different levels of the hierarchy](docs/graphs/replication.md#connect-keda)
 by targeting a ReplicaGroup's Kubernetes `/scale` subresource. The group's
@@ -574,7 +525,14 @@ and scale copies of the whole processing graph as demand for complete pipelines
 grows. Scale one group instance independently, or scale a shared definition to
 update every inheriting instance; see [instance and shared scaling](docs/graphs/replication.md#independent-instances-and-all-uses-of-a-definition).
 
+</details>
+
+<details>
+<summary>
+
 ##### Check constraints before scale changes
+
+</summary>
 
 Before creating or retiring copies, Polyad refreshes the owning graph family's
 topology and checks replica bounds and applicable GraphRules, including structural
@@ -583,7 +541,14 @@ constraints can block its application. Target the ReplicaGroup to use these
 checks: directly autoscaling a generated Deployment or StatefulSet bypasses graph
 admission. See [constraints before scaling](docs/graphs/replication.md#constraints-before-scaling).
 
+</details>
+
+<details>
+<summary>
+
 ##### Coordinate routing and remote replicas
+
+</summary>
 
 When percentage routing is configured, a positive traffic assignment also blocks
 removing its destination. Drain its share to zero before scale-in; newly added
@@ -597,14 +562,14 @@ shows where each cluster refreshes live values and enforces its own rules.
 
 </details>
 
+#### Demand-driven adaptation and preparation
+
 <details>
 <summary>
 
-#### Demand-driven adaptation and preparation
+##### Define the demand signal
 
 </summary>
-
-##### Define the demand signal
 
 [Soul searching](docs/graphs/soul-searching.md) lets a Graph or PolyGraph respond
 to application demand within administrator-approved profiles. Demand defaults to
@@ -616,7 +581,14 @@ includes the Graph, its GraphRule and its Workload/Daemon definitions. An author
 application reporter supplies the measurements; configuring a signal does not
 automatically scrape it.
 
+</details>
+
+<details>
+<summary>
+
 ##### Select approved adaptation profiles
+
+</summary>
 
 A profile combines a separate application Cheeger target with optional
 [traffic percentages](docs/graphs/traffic-balancing.md) and capacity preparation
@@ -631,7 +603,14 @@ ahead instead of one. Fresh samples, stabilization, cooldowns and change budgets
 govern those adjustments. Every change must satisfy live GraphRules and the fixed
 graph and operator capacity ceilings.
 
+</details>
+
+<details>
+<summary>
+
 ##### Separate control-loop responsibilities
+
+</summary>
 
 | Control | Responsibility |
 | --- | --- |
@@ -655,12 +634,7 @@ hard structural bounds and application targets, see
 
 ### Connectivity and placement
 
-<details>
-<summary>
-
 #### Replica connections
-
-</summary>
 
 Each ReplicaGroup can choose its own [connection mode](docs/graphs/replication.md#connections-between-copies).
 Here, one subgraph connects whole graph replicas in a [Ring](docs/graphs/replication.md#ring);
@@ -766,14 +740,7 @@ Remote placement and data-flow edges need separately configured traffic policies
 
 </details>
 
-</details>
-
-<details>
-<summary>
-
 #### Network boundaries
-
-</summary>
 
 Group workloads into subgraphs with explicit network connections. Scoped rules
 control traffic across boundaries and namespaces; optional Istio integration
@@ -836,14 +803,7 @@ are configured separately at each end of a cross-cluster connection.
 
 </details>
 
-</details>
-
-<details>
-<summary>
-
 #### Graphs across clusters
-
-</summary>
 
 Graphs execute within one cluster. PolyGraphs can optionally place child Graphs
 and nested PolyGraphs in registered remote clusters, composing regions and higher
@@ -915,14 +875,7 @@ pattern with another remote PolyGraph and cluster.
 
 </details>
 
-</details>
-
-<details>
-<summary>
-
 #### Graphs across node groups
-
-</summary>
 
 Place whole graphs on groups of Kubernetes machines, such as general compute
 or accelerators. Here, three graphs share two worker groups while coordinated
@@ -989,16 +942,9 @@ Read about [graph placement](docs/deployment/operator.md#scheduling-a-graph-onto
 
 </details>
 
-</details>
-
 ### Workload lifecycles
 
-<details>
-<summary>
-
 #### Finite pipelines
-
-</summary>
 
 Express a workflow from preparation to publication, with parallel tasks and
 gates that wait for a condition or delay. Ordinary Graph placement can select
@@ -1064,14 +1010,7 @@ Read about [finite pipelines](docs/introduction/concepts.md#finite-pipelines) an
 
 </details>
 
-</details>
-
-<details>
-<summary>
-
 #### Persistent services and recurrence
-
-</summary>
 
 Keep services running with `Daemon`, and repeat finite Graphs with activation
 requests. A producer or timer supplies each pulse; the application owns iteration
@@ -1144,18 +1083,16 @@ Read about [repeated execution](docs/deployment/operator.md#repeated-execution) 
 The operator can also [request capacity ahead of upcoming stages](docs/graphs/capacity.md),
 helping node autoscalers prepare machines while upstream work runs.
 
-</details>
-
 ### Control plane and operations
+
+#### The operator as a Graph
 
 <details>
 <summary>
 
-#### The operator as a Graph
+##### Managed service components
 
 </summary>
-
-##### Managed service components
 
 Polyad can run as a compact HA Deployment or manage its own service components
 in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemetry
@@ -1212,7 +1149,14 @@ HTTP demand drive capacity decisions. See the
 [component and networking diagrams](docs/deployment/components.md#the-operators-own-graph)
 and [deployable example](examples/components/values.yaml).
 
+</details>
+
+<details>
+<summary>
+
 ##### Downstream operators and shared services
+
+</summary>
 
 Adding an OperatorPool in a registered downstream cluster automatically links its
 Graph into the [reserved root PolyGraph](docs/deployment/root-control-plane.md#reserved-operator-hierarchy).
@@ -1232,7 +1176,14 @@ Administrators can also [install downstream workers with Helm](docs/deployment/h
 and attach their existing Deployments. Helm retains installation and upgrades;
 each attachment explicitly chooses root/KEDA or downstream replica scaling.
 
+</details>
+
+<details>
+<summary>
+
 ##### Optional durable state
+
+</summary>
 
 [PostgreSQL is optional](docs/deployment/postgresql.md), disabled by default, and stores
 graph observations and tracked parameters when enabled. Its optional
@@ -1246,7 +1197,14 @@ Optional [record encryption](docs/deployment/record-encryption.md) uses an
 administrator-provided public key to encrypt JSON payloads inside the operator
 before writing them to either managed or external PostgreSQL databases.
 
+</details>
+
+<details>
+<summary>
+
 ##### Benchmarking the control plane
+
+</summary>
 
 This is also our starting point for load-testing Polyad's own algorithms and
 watching how it scales. The [Terraform GKE test environment](terraform/README.md)
@@ -1270,12 +1228,7 @@ See [all studies](studies/README.md).
 
 </details>
 
-<details>
-<summary>
-
 #### Metrics, traces and GitOps health
-
-</summary>
 
 Queue pressure and graph hierarchies are available through the optional
 [Prometheus and JSON metrics API](docs/operations/metrics.md).
@@ -1292,8 +1245,6 @@ and independently enabled OTLP log export.
 `ReplicaGroup`, using workload metrics served by the operator.
 
 [Argo CD](docs/operations/argocd.md) and [Flux health checks](docs/operations/fluxcd.md) report graph and leaf health across nested applications.
-
-</details>
 
 ## What Polyad is not
 
