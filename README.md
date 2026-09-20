@@ -1,28 +1,62 @@
 # Polyad
 
 <!-- toc:start -->
-**Table of contents**
+<details>
+<summary>Table of contents</summary>
 
 - [Get started](#get-started)
-- [What Polyad abstracts](#what-polyad-abstracts)
+  - [Deploy and configure](#deploy-and-configure)
+  - [Develop and run local demos](#develop-and-run-local-demos)
+  - [Find detailed guides](#find-detailed-guides)
+- [Why Polyad exists](#why-polyad-exists)
   - [Motivation and inspiration](#motivation-and-inspiration)
+  - [Problems that grow with the application](#problems-that-grow-with-the-application)
+    - [Coordinating dependent services](#coordinating-dependent-services)
+    - [Request latency](#request-latency)
+    - [Recovery and cascading failures](#recovery-and-cascading-failures)
   - [How Polyad addresses these problems](#how-polyad-addresses-these-problems)
-  - [Polygraphs: graphs of graphs](#polygraphs-graphs-of-graphs)
-  - [Writing Adaptive Microservices for execution in Polygraphs](#writing-adaptive-microservices-for-execution-in-polygraphs)
-  - [Replica connections](#replica-connections)
-  - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
-  - [Demand-driven adaptation and preparation](#demand-driven-adaptation-and-preparation)
-  - [Constrained compositions](#constrained-compositions)
-  - [Network boundaries](#network-boundaries)
-  - [Graphs across clusters](#graphs-across-clusters)
-  - [Graphs across node groups](#graphs-across-node-groups)
-  - [Workloads calling the operator](#workloads-calling-the-operator)
-  - [Finite pipelines](#finite-pipelines)
-  - [Persistent services and recurrence](#persistent-services-and-recurrence)
-  - [The operator as a Graph](#the-operator-as-a-graph)
+    - [Respond close to the work](#respond-close-to-the-work)
+    - [Coordinate graph-wide changes](#coordinate-graph-wide-changes)
+    - [Measure the adaptation envelope](#measure-the-adaptation-envelope)
+- [What Polyad abstracts](#what-polyad-abstracts)
+  - [Application composition](#application-composition)
+    - [Polygraphs: graphs of graphs](#polygraphs-graphs-of-graphs)
+    - [Constrained compositions](#constrained-compositions)
+  - [Adaptive microservices](#adaptive-microservices)
+    - [Writing Adaptive Microservices for execution in Polygraphs](#writing-adaptive-microservices-for-execution-in-polygraphs)
+      - [Soul searching: adapt a service's workers](#soul-searching-adapt-a-services-workers)
+      - [Natural Selection: adapt service compositions](#natural-selection-adapt-service-compositions)
+      - [Application responsibilities](#application-responsibilities)
+    - [Workloads calling the operator](#workloads-calling-the-operator)
+  - [Scaling and capacity](#scaling-and-capacity)
+    - [Autoscaling the hierarchy](#autoscaling-the-hierarchy)
+      - [Choose the scaling target](#choose-the-scaling-target)
+      - [Check constraints before scale changes](#check-constraints-before-scale-changes)
+      - [Coordinate routing and remote replicas](#coordinate-routing-and-remote-replicas)
+    - [Demand-driven adaptation and preparation](#demand-driven-adaptation-and-preparation)
+      - [Define the demand signal](#define-the-demand-signal)
+      - [Select approved adaptation profiles](#select-approved-adaptation-profiles)
+      - [Separate control-loop responsibilities](#separate-control-loop-responsibilities)
+  - [Connectivity and placement](#connectivity-and-placement)
+    - [Replica connections](#replica-connections)
+    - [Network boundaries](#network-boundaries)
+    - [Graphs across clusters](#graphs-across-clusters)
+    - [Graphs across node groups](#graphs-across-node-groups)
+  - [Workload lifecycles](#workload-lifecycles)
+    - [Finite pipelines](#finite-pipelines)
+    - [Persistent services and recurrence](#persistent-services-and-recurrence)
+  - [Control plane and operations](#control-plane-and-operations)
+    - [The operator as a Graph](#the-operator-as-a-graph)
+      - [Managed service components](#managed-service-components)
+      - [Downstream operators and shared services](#downstream-operators-and-shared-services)
+      - [Optional durable state](#optional-durable-state)
+      - [Benchmarking the control plane](#benchmarking-the-control-plane)
+    - [Metrics, traces and GitOps health](#metrics-traces-and-gitops-health)
 - [What Polyad is not](#what-polyad-is-not)
 - [License](#license)
 - [References](#references)
+
+</details>
 <!-- toc:end -->
 
 <img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoes fading toward the right" width="630" height="140">
@@ -83,6 +117,8 @@ the Kubernetes Operators Framework for Python.
 
 ## Get started
 
+### Deploy and configure
+
 Deploy the [Kubernetes operator](docs/introduction/getting-started.md#quick-start-kubernetes)
 with the Helm chart, or try the [local Python scheduler](docs/introduction/getting-started.md#quick-start-local-work).
 The [examples](docs/introduction/getting-started.md#examples) cover pipelines, services,
@@ -92,6 +128,8 @@ For application feedback, start with the [approved load-profile example](example
 and its [Helm reference values](charts/polyad/references/values-soul-searching.reference.yaml).
 The [demand guide](docs/graphs/load-profiles.md#define-demand) explains signal names,
 units and thresholds; use `Observe` mode to inspect recommendations before enabling adaptation.
+
+### Develop and run local demos
 
 Applications can install the [Python SDK](pkg/polyad-sdk/README.md) or just the
 [shared types](pkg/polyad-types/README.md) without installing the operator. From a
@@ -110,6 +148,8 @@ Run [`python demo/nature.py`](demo/nature.py) for the [parent Natural Selection 
 changing requirements select capabilities and routes, mutate services, preserve
 useful survivors and retire excluded processes.
 
+### Find detailed guides
+
 Explore [graph concepts](docs/introduction/concepts.md), [graph rules](docs/graphs/graph-rules.md),
 [composition requests](docs/apis/composition-requests.md), the [composition API](docs/apis/composition-api.md),
 [networking and event subscriptions](docs/deployment/networking.md),
@@ -118,12 +158,7 @@ Explore [graph concepts](docs/introduction/concepts.md), [graph rules](docs/grap
 [development guide](docs/development/toolchain.md). See the [documentation index](docs/README.md)
 for lifecycle, status, health and configuration references.
 
-## What Polyad abstracts
-
-A **graph** groups related work and describes how its parts depend on each other.
-Its **nodes** can be tasks, services, resources or other graphs. A data pipeline
-might fetch records, process partitions in parallel, then publish the results;
-a service graph might keep consumers and their supporting resources running.<sup>[\[3\]](docs/introduction/concepts.md)</sup>
+## Why Polyad exists
 
 ### Motivation and inspiration
 
@@ -133,6 +168,10 @@ nested PolyGraphs. Medium's
 [Kubernetes Infrastructure At Medium](https://medium.engineering/kubernetes-infrastructure-at-medium-d9e2444932ef)
 provides public background on this strategy's multi-cluster infrastructure, gradual rollouts
 and capacity planning.
+
+### Problems that grow with the application
+
+#### Coordinating dependent services
 
 Deploying a distributed application means deciding how its services connect,
 which work can run together, and how those relationships should change as demand
@@ -145,7 +184,7 @@ for the whole application as its parts grow, shrink or span more clusters.
 Polyad aims to make that coordination repeatable, with room for applications to
 adapt within boundaries their administrators can trust.
 
-### How Polyad addresses these problems
+#### Request latency
 
 Growth puts pressure on both **request latency** and **recovery time**, especially
 when it adds interconnected dependencies and increases resource utilization.
@@ -154,12 +193,18 @@ component, and shared resources accumulate queues. Dean and Barroso's
 [*The Tail at Scale*](https://research.google/pubs/the-tail-at-scale/) explains
 how occasional delays can become a dominant performance problem at larger scales.
 
+#### Recovery and cascading failures
+
 Recovery can also become slower and more involved. An overloaded service can
 shift work onto its neighbors, while retries add more demand to struggling
 dependencies. Restoring useful capacity may require several services to recover,
 new Pods or nodes to become ready, and caches to warm. Google's account of
 [cascading failures](https://sre.google/sre-book/addressing-cascading-failures/)
 describes how these effects can reinforce one another.
+
+### How Polyad addresses these problems
+
+#### Respond close to the work
 
 Growth also creates opportunities for parallelism and spare capacity. Dividing
 work into well-defined boundaries lets individual requests and recovery decisions
@@ -180,6 +225,8 @@ services use their existing resources while additional infrastructure is being
 prepared. Services can also request [temporary connections](docs/apis/temporary-connections.md)
 and new compositions within their permissions.
 
+#### Coordinate graph-wide changes
+
 [Graphs and PolyGraphs](docs/introduction/concepts.md) make related workloads and
 their connections reusable deployment units. [GraphRules](docs/graphs/graph-rules.md)
 express their structural requirements, which Polyad checks against live state
@@ -197,6 +244,8 @@ bottlenecks, while [capacity preparation](docs/graphs/load-profiles.md) gives
 upcoming stages and node autoscalers notice of future demand. Application
 measurements and load tests establish useful targets for each boundary.
 
+#### Measure the adaptation envelope
+
 The same approach applies to a small producer-consumer pair and an application
 spread across clusters: respond close to the work, report what happened, and
 coordinate broader changes where dependencies are shared. Immediate admission
@@ -207,7 +256,16 @@ Its [adaptation envelope](docs/workloads/adaptive-microservices.md#define-the-ad
 records which changes it can absorb, how quickly it recovers and which constraints
 it must preserve.
 
-### Polygraphs: graphs of graphs
+## What Polyad abstracts
+
+A **graph** groups related work and describes how its parts depend on each other.
+Its **nodes** can be tasks, services, resources or other graphs. A data pipeline
+might fetch records, process partitions in parallel, then publish the results;
+a service graph might keep consumers and their supporting resources running.<sup>[\[3\]](docs/introduction/concepts.md)</sup>
+
+### Application composition
+
+#### Polygraphs: graphs of graphs
 
 Compose smaller workflows into an application with `PolyGraph`. Each child
 reports progress to its parent, giving the root a combined view of the work.<sup>[\[4\]](docs/introduction/concepts.md#graphs-of-graphs)</sup>
@@ -254,7 +312,66 @@ Read about [graphs of graphs](docs/introduction/concepts.md#graphs-of-graphs).
 
 </details>
 
-### Writing Adaptive Microservices for execution in Polygraphs
+#### Constrained compositions
+
+Build workflows from reusable definitions and trace each instance to its
+Kubernetes resources. `GraphRule` lets engineers constrain what users can
+schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/graphs/graph-rules.md#structural-limits)</sup><sup>[\[6\]](docs/apis/composition-requests.md#durability-ordering-and-audit)</sup>
+
+<details>
+<summary>Example: reusable graph definitions with structural constraints</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    secondaryTextColor: "#513900"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    titleColor: "#344054"
+    edgeLabelBackground: "#f2f4f7"
+    lineColor: "#667085"
+  flowchart:
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart LR
+    classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
+    classDef constraint fill:#fff3d6,stroke:#926000,color:#513900
+    classDef resource fill:#eeeeee,stroke:#777777,color:#444444
+
+    request["Composition request<br/>IDs and references"]:::resource
+    rules["GraphRule<br/>size, shape, spectrum"]:::constraint
+    root["PolyGraph root<br/>aggregate status"]:::execution
+    request --> root
+    rules -. "constrains each boundary" .-> root
+    subgraph left["Graph instance: left"]
+        a["Workload instance"]:::execution
+    end
+    subgraph right["Graph instance: right"]
+        b["Workload instance"]:::execution
+    end
+    root --> a
+    root --> b
+    definition["Shared graph definition"]:::resource
+    definition -. "instantiates" .-> a
+    definition -. "instantiates" .-> b
+```
+
+Read about [composition requests](docs/apis/composition-requests.md) and [GraphRule constraints](docs/graphs/graph-rules.md).
+
+</details>
+
+### Adaptive microservices
+
+#### Writing Adaptive Microservices for execution in Polygraphs
+
+##### Soul searching: adapt a service's workers
 
 Application code can participate in adaptation, using available capacity while
 protecting work it has already accepted. The [Soul study](studies/soul/README.md)
@@ -277,6 +394,8 @@ The study compares fixed and adaptive trials under the same offered load and
 resource ceilings, verifies every completed job, and records queue sizes,
 completion latency and process lifecycles.
 
+##### Natural Selection: adapt service compositions
+
 The [Nature study](studies/nature/README.md) adds composition decisions above
 those local adaptations. When the required output changes, its Natural Selection
 planner chooses which service implementations and connections can deliver it
@@ -291,6 +410,8 @@ their accepted work. When the original requirement returns, the planner restores
 the original composition. Each selected service continues adapting its own
 workers. Click the figure to follow the process identities and routes.*
 
+##### Application responsibilities
+
 For developers, the reusable pattern is to keep business processing separate from
 the policies that decide when to accept work, which worker profile to run and how
 to replace it safely. Extend [`AdaptiveService`](pkg/polyad-sdk/README.md#adaptive-services-and-deltas),
@@ -300,7 +421,193 @@ The [study's strategy modules](studies/soul/README.md#strategy-modules) and
 [repeatable run instructions](studies/soul/README.md#run) provide a working starting
 point with before, during and after measurements.
 
-### Replica connections
+#### Workloads calling the operator
+
+Running workloads can submit their next graph, read its status and subscribe to
+graph events through the operator's optional APIs. Services route requests to
+ready replicas; explicitly authorized callers can connect from other
+namespaces.<sup>[\[15\]](docs/deployment/networking.md#workload-access-to-operator-apis)</sup>
+
+A running service can also pulse downstream workloads or daemon replica groups,
+with explicit concurrency and frequency policies.<sup>[\[17\]](docs/workloads/activation.md)</sup>
+
+The [Python SDK](pkg/polyad-sdk/README.md) supports filtered event hooks over SSE
+or WebSocket. With optional [connection rebalancing](docs/operations/event-rebalancing.md),
+operators send paced reconnect instructions, called **copulses**, when membership
+changes or an administrator starts a roll. Clients retain their last completed
+checkpoint, refresh ready endpoints and reconnect through Service/Istio routing
+or direct client-side round robin. Graceful shutdown gives subscriptions a bounded
+window to reconnect. See the [scale-out](docs/operations/event-rebalancing.md#scale-out-and-subscription-migration)
+and [scale-down](docs/operations/event-rebalancing.md#scale-down-and-shutdown)
+sequence diagrams and [typed Helm reference](charts/polyad/references/values-event-rebalancing.reference.yaml).
+
+With a capacity policy, Polyad forecasts upcoming stages while earlier work
+runs, giving a compatible node autoscaler advance notice. Dependencies and gates
+still decide when the next stage starts.<sup>[\[16\]](docs/graphs/capacity.md)</sup>
+
+<details>
+<summary>Example: API access, event streams and advance capacity requests</summary>
+
+```mermaid
+---
+config:
+  theme: base
+  htmlLabels: false
+  themeVariables:
+    primaryTextColor: "#163b29"
+    secondaryTextColor: "#513900"
+    tertiaryTextColor: "#344054"
+    clusterBkg: "#f2f4f7"
+    clusterBorder: "#667085"
+    titleColor: "#344054"
+    edgeLabelBackground: "#f2f4f7"
+    lineColor: "#667085"
+  flowchart:
+    subGraphTitleMargin:
+      top: 8
+      bottom: 20
+---
+flowchart TB
+    subgraph local["Workloads · operator namespace"]
+        caller["Managed workload"]
+    end
+    subgraph remote["Workloads · another namespace"]
+        subscriber["Authorized workload"]
+    end
+    access["Explicit network access<br/>Optional Istio identity authorization"]
+    composition["Composition Service · 8090<br/>Submit graphs and read status"]
+    events["Event Service · 8091<br/>Subscribe to graph observations"]
+    subgraph control["Node group · operators"]
+        operator["Ready operator replicas<br/>APIs and graph scheduling"]
+        cache[("Shared Dragonfly cache<br/>Queues and event history")]
+    end
+    demand["Kubernetes API<br/>ProvisioningRequest or placeholder Pods"]
+    autoscaler["Node autoscaler"]
+    machines["Target worker node group<br/>Capacity for upcoming stages"]
+    caller -->|"Authenticated requests"| access
+    subscriber -->|"Cross-namespace requests"| access
+    access --> composition
+    access -->|"GET /v1/events"| events
+    composition --> operator
+    events --> operator
+    operator <-->|"Coordination and observations"| cache
+    events -. "SSE or WebSocket observations" .-> local
+    events -. "SSE or WebSocket observations" .-> remote
+    operator -->|"Forecast before next stage"| demand
+    demand -->|"Upcoming resource demand"| autoscaler
+    autoscaler -->|"Provision nodes when supported"| machines
+    classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
+    classDef constraint fill:#ffe3a3,stroke:#926000,color:#513900
+    classDef resource fill:#eeeeee,stroke:#777777,color:#444444
+    class caller,subscriber execution
+    class operator,access constraint
+    class composition,events,cache,demand,autoscaler,machines resource
+    style local fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
+    style remote fill:#e2e6ec,stroke:#667085,stroke-width:2px,color:#344054
+    style control fill:#fff3d6,stroke:#926000,stroke-width:2px,color:#513900
+    linkStyle default stroke:#475467,stroke-width:2px
+```
+
+Read about [workload API access](docs/deployment/networking.md#workload-access-to-operator-apis), [event subscriptions](docs/workloads/workload-events.md), and [advance capacity requests](docs/graphs/capacity.md).
+
+</details>
+
+### Scaling and capacity
+
+#### Autoscaling the hierarchy
+
+##### Choose the scaling target
+
+[KEDA can autoscale different levels of the hierarchy](docs/graphs/replication.md#connect-keda)
+by targeting a ReplicaGroup's Kubernetes `/scale` subresource. The group's
+template determines what each additional replica creates:
+
+- **[Daemon replicas](docs/graphs/replication.md#example-daemon-replicas):** another service instance, backed by its selected Deployment
+  or StatefulSet. Set the Daemon's own `replicas: 1` when each group copy should
+  represent one desired Pod.
+- **[Graph replicas](docs/graphs/replication.md#example-graph-replicas):** another complete workflow or service graph, including its
+  workloads, resources and internal connections.
+- **[PolyGraph](docs/graphs/replication.md#example-polygraph-replicas) or [nested ReplicaGroup replicas](docs/graphs/replication.md#example-nested-replicagroups):** another composition of graphs or
+  replica groups, allowing scaling at multiple levels of the same application.
+
+For example, scale a worker pool inside a processing graph as its queue grows,
+and scale copies of the whole processing graph as demand for complete pipelines
+grows. Scale one group instance independently, or scale a shared definition to
+update every inheriting instance; see [instance and shared scaling](docs/graphs/replication.md#independent-instances-and-all-uses-of-a-definition).
+
+##### Check constraints before scale changes
+
+Before creating or retiring copies, Polyad refreshes the owning graph family's
+topology and checks replica bounds and applicable GraphRules, including structural
+limits and Cheeger constraints. KEDA supplies the requested count;
+constraints can block its application. Target the ReplicaGroup to use these
+checks: directly autoscaling a generated Deployment or StatefulSet bypasses graph
+admission. See [constraints before scaling](docs/graphs/replication.md#constraints-before-scaling).
+
+##### Coordinate routing and remote replicas
+
+When percentage routing is configured, a positive traffic assignment also blocks
+removing its destination. Drain its share to zero before scale-in; newly added
+copies need explicit routing assignments. See
+[traffic balancing and scaling](docs/graphs/traffic-balancing.md#scaling-ownership-and-limitations).
+
+A ReplicaGroup of PolyGraphs can also scale a complete cross-cluster composition.
+Each destination can independently scale its own local groups. The
+[multicluster scaling diagram](docs/deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling)
+shows where each cluster refreshes live values and enforces its own rules.
+
+#### Demand-driven adaptation and preparation
+
+##### Define the demand signal
+
+[Soul searching](docs/graphs/soul-searching.md) lets a Graph or PolyGraph respond
+to application demand within administrator-approved profiles. Demand defaults to
+offered work per second. Administrators can instead
+[select an exact signal name and unit](docs/graphs/load-profiles.md#define-demand) (such
+as `queueDepth` in `jobs` or `activeSessions` in `sessions`) and define the thresholds
+that select each profile. The [complete resource example](examples/load-profiles.yaml)
+includes the Graph, its GraphRule and its Workload/Daemon definitions. An authorized
+application reporter supplies the measurements; configuring a signal does not
+automatically scrape it.
+
+##### Select approved adaptation profiles
+
+A profile combines a separate application Cheeger target with optional
+[traffic percentages](docs/graphs/traffic-balancing.md) and capacity preparation
+settings. `Observe` reports recommendations; `Adapt` may apply approved changes.
+The default `Shortfall` trigger waits for completed throughput to fall behind.
+The optional `Demand` trigger allows preparation while throughput still keeps up,
+or while queued work awaits processing.
+
+For example, sustained growth past an approved queue-depth threshold can select
+a denser connection layout, rebalance traffic and prepare three dependency stages
+ahead instead of one. Fresh samples, stabilization, cooldowns and change budgets
+govern those adjustments. Every change must satisfy live GraphRules and the fixed
+graph and operator capacity ceilings.
+
+##### Separate control-loop responsibilities
+
+| Control | Responsibility |
+| --- | --- |
+| Soul searching | Select approved connection, traffic and preparation settings from demand |
+| KEDA/HPA | Request replica counts for the configured scaling target |
+| Polyad capacity planner | Prepare known upcoming execution nodes and coordinate workload admission |
+| Kubernetes and the node autoscaler | Schedule Pods and provision machines for scheduling demand |
+
+Soul searching works independently of KEDA and leaves replica counts to the
+existing scaling controller. Lookahead prepares upcoming work already described
+by the graph; it does not add spare application replicas to an entirely deployed
+service. Actual node provisioning still depends on the configured autoscaler.
+
+See [profile configuration and limits](docs/graphs/load-profiles.md#configure-approved-profiles),
+the [preparation sequence diagram](docs/graphs/load-profiles.md#from-incoming-demand-to-prepared-capacity),
+and the [runnable example](examples/load-profiles.yaml). For the distinction between
+hard structural bounds and application targets, see
+[comparing Cheeger controls](docs/graphs/cheeger-orchestration.md).
+
+### Connectivity and placement
+
+#### Replica connections
 
 Each ReplicaGroup can choose its own [connection mode](docs/graphs/replication.md#connections-between-copies).
 Here, one subgraph connects whole graph replicas in a [Ring](docs/graphs/replication.md#ring);
@@ -406,141 +713,7 @@ Remote placement and data-flow edges need separately configured traffic policies
 
 </details>
 
-### Autoscaling the hierarchy
-
-[KEDA can autoscale different levels of the hierarchy](docs/graphs/replication.md#connect-keda)
-by targeting a ReplicaGroup's Kubernetes `/scale` subresource. The group's
-template determines what each additional replica creates:
-
-- **[Daemon replicas](docs/graphs/replication.md#example-daemon-replicas):** another service instance, backed by its selected Deployment
-  or StatefulSet. Set the Daemon's own `replicas: 1` when each group copy should
-  represent one desired Pod.
-- **[Graph replicas](docs/graphs/replication.md#example-graph-replicas):** another complete workflow or service graph, including its
-  workloads, resources and internal connections.
-- **[PolyGraph](docs/graphs/replication.md#example-polygraph-replicas) or [nested ReplicaGroup replicas](docs/graphs/replication.md#example-nested-replicagroups):** another composition of graphs or
-  replica groups, allowing scaling at multiple levels of the same application.
-
-For example, scale a worker pool inside a processing graph as its queue grows,
-and scale copies of the whole processing graph as demand for complete pipelines
-grows. Scale one group instance independently, or scale a shared definition to
-update every inheriting instance; see [instance and shared scaling](docs/graphs/replication.md#independent-instances-and-all-uses-of-a-definition).
-
-Before creating or retiring copies, Polyad refreshes the owning graph family's
-topology and checks replica bounds and applicable GraphRules, including structural
-limits and Cheeger constraints. KEDA supplies the requested count;
-constraints can block its application. Target the ReplicaGroup to use these
-checks: directly autoscaling a generated Deployment or StatefulSet bypasses graph
-admission. See [constraints before scaling](docs/graphs/replication.md#constraints-before-scaling).
-
-When percentage routing is configured, a positive traffic assignment also blocks
-removing its destination. Drain its share to zero before scale-in; newly added
-copies need explicit routing assignments. See
-[traffic balancing and scaling](docs/graphs/traffic-balancing.md#scaling-ownership-and-limitations).
-
-A ReplicaGroup of PolyGraphs can also scale a complete cross-cluster composition.
-Each destination can independently scale its own local groups. The
-[multicluster scaling diagram](docs/deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling)
-shows where each cluster refreshes live values and enforces its own rules.
-
-### Demand-driven adaptation and preparation
-
-[Soul searching](docs/graphs/soul-searching.md) lets a Graph or PolyGraph respond
-to application demand within administrator-approved profiles. Demand defaults to
-offered work per second. Administrators can instead
-[select an exact signal name and unit](docs/graphs/load-profiles.md#define-demand) (such
-as `queueDepth` in `jobs` or `activeSessions` in `sessions`) and define the thresholds
-that select each profile. The [complete resource example](examples/load-profiles.yaml)
-includes the Graph, its GraphRule and its Workload/Daemon definitions. An authorized
-application reporter supplies the measurements; configuring a signal does not
-automatically scrape it.
-
-A profile combines a separate application Cheeger target with optional
-[traffic percentages](docs/graphs/traffic-balancing.md) and capacity preparation
-settings. `Observe` reports recommendations; `Adapt` may apply approved changes.
-The default `Shortfall` trigger waits for completed throughput to fall behind.
-The optional `Demand` trigger allows preparation while throughput still keeps up,
-or while queued work awaits processing.
-
-For example, sustained growth past an approved queue-depth threshold can select
-a denser connection layout, rebalance traffic and prepare three dependency stages
-ahead instead of one. Fresh samples, stabilization, cooldowns and change budgets
-govern those adjustments. Every change must satisfy live GraphRules and the fixed
-graph and operator capacity ceilings.
-
-| Control | Responsibility |
-| --- | --- |
-| Soul searching | Select approved connection, traffic and preparation settings from demand |
-| KEDA/HPA | Request replica counts for the configured scaling target |
-| Polyad capacity planner | Prepare known upcoming execution nodes and coordinate workload admission |
-| Kubernetes and the node autoscaler | Schedule Pods and provision machines for scheduling demand |
-
-Soul searching works independently of KEDA and leaves replica counts to the
-existing scaling controller. Lookahead prepares upcoming work already described
-by the graph; it does not add spare application replicas to an entirely deployed
-service. Actual node provisioning still depends on the configured autoscaler.
-
-See [profile configuration and limits](docs/graphs/load-profiles.md#configure-approved-profiles),
-the [preparation sequence diagram](docs/graphs/load-profiles.md#from-incoming-demand-to-prepared-capacity),
-and the [runnable example](examples/load-profiles.yaml). For the distinction between
-hard structural bounds and application targets, see
-[comparing Cheeger controls](docs/graphs/cheeger-orchestration.md).
-
-### Constrained compositions
-
-Build workflows from reusable definitions and trace each instance to its
-Kubernetes resources. `GraphRule` lets engineers constrain what users can
-schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/graphs/graph-rules.md#structural-limits)</sup><sup>[\[6\]](docs/apis/composition-requests.md#durability-ordering-and-audit)</sup>
-
-<details>
-<summary>Example: reusable graph definitions with structural constraints</summary>
-
-```mermaid
----
-config:
-  theme: base
-  htmlLabels: false
-  themeVariables:
-    primaryTextColor: "#163b29"
-    secondaryTextColor: "#513900"
-    tertiaryTextColor: "#344054"
-    clusterBkg: "#f2f4f7"
-    clusterBorder: "#667085"
-    titleColor: "#344054"
-    edgeLabelBackground: "#f2f4f7"
-    lineColor: "#667085"
-  flowchart:
-    subGraphTitleMargin:
-      top: 8
-      bottom: 20
----
-flowchart LR
-    classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
-    classDef constraint fill:#fff3d6,stroke:#926000,color:#513900
-    classDef resource fill:#eeeeee,stroke:#777777,color:#444444
-
-    request["Composition request<br/>IDs and references"]:::resource
-    rules["GraphRule<br/>size, shape, spectrum"]:::constraint
-    root["PolyGraph root<br/>aggregate status"]:::execution
-    request --> root
-    rules -. "constrains each boundary" .-> root
-    subgraph left["Graph instance: left"]
-        a["Workload instance"]:::execution
-    end
-    subgraph right["Graph instance: right"]
-        b["Workload instance"]:::execution
-    end
-    root --> a
-    root --> b
-    definition["Shared graph definition"]:::resource
-    definition -. "instantiates" .-> a
-    definition -. "instantiates" .-> b
-```
-
-Read about [composition requests](docs/apis/composition-requests.md) and [GraphRule constraints](docs/graphs/graph-rules.md).
-
-</details>
-
-### Network boundaries
+#### Network boundaries
 
 Group workloads into subgraphs with explicit network connections. Scoped rules
 control traffic across boundaries and namespaces; optional Istio integration
@@ -603,7 +776,7 @@ are configured separately at each end of a cross-cluster connection.
 
 </details>
 
-### Graphs across clusters
+#### Graphs across clusters
 
 Graphs execute within one cluster. PolyGraphs can optionally place child Graphs
 and nested PolyGraphs in registered remote clusters, composing regions and higher
@@ -675,7 +848,7 @@ pattern with another remote PolyGraph and cluster.
 
 </details>
 
-### Graphs across node groups
+#### Graphs across node groups
 
 Place whole graphs on groups of Kubernetes machines, such as general compute
 or accelerators. Here, three graphs share two worker groups while coordinated
@@ -742,98 +915,9 @@ Read about [graph placement](docs/deployment/operator.md#scheduling-a-graph-onto
 
 </details>
 
-### Workloads calling the operator
+### Workload lifecycles
 
-Running workloads can submit their next graph, read its status and subscribe to
-graph events through the operator's optional APIs. Services route requests to
-ready replicas; explicitly authorized callers can connect from other
-namespaces.<sup>[\[15\]](docs/deployment/networking.md#workload-access-to-operator-apis)</sup>
-
-A running service can also pulse downstream workloads or daemon replica groups,
-with explicit concurrency and frequency policies.<sup>[\[17\]](docs/workloads/activation.md)</sup>
-
-The [Python SDK](pkg/polyad-sdk/README.md) supports filtered event hooks over SSE
-or WebSocket. With optional [connection rebalancing](docs/operations/event-rebalancing.md),
-operators send paced reconnect instructions, called **copulses**, when membership
-changes or an administrator starts a roll. Clients retain their last completed
-checkpoint, refresh ready endpoints and reconnect through Service/Istio routing
-or direct client-side round robin. Graceful shutdown gives subscriptions a bounded
-window to reconnect. See the [scale-out](docs/operations/event-rebalancing.md#scale-out-and-subscription-migration)
-and [scale-down](docs/operations/event-rebalancing.md#scale-down-and-shutdown)
-sequence diagrams and [typed Helm reference](charts/polyad/references/values-event-rebalancing.reference.yaml).
-
-With a capacity policy, Polyad forecasts upcoming stages while earlier work
-runs, giving a compatible node autoscaler advance notice. Dependencies and gates
-still decide when the next stage starts.<sup>[\[16\]](docs/graphs/capacity.md)</sup>
-
-<details>
-<summary>Example: API access, event streams and advance capacity requests</summary>
-
-```mermaid
----
-config:
-  theme: base
-  htmlLabels: false
-  themeVariables:
-    primaryTextColor: "#163b29"
-    secondaryTextColor: "#513900"
-    tertiaryTextColor: "#344054"
-    clusterBkg: "#f2f4f7"
-    clusterBorder: "#667085"
-    titleColor: "#344054"
-    edgeLabelBackground: "#f2f4f7"
-    lineColor: "#667085"
-  flowchart:
-    subGraphTitleMargin:
-      top: 8
-      bottom: 20
----
-flowchart TB
-    subgraph local["Workloads · operator namespace"]
-        caller["Managed workload"]
-    end
-    subgraph remote["Workloads · another namespace"]
-        subscriber["Authorized workload"]
-    end
-    access["Explicit network access<br/>Optional Istio identity authorization"]
-    composition["Composition Service · 8090<br/>Submit graphs and read status"]
-    events["Event Service · 8091<br/>Subscribe to graph observations"]
-    subgraph control["Node group · operators"]
-        operator["Ready operator replicas<br/>APIs and graph scheduling"]
-        cache[("Shared Dragonfly cache<br/>Queues and event history")]
-    end
-    demand["Kubernetes API<br/>ProvisioningRequest or placeholder Pods"]
-    autoscaler["Node autoscaler"]
-    machines["Target worker node group<br/>Capacity for upcoming stages"]
-    caller -->|"Authenticated requests"| access
-    subscriber -->|"Cross-namespace requests"| access
-    access --> composition
-    access -->|"GET /v1/events"| events
-    composition --> operator
-    events --> operator
-    operator <-->|"Coordination and observations"| cache
-    events -. "SSE or WebSocket observations" .-> local
-    events -. "SSE or WebSocket observations" .-> remote
-    operator -->|"Forecast before next stage"| demand
-    demand -->|"Upcoming resource demand"| autoscaler
-    autoscaler -->|"Provision nodes when supported"| machines
-    classDef execution fill:#e3f3e8,stroke:#247047,color:#163b29
-    classDef constraint fill:#ffe3a3,stroke:#926000,color:#513900
-    classDef resource fill:#eeeeee,stroke:#777777,color:#444444
-    class caller,subscriber execution
-    class operator,access constraint
-    class composition,events,cache,demand,autoscaler,machines resource
-    style local fill:#ffffff,stroke:#667085,stroke-width:2px,color:#344054
-    style remote fill:#e2e6ec,stroke:#667085,stroke-width:2px,color:#344054
-    style control fill:#fff3d6,stroke:#926000,stroke-width:2px,color:#513900
-    linkStyle default stroke:#475467,stroke-width:2px
-```
-
-Read about [workload API access](docs/deployment/networking.md#workload-access-to-operator-apis), [event subscriptions](docs/workloads/workload-events.md), and [advance capacity requests](docs/graphs/capacity.md).
-
-</details>
-
-### Finite pipelines
+#### Finite pipelines
 
 Express a workflow from preparation to publication, with parallel tasks and
 gates that wait for a condition or delay. Ordinary Graph placement can select
@@ -899,7 +983,7 @@ Read about [finite pipelines](docs/introduction/concepts.md#finite-pipelines) an
 
 </details>
 
-### Persistent services and recurrence
+#### Persistent services and recurrence
 
 Keep services running with `Daemon`, and repeat finite Graphs with activation
 requests. A producer or timer supplies each pulse; the application owns iteration
@@ -972,43 +1056,11 @@ Read about [repeated execution](docs/deployment/operator.md#repeated-execution) 
 The operator can also [request capacity ahead of upcoming stages](docs/graphs/capacity.md),
 helping node autoscalers prepare machines while upstream work runs.
 
-Queue pressure and graph hierarchies are available through the optional
-[Prometheus and JSON metrics API](docs/operations/metrics.md).
+### Control plane and operations
 
-Optional [OpenTelemetry tracing](docs/operations/tracing.md) exports API request,
-reconciliation and Kubernetes operation spans to an OTLP/HTTP collector, with
-configurable sampling and Secret-backed exporter credentials.
-The Helm chart can add [Grafana Alloy or Prometheus Agent](docs/operations/telemetry-agents.md)
-to collect component metrics, with Alloy also forwarding container logs and traces.
-[Decision logs](docs/operations/tracing.md#decision-and-conflict-logs) explain
-admissions, scaling, topology membership and conflicts, with trace correlation
-and independently enabled OTLP log export.
-[KEDA can scale services or whole graph compositions](docs/graphs/replication.md) through
-`ReplicaGroup`, using workload metrics served by the operator.
+#### The operator as a Graph
 
-[Argo CD](docs/operations/argocd.md) and [Flux health checks](docs/operations/fluxcd.md) report graph and leaf health across nested applications.
-
-### The operator as a Graph
-
-This is also our starting point for load-testing Polyad's own algorithms and
-watching how it scales. The [Terraform GKE test environment](terraform/README.md)
-installs standalone Argo CD and syncs the self-managed component Graph from this
-repository. The operator and KEDA use the `polyad` pool (2–10 Ubuntu nodes),
-consumers and monitoring use `fixtures`, and load generators use `copolyad`.
-All three share a configurable machine type; GKE services retain their untainted
-`default` pool. The [Argo UI](terraform/README.md#inspect-the-benchmark-application)
-can inspect both the operator and the manually synced benchmark fixture.
-
-The [load study](studies/load/README.md) installs a separate fixture Graph through
-the CRD template chart. Its [`polyad-benchmarks`](pkg/polyad-benchmarks/README.md)
-runner measures API acceptance and Job completion under bounded arrivals, with
-repeatable input snapshots and retained results. [Client plans](studies/load/README.md#plans-and-replica-counts)
-set fixture replicas and run parameters; an optional [monitoring stack](studies/load/README.md#monitoring-and-traces)
-provides Prometheus, Grafana dashboards and operator traces for each study window.
-[Graph diagnostics](docs/operations/metrics.md#graph-diagnostics-for-benchmarks)
-include topology dimensions, spectra, Cheeger inputs/search results and application
-targets on each metrics-serving operator replica.
-See [all studies](studies/README.md).
+##### Managed service components
 
 Polyad can run as a compact HA Deployment or manage its own service components
 in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemetry
@@ -1065,6 +1117,8 @@ HTTP demand drive capacity decisions. See the
 [component and networking diagrams](docs/deployment/components.md#the-operators-own-graph)
 and [deployable example](examples/components/values.yaml).
 
+##### Downstream operators and shared services
+
 Adding an OperatorPool in a registered downstream cluster automatically links its
 Graph into the [reserved root PolyGraph](docs/deployment/root-control-plane.md#reserved-operator-hierarchy).
 Deployment pools support KEDA replica scaling; DaemonSet capacity follows node
@@ -1083,6 +1137,8 @@ Administrators can also [install downstream workers with Helm](docs/deployment/h
 and attach their existing Deployments. Helm retains installation and upgrades;
 each attachment explicitly chooses root/KEDA or downstream replica scaling.
 
+##### Optional durable state
+
 [PostgreSQL is optional](docs/deployment/postgresql.md), disabled by default, and stores
 graph observations and tracked parameters when enabled. Its optional
 [KEDA configuration](examples/postgresql/keda.yaml) scales CloudNativePG instances
@@ -1094,6 +1150,46 @@ administrator-provided StorageClass or GKE disks backed by a Cloud KMS key.
 Optional [record encryption](docs/deployment/record-encryption.md) uses an
 administrator-provided public key to encrypt JSON payloads inside the operator
 before writing them to either managed or external PostgreSQL databases.
+
+##### Benchmarking the control plane
+
+This is also our starting point for load-testing Polyad's own algorithms and
+watching how it scales. The [Terraform GKE test environment](terraform/README.md)
+installs standalone Argo CD and syncs the self-managed component Graph from this
+repository. The operator and KEDA use the `polyad` pool (2–10 Ubuntu nodes),
+consumers and monitoring use `fixtures`, and load generators use `copolyad`.
+All three share a configurable machine type; GKE services retain their untainted
+`default` pool. The [Argo UI](terraform/README.md#inspect-the-benchmark-application)
+can inspect both the operator and the manually synced benchmark fixture.
+
+The [load study](studies/load/README.md) installs a separate fixture Graph through
+the CRD template chart. Its [`polyad-benchmarks`](pkg/polyad-benchmarks/README.md)
+runner measures API acceptance and Job completion under bounded arrivals, with
+repeatable input snapshots and retained results. [Client plans](studies/load/README.md#plans-and-replica-counts)
+set fixture replicas and run parameters; an optional [monitoring stack](studies/load/README.md#monitoring-and-traces)
+provides Prometheus, Grafana dashboards and operator traces for each study window.
+[Graph diagnostics](docs/operations/metrics.md#graph-diagnostics-for-benchmarks)
+include topology dimensions, spectra, Cheeger inputs/search results and application
+targets on each metrics-serving operator replica.
+See [all studies](studies/README.md).
+
+#### Metrics, traces and GitOps health
+
+Queue pressure and graph hierarchies are available through the optional
+[Prometheus and JSON metrics API](docs/operations/metrics.md).
+
+Optional [OpenTelemetry tracing](docs/operations/tracing.md) exports API request,
+reconciliation and Kubernetes operation spans to an OTLP/HTTP collector, with
+configurable sampling and Secret-backed exporter credentials.
+The Helm chart can add [Grafana Alloy or Prometheus Agent](docs/operations/telemetry-agents.md)
+to collect component metrics, with Alloy also forwarding container logs and traces.
+[Decision logs](docs/operations/tracing.md#decision-and-conflict-logs) explain
+admissions, scaling, topology membership and conflicts, with trace correlation
+and independently enabled OTLP log export.
+[KEDA can scale services or whole graph compositions](docs/graphs/replication.md) through
+`ReplicaGroup`, using workload metrics served by the operator.
+
+[Argo CD](docs/operations/argocd.md) and [Flux health checks](docs/operations/fluxcd.md) report graph and leaf health across nested applications.
 
 ## What Polyad is not
 
