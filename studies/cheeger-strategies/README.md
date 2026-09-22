@@ -165,25 +165,28 @@ versions and numerical-library thread controls.
 The study uses Polyad's simple, undirected, unweighted projection and measures
 unnormalized edge expansion:
 
-$$h(G)=\min_{\varnothing\ne S\subsetneq V}\frac{|\partial S|}{\min(|S|,|V\setminus S|)}.$$
+```math
+h(G) = \min_{\varnothing \ne S \subsetneq V}
+\frac{|\partial S|}{\min(|S|, |V \setminus S|)}.
+```
 
 An independent Gray-code exhaustive implementation supplies the reference for
 each graph snapshot. The production exact solver is separately timed and its
 answer checked against that reference. Every reduced candidate cut is lifted
-to the original graph. Its ratio is an upper bound $U$; the combinatorial
-Laplacian supplies $L=\lambda_2/2$. The cached spectral lower bound is reused
+to the original graph. Its ratio is an upper bound $`U`$; the combinatorial
+Laplacian supplies $`L=\lambda_2/2`$. The cached spectral lower bound is reused
 only for an identical edge set; after an edge change it becomes zero until fresh
 spectral work runs.
 
 We distinguish three quantities:
 
-- Cut error: $(U-h)/h$, measured using the independent reference.
-- Certificate uncertainty: $U-L$, available without exact enumeration.
+- Cut error: $`(U-h)/h`$, measured using the independent reference.
+- Certificate uncertainty: $`U-L`$, available without exact enumeration.
 - Decision correctness: whether a decisive policy answer agrees with the oracle.
   An unresolved interval is explicitly `Unknown`, never counted as a correct pass.
 
 A nonzero cut error can still give a correct, certified policy decision. The
-selector stops when $U<\theta_{min}$ proves a violation, $L>\theta_{max}$ proves
+selector stops when $`U<\theta_{\min}`$ proves a violation, $`L>\theta_{\max}`$ proves
 a violation, or the whole interval fits the requested bounds. It escalates when
 the interval does not settle them. Inclusive comparisons use the production
 tolerance. Publication fails if any sampled interval excludes its reference or
@@ -205,8 +208,8 @@ The complete executable recipe is [scenario.json](fixtures/scenario.json).
 | Graph families | Path, cycle, small-world and two-community |
 | Baseline size | 16 vertices |
 | Size sweep | 8, 12, 16, 18 and 20 vertices |
-| Retained dimensions $d$ | 1, 2, 4 and 8 |
-| Quotient supernodes $k$ | 2, 4, 6, 8 and 10 |
+| Retained dimensions $`d`$ | 1, 2, 4 and 8 |
+| Quotient supernodes $`k`$ | 2, 4, 6, 8 and 10 |
 | Random-graph edge probability | 0.1, 0.25, 0.5, 0.75 and 0.9 |
 | Requested edge replacement | 0%, 5%, 15%, 30% and 60% |
 | Cache churn gate | 0, 0.05, 0.15, 0.4 and 1 |
@@ -217,14 +220,14 @@ The complete executable recipe is [scenario.json](fixtures/scenario.json).
 | Cooperative timeout | 1 ms, 10 ms and 1 second |
 | Additional controls | Reduction disabled, cache disabled, spectral size cap, boundary size cap and a priority cut |
 | Graph seeds / timing repeats | Three seeds; three repeats for matched method comparisons |
-| PID refresh controls | Gains $K_p=0.6$, $K_i=0.4$, $K_d=0.2$; zero target cache attempts; initial interval 4 observations, bounded to [1, 8] |
+| PID refresh controls | Gains $`K_p=0.6`$, $`K_i=0.4`$, $`K_d=0.2`$; zero target cache attempts; initial interval 4 observations, bounded to [1, 8] |
 | Adaptive comparison controls | 1.5 ms soft goal; 12 baseline-only warmup observations; initial cache target 0.25, bounded to [0, 0.8] |
 | Accuracy comparison controls | 25% soft relative-error objective in parameter sweeps; independent accuracy replay varies objectives from 10% to 400% |
 
 Dimension and quotient settings are crossed in the raw data. The parameter plots
 hold one fixed when showing the other's effect. Density plots use random graphs
 with a connecting edge added between disconnected components; achieved density
-and those actual edges are retained. The graph-size plot holds $d=4$, $k=6$ and
+and those actual edges are retained. The graph-size plot holds $`d=4`$, $`k=6`$ and
 the community family fixed. The churn figure pools graph families to show
 variability; it must not be read as a topology-specific accuracy guarantee.
 
@@ -279,20 +282,30 @@ state between levels. Repetitions reset both. One tick means one observation,
 not one second, and the controller sees no exact Cheeger value, cut error,
 policy verdict, future graph or measured runtime.
 
-Let $f_t=1$ when the current call attempts cache reuse, otherwise $f_t=0$.
-With the configured target $f^*$ and unit sample spacing:
+Let $`f_t=1`$ when the current call attempts cache reuse, otherwise $`f_t=0`$.
+With the configured target $`f^{\ast}`$ and unit sample spacing:
 
-$$e_t=f_t-f^*,\qquad I_t^{candidate}=I_{t-1}+e_t,\qquad D_t=e_t-e_{t-1}.$$
+```math
+\begin{aligned}
+e_t &= f_t - f^{\ast}, \\
+I_t^{\mathrm{candidate}} &= I_{t-1} + e_t, \\
+D_t &= e_t - e_{t-1}.
+\end{aligned}
+```
 
 The next refresh interval is:
 
-$$T_{t+1}=\operatorname{clip}(T_0-K_p e_t-K_i I_t-K_d D_t,\ T_{min},\ T_{max}).$$
+```math
+T_{t+1} = \operatorname{clip}\left(
+T_0 - K_p e_t - K_i I_t - K_d D_t,\ T_{\min},\ T_{\max}
+\right).
+```
 
 The first derivative is zero. Conditional integration keeps the previous
 integral when accepting the candidate would push the interval beyond a bound
 in the direction of the error. This is
 [clamping anti-windup](https://www.mathworks.com/help/simulink/slref/anti-windup-control-using-a-pid-controller.html).
-The action for observation $t$ uses the **previously selected** interval $T_t$:
+The action for observation $`t`$ uses the **previously selected** interval $`T_t`$:
 refresh when the partition age plus one reaches that interval, otherwise try
 the cache. Successful refresh resets age to zero, including refresh after a
 miss. The current observation can only change subsequent scheduling.
@@ -342,12 +355,21 @@ query. This follows the separation of faster inner and slower outer feedback in
 but the chosen four-observation cadence is an experimental setting, not a proof
 of closed-loop stability.
 
-For one complete window $j$, let $\overline{\tau}_j$ be mean measured inner
-calculation time and $\tau_j^*$ the configured computation-time goal:
+For one complete window $`j`$, let $`\overline{\tau}_j`$ be mean measured inner
+calculation time and $`\tau_j^{\ast}`$ the configured computation-time goal:
 
-$$\epsilon_j=\frac{\overline{\tau}_j}{\tau_j^*}-1,$$
+```math
+\epsilon_j = \frac{\overline{\tau}_j}{\tau_j^{\ast}} - 1,
+```
 
-$$q_{j+1}=\operatorname{clip}\left(q_0+K_p^{outer}\epsilon_j+K_i^{outer}\sum_{i\le j}\epsilon_i+K_d^{outer}(\epsilon_j-\epsilon_{j-1}),\ q_{min},\ q_{max}\right).$$
+```math
+\begin{aligned}
+q_{j+1} = \operatorname{clip}\Bigl(&
+q_0 + K_p^{\mathrm{outer}}\epsilon_j
++ K_i^{\mathrm{outer}}\sum_{i\le j}\epsilon_i \\
+&+ K_d^{\mathrm{outer}}(\epsilon_j - \epsilon_{j-1}),\ q_{\min},\ q_{\max}\Bigr).
+\end{aligned}
+```
 
 Positive error requests more cache reuse; negative error permits more fresh
 work. The same conditional-integration anti-windup rule prevents accumulation
@@ -404,33 +426,43 @@ certificates, exact fallback, administrator ceilings or reduction feature gates.
 
 The new controller changes the objective rather than feeding the study's exact
 answer into the algorithm. Production cannot measure actual error without an
-exact calculation, but it already has a conservative interval $L\leq h\leq U$.
-For $U>0$, normalize its uncertainty as
+exact calculation, but it already has a conservative interval $`L\leq h\leq U`$.
+For $`U>0`$, normalize its uncertainty as
 
-$$g=\frac{U-L}{U}.$$
+```math
+g = \frac{U-L}{U}.
+```
 
-For $L>0$, every possible exact constant in that interval satisfies
+For $`L>0`$, every possible exact constant in that interval satisfies
 
-$$\frac{U-h}{h}\leq\frac{U-L}{L}=\frac{g}{1-g}.$$
+```math
+\frac{U-h}{h} \leq \frac{U-L}{L} = \frac{g}{1-g}.
+```
 
-A desired relative-error bound $r^*$ therefore corresponds to
-$g^*=r^*/(1+r^*)$. The default $r^*=0.25$ means $g^*=0.2$.
-The PID sees $g$, not $(U-h)/h$. A positive witness with $L=0$ has $g=1$
+A desired relative-error bound $`r^{\ast}`$ therefore corresponds to
+$`g^{\ast}=r^{\ast}/(1+r^{\ast})`$. The default $`r^{\ast}=0.25`$ means $`g^{\ast}=0.2`$.
+The PID sees $`g`$, not $`(U-h)/h`$. A positive witness with $`L=0`$ has $`g=1`$
 and **no finite relative-error bound**; telemetry records that bound as null,
 not zero. A certified zero constant has zero gap. Missing upper bounds mean
 full uncertainty.
 
 Every four observations, the outer loop calculates
 
-$$e_j=1-\frac{\overline{g}_j}{g^*},$$
+```math
+e_j = 1 - \frac{\overline{g}_j}{g^{\ast}},
+```
 
-$$q_{j+1}=\operatorname{clip}\left(q_0+K_p e_j+K_i I_j+K_d(e_j-e_{j-1}),\ 0,\ 0.8\right).$$
+```math
+q_{j+1} = \operatorname{clip}\left(
+q_0 + K_p e_j + K_i I_j + K_d(e_j - e_{j-1}),\ 0,\ 0.8
+\right).
+```
 
 Negative feedback means the certificate is too wide and requests less cache
 reuse. Positive feedback permits more reuse. The candidate integral is used
 for the clamped output; outward integral growth is not committed when the
 actuator saturates. Goal changes discard mixed windows and reset the derivative
-reference. When $q=0$, the accuracy mode explicitly schedules fresh reduction
+reference. When $`q=0`$, the accuracy mode explicitly schedules fresh reduction
 on every call, overriding the inner observation interval. This zero-reuse
 behavior is specific to accuracy mode; the original time comparator is unchanged.
 Consequently this compares complete schedulers, not an ablation that changes
@@ -482,19 +514,23 @@ runtime history; the administrator's choice overrides local policy preferences.
 ## Measuring CPU expense
 
 The adjacent `pid-cost` figure uses the same feedback observations as
-`pid-feedback`. Every strategy measurement records wall duration $W$ using
-`time.perf_counter()` and process CPU duration $C$ using `time.process_time()`.
+`pid-feedback`. Every strategy measurement records wall duration $`W`$ using
+`time.perf_counter()` and process CPU duration $`C`$ using `time.process_time()`.
 The second CPU figure applies the same measurements to churn, graph size and
 quotient size, including both complete selectors.
 
-$$\text{average millicores}=1000\frac{C}{W},\qquad
-\text{millicore-seconds per calculation}=1000C.$$
+```math
+\begin{aligned}
+\text{average millicores} &= 1000\frac{C}{W}, \\
+\text{millicore-seconds per calculation} &= 1000C.
+\end{aligned}
+```
 
 Average millicores answers how many cores were occupied **while that calculation
 was running**. Integrated millicore-seconds answers how much CPU work it consumed.
 Two single-threaded methods can both use roughly 1000m, while one consumes ten
 times less work because it finishes ten times sooner. The relative-cost panel
-plots $C_{method}/C_{fresh}$ against fresh spectral at the same seed, repetition
+plots $`C_{\mathrm{method}}/C_{\mathrm{fresh}}`$ against fresh spectral at the same seed, repetition
 and observation; it does not divide independently pooled medians.
 
 CPU time includes the Python process's native threads, so multicore numerical
@@ -515,10 +551,12 @@ measurements are explicitly labeled as uncollected, never assigned zero cost.
 
 The production gate uses Jaccard edge distance:
 
-$$\rho_E=\frac{|E_0\triangle E_t|}{|E_0\cup E_t|}.$$
+```math
+\rho_E = \frac{|E_0 \triangle E_t|}{|E_0 \cup E_t|}.
+```
 
-Replacing a fraction $r$ of edges is not the same quantity. For feasible disjoint
-replacements at fixed edge count, $\rho_E=2r/(1+r)$. Finite edge counts round the
+Replacing a fraction $`r`$ of edges is not the same quantity. For feasible disjoint
+replacements at fixed edge count, $`\rho_E=2r/(1+r)`$. Finite edge counts round the
 requested number of changes, and a saturated graph may permit fewer. The study
 adds a replacement edge before removing an original edge, so trees can also
 change while remaining connected. Every record contains both the request and
