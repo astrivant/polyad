@@ -66,7 +66,7 @@ operator:
     # Rule/throughput cheegerComputation settings may only reduce these ceilings.
     ## @param operator.cheeger.timeoutSeconds [number] Cooperative runtime ceiling per calculation, checked between batches. Incomplete search is never an exact constant.
     timeoutSeconds: 5
-    ## @param operator.cheeger.reduction [object] Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search. A GraphRule or throughput policy must separately set cheegerComputation.reduction.enabled.
+    ## @param operator.cheeger.reduction [object] Default-off administrator gate and ceilings for certificate-preserving cached quotient and fresh spectral search. A GraphPolicy or throughput policy must separately set cheegerComputation.reduction.enabled.
     reduction:
       ## @param operator.cheeger.reduction.enabled [boolean] Permit policy authors to request the reduction tiers. False preserves exact-only behavior.
       enabled: false

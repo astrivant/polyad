@@ -30,7 +30,7 @@
 ReplicaGroups can also replicate PolyGraph templates that place child Graphs in
 remote clusters. Each copy owns its complete composition, while destination
 operators enforce cluster-local rules. See
-[cross-cluster placement and scaling](../deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling).
+[cross-cluster placement and scaling](../deployment/multicluster.md#graphpolicies-cheeger-bounds-and-scaling).
 
 A **ReplicaGroup** is a scalable family of copies. Its template can reference a
 `Workload`, `Daemon`, `Resource`, `Graph`, `PolyGraph`, or another `ReplicaGroup`.
@@ -59,7 +59,7 @@ flowchart LR
 ```
 
 This diagram shows one cluster. The
-[multicluster scaling diagram](../deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling)
+[multicluster scaling diagram](../deployment/multicluster.md#graphpolicies-cheeger-bounds-and-scaling)
 extends it to PolyGraph copies that own remote Graphs, with separate destination
 operators and local rule checks.
 
@@ -298,7 +298,7 @@ For each example, adapt the [KEDA ScaledObject](#connect-keda) by setting both i
 groups have bounds 0–20, matching that example. Choose an actual demand metric
 for the layer being scaled; the sample metric URL is not created by these
 manifests. Counts describe desired steady state after admission. Applicable
-[GraphRules are checked before creating or retiring copies](#constraints-before-scaling)
+[GraphPolicies are checked before creating or retiring copies](#constraints-before-scaling)
 throughout the hierarchy, and can block an otherwise in-bounds request.
 
 ## Connections between copies
@@ -334,7 +334,7 @@ spec:
         protocol: TCP
   network:
     allowWithin: false
-  rules: [replica-bottlenecks]
+  policies: [replica-bottlenecks]
 ```
 
 | Field | Default | Meaning and constraints |
@@ -389,7 +389,7 @@ Pods. Connections also do not create Services, DNS names, forwarding, or load
 balancing. Applications provide their addressing and communication behavior;
 see [graph networking](../deployment/networking.md#isolating-a-subgraph).
 
-GraphRules with `relation: connections` evaluate these same boundaries. A rule
+GraphPolicies with `relation: connections` evaluate these same boundaries. A rule
 evaluated at a three-copy ReplicaGroup sees three vertices and the selected
 inter-copy edges for its Cheeger calculation. Rules evaluated inside a Graph or
 PolyGraph copy see that copy's own nodes and edges. The outer calculation does
@@ -1511,11 +1511,11 @@ and show retiring copies until their resources disappear.
 
 These are declared data-flow connections, not application wiring or service
 discovery. Ports become transport grants only when a network policy is selected
-on the boundary, directly or through a GraphRule. Omitted ports grant no traffic.
+on the boundary, directly or through a GraphPolicy. Omitted ports grant no traffic.
 Use `network.allowWithin: false` to restrict traffic to explicit grants; ancestor
 policies can narrow them further. See [graph networking](../deployment/networking.md).
 
-Select `relation: connections` on a GraphRule to measure these edges. For four
+Select `relation: connections` on a GraphPolicy to measure these edges. For four
 copies, the exact Cheeger constants are 0 (Independent), 0.5 (Chain), 1 (Ring),
 1 (Star), and 2 (FullMesh). Directions and ports do not weight the Cheeger
 calculation. A minimum limits bottlenecks; a maximum limits how highly connected
@@ -1524,7 +1524,7 @@ the weakest cut can be. For example, a Ring with four or five copies satisfies
 
 ```yaml
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: replica-bottlenecks
 spec:
@@ -1683,9 +1683,9 @@ with `kind`, `name`, `node` and `signal` labels.
 ## Constraints before scaling
 
 KEDA supplies a requested count through `/scale`; Polyad decides whether the
-resulting execution topology satisfies [GraphRules](graph-rules.md#polygraphs-and-autoscaling).
+resulting execution topology satisfies [GraphPolicies](graph-policies.md#polygraphs-and-autoscaling).
 The rule check runs again before each execution creation and scale-in deletion,
-using fresh graph specifications and owned children. PolyGraph rules participate
+using fresh graph specifications and owned children. PolyGraph policies participate
 in these checks, including a parent's
 recursive limits declared with `scope: Boundary`.
 
@@ -1693,7 +1693,7 @@ recursive limits declared with `scope: Boundary`.
 flowchart LR
     demand["KEDA / HPA<br/>requested replicas"] --> inputs["Refresh owning family<br/>rules, sources, siblings, children"]
     inputs --> compute["Recompute size, shape,<br/>spectrum and Cheeger bounds"]
-    compute --> valid{"All selected rules pass<br/>and input revisions still match?"}
+    compute --> valid{"All selected policies pass<br/>and input revisions still match?"}
     valid -->|yes| action["Create or retire a replica"]
     valid -->|no| blocked["Preserve existing execution<br/>retry after intent or policy changes"]
     action -. "before the next mutation" .-> inputs
@@ -1706,7 +1706,7 @@ request does not begin deletion; lower bounds and required shapes can prevent
 scaling to zero. Rejections leave `spec.replicas` as requested so the desired and
 observed counts can differ. `scaleCurrent: false` marks a failed or deferred
 reconciliation; group scalar metrics return 503 while this observation is not
-current. Successful `structuralRules` reports include the boundary identity for
+current. Successful `structuralPolicies` reports include the boundary identity for
 each evaluated rule.
 
 ReplicaGroup edges follow its [connectivity mode](#connections-between-copies).
@@ -1715,7 +1715,7 @@ Custom edges can satisfy positive bounds. Select `relation: connections` to
 evaluate them. The enclosing PolyGraph's Cheeger value still describes its
 declared inter-graph connections at that boundary.
 Place a Cheeger bound on the intended boundary with `scope: Boundary` when it
-should not propagate to the replica groups. Other subtree and namespace rules
+should not propagate to the replica groups. Other subtree and namespace policies
 continue to apply.
 
 A `Daemon` selects a Deployment (default) or StatefulSet using
@@ -1739,7 +1739,7 @@ drain workloads.
 
 ReplicaGroup uses the graph's existing ordered mutation queue and root-family
 shard. Copies inherit placement, network isolation, capacity planning and
-structural rules. Nested replication is evaluated against the graph family's
+structural policies. Nested replication is evaluated against the graph family's
 size and nesting limits before admission. Each group supports at most 256 copies;
 its default upper bound is 32. All instances in one graph family remain serialized.
 Use independent root groups to distribute duties across operator shards.

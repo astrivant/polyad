@@ -1,0 +1,187 @@
+# yaml-language-server: $schema=values.reference.schema.json
+# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.
+# GraphPolicy field catalog. This overlay creates no instances.
+# Copy selected fields into your values; optional alternatives may be mutually exclusive.
+# Required means required within its containing object when that object is supplied.
+# Explicit CRD defaults are labeled; other values are placeholders, not defaults.
+# Names default to the map key and namespaces to .Release.Namespace.
+# Every field accepts tpl; e.g. '{{ .Values.graphs.pipeline.metadata.name }}'.
+## @param graphPolicies [object] Named GraphPolicy instances; empty by default. Copy selected fields below to configure one.
+graphPolicies: {}
+
+# BEGIN RESOURCE EXAMPLE
+# ## @section GraphPolicy field reference
+# ## @param graphPolicies [object] GraphPolicy instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.
+# graphPolicies:
+#   ## @param graphPolicies.example [object] Constrain graph structure and spectrum across an operator namespace. Grants no workload execution by itself.
+#   example:
+#     ## @param graphPolicies.example.metadata [object, string] Optional. No CRD default; the value shown is illustrative.
+#     metadata:
+#       ## @param graphPolicies.example.metadata.name [string] Optional. No CRD default; the value shown is illustrative.
+#       name: "example"
+#       ## @param graphPolicies.example.metadata.namespace [string] Optional. No CRD default; the value shown is illustrative.
+#       namespace: "example"
+#       ## @param graphPolicies.example.metadata.labels [object, string] Optional. No CRD default; the value shown is illustrative.
+#       labels: {}
+#       ## @param graphPolicies.example.metadata.annotations [object, string] Optional. No CRD default; the value shown is illustrative.
+#       annotations: {}
+#     ## @param graphPolicies.example.spec [object, string] Required. No CRD default; the value shown is illustrative. Engineer-controlled structural constraints applied before scheduler admission. Namespace defaults cannot be opted out of by compositions.
+#     spec:
+#       ## @param graphPolicies.example.spec.cheegerComputation [object, string] Optional. No CRD default; the value shown is illustrative. Budget exact search and optionally try certified quotient reductions first.
+#       cheegerComputation:
+#         ## @param graphPolicies.example.spec.cheegerComputation.maxVertices [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         maxVertices: 2
+#         ## @param graphPolicies.example.spec.cheegerComputation.maxCuts [integer, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         maxCuts: 1
+#         ## @param graphPolicies.example.spec.cheegerComputation.timeoutSeconds [number, string, nullable] Optional. No CRD default; the value shown is illustrative.
+#         timeoutSeconds: 0.001
+#         ## @param graphPolicies.example.spec.cheegerComputation.priorityCuts [array, string] Optional. No CRD default; the value shown is illustrative. Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
+#         priorityCuts: []
+#         ## @param graphPolicies.example.spec.cheegerComputation.reduction [object, string] Optional. No CRD default; the value shown is illustrative. Configure the opt-in, certificate-preserving Cheeger reduction tiers.
+#         reduction:
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.enabled [boolean, string] Optional. No CRD default; the value shown is illustrative. Request reduced search before exact enumeration. The operator must also enable it.
+#           enabled: false
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.maxVertices [integer, string] Optional. No CRD default; the value shown is illustrative. Largest boundary admitted to dense spectral reduction.
+#           maxVertices: 2
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.components [integer, string] Optional. No CRD default; the value shown is illustrative. Nontrivial Laplacian eigenvectors retained by fresh spectral reduction.
+#           components: 1
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.supernodes [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum quotient vertices searched before exact enumeration.
+#           supernodes: 2
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.cache [boolean, string] Optional. No CRD default; the value shown is illustrative. Reevaluate a recently cached quotient partition on the current graph first.
+#           cache: false
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.cacheEntries [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum process-local partitions retained by the operator.
+#           cacheEntries: 1
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.maxEdgeChurn [number, string] Optional. No CRD default; the value shown is illustrative. Largest changed-edge fraction eligible for cached partition reuse.
+#           maxEdgeChurn: 0
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.strategy [string] Optional. No CRD default; the value shown is illustrative. Choices: "AdaptivePID", "CacheFirst". Preferred scheduler; either operator or policy can select legacy CacheFirst.
+#           strategy: "AdaptivePID"
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.targetSeconds [number, string] Optional. No CRD default; the value shown is illustrative. Soft mean computation-time goal; the operator value governs when administrator limits are supplied.
+#           targetSeconds: 1e-06
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.feedback [string] Optional. No CRD default; the value shown is illustrative. Choices: "CertificateGap", "ComputationTime". Adaptive PID objective; the administrator chooses the effective signal.
+#           feedback: "CertificateGap"
+#           ## @param graphPolicies.example.spec.cheegerComputation.reduction.targetRelativeError [number, string] Optional. No CRD default; the value shown is illustrative. Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee.
+#           targetRelativeError: 1e-06
+#       ## @param graphPolicies.example.spec.scope [string] Optional. Default: "Subtree". Choices: "Boundary", "Subtree". Boundary applies locally; Subtree propagates. Namespace policies select every boundary.
+#       scope: "Subtree"
+#       ## @param graphPolicies.example.spec.network [object, string] Optional. No CRD default; the value shown is illustrative. Isolate a graph subtree and intersect its exceptions with inherited constraints.
+#       network:
+#         ## @param graphPolicies.example.spec.network.scope [string] Optional. No CRD default; the value shown is illustrative. Choices: "Boundary", "Subtree". Apply to direct workloads or propagate to all descendant workloads.
+#         scope: "Boundary"
+#         ## @param graphPolicies.example.spec.network.ingress [array, string] Optional. No CRD default; the value shown is illustrative. Additional allowed inbound traffic.
+#         ingress:
+#           -
+#             ## @param graphPolicies.example.spec.network.ingress[].peer [object, string] Required. No CRD default; the value shown is illustrative. Select peers in an explicit namespace, optionally by graph or pod labels.
+#             peer:
+#               ## @param graphPolicies.example.spec.network.ingress[].peer.namespace [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               namespace: "example"
+#               ## @param graphPolicies.example.spec.network.ingress[].peer.graph [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               graph: "example"
+#               ## @param graphPolicies.example.spec.network.ingress[].peer.kind [string] Optional. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Kind of the referenced graph instance.
+#               kind: "Graph"
+#               ## @param graphPolicies.example.spec.network.ingress[].peer.node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               node: "example"
+#               ## @param graphPolicies.example.spec.network.ingress[].peer.podLabels [object, string] Optional. No CRD default; the value shown is illustrative. Additional exact pod-label matches, combined with graph selection.
+#               podLabels: {}
+#               ## @param graphPolicies.example.spec.network.ingress[].peer.cluster [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               cluster: "example"
+#             ## @param graphPolicies.example.spec.network.ingress[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination ports; empty means every transport port.
+#             ports:
+#               -
+#                 ## @param graphPolicies.example.spec.network.ingress[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                 port: 1
+#                 ## @param graphPolicies.example.spec.network.ingress[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                 protocol: "TCP"
+#             ## @param graphPolicies.example.spec.network.ingress[].node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             node: "example"
+#             ## @param graphPolicies.example.spec.network.ingress[].principals [array, string] Optional. No CRD default; the value shown is illustrative. Exact Istio source identities such as cluster.local/ns/team/sa/client.
+#             principals: []
+#             ## @param graphPolicies.example.spec.network.ingress[].methods [array, string] Optional. No CRD default; the value shown is illustrative. Allowed inbound HTTP methods; empty leaves methods unconstrained.
+#             methods: []
+#             ## @param graphPolicies.example.spec.network.ingress[].paths [array, string] Optional. No CRD default; the value shown is illustrative. Exact inbound HTTP paths; empty leaves paths unconstrained.
+#             paths: []
+#         ## @param graphPolicies.example.spec.network.egress [array, string] Optional. No CRD default; the value shown is illustrative. Additional allowed outbound traffic.
+#         egress:
+#           -
+#             ## @param graphPolicies.example.spec.network.egress[].peer [object, string] Required. No CRD default; the value shown is illustrative. Select peers in an explicit namespace, optionally by graph or pod labels.
+#             peer:
+#               ## @param graphPolicies.example.spec.network.egress[].peer.namespace [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               namespace: "example"
+#               ## @param graphPolicies.example.spec.network.egress[].peer.graph [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               graph: "example"
+#               ## @param graphPolicies.example.spec.network.egress[].peer.kind [string] Optional. No CRD default; the value shown is illustrative. Choices: "Graph", "PolyGraph", "ReplicaGroup". Kind of the referenced graph instance.
+#               kind: "Graph"
+#               ## @param graphPolicies.example.spec.network.egress[].peer.node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               node: "example"
+#               ## @param graphPolicies.example.spec.network.egress[].peer.podLabels [object, string] Optional. No CRD default; the value shown is illustrative. Additional exact pod-label matches, combined with graph selection.
+#               podLabels: {}
+#               ## @param graphPolicies.example.spec.network.egress[].peer.cluster [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#               cluster: "example"
+#             ## @param graphPolicies.example.spec.network.egress[].ports [array, string] Optional. No CRD default; the value shown is illustrative. Destination ports; empty means every transport port.
+#             ports:
+#               -
+#                 ## @param graphPolicies.example.spec.network.egress[].ports[].port [integer, string] Required. No CRD default; the value shown is illustrative. Destination transport port.
+#                 port: 1
+#                 ## @param graphPolicies.example.spec.network.egress[].ports[].protocol [string] Optional. No CRD default; the value shown is illustrative. Choices: "TCP", "UDP", "SCTP". Transport protocol.
+#                 protocol: "TCP"
+#             ## @param graphPolicies.example.spec.network.egress[].node [string, nullable] Optional. No CRD default; the value shown is illustrative.
+#             node: "example"
+#             ## @param graphPolicies.example.spec.network.egress[].principals [array, string] Optional. No CRD default; the value shown is illustrative. Exact Istio source identities such as cluster.local/ns/team/sa/client.
+#             principals: []
+#             ## @param graphPolicies.example.spec.network.egress[].methods [array, string] Optional. No CRD default; the value shown is illustrative. Allowed inbound HTTP methods; empty leaves methods unconstrained.
+#             methods: []
+#             ## @param graphPolicies.example.spec.network.egress[].paths [array, string] Optional. No CRD default; the value shown is illustrative. Exact inbound HTTP paths; empty leaves paths unconstrained.
+#             paths: []
+#         ## @param graphPolicies.example.spec.network.isolateIngress [boolean, string] Optional. No CRD default; the value shown is illustrative. Restrict incoming connections.
+#         isolateIngress: false
+#         ## @param graphPolicies.example.spec.network.isolateEgress [boolean, string] Optional. No CRD default; the value shown is illustrative. Restrict outgoing connections.
+#         isolateEgress: false
+#         ## @param graphPolicies.example.spec.network.allowWithin [boolean, string] Optional. No CRD default; the value shown is illustrative. Allow traffic between all workloads inside this boundary.
+#         allowWithin: false
+#         ## @param graphPolicies.example.spec.network.allowDNS [boolean, string] Optional. No CRD default; the value shown is illustrative. Allow TCP/UDP 53 to kube-system pods labeled k8s-app=kube-dns.
+#         allowDNS: false
+#         ## @param graphPolicies.example.spec.network.mesh [boolean, string] Optional. No CRD default; the value shown is illustrative. Require Istio injection, strict mutual TLS and inbound authorization.
+#         mesh: false
+#       ## @param graphPolicies.example.spec.enforcement [string] Optional. Default: "Namespace". Choices: "Namespace", "Referenced". Namespace policies always apply. Referenced policies apply when named by this graph or an ancestor.
+#       enforcement: "Namespace"
+#       ## @param graphPolicies.example.spec.relation [string] Optional. Default: "admission". Choices: "admission", "connections". Relation measured independently inside every graph boundary.
+#       relation: "admission"
+#       ## @param graphPolicies.example.spec.limits [object, string] Optional. No CRD default; the value shown is illustrative. Inclusive structural maxima; omitted fields impose no bound.
+#       limits:
+#         ## @param graphPolicies.example.spec.limits.nodes [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum vertices in each immediate boundary, including isolated vertices.
+#         nodes: 0
+#         ## @param graphPolicies.example.spec.limits.edges [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum distinct directed edges of the selected relation; self-loops count.
+#         edges: 0
+#         ## @param graphPolicies.example.spec.limits.depth [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum layers in the SCC condensation DAG. Admission is already acyclic.
+#         depth: 0
+#         ## @param graphPolicies.example.spec.limits.breadth [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum number of SCCs in an earliest topological layer; not maximum antichain width.
+#         breadth: 0
+#         ## @param graphPolicies.example.spec.limits.fanIn [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum directed in-degree.
+#         fanIn: 0
+#         ## @param graphPolicies.example.spec.limits.fanOut [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum directed out-degree.
+#         fanOut: 0
+#         ## @param graphPolicies.example.spec.limits.cycleRank [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum m - n + c of the simple undirected projection, excluding self-loops.
+#         cycleRank: 0
+#         ## @param graphPolicies.example.spec.limits.strongComponent [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum vertices in one strongly connected component.
+#         strongComponent: 0
+#         ## @param graphPolicies.example.spec.limits.expandedNodes [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum recursively expanded vertex occurrences, counting boundary vertices and repeated instances.
+#         expandedNodes: 0
+#         ## @param graphPolicies.example.spec.limits.nestingDepth [integer, string] Optional. No CRD default; the value shown is illustrative. Maximum nested boundary layers including this boundary as layer one.
+#         nestingDepth: 0
+#       ## @param graphPolicies.example.spec.shapes [array, string] Optional. No CRD default; the value shown is illustrative. Required shapes. Acyclic tests the directed relation; connected, tree and planar test the simple undirected projection.
+#       shapes: []
+#       ## @param graphPolicies.example.spec.cheeger [object, string] Optional. No CRD default; the value shown is illustrative. Exact unnormalized edge expansion on the simple undirected projection; computation budgets default to 20 vertices.
+#       cheeger:
+#         ## @param graphPolicies.example.spec.cheeger.minimum [number, string] Optional. No CRD default; the value shown is illustrative. Inclusive lower bound on the sparsest cut ratio. Every cut must have at least this many crossing edges per vertex on its smaller side; raising the bound rejects more severe bottlenecks.
+#         minimum: 0
+#         ## @param graphPolicies.example.spec.cheeger.maximum [number, string] Optional. No CRD default; the value shown is illustrative. Inclusive upper bound on the sparsest cut ratio. Requires some cut with at most this many crossing edges per vertex on its smaller side; does not protect against bottlenecks.
+#         maximum: 0
+#       # Constraint: Cheeger minimum must not exceed maximum.
+#       ## @param graphPolicies.example.spec.spectrum [object, string] Optional. No CRD default; the value shown is illustrative. Spectral bounds on the simple undirected, unweighted projection with self-loops removed. At most 256 vertices; relative tolerance 1e-9.
+#       spectrum:
+#         ## @param graphPolicies.example.spec.spectrum.maxRadius [number, string] Optional. No CRD default; the value shown is illustrative. Maximum absolute adjacency eigenvalue.
+#         maxRadius: 0
+#         ## @param graphPolicies.example.spec.spectrum.minConnectivity [number, string] Optional. No CRD default; the value shown is illustrative. Minimum second-smallest combinatorial Laplacian eigenvalue; zero for fewer than two vertices.
+#         minConnectivity: 0
+#         ## @param graphPolicies.example.spec.spectrum.maxLaplacian [number, string] Optional. No CRD default; the value shown is illustrative. Maximum combinatorial Laplacian eigenvalue.
+#         maxLaplacian: 0
+# END RESOURCE EXAMPLE

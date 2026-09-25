@@ -31,8 +31,8 @@ See the [gateway traffic path](multicluster.md#istio-across-different-networks)
 and [direct Pod routing path](multicluster.md#same-network-clusters) for diagrams
 of the policies and sidecars involved at each end.
 
-For every `GraphRule` field, default, validation constraint and configuration
-diagram, see the [graph rules guide](../graphs/graph-rules.md#network-contracts). This guide
+For every `GraphPolicy` field, default, validation constraint and configuration
+diagram, see the [graph policies guide](../graphs/graph-policies.md#network-contracts). This guide
 covers how traffic contracts are compiled, enforced and operated.
 
 For optional percentage routing **between graph replicas**, see
@@ -45,10 +45,10 @@ Selection and propagation answer different questions:
 
 | Setting | Meaning |
 | --- | --- |
-| `GraphRule.spec.enforcement: Namespace` | Select this engineer-owned rule at every boundary in the namespace; the default. |
-| `GraphRule.spec.enforcement: Referenced` | Select the rule through a graph's `spec.rules`. |
-| `GraphRule.spec.scope: Subtree` | Propagate a selected rule through nested boundaries; the default. |
-| `GraphRule.spec.scope: Boundary` | Evaluate the rule at the selecting boundary without propagating the reference. |
+| `GraphPolicy.spec.enforcement: Namespace` | Select this engineer-owned rule at every boundary in the namespace; the default. |
+| `GraphPolicy.spec.enforcement: Referenced` | Select the rule through a graph's `spec.policies`. |
+| `GraphPolicy.spec.scope: Subtree` | Propagate a selected rule through nested boundaries; the default. |
+| `GraphPolicy.spec.scope: Boundary` | Evaluate the rule at the selecting boundary without propagating the reference. |
 | `network.scope: Subtree` | Apply a network contract to direct workloads and all descendant workloads; the default. |
 | `network.scope: Boundary` | Apply a network contract only to direct workload nodes. |
 
@@ -64,7 +64,7 @@ At a remote PolyGraph node, inheritance and recursive rule expansion stop.
 The remote boundary counts as one local vertex; its executing operator evaluates
 its descendants using destination-cluster rules. Remote connections require
 explicit endpoint traffic contracts, as described in the
-[multicluster rule scope](multicluster.md#graphrules-cheeger-bounds-and-scaling).
+[multicluster rule scope](multicluster.md#graphpolicies-cheeger-bounds-and-scaling).
 
 For each workload, the operator walks refreshed Kubernetes owner references and
 intersects all applicable contracts. Each contract contains a union of allowed
@@ -83,7 +83,7 @@ See [Kubernetes NetworkPolicy semantics](https://kubernetes.io/docs/concepts/ser
 
 ## Isolating a subgraph
 
-Attach `network` to a `Graph`, `PolyGraph`, or `GraphRule` specification. A rewrite can replace it through `spec.topology`.
+Attach `network` to a `Graph`, `PolyGraph`, or `GraphPolicy` specification. A rewrite can replace it through `spec.topology`.
 The public Python types are `NetworkAccess`, `NetworkPeer`, `NetworkPort` and
 `TrafficRule`; their attrs fields generate the CRD schemas.
 

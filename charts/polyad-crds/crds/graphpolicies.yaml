@@ -1,14 +1,14 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: graphrules.polyad.astrivant.com
+  name: graphpolicies.polyad.astrivant.com
 spec:
   group: polyad.astrivant.com
   scope: Namespaced
   names:
-    kind: GraphRule
-    plural: graphrules
-    singular: graphrule
+    kind: GraphPolicy
+    plural: graphpolicies
+    singular: graphpolicy
   versions:
   - name: v1alpha1
     served: true
@@ -24,7 +24,7 @@ spec:
             description: Polyad API group and version.
           kind:
             type: string
-            description: 'Custom resource kind: GraphRule.'
+            description: 'Custom resource kind: GraphPolicy.'
           metadata:
             type: object
           spec:
@@ -133,7 +133,7 @@ spec:
                 - Boundary
                 - Subtree
                 default: Subtree
-                description: Boundary applies locally; Subtree propagates. Namespace rules select every boundary.
+                description: Boundary applies locally; Subtree propagates. Namespace policies select every boundary.
               network:
                 type: object
                 description: Isolate a graph subtree and intersect its exceptions with inherited constraints.
@@ -329,7 +329,7 @@ spec:
                     description: Require Istio injection, strict mutual TLS and inbound authorization.
               enforcement:
                 type: string
-                description: Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor.
+                description: Namespace policies always apply. Referenced policies apply when named by this graph or an ancestor.
                 enum:
                 - Namespace
                 - Referenced

@@ -10,11 +10,11 @@ from polyad.graph.metrics import topology_metrics as topology_metrics
 from polyad.graph.operations import Operation as Operation
 from polyad.graph.operations import OperationQueue as OperationQueue
 from polyad.graph.operations import ProcessOwner as ProcessOwner
+from polyad.graph.policies import evaluate_policy as evaluate_policy
+from polyad.graph.policies import graph_cheeger as graph_cheeger
+from polyad.graph.policies import graph_spectrum as graph_spectrum
 from polyad.graph.rewrites import Rewrite as Rewrite
 from polyad.graph.rewrites import RewriteRegistry as RewriteRegistry
-from polyad.graph.rules import evaluate_rule as evaluate_rule
-from polyad.graph.rules import graph_cheeger as graph_cheeger
-from polyad.graph.rules import graph_spectrum as graph_spectrum
 from polyad.graph.shutdown import Finalizer as Finalizer
 from polyad.graph.shutdown import ShutdownContract as ShutdownContract
 from polyad.graph.shutdown import ShutdownState as ShutdownState
@@ -27,15 +27,15 @@ from polyad.graph.workloads import Workload as Workload
 from polyad_types.graphs.activation import ActivationPolicy as ActivationPolicy
 from polyad_types.graphs.capacity import CapacityPlan as CapacityPlan
 from polyad_types.graphs.capacity import CapacityTuning as CapacityTuning
+from polyad_types.graphs.policies import Cheeger as Cheeger
+from polyad_types.graphs.policies import CheegerComputation as CheegerComputation
+from polyad_types.graphs.policies import CheegerReduction as CheegerReduction
+from polyad_types.graphs.policies import Spectrum as Spectrum
+from polyad_types.graphs.policies import StructuralPolicy as StructuralPolicy
 from polyad_types.graphs.replication import ReplicaConnection as ReplicaConnection
 from polyad_types.graphs.replication import ReplicaConnectivity as ReplicaConnectivity
 from polyad_types.graphs.replication import ReplicaTemplate as ReplicaTemplate
 from polyad_types.graphs.replication import Replication as Replication
-from polyad_types.graphs.rules import Cheeger as Cheeger
-from polyad_types.graphs.rules import CheegerComputation as CheegerComputation
-from polyad_types.graphs.rules import CheegerReduction as CheegerReduction
-from polyad_types.graphs.rules import Spectrum as Spectrum
-from polyad_types.graphs.rules import StructuralRule as StructuralRule
 from polyad_types.graphs.topology import Connection as Connection
 from polyad_types.graphs.topology import Dependency as Dependency
 from polyad_types.graphs.topology import GraphNode as GraphNode
@@ -86,12 +86,12 @@ __all__ = (
     "ShutdownState",
     "Spectrum",
     "Statistics",
-    "StructuralRule",
+    "StructuralPolicy",
     "Topology",
     "TrafficRule",
     "Work",
     "Workload",
-    "evaluate_rule",
+    "evaluate_policy",
     "graph_cheeger",
     "graph_spectrum",
     "measure_topology",

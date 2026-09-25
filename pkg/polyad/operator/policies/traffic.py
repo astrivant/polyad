@@ -14,7 +14,7 @@ from polyad.compiler.passes.network import scope_label
 from polyad.compiler.passes.traffic import route_specs
 from polyad.exceptions.reconciliation import Pending
 from polyad.operator.observability.decisions import decision
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types import resources as asts
 from polyad_types.graphs.topology import topology
@@ -127,7 +127,7 @@ async def ensure_routes(controller: Controller, obj: dict[str, Any]) -> None:
             raise Pending("graph changed before traffic routing could be applied")
         if current["metadata"].get("deletionTimestamp"):
             raise Pending("graph is deleting; traffic routing is paused")
-        await check_live_rules(controller.api, current)
+        await check_live_policies(controller.api, current)
 
     wanted = set()
     changed = False

@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=../values.reference.schema.json
-# GraphRule cheegerComputation.reduction.enabled must also be true.
+# GraphPolicy cheegerComputation.reduction.enabled must also be true.
 # Guide: ../../../docs/graphs/cheeger-tuning.md
 # PID changes scheduling only. Inconclusive certificates still require exact search.
 ## @param operator [object] Operator-owned structural computation controls.

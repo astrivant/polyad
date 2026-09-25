@@ -62,7 +62,7 @@ network access or operator RBAC is required.<sup>[\[2\]](https://argo-cd.readthe
 | Missing status, stale generation or incomplete descendant observations | Progressing |
 | Failed leaf, failed subgraph or invalid graph | Degraded |
 | Suspended or stopped graph, including an observed suspended descendant | Suspended |
-| Reusable Workload, Daemon, Resource, Gate, ShutdownPolicy, GraphRule or `templateOnly` graph | Healthy, with a reusable-definition message |
+| Reusable Workload, Daemon, Resource, Gate, ShutdownPolicy, GraphPolicy or `templateOnly` graph | Healthy, with a reusable-definition message |
 | Applied Rewrite | Healthy; execution belongs to the target graph |
 | Composition receipt | Its mirrored root lifecycle: Healthy, Progressing or Degraded |
 

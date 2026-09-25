@@ -113,7 +113,7 @@ def test_demand_prepares_layout_and_capacity_before_a_shortfall(monkeypatch, mod
     async def run():
         api = profiles(mode)
         before = copy.deepcopy(api.objects[("Graph", "test", "pipeline")]["spec"])
-        rules = copy.deepcopy(api.objects[("GraphRule", "test", "hard")])
+        rules = copy.deepcopy(api.objects[("GraphPolicy", "test", "hard")])
         assert not (await feed(api, 0, completed=200))[0]
         changed, obj = await feed(api, 10, completed=200)
         status = obj["status"]["throughput"]
@@ -125,7 +125,7 @@ def test_demand_prepares_layout_and_capacity_before_a_shortfall(monkeypatch, mod
             expected["connections"] = [{**edge, "ports": []} for edge in before["throughput"]["layouts"][0]["connections"]]
             expected["capacity"].update(lookaheadStages=3, maxPods=16)
         assert obj["spec"] == expected
-        assert api.objects[("GraphRule", "test", "hard")] == rules
+        assert api.objects[("GraphPolicy", "test", "hard")] == rules
 
     asyncio.run(run())
 
@@ -212,7 +212,7 @@ def test_capacity_only_profile_does_not_require_an_explicit_connections_field(mo
         spec["throughput"]["layouts"] = []
         for tier in spec["throughput"]["tiers"]:
             tier["cheeger"] = {"minimum": 0}
-        api.objects[("GraphRule", "test", "hard")]["spec"]["cheeger"] = {"minimum": 0}
+        api.objects[("GraphPolicy", "test", "hard")]["spec"]["cheeger"] = {"minimum": 0}
         await feed(api, 0, completed=200)
         changed, obj = await feed(api, 10, completed=200)
         assert changed and "connections" not in obj["spec"]

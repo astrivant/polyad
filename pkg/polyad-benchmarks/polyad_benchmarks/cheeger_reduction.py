@@ -97,7 +97,7 @@ def exact_cut(graph: nx.Graph[int]) -> CutMeasurement:
         subset = next_subset
 
         # Normalize by the smaller side, not by edge volume: this is the same
-        # unnormalized expansion metric that production GraphRules constrain.
+        # unnormalized expansion metric that production GraphPolicies constrain.
         count = bit_count(subset)
         value = boundary / min(count, size - count)
         if value < best:

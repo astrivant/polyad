@@ -57,6 +57,42 @@ def test_cross_resource_references_and_crd_defaults(tmp_path):
     assert not DeepDiff(resources, inherited, ignore_order=True)
 
 
+@pytest.mark.parametrize("parent", [False, True])
+def test_graph_policy_names_and_references_render_consistently(tmp_path, parent):
+    """
+    Render the renamed policy map and references through both supported Helm entry points.
+    """
+    values = {
+        "graphPolicies": {"budget": {"spec": {"enforcement": "Referenced", "limits": {"nodes": 8}}}},
+        "graphs": {"pipeline": {"spec": {"nodes": [], "policies": ["budget"]}}},
+        "replicaGroups": {
+            "copies": {"spec": {"template": {"kind": "Graph", "ref": "pipeline"}, "policies": ["budget"]}},
+        },
+    }
+    resources = [item for item in render(tmp_path, values, parent=parent) if item["metadata"]["name"] in {"budget", "pipeline", "copies"}]
+    by_kind = {item["kind"]: item for item in resources}
+    assert set(by_kind) == {"GraphPolicy", "Graph", "ReplicaGroup"}
+    assert by_kind["GraphPolicy"]["spec"]["limits"] == {"nodes": 8}
+    assert all(by_kind[kind]["spec"]["policies"] == ["budget"] for kind in ("Graph", "ReplicaGroup"))
+    for item in resources:
+        jsonschema.validate(item, resource_schema(item["kind"]))
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"graphRules": {}},
+        {"graphPolicys": {}},
+        {"graphs": {"pipeline": {"spec": {"nodes": [], "rules": ["budget"]}}}},
+    ],
+)
+def test_graph_policy_chart_rejects_retired_and_misspelled_names(tmp_path, values):
+    """
+    Reject old value keys and reference fields instead of silently retaining compatibility aliases.
+    """
+    assert "additional propert" in render(tmp_path, values, success=False).lower()
+
+
 def test_templates_preserve_false_zero_and_materialize_objects(tmp_path):
     """
     Do not replace explicit false/zero with defaults or create absent optional controllers.

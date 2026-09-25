@@ -195,7 +195,7 @@ The pending registry belongs to one API adapter and remains in memory. It stores
 resource identities, fences and private request digests, not request bodies or
 credentials. Across operator replicas and separate adapters, existing shard
 leases and Kubernetes preconditions still coordinate writes. Root authority,
-local remote-scaling consent and GraphRules continue to apply.
+local remote-scaling consent and GraphPolicies continue to apply.
 
 Rejected requests emit the structured
 [`polyad.kubernetes.write_deferred` decision log](../operations/tracing.md#decision-and-conflict-logs)

@@ -140,7 +140,7 @@ Use a deterministic weighted score as the initial policy:
 1. **Separate mandatory checks.** Schema violations, missing required approvals
    and other conditions that must block publication belong in explicit Boolean
    checks, such as `qualityPassed`. A low score cannot compensate for a failed
-   mandatory check. Authorization and GraphRules remain additional admission
+   mandatory check. Authorization and GraphPolicies remain additional admission
    requirements.
 2. **Measure soft concerns.** Choose signals with declared units, scope,
    observation windows and minimum evidence requirements. Examples include
@@ -518,13 +518,13 @@ runtime can correlate results automatically.
 
 A decision creates control intent. It adds neither a data-flow connection nor a
 network grant. Gate definitions and receipt records are not workload vertices
-and must not inflate GraphRules counts or Cheeger measurements. The compiler
+and must not inflate GraphPolicies counts or Cheeger measurements. The compiler
 must validate the decision dependency relation for cycles separately from
 `requires`; existing `relation: admission` measurements still mean `requires`.
 
 Every forwarded activation passes the same live graph-family checks as an
 ordinary pulse: dependencies, placement, storage, slots, activation frequency,
-replica bounds and applicable [GraphRules](../graphs/graph-rules.md). Recompute structural
+replica bounds and applicable [GraphPolicies](../graphs/graph-policies.md). Recompute structural
 Cheeger bounds before resulting mutations. A true predicate cannot override an
 ancestor constraint. Declared connections remain subject to networking rules;
 a future branch that changes topology would require explicit rewrite admission.
@@ -595,7 +595,7 @@ different content must be rejected, not return a misleading successful replay.
 Exercise crashes before and after branch persistence and Activation creation,
 HA handoff, deadline/expiry races, definition and graph replacement, queue
 exhaustion, receipt retention, event replay and reserved-graph isolation. Verify
-that every branch obeys inherited rules under concurrent KEDA changes, and that
+that every branch obeys inherited policies under concurrent KEDA changes, and that
 partitions cannot let remote workers choose a different branch. Language tests
 must compare compiled and interpreted decisions for the same pinned inputs and
 show useful source locations for failed checks. No runtime or installable

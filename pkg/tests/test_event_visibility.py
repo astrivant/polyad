@@ -82,7 +82,7 @@ def test_marked_definitions_and_compiled_descendants_remain_internal():
         root = resource("Graph", "renamed-operator-graph")
         root["metadata"]["labels"] = {INTERNAL: "true"}
         api = FakeAPI(root)
-        for kind in ("Graph", "ReplicaGroup", "Daemon", "GraphRule"):
+        for kind in ("Graph", "ReplicaGroup", "Daemon", "GraphPolicy"):
             definition = resource(kind, "definition")
             definition["metadata"]["labels"] = {INTERNAL: "true"}
             assert not await public_observation(api, definition)

@@ -3274,9 +3274,9 @@
         }
       }
     },
-    "graphRules": {
+    "graphPolicies": {
       "type": "object",
-      "description": "GraphRule instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.",
+      "description": "GraphPolicy instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.",
       "additionalProperties": false,
       "properties": {},
       "patternProperties": {
@@ -3294,47 +3294,47 @@
                     "name": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/name/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/name/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/name/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/name/anyOf/1"
                         }
                       ]
                     },
                     "namespace": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/namespace/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/namespace/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/namespace/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/namespace/anyOf/1"
                         }
                       ]
                     },
                     "labels": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/labels/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/labels/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/labels/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/labels/anyOf/1"
                         }
                       ]
                     },
                     "annotations": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/annotations/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/annotations/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/annotations/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/0/properties/annotations/anyOf/1"
                         }
                       ]
                     }
                   }
                 },
                 {
-                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/1"
+                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/metadata/anyOf/1"
                 }
               ]
             },
@@ -3359,27 +3359,27 @@
                                     {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/0/anyOf/0/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/0/anyOf/0/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/0/anyOf/0/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/0/anyOf/0/anyOf/1"
                                         }
                                       ]
                                     },
                                     {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/0/anyOf/1/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/0/anyOf/1/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/0/anyOf/1/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/0/anyOf/1/anyOf/1"
                                         }
                                       ]
                                     }
                                   ]
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxVertices/anyOf/1"
                                 }
                               ]
                             },
@@ -3390,27 +3390,27 @@
                                     {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/0/anyOf/0/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/0/anyOf/0/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/0/anyOf/0/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/0/anyOf/0/anyOf/1"
                                         }
                                       ]
                                     },
                                     {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/0/anyOf/1/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/0/anyOf/1/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/0/anyOf/1/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/0/anyOf/1/anyOf/1"
                                         }
                                       ]
                                     }
                                   ]
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/maxCuts/anyOf/1"
                                 }
                               ]
                             },
@@ -3421,37 +3421,37 @@
                                     {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/0/anyOf/0/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/0/anyOf/0/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/0/anyOf/0/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/0/anyOf/0/anyOf/1"
                                         }
                                       ]
                                     },
                                     {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/0/anyOf/1/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/0/anyOf/1/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/0/anyOf/1/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/0/anyOf/1/anyOf/1"
                                         }
                                       ]
                                     }
                                   ]
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/timeoutSeconds/anyOf/1"
                                 }
                               ]
                             },
                             "priorityCuts": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/priorityCuts/anyOf/1"
                                 }
                               ]
                             },
@@ -3465,134 +3465,134 @@
                                     "enabled": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/enabled/anyOf/1"
                                         }
                                       ]
                                     },
                                     "maxVertices": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxVertices/anyOf/1"
                                         }
                                       ]
                                     },
                                     "components": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/components/anyOf/1"
                                         }
                                       ]
                                     },
                                     "supernodes": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/supernodes/anyOf/1"
                                         }
                                       ]
                                     },
                                     "cache": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cache/anyOf/1"
                                         }
                                       ]
                                     },
                                     "cacheEntries": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/cacheEntries/anyOf/1"
                                         }
                                       ]
                                     },
                                     "maxEdgeChurn": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/maxEdgeChurn/anyOf/1"
                                         }
                                       ]
                                     },
                                     "strategy": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/strategy/anyOf/1"
                                         }
                                       ]
                                     },
                                     "targetSeconds": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetSeconds/anyOf/1"
                                         }
                                       ]
                                     },
                                     "feedback": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/feedback/anyOf/1"
                                         }
                                       ]
                                     },
                                     "targetRelativeError": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/0"
                                         },
                                         {
-                                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
+                                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/0/properties/targetRelativeError/anyOf/1"
                                         }
                                       ]
                                     }
                                   }
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/0/properties/reduction/anyOf/1"
                                 }
                               ]
                             }
                           }
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheegerComputation/anyOf/1"
                         }
                       ]
                     },
                     "scope": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/scope/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/scope/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/scope/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/scope/anyOf/1"
                         }
                       ]
                     },
@@ -3606,107 +3606,107 @@
                             "scope": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/scope/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/scope/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/scope/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/scope/anyOf/1"
                                 }
                               ]
                             },
                             "ingress": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/ingress/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/ingress/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/ingress/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/ingress/anyOf/1"
                                 }
                               ]
                             },
                             "egress": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/egress/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/egress/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/egress/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/egress/anyOf/1"
                                 }
                               ]
                             },
                             "isolateIngress": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/isolateIngress/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/isolateIngress/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/isolateIngress/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/isolateIngress/anyOf/1"
                                 }
                               ]
                             },
                             "isolateEgress": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/isolateEgress/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/isolateEgress/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/isolateEgress/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/isolateEgress/anyOf/1"
                                 }
                               ]
                             },
                             "allowWithin": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/allowWithin/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/allowWithin/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/allowWithin/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/allowWithin/anyOf/1"
                                 }
                               ]
                             },
                             "allowDNS": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/allowDNS/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/allowDNS/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/allowDNS/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/allowDNS/anyOf/1"
                                 }
                               ]
                             },
                             "mesh": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/mesh/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/mesh/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/mesh/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/0/properties/mesh/anyOf/1"
                                 }
                               ]
                             }
                           }
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/network/anyOf/1"
                         }
                       ]
                     },
                     "enforcement": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/enforcement/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/enforcement/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/enforcement/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/enforcement/anyOf/1"
                         }
                       ]
                     },
                     "relation": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/relation/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/relation/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/relation/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/relation/anyOf/1"
                         }
                       ]
                     },
@@ -3720,117 +3720,117 @@
                             "nodes": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/nodes/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/nodes/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/nodes/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/nodes/anyOf/1"
                                 }
                               ]
                             },
                             "edges": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/edges/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/edges/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/edges/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/edges/anyOf/1"
                                 }
                               ]
                             },
                             "depth": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/depth/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/depth/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/depth/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/depth/anyOf/1"
                                 }
                               ]
                             },
                             "breadth": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/breadth/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/breadth/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/breadth/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/breadth/anyOf/1"
                                 }
                               ]
                             },
                             "fanIn": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/fanIn/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/fanIn/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/fanIn/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/fanIn/anyOf/1"
                                 }
                               ]
                             },
                             "fanOut": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/fanOut/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/fanOut/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/fanOut/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/fanOut/anyOf/1"
                                 }
                               ]
                             },
                             "cycleRank": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/cycleRank/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/cycleRank/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/cycleRank/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/cycleRank/anyOf/1"
                                 }
                               ]
                             },
                             "strongComponent": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/strongComponent/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/strongComponent/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/strongComponent/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/strongComponent/anyOf/1"
                                 }
                               ]
                             },
                             "expandedNodes": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/expandedNodes/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/expandedNodes/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/expandedNodes/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/expandedNodes/anyOf/1"
                                 }
                               ]
                             },
                             "nestingDepth": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/nestingDepth/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/nestingDepth/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/nestingDepth/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/0/properties/nestingDepth/anyOf/1"
                                 }
                               ]
                             }
                           }
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/limits/anyOf/1"
                         }
                       ]
                     },
                     "shapes": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/shapes/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/shapes/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/shapes/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/shapes/anyOf/1"
                         }
                       ]
                     },
@@ -3844,27 +3844,27 @@
                             "minimum": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/0/properties/minimum/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/0/properties/minimum/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/0/properties/minimum/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/0/properties/minimum/anyOf/1"
                                 }
                               ]
                             },
                             "maximum": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/0/properties/maximum/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/0/properties/maximum/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/0/properties/maximum/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/0/properties/maximum/anyOf/1"
                                 }
                               ]
                             }
                           }
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/cheeger/anyOf/1"
                         }
                       ]
                     },
@@ -3878,44 +3878,44 @@
                             "maxRadius": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/maxRadius/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/maxRadius/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/maxRadius/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/maxRadius/anyOf/1"
                                 }
                               ]
                             },
                             "minConnectivity": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/minConnectivity/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/minConnectivity/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/minConnectivity/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/minConnectivity/anyOf/1"
                                 }
                               ]
                             },
                             "maxLaplacian": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/maxLaplacian/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/maxLaplacian/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/maxLaplacian/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/0/properties/maxLaplacian/anyOf/1"
                                 }
                               ]
                             }
                           }
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/spectrum/anyOf/1"
                         }
                       ]
                     }
                   }
                 },
                 {
-                  "$ref": "#/definitions/resourceValues/properties/graphRules/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/1"
+                  "$ref": "#/definitions/resourceValues/properties/graphPolicies/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/1"
                 }
               ]
             }
@@ -4008,7 +4008,7 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                          "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                           "additionalProperties": false,
                           "properties": {
                             "unit": {
@@ -4792,13 +4792,13 @@
                         }
                       ]
                     },
-                    "rules": {
+                    "policies": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/rules/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/policies/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/rules/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/graphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/policies/anyOf/1"
                         }
                       ]
                     },
@@ -5220,7 +5220,7 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                          "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                           "additionalProperties": false,
                           "properties": {
                             "unit": {
@@ -6004,13 +6004,13 @@
                         }
                       ]
                     },
-                    "rules": {
+                    "policies": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/rules/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/policies/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/rules/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/polygraphs/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/policies/anyOf/1"
                         }
                       ]
                     },
@@ -6581,13 +6581,13 @@
                         }
                       ]
                     },
-                    "rules": {
+                    "policies": {
                       "anyOf": [
                         {
-                          "$ref": "#/definitions/resourceValues/properties/replicaGroups/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/rules/anyOf/0"
+                          "$ref": "#/definitions/resourceValues/properties/replicaGroups/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/policies/anyOf/0"
                         },
                         {
-                          "$ref": "#/definitions/resourceValues/properties/replicaGroups/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/rules/anyOf/1"
+                          "$ref": "#/definitions/resourceValues/properties/replicaGroups/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/policies/anyOf/1"
                         }
                       ]
                     },
@@ -7133,7 +7133,7 @@
                               "anyOf": [
                                 {
                                   "type": "object",
-                                  "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                                  "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                                   "additionalProperties": false,
                                   "properties": {
                                     "unit": {
@@ -7802,13 +7802,13 @@
                                 }
                               ]
                             },
-                            "rules": {
+                            "policies": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/rules/anyOf/0"
+                                  "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/policies/anyOf/0"
                                 },
                                 {
-                                  "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/rules/anyOf/1"
+                                  "$ref": "#/definitions/resourceValues/properties/rewrites/patternProperties/^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/properties/spec/anyOf/0/properties/topology/anyOf/0/properties/policies/anyOf/1"
                                 }
                               ]
                             },
@@ -28022,9 +28022,9 @@
           },
           "additionalProperties": false
         },
-        "graphRules": {
+        "graphPolicies": {
           "type": "object",
-          "description": "GraphRule instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.",
+          "description": "GraphPolicy instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.",
           "patternProperties": {
             "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
               "type": "object",
@@ -28484,14 +28484,14 @@
                                 "Subtree"
                               ],
                               "default": "Subtree",
-                              "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary."
+                              "description": "Boundary applies locally; Subtree propagates. Namespace policies select every boundary."
                             },
                             {
                               "type": "string",
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary."
+                          "description": "Boundary applies locally; Subtree propagates. Namespace policies select every boundary."
                         },
                         "network": {
                           "anyOf": [
@@ -29416,7 +29416,7 @@
                           "anyOf": [
                             {
                               "type": "string",
-                              "description": "Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor.",
+                              "description": "Namespace policies always apply. Referenced policies apply when named by this graph or an ancestor.",
                               "enum": [
                                 "Namespace",
                                 "Referenced"
@@ -29428,7 +29428,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor."
+                          "description": "Namespace policies always apply. Referenced policies apply when named by this graph or an ancestor."
                         },
                         "relation": {
                           "anyOf": [
@@ -30291,7 +30291,7 @@
                           "anyOf": [
                             {
                               "type": "object",
-                              "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                              "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                               "properties": {
                                 "unit": {
                                   "anyOf": [
@@ -31448,7 +31448,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Observe or adapt topology using empirical throughput targets within hard structural rules."
+                          "description": "Observe or adapt topology using empirical throughput targets within hard structural policies."
                         },
                         "activation": {
                           "anyOf": [
@@ -32667,18 +32667,18 @@
                           ],
                           "description": "Isolate a graph subtree and intersect its exceptions with inherited constraints."
                         },
-                        "rules": {
+                        "policies": {
                           "anyOf": [
                             {
                               "type": "array",
-                              "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+                              "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
                               "maxItems": 32,
                               "x-kubernetes-list-type": "set",
                               "items": {
                                 "anyOf": [
                                   {
                                     "type": "string",
-                                    "description": "GraphRule name.",
+                                    "description": "GraphPolicy name.",
                                     "maxLength": 253,
                                     "minLength": 1
                                   },
@@ -32687,7 +32687,7 @@
                                     "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                   }
                                 ],
-                                "description": "GraphRule name."
+                                "description": "GraphPolicy name."
                               }
                             },
                             {
@@ -32695,7 +32695,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply."
+                          "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply."
                         },
                         "nodes": {
                           "anyOf": [
@@ -34640,7 +34640,7 @@
                           "anyOf": [
                             {
                               "type": "object",
-                              "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                              "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                               "properties": {
                                 "unit": {
                                   "anyOf": [
@@ -35797,7 +35797,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Observe or adapt topology using empirical throughput targets within hard structural rules."
+                          "description": "Observe or adapt topology using empirical throughput targets within hard structural policies."
                         },
                         "activation": {
                           "anyOf": [
@@ -37016,18 +37016,18 @@
                           ],
                           "description": "Isolate a graph subtree and intersect its exceptions with inherited constraints."
                         },
-                        "rules": {
+                        "policies": {
                           "anyOf": [
                             {
                               "type": "array",
-                              "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+                              "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
                               "maxItems": 32,
                               "x-kubernetes-list-type": "set",
                               "items": {
                                 "anyOf": [
                                   {
                                     "type": "string",
-                                    "description": "GraphRule name.",
+                                    "description": "GraphPolicy name.",
                                     "maxLength": 253,
                                     "minLength": 1
                                   },
@@ -37036,7 +37036,7 @@
                                     "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                   }
                                 ],
-                                "description": "GraphRule name."
+                                "description": "GraphPolicy name."
                               }
                             },
                             {
@@ -37044,7 +37044,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply."
+                          "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply."
                         },
                         "nodes": {
                           "anyOf": [
@@ -38768,7 +38768,7 @@
                             }
                           ]
                         },
-                        "rules": {
+                        "policies": {
                           "anyOf": [
                             {
                               "type": "array",
@@ -40172,7 +40172,7 @@
                                   "anyOf": [
                                     {
                                       "type": "object",
-                                      "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                                      "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                                       "properties": {
                                         "unit": {
                                           "anyOf": [
@@ -41329,7 +41329,7 @@
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "Observe or adapt topology using empirical throughput targets within hard structural rules."
+                                  "description": "Observe or adapt topology using empirical throughput targets within hard structural policies."
                                 },
                                 "capacity": {
                                   "anyOf": [
@@ -42382,18 +42382,18 @@
                                   ],
                                   "description": "Isolate a graph subtree and intersect its exceptions with inherited constraints."
                                 },
-                                "rules": {
+                                "policies": {
                                   "anyOf": [
                                     {
                                       "type": "array",
-                                      "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+                                      "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
                                       "maxItems": 32,
                                       "x-kubernetes-list-type": "set",
                                       "items": {
                                         "anyOf": [
                                           {
                                             "type": "string",
-                                            "description": "GraphRule name.",
+                                            "description": "GraphPolicy name.",
                                             "maxLength": 253,
                                             "minLength": 1
                                           },
@@ -42402,7 +42402,7 @@
                                             "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                           }
                                         ],
-                                        "description": "GraphRule name."
+                                        "description": "GraphPolicy name."
                                       }
                                     },
                                     {
@@ -42410,7 +42410,7 @@
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply."
+                                  "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply."
                                 },
                                 "nodes": {
                                   "anyOf": [

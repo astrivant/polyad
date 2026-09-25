@@ -28,7 +28,7 @@ from polyad.operator.clusters.services import graphs as service_graphs
 from polyad.operator.coordination.contracts import capture_decision
 from polyad.operator.observability.decisions import decision, status_decisions
 from polyad.operator.observability.tracing import traced
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad_types.resources import GROUP
 
 if TYPE_CHECKING:
@@ -674,11 +674,11 @@ class PoolManager:
             },
         }
         boundary = await self.graph_pool(obj, pod, owner)
-        await check_live_rules(self.api, boundary)
+        await check_live_policies(self.api, boundary)
         group = await remote.get("Graph", namespace, name + "-graph")
         if group is None:
             raise Pending("waiting for the operator group's graph definition")
-        await check_live_rules(remote, group)
+        await check_live_policies(remote, group)
         result = await self.apply(remote, body, owner)
         status = result.get("status", {})
         await self.status(
@@ -738,11 +738,11 @@ class PoolManager:
         effective = copy.deepcopy(obj)
         effective["spec"]["replicas"] = desired
         boundary = await self.graph_pool(effective, copy.deepcopy(deployment["spec"]["template"]), owner)
-        await check_live_rules(self.api, boundary)
+        await check_live_policies(self.api, boundary)
         group = await remote.get("Graph", namespace, f"polyad-worker-{meta['uid'][:12]}-graph")
         if group is None:
             raise Pending("waiting for the attached operator's graph definition")
-        await check_live_rules(remote, group)
+        await check_live_policies(remote, group)
         if authority == "Root" and deployment["spec"].get("replicas", 1) != desired:
             current = await self.api.get("OperatorPool", self.namespace, meta["name"])
             if (

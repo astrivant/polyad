@@ -22,11 +22,11 @@ __all__ = (
 HELP = {
     "graph_topology": "Precomputed declared and observed boundary topology dimensions, including layers and components.",
     "graph_execution": "Current boundary execution and recursive rollup observations; distinguish scope before aggregating.",
-    "graph_rule_current": "Whether a saved admission report matches the graph and current rule identity and generation.",
-    "graph_rule_allowed": "Verdict of the most recent current successful admission policy evaluation.",
-    "graph_rule_measurement": "Structural measurements of the live boundary used for admission, by rule and relation.",
-    "graph_rule_parameter": "Configured numeric structural and spectral bounds; absent bounds are omitted.",
-    "graph_rule_shape": "Calculated shape predicates; one means the predicate holds.",
+    "graph_policy_current": "Whether a saved admission report matches the graph and current policy identity and generation.",
+    "graph_policy_allowed": "Verdict of the most recent current successful admission policy evaluation.",
+    "graph_policy_measurement": "Structural measurements of the live boundary used for admission, by policy and relation.",
+    "graph_policy_parameter": "Configured numeric structural and spectral bounds; absent bounds are omitted.",
+    "graph_policy_shape": "Calculated shape predicates; one means the predicate holds.",
     "graph_spectrum": "Precomputed undirected adjacency and Laplacian spectral summaries.",
     "graph_eigenvalue": "Sorted precomputed eigenvalues, indexed from zero; requires retained full spectra.",
     "graph_cheeger_input": "Effective Cheeger calculation budgets, operator ceilings and projected input dimensions.",
@@ -140,28 +140,28 @@ def graph_rows(snapshot: dict[str, Any]) -> dict[str, list[tuple[dict[str, str],
                     numbers("graph_topology", {**labels, "view": view}, obj.get(field), "dimension")
                 for scope in ("execution", "rollup"):
                     numbers("graph_execution", {**labels, "scope": scope}, obj.get(scope), "dimension")
-            for report in obj.get("structuralRules", []):
-                rule_labels = {**labels, "rule": report["name"], "relation": report["relation"]}
+            for report in obj.get("structuralPolicies", []):
+                policy_labels = {**labels, "policy": report["name"], "relation": report["relation"]}
                 current = bool(report.get("current"))
-                rows["graph_rule_current"].append((rule_labels, int(current)))
+                rows["graph_policy_current"].append((policy_labels, int(current)))
                 if not current:
                     continue
-                rows["graph_rule_allowed"].append((rule_labels, int(report["allowed"])))
-                numbers("graph_rule_measurement", rule_labels, report.get("measurements"), "dimension")
-                numbers("graph_rule_parameter", rule_labels, report.get("parameters"))
-                numbers("graph_rule_shape", rule_labels, report.get("shapes"), "shape")
+                rows["graph_policy_allowed"].append((policy_labels, int(report["allowed"])))
+                numbers("graph_policy_measurement", policy_labels, report.get("measurements"), "dimension")
+                numbers("graph_policy_parameter", policy_labels, report.get("parameters"))
+                numbers("graph_policy_shape", policy_labels, report.get("shapes"), "shape")
                 spectrum = report.get("spectrum") or {}
                 numbers(
                     "graph_spectrum",
-                    rule_labels,
+                    policy_labels,
                     {key: spectrum.get(key) for key in ("radius", "connectivity", "largestLaplacian")},
                     "statistic",
                 )
                 for matrix in ("adjacency", "laplacian"):
                     for index, value in enumerate(spectrum.get(matrix, [])):
                         if isinstance(value, (int, float)) and math.isfinite(value):
-                            rows["graph_eigenvalue"].append(({**rule_labels, "matrix": matrix, "index": str(index)}, value))
-                calculation({**rule_labels, "source": "rule", "stage": "current", "layout": ""}, report.get("cheegerComputation"))
+                            rows["graph_eigenvalue"].append(({**policy_labels, "matrix": matrix, "index": str(index)}, value))
+                calculation({**policy_labels, "source": "policy", "stage": "current", "layout": ""}, report.get("cheegerComputation"))
             throughput = obj.get("throughput")
             if throughput:
                 # Certificates have their own families, keeping exact and incomplete semantics explicit.
@@ -178,14 +178,14 @@ def graph_rows(snapshot: dict[str, Any]) -> dict[str, list[tuple[dict[str, str],
                     ({**labels, **{key: str(throughput.get(key, "")) for key in ("mode", "phase", "demandSignal", "demandUnit")}}, 1)
                 )
                 calculation(
-                    {**labels, "rule": "", "relation": "connections", "source": "throughput", "stage": "current", "layout": ""},
+                    {**labels, "policy": "", "relation": "connections", "source": "throughput", "stage": "current", "layout": ""},
                     throughput.get("currentComputation"),
                 )
                 for result in throughput.get("candidateComputations", []):
                     calculation(
                         {
                             **labels,
-                            "rule": "",
+                            "policy": "",
                             "relation": "connections",
                             "source": "throughput",
                             "stage": "candidate",

@@ -154,9 +154,9 @@ def test_cheeger_bound_blocks_scale_changes_before_mutation(mode, initial, reque
 
     async def scenario():
         api = FakeAPI(
-            group(initial, connectivity={"mode": mode}, rules=["bottleneck"]),
+            group(initial, connectivity={"mode": mode}, policies=["bottleneck"]),
             resource("Daemon", "worker", {"template": template(True)}),
-            resource("GraphRule", "bottleneck", {"enforcement": "Referenced", "relation": "connections", "cheeger": bounds}),
+            resource("GraphPolicy", "bottleneck", {"enforcement": "Referenced", "relation": "connections", "cheeger": bounds}),
         )
         await turn(api)
         assert len(api.children("Deployment")) == initial
@@ -174,15 +174,15 @@ def test_cheeger_bound_blocks_scale_changes_before_mutation(mode, initial, reque
 
 def test_shared_source_rebuilds_connections_and_preserves_existing_copies():
     """
-    Check inherited counts with the instance's mode and rules at both boundaries.
+    Check inherited counts with the instance's mode and policies at both boundaries.
     """
 
     async def scenario():
         api = policy_family(bound=20, replicas=4)
         source = api.objects[("ReplicaGroup", "test", "copies")]
-        source["spec"].update(connectivity={"mode": "Ring"}, rules=["ring"])
-        api.objects[("GraphRule", "test", "ring")] = resource(
-            "GraphRule", "ring", {"enforcement": "Referenced", "relation": "connections", "cheeger": {"minimum": 1}}
+        source["spec"].update(connectivity={"mode": "Ring"}, policies=["ring"])
+        api.objects[("GraphPolicy", "test", "ring")] = resource(
+            "GraphPolicy", "ring", {"enforcement": "Referenced", "relation": "connections", "cheeger": {"minimum": 1}}
         )
         (instance,) = await start_family(api)
         original = {child["metadata"]["uid"] for child in api.children("Deployment")}
@@ -209,7 +209,7 @@ def test_custom_scale_out_waits_for_an_edge_connecting_the_new_copy():
         api = FakeAPI(
             group(
                 3,
-                rules=["connected"],
+                policies=["connected"],
                 connectivity={
                     "mode": "Custom",
                     "edges": [
@@ -219,7 +219,7 @@ def test_custom_scale_out_waits_for_an_edge_connecting_the_new_copy():
                 },
             ),
             resource("Daemon", "worker", {"template": template(True)}),
-            resource("GraphRule", "connected", {"enforcement": "Referenced", "relation": "connections", "cheeger": {"minimum": 0.5}}),
+            resource("GraphPolicy", "connected", {"enforcement": "Referenced", "relation": "connections", "cheeger": {"minimum": 0.5}}),
         )
         await turn(api)
         original = {child["metadata"]["uid"] for child in api.children("Deployment")}
@@ -245,9 +245,9 @@ def test_connected_retiring_sibling_does_not_appear_isolated():
 
     async def scenario():
         api = policy_family(bound=10, replicas=3, uses=("left", "right"))
-        api.objects[("ReplicaGroup", "test", "copies")]["spec"].update(connectivity={"mode": "Ring"}, rules=["ring"])
-        api.objects[("GraphRule", "test", "ring")] = resource(
-            "GraphRule", "ring", {"enforcement": "Referenced", "relation": "connections", "cheeger": {"minimum": 1}}
+        api.objects[("ReplicaGroup", "test", "copies")]["spec"].update(connectivity={"mode": "Ring"}, policies=["ring"])
+        api.objects[("GraphPolicy", "test", "ring")] = resource(
+            "GraphPolicy", "ring", {"enforcement": "Referenced", "relation": "connections", "cheeger": {"minimum": 1}}
         )
         left, right = await start_family(api)
         left["spec"].update(inheritReplicas=False, replicas=2)

@@ -12,7 +12,7 @@
 - [Understand computation and scale](#understand-computation-and-scale)
 <!-- toc:end -->
 
-Configure **hard structural bounds** through GraphRules and **application-driven
+Configure **hard structural bounds** through GraphPolicies and **application-driven
 targets** through each Graph or PolyGraph's throughput policy. Both use the same
 exact, unweighted edge-expansion calculation. Start with `Observe`, calibrate
 targets against application measurements, then enable bounded `Adapt` changes
@@ -22,14 +22,14 @@ when the proposed layouts are useful.
 
 | Surface | Who configures it | Effect |
 | --- | --- | --- |
-| `GraphRule.spec` | A policy administrator with Kubernetes rule-write permissions | Defines structural limits that admitted changes must respect |
-| `Graph.spec.rules`, `PolyGraph.spec.rules`, `ReplicaGroup.spec.rules` | Application owners | Selects rules with `enforcement: Referenced`; namespace rules still apply |
+| `GraphPolicy.spec` | A policy administrator with Kubernetes policy-write permissions | Defines structural limits that admitted changes must respect |
+| `Graph.spec.policies`, `PolyGraph.spec.policies`, `ReplicaGroup.spec.policies` | Application owners | Selects policies with `enforcement: Referenced`; namespace policies still apply |
 | `Graph.spec.throughput`, `PolyGraph.spec.throughput` | Application owners through manifests or composition requests | Configures demand tiers, approved layouts, traffic adjustment and response timing |
 | Helm `operator.cheeger` | Operator administrators | Sets deployment-wide vertex, cut-count and time ceilings and gates the optional reduction tiers; local policies may only narrow them |
 | Helm `architecture.cheegerMinimum` / `cheegerMaximum` | Operator administrators | Constrains the optional distributed operator component Graph |
 
-The composition API cannot create GraphRules. Throughput targets never relax
-administrator rules. See [rule selection](graph-rules.md#selection-and-measurement)
+The composition API cannot create GraphPolicies. Throughput targets never relax
+administrator policies. See [policy selection](graph-policies.md#selection-and-measurement)
 and [composition requests](../apis/composition-requests.md).
 
 ## Set useful structural bounds
@@ -75,7 +75,7 @@ convergence nor changes quotient size or spends extra exact-search work to force
 the goal; existing policy certificates still decide whether exact fallback is needed.
 
 Histories are process-local and bounded by `cacheEntries`, independently of the
-partition cache. Runtime graph UID, boundary path, rule and relation isolate
+partition cache. Runtime graph UID, boundary path, policy and relation isolate
 independent policies; membership, dimensions, quotient size, churn gate, feedback mode or either goal
 changes start new history. Concurrent
 evaluations do not double-update one history. Failover starts cold and changes
@@ -90,16 +90,16 @@ both loop states when active. Benchmark preference is not a claim of universal
 latency or accuracy improvement. Infeasible goals can saturate the cache target;
 accuracy feedback may pay for fresh work without obtaining a tighter certificate.
 
-| Field under `GraphRule.spec` | Choice and consequence |
+| Field under `GraphPolicy.spec` | Choice and consequence |
 | --- | --- |
 | `cheeger.minimum` | Nonnegative inclusive lower bound; raise it to reject sparse bottlenecks. Omit for no lower bound. |
 | `cheeger.maximum` | Nonnegative inclusive upper bound on edge expansion; requires some sufficiently sparse cut. Omit for no upper bound. |
 | `cheeger: {}` | Measure and report expansion without imposing a threshold; the computation cap still applies. |
-| Omit `cheeger` | Disable this rule's Cheeger calculation. Other selected rules and throughput policies may still compute it. |
+| Omit `cheeger` | Disable this policy's Cheeger calculation. Other selected policies and throughput policies may still compute it. |
 | `relation: connections` | Measure declared communication links; matches the throughput policy's projection. |
 | `relation: admission` | Measure dependency links; the default when omitted. |
-| `scope: Boundary` | Evaluate only the selected boundary when using a referenced rule. Useful when different layers need different bounds. |
-| `scope: Subtree` | Also propagate to descendant boundaries; the default. A namespace rule independently selects every boundary regardless of scope. |
+| `scope: Boundary` | Evaluate only the selected boundary when using a referenced policy. Useful when different layers need different bounds. |
+| `scope: Subtree` | Also propagate to descendant boundaries; the default. A namespace policy independently selects every boundary regardless of scope. |
 | `limits.nodes`, `limits.edges`, `limits.expandedNodes` | Bound local size, directed connections and recursive resource breadth separately from edge expansion. |
 
 For four vertices, a chain has `h = 0.5`, a ring `h = 1`, and a full mesh `h = 2`.
@@ -154,21 +154,21 @@ measurements. Low demand alone does not automatically remove connections. See
 ## Try the configuration reference
 
 [`examples/cheeger-tuning.yaml`](../../examples/cheeger-tuning.yaml) supplies a
-four-stage graph, a referenced rule and two demand tiers. It begins with a chain
+four-stage graph, a referenced policy and two demand tiers. It begins with a chain
 and can recommend a ring or mesh while respecting the hard interval `[0.5, 2]`.
 
 ```bash
 kubectl -n workloads apply -f examples/cheeger-tuning.yaml
 ```
 
-Use the namespace watched by your operator. Creating the example's GraphRule
+Use the namespace watched by your operator. Creating the example's GraphPolicy
 requires policy-administrator access. The included workers serve health responses;
 replace them with your application and
 [report its measured rates to Soul searching](soul-searching.md#report-measurements).
 Calibrate these example thresholds against the workers' measured capacity.
 Connections describe data flow; applications must implement the approved routing.
 
-Inspect `status.structuralRules[].measurements.cheeger` for hard-rule measurements
+Inspect `status.structuralPolicies[].measurements.cheeger` for hard-policy measurements
 and `status.throughput` for offered/completed rates, the selected target,
 recommendation and decision phase. Start in Observe. Enable Adapt only after
 checking recommendations against actual completion rates and latency under load.
@@ -187,10 +187,10 @@ The minimum defaults to `1` and accepts values from `0` through `1`. The optiona
 maximum defaults to `null`, meaning no upper bound. When set, it must be at least
 `1` to admit the chart's initial three-component chain. A maximum of `1` excludes
 a fully connected three-component graph, whose expansion is `2`. The separate
-connected-shape rule still applies if the minimum is lowered to zero.
+connected-shape policy still applies if the minimum is lowered to zero.
 
 These settings affect the component boundary in Distributed mode. They do not
-set defaults for application GraphRules, child ReplicaGroups or throughput tiers.
+set defaults for application GraphPolicies, child ReplicaGroups or throughput tiers.
 Component KEDA demand and `architecture.expandedNodes` control capacity separately.
 Use the typed [component reference values](../../charts/polyad/references/values-components.reference.yaml)
 with the installation prerequisites in the component guide.
@@ -204,7 +204,7 @@ The declaration order is the priority order. Complementary and repeated cuts are
 only evaluated once.
 
 ```yaml
-# Under GraphRule.spec, alongside cheeger; or under Graph/PolyGraph.spec.throughput.
+# Under GraphPolicy.spec, alongside cheeger; or under Graph/PolyGraph.spec.throughput.
 cheegerComputation:
   priorityCuts:
     - [ingest, decode] # Check this stage boundary first.
@@ -234,7 +234,7 @@ At most 64 preferred subsets are allowed, each with distinct, nonempty vertex
 names. Use the names in the measured boundary; for a parent Graph this means its
 subgraph node names, not workloads hidden inside them. A subset whose names are
 absent, or which contains the whole boundary, is skipped and counted in
-`skippedPriorityCuts`. This lets inherited rules visit differently named children
+`skippedPriorityCuts`. This lets inherited policies visit differently named children
 without silently treating a partially matching subset as the requested cut.
 
 ## Understand computation and scale
@@ -265,7 +265,7 @@ operator:
 ```
 
 The cluster switch grants permission and establishes ceilings; it does not change
-any GraphRule or throughput policy by itself. A policy author then requests the
+any GraphPolicy or throughput policy by itself. A policy author then requests the
 feature below `cheegerComputation`:
 
 ```yaml
@@ -288,7 +288,7 @@ boundaries into it after studying their error and cost profiles.
 This permits a complete 22-vertex enumeration if it also finishes within the time
 budget. Raising the vertex cap alone does not raise the cut or time budgets.
 Benchmark representative boundaries before increasing these ceilings. They are
-per calculation: multiple rules, descendants and up to eight candidate layouts
+per calculation: multiple policies, descendants and up to eight candidate layouts
 each consume work during reconciliation. Time checks are cooperative, between
 priority cuts and every 256 exhaustive steps; preprocessing and scheduler delays
 can extend the elapsed time beyond the configured budget.
@@ -337,7 +337,7 @@ when a refresh is due; `CacheFirst` always tries permitted reuse first. Given a 
 certificate `[L, U]`, `U < minimum` proves a lower-bound violation,
 `L > maximum` proves an upper-bound violation, and `L >= minimum` together with
 `U <= maximum` proves satisfaction. Every other result is uncertain and spends
-more computation on the next tier. GraphRules can therefore admit or reject on
+more computation on the next tier. GraphPolicies can therefore admit or reject on
 a certificate without pretending an approximation is an exact constant.
 Throughput planning still obtains exact numeric constants because it compares
 and publishes concrete current and proposed values; enabling reduction there
@@ -364,9 +364,9 @@ does not replace those values with an estimate.
 Omit a top-level local numeric field, or set it to `null`, to inherit its operator
 ceiling. Reduction resource allowances use the defaults in the table and must fit
 the administrator's ceilings; attempting to exceed one blocks evaluation.
-Scheduler choice, feedback mode and goal precedence follow the explicit rules above.
-The fields are available on `GraphRule.spec.cheegerComputation` and
-`Graph/PolyGraph.spec.throughput.cheegerComputation`. Hard-rule search and feedback
+Scheduler choice, feedback mode and goal precedence follow the explicit policies above.
+The fields are available on `GraphPolicy.spec.cheegerComputation` and
+`Graph/PolyGraph.spec.throughput.cheegerComputation`. Hard-policy search and feedback
 search have separate local preferences, under the same deployment ceilings.
 For the Python API, pass `CheegerComputation(...)` as the second argument to
 `graph_cheeger`; no Helm or environment settings are read by that library helper.

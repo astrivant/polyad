@@ -49,7 +49,7 @@ __all__ = (
 
 
 logger = logging.getLogger(__name__)
-DEFINITIONS = ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule")
+DEFINITIONS = ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphPolicy")
 
 
 class ClusterWorker:

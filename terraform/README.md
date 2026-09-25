@@ -73,7 +73,7 @@ needed. Polyad's existing
 The Git-backed [test values](polyad-values.yaml) enable two bootstrap replicas,
 the gateway/executor/telemetry component Graph, bundled KEDA, Dragonfly, and
 per-graph metrics. Each component starts at two copies and can reach eight,
-subject to fresh GraphRules. The component Graph retains its structural Cheeger
+subject to fresh GraphPolicies. The component Graph retains its structural Cheeger
 minimum of `1` and recursive vertex budget of `27`. The bootstrap count is fixed;
 its optional CPU/memory HPA can be enabled for a separate experiment.
 
@@ -89,7 +89,7 @@ flowchart TB
         keda["KEDA"]
         cache["Dragonfly controller and cache"]
         agents["Optional operator collectors"]
-        bootstrap -->|"enforce GraphRules"| pipeline
+        bootstrap -->|"enforce GraphPolicies"| pipeline
         pipeline -->|"demand metrics"| keda
         keda -->|"request replicas"| pipeline
         pipeline --> cache
@@ -256,7 +256,7 @@ scrape them into your chosen time-series store before sustained tests.
 KEDA requests more component copies based on their demand signals. Polyad admits
 those changes through graph constraints. GKE adds nodes when Pods cannot be
 scheduled with the available requested resources; high request rate alone does
-not increase node count. A component can hit its eight-copy bound, a GraphRule
+not increase node count. A component can hit its eight-copy bound, a GraphPolicy
 can deny growth, or the pool can hit ten nodes. Measure each limit separately.
 The [performance guide](../docs/operations/performance.md) covers polling and
 stabilization delays; the [Cheeger guide](../docs/graphs/cheeger-orchestration.md)
@@ -363,7 +363,7 @@ AppProject and Applications. Argo owns the operator and synced benchmark chart r
 component instances it creates; KEDA owns the requested replica counts of their
 three definitions. Argo ignores those count fields and respects that exception
 during sync, so self-healing cannot reset a scaled group to its initial two copies.
-GraphRules, min/max counts, templates and images remain Git-managed. The bootstrap
+GraphPolicies, min/max counts, templates and images remain Git-managed. The bootstrap
 also accommodates the optional Dragonfly scaler and bootstrap HPA.
 
 Use the Application's pruning review when removing resources. If you disable a

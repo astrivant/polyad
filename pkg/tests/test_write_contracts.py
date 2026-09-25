@@ -164,11 +164,11 @@ def test_new_resources_invalidate_collection_membership_and_expected_absence(obs
         api, state = transport(resource("Deployment", "target"))
         async with api.write_lock:
             with capture_decision(api, ("Graph", "test", "origin")):
-                await api.request("GET", "GraphRule", "test", "new" if observation == "absence" else "")
+                await api.request("GET", "GraphPolicy", "test", "new" if observation == "absence" else "")
                 task = asyncio.create_task(api.request("PATCH", "Deployment", "test", "target", patch("target")))
             await until(lambda: api.validations.pending and all(item.fresh() for item in api.validations.pending.values()))
-            state[("GraphRule", "test", "new")] = resource("GraphRule", "new")
-            invalidate(api, ("GraphRule", "test", "new"))
+            state[("GraphPolicy", "test", "new")] = resource("GraphPolicy", "new")
+            invalidate(api, ("GraphPolicy", "test", "new"))
         with pytest.raises(WriteConflict, match="409"):
             await task
         assert all(call.args[1] == "GET" for call in api.client.call_api.call_args_list)

@@ -341,7 +341,7 @@ def test_missing_installed_worker_stays_pending_without_recreation(monkeypatch):
 
 
 @pytest.mark.parametrize("boundary", ["root", "remote"])
-def test_attached_scale_requires_fresh_rules_at_both_boundaries(monkeypatch, boundary):
+def test_attached_scale_requires_fresh_policies_at_both_boundaries(monkeypatch, boundary):
     """
     A current rule rejection at either graph boundary prevents native replica writes.
     """
@@ -353,7 +353,7 @@ def test_attached_scale_requires_fresh_rules_at_both_boundaries(monkeypatch, bou
         if api is (local if boundary == "root" else remote):
             raise ValueError("live graph constraint blocks scale")
 
-    monkeypatch.setattr("polyad.operator.clusters.pools.check_live_rules", check)
+    monkeypatch.setattr("polyad.operator.clusters.pools.check_live_policies", check)
     with pytest.raises(ValueError, match="live graph constraint"):
         asyncio.run(pools.pool(pool))
     assert checks == ([(local, "PolyGraph")] if boundary == "root" else [(local, "PolyGraph"), (remote, "Graph")])

@@ -805,7 +805,7 @@ Actions remain explicit:
   a connection from the configured identity through the connections client.
 - `service.respond(receipt_uid, "Approve" | "Reject")` answers an observed,
   unexpired receipt after the application checks its policy. Hooks never approve
-  automatically, and the operator still enforces consent and GraphRules.
+  automatically, and the operator still enforces consent and GraphPolicies.
 - `service.report_throughput(sample)` submits an application-measured
   `polyad_types.ThroughputSample` for the configured boundary through the API
   client. The designated reporter supplies aggregation, generation, unit and

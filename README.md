@@ -43,7 +43,7 @@ the Kubernetes Operators Framework for Python.
   [storage](docs/workloads/workload-storage.md) and [placement](#graphs-across-node-groups).
 - **Scale within graph constraints.** [KEDA and ReplicaGroups](docs/graphs/replication.md)
   scale individual services, whole graphs or nested compositions. Polyad refreshes
-  live graph state and enforces [GraphRules](docs/graphs/graph-rules.md), including size,
+  live graph state and enforces [GraphPolicies](docs/graphs/graph-policies.md), including size,
   shape and structural Cheeger bounds, before applying scaling changes.
 - **Adapt to administrator-defined demand.** [Soul searching](docs/graphs/soul-searching.md)
   uses offered throughput or a named signal, such as queued jobs, to select approved
@@ -114,7 +114,7 @@ useful survivors and retire excluded processes.
 
 ### Find detailed guides
 
-Explore [graph concepts](docs/introduction/concepts.md), [graph rules](docs/graphs/graph-rules.md),
+Explore [graph concepts](docs/introduction/concepts.md), [graph policies](docs/graphs/graph-policies.md),
 [composition requests](docs/apis/composition-requests.md), the [composition API](docs/apis/composition-api.md),
 [networking and event subscriptions](docs/deployment/networking.md),
 [temporary connections](docs/apis/temporary-connections.md),
@@ -192,7 +192,7 @@ and new compositions within their permissions.
 #### Coordinate graph-wide changes
 
 [Graphs and PolyGraphs](docs/introduction/concepts.md) make related workloads and
-their connections reusable deployment units. [GraphRules](docs/graphs/graph-rules.md)
+their connections reusable deployment units. [GraphPolicies](docs/graphs/graph-policies.md)
 express their structural requirements, which Polyad checks against live state
 before applying [ReplicaGroup scaling requests](docs/graphs/replication.md#constraints-before-scaling).
 A [root control plane](docs/deployment/root-control-plane.md) extends that model
@@ -279,8 +279,8 @@ Read about [graphs of graphs](docs/introduction/concepts.md#graphs-of-graphs).
 #### Constrained compositions
 
 Build workflows from reusable definitions and trace each instance to its
-Kubernetes resources. `GraphRule` lets engineers constrain what users can
-schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/graphs/graph-rules.md#structural-limits)</sup><sup>[\[6\]](docs/apis/composition-requests.md#durability-ordering-and-audit)</sup>
+Kubernetes resources. `GraphPolicy` lets engineers constrain what users can
+schedule by size, shape, nesting and mathematical properties.<sup>[\[5\]](docs/graphs/graph-policies.md#structural-limits)</sup><sup>[\[6\]](docs/apis/composition-requests.md#durability-ordering-and-audit)</sup>
 
 <details>
 <summary><strong>Example:</strong> reusable graph definitions with structural constraints</summary>
@@ -310,7 +310,7 @@ flowchart LR
     classDef resource fill:#eeeeee,stroke:#777777,color:#444444
 
     request["Composition request<br/>IDs and references"]:::resource
-    rules["GraphRule<br/>size, shape, spectrum"]:::constraint
+    rules["GraphPolicy<br/>size, shape, spectrum"]:::constraint
     root["PolyGraph root<br/>aggregate status"]:::execution
     request --> root
     rules -. "constrains each boundary" .-> root
@@ -327,7 +327,7 @@ flowchart LR
     definition -. "instantiates" .-> b
 ```
 
-Read about [composition requests](docs/apis/composition-requests.md) and [GraphRule constraints](docs/graphs/graph-rules.md).
+Read about [composition requests](docs/apis/composition-requests.md) and [GraphPolicy constraints](docs/graphs/graph-policies.md).
 
 </details>
 
@@ -502,7 +502,7 @@ update every inheriting instance; see [instance and shared scaling](docs/graphs/
 ##### Check constraints before scale changes
 
 Before creating or retiring copies, Polyad refreshes the owning graph family's
-topology and checks replica bounds and applicable GraphRules, including structural
+topology and checks replica bounds and applicable GraphPolicies, including structural
 limits and Cheeger constraints. KEDA supplies the requested count;
 constraints can block its application. Target the ReplicaGroup to use these
 checks: directly autoscaling a generated Deployment or StatefulSet bypasses graph
@@ -517,7 +517,7 @@ copies need explicit routing assignments. See
 
 A ReplicaGroup of PolyGraphs can also scale a complete cross-cluster composition.
 Each destination can independently scale its own local groups. The
-[multicluster scaling diagram](docs/deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling)
+[multicluster scaling diagram](docs/deployment/multicluster.md#graphpolicies-cheeger-bounds-and-scaling)
 shows where each cluster refreshes live values and enforces its own rules.
 
 #### Demand-driven adaptation and preparation
@@ -530,7 +530,7 @@ offered work per second. Administrators can instead
 [select an exact signal name and unit](docs/graphs/load-profiles.md#define-demand) (such
 as `queueDepth` in `jobs` or `activeSessions` in `sessions`) and define the thresholds
 that select each profile. The [complete resource example](examples/load-profiles.yaml)
-includes the Graph, its GraphRule and its Workload/Daemon definitions. An authorized
+includes the Graph, its GraphPolicy and its Workload/Daemon definitions. An authorized
 application reporter supplies the measurements; configuring a signal does not
 automatically scrape it.
 
@@ -546,7 +546,7 @@ or while queued work awaits processing.
 For example, sustained growth past an approved queue-depth threshold can select
 a denser connection layout, rebalance traffic and prepare three dependency stages
 ahead instead of one. Fresh samples, stabilization, cooldowns and change budgets
-govern those adjustments. Every change must satisfy live GraphRules and the fixed
+govern those adjustments. Every change must satisfy live GraphPolicies and the fixed
 graph and operator capacity ceilings.
 
 ##### Separate control-loop responsibilities
@@ -714,7 +714,7 @@ config:
       bottom: 20
 ---
 flowchart TB
-    rules["GraphRule · subtree scope"] -. inherits .-> group
+    rules["GraphPolicy · subtree scope"] -. inherits .-> group
     subgraph group["PolyGraph · application"]
         direction TB
         subgraph producers["Graph · producers"]
@@ -1033,7 +1033,7 @@ helping node autoscalers prepare machines while upstream work runs.
 
 Polyad can run as a compact HA Deployment or manage its own service components
 in a Graph. With `architecture.mode: Distributed`, gateway, executor and telemetry
-ReplicaGroups scale independently through KEDA and fresh GraphRule checks. A
+ReplicaGroups scale independently through KEDA and fresh GraphPolicy checks. A
 root bootstrap Deployment retains planning and recovery responsibility. With
 root mode enabled, the **atlas**, a reserved root PolyGraph, contains a Graph for each operator
 group. The root operator Graph contains the bootstrap, managed component pipeline,
@@ -1073,7 +1073,7 @@ flowchart TB
         workers -->|"observations"| root
         pool -->|"observations"| root
     end
-    rules["GraphRule<br/>Cheeger ≥ 1; recursive size bound"] -. constrains .-> self
+    rules["GraphPolicy<br/>Cheeger ≥ 1; recursive size bound"] -. constrains .-> self
     keda -->|"scrape demand"| telemetry
     keda -->|"request replica counts"| root
     root -. "optional state storage" .-> pg
@@ -1144,7 +1144,7 @@ and independently enabled OTLP log export.
 
 Polyad coordinates application graphs alongside existing cluster components.
 
-- **A general-purpose policy engine such as OPA.** `GraphRule` constrains the
+- **A general-purpose policy engine such as OPA.** `GraphPolicy` constrains the
   graphs Polyad admits and the resources it compiles. It does not evaluate Rego,
   replace application authorization, or enforce policy on every Kubernetes API
   request. Cluster-wide admission policy remains a separate concern.<sup>[\[18\]](https://www.openpolicyagent.org/docs)</sup><sup>[\[19\]](docs/deployment/operator.md#structural-policy-and-composition-api)</sup>
@@ -1186,7 +1186,7 @@ choices.
 - **Structural bottlenecks:** Shlomo Hoory, Nathan Linial and Avi Wigderson,
   [Expander Graphs and Their Applications](https://www.math.ias.edu/~avi/PUBLICATIONS/MYPAPERS/HLW06/hlw06.pdf#page=14)
   (2006, Section 2.1). The edge-expansion definition used by Polyad's
-  [hard Cheeger bounds](docs/graphs/graph-rules.md#cheeger-bottleneck-bounds) and
+  [hard Cheeger bounds](docs/graphs/graph-policies.md#cheeger-bottleneck-bounds) and
   [throughput-driven Cheeger targets](docs/graphs/cheeger-orchestration.md).
   Administrator-selected demand signals choose calibrated targets; sustained
   shortfall or the optional [Demand trigger](docs/graphs/load-profiles.md#define-demand)

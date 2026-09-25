@@ -16,7 +16,7 @@
 Services can request a directed connection between existing nodes of a `Graph`,
 `PolyGraph`, or `ReplicaGroup` for a bounded lifetime. Polyad records each request,
 obtains the participating services' consent through [events](../workloads/workload-events.md),
-checks the live graph family's [GraphRules](../graphs/graph-rules.md), adds admitted edges
+checks the live graph family's [GraphPolicies](../graphs/graph-policies.md), adds admitted edges
 to the instance's effective topology, and removes their grants after expiry.
 The graph's reusable specification is unchanged. For endpoints in different graph
 or cluster boundaries, see [Atlas discovery and negotiation](discovery.md). It adds
@@ -127,7 +127,7 @@ Use `polygraphs` or `replicagroups` for those boundary types. `resourceNames`
 identifies persisted instances, including generated names obtained from
 composition audit or [workload identity](../workloads/workload-environment.md). Permission is
 for the entire target boundary: authorized callers can select any two nodes in
-it, subject to GraphRules. Callers can read or revoke only their own service
+it, subject to GraphPolicies. Callers can read or revoke only their own service
 account incarnation's requests.
 
 Add this to the workload's Pod template `spec`, mounting the projected token in
@@ -294,7 +294,7 @@ connections().respond_connection(
 
 Applications decide whether to approve; the client never automatically consents.
 The operator rechecks participant identity and permissions before admission,
-then evaluates GraphRules and observes the network policies. Missing permission,
+then evaluates GraphPolicies and observes the network policies. Missing permission,
 an absent service or a lost notification leaves the proposal Pending until the
 original TTL expires. There is no timeout bypass or anonymous consent, including
 in demonstration mode. Replayed responses do not extend the deadline.
@@ -392,7 +392,7 @@ sequenceDiagram
     A->>K: Check approve permission and record consent
     O->>K: Refresh intent under owning graph-family lease
     O->>O: Recheck consent identities and permissions
-    O->>O: Check live graph-family GraphRules
+    O->>O: Check live graph-family GraphPolicies
     O->>N: Admit edge and reconcile policies
     O->>K: Observe policies and mark Active
     Note over O,N: TTL deadline, endpoint removal or early revocation
@@ -443,7 +443,7 @@ live grants remain under their existing ownership.
 
 Revocation intent and pending policy cleanup are persisted before removing a
 grant, so a failed policy write or operator restart cannot silently restore it.
-Cleanup retries even when graph rules block normal admission. Static connections
+Cleanup retries even when graph policies block normal admission. Static connections
 remain declarative: update their specification when removing their endpoints;
 reconciliation does not rewrite reusable graph definitions or treat a temporary
 workload outage as a request to change the topology.

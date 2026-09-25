@@ -53,7 +53,7 @@ def state_document(obj: dict[str, Any]) -> dict[str, Any]:
 
     # Workload/Resource/Composition definitions may embed Secrets or plaintext env.
     # Their identity and observed parameters belong here; their manifests remain in Kubernetes.
-    if obj["kind"] in {"Graph", "PolyGraph", "ReplicaGroup", "GraphRule", "OperatorPool", "RemoteScale"}:
+    if obj["kind"] in {"Graph", "PolyGraph", "ReplicaGroup", "GraphPolicy", "OperatorPool", "RemoteScale"}:
         document["spec"] = obj.get("spec", {})
     return document
 

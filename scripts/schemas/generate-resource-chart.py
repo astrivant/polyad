@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 ROOT = Path(__file__).resolve().parents[2]
 CHART = ROOT / "charts/polyad-crds"
-NAMES = {"PolyGraph": "polygraphs", "ShutdownPolicy": "shutdownPolicies", "Dragonfly": "dragonflies"}
+NAMES = {"PolyGraph": "polygraphs", "GraphPolicy": "graphPolicies", "ShutdownPolicy": "shutdownPolicies", "Dragonfly": "dragonflies"}
 DNS_NAME = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
 TEMPLATE = {"type": "string", "pattern": r"\{\{[\s\S]*\}\}"}
 

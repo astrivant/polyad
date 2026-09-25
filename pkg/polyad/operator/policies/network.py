@@ -18,7 +18,7 @@ from polyad.graph.temporary import active_entries, overlay
 from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.reconciliation.replication import effective_spec, replica_selector
 from polyad_types import resources as asts
-from polyad_types.graphs.rules import StructuralRule
+from polyad_types.graphs.policies import StructuralPolicy
 from polyad_types.graphs.topology import topology
 from polyad_types.networking.access import MeshPeer
 from polyad_types.serialization import converter
@@ -41,7 +41,7 @@ POLICY_KINDS = asts.NETWORK_POLICY_KINDS
 
 async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, str], list[NetworkScope]]:
     """
-    Resolve actual owner identities and intersect every selected ancestor rule.
+    Resolve actual owner identities and intersect every selected ancestor policy.
 
     Args:
         api (API): Refreshed Kubernetes read adapter.
@@ -53,9 +53,9 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
     """
 
     namespace = obj["metadata"]["namespace"]
-    inventory = await api.request("GET", "GraphRule", namespace)
+    inventory = await api.request("GET", "GraphPolicy", namespace)
     documents = {item["metadata"]["name"]: item for item in inventory.get("items", [])}
-    rules = {name: converter.structure(item["spec"], StructuralRule) for name, item in documents.items()}
+    policies = {name: converter.structure(item["spec"], StructuralPolicy) for name, item in documents.items()}
     labels = {f"{asts.GROUP}/network-owner": obj["metadata"]["uid"], f"{asts.GROUP}/network-node": node}
     scopes = []
     current, branch = obj, node
@@ -77,14 +77,14 @@ async def context(api: API, obj: dict[str, Any], node: str) -> tuple[dict[str, s
         labels[scope_label(namespace, kind, meta["name"], branch)] = "true"
         observed_at = datetime.now(UTC)
         graph = topology(overlay(current, graph_spec, now=observed_at), kind)
-        selected = {name for name, rule in rules.items() if rule.enforcement == "Namespace"} | set(graph.rules)
-        if selected - rules.keys():
-            raise ValueError("a referenced network GraphRule is unavailable")
+        selected = {name for name, policy in policies.items() if policy.enforcement == "Namespace"} | set(graph.policies)
+        if selected - policies.keys():
+            raise ValueError("a referenced network GraphPolicy is unavailable")
         if any(documents[name]["metadata"].get("deletionTimestamp") for name in selected):
-            raise Pending("a selected network GraphRule is being deleted")
+            raise Pending("a selected network GraphPolicy is being deleted")
         accesses = [
             service_access(current, graph.network),
-            *(rules[name].network for name in sorted(selected) if current is obj or rules[name].scope == "Subtree"),
+            *(policies[name].network for name in sorted(selected) if current is obj or policies[name].scope == "Subtree"),
         ]
         for access in accesses:
             if access is not None and (current is obj or access.scope == "Subtree"):

@@ -60,7 +60,7 @@ processes. Threads share the Python process's memory.
 | `polyad-kopf` | Non-daemon thread running `asyncio.run(...)` around embedded `kopf.operator`; owns async clients, queues and tasks |
 | `polyad-http` | One non-daemon serving thread owning all enabled API listeners; Waitress by default, or a Hypercorn asyncio loop for WebSockets |
 | HTTP worker pool | Synchronous Flask request handling, including streaming responses; shared by all API families |
-| Asyncio default executor | Workers created on demand by `asyncio.to_thread`, including synchronous Kubernetes transport, graph rule/Cheeger computations, credential-file reads and metrics serialization |
+| Asyncio default executor | Workers created on demand by `asyncio.to_thread`, including synchronous Kubernetes transport, graph policy/Cheeger computations, credential-file reads and metrics serialization |
 | Kopf callback executor | Framework-managed execution of synchronous callbacks, including Polyad's health probe; async handlers stay on the event loop |
 | `polyad-credential-lanes` | Optional daemon thread renewing named API-key concurrency permits; the shared HTTP `Access` runtime owns one renewer |
 | OpenTelemetry batch workers | One optional SDK worker per enabled signal (traces and logs), initialized before operator work and drained afterward |

@@ -149,7 +149,7 @@ within the active plan's delegated settings and supplies observations that can
 trigger the next composition decision.
 
 Each selected plan carries a revision and identifies the graph boundaries and
-settings it controls. Polyad admits that revision against configured GraphRules,
+settings it controls. Polyad admits that revision against configured GraphPolicies,
 local authority, permissions and resource budgets. Once admitted, the revision
 governs subsequent decisions for those boundaries.
 
@@ -251,7 +251,7 @@ values into the capability catalog or receipts.
    resource versions and assumptions that support each proposed composition.
 4. Present a plan for review, or submit it automatically only under an explicit
    administrator policy authorizing those changes.
-5. Let Polyad refresh affected state and evaluate live GraphRules, ownership,
+5. Let Polyad refresh affected state and evaluate live GraphPolicies, ownership,
    permissions and capacity before admitting mutations.
 6. Observe the complete outcome. Replan after sustained deviations or invalidated
    assumptions, subject to cooldowns, change budgets and safe migration rules.
@@ -318,7 +318,7 @@ boundaries.
 
 ## Cheeger bounds and application guarantees
 
-[GraphRules](../graphs/graph-rules.md) would constrain every proposed composition
+[GraphPolicies](../graphs/graph-policies.md) would constrain every proposed composition
 at the configured graph boundaries. [Structural Cheeger bounds and
 throughput-derived targets](../graphs/cheeger-orchestration.md) would keep their
 existing meanings: structural bounds constrain connectivity, and application

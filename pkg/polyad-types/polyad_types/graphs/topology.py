@@ -15,7 +15,7 @@ from typing_extensions import TypeVar
 from polyad_types.api.throughput import DemandSource
 from polyad_types.graphs.activation import ActivationPolicy
 from polyad_types.graphs.capacity import CapacityPlan, CapacityTuning
-from polyad_types.graphs.rules import Cheeger, CheegerComputation
+from polyad_types.graphs.policies import Cheeger, CheegerComputation
 from polyad_types.networking.access import NetworkAccess, NetworkPort
 from polyad_types.networking.traffic import TrafficRoute, TrafficWeights
 from polyad_types.serialization import converter
@@ -101,7 +101,7 @@ class ThroughputTier:
 
     Attributes:
         threshold (float): Inclusive threshold in the selected demand signal's unit; defaults to offered work per second.
-        cheeger (Cheeger): Target range on the connections relation; never overrides GraphRules.
+        cheeger (Cheeger): Target range on the connections relation; never overrides GraphPolicies.
         trafficWeights (tuple[TrafficWeights, ...]): Optional calibrated request percentages for configured routes.
         capacity (CapacityTuning | None): Approved forecast parameters; omitted retains the current capacity plan.
     """
@@ -161,7 +161,7 @@ class ThroughputLayout:
 @frozen
 class ThroughputPolicy:
     """
-    Observe or adapt topology using empirical throughput targets within hard structural rules.
+    Observe or adapt topology using empirical throughput targets within hard structural policies.
 
     Attributes:
         unit (str): Application work unit shared by offered and completed rates, such as records.
@@ -311,7 +311,7 @@ class Topology:
         suspend (bool): Whether execution is drained and admission paused.
         templateOnly (bool): Whether this definition is instantiated only by a parent graph.
         placement (Placement | None): Scheduling constraints inherited by descendant execution.
-        rules (tuple[str, ...]): Additional structural rules inherited by nested boundaries.
+        policies (tuple[str, ...]): Additional structural policies inherited by nested boundaries.
         capacity (CapacityPlan | None): Optional advance capacity policy inherited by nested graph instances.
         network (NetworkAccess | None): Optional traffic restrictions inherited by descendant workloads.
         activation (ActivationPolicy | None): Optional pulse policy when this graph is referenced as a downstream node.
@@ -327,7 +327,7 @@ class Topology:
     suspend: bool = False
     templateOnly: bool = False
     placement: Placement | None = field(default=None, kw_only=True)
-    rules: tuple[str, ...] = field(default=(), kw_only=True)
+    policies: tuple[str, ...] = field(default=(), kw_only=True)
     capacity: CapacityPlan | None = field(default=None, kw_only=True)
     network: NetworkAccess | None = field(default=None, kw_only=True)
     activation: ActivationPolicy | None = field(default=None, kw_only=True)

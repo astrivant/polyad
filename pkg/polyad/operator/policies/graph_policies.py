@@ -11,13 +11,13 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-# Preserve existing import paths while keeping each exception defined centrally.
-from polyad.exceptions.policies import RuleViolation as RuleViolation
+# Export the policy exception from its central definition.
+from polyad.exceptions.policies import PolicyViolation as PolicyViolation
 from polyad.exceptions.reconciliation import Pending
-from polyad.graph.rules import evaluate_rule
+from polyad.graph.policies import evaluate_policy
 from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.cheeger import computation_limits
-from polyad_types.graphs.rules import StructuralRule
+from polyad_types.graphs.policies import StructuralPolicy
 from polyad_types.graphs.topology import topology
 from polyad_types.resources import BOUNDARY_KINDS
 from polyad_types.serialization import converter
@@ -28,45 +28,45 @@ if TYPE_CHECKING:
     from polyad.operator.adapters.kubernetes import API
 
 __all__ = (
-    "RuleViolation",
-    "check_rules",
+    "PolicyViolation",
+    "check_policies",
 )
 
 
-async def check_rules(
+async def check_policies(
     api: API,
     namespace: str,
     kind: str,
     spec: dict[str, Any],
     *,
     definitions: dict[tuple[str, str], dict[str, Any]] | None = None,
-    rule_documents: list[dict[str, Any]] | None = None,
+    policy_documents: list[dict[str, Any]] | None = None,
     observations: list[dict[str, Any]] | None = None,
     cache_scope: str = "",
 ) -> list[dict[str, Any]]:
     """
-    Apply mandatory and inherited rules to every referenced boundary using refreshed definitions.
+    Apply mandatory and inherited policies to every referenced boundary using refreshed definitions.
 
     Args:
         api (API): Kubernetes read adapter used inside the current leased reconciliation.
-        namespace (str): Namespace containing graph definitions and structural rules.
+        namespace (str): Namespace containing graph definitions and structural policies.
         kind (str): Root boundary kind.
         spec (dict[str, Any]): Root desired specification.
         definitions (dict[tuple[str, str], dict[str, Any]] | None): Not-yet-created composition definitions for preflight.
-        rule_documents (list[dict[str, Any]] | None): Fresh rule snapshot when the caller also verifies revisions.
+        policy_documents (list[dict[str, Any]] | None): Fresh policy snapshot when the caller also verifies revisions.
         observations (list[dict[str, Any]] | None): Optional collector for verdicts at every visited boundary.
         cache_scope (str): Persisted root UID when available; preflight falls back to a content-isolated identity.
 
     Returns:
-        list[dict[str, Any]]: Root rule verdicts with persisted rule identities and measurements.
+        list[dict[str, Any]]: Root policy verdicts with persisted policy identities and measurements.
     """
-    if rule_documents is None:
-        rule_documents = (await api.request("GET", "GraphRule", namespace)).get("items", [])
-    documents = {item["metadata"]["name"]: item for item in rule_documents}
+    if policy_documents is None:
+        policy_documents = (await api.request("GET", "GraphPolicy", namespace)).get("items", [])
+    documents = {item["metadata"]["name"]: item for item in policy_documents}
     if len(documents) > 32:
-        raise RuleViolation("a namespace supports at most 32 GraphRules")
-    rules = {name: converter.structure(item["spec"], StructuralRule) for name, item in documents.items()}
-    mandatory = {name for name, rule in rules.items() if rule.enforcement == "Namespace"}
+        raise PolicyViolation("a namespace supports at most 32 GraphPolicies")
+    policies = {name: converter.structure(item["spec"], StructuralPolicy) for name, item in documents.items()}
+    mandatory = {name for name, policy in policies.items() if policy.enforcement == "Namespace"}
     cache = dict(definitions or {})
     visited_nodes = 0
     boundaries = 0
@@ -78,52 +78,52 @@ async def check_rules(
         nonlocal visited_nodes, boundaries
         boundaries += 1
         if len(path) >= 32 or boundaries > 256:
-            raise RuleViolation("graph expansion exceeds 32 nesting levels or 256 boundaries")
+            raise PolicyViolation("graph expansion exceeds 32 nesting levels or 256 boundaries")
         graph = topology(body, boundary_kind)
         cluster_local |= boundary_kind == "Graph"
-        selected = mandatory | inherited | set(graph.rules)
-        missing = selected - rules.keys()
+        selected = mandatory | inherited | set(graph.policies)
+        missing = selected - policies.keys()
         if missing:
-            raise RuleViolation(f"referenced GraphRule is unavailable: {', '.join(sorted(missing))}")
+            raise PolicyViolation(f"referenced GraphPolicy is unavailable: {', '.join(sorted(missing))}")
         if any(documents[name]["metadata"].get("deletionTimestamp") for name in selected):
-            raise RuleViolation("a selected GraphRule is being deleted")
+            raise PolicyViolation("a selected GraphPolicy is being deleted")
         visited_nodes += len(graph.nodes)
         if visited_nodes > 4096:
-            raise RuleViolation("expanded graph family exceeds 4096 node occurrences")
+            raise PolicyViolation("expanded graph family exceeds 4096 node occurrences")
         expanded, depth = len(graph.nodes), 1
         for node in graph.nodes:
             if node.kind not in BOUNDARY_KINDS:
                 continue
             if getattr(node, "cluster", None):
                 if cluster_local:
-                    raise RuleViolation("Graph descendants must stay in one cluster; place cross-cluster compositions in a PolyGraph")
+                    raise PolicyViolation("Graph descendants must stay in one cluster; place cross-cluster compositions in a PolyGraph")
 
                 # The remote boundary is a vertex here. Its own operator enforces
-                # destination namespace rules against its live local family.
+                # destination namespace policies against its live local family.
                 continue
             key = node.kind, node.ref
             if key in path:
-                raise RuleViolation("recursive graph definition references are invalid")
+                raise PolicyViolation("recursive graph definition references are invalid")
             if key not in cache:
                 definition = await api.get(node.kind, namespace, node.ref)
                 if definition is None or definition["metadata"].get("deletionTimestamp"):
                     raise Pending(f"waiting for graph definition: {node.kind}/{node.ref}")
                 cache[key] = definition
             count, levels, _ = await visit(
-                node.kind, cache[key]["spec"], (*path, key), {name for name in selected if rules[name].scope == "Subtree"}, cluster_local
+                node.kind, cache[key]["spec"], (*path, key), {name for name in selected if policies[name].scope == "Subtree"}, cluster_local
             )
             expanded += count
             depth = max(depth, levels + 1)
         reports = []
         for name in sorted(selected):
             report = await asyncio.to_thread(
-                evaluate_rule,
-                rules[name],
+                evaluate_policy,
+                policies[name],
                 graph,
                 expanded_nodes=expanded,
                 nesting_depth=depth,
                 cheeger_limits=computation_limits(),
-                cache_scope=json.dumps([namespace, kind, scope, path, documents[name]["metadata"]["uid"], rules[name].relation]),
+                cache_scope=json.dumps([namespace, kind, scope, path, documents[name]["metadata"]["uid"], policies[name].relation]),
             )
             meta = documents[name]["metadata"]
 
@@ -136,18 +136,18 @@ async def check_rules(
             if not report["allowed"]:
                 location = "/".join(name for _, name in path) or "root"
                 decision(
-                    "polyad.rules.rejected",
-                    f"GraphRule {name} blocks boundary {location}: {'; '.join(report['violations'])}.",
+                    "polyad.policies.rejected",
+                    f"GraphPolicy {name} blocks boundary {location}: {'; '.join(report['violations'])}.",
                     obj=documents[name],
                     outcome="blocked",
                     reason="structural_constraint",
                     level=logging.WARNING,
                     attributes={"polyad.boundary.path": location, "polyad.boundary.kind": boundary_kind},
                 )
-                raise RuleViolation(f"GraphRule/{name} at {location}: {'; '.join(report['violations'])}")
+                raise PolicyViolation(f"GraphPolicy/{name} at {location}: {'; '.join(report['violations'])}")
             decision(
-                "polyad.rules.allowed",
-                f"GraphRule {name} permits the measured boundary.",
+                "polyad.policies.allowed",
+                f"GraphPolicy {name} permits the measured boundary.",
                 obj=documents[name],
                 outcome="allowed",
                 reason="structural_constraints_passed",

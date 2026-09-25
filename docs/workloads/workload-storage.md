@@ -194,7 +194,7 @@ create separate sets with disjoint selectors and claim identities;
 `replicasPerActivation` determines each pulse's Pod count.
 
 Point KEDA at the ReplicaGroup scale subresource. StatefulSet execution follows
-the same live ancestor GraphRule checks, including Cheeger bounds, as Deployment
+the same live ancestor GraphPolicy checks, including Cheeger bounds, as Deployment
 execution. Rules count graph vertices and expanded occurrences; native Pod and
 PVC counts inside one vertex do not add graph vertices. Direct autoscaling of
 the generated native controller bypasses those graph checks. See

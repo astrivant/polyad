@@ -25,13 +25,14 @@ from polyad_types import (
     Event,
     Graph,
     GraphMetrics,
+    GraphPolicy,
     NetworkPort,
     Node,
     ObjectMeta,
     ReplicaConnectivity,
     ReplicaTemplate,
     Replication,
-    StructuralRule,
+    StructuralPolicy,
     Topology,
     from_dict,
     from_document,
@@ -48,9 +49,42 @@ def test_operator_and_client_share_the_public_models():
     """
     assert RESOURCE_MODELS["Graph"] is Graph
     assert graph.Topology is Topology
-    assert graph.StructuralRule is StructuralRule
+    assert graph.StructuralPolicy is StructuralPolicy
     assert graph.Replication is Replication
     assert ClientEvent is Event
+
+
+def test_graph_policy_resource_uses_only_the_new_public_kind():
+    """
+    Keep the resource model, routing plural and decoding contract on the new API name.
+    """
+    document = {
+        "apiVersion": GraphPolicy.resource_type.api_version,
+        "kind": "GraphPolicy",
+        "metadata": {"name": "budget"},
+        "spec": {"limits": {"nodes": 8}},
+    }
+    assert isinstance(from_document(document), GraphPolicy)
+    assert RESOURCE_MODELS["GraphPolicy"] is GraphPolicy
+    assert GraphPolicy.resource_type.plural == "graphpolicies"
+    assert "GraphRule" not in RESOURCE_MODELS and not hasattr(polyad_types, "GraphRule")
+    with pytest.raises(ValueError, match="unsupported resource kind"):
+        from_document({**document, "kind": "GraphRule"})
+
+
+@pytest.mark.parametrize(
+    "model,body",
+    [(Topology, {"nodes": []}), (Replication, {"template": {"kind": "Graph", "ref": "pipeline"}})],
+)
+def test_graph_policy_references_reject_the_retired_field(model, body):
+    """
+    Serialize policy references consistently and fail closed on the retired rules key.
+    """
+    value = from_dict({**body, "policies": ["budget"]}, model)
+    assert value.policies == ("budget",)
+    assert to_dict(value)["policies"] == ["budget"]
+    with pytest.raises(ForbiddenExtraKeysError):
+        from_dict({**body, "rules": ["budget"]}, model)
 
 
 def test_resource_consumers_use_the_same_registry_and_classes():
@@ -95,7 +129,7 @@ def test_domain_exports_and_schemas_refer_to_canonical_models():
     [
         Topology(nodes=(Node("work", "Workload", "worker"),)),
         Topology(mode="persistent", nodes=(Node("service", "Daemon", "server"),)),
-        StructuralRule(relation="connections", cheeger=Cheeger(minimum=0.5)),
+        StructuralPolicy(relation="connections", cheeger=Cheeger(minimum=0.5)),
         Replication(ReplicaTemplate("Graph", "pipeline"), connectivity=ReplicaConnectivity(mode="Ring")),
         ActivationRequest("pulse", "pipeline", "uid", "work"),
         CompositionRequest("request", "root", (CompositionItem("root", "Graph", {"nodes": []}),)),
@@ -141,6 +175,6 @@ def test_configuration_decoding_rejects_invalid_or_unrecognized_fields():
     with pytest.raises(ValueError, match="minimum must not exceed"):
         from_dict({"minimum": 2, "maximum": 1}, Cheeger)
     with pytest.raises(ForbiddenExtraKeysError, match="Extra fields"):
-        from_dict({"unexpected": True}, StructuralRule)
+        from_dict({"unexpected": True}, StructuralPolicy)
     with pytest.raises(ValueError, match="ttlSeconds"):
         ConnectionRequest("edge", "test", "Graph", "pipeline", "uid", "first", "second", 0)

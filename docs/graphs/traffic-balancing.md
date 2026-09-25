@@ -138,7 +138,7 @@ Keep `mode: Observe` while calibrating, then choose `Adapt` to permit bounded wr
 | `Headroom` | Each destination's completed rate plus reported additional sustainable capacity determines its share | Sustained imbalance under positive demand, even before an aggregate shortfall |
 
 Both require a matching demand tier and a proposed topology satisfying that
-tier's Cheeger target and the live GraphRules. Neither changes replicas or
+tier's Cheeger target and the live GraphPolicies. Neither changes replicas or
 relaxes network authorization. `Headroom` does not accept tier `trafficWeights`;
 choose one source of routing targets for each graph's feedback policy.
 
@@ -197,7 +197,7 @@ flowchart TB
     samples["Headroom mode<br/>Each copy reports completed work and spare capacity"] --> target
     current --> limits["Sustained samples, per-copy ranges<br/>Maximum step, cooldown and change budget"]
     target --> limits
-    limits --> rules["Fresh graph family and GraphRules<br/>Application Cheeger target"]
+    limits --> rules["Fresh graph family and GraphPolicies<br/>Application Cheeger target"]
     rules --> observe["Observe: publish recommendation"]
     rules --> adapt["Adapt: persist bounded percentages"]
     adapt --> istio["Istio distributes new requests"]
@@ -298,7 +298,7 @@ VirtualService. Then remove the copy. Zero-weight paths can remain declared
 through scale-in in Tiers/static mode. In Headroom mode, update the route and
 report inventory together so every configured destination has a current report.
 Scaling workloads directly through native Kubernetes APIs bypasses Polyad's
-graph admission checks, as it does for other GraphRules.
+graph admission checks, as it does for other GraphPolicies.
 
 Policies are graph-owned auxiliary resources and update in place; changing a
 percentage does not roll application pods. Polyad refuses to adopt another

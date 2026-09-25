@@ -23,7 +23,7 @@ spec:
             httpGet: {path: /, port: 8080}
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: pipeline-cheeger
 spec:
@@ -48,7 +48,7 @@ metadata:
   name: cheeger-pipeline
 spec:
   mode: persistent
-  rules: [pipeline-cheeger]
+  policies: [pipeline-cheeger]
   nodes:
     - {name: a, kind: Daemon, ref: cheeger-stage}
     - {name: b, kind: Daemon, ref: cheeger-stage}

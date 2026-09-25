@@ -21,7 +21,7 @@ locals {
   })
 
   # Kept in step with the Python resource registry by test_terraform.py.
-  definition_kinds = ["Daemon", "Gate", "GraphRule", "Resource", "ShutdownPolicy", "Workload"]
+  definition_kinds = ["Daemon", "Gate", "GraphPolicy", "Resource", "ShutdownPolicy", "Workload"]
   health_lua = replace(
     file("${path.module}/../integrations/argocd/health.lua"),
     "-- REGISTRY_DEFINITIONS",

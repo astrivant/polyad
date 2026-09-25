@@ -53,8 +53,8 @@ replicaGroups: {}
 #       suspend: false
 #       ## @param replicaGroups.example.spec.placement [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
 #       placement: {}
-#       ## @param replicaGroups.example.spec.rules [array, string] Optional. No CRD default; the value shown is illustrative. Structural restrictions for every replicated graph.
-#       rules: []
+#       ## @param replicaGroups.example.spec.policies [array, string] Optional. No CRD default; the value shown is illustrative. Structural restrictions for every replicated graph.
+#       policies: []
 #       ## @param replicaGroups.example.spec.network [object, string, nullable] Optional. No CRD default; the value shown is illustrative.
 #       network: {}
 #       ## @param replicaGroups.example.spec.capacity [object, string, nullable] Optional. No CRD default; the value shown is illustrative.

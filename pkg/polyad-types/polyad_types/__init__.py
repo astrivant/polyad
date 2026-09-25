@@ -1,7 +1,7 @@
 """
 Define and serialize the shared data exchanged by Polyad operators and applications.
 
-Validated models cover resources, graph rules, replication, networking, API
+Validated models cover resources, graph policies, replication, networking, API
 requests, discovery, events and observed state. The operator, SDK and benchmarks
 use these definitions, which also supply the generated JSON Schemas.
 """
@@ -50,17 +50,17 @@ from polyad_types.exceptions.events import EventTooLarge as EventTooLarge
 from polyad_types.graphs.activation import ActivationPolicy as ActivationPolicy
 from polyad_types.graphs.capacity import CapacityPlan as CapacityPlan
 from polyad_types.graphs.capacity import CapacityTuning as CapacityTuning
+from polyad_types.graphs.policies import Cheeger as Cheeger
+from polyad_types.graphs.policies import CheegerComputation as CheegerComputation
+from polyad_types.graphs.policies import CheegerReduction as CheegerReduction
+from polyad_types.graphs.policies import Spectrum as Spectrum
+from polyad_types.graphs.policies import StructuralPolicy as StructuralPolicy
 from polyad_types.graphs.replication import RemoteScaleOwner as RemoteScaleOwner
 from polyad_types.graphs.replication import ReplicaConnection as ReplicaConnection
 from polyad_types.graphs.replication import ReplicaConnectivity as ReplicaConnectivity
 from polyad_types.graphs.replication import ReplicaSource as ReplicaSource
 from polyad_types.graphs.replication import ReplicaTemplate as ReplicaTemplate
 from polyad_types.graphs.replication import Replication as Replication
-from polyad_types.graphs.rules import Cheeger as Cheeger
-from polyad_types.graphs.rules import CheegerComputation as CheegerComputation
-from polyad_types.graphs.rules import CheegerReduction as CheegerReduction
-from polyad_types.graphs.rules import Spectrum as Spectrum
-from polyad_types.graphs.rules import StructuralRule as StructuralRule
 from polyad_types.graphs.topology import Connection as Connection
 from polyad_types.graphs.topology import Dependency as Dependency
 from polyad_types.graphs.topology import GraphNode as GraphNode
@@ -137,7 +137,7 @@ from polyad_types.resources.polyad import Composition as Composition
 from polyad_types.resources.polyad import Daemon as Daemon
 from polyad_types.resources.polyad import Gate as Gate
 from polyad_types.resources.polyad import Graph as Graph
-from polyad_types.resources.polyad import GraphRule as GraphRule
+from polyad_types.resources.polyad import GraphPolicy as GraphPolicy
 from polyad_types.resources.polyad import PolyGraph as PolyGraph
 from polyad_types.resources.polyad import ReplicaGroup as ReplicaGroup
 from polyad_types.resources.polyad import ResourceDefinition as ResourceDefinition
@@ -231,7 +231,7 @@ __all__ = (
     "GraphEvent",
     "GraphMetrics",
     "GraphNode",
-    "GraphRule",
+    "GraphPolicy",
     "HeartbeatEvent",
     "Independence",
     "Job",
@@ -296,7 +296,7 @@ __all__ = (
     "StatefulSet",
     "StatefulSetSpec",
     "StatusPatch",
-    "StructuralRule",
+    "StructuralPolicy",
     "SubgraphMetrics",
     "TemporaryConnection",
     "ThroughputLayout",

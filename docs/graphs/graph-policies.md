@@ -1,4 +1,4 @@
-# Graph rules
+# Graph policies
 
 <!-- toc:start -->
 **Table of contents**
@@ -41,22 +41,22 @@
   - [Peer selection](#peer-selection)
   - [Mesh identity and HTTP constraints](#mesh-identity-and-http-constraints)
   - [Combining network contracts](#combining-network-contracts)
-- [Complete rule examples](#complete-rule-examples)
+- [Complete policy examples](#complete-policy-examples)
 - [PolyGraphs and autoscaling](#polygraphs-and-autoscaling)
 - [Admission, reporting and computation limits](#admission-reporting-and-computation-limits)
 - [Application throughput targets](#application-throughput-targets)
 <!-- toc:end -->
 
-`GraphRule` defines which graphs Polyad may admit and which traffic their workloads
-may exchange. Administrators create rules in the operator namespace; end-users
-select optional rules through a graph's `spec.rules`, including in
-[composition requests](../apis/composition-requests.md). Namespace rules apply automatically.
+`GraphPolicy` defines which graphs Polyad may admit and which traffic their workloads
+may exchange. Administrators create policies in the operator namespace; end-users
+select optional policies through a graph's `spec.policies`, including in
+[composition requests](../apis/composition-requests.md). Namespace policies apply automatically.
 Every selected structural constraint must pass before new work is admitted or
-a replica scaling action is dispatched. `PolyGraph` supports `spec.rules` exactly
+a replica scaling action is dispatched. `PolyGraph` supports `spec.policies` exactly
 as `Graph` and `ReplicaGroup` do.
 
-Only policy administrators should have write access to `graphrules`. The operator's
-Role grants read access, and the composition HTTP API cannot create or modify rules.
+Only policy administrators should have write access to `graphpolicies`. The operator's
+Role grants read access, and the composition HTTP API cannot create or modify policies.
 The operator enforces these policies during graph admission and when compiling
 workload networking resources. Cluster admission controllers govern direct Pod
 requests from other clients.
@@ -68,7 +68,7 @@ are applied by the operator even where the CRD does not persist a default value.
 
 | Field | Default | Configuration |
 | --- | --- | --- |
-| [`enforcement`](#enforcement) | `Namespace` | `Namespace` or `Referenced`: how a rule is selected |
+| [`enforcement`](#enforcement) | `Namespace` | `Namespace` or `Referenced`: how a policy is selected |
 | [`scope`](#scope) | `Subtree` | `Boundary` or `Subtree`: whether a selected reference propagates |
 | [`relation`](#relation) | `admission` | `admission` dependencies or `connections` for structural measurements |
 | [`limits`](#structural-limits) | `{}` | Ten independent inclusive nonnegative integer maxima |
@@ -78,46 +78,46 @@ are applied by the operator even where the CRD does not persist a default value.
 | [`cheegerComputation`](#cheeger-computation-budgets-and-priorities) | Inherit operator ceilings | `maxVertices`, `maxCuts`, `timeoutSeconds`, ordered `priorityCuts`; preferences never weaken bounds |
 | [`network`](#network-contracts) | Omitted | Scope, isolation, peer, port and optional Istio restrictions |
 
-The [GraphRule CRD](../../charts/polyad-crds/crds/graphrules.yaml) defines the Kubernetes
+The [GraphPolicy CRD](../../charts/polyad-crds/crds/graphpolicies.yaml) defines the Kubernetes
 schema. Structural integer limits and spectral thresholds have a CRD maximum of
-1,000,000. The Python types are `StructuralRule`, `Spectrum`, `Cheeger` and
+1,000,000. The Python types are `StructuralPolicy`, `Spectrum`, `Cheeger` and
 `NetworkAccess`, exported from `polyad.graph`.
 
 Diagrams below label passing and failing examples explicitly. Directed arrows
-represent the selected relation unless a diagram describes rule selection or
+represent the selected relation unless a diagram describes policy selection or
 network traffic. Undirected lines represent the simple projection.
 
 ## Selection and measurement
 
 ### Enforcement
 
-`enforcement: Namespace` selects the rule independently at every executable
+`enforcement: Namespace` selects the policy independently at every executable
 boundary in the namespace. `enforcement: Referenced` selects it when a graph names
-it in `rules`, or inherits that reference from an ancestor. Missing rule references
-block admission. A composition cannot opt out of namespace rules.
+it in `policies`, or inherits that reference from an ancestor. Missing policy references
+block admission. A composition cannot opt out of namespace policies.
 
 ```mermaid
 flowchart TB
-    ns["enforcement: Namespace"] --> a["Graph A<br/>rules omitted: selected"]
-    ns --> b["Graph B<br/>rules omitted: selected"]
-    ref["enforcement: Referenced<br/>rule name: budget"] --> c["Graph C<br/>rules: [budget]: selected"]
-    ref -. "not selected" .-> d["Graph D<br/>rules omitted; no inherited reference"]
+    ns["enforcement: Namespace"] --> a["Graph A<br/>policies omitted: selected"]
+    ns --> b["Graph B<br/>policies omitted: selected"]
+    ref["enforcement: Referenced<br/>policy name: budget"] --> c["Graph C<br/>policies: [budget]: selected"]
+    ref -. "not selected" .-> d["Graph D<br/>policies omitted; no inherited reference"]
 ```
 
 ### Scope
 
-`scope: Boundary` keeps a referenced rule local; `scope: Subtree` propagates it to
-nested boundaries. Each boundary is measured separately. A namespace rule remains
+`scope: Boundary` keeps a referenced policy local; `scope: Subtree` propagates it to
+nested boundaries. Each boundary is measured separately. A namespace policy remains
 mandatory with either scope because it is independently selected at every
 boundary. Recursive measurements such as `expandedNodes` still include descendants
-when the rule has `scope: Boundary`.
+when the policy has `scope: Boundary`.
 
 ```mermaid
 flowchart TB
-    subgraph local["Referenced rule · scope: Boundary"]
+    subgraph local["Referenced policy · scope: Boundary"]
         a["Parent: checked"] --> b["Child: not checked by this reference"]
     end
-    subgraph recursive["Referenced rule · scope: Subtree"]
+    subgraph recursive["Referenced policy · scope: Subtree"]
         c["Parent: checked"] --> d["Child: checked separately"]
         d --> e["Grandchild: checked separately"]
     end
@@ -149,8 +149,8 @@ directed edges become one undirected edge.
 ## Structural limits
 
 With optional [cross-cluster PolyGraphs](../deployment/multicluster.md), a remote boundary is
-one vertex in its parent's cluster. Recursive expansion and inherited rules stop
-there. Its destination operator enforces that cluster's rules against local
+one vertex in its parent's cluster. Recursive expansion and inherited policies stop
+there. Its destination operator enforces that cluster's policies against local
 descendants. Cheeger values describe each evaluated boundary's declared
 structure; they do not measure network throughput across clusters.
 
@@ -425,7 +425,7 @@ flowchart LR
 
 ## Spectral bounds
 
-Spectral rules use the simple undirected, unweighted projection. For adjacency
+Spectral policies use the simple undirected, unweighted projection. For adjacency
 matrix `A` and degree matrix `D`, the combinatorial Laplacian is `L = D - A`.
 A directed DAG's adjacency eigenvalues alone are all zero; using its undirected
 projection makes the measurements informative about graph shape.
@@ -436,7 +436,7 @@ projection makes the measurements informative about graph shape.
 | `minConnectivity` | Minimum second-smallest eigenvalue of `L` | `spectrum.connectivity` |
 | `maxLaplacian` | Maximum eigenvalue of `L` | `spectrum.largestLaplacian` |
 
-A spectral rule supports at most **256 vertices per boundary**, even with
+A spectral policy supports at most **256 vertices per boundary**, even with
 `spectrum: {}`. Omit `spectrum` to avoid computation and its size restriction.
 Connectivity is zero for fewer than two vertices or a disconnected projection;
 an empty graph's other spectral measurements are also zero. See the NetworkX
@@ -495,7 +495,7 @@ flowchart LR
 
 ## Cheeger bottleneck bounds
 
-Cheeger rules compute exact **unnormalized edge expansion** on the simple
+Cheeger policies compute exact **unnormalized edge expansion** on the simple
 undirected projection:
 
 `h(G) = min |cut(S)| / min(|S|, |V−S|)` over nonempty proper vertex subsets.
@@ -566,7 +566,7 @@ and the constant can exceed one.
 
 The default computation ceiling is **20 vertices per boundary**, including when
 `cheeger: {}` requests measurement without bounds. Administrators can change
-Helm `operator.cheeger.maxVertices`, `maxCuts` and `timeoutSeconds`. Rules may
+Helm `operator.cheeger.maxVertices`, `maxCuts` and `timeoutSeconds`. Policies may
 lower those ceilings with `spec.cheegerComputation`, or inherit them by omission.
 Its `priorityCuts` lists important vertex subsets to inspect first. The rest of
 the search space remains subject to exactly the same bounds.
@@ -584,7 +584,7 @@ flowchart TD
 
 A witnessed cut below the minimum can reject early. Exhausted budgets cannot
 approve an unverified graph. Exact measurements appear in
-`status.structuralRules[].measurements.cheeger`; partial-search diagnostics keep
+`status.structuralPolicies[].measurements.cheeger`; partial-search diagnostics keep
 an `upperBound` separately. Omitting `cheeger` avoids this computation entirely.
 See [practical tuning](cheeger-tuning.md) for every field's range, application
 feedback tradeoffs and [cut-priority examples](cheeger-tuning.md#prioritize-important-cuts).
@@ -597,8 +597,8 @@ separately at their configured scopes.
 
 ## Network contracts
 
-`spec.network` attaches a traffic contract to a selected rule. Omit it to impose
-no network contract from that rule; `network: {}` activates the defaults below.
+`spec.network` attaches a traffic contract to a selected policy. Omit it to impose
+no network contract from that policy; `network: {}` activates the defaults below.
 These settings generate workload policies; they do not choose the structural
 `relation` or change the graph's measured edges.
 
@@ -616,14 +616,14 @@ These settings generate workload policies; they do not choose the structural
 ### Network scope
 
 `network.scope` decides which workloads a contract selects. This is separate from
-`spec.scope`, which propagates the selected rule reference. For an ancestor's
-referenced network rule to reach descendants, both must be `Subtree`. A
+`spec.scope`, which propagates the selected policy reference. For an ancestor's
+referenced network policy to reach descendants, both must be `Subtree`. A
 `PolyGraph` has no direct workload nodes, so `network.scope: Boundary` on it
-selects no pods. Namespace rules are still independently selected at each child.
+selects no pods. Namespace policies are still independently selected at each child.
 
 ```mermaid
 flowchart TB
-    rule["Referenced GraphRule<br/>spec.scope: Subtree"] --> root["Selecting graph"]
+    policy["Referenced GraphPolicy<br/>spec.scope: Subtree"] --> root["Selecting graph"]
     root --> direct["Direct workload<br/>selected with either network.scope"]
     root --> child["Nested graph"]
     child --> leaf["Descendant workload<br/>selected with network.scope: Subtree<br/>not selected with network.scope: Boundary"]
@@ -793,7 +793,7 @@ when every caller must satisfy the filters.
 
 Allowances within a contract are alternatives; applicable isolated contracts
 intersect. A child can narrow a parent's allowances, but cannot opt out of them.
-The same intersection applies to multiple selected GraphRules and a graph's own
+The same intersection applies to multiple selected GraphPolicies and a graph's own
 network contract. Per direction, expansion is capped at 1,024 candidate pairs
 and 256 effective terms.
 
@@ -810,18 +810,18 @@ Cross-namespace peer selection does not create resources in the peer namespace.
 For generated policies, membership, pod security requirements and update behavior,
 see [network enforcement and lifecycle](../deployment/networking.md#enforcement-and-lifecycle).
 Other administrators' additive Kubernetes policies can widen allowances, so
-GraphRules assume trusted management of that enforcement infrastructure.
+GraphPolicies assume trusted management of that enforcement infrastructure.
 
-## Complete rule examples
+## Complete policy examples
 
-The first rule applies a structural budget namespace-wide. The second is selected
+The first policy applies a structural budget namespace-wide. The second is selected
 by end-users and combines bottleneck bounds with explicit traffic permissions.
-The second rule's `scope: Boundary` keeps its node-specific contract on the
+The second policy's `scope: Boundary` keeps its node-specific contract on the
 selecting boundary, which must contain a workload node named `api`.
 
 ```yaml
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: namespace-budget
 spec:
@@ -846,7 +846,7 @@ spec:
     maxLaplacian: 16
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: bounded-flow
 spec:
@@ -892,18 +892,18 @@ spec:
             protocol: TCP
 ```
 
-End-users set `spec.rules: [bounded-flow]` on their graph, or `rules` inside a
-composition graph object's `spec`. Namespace rules still apply. An isolated caller in `consumers`
+End-users set `spec.policies: [bounded-flow]` on their graph, or `policies` inside a
+composition graph object's `spec`. Namespace policies still apply. An isolated caller in `consumers`
 also needs egress permission to the API, and the database needs any applicable
 ingress permission.
 
 Python callers can evaluate the same constraints directly:
 
 ```python
-from polyad.graph import Cheeger, StructuralRule, evaluate_rule, graph_cheeger
+from polyad.graph import Cheeger, StructuralPolicy, evaluate_policy, graph_cheeger
 
-rule = StructuralRule(relation="connections", cheeger=Cheeger(minimum=0.25, maximum=2))
-report = evaluate_rule(rule, topology, expanded_nodes=6, nesting_depth=2)
+policy = StructuralPolicy(relation="connections", cheeger=Cheeger(minimum=0.25, maximum=2))
+report = evaluate_policy(policy, topology, expanded_nodes=6, nesting_depth=2)
 # topology is a validated polyad.graph.Topology supplied by the caller.
 # graph_cheeger(networkx_graph) also computes the constant directly.
 ```
@@ -921,7 +921,7 @@ example, two ReplicaGroup children with two Daemon copies each contribute
 
 ```yaml
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: application-budget
 spec:
@@ -939,7 +939,7 @@ metadata:
   name: application
 spec:
   mode: persistent
-  rules: [application-budget]
+  policies: [application-budget]
   nodes:
     - name: producers
       kind: ReplicaGroup
@@ -956,12 +956,12 @@ The referenced ReplicaGroup definitions must already exist with
 `templateOnly: true`. With two Daemon copies per group, this PolyGraph has
 `h = 1` and meets its recursive budget. Growing either group to three would make
 `expandedNodes = 7` and is blocked, even though `scope: Boundary` does not copy
-this rule to the children. Removing the connection would make `h = 0`, so a
+this policy to the children. Removing the connection would make `h = 0`, so a
 subsequent scaling action is blocked by the recomputed parent Cheeger bound.
 
 ```mermaid
 flowchart TB
-    rule["PolyGraph rule<br/>expandedNodes ≤ 6; Cheeger ≥ 1"] -. checks .-> parent["Application · h = 1"]
+    policy["PolyGraph policy<br/>expandedNodes ≤ 6; Cheeger ≥ 1"] -. checks .-> parent["Application · h = 1"]
     parent --> left["Producers · 2 copies"]
     parent --> right["Consumers · 2 copies"]
     left ---|"declared connection"| right
@@ -980,9 +980,9 @@ separate vertices in the structural projection.
 
 The requested target topology must pass before its scaling mutations proceed.
 Inputs are checked again after computation; changed identities, specifications,
-children or rules defer the action for a fresh reconciliation. Graph status
+children or policies defer the action for a fresh reconciliation. Graph status
 measurements and KEDA demand metrics are not reused as admission verdicts.
-Scale-out and scale-in use the same rule checks; a connectivity or lower-bound
+Scale-out and scale-in use the same policy checks; a connectivity or lower-bound
 constraint can prohibit scaling to zero. A violating request stays requested but
 is not applied, and failed or deferred reconciliation sets `scaleCurrent: false`.
 Later reconciliations retry when intent or policy changes. Explicit deletion,
@@ -992,14 +992,14 @@ ReplicaGroup defaults to `connectivity.mode: Independent`, with no inter-copy
 edges and Cheeger constant zero. Users can select Chain, Ring, Star, FullMesh,
 or Custom connections, with optional reverse edges and transport ports; see
 [connection modes and diagrams](replication.md#connections-between-copies).
-Rules with `relation: connections` evaluate the chosen pattern, rebuilt using
+Policies with `relation: connections` evaluate the chosen pattern, rebuilt using
 the effective count before scaling actions. A four-copy Ring has `h = 1`, while
 a six-copy Ring has `h = 2/3`: a minimum of 1 permits the former and blocks scaling
 to the latter. Custom edges only participate while both named ordinals exist.
 
 A positive Cheeger minimum inherited onto an Independent group rejects it. Use
-`scope: Boundary` for a rule intended only for a PolyGraph's connections, and
-separate subtree rules for recursive budgets or other applicable constraints.
+`scope: Boundary` for a policy intended only for a PolyGraph's connections, and
+separate subtree policies for recursive budgets or other applicable constraints.
 The parent's Cheeger constant does not change merely because a child has more
 copies; the graphs are not flattened, and internal Pod replicas do not become
 extra graph vertices.
@@ -1013,27 +1013,27 @@ intercept those writes. See [KEDA and constraint enforcement](replication.md#con
 
 ## Admission, reporting and computation limits
 
-Rules and nested definitions are refreshed before admission, including rewrite
-targets. A violation reports phase `Invalid` with the rule and explanation.
-Successful observations include `status.structuralRules` with rule names, UIDs,
+Policies and nested definitions are refreshed before admission, including rewrite
+targets. A violation reports phase `Invalid` with the policy and explanation.
+Successful observations include `status.structuralPolicies` with policy names, UIDs,
 generations, measured limits, optional Cheeger measurements and compact spectra.
 Live checks annotate the reconciling boundary's verdicts with `boundary.kind`,
 `boundary.name`, `boundary.uid` and an occurrence `boundary.path`. All family
 constraints are evaluated, but each graph stores its own verdicts to keep status
 size bounded. An ancestor or sibling violation still blocks the action and names
-the failing rule and boundary in the error.
+the failing policy and boundary in the error.
 Check phase and observed generation for current validity; the stored successful
 report may describe an earlier observation.
 
 Spectral and Cheeger comparisons allow
 `1e-9 * max(1, |measured|, |bound|)` numerical tolerance. Their calculations run
 outside the operator's event loop. Independent preflight caps are 4,096 expanded
-node occurrences, 256 boundaries, 32 nesting levels and 32 GraphRules per namespace.
+node occurrences, 256 boundaries, 32 nesting levels and 32 GraphPolicies per namespace.
 User bounds cannot raise these caps or the 256-vertex spectral cap. Cheeger
 computation ceilings are separately [configurable](cheeger-tuning.md#understand-computation-and-scale). Recursive counts describe the current composition; they do not
 bound lifetime work submitted through repeated activation requests.
 
-Structural rule updates block further admission on subsequent reconciliations;
+Structural policy updates block further admission on subsequent reconciliations;
 they do not evict running workloads. Network contract updates have their own
 [enforcement lifecycle](../deployment/networking.md#enforcement-and-lifecycle). Kubernetes reads
 across objects can observe different moments during a concurrent update.
@@ -1043,11 +1043,11 @@ across objects can observe different moments during a concurrent update.
 See [comparing Cheeger policies](cheeger-orchestration.md) for diagrams showing
 how hard admission bounds, Observe/Adapt feedback and replica scaling interact.
 
-GraphRule Cheeger bounds remain hard structural constraints. Optional
+GraphPolicy Cheeger bounds remain hard structural constraints. Optional
 [Soul searching](soul-searching.md) maintains a **separate**
 Cheeger target range derived from administrator-calibrated demand tiers. Observe
 mode reports recommendations; Adapt may apply an approved connection layout or
 bounded [traffic adjustment](traffic-balancing.md) only after fresh family checks
 pass both policies. Soul searching
-cannot relax a GraphRule. Disjoint bounds block adaptation and report
+cannot relax a GraphPolicy. Disjoint bounds block adaptation and report
 `NoAllowedLayout`; neither metric is a guarantee of an application data rate.

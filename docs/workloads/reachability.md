@@ -210,7 +210,7 @@ comparisons, import/solve/total time, CPU time and peak process RSS where suppor
 
 The numerical safety study covers queue overflow. `Envelope.assess` additionally
 checks terminal targets. Neither result silently proves the full application's
-latency, delivery, GraphRules or permission contract.
+latency, delivery, GraphPolicies or permission contract.
 
 ## Resource requirements
 

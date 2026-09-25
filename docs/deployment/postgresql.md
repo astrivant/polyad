@@ -259,7 +259,7 @@ For example, inspect persisted graph constraints and workload measurements with:
 ```sql
 SELECT cluster, namespace, kind, name, observed_at,
        document -> 'spec' -> 'rules' AS rules,
-       document -> 'status' -> 'structuralRules' AS measurements,
+       document -> 'status' -> 'structuralPolicies' AS measurements,
        document -> 'status' -> 'workloads' AS workload_parameters
 FROM polyad_graph_state
 WHERE scope = 'polyad/polyad' AND kind IN ('Graph', 'PolyGraph', 'ReplicaGroup');
@@ -277,7 +277,7 @@ deleted graphs. Restarting the operator resumes observations from Kubernetes and
 updates the existing database. During a database outage, persisted observations
 remain at their last successful state, persistence retries, and database scaling
 metrics report unavailable. The optional database does not become a prerequisite
-for graph execution or bootstrap recovery. Live GraphRules are still recomputed
+for graph execution or bootstrap recovery. Live GraphPolicies are still recomputed
 against Kubernetes before graph scaling actions.
 
 The database Cluster has `helm.sh/resource-policy: keep`: uninstalling Polyad

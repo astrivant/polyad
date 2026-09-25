@@ -360,27 +360,29 @@ def test_graph_analysis_exports_certificates_spectra_and_fences_policy_changes(k
     """
     Export real solver outputs on every replica without rerunning graph algorithms during a scrape.
     """
-    from polyad.graph import Cheeger, CheegerComputation, Connection, Node, Spectrum, StructuralRule, Topology, evaluate_rule
+    from polyad.graph import Cheeger, CheegerComputation, Connection, Node, Spectrum, StructuralPolicy, Topology, evaluate_policy
 
     topology = Topology(
         mode="persistent",
         nodes=tuple(Node(name, "Daemon", name) for name in "abc"),
         connections=(Connection("a", "b"), Connection("b", "c")),
     )
-    report = evaluate_rule(
-        StructuralRule(relation="connections", cheeger=Cheeger(minimum=0.5), spectrum=Spectrum(), limits={"nodes": 4}),
+    report = evaluate_policy(
+        StructuralPolicy(relation="connections", cheeger=Cheeger(minimum=0.5), spectrum=Spectrum(), limits={"nodes": 4}),
         topology,
         expanded_nodes=3,
         nesting_depth=1,
     )
-    rule = graph("budget", "GraphRule")
+    policy = graph("budget", "GraphPolicy")
     spec = {"template": {"kind": "Daemon", "ref": "worker"}} if kind == "ReplicaGroup" else {}
     boundary = graph("pipeline", kind, **spec)
-    report.update(name="budget", uid=rule["metadata"]["uid"], generation=1, boundary={"generation": 1, "uid": boundary["metadata"]["uid"]})
-    boundary["status"]["structuralRules"] = [report]
+    report.update(
+        name="budget", uid=policy["metadata"]["uid"], generation=1, boundary={"generation": 1, "uid": boundary["metadata"]["uid"]}
+    )
+    boundary["status"]["structuralPolicies"] = [report]
     boundary["status"]["metrics"]["observedTopology"] = {"nodeCount": 1, "connections": {"strongComponents": 1}}
     from polyad.graph.cheeger import compute_cheeger
-    from polyad.graph.rules import relation_graph
+    from polyad.graph.policies import relation_graph
 
     incomplete = compute_cheeger(relation_graph(topology, "connections"), CheegerComputation(maxCuts=1)).report()
     boundary["status"]["throughput"] = {
@@ -392,15 +394,15 @@ def test_graph_analysis_exports_certificates_spectra_and_fences_policy_changes(k
         "currentComputation": incomplete,
         "candidateComputations": [],
     }
-    source = snapshot([boundary, rule])
-    source["clusters"] = {"west": snapshot([boundary, rule])}
+    source = snapshot([boundary, policy])
+    source["clusters"] = {"west": snapshot([boundary, policy])}
     store = MetricsStore()
 
     def forbid(*args, **kwargs):
         raise AssertionError("scrapes must not execute graph analysis")
 
     monkeypatch.setattr("polyad.graph.cheeger.compute_cheeger", forbid)
-    monkeypatch.setattr("polyad.graph.rules.graph_spectrum", forbid)
+    monkeypatch.setattr("polyad.graph.policies.graph_spectrum", forbid)
     for replica in ("replica-a", "replica-b"):
         source["replica"] = replica
         store.publish(source, graph_labels=True)
@@ -411,29 +413,29 @@ def test_graph_analysis_exports_certificates_spectra_and_fences_policy_changes(k
         assert {s.labels["cluster"] for s in eigenvalues} == {"", "west"}
         assert next(s.value for s in eigenvalues if s.labels["matrix"] == "laplacian" and s.labels["index"] == "1") == pytest.approx(1)
         certificates = [s for s in emitted if s.name == "polyad_graph_cheeger_result"]
-        assert next(s.value for s in certificates if s.labels["source"] == "rule" and s.labels["statistic"] == "constant") == 1
+        assert next(s.value for s in certificates if s.labels["source"] == "policy" and s.labels["statistic"] == "constant") == 1
         assert not any(s.labels["source"] == "throughput" and s.labels["statistic"] == "constant" for s in certificates)
         assert next(s.value for s in certificates if s.labels["source"] == "throughput" and s.labels["statistic"] == "exact") == 0
         assert any(s.name == "polyad_graph_cheeger_input" and s.labels["parameter"] == "maxCuts" and s.value == 1 for s in emitted)
         assert any(s.name == "polyad_graph_topology" and s.labels["view"] == "observed" and s.value == 1 for s in emitted)
         exported = next(obj for obj in json.loads(store.read()[1])["inventory"]["objects"] if obj["name"] == "pipeline")
-        assert exported["structuralRules"][0]["cheegerComputation"]["inputs"]["vertices"] == 3
+        assert exported["structuralPolicies"][0]["cheegerComputation"]["inputs"]["vertices"] == 3
         assert exported["throughput"]["currentComputation"]["cut"] == list(incomplete["cut"])
 
-    # A changed/replaced rule must retire its previous bound and spectral series.
+    # A changed/replaced policy must retire its previous bound and spectral series.
     for field, value in (("generation", 2), ("uid", "replacement")):
-        changed = copy.deepcopy(rule)
+        changed = copy.deepcopy(policy)
         changed["metadata"][field] = value
         store.publish(snapshot([boundary, changed]), graph_labels=True)
-        assert next(s.value for s in samples(store) if s.name == "polyad_graph_rule_current") == 0
+        assert next(s.value for s in samples(store) if s.name == "polyad_graph_policy_current") == 0
         assert not any(
-            s.name in {"polyad_graph_spectrum", "polyad_graph_eigenvalue", "polyad_graph_rule_measurement"} for s in samples(store)
+            s.name in {"polyad_graph_spectrum", "polyad_graph_eigenvalue", "polyad_graph_policy_measurement"} for s in samples(store)
         )
     boundary["metadata"]["generation"] = 2
-    store.publish(snapshot([boundary, rule]), graph_labels=True)
+    store.publish(snapshot([boundary, policy]), graph_labels=True)
     assert not any(s.name in {"polyad_graph_topology", "polyad_graph_throughput", "polyad_graph_cheeger_result"} for s in samples(store))
     source["inventory"]["fresh"] = source["clusters"]["west"]["inventory"]["fresh"] = False
     store.publish(source, graph_labels=True)
     assert not any(s.name == "polyad_graph_eigenvalue" for s in samples(store))
-    store.publish(snapshot([boundary, rule]), graph_labels=False)
+    store.publish(snapshot([boundary, policy]), graph_labels=False)
     assert not any(s.name.startswith("polyad_graph_cheeger") for s in samples(store))

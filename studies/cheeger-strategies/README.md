@@ -590,7 +590,7 @@ Keep quotient sizes bounded; a 64-supernode search is still exponential.
 Dense spectral work is capped separately by `reduction.maxVertices`. The overall
 boundary vertex cap is checked first. Without a policy threshold, numeric
 measurement callers continue to request exact values; this study's selector
-experiments use bounded GraphRule-style decisions. It does not claim that Soul's
+experiments use bounded GraphPolicy-style decisions. It does not claim that Soul's
 throughput measurements or SLA improve merely because a structural computation
 becomes cheaper. Nested PolyGraph boundaries are evaluated independently; no
 global Cheeger bound is inferred by adding child results.

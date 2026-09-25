@@ -317,7 +317,7 @@ async def rescan_loop() -> None:
                     logger.warning("PostgreSQL unavailable; continuing live observation without persistence")
             objects = []
             definitions: tuple[str, ...] = (
-                ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule") if serves("METRICS") or state else ()
+                ("Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphPolicy") if serves("METRICS") or state else ()
             )
             if root_plane and (serves("METRICS") or state):
                 definitions += ("OperatorPool", "RemoteScale")

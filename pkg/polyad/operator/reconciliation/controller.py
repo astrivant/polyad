@@ -44,9 +44,9 @@ from polyad.operator.observability.graph_status import instance_metrics
 from polyad.operator.observability.graph_status import observed as observed
 from polyad.operator.observability.tracing import traced
 from polyad.operator.policies.capacity import CapacityManager
+from polyad.operator.policies.graph_policies import check_policies
 from polyad.operator.policies.network import POLICY_KINDS, context, ensure_policies
-from polyad.operator.policies.rule_state import check_live_rules
-from polyad.operator.policies.rules import check_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad.operator.reconciliation.activations import TERMINAL, Activations
 from polyad.operator.reconciliation.compositions import drain_composition, reconcile_composition
 from polyad.operator.reconciliation.identity import graph_ancestry
@@ -505,7 +505,7 @@ class Controller:
         spec, meta = obj["spec"], obj["metadata"]
         topology({key: value for key, value in spec["topology"].items() if key != "placement"}, spec.get("kind", "Graph"))
         target = await self.definition(spec.get("kind", "Graph"), meta["namespace"], spec["graph"])
-        await check_rules(self.api, meta["namespace"], target["kind"], spec["topology"])
+        await check_policies(self.api, meta["namespace"], target["kind"], spec["topology"])
 
         # This annotation is committed atomically with the spec and survives a status-write timeout.
         token = meta["uid"]
@@ -735,21 +735,21 @@ class Controller:
             )
             return
         desired: dict[str, asts.Resource] = {}
-        rule_reports = await check_live_rules(self.api, obj)
-        rule_candidate = None
+        policy_reports = await check_live_policies(self.api, obj)
+        policy_candidate = None
         remote_snapshot = None
 
-        async def refresh_rules() -> None:
+        async def refresh_policies() -> None:
             """
             Recheck the live family immediately before each execution resource creation.
 
             Returns:
                 None: Recomputed reports replace the previous observations.
             """
-            nonlocal rule_reports
+            nonlocal policy_reports
             if any(deadline <= datetime.now(UTC) for deadline in deadlines):
                 raise Pending("temporary connection expired before workload mutation")
-            rule_reports = await check_live_rules(self.api, obj, candidate=rule_candidate)
+            policy_reports = await check_live_policies(self.api, obj, candidate=policy_candidate)
 
             # Connectivity loss is not evidence that a remote child has stopped.
             refreshed = await self.federation.children(obj)
@@ -904,13 +904,13 @@ class Controller:
                 spec["templateOnly"] = False
                 if graph.capacity is not None:
                     spec.setdefault("capacity", converter.unstructure(graph.capacity))
-                if graph.rules and not cluster:
-                    inherited_rules = set()
-                    for rule_name in graph.rules:
-                        rule = await self.definition("GraphRule", namespace, rule_name)
-                        if rule["spec"].get("scope", "Subtree") == "Subtree":
-                            inherited_rules.add(rule_name)
-                    spec["rules"] = sorted(set(spec.get("rules", [])) | inherited_rules)
+                if graph.policies and not cluster:
+                    inherited_policies = set()
+                    for policy_name in graph.policies:
+                        graph_policy = await self.definition("GraphPolicy", namespace, policy_name)
+                        if graph_policy["spec"].get("scope", "Subtree") == "Subtree":
+                            inherited_policies.add(policy_name)
+                    spec["policies"] = sorted(set(spec.get("policies", [])) | inherited_policies)
                 if placement:
                     spec["placement"] = merge_placement(placement, spec.get("placement"))
                 kind = node.kind
@@ -958,8 +958,8 @@ class Controller:
                 persistence[runtime_name] = persistence[receipt["spec"]["node"]]
         persistence = {name: storage for name, storage in persistence.items() if name in desired}
         if activation_policies:
-            rule_candidate = converter.unstructure(graph)
-            await refresh_rules()
+            policy_candidate = converter.unstructure(graph)
+            await refresh_policies()
         await ensure_policies(self, obj, network_plans)
         route_pending = None
         if os.environ.get("POLYAD_MESH_ENABLED", "false").lower() == "true" or graph.traffic:
@@ -999,7 +999,7 @@ class Controller:
                 ):
                     continue  # Scale-in waits for finite work; it never cancels an active Job.
                 if not child["metadata"].get("deletionTimestamp"):
-                    await refresh_rules()
+                    await refresh_policies()
                     await self.federation.delete(child)
             raise Pending("draining removed or replaced nodes before admitting the new topology", phase="Draining")
         current = {child["metadata"]["name"]: child for child in children}
@@ -1081,7 +1081,7 @@ class Controller:
                 continue
             if not await activations.admit(node.name):
                 continue
-            await self.ensure(admitted, before_create=refresh_rules)
+            await self.ensure(admitted, before_create=refresh_policies)
             used += node.slots
         if route_pending:
             raise route_pending
@@ -1145,7 +1145,7 @@ class Controller:
                     "connections": converter.unstructure(graph.connections),
                 },
                 "delays": delays,
-                "structuralRules": rule_reports,
+                "structuralPolicies": policy_reports,
                 "observedGeneration": meta["generation"],
             },
         )

@@ -84,7 +84,7 @@ def test_inventory_and_reconciliation_roles():
     assert set(WORKLOAD_KINDS) == GRAPH_OWNED_KINDS - BOUNDARY_KINDS - {"Activation", "TemporaryConnection"}
     assert set(WATCHED_KINDS) == RECONCILED_KINDS == BOUNDARY_KINDS | {"Rewrite", "Composition", "Activation", "TemporaryConnection"}
     assert DEFINITION_KINDS.isdisjoint(RECONCILED_KINDS)
-    assert COMPOSABLE_KINDS == BOUNDARY_KINDS | (DEFINITION_KINDS - {"GraphRule"})
+    assert COMPOSABLE_KINDS == BOUNDARY_KINDS | (DEFINITION_KINDS - {"GraphPolicy"})
     assert AUXILIARY_KINDS == CAPACITY_KINDS | NETWORK_POLICY_KINDS | {
         "Activation",
         "TemporaryConnection",

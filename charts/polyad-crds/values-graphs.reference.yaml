@@ -75,7 +75,7 @@ graphs: {}
 #             timeoutSeconds: 0
 #             ## @param graphs.example.spec.traffic[].resilience.retryOn [string] Optional. No CRD default; the value shown is illustrative. Choices: "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes". Istio retry conditions used when retries are enabled.
 #             retryOn: "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
-#       ## @param graphs.example.spec.throughput [object, string] Optional. No CRD default; the value shown is illustrative. Observe or adapt topology using empirical throughput targets within hard structural rules.
+#       ## @param graphs.example.spec.throughput [object, string] Optional. No CRD default; the value shown is illustrative. Observe or adapt topology using empirical throughput targets within hard structural policies.
 #       throughput:
 #         ## @param graphs.example.spec.throughput.unit [string] Required. No CRD default; the value shown is illustrative. Application work unit shared by offered and completed rates, such as records.
 #         unit: "example"
@@ -302,8 +302,8 @@ graphs: {}
 #         allowDNS: false
 #         ## @param graphs.example.spec.network.mesh [boolean, string] Optional. No CRD default; the value shown is illustrative. Require Istio injection, strict mutual TLS and inbound authorization.
 #         mesh: false
-#       ## @param graphs.example.spec.rules [array, string] Optional. No CRD default; the value shown is illustrative. Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.
-#       rules: []
+#       ## @param graphs.example.spec.policies [array, string] Optional. No CRD default; the value shown is illustrative. Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.
+#       policies: []
 #       ## @param graphs.example.spec.nodes [array, string] Required. No CRD default; the value shown is illustrative. Graph membership in deterministic admission order. Names are unique within this boundary; definitions are resolved in the same namespace.
 #       nodes:
 #         -

@@ -287,7 +287,7 @@ sequenceDiagram
     participant R as Root RemoteScale
     participant W as Leased execution worker
     participant G as Remote ReplicaGroup
-    participant P as GraphRules and live graph state
+    participant P as GraphPolicies and live graph state
     K->>R: Update requested replicas through /scale
     W->>R: Read request identity and pinned target generation
     W->>G: Verify local approval, identity and replica bounds
@@ -305,7 +305,7 @@ sequenceDiagram
 
 The target UID, approved generation and cluster are immutable. RemoteScale never
 patches the destination's `spec.replicas` or its approval. The destination resolves
-the approved annotation into an effective count and applies its own GraphRules,
+the approved annotation into an effective count and applies its own GraphPolicies,
 Cheeger bounds and execution checks. Reusable groups can distribute that effective
 count to their inheriting instances. A generated group must set
 `inheritReplicas: false` to receive its own independent remote request.
@@ -334,7 +334,7 @@ Root status and workload metrics stay pending/stale until the destination has
 observed the exact current intent revision; a prior successful count cannot
 acknowledge a newer request.
 
-Cheeger and other structural rules still apply at their declared graph boundaries.
+Cheeger and other structural policies still apply at their declared graph boundaries.
 Central authority does not turn cluster-local rules into a flattened, atomic
 cross-cluster rule transaction. Every execution mutation reuses the
 [fresh-state admission path](../graphs/replication.md#constraints-before-scaling).
@@ -466,7 +466,7 @@ workers cannot become responsible for recovering the root hierarchy.
 
 The PolyGraph, group Graphs, definitions and operator workloads carry the internal
 marker. Application event streams exclude the entire operator tree regardless
-of a caller's graph grants. The existing per-cluster GraphRule boundaries and
+of a caller's graph grants. The existing per-cluster GraphPolicy boundaries and
 root-disconnection fencing still apply.
 
 ## Reserved graphs for node workers

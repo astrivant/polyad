@@ -20,7 +20,7 @@ from kubernetes.client.exceptions import ApiException
 
 from polyad.api.workloads.throughput import report_throughput
 from polyad.exceptions.api import Conflict, Forbidden
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.operator.policies.soul import controller as soul_searching
 from polyad.operator.policies.soul.contracts import SAMPLE, STATE
 from polyad.operator.policies.soul.controller import search_soul
@@ -80,7 +80,7 @@ def fixture(mode="Observe", maximum=None):
             },
         },
     )
-    rule = resource("GraphRule", "hard", {"relation": "connections", "cheeger": {"minimum": 0.5, "maximum": maximum}})
+    rule = resource("GraphPolicy", "hard", {"relation": "connections", "cheeger": {"minimum": 0.5, "maximum": maximum}})
     return FeedbackAPI(graph, rule)
 
 
@@ -114,14 +114,14 @@ def test_modes_keep_hard_bounds_independent(mode, changed, phase, edges):
 
     async def run():
         api = fixture(mode)
-        hard = copy.deepcopy(api.objects[("GraphRule", "test", "hard")])
+        hard = copy.deepcopy(api.objects[("GraphPolicy", "test", "hard")])
         assert (await feed(api, 0))[0] is False
         actual, graph = await feed(api, 10)
         assert actual is changed
         assert graph["status"]["throughput"]["phase"] == phase
         assert graph["status"]["throughput"]["target"]["minimum"] == 1
         assert len(graph["spec"]["connections"]) == edges
-        assert api.objects[("GraphRule", "test", "hard")] == hard
+        assert api.objects[("GraphPolicy", "test", "hard")] == hard
         if changed:
             assert len(json.loads(graph["metadata"]["annotations"][STATE])["changes"]) == 1
             assert graph["metadata"]["generation"] == 2
@@ -168,7 +168,7 @@ def test_final_admission_rejects_drift_without_spending_change_budget(monkeypatc
                 child["spec"]["replicas"] = 2
                 child["metadata"]["generation"] += 1
             elif drift == "rules":
-                api.objects[("GraphRule", "test", "hard")]["spec"]["cheeger"]["maximum"] = 0.75
+                api.objects[("GraphPolicy", "test", "hard")]["spec"]["cheeger"]["maximum"] = 0.75
             elif drift == "resource_version":
                 current = copy.deepcopy(api.objects[("Graph", "test", "pipeline")])
                 meta = current["metadata"]
@@ -180,7 +180,7 @@ def test_final_admission_rejects_drift_without_spending_change_budget(monkeypatc
         if drift == "sample_age":
             monkeypatch.setattr(soul_searching, "time", SimpleNamespace(monotonic=Mock(side_effect=[0, 31])))
         if drift == "rules":
-            with pytest.raises(RuleViolation):
+            with pytest.raises(PolicyViolation):
                 await feed(api, 10)
         elif drift == "resource_version":
             with pytest.raises(ApiException) as error:
@@ -277,7 +277,7 @@ def test_adaptation_checks_live_activation_instances():
 
     async def run():
         api = fixture("Adapt")
-        api.objects[("GraphRule", "test", "hard")]["spec"]["limits"] = {"nodes": 4}
+        api.objects[("GraphPolicy", "test", "hard")]["spec"]["limits"] = {"nodes": 4}
         for name in ("a-pulse-one", "a-pulse-two"):
             child = resource("Deployment", name, {"replicas": 1})
             child["apiVersion"] = "apps/v1"

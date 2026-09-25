@@ -156,7 +156,7 @@ marked so administrators can supply the fields their workloads require.
 | Dragonfly | [dragonflies](values-dragonflies.reference.yaml) |
 | DragonflyPool | [dragonflyPools](values-dragonflyPools.reference.yaml) |
 | Gate | [gates](values-gates.reference.yaml) |
-| GraphRule | [graphRules](values-graphRules.reference.yaml) |
+| GraphPolicy | [graphPolicies](values-graphPolicies.reference.yaml) |
 | Graph | [graphs](values-graphs.reference.yaml) |
 | OperatorPool | [operatorPools](values-operatorPools.reference.yaml) |
 | PolyGraph | [polygraphs](values-polygraphs.reference.yaml) |
@@ -184,7 +184,7 @@ Use `partial=True` for editor validation of overlays.
 Helm validates literal inputs against `values.schema.json`; the renderer checks
 resolved types, required fields, choices and scalar bounds after TPL evaluation.
 Kubernetes admission enforces CEL rules and API semantics; operator admission
-still controls graph rules, permissions and supported requests. A Helm template
+still controls graph policies, permissions and supported requests. A Helm template
 does not grant permission to bypass connection negotiation or remote-scale
 ownership.
 
@@ -214,7 +214,7 @@ invalid results and use through the operator dependency.
 | `dragonflies`          | **Type: object.** Dragonfly instances keyed by name; spec and metadata support tpl references to other maps.           | `{}` |
 | `dragonflyPools`       | **Type: object.** DragonflyPool instances keyed by name; spec and metadata support tpl references to other maps.       | `{}` |
 | `gates`                | **Type: object.** Gate instances keyed by name; spec and metadata support tpl references to other maps.                | `{}` |
-| `graphRules`           | **Type: object.** GraphRule instances keyed by name; spec and metadata support tpl references to other maps.           | `{}` |
+| `graphPolicies`        | **Type: object.** GraphPolicy instances keyed by name; spec and metadata support tpl references to other maps.         | `{}` |
 | `graphs`               | **Type: object.** Graph instances keyed by name; spec and metadata support tpl references to other maps.               | `{}` |
 | `operatorPools`        | **Type: object.** OperatorPool instances keyed by name; spec and metadata support tpl references to other maps.        | `{}` |
 | `polygraphs`           | **Type: object.** PolyGraph instances keyed by name; spec and metadata support tpl references to other maps.           | `{}` |

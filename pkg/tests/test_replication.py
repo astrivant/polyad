@@ -149,7 +149,7 @@ def test_nested_group_status_and_rules_count_replication():
         root = api.objects[("ReplicaGroup", "test", "copies")]
         assert root["status"]["readyReplicas"] == 2
         assert root["status"]["metrics"]["rollup"]["graphCount"] == 3
-        api.objects[("GraphRule", "test", "bounded")] = resource("GraphRule", "bounded", {"limits": {"nodes": 2}})
+        api.objects[("GraphPolicy", "test", "bounded")] = resource("GraphPolicy", "bounded", {"limits": {"nodes": 2}})
         root["spec"]["replicas"] = 3
         root["metadata"]["generation"] += 1
         with pytest.raises(ValueError, match="exceeds"):
@@ -243,12 +243,12 @@ def policy_family(*, bound=3, replicas=2, uses=("workers",), scope="Boundary", *
     Put optional constraints on a PolyGraph containing independently scalable groups.
     """
     policy = resource(
-        "GraphRule", "budget", {"enforcement": "Referenced", "scope": scope, "limits": {"expandedNodes": bound}, **constraints}
+        "GraphPolicy", "budget", {"enforcement": "Referenced", "scope": scope, "limits": {"expandedNodes": bound}, **constraints}
     )
     parent = resource(
         "PolyGraph",
         "root",
-        {"mode": "persistent", "rules": ["budget"], "nodes": [{"name": name, "kind": "ReplicaGroup", "ref": "copies"} for name in uses]},
+        {"mode": "persistent", "policies": ["budget"], "nodes": [{"name": name, "kind": "ReplicaGroup", "ref": "copies"} for name in uses]},
     )
     return FakeAPI(parent, policy, group(replicas, templateOnly=True), resource("Daemon", "worker", {"template": template(True)}))
 
@@ -278,7 +278,7 @@ def test_polygraph_boundary_rule_blocks_child_scale_out(kind):
 
             api.objects[("Daemon", "test", "worker")]["spec"].update(stateful_spec())
         (instance,) = await start_family(api)
-        assert instance["spec"].get("rules", []) == []
+        assert instance["spec"].get("policies", []) == []
         instance["spec"].update(inheritReplicas=False, replicas=3)
         instance["metadata"]["generation"] += 1
         api.calls.clear()
@@ -368,14 +368,14 @@ def test_rule_update_between_replica_creations_stops_the_next_action():
         async def request(self, method, kind, namespace, name="", body=None, **kwargs):
             result = await super().request(method, kind, namespace, name, body, **kwargs)
             if method == "POST" and kind == "Deployment":
-                rule = self.objects[("GraphRule", "test", "limit")]
+                rule = self.objects[("GraphPolicy", "test", "limit")]
                 rule["spec"]["limits"]["nodes"] = 1
                 rule["metadata"]["generation"] += 1
             return result
 
     async def scenario():
         api = ChangingAPI(
-            group(), resource("Daemon", "worker", {"template": template(True)}), resource("GraphRule", "limit", {"limits": {"nodes": 2}})
+            group(), resource("Daemon", "worker", {"template": template(True)}), resource("GraphPolicy", "limit", {"limits": {"nodes": 2}})
         )
         with pytest.raises(ValueError, match="nodes=2"):
             await turn(api)
@@ -394,7 +394,7 @@ def test_live_cheeger_change_blocks_nested_scaling():
         root = api.objects[("PolyGraph", "test", "root")]
         root["spec"]["connections"] = [{"source": "left", "target": "right"}]
         instances = await start_family(api)
-        assert any(report["measurements"].get("cheeger") == 1 for report in root["status"]["structuralRules"])
+        assert any(report["measurements"].get("cheeger") == 1 for report in root["status"]["structuralPolicies"])
         root["spec"]["connections"] = []
         root["metadata"]["generation"] += 1
         source = api.objects[("ReplicaGroup", "test", "copies")]
@@ -416,10 +416,10 @@ def test_rule_update_between_removals_stops_scale_in():
     class ChangingAPI(FakeAPI):
         async def delete(self, obj):
             await super().delete(obj)
-            self.objects[("GraphRule", "test", "limit")]["spec"]["shapes"] = ["connected"]
+            self.objects[("GraphPolicy", "test", "limit")]["spec"]["shapes"] = ["connected"]
 
     async def scenario():
-        api = ChangingAPI(group(), resource("Daemon", "worker", {"template": template(True)}), resource("GraphRule", "limit"))
+        api = ChangingAPI(group(), resource("Daemon", "worker", {"template": template(True)}), resource("GraphPolicy", "limit"))
         await turn(api)
         api.objects[("ReplicaGroup", "test", "copies")]["spec"]["replicas"] = 0
         with pytest.raises(ValueError, match="required shape: connected"):
@@ -439,7 +439,7 @@ def test_changed_source_during_family_evaluation_defers_writes():
 
         async def request(self, method, kind, namespace, name="", body=None, **kwargs):
             result = await super().request(method, kind, namespace, name, body, **kwargs)
-            if method == "GET" and kind == "GraphRule" and self.change_source:
+            if method == "GET" and kind == "GraphPolicy" and self.change_source:
                 self.change_source = False
                 source = self.objects[("ReplicaGroup", "test", "copies")]
                 source["spec"]["replicas"] = 3
@@ -470,7 +470,7 @@ def test_refreshed_spectral_rule_blocks_descendant_scaling():
         root = api.objects[("PolyGraph", "test", "root")]
         root["spec"]["connections"] = [{"source": "left", "target": "right"}]
         instance, _ = await start_family(api)
-        rule = api.objects[("GraphRule", "test", "budget")]
+        rule = api.objects[("GraphPolicy", "test", "budget")]
         rule["spec"]["spectrum"]["maxRadius"] = 0.5
         rule["metadata"]["generation"] += 1
         api.objects[("ReplicaGroup", "test", "copies")]["spec"]["replicas"] = 3

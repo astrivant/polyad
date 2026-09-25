@@ -17,7 +17,7 @@ __all__ = (
     "CheegerReduction",
     "LIMITS",
     "Spectrum",
-    "StructuralRule",
+    "StructuralPolicy",
 )
 
 
@@ -209,13 +209,13 @@ class CheegerComputation:
 
 
 @frozen
-class StructuralRule:
+class StructuralPolicy:
     """
     Apply reusable mathematical constraints to each graph boundary and its subtree.
 
     Attributes:
-        scope (Literal['Boundary', 'Subtree']): Whether selected rules propagate to descendant boundaries.
-        enforcement (Literal['Namespace', 'Referenced']): Mandatory namespace policy or explicitly selected rule.
+        scope (Literal['Boundary', 'Subtree']): Whether selected policies propagate to descendant boundaries.
+        enforcement (Literal['Namespace', 'Referenced']): Mandatory namespace policy or explicitly selected policy.
         relation (Literal['admission', 'connections']): Directed edge relation used for local measurements.
         limits (dict[str, int]): Inclusive upper bounds on named combinatorial measurements.
         shapes (tuple[Literal['acyclic', 'connected', 'tree', 'planar'], ...]): Required graph properties.
@@ -243,10 +243,10 @@ class StructuralRule:
             None: No return value.
         """
         if self.scope not in {"Boundary", "Subtree"}:
-            raise ValueError("unknown rule scope")
+            raise ValueError("unknown policy scope")
         if self.enforcement not in {"Namespace", "Referenced"} or self.relation not in {"admission", "connections"}:
-            raise ValueError("unknown rule enforcement or graph relation")
+            raise ValueError("unknown policy enforcement or graph relation")
         if set(self.limits) - LIMITS or any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in self.limits.values()):
-            raise ValueError("rule limits require known measurements and nonnegative integers")
+            raise ValueError("policy limits require known measurements and nonnegative integers")
         if set(self.shapes) - {"acyclic", "connected", "tree", "planar"}:
             raise ValueError("unknown graph shape")

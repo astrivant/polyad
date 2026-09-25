@@ -174,7 +174,7 @@ def test_root_cache_loss_fences_every_remote_mutation():
     asyncio.run(scenario())
 
 
-def test_root_scale_reuses_live_graph_rules_and_retains_existing_execution():
+def test_root_scale_reuses_live_graph_policies_and_retains_existing_execution():
     """
     Root KEDA requests reach ReplicaGroup admission without directly scaling native controllers.
     """
@@ -187,7 +187,7 @@ def test_root_scale_reuses_live_graph_rules_and_retains_existing_execution():
         original = remote.children("Deployment")[0]["metadata"]["uid"]
         root_api = ManagementAPI(intent)
         pools = manager(root_api, remote)
-        remote.objects[("GraphRule", "test", "limit")] = resource("GraphRule", "limit", {"limits": {"nodes": 2}})
+        remote.objects[("GraphPolicy", "test", "limit")] = resource("GraphPolicy", "limit", {"limits": {"nodes": 2}})
         await pools.scale(intent)
         status = root_api.children("RemoteScale")[0]["status"]
         assert status["phase"] == "Pending" and status["replicas"] == 1
@@ -197,7 +197,7 @@ def test_root_scale_reuses_live_graph_rules_and_retains_existing_execution():
             await Controller(remote).reconcile(("ReplicaGroup", "test", "copies"))
         assert [item["metadata"]["uid"] for item in remote.children("Deployment")] == [original]
         assert not remote.children("Deployment")[0]["metadata"].get("deletionTimestamp")
-        remote.objects[("GraphRule", "test", "limit")]["spec"]["limits"]["nodes"] = 3
+        remote.objects[("GraphPolicy", "test", "limit")]["spec"]["limits"]["nodes"] = 3
         await turn(remote)
         assert len(remote.children("Deployment")) == 3
 
@@ -379,12 +379,12 @@ def test_pool_install_upgrade_secret_rotation_and_scale_zero(monkeypatch, tmp_pa
             await pools.pool(pool)
         assert len(remote.calls) == before
         monkeypatch.setenv("POLYAD_OPERATOR_IMAGE", "polyad:v2")
-        rule = resource("GraphRule", "block-operators", {"enforcement": "Namespace", "limits": {"nodes": 0}})
-        remote.objects["GraphRule", "test", "block-operators"] = rule
+        rule = resource("GraphPolicy", "block-operators", {"enforcement": "Namespace", "limits": {"nodes": 0}})
+        remote.objects["GraphPolicy", "test", "block-operators"] = rule
         with pytest.raises(ValueError, match="nodes"):
             await pools.pool(pool)
         assert remote.children("Deployment")[0]["spec"]["replicas"] == 2
-        del remote.objects["GraphRule", "test", "block-operators"]
+        del remote.objects["GraphPolicy", "test", "block-operators"]
         await pools.pool(pool)
         updated = remote.children("Deployment")[0]
         assert updated["spec"]["replicas"] == 0

@@ -24,7 +24,7 @@ spec:
       ref: process-batch
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: regional-limits
   namespace: polyad

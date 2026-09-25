@@ -14,7 +14,7 @@
 Soul searching can prepare for sustained incoming demand before completed
 throughput falls behind. An administrator defines demand tiers containing a
 Cheeger target, optional traffic percentages and optional capacity lookahead.
-Polyad selects among those approved profiles; hard GraphRules and resource
+Polyad selects among those approved profiles; hard GraphPolicies and resource
 ceilings remain fixed.
 
 ## Separate control loops
@@ -34,7 +34,7 @@ and [Polyad's ReplicaGroup integration](replication.md#connect-keda).
 
 For example, KEDA might request more processing replicas while Soul searching
 selects a wider connection layout and looks three stages ahead. ReplicaGroup
-reconciliation checks live GraphRules before changing execution. An observed
+reconciliation checks live GraphPolicies before changing execution. An observed
 replica or descendant topology change restarts Soul searching's stabilization;
 the next profile decision needs fresh measurements of that execution state.
 Do not assign two replica controllers to the same target.
@@ -47,7 +47,7 @@ for the application. [Cheeger remains a structural measurement](cheeger-orchestr
 
 Configure demand under `spec.throughput` on a `Graph` or `PolyGraph`; the Helm chart
 installs their CRDs. The [complete resource example](../../examples/load-profiles.yaml)
-defines a Graph, its referenced GraphRule and the Workload/Daemon resources used
+defines a Graph, its referenced GraphPolicy and the Workload/Daemon resources used
 by its nodes. Uncomment `demand: {name: queueDepth, unit: jobs}` in that manifest
 to make its thresholds count queued jobs instead of offered work per second.
 
@@ -116,7 +116,7 @@ sequenceDiagram
     autonumber
     participant App as Application reporter
     participant Soul as Soul searching
-    participant Rules as Live graph family and GraphRules
+    participant Rules as Live graph family and GraphPolicies
     participant Plan as Capacity planner
     participant Nodes as Kubernetes and node autoscaler
     participant Scale as Existing KEDA and HPA
@@ -225,7 +225,7 @@ Setting a capacity ceiling without enabling a forecast plan is invalid.
 ## Limits and failure behavior
 
 - Every adaptation must meet the selected application Cheeger target and live
-  GraphRules. Computation budgets and important-cut priorities remain fixed.
+  GraphPolicies. Computation budgets and important-cut priorities remain fixed.
 - A capacity profile must fit `capacityCeiling` and the operator's Helm
   `capacity.maxPods`; `capacity.enabled` must be true. Otherwise
   `CapacityUnavailable` prevents the entire proposed change.
@@ -240,7 +240,7 @@ Setting a capacity ceiling without enabling a forecast plan is invalid.
   remove machines. Backend failures and expired plans remain visible through
   `status.capacity`; a profile is not permission to bypass admission.
 
-Hard GraphRules, KEDA replica ceilings, node-pool limits and workload resource
+Hard GraphPolicies, KEDA replica ceilings, node-pool limits and workload resource
 requests are never rewritten by this controller. Capacity ceilings apply per
 boundary; planning total cluster headroom must account for concurrent boundaries.
 

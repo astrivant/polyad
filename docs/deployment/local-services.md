@@ -24,7 +24,7 @@ gateway/executor/telemetry pipeline retain their existing branches.
 | Branch | Observed services | Lifecycle owner |
 | --- | --- | --- |
 | `bootstrap` | Root operator Deployment | Helm and the optional operator HPA |
-| `components` | Gateway, executor and telemetry ReplicaGroups, in Distributed mode | Polyad, with GraphRule admission and KEDA demand |
+| `components` | Gateway, executor and telemetry ReplicaGroups, in Distributed mode | Polyad, with GraphPolicy admission and KEDA demand |
 | `endpoints` | Enabled composition, events, metrics and temporary-connection Services | Helm |
 | `keda` | Operator, metrics server and enabled admission webhook Deployments and Services | Bundled chart and HA component HPAs, or the existing installation |
 | `dragonfly` | Bundled Dragonfly operator, its Service, cache instance, StatefulSet and primary Service | Helm and the Dragonfly operator |
@@ -169,7 +169,7 @@ traffic. These results roll up into root Graph and PolyGraph readiness.
 
 Suspending or removing an observation Graph never scales, adopts, deletes or
 recreates its native services. Installation, upgrades, failover and native
-autoscaling stay with their existing owners. GraphRules still constrain the
+autoscaling stay with their existing owners. GraphPolicies still constrain the
 observed topology and Polyad-managed component changes; observation membership
 does not intercept Helm, KEDA or upstream controller writes to infrastructure.
 

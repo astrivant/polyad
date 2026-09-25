@@ -9,12 +9,12 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.traffic import subset_name
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.exceptions.reconciliation import Pending
 from polyad.graph.temporary import ANNOTATION, active_entries, overlay
 from polyad.operator.clusters.remote_scaling import approved_intent
 from polyad.operator.coordination.contracts import expires_before
-from polyad.operator.policies.rules import check_rules
+from polyad.operator.policies.graph_policies import check_policies
 from polyad_types.graphs.replication import Replication, replica_topology
 from polyad_types.graphs.topology import topology
 from polyad_types.resources import AUXILIARY_KINDS, BOUNDARY_KINDS, GROUP, VERSION
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from polyad.operator.adapters.kubernetes import API
 
-__all__ = ("check_live_rules",)
+__all__ = ("check_live_policies",)
 
 
 def _revision(obj: dict[str, Any]) -> dict[str, Any]:
@@ -74,7 +74,7 @@ def _activation_topology(raw: dict[str, Any], children: list[dict[str, Any]]) ->
         sum(map(len, aliases.values())) > 4096
         or sum(len(aliases[edge["source"]]) * len(aliases[edge["target"]]) for edge in raw.get("connections", [])) > 16384
     ):
-        raise RuleViolation("expanded activation topology exceeds 4096 vertices or 16384 connections")
+        raise PolicyViolation("expanded activation topology exceeds 4096 vertices or 16384 connections")
     return {
         **raw,
         # Traffic selectors retain logical node names; only the structural
@@ -100,11 +100,11 @@ def _activation_topology(raw: dict[str, Any], children: list[dict[str, Any]]) ->
     }
 
 
-async def check_live_rules(
+async def check_live_policies(
     api: API, obj: dict[str, Any], *, candidate: dict[str, Any] | None = None, candidate_is_logical: bool = False
 ) -> list[dict[str, Any]]:
     """
-    Validate a proposed boundary against fresh ancestors, sibling instances and rules.
+    Validate a proposed boundary against fresh ancestors, sibling instances and policies.
 
     Args:
         api (API): Read adapter under the existing root-family lease.
@@ -141,7 +141,7 @@ async def check_live_rules(
         if key not in documents:
             current = await api.get(kind, namespace, name)
             if current is None or current["metadata"].get("deletionTimestamp"):
-                raise Pending(f"waiting for live rule input: {kind}/{name}")
+                raise Pending(f"waiting for live policy input: {kind}/{name}")
             documents[key] = current
         return documents[key]
 
@@ -164,11 +164,11 @@ async def check_live_rules(
 
     current = await read(obj["kind"], obj["metadata"]["name"])
     if current["metadata"]["uid"] != target_uid or current["metadata"].get("generation") != obj["metadata"].get("generation"):
-        raise Pending("graph changed before structural rule evaluation")
+        raise Pending("graph changed before structural policy evaluation")
     if _revision(current)["temporaryConnections"] != _revision(obj)["temporaryConnections"]:
-        raise Pending("temporary connections changed before structural rule evaluation")
+        raise Pending("temporary connections changed before structural policy evaluation")
     if _revision(current)["remoteScaleIntent"] != _revision(obj)["remoteScaleIntent"]:
-        raise Pending("remote scale intent changed before structural rule evaluation")
+        raise Pending("remote scale intent changed before structural policy evaluation")
     root = current
     ancestors = {target_uid}
     while True:
@@ -184,7 +184,7 @@ async def check_live_rules(
         if root["metadata"]["uid"] != owner["uid"]:
             raise Pending("graph ancestor incarnation changed")
         if owner["uid"] in ancestors or len(ancestors) >= 32:
-            raise RuleViolation("cyclic graph ownership or more than 32 nesting levels")
+            raise PolicyViolation("cyclic graph ownership or more than 32 nesting levels")
         ancestors.add(owner["uid"])
 
     async def expand(
@@ -210,7 +210,7 @@ async def check_live_rules(
         nonlocal boundaries, vertices, target_path
         boundaries += 1
         if boundaries > 256 or len(path) >= 32:
-            raise RuleViolation("graph expansion exceeds 32 nesting levels or 256 boundaries")
+            raise PolicyViolation("graph expansion exceeds 32 nesting levels or 256 boundaries")
         identity = instance["metadata"] if instance else {}
         identities[path] = {
             "kind": kind,
@@ -234,11 +234,11 @@ async def check_live_rules(
                 source_intent = approved_intent(source)
                 count = source_intent["replicas"] if source_intent else converter.structure(source["spec"], Replication).replicas
                 if not policy.minReplicas <= count <= policy.maxReplicas:
-                    raise RuleViolation("inherited replicas exceed this instance's bounds")
+                    raise PolicyViolation("inherited replicas exceed this instance's bounds")
                 body["replicas"] = count
             projected = replica_topology(body)
             if is_target and projected != obj["spec"]:
-                raise Pending("replica intent changed before structural rule evaluation")
+                raise Pending("replica intent changed before structural policy evaluation")
 
             # Sibling scale-in has not released capacity until deletion is observed.
             # Keep retiring ordinals in the sibling projection while reserving all
@@ -248,7 +248,7 @@ async def check_live_rules(
                 projected = replica_topology(body, retained=retained)
             body = projected
         elif is_target and body != obj["spec"]:
-            raise Pending("graph intent changed before structural rule evaluation")
+            raise Pending("graph intent changed before structural policy evaluation")
         if is_target:
             target_path = path
             if candidate is not None:
@@ -262,15 +262,15 @@ async def check_live_rules(
         graph = topology(body, kind)
         vertices += len(graph.nodes)
         if vertices > 4096:
-            raise RuleViolation("expanded graph family exceeds 4096 node occurrences")
+            raise PolicyViolation("expanded graph family exceeds 4096 node occurrences")
         for node in body.get("nodes", []):
             if node["kind"] not in BOUNDARY_KINDS:
                 continue
             if node.get("cluster"):
-                continue  # Remote execution belongs to its destination's independent rule family.
+                continue  # Remote execution belongs to its destination's independent policy family.
             reference = node["kind"], node["ref"]
             if reference in references:
-                raise RuleViolation("recursive graph definition references are invalid")
+                raise PolicyViolation("recursive graph definition references are invalid")
             matches = [
                 child
                 for child in live_children
@@ -314,33 +314,33 @@ async def check_live_rules(
                                     raise Pending("persist zero traffic weight before removing its graph replica")
                         break
                     if endpoint is None or endpoint.get("cluster") or endpoint["kind"] == "Resource":
-                        raise RuleViolation(
+                        raise PolicyViolation(
                             "a positive traffic weight requires a present local downstream execution; drain its weight before scale-in"
                         )
                     if index < len(parts) - 1:
                         if endpoint["kind"] not in BOUNDARY_KINDS:
-                            raise RuleViolation("traffic destination paths can traverse only graph boundaries")
+                            raise PolicyViolation("traffic destination paths can traverse only graph boundaries")
                         target_body = definitions[(endpoint["kind"], endpoint["ref"])]["spec"]
         return body
 
     spec = await expand(root["kind"], root["spec"], root, (), ())
     if target_path is None:
         raise Pending("scaling target is no longer part of its owner's topology")
-    rule_documents = (await api.request("GET", "GraphRule", namespace)).get("items", [])
+    policy_documents = (await api.request("GET", "GraphPolicy", namespace)).get("items", [])
     reports: list[dict[str, Any]] = []
-    await check_rules(
+    await check_policies(
         api,
         namespace,
         root["kind"],
         spec,
         definitions=definitions,
-        rule_documents=rule_documents,
+        policy_documents=policy_documents,
         observations=reports,
         cache_scope=root["metadata"]["uid"],
     )
 
     # Persist only the reconciling boundary's reports, as before. Repeating all
-    # 32 rules at 256 boundaries in every status could exceed Kubernetes object
+    # 32 policies at 256 boundaries in every status could exceed Kubernetes object
     # size limits. Ancestor and sibling failures still block the action.
     reports = [report for report in reports if report["path"] == target_path]
     for report in reports:
@@ -352,20 +352,20 @@ async def check_live_rules(
     for (kind, name), original in documents.items():
         fresh = await api.get(kind, namespace, name)
         if fresh is None or _revision(fresh) != _revision(original):
-            raise Pending("graph family changed during structural rule evaluation")
+            raise Pending("graph family changed during structural policy evaluation")
     for uid, original_children in owned.items():
         fresh_children = [child for child in await api.owned(namespace, uid) if child["kind"] not in AUXILIARY_KINDS]
         if {child["metadata"]["uid"]: _revision(child) for child in fresh_children} != {
             child["metadata"]["uid"]: _revision(child) for child in original_children
         }:
-            raise Pending("graph children changed during structural rule evaluation")
-    fresh_rules = (await api.request("GET", "GraphRule", namespace)).get("items", [])
-    if {item["metadata"]["uid"]: _revision(item) for item in fresh_rules} != {
-        item["metadata"]["uid"]: _revision(item) for item in rule_documents
+            raise Pending("graph children changed during structural policy evaluation")
+    fresh_policies = (await api.request("GET", "GraphPolicy", namespace)).get("items", [])
+    if {item["metadata"]["uid"]: _revision(item) for item in fresh_policies} != {
+        item["metadata"]["uid"]: _revision(item) for item in policy_documents
     }:
-        raise Pending("GraphRules changed during structural rule evaluation")
+        raise Pending("GraphPolicies changed during structural policy evaluation")
     if any(value <= datetime.now(UTC) for value in deadlines):
-        raise Pending("a temporary connection expired during structural rule evaluation")
+        raise Pending("a temporary connection expired during structural policy evaluation")
     if deadlines:
         expires_before(min(deadlines))
     return reports

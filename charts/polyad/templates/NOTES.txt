@@ -100,7 +100,7 @@ Shared read-only graph observers (dedicated bearer authentication required):
   GET http://{{ .Release.Name }}-polyad-observer.{{ .Release.Namespace }}.svc:8094/openapi.json
   Local access: kubectl -n {{ .Release.Namespace }} port-forward service/{{ .Release.Name }}-polyad-observer 8094:8094
   Local base URL: http://127.0.0.1:8094
-  Observers cannot deploy, scale or change graphs. Local execution operators enforce GraphRules.
+  Observers cannot deploy, scale or change graphs. Local execution operators enforce GraphPolicies.
 {{- end }}
 {{- if .Values.api.enabled }}
 Composition and activation API (bearer authentication required):

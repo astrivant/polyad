@@ -237,7 +237,7 @@ planned step. Independent reload behavior remains available for other consumers.
 ## Admission, KEDA and graph constraints
 
 Before every mutation, re-read target identity, desired revision, current
-readiness, ancestor constraints and selected GraphRules under the existing
+readiness, ancestor constraints and selected GraphPolicies under the existing
 mutation fence. Recompute graph metrics, including Cheeger where required.
 Structural validity, healthy capacity and application throughput each require
 their own checks. The current Cheeger calculation measures the declared graph;

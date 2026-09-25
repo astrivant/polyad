@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=../values.reference.schema.json
 # Demonstration only: all enabled HTTP listeners accept calls without credentials.
-# GraphRules, namespace scopes, TTLs, body size and physical server capacity still apply.
+# GraphPolicies, namespace scopes, TTLs, body size and physical server capacity still apply.
 # Guide: ../../../docs/operations/api-keys.md#demonstrations-without-authentication
 ## @param ha [boolean] Run at least two operator replicas and permit split components or remote workers; false runs one dense operator
 ha: false

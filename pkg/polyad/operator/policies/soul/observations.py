@@ -14,7 +14,7 @@ from polyad.compiler.passes.traffic import capacity_weights
 from polyad.exceptions.graph import CheegerIncomplete
 from polyad.exceptions.reconciliation import Pending
 from polyad.graph.cheeger import compute_cheeger
-from polyad.graph.rules import relation_graph
+from polyad.graph.policies import relation_graph
 from polyad.operator.policies.cheeger import computation_limits
 from polyad.operator.policies.soul.contracts import STATE, Search
 from polyad_types.graphs.topology import topology

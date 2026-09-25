@@ -241,7 +241,7 @@ completion assertions with application health and lifecycle reporting.
 ## Cheeger bounds at two boundaries
 
 `cheeger()` computes exact unweighted edge expansion for these small graphs,
-ignoring direction as in Polyad's [structural definition](../graphs/graph-rules.md#cheeger-bottleneck-bounds).
+ignoring direction as in Polyad's [structural definition](../graphs/graph-policies.md#cheeger-bottleneck-bounds).
 
 | Boundary | Baseline | Under load | Values |
 | --- | --- | --- | --- |
@@ -316,4 +316,4 @@ The [Copolyad proposal](../proposals/copolyad.md#from-local-capabilities-to-natu
 defines that planning boundary. An admitted Natural Selection plan owns its
 composition and overrides conflicting Soul searching choices. Soul searching
 continues adapting the profile settings delegated by that plan, subject to
-GraphRules, permissions and resource limits.
+GraphPolicies, permissions and resource limits.

@@ -38,6 +38,6 @@ federation:
 # those operators execute it. For root-owned execution replicas instead, use
 # values-root-control-plane.reference.yaml (which includes its own registry).
 #
-# GraphRules stay cluster-local. Placement does not establish cross-cluster
+# GraphPolicies stay cluster-local. Placement does not establish cross-cluster
 # workload transport; values-multicluster.reference.yaml covers Istio transport.
 # Helm renders native resources only into the release cluster, never the peers.

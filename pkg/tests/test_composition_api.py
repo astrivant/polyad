@@ -14,7 +14,7 @@ from polyad.api import create_app
 from polyad.api.composition.store import CompositionStore
 from polyad.compiler.passes.composition import compile_composition, read_receipt, receipt_spec, request_name
 from polyad.exceptions.api import Conflict
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.exceptions.reconciliation import Pending
 from polyad.operator.coordination.leases import Coordinator
 from polyad.operator.reconciliation.controller import Controller
@@ -154,14 +154,14 @@ def test_queued_materialization_policy_and_audit_lineage():
     async def scenario():
         request = request_value()
         receipt = resource("Composition", request_name(request.requestId), receipt_spec(request))
-        rule = resource("GraphRule", "budget", {"limits": {"expandedNodes": 3}})
+        rule = resource("GraphPolicy", "budget", {"limits": {"expandedNodes": 3}})
         api = FakeAPI(receipt, rule)
         controller = Controller(api)
         key = ("Composition", "test", receipt["metadata"]["name"])
-        with pytest.raises(RuleViolation, match="expandedNodes=4"):
+        with pytest.raises(PolicyViolation, match="expandedNodes=4"):
             await controller.reconcile(key)
         assert not any(call[0] == "POST" for call in api.calls)
-        api.objects[("GraphRule", "test", "budget")]["spec"]["limits"]["expandedNodes"] = 4
+        api.objects[("GraphPolicy", "test", "budget")]["spec"]["limits"]["expandedNodes"] = 4
         with pytest.raises(Pending, match="definitions"):
             await controller.reconcile(key)
         assert not any(k[0] == "PolyGraph" for k in api.objects)

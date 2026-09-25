@@ -677,7 +677,7 @@ class AdaptiveService(ABC):
             decision (Literal['Approve', 'Reject']): Your application's answer after checking whether to accept this connection.
 
         Returns:
-            dict[str, Any]: Recorded answer. The operator checks permissions and graph rules before making the connection Active.
+            dict[str, Any]: Recorded answer. The operator checks permissions and graph policies before making the connection Active.
         """
         if self.connections is None:
             raise RuntimeError("configure a separately authorized connections client")

@@ -67,7 +67,7 @@ from polyad_types.resources.polyad import Daemon as Daemon
 from polyad_types.resources.polyad import DragonflyPool as DragonflyPool
 from polyad_types.resources.polyad import Gate as Gate
 from polyad_types.resources.polyad import Graph as Graph
-from polyad_types.resources.polyad import GraphRule as GraphRule
+from polyad_types.resources.polyad import GraphPolicy as GraphPolicy
 from polyad_types.resources.polyad import OperatorPool as OperatorPool
 from polyad_types.resources.polyad import PolyGraph as PolyGraph
 from polyad_types.resources.polyad import RemoteScale as RemoteScale
@@ -125,7 +125,7 @@ __all__ = (
     "Gate",
     "Graph",
     "GraphMetrics",
-    "GraphRule",
+    "GraphPolicy",
     "Independence",
     "Job",
     "JobSpec",

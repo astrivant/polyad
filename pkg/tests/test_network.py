@@ -10,7 +10,7 @@ import copy
 import pytest
 
 from polyad.compiler.passes.network import NetworkScope, configure_pod, policy_specs, scope_label, traffic
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.exceptions.reconciliation import Pending
 from polyad.graph import NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
 from polyad.operator.policies.network import context
@@ -202,14 +202,14 @@ def test_network_bypass_is_rejected(override):
 
 
 @pytest.mark.parametrize("scope_name", ["Boundary", "Subtree"])
-def test_referenced_structural_rules_obey_their_scope(scope_name):
+def test_referenced_structural_policies_obey_their_scope(scope_name):
     """
     Boundary-scoped references do not silently constrain reusable descendants.
     """
-    from polyad.operator.policies.rules import check_rules
+    from polyad.operator.policies.graph_policies import check_policies
 
     async def run():
-        rule = resource("GraphRule", "one-node", {"enforcement": "Referenced", "scope": scope_name, "limits": {"nodes": 1}})
+        rule = resource("GraphPolicy", "one-node", {"enforcement": "Referenced", "scope": scope_name, "limits": {"nodes": 1}})
         child = resource(
             "Graph",
             "child",
@@ -218,13 +218,13 @@ def test_referenced_structural_rules_obey_their_scope(scope_name):
                 "nodes": [{"name": "a", "kind": "Workload", "ref": "job"}, {"name": "b", "kind": "Workload", "ref": "job"}],
             },
         )
-        root = {"rules": ["one-node"], "nodes": [{"name": "child", "kind": "Graph", "ref": "child"}]}
+        root = {"policies": ["one-node"], "nodes": [{"name": "child", "kind": "Graph", "ref": "child"}]}
         api = FakeAPI(rule, child)
         if scope_name == "Subtree":
-            with pytest.raises(RuleViolation):
-                await check_rules(api, "test", "Graph", root)
+            with pytest.raises(PolicyViolation):
+                await check_policies(api, "test", "Graph", root)
         else:
-            assert (await check_rules(api, "test", "Graph", root))[0]["allowed"]
+            assert (await check_policies(api, "test", "Graph", root))[0]["allowed"]
 
     asyncio.run(run())
 
@@ -235,7 +235,7 @@ def test_namespace_network_rule_cannot_be_opted_out_of():
     """
 
     async def run():
-        rule = resource("GraphRule", "isolated", {"network": {"allowWithin": False}})
+        rule = resource("GraphPolicy", "isolated", {"network": {"allowWithin": False}})
         graph = resource(
             "Graph", "root", {"nodes": [{"name": "a", "kind": "Workload", "ref": "job"}], "network": {"ingress": [{"peer": {}}]}}
         )

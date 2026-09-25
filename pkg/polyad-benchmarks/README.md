@@ -66,7 +66,7 @@ The [example plan](../../studies/load/fixtures/plan.json) specifies fixture repl
 batch execution concurrency, images, placement and arrival parameters. Each new
 submission generates a UUID-backed `runId`, submitted as its `requestId`. `composition_plan` renders the versioned chart into a typed
 `CompositionRequest`; `submit_plan(client, plan, chart, namespace)` submits it.
-The referenced administrator GraphRule must already exist. Each composed run has
+The referenced administrator GraphPolicy must already exist. Each composed run has
 its own graph, immutable ConfigMap and runner Job. Reusing its request ID is an
 idempotent retry of the same experiment. Use `--run-id SAVED_RUN_ID` or an explicit
 plan `requestId` only for that retry; leave them unset for a new run. Rendering

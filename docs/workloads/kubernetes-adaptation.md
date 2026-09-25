@@ -113,7 +113,7 @@ admission may need to slow and accepted work drain before a replacement fits.
 Never sleep through provisioning or solve an HJ grid in a strategy callback.
 
 Internal workers share the current container's CPU and memory. Pod scaling goes
-through its controllers and GraphRules. A local profile cannot change a quota
+through its controllers and GraphPolicies. A local profile cannot change a quota
 or authorize a forbidden connection.
 
 ## Implement a strategy component

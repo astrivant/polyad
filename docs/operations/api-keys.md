@@ -75,7 +75,7 @@ ambiguous. Both limits must be positive.
 Inbound scopes are independently selectable: `composition`, `activations`,
 `throughput`, `events`, `topology`, `metrics`, and `observations` (the optional
 read-only observer). Sharing a listener does not grant another endpoint scope. Enable each API separately. Keys authorize its existing namespace
-and operations; they do not grant Kubernetes RBAC or bypass GraphRules.
+and operations; they do not grant Kubernetes RBAC or bypass GraphPolicies.
 Temporary connections retain Kubernetes service-account authentication and
 namespace checks.
 
@@ -263,7 +263,7 @@ checks and configured request/concurrency quotas, including named-key lanes and
 Flask-Limiter. Event stream slots still reserve shared HTTP workers for other APIs;
 these slots bound transport capacity across callers. If temporary connections are enabled,
 TokenReview and SubjectAccessReview are bypassed using one demonstration identity.
-Namespace scope, graph rules, TTL bounds, body-size bounds and finite server
+Namespace scope, graph policies, TTL bounds, body-size bounds and finite server
 capacity still apply. This option does not make an infinite-capacity server or
 remove workload safety constraints. The Python SDK accepts `token=None` for
 this explicit public mode. `Required` remains the production default.

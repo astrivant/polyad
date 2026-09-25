@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from polyad.compiler.passes.composition import compile_composition, read_receipt, request_name
 from polyad.exceptions.reconciliation import Pending
 from polyad.operator.observability.graph_status import observed
-from polyad.operator.policies.rules import check_rules
+from polyad.operator.policies.graph_policies import check_policies
 from polyad_types import resources as asts
 from polyad_types.api.requests import COMPOSITION_KINDS
 
@@ -67,7 +67,7 @@ async def reconcile_composition(controller: Controller, obj: dict[str, Any]) -> 
     manifests = compile_composition(request, meta["namespace"], owner_uid=meta["uid"])
     root = manifests[request.rootId]
     documents = {(item.resource_type.kind, item.metadata.name or ""): asts.to_document(item) for item in manifests.values()}
-    await check_rules(
+    await check_policies(
         controller.api,
         meta["namespace"],
         root.resource_type.kind,

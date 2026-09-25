@@ -39,7 +39,7 @@ LEGACY_IMPORTS = (
     ("polyad.operator.coordination.leases", "polyad.exceptions.coordination", "NotOwner"),
     ("polyad.operator.coordination.pulses", "polyad.exceptions.coordination", "PulseDeferred"),
     ("polyad.operator.coordination.write_queue", "polyad.exceptions.kubernetes", "WriteConflict"),
-    ("polyad.operator.policies.rules", "polyad.exceptions.policies", "RuleViolation"),
+    ("polyad.operator.policies.graph_policies", "polyad.exceptions.policies", "PolicyViolation"),
     ("polyad.operator.reconciliation.controller", "polyad.exceptions.reconciliation", "Pending"),
     ("polyad.api.composition.app", "polyad.exceptions.api", "Conflict"),
     ("polyad.api.composition.app", "polyad.exceptions.api", "Unavailable"),

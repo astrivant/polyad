@@ -13,7 +13,7 @@ import networkx as nx
 import numpy as np
 
 if TYPE_CHECKING:
-    from polyad_types.graphs.rules import CheegerReduction
+    from polyad_types.graphs.policies import CheegerReduction
 
 __all__ = (
     "ReductionCertificate",

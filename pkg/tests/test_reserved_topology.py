@@ -206,7 +206,7 @@ def test_component_recovery_and_scaling_stay_inside_the_root_operator_graph(monk
             {"source": "bootstrap", "target": "endpoints"},
             {"source": "endpoints", "target": "bootstrap"},
         ]
-        assert members["components"]["status"]["structuralRules"][0]["measurements"]["cheeger"] == 1
+        assert members["components"]["status"]["structuralPolicies"][0]["measurements"]["cheeger"] == 1
         poly = api.objects["PolyGraph", "test", "test-atlas"]
         assert poly["status"]["ready"]
         assert poly["status"]["metrics"]["rollup"]["leafNodes"] == 9

@@ -116,7 +116,7 @@ constraints:
   resources:
     cpu: {maximum: 8, unit: cores}
     memory: {maximum: 16, unit: GiB}
-  graphRules: [pipeline-policy]
+  graphPolicies: [pipeline-policy]
 objectives:
   latency:
     metric: example.ingress-to-query-visibility@1
@@ -148,7 +148,7 @@ unverified. Evidence must include workload conditions and sample counts.
 
 `planningPolicy` would define authorized scope, freshness requirements, search
 limits, transitions and review policy. It cannot widen permissions inherited
-from the parent operator or waive namespace GraphRules. Resource totals include
+from the parent operator or waive namespace GraphPolicies. Resource totals include
 all resources charged to this plan under the policy, including replica counts
 and dependencies; sharing rules must be explicit to avoid undercounting.
 
@@ -359,7 +359,7 @@ atomic by placing them in the same Plan IR. The adapter must expose unsupported
 operations before submission and preserve existing mutation fencing and
 connection consent.
 
-[GraphRules](../graphs/graph-rules.md) still constrain the resulting graph, and
+[GraphPolicies](../graphs/graph-policies.md) still constrain the resulting graph, and
 Polyad still checks live state before writes. The planner may use benchmark
 estimates to rank candidates, but per-stage percentile latencies cannot simply
 be added to establish an end-to-end percentile guarantee. The declared outcome
@@ -374,7 +374,7 @@ must be measured at its own boundary.
 | Type-check | Port shapes, payload types, fact subjects, lineage, unit compatibility and Boolean policy results |
 | Search | All prerequisites satisfied, permitted alternatives, cycle handling, effects and bounded resource/search costs |
 | Review | Distinguish declarations, measurements and assumptions; explain missing evidence and rejected alternatives |
-| Admit | Fresh state, ownership, GraphRules, quotas, consent and mutation dependency validation |
+| Admit | Fresh state, ownership, GraphPolicies, quotas, consent and mutation dependency validation |
 | Observe | Correlated outcomes, coverage, end-to-end objectives and bounded replanning |
 
 Start by defining shared Contract IR and Plan IR models and generating their

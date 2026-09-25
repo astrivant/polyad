@@ -24,7 +24,7 @@
 <!-- toc:end -->
 
 Polyad deploys, connects and scales container workloads as graphs within and
-across Kubernetes clusters. It checks graph rules, including Cheeger bounds,
+across Kubernetes clusters. It checks graph policies, including Cheeger bounds,
 before applying changes, and uses application demand to select approved
 connection layouts, traffic splits and capacity preparation. Services participate
 through composition, discovery, event and temporary-connection APIs.
@@ -819,7 +819,7 @@ References: [Kopf embedding](https://docs.kopf.dev/en/stable/embedding/), [Kopf 
 
 ## Structural policy and composition API
 
-`GraphRule` applies namespace-wide or inherited referenced constraints to graph
+`GraphPolicy` applies namespace-wide or inherited referenced constraints to graph
 structure, recursive size and spectra before admission. `Composition` records an
 immutable ID-addressed request, materializes reusable definitions and a root through
 the leased queues, and records generated manifest identities. The optional Flask
@@ -828,6 +828,6 @@ API families retain separate listener ports and credentials while sharing worker
 and shutdown handling. Waitress serves HTTP/SSE by default; enabling WebSocket
 events selects Hypercorn for that same runtime. See the
 [process hierarchy](process-hierarchy.md#container-and-thread-hierarchy).
-See [graph rules and constraint diagrams](../graphs/graph-rules.md),
+See [graph policies and constraint diagrams](../graphs/graph-policies.md),
 [composition request format and audit semantics](../apis/composition-requests.md), and
 [composition service setup](../apis/composition-api.md).

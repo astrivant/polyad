@@ -3,7 +3,7 @@ Run Soul searching's observe, recommend, admit and commit stages in one place.
 
 This is the algorithm's high-level entry point. Recommendations combine Cheeger
 targets, traffic percentages and capacity preparation; admission keeps hard
-GraphRules, observation freshness and shared change budgets authoritative.
+GraphPolicies, observation freshness and shared change budgets authoritative.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from polyad.graph.temporary import active_entries
 from polyad.operator.coordination.contracts import expires_before
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad.operator.policies.soul.contracts import STATE
 from polyad.operator.policies.soul.observations import capacity_revision, headroom_targets, observe
 from polyad.operator.policies.soul.planning import propose
@@ -68,7 +68,7 @@ async def search_soul(controller: Controller, obj: dict[str, Any], *, now: datet
             status["phase"] = "CoolingDown"
         else:
             # Admit against the whole live family immediately before the fenced write.
-            await check_live_rules(controller.api, obj, candidate=proposal.spec, candidate_is_logical=True)
+            await check_live_policies(controller.api, obj, candidate=proposal.spec, candidate_is_logical=True)
 
             # Revalidate capacity and demand freshness immediately before writing;
             # planning may have taken long enough for the underlying evidence to change.

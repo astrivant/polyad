@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/graphrule.v1alpha1.schema.json",
-  "title": "polyad.astrivant.com GraphRule v1alpha1",
+  "$id": "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/resources/graphpolicy.v1alpha1.schema.json",
+  "title": "polyad.astrivant.com GraphPolicy v1alpha1",
   "type": "object",
   "description": "Constrain graph structure and spectrum across an operator namespace. Grants no workload execution by itself.",
   "properties": {
@@ -12,8 +12,8 @@
     },
     "kind": {
       "type": "string",
-      "description": "Custom resource kind: GraphRule.",
-      "const": "GraphRule"
+      "description": "Custom resource kind: GraphPolicy.",
+      "const": "GraphPolicy"
     },
     "metadata": {
       "type": "object"
@@ -162,7 +162,7 @@
             "Subtree"
           ],
           "default": "Subtree",
-          "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary."
+          "description": "Boundary applies locally; Subtree propagates. Namespace policies select every boundary."
         },
         "network": {
           "type": "object",
@@ -482,7 +482,7 @@
         },
         "enforcement": {
           "type": "string",
-          "description": "Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor.",
+          "description": "Namespace policies always apply. Referenced policies apply when named by this graph or an ancestor.",
           "enum": [
             "Namespace",
             "Referenced"
@@ -635,5 +635,5 @@
     "metadata",
     "spec"
   ],
-  "$comment": "Generated from charts/polyad-crds/crds/graphrules.yaml; do not edit this artifact."
+  "$comment": "Generated from charts/polyad-crds/crds/graphpolicies.yaml; do not edit this artifact."
 }

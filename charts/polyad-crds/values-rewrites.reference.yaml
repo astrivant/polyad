@@ -83,7 +83,7 @@ rewrites: {}
 #               timeoutSeconds: 0
 #               ## @param rewrites.example.spec.topology.traffic[].resilience.retryOn [string] Optional. No CRD default; the value shown is illustrative. Choices: "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes". Istio retry conditions used when retries are enabled.
 #               retryOn: "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
-#         ## @param rewrites.example.spec.topology.throughput [object, string] Optional. No CRD default; the value shown is illustrative. Observe or adapt topology using empirical throughput targets within hard structural rules.
+#         ## @param rewrites.example.spec.topology.throughput [object, string] Optional. No CRD default; the value shown is illustrative. Observe or adapt topology using empirical throughput targets within hard structural policies.
 #         throughput:
 #           ## @param rewrites.example.spec.topology.throughput.unit [string] Required. No CRD default; the value shown is illustrative. Application work unit shared by offered and completed rates, such as records.
 #           unit: "example"
@@ -292,8 +292,8 @@ rewrites: {}
 #           allowDNS: false
 #           ## @param rewrites.example.spec.topology.network.mesh [boolean, string] Optional. No CRD default; the value shown is illustrative. Require Istio injection, strict mutual TLS and inbound authorization.
 #           mesh: false
-#         ## @param rewrites.example.spec.topology.rules [array, string] Optional. No CRD default; the value shown is illustrative. Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.
-#         rules: []
+#         ## @param rewrites.example.spec.topology.policies [array, string] Optional. No CRD default; the value shown is illustrative. Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.
+#         policies: []
 #         ## @param rewrites.example.spec.topology.nodes [array, string] Required. No CRD default; the value shown is illustrative. Graph membership in deterministic admission order. Names are unique within this boundary; definitions are resolved in the same namespace.
 #         nodes:
 #           -

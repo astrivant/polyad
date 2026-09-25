@@ -278,8 +278,8 @@ def test_client_plan_uses_canonical_graph_with_immutable_per_run_settings():
     assert objects["load-batch"]["spec"]["activation"]["maxConcurrent"] == 4
     assert "activation" not in objects["load-runner"]["spec"]
     assert objects["load-runner"]["spec"]["template"]["spec"]["containers"][0]["args"][-2:] == ["--run-id", document["requestId"]]
-    assert not any(item["kind"] == "GraphRule" for item in document["objects"])
-    assert objects["load-study"]["spec"]["rules"]
+    assert not any(item["kind"] == "GraphPolicy" for item in document["objects"])
+    assert objects["load-study"]["spec"]["policies"]
     graph = objects["load-study"]["spec"]
     assert {item["refId"] for item in graph["nodes"]} <= set(objects)
     projected = objects["load-plan"]["spec"]["manifest"]

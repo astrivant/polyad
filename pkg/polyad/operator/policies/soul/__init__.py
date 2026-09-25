@@ -5,7 +5,7 @@ Start with controller.search_soul: observe live capacity, propose an
 approved profile, revalidate its constraints and persist one fenced change.
 Observations owns measurements, planning owns recommendations, and contracts
 defines their internal handoff and the durable annotation names. Graph algorithms,
-GraphRules, Istio reconciliation and workload autoscaling retain their own owners.
+GraphPolicies, Istio reconciliation and workload autoscaling retain their own owners.
 """
 
 from __future__ import annotations

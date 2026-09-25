@@ -68,7 +68,7 @@ flowchart TB
 These modes set the maximum permitted scope. A child rejects operations it
 cannot fulfill. A permitted connection also needs a
 common application graph boundary owned by the receiving operator, endpoint
-consent, current GraphRules and compatible network contracts.
+consent, current GraphPolicies and compatible network contracts.
 
 ## Discover current services
 
@@ -198,8 +198,8 @@ sequenceDiagram
     R-->>B: Proposal on target's authorized graph event stream
     B->>R: Approve receipt UID with East Pod token
     R->>E: TokenReview, live ownership and approve permission
-    R->>W: Recheck GraphRules and install source policy grant
-    R->>E: Recheck GraphRules and install destination policy grant
+    R->>W: Recheck GraphPolicies and install source policy grant
+    R->>E: Recheck GraphPolicies and install destination policy grant
     R-->>A: Active after both policy sets are observed
     R-->>B: Active on target's graph stream
     R->>W: Remove grant at expiry or revocation
@@ -266,11 +266,11 @@ services dedicated service accounts, and align mesh trust domains and aliases
 with the configured values. Existing multicluster service routing must already
 work; negotiation changes authorization, not cluster transport infrastructure.
 
-The common PolyGraph gets a structural edge for GraphRules and Cheeger checks.
+The common PolyGraph gets a structural edge for GraphPolicies and Cheeger checks.
 That edge carries no broad transport allowance. Within one cluster, omitting
 ports declares only a structural edge and opens no network access; cross-cluster
 requests require explicit TCP ports. Each leaf workload instead gets
-an expiring network exception, intersected with its local ancestor and GraphRule
+an expiring network exception, intersected with its local ancestor and GraphPolicy
 policies. Remote ingress also restricts the authenticated mesh principal. Gateway
 egress uses the registered tunnel port, while destination ingress uses the
 requested application port. Existing restrictive contracts can reject the proposal.
@@ -288,7 +288,7 @@ requested application port. Existing restrictive contracts can reject the propos
 
 Acceptance acknowledges durable intent. Connection activation follows admission
 and policy reconciliation. Fresh ownership,
-access ceilings and graph rules are checked again before writes. A participant
+access ceilings and graph policies are checked again before writes. A participant
 removal, replacement, explicit refusal or narrowed mode triggers cleanup of both
 policy grants. A missing target is never recreated by negotiation. A remote
 outage delays acknowledgement and cleanup; finalizers retain the receipt until
@@ -314,7 +314,7 @@ cannot execute; Helm does not arrange a forwarding fallback.
 
 Graph grants, discovery ceilings, Kubernetes `connect`/`approve` permissions,
 [namespace scope](temporary-connections.md#enable-the-endpoint-and-choose-its-scope),
-[GraphRules](../graphs/graph-rules.md),
+[GraphPolicies](../graphs/graph-policies.md),
 [mesh contracts](../deployment/multicluster.md), per-key lanes and
 [pulse cooldowns](temporary-connections.md#administrator-pulse-limits) are separate
 controls. Widening any one does not bypass the others.

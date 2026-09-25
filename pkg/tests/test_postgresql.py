@@ -39,8 +39,8 @@ def test_state_preserves_graph_parameters_and_excludes_embedded_credentials():
     """
     Graph intent and observed workload signals survive without copying raw workload manifests.
     """
-    graph = resource("Graph", "pipeline", {"nodes": [], "rules": ["budget"]})
-    graph["status"] = {"workloads": {"consumer": {"values": {"throughput": 42}}}, "structuralRules": [{"cheeger": 1}]}
+    graph = resource("Graph", "pipeline", {"nodes": [], "policies": ["budget"]})
+    graph["status"] = {"workloads": {"consumer": {"values": {"throughput": 42}}}, "structuralPolicies": [{"cheeger": 1}]}
     stored = state_document(graph)
     assert stored["spec"] == graph["spec"]
     assert stored["status"] == graph["status"]
@@ -161,7 +161,7 @@ def test_postgresql_commits_state_rejects_old_scans_and_removes_deleted_graphs()
             await asyncio.gather(store.start(), other.start())
             old = await store.begin()
             newer = await other.begin()
-            graph = resource("Graph", "pipeline", {"nodes": [], "rules": ["budget"]})
+            graph = resource("Graph", "pipeline", {"nodes": [], "policies": ["budget"]})
             graph["status"] = {"workloads": {"consumer": {"values": {"throughput": 42}}}}
             assert await other.save("west", "test", newer, [graph], {"parameters": {"throughput": 42}})
             assert not await store.save("west", "test", old, [], {})

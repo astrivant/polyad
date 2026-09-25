@@ -41,7 +41,7 @@ def composition_plan(plan: dict[str, Any], chart: Path, namespace: str) -> dict[
         namespace (str): Operator API namespace; must match the receiving operator.
 
     Returns:
-        dict[str, Any]: Validated immutable composition document; administrator rules stay references.
+        dict[str, Any]: Validated immutable composition document; administrator policies stay references.
     """
     if set(plan) - {"requestId", "variables"} or not isinstance(plan.get("variables", {}), dict):
         raise ValueError("plans contain a variables mapping and an optional requestId for retries")
@@ -73,7 +73,7 @@ def composition_plan(plan: dict[str, Any], chart: Path, namespace: str) -> dict[
         )
     objects = []
     for resource in yaml.safe_load_all(rendered):
-        if not resource or resource.get("apiVersion") != "polyad.astrivant.com/v1alpha1" or resource["kind"] == "GraphRule":
+        if not resource or resource.get("apiVersion") != "polyad.astrivant.com/v1alpha1" or resource["kind"] == "GraphPolicy":
             continue
         kind, name = resource["kind"], resource["metadata"]["name"]
         spec = copy.deepcopy(resource["spec"])

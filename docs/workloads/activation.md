@@ -116,7 +116,7 @@ each pulse. Separate groups have disjoint controller selectors. StatefulSet acti
 have separate PVC identities; see [storage retention](workload-storage.md#retention-and-revisions). `maxReplicas`
 bounds `maxConcurrent × replicasPerActivation`; it defaults to 1,024. Per-pulse
 replica counts apply only to Daemons. Concurrent subgraphs remain subject to their
-own workload replica settings and graph rules.
+own workload replica settings and graph policies.
 
 Queue, Reject and Coalesce require `maxConcurrent: 1`. A daemon therefore occupies
 that target until an explicit stop or graph cleanup. A stop does not release its
@@ -126,7 +126,7 @@ also bound parallel activations independently of replica counts.
 Names differ between pulses. Use a Service with application labels for stable
 network discovery across activations.
 Each execution retains the logical node's network scope and inherited placement.
-Structural rules are also checked against the expanded execution topology.
+Structural policies are also checked against the expanded execution topology.
 Boolean gates can continue to reference `NAME.ready`, `NAME.started` and
 `NAME.completed`: each is true when every selected execution satisfies it.
 `NAME.failed` is true when any selected execution fails. With no execution

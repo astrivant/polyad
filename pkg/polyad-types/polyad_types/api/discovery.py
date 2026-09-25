@@ -43,7 +43,7 @@ class ServiceAccess:
 
     Attributes:
         discovery (AccessMode): Maximum discoverable scope relative to a service's home graph.
-        connections (AccessMode): Maximum negotiable scope; consent and GraphRules remain required.
+        connections (AccessMode): Maximum negotiable scope; consent and GraphPolicies remain required.
         parent (str): Parent operator's registered cluster; empty selects the atlas root.
     """
 

@@ -24,7 +24,7 @@ All paths below are relative to [`pkg/polyad/operator`](../../pkg/polyad/operato
 | --- | --- | --- |
 | `lifecycle/` | Kopf startup and shutdown, service ownership, health, roles and polling intervals | `handlers`, `health`, `roles`, `tuning` |
 | `reconciliation/` | Translate graph intent into owned workloads, execution instances and ordered mutations | `controller`, `activations`, `compositions`, `replication`, `mutations`, `identity`, `placement` |
-| `policies/` | Check live graph families and enforce structural, network, capacity, throughput and traffic decisions | `rules`, `rule_state`, `cheeger`, `soul/`, `traffic`, `capacity`, `network`, `connections` |
+| `policies/` | Check live graph families and enforce structural, network, capacity, throughput and traffic decisions | `graph_policies`, `policy_state`, `cheeger`, `soul/`, `traffic`, `capacity`, `network`, `connections` |
 | `coordination/` | Planner election, shard leases, local and shared queues, write contracts, validation, dependency dispatch and pending conflicts, and scaling the shared Dragonfly service | `leases`, `queue`, `shared_queue`, `write_queue`, `contracts`, `validation`, `dispatch`, `dragonfly` |
 | `clusters/` | Root orchestration, remote graph ownership, worker pools, remote scaling consent and reserved operator membership | `root`, `federation`, `pools`, `remote_scaling`, `reserved` |
 | `observability/` | Status trees, descendant summaries, write pressure, component demand, decision logs and traces | `graph_status`, `rollup`, `metrics`, `pressure`, `decisions`, `logging`, `tracing` |
@@ -58,7 +58,7 @@ flowchart TD
 This diagram describes control flow between the operator's components.
 The controller and individual reconcilers cooperate through type-only and local
 imports where needed. [Mutation plans](mutations.md) and
-[live GraphRules](../graphs/graph-rules.md) continue to govern writes.
+[live GraphPolicies](../graphs/graph-policies.md) continue to govern writes.
 
 ## Soul searching entry point
 
@@ -93,7 +93,7 @@ flowchart TD
 
 The package owns the adaptation decision. Specialized implementations retain
 their own locations: exact cuts in [`polyad.graph.cheeger`](../../pkg/polyad/graph/cheeger.py),
-live family constraints in [`rule_state.py`](../../pkg/polyad/operator/policies/rule_state.py),
+live family constraints in [`policy_state.py`](../../pkg/polyad/operator/policies/policy_state.py),
 percentage arithmetic in [`compiler/passes/traffic.py`](../../pkg/polyad/compiler/passes/traffic.py),
 and Istio resource reconciliation in [`policies/traffic.py`](../../pkg/polyad/operator/policies/traffic.py).
 KEDA/HPA continue to own their configured replica targets; Soul searching proposes

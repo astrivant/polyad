@@ -29,7 +29,7 @@ fight, and how to assign authority safely.
 flowchart TB
     requirements["Outcome and capability requirements"]
     nature["Natural Selection<br/>Choose service composition"]
-    rules["GraphRules and Cheeger bounds<br/>Hard admission envelope"]
+    rules["GraphPolicies and Cheeger bounds<br/>Hard admission envelope"]
     soul["Soul searching<br/>Layout, traffic and capacity profile"]
     kube["KEDA, HPA and VPA<br/>Replica and container capacity"]
     sdk["SDK strategies<br/>Application-local profile and guards"]
@@ -54,7 +54,7 @@ because Soul searching or an SDK strategy is enabled.
 
 | Mechanism | Reads | May change | Strength | Main limitation |
 | --- | --- | --- | --- | --- |
-| GraphRule Cheeger bounds | Projected graph relation | Nothing directly; admits or blocks proposed state | Hard structural invariant | Structure is not service quality |
+| GraphPolicy Cheeger bounds | Projected graph relation | Nothing directly; admits or blocks proposed state | Hard structural invariant | Structure is not service quality |
 | Soul searching | Fresh demand, completion, headroom and current graph | Approved connections, traffic percentages and capacity profiles in `Adapt` | Bounded graph feedback controller | Delayed/noisy feedback can oscillate |
 | Natural Selection | Required outcome, capability contracts, costs and exact structural floor | Selected services, routes and incarnations in the local study | Composition planner | Bounded enumeration and model/catalog quality |
 | SDK adaptation strategies | Projected deltas, metrics, topology and local state | Application intent, routing candidates or worker profile | Fast, application-aware response | Correct admission, idempotency and draining remain application duties |
@@ -89,7 +89,7 @@ or time budgets produces an explicit incomplete result, never an exact label.
 When checking a hard minimum, a witnessed cut below that minimum is already a
 sufficient certificate to reject the state.
 
-Use GraphRule bounds as an outer safety envelope. Soul searching's tier target
+Use GraphPolicy bounds as an outer safety envelope. Soul searching's tier target
 is an empirically calibrated desired range inside that envelope. Their
 intersection must be nonempty; the throughput controller never relaxes a rule.
 
@@ -165,7 +165,7 @@ in-place resize. Those variables are snapshots; the cgroup sample is live.
 
 | Interaction | Failure mode | Safeguard |
 | --- | --- | --- |
-| Soul target vs GraphRule | Desired tier has no legal layout | Validate range intersection; expose `NoAllowedLayout`; never relax the rule |
+| Soul target vs GraphPolicy | Desired tier has no legal layout | Validate range intersection; expose `NoAllowedLayout`; never relax the rule |
 | Soul and SDK strategy | Both respond to the same shortfall and overcorrect | Give graph routing/topology to Soul and local concurrency/profile to the application; stagger their clocks |
 | Soul and KEDA/HPA | Topology and replica count change before either settles | Let autoscaling settle faster; use longer Soul stabilization and cooldown |
 | VPA and SDK profile | Profile starts before resized capacity exists | Read live cgroups, reserve overlap, wait for readiness, then commit |
@@ -182,7 +182,7 @@ Use the following precedence when mechanisms disagree:
 
 1. Identity, generation, permissions and capability compatibility reject stale
    or unauthorized actions.
-2. Resource ceilings and GraphRules reject unsafe candidate states.
+2. Resource ceilings and GraphPolicies reject unsafe candidate states.
 3. Readiness, local constraints and overlap reservations govern execution.
 4. Soul/Natural Selection ranking chooses among the candidates that remain.
 5. SLA state judges the observed customer result; it does not legalize a state

@@ -6,7 +6,7 @@
 - [Root-managed execution](#root-managed-execution)
 - [Execution and observation](#execution-and-observation)
 - [Placement and ownership](#placement-and-ownership)
-- [GraphRules, Cheeger bounds and scaling](#graphrules-cheeger-bounds-and-scaling)
+- [GraphPolicies, Cheeger bounds and scaling](#graphpolicies-cheeger-bounds-and-scaling)
 - [Istio across different networks](#istio-across-different-networks)
   - [Configurable gateway listener](#configurable-gateway-listener)
   - [Mesh prerequisites](#mesh-prerequisites)
@@ -84,13 +84,13 @@ flowchart LR
     subgraph east["Cluster east"]
         direction TB
         intent["PolyGraph intent<br/>Local Kubernetes API"]
-        manager["Execution operator<br/>Fresh local GraphRules"]
+        manager["Execution operator<br/>Fresh local GraphPolicies"]
         intent -->|"Reconcile"| manager
     end
     subgraph west["Cluster west"]
         direction TB
         api["Graph or PolyGraph instance<br/>Destination Kubernetes API"]
-        worker["Execution operator<br/>Fresh local GraphRules"]
+        worker["Execution operator<br/>Fresh local GraphPolicies"]
         pods["Local workloads and resources<br/>Jobs, Deployments, StatefulSets"]
         api -->|"Reconcile"| worker
         worker -->|"Create, scale and drain"| pods
@@ -251,14 +251,14 @@ sequenceDiagram
     Source->>Parent: Clear inventory and finish cleanup
 ```
 
-## GraphRules, Cheeger bounds and scaling
+## GraphPolicies, Cheeger bounds and scaling
 
 Rules remain cluster-local. A PolyGraph's local rule evaluation sees each remote
 Graph or PolyGraph as one vertex and evaluates its declared connections,
 including its Cheeger bound. Recursive `expandedNodes` and `nestingDepth` stop at
-the remote boundary. Rule references, namespace rules and inherited network
+the remote boundary. Rule references, namespace policies and inherited network
 contracts do not propagate across cluster ownership. The destination's operator
-applies its own namespace rules and the selected template's rule references to
+applies its own namespace policies and the selected template's rule references to
 the live local family before workload and scaling mutations.
 
 A Cheeger bound describes the declared graph's structural bottlenecks at the
@@ -274,7 +274,7 @@ checks. Observations and lifecycle dependencies refresh before dispatch; stale
 remote readiness cannot satisfy a new dependency. This provides no global
 transaction, shared lease or recursively enforced Cheeger constraint spanning
 independent clusters. See [replication](../graphs/replication.md) and
-[GraphRule scope](../graphs/graph-rules.md#scope).
+[GraphPolicy scope](../graphs/graph-policies.md#scope).
 
 ```mermaid
 ---
@@ -302,7 +302,7 @@ flowchart LR
         direction TB
         sourceKeda["KEDA"]
         compositions["ReplicaGroup<br/>PolyGraph template"]
-        sourceCheck["East operator refreshes local family<br/>Replica bounds and GraphRules"]
+        sourceCheck["East operator refreshes local family<br/>Replica bounds and GraphPolicies"]
         copies["PolyGraph copies<br/>Each owns remote Graph intent"]
         sourceKeda -->|"Requested /scale count"| compositions
         compositions --> sourceCheck
@@ -311,7 +311,7 @@ flowchart LR
     subgraph west["Cluster west · scale local workers"]
         direction TB
         graphs["Destination Graph instances"]
-        targetCheck["West operator refreshes local family<br/>Replica bounds and GraphRules"]
+        targetCheck["West operator refreshes local family<br/>Replica bounds and GraphPolicies"]
         targetKeda["KEDA"]
         workers["ReplicaGroups inside each Graph<br/>Daemon, Graph or local composition"]
         pods["Local workload copies"]
@@ -653,7 +653,7 @@ flowchart TB
     subgraph west["Cluster west · Polyad namespace"]
         readers["Optional observer Service<br/>Shared read-only Deployment replicas"]
         api["Local Kubernetes API<br/>Graph A, Graph B and owned resources"]
-        executor["Execution operator<br/>Local GraphRules and scheduler leases"]
+        executor["Execution operator<br/>Local GraphPolicies and scheduler leases"]
         workloads["Local workloads"]
         api -.->|"GET and LIST results"| readers
         api -->|"Fresh intent and state"| executor
@@ -720,5 +720,5 @@ to roll out observers when their ESO-managed read token changes. Otherwise, roll
 out observer Pods after rotating the read token.
 
 Read replicas never authorize mutations. Operators continue to use fresh
-Kubernetes reads and local GraphRules before actions, regardless of whether an
+Kubernetes reads and local GraphPolicies before actions, regardless of whether an
 observer exists or is reachable.

@@ -23,8 +23,8 @@ operator:
 architecture:
   ## @param architecture.mode [string] Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha Choices: Dense, Distributed.
   mode: Distributed
-  ## @param architecture.autoscaling [boolean] Enable KEDA scaling of all component ReplicaGroup definitions KEDA requests counts; the operator admits them through GraphRules.
-  autoscaling: true # KEDA requests counts; the operator admits them through GraphRules.
+  ## @param architecture.autoscaling [boolean] Enable KEDA scaling of all component ReplicaGroup definitions KEDA requests counts; the operator admits them through GraphPolicies.
+  autoscaling: true # KEDA requests counts; the operator admits them through GraphPolicies.
   ## @param architecture.cheegerMinimum [number] Minimum edge expansion of the three-component Graph; the default chain has h=1 Structural edge-expansion bound, not measured throughput. Minimum: 0. Maximum: 1.
   cheegerMinimum: 1 # Structural edge-expansion bound, not measured throughput.
   ## @param architecture.cheegerMaximum [number, nullable] Optional upper structural bound; null leaves it unbounded. Use 1 to permit the initial chain while excluding a fully connected triangle; values below 1 cannot admit this chart's topology.

@@ -14,22 +14,23 @@ import pytest
 import yaml
 
 from polyad.exceptions.graph import CheegerIncomplete
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.graph import (
     Cheeger,
     CheegerComputation,
     CheegerReduction,
     Connection,
     Node,
-    StructuralRule,
+    StructuralPolicy,
     Topology,
-    evaluate_rule,
+    evaluate_policy,
     graph_cheeger,
 )
 from polyad.graph.cheeger import compute_cheeger
 from polyad.graph.reduction import clear_reduction_cache
 from polyad.operator.policies.cheeger import computation_limits
-from polyad.operator.policies.rules import check_rules
+from polyad.operator.policies.graph_policies import check_policies
+from polyad_types.resources.registry import RESOURCE_TYPES
 from tests.test_operator import FakeAPI, resource
 
 
@@ -99,8 +100,8 @@ def test_a_good_preferred_cut_cannot_hide_a_bad_unexplored_cut():
         nodes=tuple(Node(name, "Daemon", name) for name in "abcdef"),
         connections=tuple(Connection(left, right) for left, right in zip("abcde", "bcdef", strict=True)),
     )
-    verdict = evaluate_rule(
-        StructuralRule(
+    verdict = evaluate_policy(
+        StructuralPolicy(
             relation="connections",
             cheeger=Cheeger(minimum=0.5, maximum=1),
             cheegerComputation=CheegerComputation(maxCuts=1, priorityCuts=(("a",),)),
@@ -138,9 +139,9 @@ def test_operator_ceilings_apply_to_live_rules_and_cannot_be_overridden(monkeypa
     assert limits.reduction.enabled and limits.reduction.supernodes == 6
     assert graph_cheeger(nx.path_graph(21), limits=limits) == pytest.approx(0.1)
     graph = {"mode": "persistent", "nodes": [{"name": "a", "kind": "Daemon", "ref": "worker"}]}
-    rule = resource("GraphRule", "hard", {"cheeger": {}, "cheegerComputation": {"maxVertices": 22}})
-    with pytest.raises(RuleViolation, match="exceeds operator ceiling 21"):
-        asyncio.run(check_rules(FakeAPI(rule), "test", "Graph", graph))
+    rule = resource("GraphPolicy", "hard", {"cheeger": {}, "cheegerComputation": {"maxVertices": 22}})
+    with pytest.raises(PolicyViolation, match="exceeds operator ceiling 21"):
+        asyncio.run(check_policies(FakeAPI(rule), "test", "Graph", graph))
 
 
 def test_reduction_requires_both_policy_and_operator_opt_in():
@@ -205,8 +206,8 @@ def test_structural_rule_accepts_a_certified_interval_without_reporting_an_estim
         connections=tuple(Connection(str(left), str(right)) for left, right in nx.complete_graph(8).edges()),
     )
     reduction = CheegerReduction(enabled=True, components=3, supernodes=4)
-    verdict = evaluate_rule(
-        StructuralRule(
+    verdict = evaluate_policy(
+        StructuralPolicy(
             relation="connections",
             cheeger=Cheeger(minimum=3, maximum=5),
             cheegerComputation=CheegerComputation(reduction=reduction),
@@ -273,17 +274,19 @@ def test_tuning_reference_and_generated_schemas_share_computation_types():
     root = Path(__file__).parents[2]
     documents = list(yaml.safe_load_all((root / "examples/cheeger-tuning.yaml").read_text()))
     for document in documents:
-        crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{document['kind'].lower()}s.yaml").read_text())
+        # Resource names include irregular plurals such as graphpolicies.
+        plural = RESOURCE_TYPES[document["kind"]].plural
+        crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{plural}.yaml").read_text())
         schema = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
 
         # Kubernetes OpenAPI uses the boolean exclusiveMinimum form from draft 4.
         jsonschema.Draft4Validator(schema).validate(document)
-    for kind in ("graphs", "polygraphs", "rewrites", "graphrules"):
+    for kind in ("graphs", "polygraphs", "rewrites", "graphpolicies"):
         crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{kind}.yaml").read_text())
         spec = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]["spec"]["properties"]
         if kind == "rewrites":
             spec = spec["topology"]["properties"]
-        if kind != "graphrules":
+        if kind != "graphpolicies":
             spec = spec["throughput"]["properties"]
             bounds = spec["tiers"]["items"]["properties"]["cheeger"]
             assert not jsonschema.Draft4Validator(bounds).is_valid({"minimum": -1})

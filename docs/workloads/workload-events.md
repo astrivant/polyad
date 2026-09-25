@@ -114,7 +114,7 @@ flowchart LR
 Notifications follow owning-shard reconciliation and periodic rescans. They are
 observations of state at reconciliation time. Several Kubernetes changes can be
 coalesced before an observation.
-GraphRules control admission independently of event delivery.
+GraphPolicies control admission independently of event delivery.
 
 ## Connection consent events
 
@@ -195,7 +195,7 @@ and destination port grants. Dependencies include the lifecycle `condition`.
 Connections describe **desired** data flow. Execution lists describe resources
 that actually exist, including retiring resources. A requested replica can have
 `desired: true` and an empty execution list when admission is pending or blocked
-by GraphRules. A removed vertex can remain `desired: false` until its execution
+by GraphPolicies. A removed vertex can remain `desired: false` until its execution
 disappears. Neither presence nor a port declaration guarantees readiness or
 reachability. Addresses and service discovery remain the application's
 responsibility; snapshots do not expose Pod IPs or EndpointSlices.

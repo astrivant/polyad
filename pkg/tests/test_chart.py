@@ -496,7 +496,7 @@ def test_composition_service_and_policy_rbac():
     assert next(item for item in env if item["name"] == "POLYAD_API_TOKEN_FILE")["value"] == "/var/run/polyad/api/token"
     assert operator["spec"]["template"]["spec"]["volumes"][0]["secret"]["secretName"] == "composition-token"
     role = next(obj for obj in objects if obj["kind"] == "Role" and obj["metadata"]["name"] == "test-polyad")
-    policy = [rule for rule in role["rules"] if "graphrules" in rule["resources"]]
+    policy = [rule for rule in role["rules"] if "graphpolicies" in rule["resources"]]
     assert len(policy) == 1 and set(policy[0]["verbs"]) == {"get", "list", "watch"}
     assert not any(obj["kind"] == "Service" and obj["metadata"]["name"] == "test-polyad-api" for obj in render())
     schemas = {
@@ -507,7 +507,7 @@ def test_composition_service_and_policy_rbac():
     assert schemas["Composition"]["properties"]["spec"]["x-kubernetes-validations"][0]["rule"] == "self == oldSelf"
     for kind in ["Graph", "PolyGraph"]:
         spec = schemas[kind]["properties"]["spec"]["properties"]
-        assert spec["rules"]["x-kubernetes-list-type"] == "set"
+        assert spec["policies"]["x-kubernetes-list-type"] == "set"
         assert spec["nodes"]["items"]["properties"]["id"]["maxLength"] == 63
 
 
@@ -1305,10 +1305,10 @@ def test_distributed_components_form_a_real_constrained_graph_without_postgresql
     )
     assert not any(obj["kind"] == "Cluster" for obj in objects)
     graph = next(obj for obj in objects if obj["kind"] == "Graph")
-    assert graph["spec"]["rules"] == ["test-control-plane"]
+    assert graph["spec"]["policies"] == ["test-control-plane"]
     assert len(graph["spec"]["nodes"]) == 3
     assert len(graph["spec"]["connections"]) == 2
-    assert next(obj for obj in objects if obj["kind"] == "GraphRule")["spec"]["cheeger"] == {"minimum": 1}
+    assert next(obj for obj in objects if obj["kind"] == "GraphPolicy")["spec"]["cheeger"] == {"minimum": 1}
     groups = [obj for obj in objects if obj["kind"] == "ReplicaGroup"]
     assert len(groups) == 3 and all(obj["spec"]["templateOnly"] for obj in groups)
     scaled = [obj for obj in objects if obj["kind"] == "ScaledObject"]
@@ -1334,7 +1334,7 @@ def test_distributed_components_form_a_real_constrained_graph_without_postgresql
         if obj["kind"] == "CustomResourceDefinition"
     }
     for obj in objects:
-        if obj["kind"] in {"Daemon", "GraphRule", "Graph", "ReplicaGroup"}:
+        if obj["kind"] in {"Daemon", "GraphPolicy", "Graph", "ReplicaGroup"}:
             assert obj["metadata"]["labels"]["polyad.astrivant.com/internal"] == "true"
             jsonschema.Draft7Validator(schemas[obj["kind"]]).validate(obj)
 
@@ -1401,15 +1401,15 @@ def test_component_graph_accepts_the_optional_cheeger_maximum():
     """
     Render both inclusive bounds into the policy enforcing the existing component chain.
     """
-    from polyad.graph import StructuralRule, evaluate_rule
+    from polyad.graph import StructuralPolicy, evaluate_policy
     from polyad_types.graphs.topology import topology
     from polyad_types.serialization import converter
 
     objects = render("architecture.cheegerMaximum=1", values_files=(CHART / "references" / "values-components.reference.yaml",))
-    rule = next(obj for obj in objects if obj["kind"] == "GraphRule")
+    rule = next(obj for obj in objects if obj["kind"] == "GraphPolicy")
     graph = next(obj for obj in objects if obj["kind"] == "Graph")
     assert rule["spec"]["cheeger"] == {"minimum": 1, "maximum": 1}
-    verdict = evaluate_rule(
-        converter.structure(rule["spec"], StructuralRule), topology(graph["spec"], "Graph"), expanded_nodes=9, nesting_depth=2
+    verdict = evaluate_policy(
+        converter.structure(rule["spec"], StructuralPolicy), topology(graph["spec"], "Graph"), expanded_nodes=9, nesting_depth=2
     )
     assert verdict["allowed"] and verdict["measurements"]["cheeger"] == 1

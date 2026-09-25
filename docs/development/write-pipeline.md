@@ -148,7 +148,7 @@ three to four replicas may no longer be appropriate after demand falls. The old
 contract becomes stale; reconciliation computes and submits the newly appropriate
 target. Submit the replacement as a **new validated decision** and retire the
 stale queued payload. Arrival order alone does not override local scaling consent,
-root authority, GraphRules or competing policies.
+root authority, GraphPolicies or competing policies.
 
 ## Dependencies and ordering
 

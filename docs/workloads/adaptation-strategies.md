@@ -463,7 +463,7 @@ supervisor or a custom strategy.
 steps for real child processes. Its application-specific sustained-demand policy
 is described in [the local Soul walkthrough](local-soul-searching.md#writing-an-adaptive-application).
 The operator's [Soul searching policy](../graphs/soul-searching.md) continues to
-own graph-level layout and traffic changes within GraphRules.
+own graph-level layout and traffic changes within GraphPolicies.
 
 ## Write a strategy
 
@@ -518,4 +518,4 @@ supervisor handles recovery and admission; see the
 These application components complement the operator's
 [mutation planner and executor](../development/mutations.md). They assess local
 responses to observed changes; graph mutations still pass through the operator's
-live GraphRules, permissions and resource budgets.
+live GraphPolicies, permissions and resource budgets.

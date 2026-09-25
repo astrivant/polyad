@@ -15,7 +15,7 @@ and resource audit. This guide covers service deployment, authentication, routin
 rate limits and schema discovery.
 
 See [Composition requests](composition-requests.md) for the request format, ID
-references, retries and audit semantics. See [Graph rules](../graphs/graph-rules.md) for the
+references, retries and audit semantics. See [Graph policies](../graphs/graph-policies.md) for the
 constraints applied before admission. The HTTP API cannot create or modify rules.
 Its bearer credential authorizes workload creation and audit reads in the operator
 namespace. Configure per-user access and tenant isolation through workload RBAC,

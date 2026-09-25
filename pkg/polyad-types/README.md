@@ -14,7 +14,7 @@
 - [Publishing](#publishing)
 <!-- toc:end -->
 
-Shared Python 3.11–3.14 models for Polyad resources, graph rules, replication,
+Shared Python 3.11–3.14 models for Polyad resources, graph policies, replication,
 networking, API requests, discovery, events and observed state. The operator,
 Python SDK and benchmarks use these definitions for constructor validation and
 serialization; they also supply the generated JSON Schemas. A `py.typed` marker
@@ -36,7 +36,7 @@ Import it as `polyad_types`. Installing it does not install `polyad` or
 
 ```python
 from polyad_types import (
-    Cheeger, Connection, Graph, Node, ObjectMeta, StructuralRule, Topology,
+    Cheeger, Connection, Graph, Node, ObjectMeta, StructuralPolicy, Topology,
     from_dict, to_dict, to_document,
 )
 
@@ -51,7 +51,7 @@ graph = Graph(metadata=ObjectMeta(name="pipeline"), spec=to_dict(layout))
 manifest = to_document(graph)
 rule = from_dict(
     {"relation": "connections", "cheeger": {"minimum": 0.5}},
-    StructuralRule,
+    StructuralPolicy,
 )
 assert rule.cheeger == Cheeger(minimum=0.5)
 ```
@@ -65,7 +65,7 @@ from them. Package releases and internal dependency pins use the same version.
 ```text
 polyad_types/
   api/            authentication, discovery, requests and demand reports
-  graphs/         topology, replication, rules, activation and capacity policies
+  graphs/         topology, replication, structural, activation and capacity policies
   networking/     access policies and weighted traffic routes
   events/         envelopes, payload trees and strict event decoding
   resources/      resource envelopes, API registry, status and mutation plans
@@ -93,7 +93,7 @@ in-memory `Graph` and a Kubernetes `Graph` resource have different responsibilit
 | `polyad_types.resources` | Kubernetes resource envelopes, metadata, status metrics, capacity status and mutation plans |
 | `polyad_types.graphs.topology` | Nodes, dependencies, connections, placement and graph specifications |
 | `polyad_types.graphs.replication` | Replica templates, bounds and connection modes |
-| `polyad_types.graphs.rules` | Structural, spectral and Cheeger configuration |
+| `polyad_types.graphs.policies` | Structural, spectral and Cheeger configuration |
 | `polyad_types.networking.access` | Network access, peers, ports and traffic rules |
 | `polyad_types.networking.traffic` | Istio routes, destination weights and bounds, and approved traffic splits |
 | `polyad_types.api.throughput` | Application throughput and per-destination capacity reports for Soul searching |
@@ -113,7 +113,7 @@ Reference a Daemon definition inside a persistent graph with
 describes the reusable service definition; `Node` describes its place in a graph.
 
 Code using former flat module paths should use the domain paths above, such as
-`from polyad_types.graphs.rules import Cheeger`. Root imports such as
+`from polyad_types.graphs.policies import Cheeger`. Root imports such as
 `from polyad_types import Cheeger` continue to refer to the same model. For schema
 selection, prefer `schema_for(Cheeger)` so the class supplies its module path.
 

@@ -14,7 +14,7 @@ from polyad.graph.pid import AccuracyTargetPID, CacheTargetConfig, CacheTargetPI
 if TYPE_CHECKING:
     import networkx as nx
 
-    from polyad_types.graphs.rules import CheegerReduction
+    from polyad_types.graphs.policies import CheegerReduction
 
 __all__ = ("RefreshTicket", "begin_refresh", "clear_refresh_cache", "finish_refresh")
 

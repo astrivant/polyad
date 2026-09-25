@@ -24,7 +24,7 @@ HTTP transport, controller or graph computation just to catch its failures.
 | `polyad.exceptions.events` | `CursorExpired`, `TopologyReplaced` |
 | `polyad.exceptions.graph` | `CheegerIncomplete` |
 | `polyad.exceptions.kubernetes` | `WriteConflict` |
-| `polyad.exceptions.policies` | `RuleViolation` |
+| `polyad.exceptions.policies` | `PolicyViolation` |
 | `polyad.exceptions.reconciliation` | `Pending` |
 | `polyad_sdk.exceptions.api` | `APIError` |
 | `polyad_sdk.exceptions.events` | `StreamInterrupted` |
@@ -38,7 +38,7 @@ from polyad_sdk.exceptions.events import StreamInterrupted
 from polyad_types.exceptions.events import EventTooLarge
 
 # A convenient alternative when importing several categories:
-from polyad.exceptions import Pending, RuleViolation
+from polyad.exceptions import Pending, PolicyViolation
 ```
 
 `polyad_sdk.exceptions.processes` contains the supervisor's private `_Aborted`

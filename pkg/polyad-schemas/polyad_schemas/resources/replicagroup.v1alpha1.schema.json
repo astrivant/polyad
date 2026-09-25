@@ -133,7 +133,7 @@
             }
           ]
         },
-        "rules": {
+        "policies": {
           "type": "array",
           "items": {
             "type": "string"

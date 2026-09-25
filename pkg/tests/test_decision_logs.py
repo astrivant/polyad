@@ -16,11 +16,11 @@ from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.sampling import ALWAYS_OFF, ALWAYS_ON
 
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.operator.observability import logging as diagnostics
 from polyad.operator.observability import tracing
 from polyad.operator.observability.decisions import decision, decision_context
-from polyad.operator.policies.rules import check_rules
+from polyad.operator.policies.graph_policies import check_policies
 from polyad.operator.reconciliation.controller import Controller
 from tests.test_chart import render
 from tests.test_operator import FakeAPI, resource
@@ -141,12 +141,12 @@ def test_structural_conflict_explains_the_rejected_rule_and_boundary(caplog):
     """
     Preserve the rule and constraint explanation without dumping graph specifications.
     """
-    rule = resource("GraphRule", "zero-nodes", {"enforcement": "Namespace", "limits": {"nodes": 0}})
+    rule = resource("GraphPolicy", "zero-nodes", {"enforcement": "Namespace", "limits": {"nodes": 0}})
     spec = {"mode": "persistent", "nodes": [{"name": "worker", "kind": "Daemon", "ref": "worker"}]}
-    with caplog.at_level(logging.WARNING, logger="polyad"), pytest.raises(RuleViolation):
-        asyncio.run(check_rules(FakeAPI(rule), "test", "Graph", spec))
+    with caplog.at_level(logging.WARNING, logger="polyad"), pytest.raises(PolicyViolation):
+        asyncio.run(check_policies(FakeAPI(rule), "test", "Graph", spec))
     record = caplog.records[-1]
-    assert record.event_name == "polyad.rules.rejected"
+    assert record.event_name == "polyad.policies.rejected"
     assert "zero-nodes" in record.getMessage() and "nodes" in record.getMessage()
     assert record.polyad_attributes["polyad.boundary.path"] == "root"
 

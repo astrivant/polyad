@@ -15,8 +15,8 @@ from polyad.compiler.passes.schema import structural_schema
 from polyad_types.api.requests import ConnectionRequest
 from polyad_types.graphs.activation import ActivationPolicy
 from polyad_types.graphs.capacity import CapacityPlan, CapacityTuning
+from polyad_types.graphs.policies import CheegerComputation
 from polyad_types.graphs.replication import Replication
-from polyad_types.graphs.rules import CheegerComputation
 from polyad_types.graphs.topology import GraphNode, ThroughputPolicy
 from polyad_types.networking.access import NetworkAccess, NetworkPort
 from polyad_types.networking.traffic import TrafficRoute, TrafficWeights
@@ -99,12 +99,12 @@ def main() -> int:
     args = parser.parse_args()
     directory = Path(__file__).resolve().parents[2] / "charts/polyad-crds/crds"
     changed = []
-    for kind in ("graphs", "polygraphs", "rewrites", "graphrules"):
+    for kind in ("graphs", "polygraphs", "rewrites", "graphpolicies"):
         path = directory / f"{kind}.yaml"
         source = path.read_text()
         props = ROOT + (("topology", "properties") if kind == "rewrites" else ())
         updated = refresh(source, props, "network", structural_schema(NetworkAccess))
-        if kind == "graphrules":
+        if kind == "graphpolicies":
             updated = refresh(updated, props, "cheegerComputation", structural_schema(CheegerComputation))
             updated = refresh(
                 updated,
@@ -114,10 +114,10 @@ def main() -> int:
                     "type": "string",
                     "enum": ["Boundary", "Subtree"],
                     "default": "Subtree",
-                    "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary.",
+                    "description": "Boundary applies locally; Subtree propagates. Namespace policies select every boundary.",
                 },
             )
-        if kind != "graphrules":
+        if kind != "graphpolicies":
             cluster_schema = structural_schema(GraphNode)["properties"]["cluster"]
             if kind == "graphs":
                 cluster_schema["x-kubernetes-validations"] = [{"rule": "false", "message": "Cluster placement belongs on PolyGraph nodes."}]

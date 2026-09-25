@@ -11,9 +11,9 @@
 
 A composition request describes an executable graph and its reusable definitions
 using request-local IDs. The operator records a durable receipt, checks applicable
-[graph rules](../graphs/graph-rules.md), and materializes the graph in its namespace.
-End-users select existing rules; requests cannot create or modify `GraphRule`
-resources. Namespace rules apply even when a request omits `rules`.
+[graph policies](../graphs/graph-policies.md), and materializes the graph in its namespace.
+End-users select existing policies; requests cannot create or modify `GraphPolicy`
+resources. Namespace policies apply even when a request omits `policies`.
 
 For authentication, deployment, routing, rate limits and OpenAPI discovery, see
 [Composition API service](composition-api.md). The bearer credential authorizes
@@ -26,7 +26,7 @@ resource quotas for that namespace.
 ```mermaid
 flowchart LR
     request["POST composition<br/>requestId + rootId + objects"] --> receipt["Durable receipt<br/>HTTP 202"]
-    receipt --> policy{"Graph rules pass?"}
+    receipt --> policy{"Graph policies pass?"}
     policy -->|yes| definitions["Reusable definitions"]
     definitions --> root["Executable root"]
     root --> audit["Status and resource audit"]
@@ -54,7 +54,7 @@ Inside graph specifications, use:
 - `requires[].nodeId` for another vertex in the same boundary.
 - `connections[].sourceId` and `targetId` for data-flow edges.
 - `nodes[].gateId` and `shutdownPolicyId` for supplied reusable definitions.
-- `rules` for administrator-defined [GraphRule names](../graphs/graph-rules.md#enforcement) in the operator namespace.
+- `policies` for administrator-defined [GraphPolicy names](../graphs/graph-policies.md#enforcement) in the operator namespace.
 
 A graph definition can be referenced by several vertices. Each reference gets an
 independent execution instance and audit path. Daemon controller selection and
@@ -84,7 +84,7 @@ Receipt writes use a serialized Kubernetes adapter. Concurrent replicas converge
 through deterministic names and Kubernetes create-if-absent semantics. Receipts,
 their definitions and executable descendants share one family shard. Shared
 Dragonfly queues and Kubernetes Leases govern all graph materialization. A worker
-preflights rules, creates reusable templates, observes their acknowledgements on a
+preflights policies, creates reusable templates, observes their acknowledgements on a
 later pass, and only then creates the executable root. Finalization drains that
 root before deleting templates.
 

@@ -16,9 +16,9 @@ from deepdiff import DeepDiff
 
 from polyad.compiler.passes.network import scope_label
 from polyad.compiler.passes.traffic import capacity_weights, route_specs, step_weights
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.exceptions.reconciliation import Pending
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad.operator.policies.soul.contracts import SAMPLE
 from polyad.operator.policies.soul.controller import search_soul
 from polyad.operator.policies.traffic import ensure_routes
@@ -185,12 +185,12 @@ def test_headroom_requires_complete_current_replica_reports(measurements, stale)
 
 def test_hard_rules_block_weight_only_adaptation():
     """
-    Traffic adjustment cannot bypass a conflicting structural rule even with unchanged edges.
+    Traffic adjustment cannot bypass a conflicting structural policy even with unchanged edges.
     """
 
     async def run():
         api = fixture("Adapt")
-        api.objects[("GraphRule", "test", "hard")] = resource("GraphRule", "hard", {"relation": "connections", "limits": {"edges": 0}})
+        api.objects[("GraphPolicy", "test", "hard")] = resource("GraphPolicy", "hard", {"relation": "connections", "limits": {"edges": 0}})
         await report(api, 0)
         changed, root = await report(api, 10)
         assert not changed
@@ -337,17 +337,17 @@ def test_scale_in_requires_draining_the_graph_copys_traffic_weight(monkeypatch):
         from polyad_types.graphs.replication import replica_topology
 
         effective = {**group, "spec": replica_topology(group["spec"])}
-        with pytest.raises(RuleViolation, match="drain its weight"):
-            await check_live_rules(api, effective)
+        with pytest.raises(PolicyViolation, match="drain its weight"):
+            await check_live_policies(api, effective)
         root["spec"].pop("throughput")
         for destination, weight in zip(root["spec"]["traffic"][0]["destinations"], (100, 0), strict=True):
             destination.update(weight=weight, minWeight=0, maxWeight=100)
         api.objects[("Graph", "test", "pipeline")] = root
         with pytest.raises(Pending, match="persist zero traffic weight"):
-            await check_live_rules(api, effective)
+            await check_live_policies(api, effective)
         with pytest.raises(Pending, match="persisted"):
             await ensure_routes(Controller(api), root)
-        await check_live_rules(api, effective)
+        await check_live_policies(api, effective)
 
     asyncio.run(run())
 

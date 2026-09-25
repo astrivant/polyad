@@ -16,13 +16,13 @@ from polyad.api.connections.consent import confirmed, decisions
 from polyad.api.connections.store import FINALIZER, ConnectionSettings
 from polyad.compiler.passes.network import NetworkScope
 from polyad.exceptions.api import Conflict, Forbidden, Unavailable
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.exceptions.reconciliation import Pending
 from polyad.graph.temporary import ANNOTATION, CLEANUP, MAX_CONNECTIONS, active_entries, deadline, entries, overlay
 from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.observability.decisions import decision
 from polyad.operator.policies.network import context, ensure_policies
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types import resources as asts
 from polyad_types.api.requests import ConnectionRequest
@@ -352,7 +352,7 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
 
         try:
             await validate(controller, receipt)
-        except (Conflict, Forbidden, Unavailable, ValueError, RuleViolation) as error:
+        except (Conflict, Forbidden, Unavailable, ValueError, PolicyViolation) as error:
             await finish(controller, receipt, graph, "Rejected", str(error))
             return
     grants = entries(graph)
@@ -448,8 +448,8 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         proposed = copy.deepcopy(base)
         proposed["metadata"].setdefault("annotations", {})[ANNOTATION] = json.dumps(grants)
         try:
-            await check_live_rules(controller.api, base, candidate=overlay(proposed, base["spec"]))
-        except RuleViolation as error:
+            await check_live_policies(controller.api, base, candidate=overlay(proposed, base["spec"]))
+        except PolicyViolation as error:
             await finish(controller, receipt, graph, "Rejected", str(error))
             return
         refreshed = await controller.api.get("TemporaryConnection", meta["namespace"], meta["name"])
@@ -475,8 +475,8 @@ async def reconcile_connection(controller: Controller, receipt: dict[str, Any]) 
         base["spec"], _ = await effective_spec(controller.api, graph)
         base["spec"] = replica_topology(base["spec"])
     try:
-        await check_live_rules(controller.api, base)
-    except RuleViolation as error:
+        await check_live_policies(controller.api, base)
+    except PolicyViolation as error:
         await finish(controller, receipt, graph, "Rejected", str(error))
         return
     await refresh_network(controller, graph, revoking=False)

@@ -20,7 +20,7 @@ from polyad.graph.service_connections import ANNOTATION, grants
 from polyad.graph.temporary import deadline
 from polyad.operator.coordination.contracts import expires_before
 from polyad.operator.policies.network import context
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad_types.api.discovery import ServiceEndpoint
 from polyad_types.networking.access import MeshPeer, NetworkAccess, TrafficRule
 from polyad_types.serialization import converter
@@ -90,7 +90,7 @@ def capabilities(source: list[tuple[API, dict[str, Any], str, str]], target: lis
 
 async def validate(controller: Controller, receipt: dict[str, Any]) -> dict[str, list[tuple[API, dict[str, Any], str, str]]]:
     """
-    Recheck all endpoint ownership paths, child ceilings and local GraphRules before granting traffic.
+    Recheck all endpoint ownership paths, child ceilings and local GraphPolicies before granting traffic.
 
     Args:
         controller (Controller): Common-boundary owner.
@@ -126,7 +126,7 @@ async def validate(controller: Controller, receipt: dict[str, Any]) -> dict[str,
             for child in children
         ):
             raise Unavailable("child operator cannot fulfill a connection before the exact workload exists")
-        await check_live_rules(api, obj)
+        await check_live_policies(api, obj)
     return paths
 
 
@@ -187,7 +187,7 @@ async def reconcile(controller: Controller, receipt: dict[str, Any], *, remove: 
     Args:
         controller (Controller): Common graph-family owner.
         receipt (dict[str, Any]): Durable journal of both exact graph addresses.
-        remove (bool): Remove this grant even if current scope, consent or graph rules reject new work.
+        remove (bool): Remove this grant even if current scope, consent or graph policies reject new work.
 
     Returns:
         None: Every destination has acknowledged its policies; pending work retries from fresh reads.

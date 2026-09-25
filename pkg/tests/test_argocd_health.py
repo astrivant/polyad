@@ -187,7 +187,7 @@ def test_lupa_executes_generated_argocd_health(argocd_config: Path) -> None:
     }
 
 
-@pytest.mark.parametrize("kind", ["Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule"])
+@pytest.mark.parametrize("kind", ["Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphPolicy"])
 def test_definitions_do_not_claim_execution(tmp_path, argocd_config, kind):
     """
     Reusable library objects have no execution health to wait for.

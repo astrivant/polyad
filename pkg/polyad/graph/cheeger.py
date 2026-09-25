@@ -14,7 +14,7 @@ from attrs import asdict, evolve, field, frozen
 from polyad.exceptions.graph import CheegerIncomplete as CheegerIncomplete
 from polyad.graph.reduction import cached_quotient, fresh_spectral_reduction
 from polyad.graph.refresh import begin_refresh, finish_refresh
-from polyad_types.graphs.rules import CheegerComputation
+from polyad_types.graphs.policies import CheegerComputation
 
 if TYPE_CHECKING:
     from typing import Any
@@ -326,7 +326,7 @@ def compute_cheeger(
             return "MinimumViolated"
         return None
 
-    # Subtree and Namespace rules can visit boundaries with different names.
+    # Subtree and Namespace policies can visit boundaries with different names.
     # Missing members never turn a preferred subset into a different cut.
     for group in options.priorityCuts:
         if not set(group) <= indices.keys() or len(group) == n:

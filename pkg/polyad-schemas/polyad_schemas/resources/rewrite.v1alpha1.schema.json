@@ -211,7 +211,7 @@
             },
             "throughput": {
               "type": "object",
-              "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+              "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
               "properties": {
                 "unit": {
                   "type": "string",
@@ -1040,14 +1040,14 @@
                 }
               }
             },
-            "rules": {
+            "policies": {
               "type": "array",
-              "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+              "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
               "maxItems": 32,
               "x-kubernetes-list-type": "set",
               "items": {
                 "type": "string",
-                "description": "GraphRule name.",
+                "description": "GraphPolicy name.",
                 "maxLength": 253,
                 "minLength": 1
               }

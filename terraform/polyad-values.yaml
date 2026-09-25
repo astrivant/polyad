@@ -7,7 +7,7 @@ ha: true
 architecture:
   ## @param architecture.mode [string] Distributed puts gateway, executor and telemetry ReplicaGroups in the operator's own Graph.
   mode: Distributed
-  ## @param architecture.autoscaling [boolean] Let KEDA request 2–8 copies of each component, subject to fresh GraphRules.
+  ## @param architecture.autoscaling [boolean] Let KEDA request 2–8 copies of each component, subject to fresh GraphPolicies.
   autoscaling: true
 ## @param keda [object] Install the chart's pinned KEDA dependency in this cluster.
 keda:

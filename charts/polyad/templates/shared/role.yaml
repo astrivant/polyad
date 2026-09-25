@@ -42,7 +42,7 @@ rules:
     resources: [services, configmaps, persistentvolumeclaims]
     verbs: [get, list, watch, create, delete]
   - apiGroups: [polyad.astrivant.com]
-    resources: [graphrules]
+    resources: [graphpolicies]
     verbs: [get, list, watch]
   - apiGroups: ['']
     resources: [pods]

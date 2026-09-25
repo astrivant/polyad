@@ -18,12 +18,12 @@ from polyad.api.connections.store import AUDIENCE, FINALIZER, Caller, Connection
 from polyad.compiler.passes.network import NetworkScope, traffic
 from polyad.events.topology import topology_snapshot
 from polyad.exceptions.api import Conflict, Forbidden, Unauthorized
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.exceptions.reconciliation import Pending
 from polyad.graph import NetworkAccess
 from polyad.graph.temporary import ANNOTATION, CLEANUP, deadline, entries, overlay
 from polyad.operator.policies.network import context, ensure_policies
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad.operator.reconciliation.controller import Controller
 from polyad_sdk import Client
 from polyad_sdk.exceptions.api import APIError
@@ -489,17 +489,19 @@ def test_dead_connection_cleanup_survives_policy_failure_and_endpoint_return(orp
         await api.request("PUT", "Graph", "test", "root", current)
 
         # Normal graph admission now fails, but cleanup must still finish.
-        api.objects[("GraphRule", "test", "tight")] = resource("GraphRule", "tight", {"relation": "connections", "cheeger": {"minimum": 2}})
+        api.objects[("GraphPolicy", "test", "tight")] = resource(
+            "GraphPolicy", "tight", {"relation": "connections", "cheeger": {"minimum": 2}}
+        )
         restarted = Controller(api)
         for _ in range(12):
             try:
                 await restarted.reconcile(("Graph", "test", "root"))
             except Pending:
                 continue
-            except RuleViolation:
+            except PolicyViolation:
                 break
         else:
-            pytest.fail("cleanup did not finish before graph rule validation")
+            pytest.fail("cleanup did not finish before graph policy validation")
         if not orphaned:
             await settle(restarted, key)
             assert api.objects[key]["status"]["phase"] == "Revoked"
@@ -543,9 +545,11 @@ def test_expiry_rebuilds_policies_after_restart_even_when_rules_block(monkeypatc
         target["metadata"]["annotations"][ANNOTATION] = json.dumps(grants)
 
         # The static reverse edge still has h=1; demand h=2 so normal work is blocked.
-        api.objects[("GraphRule", "test", "tight")] = resource("GraphRule", "tight", {"relation": "connections", "cheeger": {"minimum": 2}})
-        with pytest.raises(RuleViolation):
-            await check_live_rules(api, await api.get("Graph", "test", "root"))
+        api.objects[("GraphPolicy", "test", "tight")] = resource(
+            "GraphPolicy", "tight", {"relation": "connections", "cheeger": {"minimum": 2}}
+        )
+        with pytest.raises(PolicyViolation):
+            await check_live_policies(api, await api.get("Graph", "test", "root"))
         monkeypatch.setenv("POLYAD_CONNECTIONS_ENABLED", "false")
         await settle(Controller(api), key)
         assert api.objects[key]["status"]["phase"] == "Expired"
@@ -605,7 +609,7 @@ def test_admission_rejects_rules_or_disabled_feature_without_grant(enabled, monk
 
     async def run():
         graph, definitions = graph_fixture()
-        rule = resource("GraphRule", "edges", {"relation": "connections", "limits": {"edges": 0}})
+        rule = resource("GraphPolicy", "edges", {"relation": "connections", "limits": {"edges": 0}})
         api = ConnectionAPI(graph, *definitions, rule)
         receipt = await ConnectionStore(api, ConnectionSettings("test")).submit(request_for(graph), CALLER)
         await approve_receipt(api, receipt)
@@ -689,10 +693,10 @@ def test_ancestor_rule_blocks_descendant_admission(monkeypatch):
         root = resource(
             "PolyGraph",
             "parent",
-            {"mode": "persistent", "rules": ["no-edges"], "nodes": [{"name": "child", "kind": "Graph", "ref": "leaf"}]},
+            {"mode": "persistent", "policies": ["no-edges"], "nodes": [{"name": "child", "kind": "Graph", "ref": "leaf"}]},
         )
         rule = resource(
-            "GraphRule", "no-edges", {"enforcement": "Referenced", "scope": "Subtree", "relation": "connections", "limits": {"edges": 0}}
+            "GraphPolicy", "no-edges", {"enforcement": "Referenced", "scope": "Subtree", "relation": "connections", "limits": {"edges": 0}}
         )
         api = ConnectionAPI(root, leaf, rule, *definitions)
         controller = Controller(api)

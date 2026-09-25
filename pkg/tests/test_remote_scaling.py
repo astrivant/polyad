@@ -14,7 +14,7 @@ from kubernetes.client.exceptions import ApiException
 from polyad.exceptions.reconciliation import Pending
 from polyad.metrics.inventory import inventory
 from polyad.operator.clusters.remote_scaling import INTENT, approved_intent, remote_revision
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad.operator.reconciliation.replication import effective_spec
 from polyad_types.graphs.replication import replica_topology
 from tests.test_operator import resource, template
@@ -109,7 +109,7 @@ def test_new_intent_requires_new_local_admission_and_metric_observation():
         assert root.children("RemoteScale")[0]["status"]["phase"] == "Pending"
         old["spec"] = replica_topology((await effective_spec(remote, old))[0])
         with pytest.raises(Pending, match="remote scale intent changed"):
-            await check_live_rules(remote, old)
+            await check_live_policies(remote, old)
         await turn(remote)
         assert len(remote.children("Deployment")) == 3
         assert live["status"]["metrics"]["topology"]["nodeCount"] == 3

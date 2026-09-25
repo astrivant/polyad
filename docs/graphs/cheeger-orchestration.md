@@ -17,7 +17,7 @@
 <!-- toc:end -->
 
 Polyad uses the same structural Cheeger measurement for two different policies:
-**GraphRules define permitted topology**, while **throughput policies select a
+**GraphPolicies define permitted topology**, while **throughput policies select a
 desired topology in response to measured application demand**.
 [Soul searching](soul-searching.md), Polyad's bounded topology optimizer,
 implements the second policy with `Observe` and `Adapt` modes.
@@ -32,7 +32,7 @@ Soul searching can also rebalance [traffic percentages](traffic-balancing.md)
 within the same bounds, including Headroom adjustments before an aggregate shortfall.
 With [`trigger: Demand`](load-profiles.md), approved profiles can change connections,
 traffic and capacity lookahead under sustained positive demand while completed
-throughput keeps up. Hard rules and replica-scaling ownership remain independent.
+throughput keeps up. Hard policies and replica-scaling ownership remain independent.
 
 ## One metric, two responsibilities
 
@@ -47,24 +47,24 @@ A small value indicates a sparse connection between relatively large parts of
 the graph. This measurement counts edges and vertices; it does not account for
 bandwidth, message sizes, CPU capacity, processing costs or edge direction.
 
-| Question | Hard GraphRule bounds | Application throughput targets |
+| Question | Hard GraphPolicy bounds | Application throughput targets |
 | --- | --- | --- |
-| Where configured? | `GraphRule.spec.cheeger.minimum` / `maximum` | `Graph.spec.throughput.tiers[].cheeger` or the equivalent PolyGraph field |
+| Where configured? | `GraphPolicy.spec.cheeger.minimum` / `maximum` | `Graph.spec.throughput.tiers[].cheeger` or the equivalent PolyGraph field |
 | What sets the bounds? | Administrator policy | Administrator-calibrated demand tiers; input defaults to `offeredPerSecond` or an explicitly configured signal |
-| Which relation is measured? | The rule's selected relation; use `relation: connections` for these comparisons | The boundary's logical `connections` relation |
+| Which relation is measured? | The policy's selected relation; use `relation: connections` for these comparisons | The boundary's logical `connections` relation |
 | When evaluated? | During admission and before graph-managed changes, including scaling | After sustained shortfall, positive demand with `trigger: Demand`, or Headroom imbalance under positive demand |
 | What does it orchestrate? | Permits or blocks an otherwise requested change | Recommends approved connection layouts or bounded traffic splits, or applies them in Adapt mode |
 | Can it change replicas? | Constrains scaling through Polyad's admission path | No; it changes connections or routing percentages |
-| How does it apply through a hierarchy? | Referenced/inherited rules and namespace rules govern applicable boundaries | Each Graph or PolyGraph configures its own feedback policy |
+| How does it apply through a hierarchy? | Referenced/inherited policies and namespace policies govern applicable boundaries | Each Graph or PolyGraph configures its own feedback policy |
 | What if the application misses its throughput goal? | The hard bounds still apply | An eligible approved layout may be considered; the hard bounds still apply |
 
 For the **same boundary and projection**, an adapted layout must satisfy the
 intersection of the ranges. Hard bounds `[0.5, 1.5]` and a selected target
 `[1, 2]` permit values in `[1, 1.5]`.
 
-This interval comparison is only part of admission. A GraphRule may measure a
-different relation, inherited rules may constrain other boundaries, and live
-activation instances expand the structural projection. Every applicable rule
+This interval comparison is only part of admission. A GraphPolicy may measure a
+different relation, inherited policies may constrain other boundaries, and live
+activation instances expand the structural projection. Every applicable policy
 must pass its own fresh evaluation.
 
 ## The same graph, different decisions
@@ -91,7 +91,7 @@ projection. The application must support both approved layouts and update its
 routing when it receives topology events.
 
 Suppose the hard range is `[0.5, 1.5]`. Both layouts are structurally allowed.
-GraphRules alone will not replace the chain because traffic increased.
+GraphPolicies alone will not replace the chain because traffic increased.
 
 Now suppose the application reports **200 records/s offered and 120 records/s
 completed**. A calibrated tier starting at 100 records/s selects a target of
@@ -132,7 +132,7 @@ flowchart LR
 shortfall by default; `trigger: Demand` also allows changes while throughput keeps up.
 `Headroom` uses each destination's completed throughput plus reported
 spare capacity and can rebalance before aggregate throughput falls. Both keep
-the selected Cheeger target, hard rules, destination bounds, stabilization and
+the selected Cheeger target, hard policies, destination bounds, stabilization and
 shared change budget. Neither changes the number of replicas.
 
 Routing percentages are separate from the unweighted structural measurement;
@@ -144,7 +144,7 @@ for local Service requirements, configuration and reporting examples.
 ## Observe, Adapt and conflicting bounds
 
 Observe and Adapt share sample validation, stabilization, target selection and
-candidate rule checks. Their difference is whether an approved recommendation can
+candidate policy checks. Their difference is whether an approved recommendation can
 be committed. This diagram follows a connection-layout change; percentage
 adjustments use the same admission and timing guards with their selected routing mode.
 
@@ -153,11 +153,11 @@ flowchart TB
     reports["Fresh reports<br/>Matching graph UID, generation and unit"]
     stable{"Sustained shortfall<br/>and enough distinct samples?"}
     layout["Current h misses target<br/>Find an approved layout"]
-    allowed{"Target and all<br/>live GraphRules pass?"}
+    allowed{"Target and all<br/>live GraphPolicies pass?"}
     mode{"Configured mode"}
     observe["Observe: Recommended<br/>Keep current connections"]
     guards["Adapt: check cooldown, change budget<br/>and active temporary connections"]
-    commit["Refresh rules, capacity and sample age<br/>Commit with resource-version check"]
+    commit["Refresh policies, capacity and sample age<br/>Commit with resource-version check"]
     reports --> stable
     stable -->|"Yes"| layout --> allowed
     stable -->|"No"| wait["Keep measuring"]
@@ -193,7 +193,7 @@ flowchart LR
 The conflicting target cannot authorize the ring in either mode. A hard upper
 bound can deliberately limit connectivity even when an application target favors
 more edges. Administrators must resolve the policy conflict or supply a different
-feasible target/layout; the operator does not weaken GraphRules automatically.
+feasible target/layout; the operator does not weaken GraphPolicies automatically.
 `NoAllowedLayout` also covers cases where the ranges overlap but none of the
 approved layouts satisfies all constraints.
 
@@ -207,12 +207,12 @@ separate triggers and must coordinate through fresh state.
 flowchart TB
     metrics["Configured capacity metrics"]
     keda["KEDA and HPA<br/>Request ReplicaGroup count"]
-    admission{"Fresh family GraphRules"}
+    admission{"Fresh family GraphPolicies"}
     copies["Create or retire permitted copies"]
     settle["Observed local capacity change<br/>Reset feedback stabilization"]
     samples["Fresh application measurements<br/>Select calibrated target"]
     proposal["Observe: recommend layout<br/>Adapt: request connection change"]
-    recheck{"Fresh family GraphRules<br/>and adaptation guards"}
+    recheck{"Fresh family GraphPolicies<br/>and adaptation guards"}
     edges["Apply eligible Adapt layout"]
     metrics --> keda --> admission
     admission -->|"Pass"| copies --> settle --> samples --> proposal --> recheck
@@ -224,7 +224,7 @@ flowchart TB
 For example, a four-copy ReplicaGroup Ring has `h = 1`; a six-copy Ring has
 `h = 2/3`. A hard minimum of `1` blocks the six-copy topology even if KEDA requests
 more capacity. Throughput feedback on an enclosing Graph does not rewrite the
-ReplicaGroup's `connectivity.mode` to get around that rule. Feedback policies are
+ReplicaGroup's `connectivity.mode` to get around that policy. Feedback policies are
 configured on Graphs and PolyGraphs; ReplicaGroups retain their declared
 connection modes and scaling constraints.
 
@@ -279,10 +279,10 @@ can change its Cheeger measurement.
 
 An unchanged parent Cheeger does not mean a change is automatically allowed.
 The parent can also impose a recursive `expandedNodes` budget, and inherited or
-namespace GraphRules can constrain the child. Every applicable check must pass.
-`scope: Boundary` applies a referenced rule only at its selected boundary;
+namespace GraphPolicies can constrain the child. Every applicable check must pass.
+`scope: Boundary` applies a referenced policy only at its selected boundary;
 `scope: Subtree` also applies it independently within local descendants. See
-[rule selection and measurement](graph-rules.md#selection-and-measurement).
+[policy selection and measurement](graph-policies.md#selection-and-measurement).
 
 ### Replicating the whole child
 
@@ -312,10 +312,10 @@ A group bound of `cheeger.minimum: 0.75` blocks six copies, even though the pare
 and every child pass their own Cheeger bounds. Independently, a parent budget of
 `limits.expandedNodes: 30` also blocks that request. If the only Cheeger constraints
 are on the parent and child Graphs, they do not implicitly impose a minimum on
-the ReplicaGroup's copy connections; configure or inherit a rule for that boundary.
+the ReplicaGroup's copy connections; configure or inherit a policy for that boundary.
 
 Polyad refreshes the local family, including ancestors, sibling instances,
-replica sources and rules, before creating or retiring copies. A rejected request
+replica sources and policies, before creating or retiring copies. A rejected request
 can remain recorded as desired replicas while the existing execution stays in
 place. It does not weaken another boundary's bound to make the count fit. See
 [constraints before scaling](replication.md#constraints-before-scaling).
@@ -334,7 +334,7 @@ mode. `Observe` only recommends changes at its own boundary.
 
 Local parent and child mutations share the root graph family's lease and execute
 in sequence. Before applying a proposal, Polyad refreshes the family and checks
-all applicable hard rules. An observed child topology or capacity change resets
+all applicable hard policies. An observed child topology or capacity change resets
 the parent's feedback stabilization, so it needs fresh, sustained measurements
 before another adaptation. Separate cooldowns and change budgets still apply
 at each Graph. The two application targets are not combined into one optimizer
@@ -342,7 +342,7 @@ or one global throughput promise.
 
 For remote children placed through a PolyGraph, the destination enforces its
 local graph family independently; these checks are not one cross-cluster atomic
-transaction. See [cross-cluster rule scope](../deployment/multicluster.md#graphrules-cheeger-bounds-and-scaling).
+transaction. See [cross-cluster policy scope](../deployment/multicluster.md#graphpolicies-cheeger-bounds-and-scaling).
 
 ## Hierarchy and reserved operator graphs
 
@@ -352,7 +352,7 @@ Increasing replicas *inside* a child does not automatically change its parent's
 Cheeger constant. The parent continues to see that child as one vertex.
 
 Calibrate targets independently at each layer. Fresh local family checks enforce
-the applicable rules; remote clusters retain their local rule enforcement. A
+the applicable policies; remote clusters retain their local policy enforcement. A
 cross-cluster PolyGraph does not turn local measurements into one atomic,
 cluster-wide throughput guarantee. Exact Cheeger evaluation defaults to
 20 vertices per measured boundary; [budgets and search priorities are configurable](cheeger-tuning.md).
@@ -395,11 +395,11 @@ workload-facing event streams exclude the operator tree. See
 ## Configuration and observations
 
 These excerpts show the two settings used in the chain/ring example. They belong
-to separate resources; the Graph must reference the rule and declare its approved
+to separate resources; the Graph must reference the policy and declare its approved
 layouts.
 
 ```yaml
-# GraphRule.spec
+# GraphPolicy.spec
 enforcement: Referenced
 scope: Boundary
 relation: connections
@@ -409,7 +409,7 @@ cheeger:
 ```
 
 ```yaml
-# Graph.spec, alongside nodes, connections and rules
+# Graph.spec, alongside nodes, connections and policies
 throughput:
   mode: Observe # Adapt permits the approved layouts to be applied.
   unit: records
@@ -419,7 +419,7 @@ throughput:
   # Configure layouts before choosing Adapt; see the complete example below.
 ```
 
-Use `status.structuralRules` for structural verdicts and
+Use `status.structuralPolicies` for structural verdicts and
 `status.throughput` for the selected target, current value, recommendation and
 feedback phase, including `currentTraffic`, `targetTraffic` and `proposedTraffic`
 when routing is configured. Check freshness and generation: stored status does not authorize
@@ -428,5 +428,5 @@ must refresh the graph identity before submitting its next measurement window.
 
 For a complete manifest, reporting examples and all timing controls, see
 [Soul searching policy configuration](soul-searching.md#configure-a-bounded-policy).
-For rule scope, admission and every available structural constraint, see
-[GraphRules](graph-rules.md).
+For policy scope, admission and every available structural constraint, see
+[GraphPolicies](graph-policies.md).

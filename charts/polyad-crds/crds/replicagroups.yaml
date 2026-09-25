@@ -121,7 +121,7 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                   nullable: true
                   description: Placement inherited by all copies.
-                rules:
+                policies:
                   type: array
                   items:
                     type: string

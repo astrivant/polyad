@@ -31,7 +31,7 @@ then [run your first workload](introduction/getting-started.md).
 | Guide | Contents |
 | --- | --- |
 | [Graph boundaries](graphs/graph-boundaries.md) | Three boundary types, repeated execution, placement and storage |
-| [Graph rules](graphs/graph-rules.md) | Every structural, spectral, Cheeger and network constraint, with Mermaid examples |
+| [Graph policies](graphs/graph-policies.md) | Every structural, spectral, Cheeger and network constraint, with Mermaid examples |
 | [Practical Cheeger tuning](graphs/cheeger-tuning.md) | Bounds, throughput response settings, computation budgets, important cuts and a runnable reference |
 | [Comparing Cheeger bounds and throughput targets](graphs/cheeger-orchestration.md) | Hard bounds versus throughput targets, nested parent/child measurements, subgraph replication and Observe/Adapt diagrams |
 | [Replication and KEDA](graphs/replication.md) | Scalable workloads, nested replica groups and instance/definition metrics |

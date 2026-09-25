@@ -10,9 +10,9 @@ import math
 import networkx as nx
 import pytest
 
-from polyad.exceptions.policies import RuleViolation
-from polyad.graph import Connection, Dependency, Node, Spectrum, StructuralRule, Topology, evaluate_rule, graph_spectrum
-from polyad.operator.policies.rules import check_rules
+from polyad.exceptions.policies import PolicyViolation
+from polyad.graph import Connection, Dependency, Node, Spectrum, StructuralPolicy, Topology, evaluate_policy, graph_spectrum
+from polyad.operator.policies.graph_policies import check_policies
 from polyad.operator.reconciliation.controller import Controller
 from tests.test_operator import FakeAPI, resource, template
 
@@ -49,16 +49,16 @@ def test_relations_and_condensation_have_different_shapes():
         nodes=(Node("a", "Workload", "w"), Node("b", "Workload", "w", (Dependency("a"),)), Node("c", "Workload", "w", (Dependency("b"),))),
         connections=(Connection("a", "b"), Connection("b", "c"), Connection("c", "a")),
     )
-    admission = evaluate_rule(
-        StructuralRule(shapes=("tree",), spectrum=Spectrum(minConnectivity=1, maxRadius=math.sqrt(2))),
+    admission = evaluate_policy(
+        StructuralPolicy(shapes=("tree",), spectrum=Spectrum(minConnectivity=1, maxRadius=math.sqrt(2))),
         graph,
         expanded_nodes=3,
         nesting_depth=1,
     )
     assert admission["allowed"]
     assert admission["measurements"]["depth"] == 3
-    cyclic = evaluate_rule(
-        StructuralRule(relation="connections", limits={"strongComponent": 2, "cycleRank": 0}, shapes=("acyclic",)),
+    cyclic = evaluate_policy(
+        StructuralPolicy(relation="connections", limits={"strongComponent": 2, "cycleRank": 0}, shapes=("acyclic",)),
         graph,
         expanded_nodes=3,
         nesting_depth=1,
@@ -72,21 +72,21 @@ def test_relations_and_condensation_have_different_shapes():
 
 def test_namespace_policy_cannot_be_omitted_and_is_refreshed():
     """
-    A rule update blocks new workload admission on the next refreshed pass.
+    A policy update blocks new workload admission on the next refreshed pass.
     """
 
     async def scenario():
         graph = resource("Graph", "root", {"nodes": [{"name": "a", "kind": "Workload", "ref": "work"}]})
-        rule = resource("GraphRule", "budget", {"limits": {"nodes": 0}})
-        api = FakeAPI(graph, rule, resource("Workload", "work", {"template": template()}))
+        policy = resource("GraphPolicy", "budget", {"limits": {"nodes": 0}})
+        api = FakeAPI(graph, policy, resource("Workload", "work", {"template": template()}))
         controller = Controller(api)
-        with pytest.raises(RuleViolation, match="nodes=1"):
+        with pytest.raises(PolicyViolation, match="nodes=1"):
             await controller.reconcile(("Graph", "test", "root"))
         assert not any(method == "POST" for method, _, _ in api.calls)
-        api.objects[("GraphRule", "test", "budget")]["spec"]["limits"]["nodes"] = 1
+        api.objects[("GraphPolicy", "test", "budget")]["spec"]["limits"]["nodes"] = 1
         await controller.reconcile(("Graph", "test", "root"))
         assert any(kind == "Job" and method == "POST" for method, kind, _ in api.calls)
-        status = api.objects[("Graph", "test", "root")]["status"]["structuralRules"][0]
+        status = api.objects[("Graph", "test", "root")]["status"]["structuralPolicies"][0]
         assert status["uid"] == "uid-budget" and status["allowed"]
 
     asyncio.run(scenario())
@@ -94,7 +94,7 @@ def test_namespace_policy_cannot_be_omitted_and_is_refreshed():
 
 def test_referenced_rules_and_expanded_occurrences_survive_nesting():
     """
-    Referencing one template twice counts two instances and inherits optional rules.
+    Referencing one template twice counts two instances and inherits optional policies.
     """
 
     async def scenario():
@@ -104,17 +104,17 @@ def test_referenced_rules_and_expanded_occurrences_survive_nesting():
             {"templateOnly": True, "nodes": [{"name": "a", "kind": "Workload", "ref": "w"}, {"name": "b", "kind": "Workload", "ref": "w"}]},
         )
         root = {"nodes": [{"name": "left", "kind": "Graph", "ref": "leaf"}, {"name": "right", "kind": "Graph", "ref": "leaf"}]}
-        optional = resource("GraphRule", "selected", {"enforcement": "Referenced", "limits": {"expandedNodes": 5}})
+        optional = resource("GraphPolicy", "selected", {"enforcement": "Referenced", "limits": {"expandedNodes": 5}})
         api = FakeAPI(leaf, optional)
-        assert await check_rules(api, "test", "Graph", root) == []
-        with pytest.raises(RuleViolation, match="expandedNodes=6"):
-            await check_rules(api, "test", "Graph", {**root, "rules": ["selected"]})
+        assert await check_policies(api, "test", "Graph", root) == []
+        with pytest.raises(PolicyViolation, match="expandedNodes=6"):
+            await check_policies(api, "test", "Graph", {**root, "policies": ["selected"]})
         optional["spec"]["limits"] = {"nodes": 1}
-        api.objects[("GraphRule", "test", "selected")] = optional
-        with pytest.raises(RuleViolation, match="at leaf"):
-            await check_rules(api, "test", "Graph", {"rules": ["selected"], "nodes": root["nodes"][:1]})
-        with pytest.raises(RuleViolation, match="unavailable"):
-            await check_rules(api, "test", "Graph", {**root, "rules": ["missing"]})
+        api.objects[("GraphPolicy", "test", "selected")] = optional
+        with pytest.raises(PolicyViolation, match="at leaf"):
+            await check_policies(api, "test", "Graph", {"policies": ["selected"], "nodes": root["nodes"][:1]})
+        with pytest.raises(PolicyViolation, match="unavailable"):
+            await check_policies(api, "test", "Graph", {**root, "policies": ["missing"]})
 
     asyncio.run(scenario())
 
@@ -188,14 +188,14 @@ def test_cheeger_rule_admission_and_measurement():
                 {"name": "b", "kind": "Workload", "ref": "w", "requires": [{"node": "a"}]},
             ]
         }
-        rule = resource("GraphRule", "expansion", {"cheeger": {"minimum": 1, "maximum": 1}})
-        api = FakeAPI(rule)
-        reports = await check_rules(api, "test", "Graph", spec)
+        policy = resource("GraphPolicy", "expansion", {"cheeger": {"minimum": 1, "maximum": 1}})
+        api = FakeAPI(policy)
+        reports = await check_policies(api, "test", "Graph", spec)
         assert reports[0]["measurements"]["cheeger"] == 1
         for bounds in ({"maximum": 0.5}, {"minimum": 2}):
-            api.objects[("GraphRule", "test", "expansion")]["spec"]["cheeger"] = bounds
-            with pytest.raises(RuleViolation, match="cheeger=1"):
-                await check_rules(api, "test", "Graph", spec)
+            api.objects[("GraphPolicy", "test", "expansion")]["spec"]["cheeger"] = bounds
+            with pytest.raises(PolicyViolation, match="cheeger=1"):
+                await check_policies(api, "test", "Graph", spec)
 
     asyncio.run(scenario())
 
@@ -220,9 +220,9 @@ def test_benchmark_spectrum_retention_does_not_change_admission(enabled, monkeyp
     Preserve computed eigenvalues across replicas only when the administrator enables their retention.
     """
     monkeypatch.setenv("POLYAD_METRICS_GRAPH_SPECTRA", str(enabled).lower())
-    rule = resource("GraphRule", "spectrum", {"spectrum": {}})
+    policy = resource("GraphPolicy", "spectrum", {"spectrum": {}})
     graph = {"nodes": [{"name": "a", "kind": "Workload", "ref": "work"}]}
-    report = asyncio.run(check_rules(FakeAPI(rule), "test", "Graph", graph))[0]
+    report = asyncio.run(check_policies(FakeAPI(policy), "test", "Graph", graph))[0]
     assert report["allowed"]
     assert report["spectrum"]["radius"] == 0
     assert ("adjacency" in report["spectrum"]) is enabled

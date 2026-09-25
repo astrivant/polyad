@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from polyad.events.visibility import INTERNAL
 from polyad.operator.observability.graph_status import observed
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad_types.graphs.topology import topology
 from polyad_types.resources import GROUP
 
@@ -155,7 +155,7 @@ async def reconcile(controller: Controller, obj: dict[str, Any]) -> None:
         None: Only the Graph's status is changed.
     """
     children = await members(controller.api, obj)
-    reports = await check_live_rules(controller.api, obj)
+    reports = await check_live_policies(controller.api, obj)
     nodes = obj["spec"]["nodes"]
     suspended = obj["spec"].get("suspend", False)
     by_node = {child["metadata"]["labels"][f"{GROUP}/node"]: child for child in children}
@@ -171,7 +171,7 @@ async def reconcile(controller: Controller, obj: dict[str, Any]) -> None:
             "failed": failed,
             "observedGeneration": obj["metadata"].get("generation", 1),
             "nodes": states,
-            "structuralRules": reports,
+            "structuralPolicies": reports,
             "workloads": {
                 node["name"]: {
                     "kind": node["kind"],

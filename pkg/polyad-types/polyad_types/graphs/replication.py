@@ -186,7 +186,7 @@ class Replication:
         inheritReplicas (bool): Whether a generated instance follows its reusable group.
         suspend (bool): Drain execution until resumed.
         placement (dict[str, Any] | None): Placement inherited by all copies.
-        rules (tuple[str, ...]): Structural restrictions for every replicated graph.
+        policies (tuple[str, ...]): Structural restrictions for every replicated graph.
         network (dict[str, Any] | None): Traffic restrictions across this group.
         capacity (dict[str, Any] | None): Advance capacity policy for contained work.
         shutdownPolicy (str | None): Graceful termination policy.
@@ -204,7 +204,7 @@ class Replication:
     inheritReplicas: bool = True
     suspend: bool = False
     placement: dict[str, Any] | None = None
-    rules: tuple[str, ...] = ()
+    policies: tuple[str, ...] = ()
     network: dict[str, Any] | None = None
     capacity: dict[str, Any] | None = None
     shutdownPolicy: str | None = None
@@ -229,7 +229,7 @@ class Replication:
 
 def replica_topology(spec: dict[str, Any], *, retained: Iterable[str] = ()) -> dict[str, Any]:
     """
-    Project replication into ordinary graph vertices for scheduling and mathematical rules.
+    Project replication into ordinary graph vertices for scheduling and mathematical policies.
 
     Args:
         spec (dict[str, Any]): ReplicaGroup specification, including its effective count.
@@ -244,7 +244,7 @@ def replica_topology(spec: dict[str, Any], *, retained: Iterable[str] = ()) -> d
     names = tuple(sorted({*(f"replica-{index}" for index in range(policy.replicas)), *retained}, key=lambda name: int(name[8:])))
     result = {
         key: spec[key]
-        for key in ("suspend", "placement", "rules", "network", "capacity", "shutdownPolicy", "templateOnly")
+        for key in ("suspend", "placement", "policies", "network", "capacity", "shutdownPolicy", "templateOnly")
         if key in spec and spec[key] is not None
     }
     return {

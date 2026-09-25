@@ -105,7 +105,7 @@ conservatively waiting or rebuilding that evidence.
 Compute each scope's earliest time allowed by its interval, settled cooldown,
 debounce and sliding-window quota, then take the latest of those times. Expose
 it as `notBefore`, the earliest eligible admission time. An active
-conflict, readiness or GraphRules may still block it. Unresolved cooldowns have
+conflict, readiness or GraphPolicies may still block it. Unresolved cooldowns have
 no known deadline; report the condition that blocks them.
 Eligibility uses the root's time authority, never a remote worker's independent
 clock. Uncertain clock or history observations block admission.

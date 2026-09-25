@@ -90,7 +90,7 @@ spec:
 {{- end }}
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: {{ .Release.Name }}-control-plane
   labels:
@@ -120,7 +120,7 @@ spec:
   templateOnly: true
   {{- end }}
   mode: persistent
-  rules: [{{ .Release.Name }}-control-plane]
+  policies: [{{ .Release.Name }}-control-plane]
   nodes:
     - {name: gateway, kind: ReplicaGroup, ref: {{ .Release.Name }}-gateway}
     - {name: executor, kind: ReplicaGroup, ref: {{ .Release.Name }}-executor}

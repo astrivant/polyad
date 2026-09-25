@@ -22,8 +22,8 @@ dragonflies: {}
 dragonflyPools: {}
 ## @param gates [object] Gate instances keyed by name; spec and metadata support tpl references to other maps.
 gates: {}
-## @param graphRules [object] GraphRule instances keyed by name; spec and metadata support tpl references to other maps.
-graphRules: {}
+## @param graphPolicies [object] GraphPolicy instances keyed by name; spec and metadata support tpl references to other maps.
+graphPolicies: {}
 ## @param graphs [object] Graph instances keyed by name; spec and metadata support tpl references to other maps.
 graphs: {}
 ## @param operatorPools [object] OperatorPool instances keyed by name; spec and metadata support tpl references to other maps.

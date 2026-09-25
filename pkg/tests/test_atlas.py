@@ -348,8 +348,8 @@ def test_active_connections_revoke_when_child_state_cannot_fulfill_contract(monk
         elif change == "removed":
             apis["east"].objects["Graph", "test", "east"]["spec"]["nodes"] = []
         else:
-            apis["east"].objects["GraphRule", "test", "deny"] = resource(
-                "GraphRule",
+            apis["east"].objects["GraphPolicy", "test", "deny"] = resource(
+                "GraphPolicy",
                 "deny",
                 {
                     "enforcement": "Namespace",

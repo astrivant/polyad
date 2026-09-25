@@ -25013,9 +25013,9 @@
           },
           "additionalProperties": false
         },
-        "graphRules": {
+        "graphPolicies": {
           "type": "object",
-          "description": "GraphRule instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.",
+          "description": "GraphPolicy instances keyed by Kubernetes name; fields accept tpl and use CRD defaults.",
           "patternProperties": {
             "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$": {
               "type": "object",
@@ -25475,14 +25475,14 @@
                                 "Subtree"
                               ],
                               "default": "Subtree",
-                              "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary."
+                              "description": "Boundary applies locally; Subtree propagates. Namespace policies select every boundary."
                             },
                             {
                               "type": "string",
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary."
+                          "description": "Boundary applies locally; Subtree propagates. Namespace policies select every boundary."
                         },
                         "network": {
                           "anyOf": [
@@ -26407,7 +26407,7 @@
                           "anyOf": [
                             {
                               "type": "string",
-                              "description": "Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor.",
+                              "description": "Namespace policies always apply. Referenced policies apply when named by this graph or an ancestor.",
                               "enum": [
                                 "Namespace",
                                 "Referenced"
@@ -26419,7 +26419,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor."
+                          "description": "Namespace policies always apply. Referenced policies apply when named by this graph or an ancestor."
                         },
                         "relation": {
                           "anyOf": [
@@ -27282,7 +27282,7 @@
                           "anyOf": [
                             {
                               "type": "object",
-                              "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                              "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                               "properties": {
                                 "unit": {
                                   "anyOf": [
@@ -28439,7 +28439,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Observe or adapt topology using empirical throughput targets within hard structural rules."
+                          "description": "Observe or adapt topology using empirical throughput targets within hard structural policies."
                         },
                         "activation": {
                           "anyOf": [
@@ -29658,18 +29658,18 @@
                           ],
                           "description": "Isolate a graph subtree and intersect its exceptions with inherited constraints."
                         },
-                        "rules": {
+                        "policies": {
                           "anyOf": [
                             {
                               "type": "array",
-                              "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+                              "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
                               "maxItems": 32,
                               "x-kubernetes-list-type": "set",
                               "items": {
                                 "anyOf": [
                                   {
                                     "type": "string",
-                                    "description": "GraphRule name.",
+                                    "description": "GraphPolicy name.",
                                     "maxLength": 253,
                                     "minLength": 1
                                   },
@@ -29678,7 +29678,7 @@
                                     "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                   }
                                 ],
-                                "description": "GraphRule name."
+                                "description": "GraphPolicy name."
                               }
                             },
                             {
@@ -29686,7 +29686,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply."
+                          "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply."
                         },
                         "nodes": {
                           "anyOf": [
@@ -31631,7 +31631,7 @@
                           "anyOf": [
                             {
                               "type": "object",
-                              "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                              "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                               "properties": {
                                 "unit": {
                                   "anyOf": [
@@ -32788,7 +32788,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Observe or adapt topology using empirical throughput targets within hard structural rules."
+                          "description": "Observe or adapt topology using empirical throughput targets within hard structural policies."
                         },
                         "activation": {
                           "anyOf": [
@@ -34007,18 +34007,18 @@
                           ],
                           "description": "Isolate a graph subtree and intersect its exceptions with inherited constraints."
                         },
-                        "rules": {
+                        "policies": {
                           "anyOf": [
                             {
                               "type": "array",
-                              "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+                              "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
                               "maxItems": 32,
                               "x-kubernetes-list-type": "set",
                               "items": {
                                 "anyOf": [
                                   {
                                     "type": "string",
-                                    "description": "GraphRule name.",
+                                    "description": "GraphPolicy name.",
                                     "maxLength": 253,
                                     "minLength": 1
                                   },
@@ -34027,7 +34027,7 @@
                                     "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                   }
                                 ],
-                                "description": "GraphRule name."
+                                "description": "GraphPolicy name."
                               }
                             },
                             {
@@ -34035,7 +34035,7 @@
                               "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                             }
                           ],
-                          "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply."
+                          "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply."
                         },
                         "nodes": {
                           "anyOf": [
@@ -35759,7 +35759,7 @@
                             }
                           ]
                         },
-                        "rules": {
+                        "policies": {
                           "anyOf": [
                             {
                               "type": "array",
@@ -37163,7 +37163,7 @@
                                   "anyOf": [
                                     {
                                       "type": "object",
-                                      "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                                      "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                                       "properties": {
                                         "unit": {
                                           "anyOf": [
@@ -38320,7 +38320,7 @@
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "Observe or adapt topology using empirical throughput targets within hard structural rules."
+                                  "description": "Observe or adapt topology using empirical throughput targets within hard structural policies."
                                 },
                                 "capacity": {
                                   "anyOf": [
@@ -39373,18 +39373,18 @@
                                   ],
                                   "description": "Isolate a graph subtree and intersect its exceptions with inherited constraints."
                                 },
-                                "rules": {
+                                "policies": {
                                   "anyOf": [
                                     {
                                       "type": "array",
-                                      "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+                                      "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
                                       "maxItems": 32,
                                       "x-kubernetes-list-type": "set",
                                       "items": {
                                         "anyOf": [
                                           {
                                             "type": "string",
-                                            "description": "GraphRule name.",
+                                            "description": "GraphPolicy name.",
                                             "maxLength": 253,
                                             "minLength": 1
                                           },
@@ -39393,7 +39393,7 @@
                                             "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                           }
                                         ],
-                                        "description": "GraphRule name."
+                                        "description": "GraphPolicy name."
                                       }
                                     },
                                     {
@@ -39401,7 +39401,7 @@
                                       "pattern": "\\{\\{[\\s\\S]*\\}\\}"
                                     }
                                   ],
-                                  "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply."
+                                  "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply."
                                 },
                                 "nodes": {
                                   "anyOf": [

@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING
 
 from polyad.compiler.passes.traffic import step_weights
 from polyad.exceptions.graph import CheegerIncomplete
-from polyad.exceptions.policies import RuleViolation
-from polyad.operator.policies.rule_state import check_live_rules
+from polyad.exceptions.policies import PolicyViolation
+from polyad.operator.policies.policy_state import check_live_policies
 from polyad.operator.policies.soul.contracts import SAMPLE, Proposal
 from polyad.operator.policies.soul.observations import expansion, headroom_targets
 from polyad_types.api.throughput import ThroughputSample
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from polyad.operator.policies.soul.contracts import Search
     from polyad.operator.reconciliation.controller import Controller
-    from polyad_types.graphs.rules import Cheeger
+    from polyad_types.graphs.policies import Cheeger
     from polyad_types.graphs.topology import ThroughputTier
     from polyad_types.networking.traffic import TrafficWeights
 
@@ -154,7 +154,7 @@ async def candidate_spec(
     demand: bool,
 ) -> dict[str, Any] | None:
     """
-    Combine approved layout, bounded traffic and capacity changes under live GraphRules.
+    Combine approved layout, bounded traffic and capacity changes under live GraphPolicies.
 
     Args:
         controller (Controller): Family-leased reader for candidate validation.
@@ -189,8 +189,8 @@ async def candidate_spec(
             if not within(value, tier.cheeger):
                 continue
             try:
-                await check_live_rules(controller.api, obj, candidate=proposal, candidate_is_logical=True)
-            except RuleViolation:
+                await check_live_policies(controller.api, obj, candidate=proposal, candidate_is_logical=True)
+            except PolicyViolation:
                 continue
             status.update(phase="Recommended", recommendedLayout=layout.name, proposedCheeger=value, computation=None)
             candidate = proposal
@@ -204,8 +204,8 @@ async def candidate_spec(
         proposal = {**(candidate or obj["spec"]), "traffic": converter.unstructure(traffic)}
         try:
             topology(proposal, obj["kind"])
-            await check_live_rules(controller.api, obj, candidate=proposal, candidate_is_logical=True)
-        except (ValueError, RuleViolation):
+            await check_live_policies(controller.api, obj, candidate=proposal, candidate_is_logical=True)
+        except (ValueError, PolicyViolation):
             blocked = True
             candidate = None
             status.update(phase="NoAllowedLayout", recommendedLayout=None, proposedCheeger=None)
@@ -222,8 +222,8 @@ async def candidate_spec(
             proposal = {**(candidate or obj["spec"]), "capacity": {**obj["spec"]["capacity"], **status["targetCapacity"]}}
             try:
                 topology(proposal, obj["kind"])
-                await check_live_rules(controller.api, obj, candidate=proposal, candidate_is_logical=True)
-            except (ValueError, RuleViolation):
+                await check_live_policies(controller.api, obj, candidate=proposal, candidate_is_logical=True)
+            except (ValueError, PolicyViolation):
                 candidate = None
                 status.update(phase="NoAllowedLayout", recommendedLayout=None, proposedCheeger=None, proposedTraffic=[])
             else:
@@ -242,7 +242,7 @@ def within(value: float, bounds: Cheeger) -> bool:
 
     Args:
         value (float): Measured unnormalized Cheeger constant.
-        bounds (Cheeger): Application target independent of GraphRules.
+        bounds (Cheeger): Application target independent of GraphPolicies.
 
     Returns:
         bool: Whether both configured bounds hold within numerical tolerance.

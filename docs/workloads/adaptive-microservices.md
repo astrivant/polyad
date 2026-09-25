@@ -45,14 +45,14 @@ The [Python SDK](../../pkg/polyad-sdk/README.md) supplies a delta-first
 negotiation and throughput reporting. The SDK exposes Service Symbiosis to
 application code; [Soul searching](../graphs/soul-searching.md) uses the reported
 demand to adapt permitted graph structure and traffic. Polyad checks current
-GraphRules and permissions before admitting changes. This guide defines the
+GraphPolicies and permissions before admitting changes. This guide defines the
 application contract and [shows how to connect it to the SDK](#use-the-python-sdk).
 
 ## Who controls what
 
 | Participant | Responsibility |
 | --- | --- |
-| Administrator and GraphRules | Permitted graph structure, network relationships, credentials and resource ceilings |
+| Administrator and GraphPolicies | Permitted graph structure, network relationships, credentials and resource ceilings |
 | Soul searching | Select approved layouts, traffic splits and capacity preparation from measured demand |
 | KEDA/HPA | Request replica counts for their configured scaling targets |
 | Polyad reconciliation | Check current rules and identities before admitting graph-managed changes |
@@ -269,7 +269,7 @@ the application must deliver those results. For example:
 > sustain that completion rate and p95 latency below 250 ms for five minutes.
 > Throughout the transition, lose no accepted records and use at most 16 CPUs,
 > including replacement processes. Keep queues bounded and obey the configured
-> GraphRules and permissions.
+> GraphPolicies and permissions.
 
 Record the workload mix, record sizes, burst duration, initial queues and ready
 capacity as part of the scenario. Specify how the application handles work

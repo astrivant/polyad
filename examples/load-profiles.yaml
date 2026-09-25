@@ -33,7 +33,7 @@ spec:
             httpGet: {path: /, port: 8080}
 ---
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: profile-envelope
 spec:
@@ -49,7 +49,7 @@ metadata:
   name: load-pipeline
 spec:
   mode: persistent
-  rules: [profile-envelope]
+  policies: [profile-envelope]
   nodes:
     - {name: a, kind: Workload, ref: profile-prepare}
     - name: b

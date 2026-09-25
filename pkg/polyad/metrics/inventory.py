@@ -32,7 +32,7 @@ def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, 
     """
     indexed = {(obj["kind"], obj["metadata"]["name"]): obj for obj in objects}
     records = []
-    definitions = {"Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphRule"}
+    definitions = {"Workload", "Daemon", "Resource", "Gate", "ShutdownPolicy", "GraphPolicy"}
     counts: Counter[tuple[str, str]] = Counter()
     for obj in objects:
         meta, status = obj["metadata"], obj.get("status", {})
@@ -134,18 +134,18 @@ def inventory(objects: list[dict[str, Any]], *, cluster: str = "") -> dict[str, 
                 "execution": metrics.get("execution") if observed else None,
                 "topology": metrics.get("topology") if observed else None,
                 "observedTopology": metrics.get("observedTopology") if observed else None,
-                "structuralRules": [
+                "structuralPolicies": [
                     {
                         **report,
                         "current": observed
                         and report.get("boundary", {}).get("generation") == generation
                         and report.get("boundary", {}).get("uid") == meta["uid"]
-                        and (rule := indexed.get(("GraphRule", report["name"]))) is not None
-                        and rule["metadata"]["uid"] == report.get("uid")
-                        and rule["metadata"].get("generation", 1) == report.get("generation")
-                        and not rule["metadata"].get("deletionTimestamp"),
+                        and (policy := indexed.get(("GraphPolicy", report["name"]))) is not None
+                        and policy["metadata"]["uid"] == report.get("uid")
+                        and policy["metadata"].get("generation", 1) == report.get("generation")
+                        and not policy["metadata"].get("deletionTimestamp"),
                     }
-                    for report in status.get("structuralRules", [])
+                    for report in status.get("structuralPolicies", [])
                 ],
                 "throughput": status.get("throughput")
                 if (status.get("throughput") or {}).get("observedGeneration") == generation

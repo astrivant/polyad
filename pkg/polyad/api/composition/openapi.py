@@ -134,12 +134,12 @@ def schemas() -> dict[str, dict[str, Any]]:
                         "reach descendant Pod manifests. "
                     ),
                 },
-                "rules": {
+                "policies": {
                     "type": "array",
                     "maxItems": 32,
                     "uniqueItems": True,
                     "items": {"type": "string", "maxLength": 253},
-                    "description": "Additional namespace GraphRule names inherited by descendants; namespace-wide rules always apply.",
+                    "description": "Additional namespace GraphPolicy names inherited by descendants; namespace-wide policies always apply.",
                 },
             },
         },
@@ -159,7 +159,7 @@ def schemas() -> dict[str, dict[str, Any]]:
                 "connectivity": reference("ReplicaConnectivity"),
                 "placement": free_object,
                 "network": free_object,
-                "rules": {"type": "array", "items": reference("ID")},
+                "policies": {"type": "array", "items": reference("ID")},
             },
         },
         "CompositionItem": {

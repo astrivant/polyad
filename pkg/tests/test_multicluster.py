@@ -15,10 +15,10 @@ from kubernetes.client.exceptions import ApiException
 from polyad.api.observations.app import ObservationAPI, build_app, observe
 from polyad.compiler.passes.network import policy_specs, traffic
 from polyad.exceptions.api import Unavailable
-from polyad.exceptions.policies import RuleViolation
+from polyad.exceptions.policies import PolicyViolation
 from polyad.exceptions.reconciliation import Pending
 from polyad.operator.clusters.federation import INVENTORY, PARENT, REMOTE, Federation
-from polyad.operator.policies.rules import check_rules
+from polyad.operator.policies.graph_policies import check_policies
 from polyad.operator.reconciliation.controller import FINALIZER, Controller
 from polyad_types import GraphNode, MeshPeer, NetworkAccess, NetworkPeer, NetworkPort, TrafficRule
 from polyad_types.graphs.topology import topology
@@ -105,16 +105,16 @@ def test_source_and_destination_rules_gate_their_own_mutations():
 
     async def run():
         local, remote, controller = setup()
-        rule = resource("GraphRule", "blocked", {"limits": {"nodes": 0}})
-        local.objects[("GraphRule", "test", "blocked")] = rule
-        with pytest.raises(RuleViolation):
+        rule = resource("GraphPolicy", "blocked", {"limits": {"nodes": 0}})
+        local.objects[("GraphPolicy", "test", "blocked")] = rule
+        with pytest.raises(PolicyViolation):
             await controller.reconcile(("PolyGraph", "test", "application"))
         assert not remote.calls
-        local.objects.pop(("GraphRule", "test", "blocked"))
-        remote.objects[("GraphRule", "test", "blocked")] = rule
+        local.objects.pop(("GraphPolicy", "test", "blocked"))
+        remote.objects[("GraphPolicy", "test", "blocked")] = rule
         child = await create_remote(local, remote, controller)
         child["metadata"]["finalizers"] = [FINALIZER]
-        with pytest.raises(RuleViolation):
+        with pytest.raises(PolicyViolation):
             await Controller(remote).reconcile(("Graph", "test", child["metadata"]["name"]))
         assert not remote.children("Job")
 
@@ -253,11 +253,11 @@ def test_graphs_remain_cluster_local_and_remote_rules_stay_at_the_destination():
         local, _, _ = setup()
         poly = local.children("PolyGraph")[0]
         assert topology(poly["spec"], "PolyGraph").nodes[0].cluster == "west"
-        await check_rules(local, "test", "PolyGraph", poly["spec"])
+        await check_policies(local, "test", "PolyGraph", poly["spec"])
         nested = resource("PolyGraph", "nested", poly["spec"])
         local.objects[("PolyGraph", "test", "nested")] = nested
-        with pytest.raises(RuleViolation, match="one cluster"):
-            await check_rules(local, "test", "Graph", {"nodes": [{"name": "nested", "kind": "PolyGraph", "ref": "nested"}]})
+        with pytest.raises(PolicyViolation, match="one cluster"):
+            await check_policies(local, "test", "Graph", {"nodes": [{"name": "nested", "kind": "PolyGraph", "ref": "nested"}]})
         with pytest.raises(ValueError):
             topology(poly["spec"], "Graph")
         with pytest.raises(ValueError, match="containing"):

@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, cast
 
-from polyad_types.graphs.rules import CheegerComputation, CheegerReduction
+from polyad_types.graphs.policies import CheegerComputation, CheegerReduction
 
 if TYPE_CHECKING:
     from typing import Literal

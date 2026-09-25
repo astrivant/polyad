@@ -7,17 +7,17 @@ from __future__ import annotations
 from polyad_types.graphs.activation import ActivationPolicy as ActivationPolicy
 from polyad_types.graphs.capacity import CapacityPlan as CapacityPlan
 from polyad_types.graphs.capacity import CapacityTuning as CapacityTuning
+from polyad_types.graphs.policies import Cheeger as Cheeger
+from polyad_types.graphs.policies import CheegerComputation as CheegerComputation
+from polyad_types.graphs.policies import CheegerReduction as CheegerReduction
+from polyad_types.graphs.policies import Spectrum as Spectrum
+from polyad_types.graphs.policies import StructuralPolicy as StructuralPolicy
 from polyad_types.graphs.replication import RemoteScaleOwner as RemoteScaleOwner
 from polyad_types.graphs.replication import ReplicaConnection as ReplicaConnection
 from polyad_types.graphs.replication import ReplicaConnectivity as ReplicaConnectivity
 from polyad_types.graphs.replication import ReplicaSource as ReplicaSource
 from polyad_types.graphs.replication import ReplicaTemplate as ReplicaTemplate
 from polyad_types.graphs.replication import Replication as Replication
-from polyad_types.graphs.rules import Cheeger as Cheeger
-from polyad_types.graphs.rules import CheegerComputation as CheegerComputation
-from polyad_types.graphs.rules import CheegerReduction as CheegerReduction
-from polyad_types.graphs.rules import Spectrum as Spectrum
-from polyad_types.graphs.rules import StructuralRule as StructuralRule
 from polyad_types.graphs.topology import Connection as Connection
 from polyad_types.graphs.topology import Dependency as Dependency
 from polyad_types.graphs.topology import GraphNode as GraphNode
@@ -49,7 +49,7 @@ __all__ = (
     "ReplicaTemplate",
     "Replication",
     "Spectrum",
-    "StructuralRule",
+    "StructuralPolicy",
     "ThroughputLayout",
     "ThroughputPolicy",
     "ThroughputTier",

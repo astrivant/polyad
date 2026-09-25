@@ -60,7 +60,7 @@ the answer unknown; an unknown answer is not permission to start work.
 
 **Admission** is Polyad's decision that a particular piece of work may start.
 A true gate condition is one check in that decision. Dependencies, placement,
-available execution slots, capacity and applicable [GraphRules](../graphs/graph-rules.md)
+available execution slots, capacity and applicable [GraphPolicies](../graphs/graph-policies.md)
 must also allow it. With [activation](../workloads/activation.md), the node also
 needs an explicit request to start; becoming ready or satisfying a condition
 does not itself supply that request.
@@ -98,12 +98,12 @@ the [composition diagram](../../README.md#constrained-compositions), two nodes u
 the same graph definition to create separate instances, each with its own workload. IDs identify both the definitions and
 their uses, so a request can be traced to the Kubernetes resources it creates.<sup>[\[9\]](../apis/composition-requests.md#durability-ordering-and-audit)</sup>
 
-A **GraphRule** describes which graph structures an engineer will allow users to
+A **GraphPolicy** describes which graph structures an engineer will allow users to
 schedule. Rules can limit size, nesting, or branching, require a shape such as a
 tree, or constrain the graph's spectrum: the eigenvalues of a matrix representing
 its connections. Namespace-wide rules apply to every graph in that namespace;
 graphs can also reference additional rules. Recursive size limits count each
-subgraph instance, including repeated uses of the same definition.<sup>[\[10\]](../graphs/graph-rules.md#structural-limits)</sup>
+subgraph instance, including repeated uses of the same definition.<sup>[\[10\]](../graphs/graph-policies.md#structural-limits)</sup>
 
 The API's immutable `APIBuilder` configures authenticated composition services<sup>[\[11\]](../apis/composition-api.md#enable-the-service)</sup>
 and exposes their OpenAPI schema at `/openapi.json`.<sup>[\[12\]](../apis/composition-api.md#openapi-schema)</sup>

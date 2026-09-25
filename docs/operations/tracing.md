@@ -196,7 +196,7 @@ Outside Helm, set `POLYAD_LOGS_ENABLED=true` and
 | Operator group linked/unlinked; root-managed resources created/updated | INFO after an acknowledged write; unchanged membership is quiet |
 | Workload creation/deletion, committed phase, scale and capacity transitions | INFO; heartbeat and metric-only status updates do not repeat decisions |
 | Throughput observation, stabilization, recommendation, cooldown and applied layout | INFO when the decision, target, mode or recommended layout changes |
-| GraphRule rejection, ownership collision, rewrite/remote-scale generation conflict | WARNING, with the rule or conflicting resource/request identities |
+| GraphPolicy rejection, ownership collision, rewrite/remote-scale generation conflict | WARNING, with the rule or conflicting resource/request identities |
 | Kubernetes HTTP 409 | WARNING; refresh state before retrying, without logging the API error body |
 | Pending Kubernetes write conflict or stale queued target | WARNING via `polyad.kubernetes.write_deferred`; includes a stable reason and target identity, without request bodies or digests |
 | Identical pending write and dependency contract | DEBUG via `polyad.kubernetes.write_coalesced`; one queue entry and acknowledgement serve the callers |
@@ -221,7 +221,7 @@ not automatic replay of old patches. Cached validations expire or are invalidate
 by relevant watches and known mutations.
 
 Repeated failed attempts can emit repeated warnings. These diagnostic records
-explain each attempt under the existing GraphRules and conflict-resolution policy.
+explain each attempt under the existing GraphPolicies and conflict-resolution policy.
 Logs and downstream workload event subscriptions have separate delivery paths.
 Internal operator graphs remain excluded from application
 [event streams](../workloads/workload-events.md).

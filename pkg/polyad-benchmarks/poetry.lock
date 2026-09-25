@@ -1671,7 +1671,7 @@ url = "../polyad-sdk"
 [[package]]
 name = "polyad-types"
 version = "0.0.1a15"
-description = "Validated Python models and serialization for Polyad resources, graph rules, networking, events and operator APIs"
+description = "Validated Python models and serialization for Polyad resources, graph policies, networking, events and operator APIs"
 optional = false
 python-versions = ">=3.11,<4"
 groups = ["main"]

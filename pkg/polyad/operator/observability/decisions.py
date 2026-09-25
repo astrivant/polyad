@@ -41,7 +41,7 @@ THROUGHPUT_REASONS = {
     "CapacityUnavailable": "The selected capacity profile requires enabled forecasting and must fit the operator's Pod ceiling.",
     "TemporaryConnectionsActive": "Active temporary connections defer the proposed layout change.",
     "CoolingDown": "The cooldown or rolling change budget defers the proposed layout change.",
-    "Applied": "Applied an approved parameter profile after fresh graph rules and adaptation checks passed.",
+    "Applied": "Applied an approved parameter profile after fresh graph policies and adaptation checks passed.",
 }
 decision_context: ContextVar[dict[str, Any] | None] = ContextVar("decision_context", default=None)
 

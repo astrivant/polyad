@@ -583,7 +583,7 @@
             "Cluster",
             "Atlas"
           ],
-          "description": "Maximum negotiable scope; consent and GraphRules remain required."
+          "description": "Maximum negotiable scope; consent and GraphPolicies remain required."
         },
         "parent": {
           "type": "string",
@@ -2389,6 +2389,298 @@
         "maxPods"
       ]
     },
+    "polyad_types.graphs.policies.Cheeger": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "minimum": 0,
+          "description": "Inclusive nonnegative minimum; raise it to reject sparse bottlenecks, or omit for no lower bound."
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "minimum": 0,
+          "description": "Inclusive nonnegative maximum; lower it to require a sparse cut, or omit for no upper bound."
+        }
+      },
+      "description": "Bound exact edge expansion on the simple undirected projection. A cut's ratio is its crossing-edge count divided by its smaller side's vertex count. The constant is the minimum ratio over all cuts. Raising the minimum rejects severe structural bottlenecks; lowering the maximum requires a sparse cut. Throughput policies can select these structural targets using application-reported rates; the constant itself is edge expansion."
+    },
+    "polyad_types.graphs.policies.CheegerComputation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxVertices": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "minimum": 2,
+          "maximum": 4096,
+          "description": "Boundary vertex cap; null inherits the operator ceiling, normally 20."
+        },
+        "maxCuts": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "minimum": 1,
+          "maximum": 2147483647,
+          "description": "Unique cut evaluation budget; null inherits the operator ceiling, normally 524287."
+        },
+        "timeoutSeconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "minimum": 0.001,
+          "maximum": 300,
+          "description": "Cooperative time budget; null inherits the operator ceiling, normally five seconds."
+        },
+        "priorityCuts": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "minItems": 1,
+            "maxItems": 4096,
+            "uniqueItems": true
+          },
+          "maxItems": 64,
+          "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
+        },
+        "reduction": {
+          "$ref": "#/$defs/polyad_types.graphs.policies.CheegerReduction",
+          "description": "Optional cached quotient and fresh spectral stages before exact enumeration."
+        }
+      },
+      "description": "Budget exact search and optionally try certified quotient reductions first."
+    },
+    "polyad_types.graphs.policies.CheegerReduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Request reduced search before exact enumeration. The operator must also enable it."
+        },
+        "maxVertices": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4096,
+          "description": "Largest boundary admitted to dense spectral reduction."
+        },
+        "components": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
+        },
+        "supernodes": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64,
+          "description": "Maximum quotient vertices searched before exact enumeration."
+        },
+        "cache": {
+          "type": "boolean",
+          "description": "Reevaluate a recently cached quotient partition on the current graph first."
+        },
+        "cacheEntries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "description": "Maximum process-local partitions retained by the operator."
+        },
+        "maxEdgeChurn": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Largest changed-edge fraction eligible for cached partition reuse."
+        },
+        "strategy": {
+          "enum": [
+            "AdaptivePID",
+            "CacheFirst"
+          ],
+          "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
+        },
+        "targetSeconds": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 300,
+          "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
+        },
+        "feedback": {
+          "enum": [
+            "CertificateGap",
+            "ComputationTime"
+          ],
+          "description": "Adaptive PID objective; the administrator chooses the effective signal."
+        },
+        "targetRelativeError": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 100,
+          "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
+        }
+      },
+      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
+    },
+    "polyad_types.graphs.policies.Spectrum": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxRadius": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Maximum absolute adjacency eigenvalue."
+        },
+        "minConnectivity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Minimum second eigenvalue of the combinatorial Laplacian."
+        },
+        "maxLaplacian": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Maximum combinatorial Laplacian eigenvalue."
+        }
+      },
+      "description": "Bound the spectrum of the simple undirected projection of a graph relation."
+    },
+    "polyad_types.graphs.policies.StructuralPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "enum": [
+            "Boundary",
+            "Subtree"
+          ],
+          "description": "Whether selected policies propagate to descendant boundaries."
+        },
+        "enforcement": {
+          "enum": [
+            "Namespace",
+            "Referenced"
+          ],
+          "description": "Mandatory namespace policy or explicitly selected policy."
+        },
+        "relation": {
+          "enum": [
+            "admission",
+            "connections"
+          ],
+          "description": "Directed edge relation used for local measurements."
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Inclusive upper bounds on named combinatorial measurements."
+        },
+        "shapes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "acyclic",
+              "connected",
+              "tree",
+              "planar"
+            ]
+          },
+          "description": "Required graph properties."
+        },
+        "spectrum": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.graphs.policies.Spectrum"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional undirected spectral constraints, limited to 256 vertices."
+        },
+        "network": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.networking.access.NetworkAccess"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Mandatory or referenced traffic restrictions inherited by graph descendants."
+        },
+        "cheeger": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyad_types.graphs.policies.Cheeger"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional edge-expansion bounds proven exactly or by a conservative interval."
+        },
+        "cheegerComputation": {
+          "$ref": "#/$defs/polyad_types.graphs.policies.CheegerComputation",
+          "description": "Cut priorities and per-calculation budgets within operator ceilings."
+        }
+      },
+      "description": "Apply reusable mathematical constraints to each graph boundary and its subtree."
+    },
     "polyad_types.graphs.replication.RemoteScaleOwner": {
       "type": "object",
       "additionalProperties": false,
@@ -2607,7 +2899,7 @@
           ],
           "description": "Placement inherited by all copies."
         },
-        "rules": {
+        "policies": {
           "type": "array",
           "items": {
             "type": "string"
@@ -2681,298 +2973,6 @@
       "required": [
         "template"
       ]
-    },
-    "polyad_types.graphs.rules.Cheeger": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "minimum": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "minimum": 0,
-          "description": "Inclusive nonnegative minimum; raise it to reject sparse bottlenecks, or omit for no lower bound."
-        },
-        "maximum": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "minimum": 0,
-          "description": "Inclusive nonnegative maximum; lower it to require a sparse cut, or omit for no upper bound."
-        }
-      },
-      "description": "Bound exact edge expansion on the simple undirected projection. A cut's ratio is its crossing-edge count divided by its smaller side's vertex count. The constant is the minimum ratio over all cuts. Raising the minimum rejects severe structural bottlenecks; lowering the maximum requires a sparse cut. Throughput policies can select these structural targets using application-reported rates; the constant itself is edge expansion."
-    },
-    "polyad_types.graphs.rules.CheegerComputation": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "maxVertices": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "minimum": 2,
-          "maximum": 4096,
-          "description": "Boundary vertex cap; null inherits the operator ceiling, normally 20."
-        },
-        "maxCuts": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "minimum": 1,
-          "maximum": 2147483647,
-          "description": "Unique cut evaluation budget; null inherits the operator ceiling, normally 524287."
-        },
-        "timeoutSeconds": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "minimum": 0.001,
-          "maximum": 300,
-          "description": "Cooperative time budget; null inherits the operator ceiling, normally five seconds."
-        },
-        "priorityCuts": {
-          "type": "array",
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 253
-            },
-            "minItems": 1,
-            "maxItems": 4096,
-            "uniqueItems": true
-          },
-          "maxItems": 64,
-          "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent."
-        },
-        "reduction": {
-          "$ref": "#/$defs/polyad_types.graphs.rules.CheegerReduction",
-          "description": "Optional cached quotient and fresh spectral stages before exact enumeration."
-        }
-      },
-      "description": "Budget exact search and optionally try certified quotient reductions first."
-    },
-    "polyad_types.graphs.rules.CheegerReduction": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Request reduced search before exact enumeration. The operator must also enable it."
-        },
-        "maxVertices": {
-          "type": "integer",
-          "minimum": 2,
-          "maximum": 4096,
-          "description": "Largest boundary admitted to dense spectral reduction."
-        },
-        "components": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64,
-          "description": "Nontrivial Laplacian eigenvectors retained by fresh spectral reduction."
-        },
-        "supernodes": {
-          "type": "integer",
-          "minimum": 2,
-          "maximum": 64,
-          "description": "Maximum quotient vertices searched before exact enumeration."
-        },
-        "cache": {
-          "type": "boolean",
-          "description": "Reevaluate a recently cached quotient partition on the current graph first."
-        },
-        "cacheEntries": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 4096,
-          "description": "Maximum process-local partitions retained by the operator."
-        },
-        "maxEdgeChurn": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Largest changed-edge fraction eligible for cached partition reuse."
-        },
-        "strategy": {
-          "enum": [
-            "AdaptivePID",
-            "CacheFirst"
-          ],
-          "description": "Preferred scheduler; either operator or policy can select legacy CacheFirst."
-        },
-        "targetSeconds": {
-          "type": "number",
-          "minimum": 1e-06,
-          "maximum": 300,
-          "description": "Soft mean computation-time goal; the operator value governs when administrator limits are supplied."
-        },
-        "feedback": {
-          "enum": [
-            "CertificateGap",
-            "ComputationTime"
-          ],
-          "description": "Adaptive PID objective; the administrator chooses the effective signal."
-        },
-        "targetRelativeError": {
-          "type": "number",
-          "minimum": 1e-06,
-          "maximum": 100,
-          "description": "Soft certified relative-error objective; 0.25 means 25 percent, not a hard accuracy guarantee."
-        }
-      },
-      "description": "Configure the opt-in, certificate-preserving Cheeger reduction tiers."
-    },
-    "polyad_types.graphs.rules.Spectrum": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "maxRadius": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Maximum absolute adjacency eigenvalue."
-        },
-        "minConnectivity": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Minimum second eigenvalue of the combinatorial Laplacian."
-        },
-        "maxLaplacian": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Maximum combinatorial Laplacian eigenvalue."
-        }
-      },
-      "description": "Bound the spectrum of the simple undirected projection of a graph relation."
-    },
-    "polyad_types.graphs.rules.StructuralRule": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "scope": {
-          "enum": [
-            "Boundary",
-            "Subtree"
-          ],
-          "description": "Whether selected rules propagate to descendant boundaries."
-        },
-        "enforcement": {
-          "enum": [
-            "Namespace",
-            "Referenced"
-          ],
-          "description": "Mandatory namespace policy or explicitly selected rule."
-        },
-        "relation": {
-          "enum": [
-            "admission",
-            "connections"
-          ],
-          "description": "Directed edge relation used for local measurements."
-        },
-        "limits": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "integer"
-          },
-          "description": "Inclusive upper bounds on named combinatorial measurements."
-        },
-        "shapes": {
-          "type": "array",
-          "items": {
-            "enum": [
-              "acyclic",
-              "connected",
-              "tree",
-              "planar"
-            ]
-          },
-          "description": "Required graph properties."
-        },
-        "spectrum": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/polyad_types.graphs.rules.Spectrum"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Optional undirected spectral constraints, limited to 256 vertices."
-        },
-        "network": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/polyad_types.networking.access.NetworkAccess"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Mandatory or referenced traffic restrictions inherited by graph descendants."
-        },
-        "cheeger": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/polyad_types.graphs.rules.Cheeger"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Optional edge-expansion bounds proven exactly or by a conservative interval."
-        },
-        "cheegerComputation": {
-          "$ref": "#/$defs/polyad_types.graphs.rules.CheegerComputation",
-          "description": "Cut priorities and per-calculation budgets within operator ceilings."
-        }
-      },
-      "description": "Apply reusable mathematical constraints to each graph boundary and its subtree."
     },
     "polyad_types.graphs.topology.Connection": {
       "type": "object",
@@ -3242,12 +3242,12 @@
           ],
           "description": "Scheduling constraints inherited by descendant execution."
         },
-        "rules": {
+        "policies": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Additional structural rules inherited by nested boundaries."
+          "description": "Additional structural policies inherited by nested boundaries."
         },
         "capacity": {
           "anyOf": [
@@ -3410,7 +3410,7 @@
           "description": "Maximum successful changes in a rolling hour."
         },
         "cheegerComputation": {
-          "$ref": "#/$defs/polyad_types.graphs.rules.CheegerComputation",
+          "$ref": "#/$defs/polyad_types.graphs.policies.CheegerComputation",
           "description": "Search priorities and budgets shared by current and candidate layouts."
         },
         "maxWeightStep": {
@@ -3456,7 +3456,7 @@
           "description": "Named application signal used for thresholds; omitted uses offered work per second."
         }
       },
-      "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+      "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
       "required": [
         "unit",
         "tiers"
@@ -3472,7 +3472,7 @@
           "description": "Inclusive threshold in the selected demand signal's unit; defaults to offered work per second."
         },
         "cheeger": {
-          "$ref": "#/$defs/polyad_types.graphs.rules.Cheeger",
+          "$ref": "#/$defs/polyad_types.graphs.policies.Cheeger",
           "x-kubernetes-validations": [
             {
               "rule": "(has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum != null)",
@@ -3483,7 +3483,7 @@
               "message": "Cheeger minimum must not exceed maximum."
             }
           ],
-          "description": "Target range on the connections relation; never overrides GraphRules."
+          "description": "Target range on the connections relation; never overrides GraphPolicies."
         },
         "trafficWeights": {
           "type": "array",
@@ -3570,12 +3570,12 @@
           ],
           "description": "Scheduling constraints inherited by descendant execution."
         },
-        "rules": {
+        "policies": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Additional structural rules inherited by nested boundaries."
+          "description": "Additional structural policies inherited by nested boundaries."
         },
         "capacity": {
           "anyOf": [
@@ -6575,7 +6575,7 @@
         "kind"
       ]
     },
-    "polyad_types.resources.polyad.GraphRule": {
+    "polyad_types.resources.polyad.GraphPolicy": {
       "type": "object",
       "additionalProperties": true,
       "properties": {
@@ -6613,7 +6613,7 @@
           "const": "polyad.astrivant.com/v1alpha1"
         },
         "kind": {
-          "const": "GraphRule"
+          "const": "GraphPolicy"
         }
       },
       "description": "An engineer-managed structural graph policy.",

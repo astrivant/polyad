@@ -164,7 +164,7 @@ workloads:
             - name: plan
               configMap:
                 name: ${nodes.plan.name}
-graphRules:
+graphPolicies:
   load-envelope:
     spec:
       enforcement: Referenced
@@ -180,8 +180,8 @@ graphs:
   load-study:
     spec:
       mode: persistent
-      rules:
-        - '{{ (index .Values.graphRules "load-envelope").metadata.name }}'
+      policies:
+        - '{{ (index .Values.graphPolicies "load-envelope").metadata.name }}'
       nodes:
         - name: plan
           kind: Resource

@@ -12,7 +12,7 @@
       "load-runner",
       "load-batch"
     ],
-    "graphrule": [
+    "graphpolicy": [
       "load-envelope"
     ],
     "resource": [

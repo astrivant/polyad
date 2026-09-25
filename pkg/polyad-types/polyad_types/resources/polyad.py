@@ -18,7 +18,7 @@ __all__ = (
     "DragonflyPool",
     "Gate",
     "Graph",
-    "GraphRule",
+    "GraphPolicy",
     "OperatorPool",
     "PolyGraph",
     "RemoteScale",
@@ -168,7 +168,7 @@ class Rewrite(SpecResource):
 
 
 @frozen(kw_only=True)
-class GraphRule(SpecResource):
+class GraphPolicy(SpecResource):
     """
     An engineer-managed structural graph policy.
 
@@ -177,9 +177,9 @@ class GraphRule(SpecResource):
     """
 
     resource_type: ClassVar[ResourceType] = ResourceType(
-        "GraphRule",
+        "GraphPolicy",
         f"{GROUP}/{VERSION}",
-        "graphrules",
+        "graphpolicies",
         description="Structural and network policy governing graph admission.",
         definition=True,
     )

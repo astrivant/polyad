@@ -21,7 +21,7 @@ completed throughput falls behind, independently of KEDA/HPA replica scaling.
 For the implementation, start with the
 [central decision pipeline and code map](../development/operator-layout.md#soul-searching-entry-point).
 
-Polyad keeps **hard structural Cheeger bounds** in GraphRules and a separate
+Polyad keeps **hard structural Cheeger bounds** in GraphPolicies and a separate
 **application-driven Cheeger target** in `Graph.spec.throughput` or
 `PolyGraph.spec.throughput`. Configure `mode: Observe` (the default) to report
 recommendations, or `mode: Adapt` to let the operator apply approved connection
@@ -37,15 +37,15 @@ For policies active in both a parent and child, see
 
 | Control | Responsibility | Changes |
 | --- | --- | --- |
-| GraphRule `cheeger.minimum` / `maximum` | Hard limits on permitted topology | Administrator-managed rules |
+| GraphPolicy `cheeger.minimum` / `maximum` | Hard limits on permitted topology | Administrator-managed policies |
 | Throughput policy `tiers[].cheeger` | Empirically calibrated target range for a demand tier | Constrains recommended or applied connection and traffic changes |
 | KEDA / HPA | Workload or ReplicaGroup capacity | Replica counts through the selected scaling target |
 | Optional Istio percentage routing | Divide incoming work among approved downstream targets | Bounded percentages from demand tiers or per-replica throughput/headroom |
 | Throughput tier `capacity` | Prepare known upcoming workload stages | Approved forecast depth and Pod budget within fixed ceilings |
 
-The topology controller never changes replica counts or rewrites GraphRules.
+The topology controller never changes replica counts or rewrites GraphPolicies.
 An adaptation must satisfy **both** its application target and every applicable
-hard rule. For example, a static range `[0.5, 1.5]` and an application target
+hard policy. For example, a static range `[0.5, 1.5]` and an application target
 `[1, 2]` permit an adapted layout only within `[1, 1.5]`. Disjoint ranges produce
 `NoAllowedLayout`; the operator does not relax policy to meet demand.
 
@@ -57,7 +57,7 @@ Keep adaptation slower than workload autoscaling and allow measurements to settl
 after a change. KEDA generally supplies metrics to its managed HPA; do not attach
 a competing HPA to the same target. For graph-enforced scaling, target a
 [ReplicaGroup](replication.md#connect-keda), which refreshes applicable
-GraphRules before changing execution. Directly scaling a generated native
+GraphPolicies before changing execution. Directly scaling a generated native
 Deployment or StatefulSet bypasses that admission path.
 
 ```mermaid
@@ -67,12 +67,12 @@ flowchart TB
     targets["Separate Cheeger target<br/>Calibrated demand tiers"]
     layouts["Approved connection layouts"]
     traffic["Bounded traffic splits<br/>Tiers or measured Headroom"]
-    rules["Hard GraphRules<br/>Fresh family checks and revision fence"]
+    policies["Hard GraphPolicies<br/>Fresh family checks and revision fence"]
     topology["Graph or PolyGraph<br/>Connections or Istio percentages updated"]
     autoscale["KEDA and its HPA<br/>ReplicaGroup capacity request"]
-    replicas["ReplicaGroup controller<br/>Fresh GraphRules before execution"]
-    application --> feedback --> targets --> layouts --> rules --> topology
-    feedback --> traffic --> rules
+    replicas["ReplicaGroup controller<br/>Fresh GraphPolicies before execution"]
+    application --> feedback --> targets --> layouts --> policies --> topology
+    feedback --> traffic --> policies
     targets --> traffic
     application -. "Capacity metrics" .-> autoscale --> replicas
     topology --> application
@@ -116,7 +116,7 @@ in the same namespace.
 
 ```yaml
 apiVersion: polyad.astrivant.com/v1alpha1
-kind: GraphRule
+kind: GraphPolicy
 metadata:
   name: pipeline-envelope
 spec:
@@ -131,7 +131,7 @@ metadata:
   name: pipeline
 spec:
   mode: persistent
-  rules: [pipeline-envelope]
+  policies: [pipeline-envelope]
   nodes:
     - {name: a, kind: Daemon, ref: a}
     - {name: b, kind: Daemon, ref: b}
@@ -201,7 +201,7 @@ a route starting at 60/40 can move automatically through **70/30 → 80/20**.
 action. Each step requires fresh qualifying reports: at least three samples over
 60 seconds, a 300-second cooldown between successful changes, and room within the
 shared budget of two changes per rolling hour. The proposed state must satisfy
-the tier's Cheeger target, live GraphRules and destination weight limits.
+the tier's Cheeger target, live GraphPolicies and destination weight limits.
 
 With the default `trigger: Shortfall`, offered demand must reach the tier's
 threshold (100 records per second here) and completed work must remain below 90%
@@ -297,7 +297,7 @@ show forecast depth and budget. `CapacityUnavailable` blocks changes when the
 operator has disabled preparation or its Pod ceiling is too small.
 
 Before applying a profile change, Polyad refreshes the complete local graph family,
-definitions and GraphRules, then uses a resource-version fence. Concurrent changes
+definitions and GraphPolicies, then uses a resource-version fence. Concurrent changes
 require another pass. Active temporary connections defer application, and expired
 measurements cannot authorize it. `CoolingDown`, `Stabilizing`, `StaleSample`,
 `TemporaryConnectionsActive` and `NoAllowedLayout` explain why a change was withheld.

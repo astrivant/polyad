@@ -7018,8 +7018,8 @@
       "description": "Define a Boolean or delay gate. Instances keep delay observations on their containing graph."
     }
   },
-  "graphRules": {
-    "kind": "GraphRule",
+  "graphPolicies": {
+    "kind": "GraphPolicy",
     "apiVersion": "polyad.astrivant.com/v1alpha1",
     "schema": {
       "type": "object",
@@ -7197,7 +7197,7 @@
                 "Subtree"
               ],
               "default": "Subtree",
-              "description": "Boundary applies locally; Subtree propagates. Namespace rules select every boundary."
+              "description": "Boundary applies locally; Subtree propagates. Namespace policies select every boundary."
             },
             "network": {
               "type": "object",
@@ -7517,7 +7517,7 @@
             },
             "enforcement": {
               "type": "string",
-              "description": "Namespace rules always apply. Referenced rules apply when named by this graph or an ancestor.",
+              "description": "Namespace policies always apply. Referenced policies apply when named by this graph or an ancestor.",
               "enum": [
                 "Namespace",
                 "Referenced"
@@ -7872,7 +7872,7 @@
             },
             "throughput": {
               "type": "object",
-              "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+              "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
               "properties": {
                 "unit": {
                   "type": "string",
@@ -8768,14 +8768,14 @@
                 }
               }
             },
-            "rules": {
+            "policies": {
               "type": "array",
-              "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+              "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
               "maxItems": 32,
               "x-kubernetes-list-type": "set",
               "items": {
                 "type": "string",
-                "description": "GraphRule name.",
+                "description": "GraphPolicy name.",
                 "maxLength": 253,
                 "minLength": 1
               }
@@ -9597,7 +9597,7 @@
             },
             "throughput": {
               "type": "object",
-              "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+              "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
               "properties": {
                 "unit": {
                   "type": "string",
@@ -10493,14 +10493,14 @@
                 }
               }
             },
-            "rules": {
+            "policies": {
               "type": "array",
-              "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+              "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
               "maxItems": 32,
               "x-kubernetes-list-type": "set",
               "items": {
                 "type": "string",
-                "description": "GraphRule name.",
+                "description": "GraphPolicy name.",
                 "maxLength": 253,
                 "minLength": 1
               }
@@ -11222,7 +11222,7 @@
                 }
               ]
             },
-            "rules": {
+            "policies": {
               "type": "array",
               "items": {
                 "type": "string"
@@ -11784,7 +11784,7 @@
                 },
                 "throughput": {
                   "type": "object",
-                  "description": "Observe or adapt topology using empirical throughput targets within hard structural rules.",
+                  "description": "Observe or adapt topology using empirical throughput targets within hard structural policies.",
                   "properties": {
                     "unit": {
                       "type": "string",
@@ -12613,14 +12613,14 @@
                     }
                   }
                 },
-                "rules": {
+                "policies": {
                   "type": "array",
-                  "description": "Additional GraphRule names in this namespace, inherited by descendants. Namespace-wide rules always apply.",
+                  "description": "Additional GraphPolicy names in this namespace, inherited by descendants. Namespace-wide policies always apply.",
                   "maxItems": 32,
                   "x-kubernetes-list-type": "set",
                   "items": {
                     "type": "string",
-                    "description": "GraphRule name.",
+                    "description": "GraphPolicy name.",
                     "maxLength": 253,
                     "minLength": 1
                   }

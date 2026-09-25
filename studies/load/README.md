@@ -51,7 +51,7 @@ flowchart LR
 ```
 
 The Graph's declared connections form a star around the fixture. Its referenced
-GraphRule requires structural Cheeger expansion of at least 0.5 and bounds expanded
+GraphPolicy requires structural Cheeger expansion of at least 0.5 and bounds expanded
 vertices/edges. The batch policy permits two concurrent Jobs and 32 pending pulses.
 The runner policy rejects simultaneous runs. Neither Workload starts on install;
 only the fixture, discovery Service and plan ConfigMap start automatically. Their definitions
@@ -115,7 +115,7 @@ in a Graph-owned ConfigMap, mounted at `/etc/polyad-benchmarks/plan.json`. The
 runner loads it once when starting and saves that exact snapshot with results.
 `replicas.fixture` sets the fixture Deployment's Pod count; `replicas.batch` sets
 the batch Workload's maximum concurrent executions. These do not change operator
-replicas or bypass the GraphRule and activation policies.
+replicas or bypass the GraphPolicy and activation policies.
 
 Update Helm values between experiments. The GKE overlay enables the Reloader
 dependency and `polyadResources.variables.reloadOnPlanChange`. Polyad copies the

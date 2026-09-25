@@ -18,7 +18,7 @@ from polyad.exceptions.coordination import PulseDeferred as PulseDeferred
 from polyad.exceptions.events import CursorExpired as CursorExpired
 from polyad.exceptions.events import TopologyReplaced as TopologyReplaced
 from polyad.exceptions.graph import CheegerIncomplete as CheegerIncomplete
-from polyad.exceptions.policies import RuleViolation as RuleViolation
+from polyad.exceptions.policies import PolicyViolation as PolicyViolation
 from polyad.exceptions.reconciliation import Pending as Pending
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ __all__ = (
     "PreconditionFailed",
     "PulseDeferred",
     "RequestError",
-    "RuleViolation",
+    "PolicyViolation",
     "TopologyReplaced",
     "Unauthorized",
     "Unavailable",

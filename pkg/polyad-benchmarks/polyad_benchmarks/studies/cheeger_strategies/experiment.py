@@ -25,7 +25,7 @@ from polyad.graph.pid import AccuracyTargetPID, certificate_gap
 from polyad.graph.reduction import cached_quotient, clear_reduction_cache, fresh_spectral_reduction
 from polyad_benchmarks.cheeger_reduction import approximate_cut, exact_cut, graph_case
 from polyad_benchmarks.studies.cheeger_strategies.pid import CacheTargetConfig, CacheTargetPID, RefreshConfig, RefreshPID
-from polyad_types.graphs.rules import CheegerComputation, CheegerReduction
+from polyad_types.graphs.policies import CheegerComputation, CheegerReduction
 
 if TYPE_CHECKING:
     from collections.abc import Callable

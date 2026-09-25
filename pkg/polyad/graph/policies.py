@@ -16,11 +16,11 @@ from polyad.graph.cheeger import graph_cheeger as graph_cheeger
 if TYPE_CHECKING:
     from typing import Any
 
-    from polyad_types.graphs.rules import CheegerComputation, StructuralRule
+    from polyad_types.graphs.policies import CheegerComputation, StructuralPolicy
     from polyad_types.graphs.topology import Topology
 
 __all__ = (
-    "evaluate_rule",
+    "evaluate_policy",
     "graph_cheeger",
     "graph_spectrum",
     "relation_graph",
@@ -60,7 +60,7 @@ def graph_spectrum(graph: nx.DiGraph[str]) -> dict[str, Any]:
         dict[str, Any]: Sorted eigenvalues, spectral radius, algebraic connectivity and largest Laplacian eigenvalue.
     """
     if len(graph) > 256:
-        raise ValueError("spectral rules support at most 256 vertices per boundary")
+        raise ValueError("spectral policies support at most 256 vertices per boundary")
     projection: nx.Graph[str] = nx.Graph()
     projection.add_nodes_from(graph)
     projection.add_edges_from(graph.edges)
@@ -81,8 +81,8 @@ def graph_spectrum(graph: nx.DiGraph[str]) -> dict[str, Any]:
     }
 
 
-def evaluate_rule(
-    rule: StructuralRule,
+def evaluate_policy(
+    policy: StructuralPolicy,
     topology: Topology,
     *,
     expanded_nodes: int,
@@ -94,17 +94,17 @@ def evaluate_rule(
     Evaluate inclusive bounds, required shapes and optional spectral constraints.
 
     Args:
-        rule (StructuralRule): Engineer-defined structural policy.
+        policy (StructuralPolicy): Engineer-defined structural policy.
         topology (Topology): Validated boundary being considered for admission.
         expanded_nodes (int): Node occurrences across this boundary and all referenced subgraph instances.
         nesting_depth (int): Maximum boundary nesting, counting this boundary as one.
-        cheeger_limits (CheegerComputation | None): Operator ceilings for every selected rule calculation.
-        cache_scope (str): Stable graph boundary and rule identity for independent adaptive histories.
+        cheeger_limits (CheegerComputation | None): Operator ceilings for every selected policy calculation.
+        cache_scope (str): Stable graph boundary and policy identity for independent adaptive histories.
 
     Returns:
         dict[str, Any]: Measurements, violations and the policy verdict.
     """
-    graph = relation_graph(topology, rule.relation)
+    graph = relation_graph(topology, policy.relation)
     simple = nx.Graph(graph)
     simple.remove_edges_from(nx.selfloop_edges(simple))
     condensed = nx.condensation(graph)
@@ -122,16 +122,16 @@ def evaluate_rule(
         "expandedNodes": expanded_nodes,
         "nestingDepth": nesting_depth,
     }
-    violations = [f"{key}={measured[key]} exceeds {limit}" for key, limit in rule.limits.items() if measured[key] > limit]
+    violations = [f"{key}={measured[key]} exceeds {limit}" for key, limit in policy.limits.items() if measured[key] > limit]
     computation = None
-    if rule.cheeger is not None:
+    if policy.cheeger is not None:
         try:
             result = compute_cheeger(
                 graph,
-                rule.cheegerComputation,
+                policy.cheegerComputation,
                 limits=cheeger_limits,
-                minimum=rule.cheeger.minimum,
-                maximum=rule.cheeger.maximum,
+                minimum=policy.cheeger.minimum,
+                maximum=policy.cheeger.maximum,
                 cache_scope=cache_scope,
             )
             computation = result.report()
@@ -141,15 +141,15 @@ def evaluate_rule(
                 assert result.upperBound is not None
                 actual = result.upperBound
                 measured["cheeger"] = actual
-                for threshold, lower in ((rule.cheeger.minimum, True), (rule.cheeger.maximum, False)):
+                for threshold, lower in ((policy.cheeger.minimum, True), (policy.cheeger.maximum, False)):
                     if threshold is not None:
                         tolerance = 1e-9 * max(1.0, abs(actual), abs(threshold))
                         if (actual + tolerance < threshold) if lower else (actual - tolerance > threshold):
                             violations.append(f"cheeger={actual:.12g} violates {'minimum' if lower else 'maximum'} {threshold}")
             elif result.reason == "MinimumViolated":
-                violations.append(f"cheeger<={result.upperBound} violates minimum {rule.cheeger.minimum}; witnessed cut {result.cut}")
+                violations.append(f"cheeger<={result.upperBound} violates minimum {policy.cheeger.minimum}; witnessed cut {result.cut}")
             elif result.reason == "MaximumViolated":
-                violations.append(f"cheeger>={result.lowerBound} violates maximum {rule.cheeger.maximum}; spectral certificate")
+                violations.append(f"cheeger>={result.lowerBound} violates maximum {policy.cheeger.maximum}; spectral certificate")
             elif result.reason == "BoundsSatisfied":
                 pass
             else:
@@ -161,15 +161,15 @@ def evaluate_rule(
         "connected": bool(simple) and nx.is_connected(simple),
         "tree": bool(simple) and nx.is_tree(simple),
     }
-    if "planar" in rule.shapes:
+    if "planar" in policy.shapes:
         shapes["planar"] = nx.check_planarity(simple)[0]
-    violations.extend(f"required shape: {shape}" for shape in rule.shapes if not shapes[shape])
-    spectrum = graph_spectrum(graph) if rule.spectrum is not None else None
-    if rule.spectrum is not None and spectrum is not None:
+    violations.extend(f"required shape: {shape}" for shape in policy.shapes if not shapes[shape])
+    spectrum = graph_spectrum(graph) if policy.spectrum is not None else None
+    if policy.spectrum is not None and spectrum is not None:
         for key, threshold, lower in (
-            ("radius", rule.spectrum.maxRadius, False),
-            ("connectivity", rule.spectrum.minConnectivity, True),
-            ("largestLaplacian", rule.spectrum.maxLaplacian, False),
+            ("radius", policy.spectrum.maxRadius, False),
+            ("connectivity", policy.spectrum.minConnectivity, True),
+            ("largestLaplacian", policy.spectrum.maxLaplacian, False),
         ):
             if threshold is not None:
                 actual = spectrum[key]
@@ -178,15 +178,15 @@ def evaluate_rule(
                     violations.append(f"{key}={actual:.12g} violates {'minimum' if lower else 'maximum'} {threshold}")
     return {
         "allowed": not violations,
-        "relation": rule.relation,
+        "relation": policy.relation,
         "measurements": measured,
         "parameters": {
-            "limits": rule.limits,
-            "cheeger": asdict(rule.cheeger) if rule.cheeger is not None else None,
-            "spectrum": asdict(rule.spectrum) if rule.spectrum is not None else None,
-            "scope": rule.scope,
-            "enforcement": rule.enforcement,
-            "shapes": rule.shapes,
+            "limits": policy.limits,
+            "cheeger": asdict(policy.cheeger) if policy.cheeger is not None else None,
+            "spectrum": asdict(policy.spectrum) if policy.spectrum is not None else None,
+            "scope": policy.scope,
+            "enforcement": policy.enforcement,
+            "shapes": policy.shapes,
         },
         "shapes": shapes,
         "spectrum": spectrum,

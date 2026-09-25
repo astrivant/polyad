@@ -60,7 +60,7 @@ file to opt into database storage after installing CloudNativePG.
 
 For release `polyad`, Helm declares `Graph/polyad-control-plane`, three reusable
 ReplicaGroups (`polyad-gateway`, `polyad-executor`, `polyad-telemetry`), their
-Daemon definitions and `GraphRule/polyad-control-plane`.
+Daemon definitions and `GraphPolicy/polyad-control-plane`.
 Without root mode, the component Graph runs on its own and the Helm bootstrap
 reconciles it from outside the Graph.
 
@@ -95,7 +95,7 @@ flowchart TB
         remote["Remote operator group Graphs"]
         group <-->|"root coordination and observations"| remote
     end
-    rule["GraphRule<br/>connected, Cheeger ≥ 1<br/>expandedNodes ≤ 27"] -. checks .-> plane
+    rule["GraphPolicy<br/>connected, Cheeger ≥ 1<br/>expandedNodes ≤ 27"] -. checks .-> plane
     keda -->|"read global demand"| telemetry
     keda -->|"request group counts"| bootstrap
 ```
@@ -137,7 +137,7 @@ retains Helm ownership.
 ## Scaling and structural bounds
 
 The component graph's simple undirected projection is a three-vertex chain with
-Cheeger constant 1. Its referenced GraphRule uses `scope: Boundary`,
+Cheeger constant 1. Its referenced GraphPolicy uses `scope: Boundary`,
 `relation: connections`, a connected-shape requirement and a configurable
 `architecture.cheegerMinimum` (default 1). Optional `architecture.cheegerMaximum`
 defaults to `null` (unbounded); set it to `1` to permit the chain but reject a
@@ -146,7 +146,7 @@ fully connected triangle, whose expansion is `2`. See the
 and [practical tuning guide](../graphs/cheeger-tuning.md). `architecture.expandedNodes` bounds
 the three group vertices plus their Daemon copies. The default 27 permits all
 three groups to reach eight copies; smaller budgets can block a scaling request.
-Namespace GraphRules also remain applicable.
+Namespace GraphPolicies also remain applicable.
 
 Copies within each group use the existing Independent default. The parent
 Cheeger bound applies to the three stages, while group min/max replica limits
@@ -204,7 +204,7 @@ their root Graph contains bootstrap and the enabled local service observations.
 The HA chart requires at least two bootstrap replicas. Deleting or
 suspending the managed Graph stops its components; bootstrap survives and can
 reconcile a restored Graph. It does not override intentional deletion or invalid
-GraphRules. Root-managed remote OperatorPools always run the executor role and
+GraphPolicies. Root-managed remote OperatorPools always run the executor role and
 report to the same root services. The root planner heartbeat still fences their
 mutations during loss of root contact. See [the root architecture](root-control-plane.md).
 
