@@ -4,28 +4,31 @@ Validate install notes against enabled routes without contacting a cluster.
 
 from __future__ import annotations
 
-import json
 import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.helm import render_with_notes
 
 CHART = Path(__file__).resolve().parents[2] / "charts/polyad"
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="requires Helm and chart dependencies")
 
 
-def notes(*settings):
+@pytest.fixture
+def notes(tmp_path):
     """
-    Exercise Helm's install notes rendering with an explicitly client-only dry run.
+    Render chart notes without requiring a cluster or credentials on a clean runner.
     """
-    command = ["helm", "install", "example", str(CHART), "--namespace", "apps", "--dry-run=client", "--hide-secret", "--output", "json"]
-    for setting in settings:
-        command.extend(["--set", setting])
-    return json.loads(subprocess.check_output(command, text=True))["info"]["notes"]
+
+    def render(*settings):
+        options = [argument for setting in settings for argument in ("--set", setting)]
+        return render_with_notes(CHART, tmp_path, *options)[0]
+
+    return render
 
 
-def test_default_notes_do_not_advertise_disabled_apis():
+def test_default_notes_do_not_advertise_disabled_apis(notes):
     """
     A default install has health access but no public routes or API Services.
     """
@@ -38,7 +41,7 @@ def test_default_notes_do_not_advertise_disabled_apis():
     assert "/v1/" not in text and "/openapi.json" not in text
 
 
-def test_internal_notes_include_enabled_services_without_credentials():
+def test_internal_notes_include_enabled_services_without_credentials(notes):
     """
     Show namespaced URLs and local access commands while keeping tokens out of notes.
     """
@@ -64,7 +67,7 @@ def test_internal_notes_include_enabled_services_without_credentials():
 
 
 @pytest.mark.parametrize("tls", [False, True])
-def test_created_gateway_notes_match_listener_scheme(tls):
+def test_created_gateway_notes_match_listener_scheme(tls, notes):
     """
     List every configured host using the chart-created listener's actual protocol.
     """
@@ -85,7 +88,7 @@ def test_created_gateway_notes_match_listener_scheme(tls):
     assert "/v1/events" not in public and "/metrics" not in public
 
 
-def test_gateway_without_hostname_uses_address_placeholder():
+def test_gateway_without_hostname_uses_address_placeholder(notes):
     """
     Do not invent a hostname before an ingress controller assigns its address.
     """
@@ -99,7 +102,7 @@ def test_gateway_without_hostname_uses_address_placeholder():
     assert "get gateway.gateway.networking.k8s.io example-polyad-api" in public
 
 
-def test_existing_gateway_notes_do_not_guess_listener_protocol():
+def test_existing_gateway_notes_do_not_guess_listener_protocol(notes):
     """
     Direct users to the correct namespace and listener on their existing Gateway.
     """
@@ -118,7 +121,7 @@ def test_existing_gateway_notes_do_not_guess_listener_protocol():
 
 
 @pytest.mark.parametrize("composition", [False, True])
-def test_istio_notes_include_events_and_their_rewritten_schema(composition):
+def test_istio_notes_include_events_and_their_rewritten_schema(composition, notes):
     """
     Match public event schema rewriting and avoid advertising metrics through ingress.
     """

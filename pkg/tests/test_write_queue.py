@@ -265,7 +265,11 @@ def test_repeated_cancellation_does_not_abandon_inflight_scale():
                 await second
             assert error.value.conflict_reason == "queued_write_revision_changed"
             assert state["spec"]["replicas"] == 4
-            assert [call.args[1] for call in api.client.call_api.call_args_list] == ["PATCH", "GET"]
+
+            # The background validator can read before the PATCH finishes, then
+            # reread after invalidation. Only the first mutation may dispatch.
+            methods = [call.args[1] for call in api.client.call_api.call_args_list]
+            assert methods[0] == "PATCH" and set(methods[1:]) == {"GET"}
             assert api.writes.snapshot()["total"] == 0
         finally:
             release.set()

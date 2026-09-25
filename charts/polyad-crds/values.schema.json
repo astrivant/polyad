@@ -534,16 +534,6 @@
               "anyOf": [
                 {
                   "type": "object",
-                  "x-kubernetes-validations": [
-                    {
-                      "rule": "!has(self.controller) || self.controller != 'StatefulSet' || has(self.statefulSet)",
-                      "message": "controller StatefulSet requires statefulSet options and serviceName."
-                    },
-                    {
-                      "rule": "!has(self.statefulSet) || (has(self.controller) && self.controller == 'StatefulSet')",
-                      "message": "statefulSet options require controller StatefulSet."
-                    }
-                  ],
                   "properties": {
                     "serviceLevel": {
                       "anyOf": [
@@ -556,7 +546,7 @@
                                 {
                                   "type": "array",
                                   "maxItems": 64,
-                                  "uniqueItems": true,
+                                  "x-kubernetes-list-type": "set",
                                   "items": {
                                     "anyOf": [
                                       {
@@ -570,7 +560,8 @@
                                       }
                                     ]
                                   },
-                                  "description": "Capabilities that must remain available for the service to avoid Unavailable status."
+                                  "description": "Capabilities that must remain available for the service to avoid Unavailable status.",
+                                  "uniqueItems": true
                                 },
                                 {
                                   "type": "string",
@@ -2099,6 +2090,20 @@
                   },
                   "required": [
                     "template"
+                  ],
+                  "x-kubernetes-validations": [
+                    {
+                      "rule": "!has(self.controller) || self.controller != 'DaemonSet' || ((!has(self.replicas) || self.replicas == 1) && !has(self.statefulSet) && !has(self.activation))",
+                      "message": "DaemonSet uses node eligibility; replicas must be one and statefulSet and activation are unsupported."
+                    },
+                    {
+                      "rule": "!has(self.controller) || self.controller != 'StatefulSet' || has(self.statefulSet)",
+                      "message": "controller StatefulSet requires statefulSet options and serviceName."
+                    },
+                    {
+                      "rule": "!has(self.statefulSet) || (has(self.controller) && self.controller == 'StatefulSet')",
+                      "message": "statefulSet options require controller StatefulSet."
+                    }
                   ],
                   "description": "Desired configuration for this Daemon resource. Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers must provide startup, readiness and liveness probes. Daemons become ready and stop explicitly; they do not complete.",
                   "additionalProperties": false
@@ -19545,6 +19550,7 @@
                                         },
                                         "minItems": 1,
                                         "maxItems": 4096,
+                                        "x-kubernetes-list-type": "set",
                                         "uniqueItems": true
                                       },
                                       {
@@ -20921,7 +20927,8 @@
                               }
                             ],
                             "description": "Required graph shape."
-                          }
+                          },
+                          "uniqueItems": true
                         },
                         {
                           "type": "string",
@@ -21696,11 +21703,11 @@
                                                 },
                                                 "x-kubernetes-validations": [
                                                   {
-                                                    "rule": "(has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum != null)",
+                                                    "rule": "has(self.minimum) || has(self.maximum)",
                                                     "message": "A throughput tier requires at least one Cheeger bound."
                                                   },
                                                   {
-                                                    "rule": "!has(self.minimum) || self.minimum == null || !has(self.maximum) || self.maximum == null || self.minimum <= self.maximum",
+                                                    "rule": "!has(self.minimum) || !has(self.maximum) || self.minimum <= self.maximum",
                                                     "message": "Cheeger minimum must not exceed maximum."
                                                   }
                                                 ],
@@ -22311,6 +22318,7 @@
                                                 },
                                                 "minItems": 1,
                                                 "maxItems": 4096,
+                                                "x-kubernetes-list-type": "set",
                                                 "uniqueItems": true
                                               },
                                               {
@@ -23969,7 +23977,8 @@
                               }
                             ],
                             "description": "GraphPolicy name."
-                          }
+                          },
+                          "uniqueItems": true
                         },
                         {
                           "type": "string",
@@ -26045,11 +26054,11 @@
                                                 },
                                                 "x-kubernetes-validations": [
                                                   {
-                                                    "rule": "(has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum != null)",
+                                                    "rule": "has(self.minimum) || has(self.maximum)",
                                                     "message": "A throughput tier requires at least one Cheeger bound."
                                                   },
                                                   {
-                                                    "rule": "!has(self.minimum) || self.minimum == null || !has(self.maximum) || self.maximum == null || self.minimum <= self.maximum",
+                                                    "rule": "!has(self.minimum) || !has(self.maximum) || self.minimum <= self.maximum",
                                                     "message": "Cheeger minimum must not exceed maximum."
                                                   }
                                                 ],
@@ -26660,6 +26669,7 @@
                                                 },
                                                 "minItems": 1,
                                                 "maxItems": 4096,
+                                                "x-kubernetes-list-type": "set",
                                                 "uniqueItems": true
                                               },
                                               {
@@ -28318,7 +28328,8 @@
                               }
                             ],
                             "description": "GraphPolicy name."
-                          }
+                          },
+                          "uniqueItems": true
                         },
                         {
                           "type": "string",
@@ -31577,11 +31588,11 @@
                                                         },
                                                         "x-kubernetes-validations": [
                                                           {
-                                                            "rule": "(has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum != null)",
+                                                            "rule": "has(self.minimum) || has(self.maximum)",
                                                             "message": "A throughput tier requires at least one Cheeger bound."
                                                           },
                                                           {
-                                                            "rule": "!has(self.minimum) || self.minimum == null || !has(self.maximum) || self.maximum == null || self.minimum <= self.maximum",
+                                                            "rule": "!has(self.minimum) || !has(self.maximum) || self.minimum <= self.maximum",
                                                             "message": "Cheeger minimum must not exceed maximum."
                                                           }
                                                         ],
@@ -32192,6 +32203,7 @@
                                                         },
                                                         "minItems": 1,
                                                         "maxItems": 4096,
+                                                        "x-kubernetes-list-type": "set",
                                                         "uniqueItems": true
                                                       },
                                                       {
@@ -33684,7 +33696,8 @@
                                       }
                                     ],
                                     "description": "GraphPolicy name."
-                                  }
+                                  },
+                                  "uniqueItems": true
                                 },
                                 {
                                   "type": "string",

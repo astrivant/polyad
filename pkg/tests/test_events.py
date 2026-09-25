@@ -198,15 +198,26 @@ def test_live_event_server_streams_and_stops_cleanly(monkeypatch):
     """
     import urllib.request
 
+    from kubernetes.client import Configuration
+
     from polyad.api.http.server import APIServer
     from polyad.operator.adapters.kubernetes import API
 
     monkeypatch.setenv("POLYAD_CACHE_URL", os.environ["POLYAD_TEST_DRAGONFLY_URL"])
 
+    # This legacy namespace-token fixture explicitly permits cluster discovery;
+    # the default GraphTree policy requires a named key with a fenced home graph.
+    monkeypatch.setenv("POLYAD_SERVICE_ACCESS", json.dumps({"discovery": "Cluster"}))
+
     async def run():
         namespace = f"server-{uuid4()}"
         store = EventStore(os.environ["POLYAD_TEST_DRAGONFLY_URL"], namespace, visible=lambda obj: public_observation(FakeAPI(), obj))
-        server = APIServer(API())
+
+        # This integration test exercises Redis and HTTP, not Kubernetes. Never
+        # inherit developer credentials or require a kubeconfig on a clean runner.
+        api = API(configuration=Configuration(host="http://127.0.0.1:1"))
+        monkeypatch.setattr(api.client, "call_api", lambda *args, **kwargs: pytest.fail("unexpected Kubernetes request"))
+        server = APIServer(api)
         server.events(store, namespace, "subscriber", connections=1)
         server.start(host="127.0.0.1", ports={"events": 0})
         try:
@@ -229,7 +240,11 @@ def test_live_event_server_streams_and_stops_cleanly(monkeypatch):
                 raise AssertionError("no event received")
 
             result = await asyncio.to_thread(receive)
-            assert '"name": "sample"' in result
+            assert "event: graph\n" in result
+
+            # SSE data is JSON; compact serialization must not change this assertion.
+            observation = json.loads(next(line[5:] for line in result.splitlines() if line.startswith("data:")))
+            assert observation["name"] == "sample"
 
             def neighbors():
                 req = urllib.request.Request(

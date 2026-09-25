@@ -21,6 +21,7 @@ from polyad_benchmarks import fixture, plan, refresh, runner
 from polyad_benchmarks.config import RunConfig
 from polyad_benchmarks.identity import new_run_id, plan_hash
 from polyad_sdk.exceptions.api import APIError
+from tests.helm import render_with_notes
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -430,30 +431,22 @@ def test_composition_submissions_generate_distinct_keys_with_retry_support():
         assert node["spec"]["template"]["spec"]["containers"][0]["args"][-1] == document["requestId"]
 
 
-def test_notes_report_the_resolved_projected_plan_and_actual_submission_model():
+def test_notes_report_the_resolved_projected_plan_and_actual_submission_model(tmp_path):
     """
     Client-only Helm output describes overrides and monitoring without claiming it launched work.
     """
-    output = subprocess.check_output(
-        [
-            "helm",
-            "install",
-            "notes",
-            str(ROOT / "charts/polyad-benchmarks"),
-            "--namespace",
-            "study",
-            "--dry-run=client",
-            "-f",
-            str(ROOT / "charts/polyad-benchmarks/values-burst.yaml"),
-            "--set",
-            "polyadResources.variables.run.max_requests=17",
-            "--set",
-            "polyadResources.variables.replicas.fixture=3",
-        ],
-        text=True,
+    notes, documents = render_with_notes(
+        ROOT / "charts/polyad-benchmarks",
+        tmp_path,
+        "-f",
+        str(ROOT / "charts/polyad-benchmarks/values-burst.yaml"),
+        "--set",
+        "polyadResources.variables.run.max_requests=17",
+        "--set",
+        "polyadResources.variables.replicas.fixture=3",
+        release="notes",
+        namespace="study",
     )
-    notes = output.split("NOTES:\n", 1)[1]
-    documents = list(yaml.safe_load_all(output.split("MANIFEST:\n", 1)[1].split("NOTES:\n", 1)[0]))
     projected = next(obj for obj in documents if obj and obj["kind"] == "Resource" and obj["metadata"]["name"] == "load-plan")
     configured = json.loads(projected["spec"]["manifest"]["data"]["plan.json"])
     assert configured["run"]["max_requests"] == 17 and configured["replicas"]["fixture"] == 3

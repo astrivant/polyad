@@ -1,0 +1,2 @@
+# CI's generated validator schemas are not needed to render or install the chart.
+schemas/

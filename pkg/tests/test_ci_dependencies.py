@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import shlex
 import subprocess
+import tarfile
 import tomllib
 from pathlib import Path
 
@@ -120,6 +121,38 @@ def test_plot_tests_have_operator_dependencies_and_child_process_import_paths():
         commands = [step.get("run", "") for step in config["steps"]]
         assert any("poetry sync --all-extras" in command or "poetry install --all-extras" in command for command in commands)
         assert not any("poetry --project pkg/polyad-benchmarks run python -m pytest" in command for command in commands)
+
+
+def test_mermaid_dependencies_are_installed_for_every_python_version():
+    """
+    An npm download cache or a matrix-specific pre-commit run cannot supply node_modules.
+    """
+    workflow = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["python"]["steps"]
+    install = next(index for index, step in enumerate(steps) if "npm ci --prefix scripts/validation/mermaid" in step.get("run", ""))
+    test = next(index for index, step in enumerate(steps) if "npm test --prefix scripts/validation/mermaid" in step.get("run", ""))
+    assert install < test
+    assert "if" not in steps[install]
+    assert "--ignore-scripts" in steps[install]["run"]
+
+
+@pytest.mark.parametrize("chart", ["polyad", "polyad-crds", "polyad-benchmarks"])
+def test_chart_packages_keep_runtime_inputs_but_omit_duplicate_validator_schemas(chart, tmp_path):
+    """
+    Exclude source-tree CI copies from Helm's size-limited release without stripping customer references.
+    """
+    source = ROOT / "charts" / chart
+    subprocess.run(["helm", "package", str(source), "--destination", str(tmp_path)], check=True, capture_output=True, text=True)
+    with tarfile.open(next(tmp_path.glob("*.tgz"))) as archive:
+        members = set(archive.getnames())
+    assert f"{chart}/values.schema.json" in members
+    assert not any(name.startswith(f"{chart}/schemas/") for name in members)
+
+    # Files consumed by templates and documented values overlays stay distributable.
+    for pattern in ("files/**/*", "plans/*", "references/*", "values-*.reference.yaml", "crds/*.yaml"):
+        for path in source.glob(pattern):
+            if path.is_file():
+                assert f"{chart}/{path.relative_to(source)}" in members, path
 
 
 def test_development_image_copies_local_dependencies_before_installation():

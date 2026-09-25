@@ -113,6 +113,8 @@ jobs:
           node-version: ${{ steps.tools.outputs.nodejs }}
           cache: npm
           cache-dependency-path: scripts/validation/mermaid/package-lock.json
+      - name: Install Mermaid test dependencies
+        run: npm ci --prefix scripts/validation/mermaid --ignore-scripts --no-audit --no-fund
       - run: pip install "poetry==${{ steps.tools.outputs.poetry }}"
       - name: Validate distribution version
         id: version
@@ -132,7 +134,7 @@ jobs:
         run: bash scripts/tooling/build-chart-dependencies.sh
       - run: poetry run pre-commit run --all-files
         if: matrix.python == '3.13'
-      - name: Validate Flux health expressions
+      - name: Validate CRD admission and Flux health expressions
         env:
           POLYAD_FLUX_CHECKS: ${{ runner.temp }}/polyad-flux-checks.json
         run: |

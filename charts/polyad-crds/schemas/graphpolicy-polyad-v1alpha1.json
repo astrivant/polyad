@@ -76,6 +76,7 @@
                 },
                 "minItems": 1,
                 "maxItems": 4096,
+                "x-kubernetes-list-type": "set",
                 "uniqueItems": true
               },
               "description": "Ordered vertex subsets to examine before exhaustive search; complements are equivalent.",
@@ -578,7 +579,8 @@
               "tree",
               "planar"
             ]
-          }
+          },
+          "uniqueItems": true
         },
         "cheeger": {
           "type": "object",

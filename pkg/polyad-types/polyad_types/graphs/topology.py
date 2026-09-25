@@ -112,14 +112,12 @@ class ThroughputTier:
             "schema": {
                 "x-kubernetes-validations": [
                     {
-                        "rule": "(has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum != null)",
+                        # CEL treats nullable CRD fields as absent, not a typed null value.
+                        "rule": "has(self.minimum) || has(self.maximum)",
                         "message": "A throughput tier requires at least one Cheeger bound.",
                     },
                     {
-                        "rule": (
-                            "!has(self.minimum) || self.minimum == null || !has(self.maximum) || "
-                            "self.maximum == null || self.minimum <= self.maximum"
-                        ),
+                        "rule": "!has(self.minimum) || !has(self.maximum) || self.minimum <= self.maximum",
                         "message": "Cheeger minimum must not exceed maximum.",
                     },
                 ]

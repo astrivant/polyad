@@ -30,9 +30,6 @@ spec:
             properties: {}
           spec:
             type: object
-            x-kubernetes-validations:
-              - rule: "!has(self.controller) || self.controller != 'DaemonSet' || ((!has(self.replicas) || self.replicas == 1) && !has(self.statefulSet) && !has(self.activation))"
-                message: DaemonSet uses node eligibility; replicas must be one and statefulSet and activation are unsupported.
             properties:
               serviceLevel:
                 type: object
@@ -41,7 +38,7 @@ spec:
                   requiredCapabilities:
                     type: array
                     maxItems: 64
-                    uniqueItems: true
+                    x-kubernetes-list-type: set
                     items:
                       type: string
                       minLength: 1
@@ -505,6 +502,8 @@ spec:
             required:
             - template
             x-kubernetes-validations:
+            - rule: "!has(self.controller) || self.controller != 'DaemonSet' || ((!has(self.replicas) || self.replicas == 1) && !has(self.statefulSet) && !has(self.activation))"
+              message: DaemonSet uses node eligibility; replicas must be one and statefulSet and activation are unsupported.
             - rule: "!has(self.controller) || self.controller != 'StatefulSet' || has(self.statefulSet)"
               message: controller StatefulSet requires statefulSet options and serviceName.
             - rule: "!has(self.statefulSet) || (has(self.controller) && self.controller == 'StatefulSet')"

@@ -1,0 +1,3 @@
+# Source-tree kubeconform copies duplicate the CRDs and can overflow Helm's 1 MiB release Secret.
+# Keep values.schema.json, runtime files, CRDs and customer reference values in the chart.
+schemas/

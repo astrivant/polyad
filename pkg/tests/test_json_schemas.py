@@ -31,6 +31,7 @@ from polyad_types import (
     to_document,
 )
 from polyad_types.api.discovery import ServiceAccess
+from polyad_types.api.service_level import ServiceLevelPolicy, ServiceLevelReport
 from polyad_types.events.codec import decode_event
 from polyad_types.graphs.topology import GraphNode, PolyGraph
 from polyad_types.resources import ConfigMap
@@ -221,7 +222,9 @@ def test_model_schemas_accept_serialized_shapes_and_preserved_extensions(model):
         (NetworkPort, {"port": True}),
         (NetworkPort, {"port": 80, "unexpected": "field"}),
         (CheegerComputation, {"priorityCuts": [[123]]}),
+        (CheegerComputation, {"priorityCuts": [["worker", "worker"]]}),
         (CheegerComputation, {"timeoutSeconds": 301}),
+        (ServiceLevelPolicy, {"requiredCapabilities": ["batch", "batch"]}),
         (ServiceAccess, {"discovery": "Everything"}),
         (PolyGraph, {"nodes": [{"name": "worker", "kind": "Daemon", "ref": "worker"}]}),
         (Graph, {"apiVersion": "polyad.astrivant.com/v1alpha1", "kind": "Graph", "metadata": {}, "spec": {}}),
@@ -235,6 +238,24 @@ def test_model_schemas_reject_wrong_types_limits_enums_and_resource_identity(mod
     """
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.validate(document, schema_for(model))
+
+
+def test_kubernetes_set_schemas_preserve_offline_uniqueness():
+    """
+    Helm and standalone JSON validators must reject the same duplicate capability and cut members.
+    """
+    daemon = resource_schema("Daemon")["properties"]["spec"]["properties"]
+    capabilities = daemon["serviceLevel"]["properties"]["requiredCapabilities"]
+    policy = resource_schema("GraphPolicy")["properties"]["spec"]["properties"]
+    cut = policy["cheegerComputation"]["properties"]["priorityCuts"]["items"]
+    report = schema_for(ServiceLevelReport)
+    advertised = report["$defs"][report["title"]]["properties"]["capabilities"]
+    for schema in (capabilities, cut, advertised):
+        assert schema["x-kubernetes-list-type"] == "set"
+        assert schema["uniqueItems"] is True
+        jsonschema.validate(["first", "second"], schema)
+        with pytest.raises(jsonschema.ValidationError, match="non-unique"):
+            jsonschema.validate(["first", "first"], schema)
 
 
 def test_event_envelopes_keep_the_same_contract_through_both_schema_apis():

@@ -904,6 +904,7 @@
             "type": "string"
           },
           "maxItems": 64,
+          "x-kubernetes-list-type": "set",
           "uniqueItems": true,
           "description": "Capabilities that must remain available."
         },
@@ -994,6 +995,7 @@
             "type": "string"
           },
           "maxItems": 64,
+          "x-kubernetes-list-type": "set",
           "uniqueItems": true,
           "description": "Capabilities served throughout the sample."
         },
@@ -2474,6 +2476,7 @@
             },
             "minItems": 1,
             "maxItems": 4096,
+            "x-kubernetes-list-type": "set",
             "uniqueItems": true
           },
           "maxItems": 64,
@@ -3475,11 +3478,11 @@
           "$ref": "#/$defs/polyad_types.graphs.policies.Cheeger",
           "x-kubernetes-validations": [
             {
-              "rule": "(has(self.minimum) && self.minimum != null) || (has(self.maximum) && self.maximum != null)",
+              "rule": "has(self.minimum) || has(self.maximum)",
               "message": "A throughput tier requires at least one Cheeger bound."
             },
             {
-              "rule": "!has(self.minimum) || self.minimum == null || !has(self.maximum) || self.maximum == null || self.minimum <= self.maximum",
+              "rule": "!has(self.minimum) || !has(self.maximum) || self.minimum <= self.maximum",
               "message": "Cheeger minimum must not exceed maximum."
             }
           ],

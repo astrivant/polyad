@@ -64,7 +64,7 @@ spec:
                         maxLength: 253
                       minItems: 1
                       maxItems: 4096
-                      uniqueItems: true
+                      x-kubernetes-list-type: set
                     description: Ordered vertex subsets to examine before exhaustive search; complements are equivalent.
                     maxItems: 64
                   reduction:

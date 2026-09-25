@@ -175,7 +175,7 @@ class CheegerComputation:
                 "items": {
                     "minItems": 1,
                     "maxItems": 4096,
-                    "uniqueItems": True,
+                    "x-kubernetes-list-type": "set",
                     "items": {"type": "string", "minLength": 1, "maxLength": 253},
                 },
             }

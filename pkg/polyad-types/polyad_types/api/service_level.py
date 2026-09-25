@@ -63,7 +63,7 @@ class ServiceLevelPolicy:
         adaptation (AdaptationBudget): Transition-specific budgets.
     """
 
-    requiredCapabilities: tuple[str, ...] = field(default=(), metadata={"schema": {"maxItems": 64, "uniqueItems": True}})
+    requiredCapabilities: tuple[str, ...] = field(default=(), metadata={"schema": {"maxItems": 64, "x-kubernetes-list-type": "set"}})
     availability: float = 0.999
     latencyP99Seconds: float | None = None
     minimumThroughputPerSecond: float | None = None
@@ -127,7 +127,7 @@ class ServiceLevelReport:
     observedAt: str
     durationSeconds: float
     serving: bool
-    capabilities: tuple[str, ...] = field(default=(), metadata={"schema": {"maxItems": 64, "uniqueItems": True}})
+    capabilities: tuple[str, ...] = field(default=(), metadata={"schema": {"maxItems": 64, "x-kubernetes-list-type": "set"}})
     eligibleRequests: int = 0
     successfulRequests: int = 0
     requestsWithinLatencyObjective: int = 0

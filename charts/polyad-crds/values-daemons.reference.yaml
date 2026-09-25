@@ -202,6 +202,7 @@ daemons: {}
 #         ## @param daemons.example.spec.persistence.mountPath [string] Optional. Default: "/var/lib/polyad". Absolute non-root path mounted in application and init containers.
 #         mountPath: "/var/lib/polyad"
 #       # Constraint: enabled persistence requires storageClass and claimName
+#     # Constraint: DaemonSet uses node eligibility; replicas must be one and statefulSet and activation are unsupported.
 #     # Constraint: controller StatefulSet requires statefulSet options and serviceName.
 #     # Constraint: statefulSet options require controller StatefulSet.
 # END RESOURCE EXAMPLE

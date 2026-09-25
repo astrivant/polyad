@@ -5,6 +5,7 @@ Verify configurable exact search, preferred cuts and conservative admission unde
 from __future__ import annotations
 
 import asyncio
+import runpy
 from itertools import combinations
 from pathlib import Path
 
@@ -272,26 +273,28 @@ def test_tuning_reference_and_generated_schemas_share_computation_types():
     Validate the complete reference and reject negative targets and malformed search controls at admission.
     """
     root = Path(__file__).parents[2]
+    normalize = runpy.run_path(str(root / "scripts/schemas/generate-json-schemas.py"))["json_schema"]
     documents = list(yaml.safe_load_all((root / "examples/cheeger-tuning.yaml").read_text()))
     for document in documents:
         # Resource names include irregular plurals such as graphpolicies.
         plural = RESOURCE_TYPES[document["kind"]].plural
         crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{plural}.yaml").read_text())
-        schema = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]
+        schema = normalize(crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"])
 
-        # Kubernetes OpenAPI uses the boolean exclusiveMinimum form from draft 4.
-        jsonschema.Draft4Validator(schema).validate(document)
+        # Normalize Kubernetes set/nullable keywords for the offline validator.
+        # The Go suite separately checks real Kubernetes admission and CEL rules.
+        jsonschema.Draft7Validator(schema).validate(document)
     for kind in ("graphs", "polygraphs", "rewrites", "graphpolicies"):
         crd = yaml.safe_load((root / f"charts/polyad-crds/crds/{kind}.yaml").read_text())
-        spec = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]["spec"]["properties"]
+        spec = normalize(crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"])["properties"]["spec"]["properties"]
         if kind == "rewrites":
             spec = spec["topology"]["properties"]
         if kind != "graphpolicies":
             spec = spec["throughput"]["properties"]
             bounds = spec["tiers"]["items"]["properties"]["cheeger"]
-            assert not jsonschema.Draft4Validator(bounds).is_valid({"minimum": -1})
+            assert not jsonschema.Draft7Validator(bounds).is_valid({"minimum": -1})
             assert len(bounds["x-kubernetes-validations"]) == 2
-        validator = jsonschema.Draft4Validator(spec["cheegerComputation"])
+        validator = jsonschema.Draft7Validator(spec["cheegerComputation"])
         assert validator.is_valid(
             {
                 "maxVertices": 22,

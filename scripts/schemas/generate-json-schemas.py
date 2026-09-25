@@ -132,6 +132,11 @@ def json_schema(node: Any) -> Any:
     if not isinstance(node, dict):
         return node
     result = {key: json_schema(value) for key, value in node.items() if key != "nullable"}
+
+    # Kubernetes forbids uniqueItems on CRDs. Preserve set uniqueness for offline
+    # JSON Schema consumers, which do not interpret Kubernetes list annotations.
+    if result.get("x-kubernetes-list-type") == "set":
+        result["uniqueItems"] = True
     for bound in ("Minimum", "Maximum"):
         exclusive = f"exclusive{bound}"
         if isinstance(result.get(exclusive), bool):
