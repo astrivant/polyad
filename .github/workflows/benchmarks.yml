@@ -48,6 +48,8 @@ jobs:
           retention-days: 30
   smoke:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: pkg/polyad-benchmarks:.
     strategy:
       matrix:
         python: ['3.13', '3.14']
@@ -57,14 +59,15 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
-      - run: poetry -C pkg/polyad-benchmarks sync --extras plots
+      # Plot regression tests also exercise Polyad's production Cheeger solver.
+      - run: poetry sync --all-extras
       - run: bash scripts/tooling/install-helm-tools.sh helm
-      - run: helm dependency build charts/polyad-benchmarks
-      - run: poetry --project pkg/polyad-benchmarks run python scripts/validation/benchmark-schemas.py
+      - run: bash scripts/tooling/build-chart-dependencies.sh charts/polyad-benchmarks
+      - run: poetry run python scripts/validation/benchmark-schemas.py
       - name: Exercise harness and refresh barriers offline
         run: |
           mkdir -p .cache/benchmarks/smoke
-          poetry --project pkg/polyad-benchmarks run python -m pytest -c pyproject.toml -o addopts='' pkg/tests/test_benchmarks.py pkg/tests/test_study_plotting.py --junitxml=.cache/benchmarks/smoke/pytest.xml
+          poetry run python -m pytest -c pyproject.toml -o addopts='' pkg/tests/test_benchmarks.py pkg/tests/test_study_plotting.py --junitxml=.cache/benchmarks/smoke/pytest.xml
           helm lint charts/polyad-benchmarks
           helm template study charts/polyad-benchmarks -f studies/load/fixtures/gke-values.yaml > .cache/benchmarks/smoke/fixture.yaml
       - uses: actions/upload-artifact@v4

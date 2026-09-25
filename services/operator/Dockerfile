@@ -65,6 +65,8 @@ ENV PATH="/opt/venv/bin:/opt/poetry/bin:${PATH}" \
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends "git=${GIT_VERSION}" "git-man=${GIT_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
+# The development dependency is installed before the full source-tree copy.
+COPY pkg/polyad-sdk ./pkg/polyad-sdk
 RUN --mount=type=cache,id=polyad-poetry-${TARGETARCH}${TARGETVARIANT},target=/var/cache/pypoetry,sharing=locked \
     /opt/poetry/bin/poetry sync --with dev --no-root --all-extras
 COPY --chown=65532:65532 . .

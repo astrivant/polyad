@@ -30,8 +30,7 @@ Install asdf and Bash 4.4 or newer, then run from the repository root:
 bash scripts/tooling/install-asdf-tools.sh
 python -m venv .venv
 poetry install
-helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-helm dependency build charts/polyad
+bash scripts/tooling/build-chart-dependencies.sh
 poetry run pre-commit install --install-hooks
 poetry run pre-commit run --all-files
 ```
@@ -39,6 +38,14 @@ poetry run pre-commit run --all-files
 On macOS, put a current Bash on `PATH` ahead of `/bin/bash`. The shell checker
 requires the exact ShellCheck and shfmt versions in `.tool-versions`. If you
 manage tools without asdf, install those versions using your preferred manager.
+
+The dependency helper registers Istio, KEDA, Stakater, Prometheus Community,
+Grafana Community and OpenTelemetry before building both charts from their
+committed `Chart.lock` files. Optional dependencies still need their repositories
+when disabled. Local `file://` and OCI dependencies do not use `helm repo add`.
+Pass `charts/polyad` or `charts/polyad-benchmarks` to build only that chart.
+CI validation, integration tests and release packaging use the same helper;
+regression tests compare its repository inventory with every chart and lockfile.
 
 To install shfmt with Homebrew, run `brew bundle install` from the repository
 root. The [Brewfile](../../Brewfile) installs the current Homebrew release; the shell

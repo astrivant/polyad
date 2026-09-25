@@ -29,6 +29,9 @@ jobs:
         run: terraform -chdir=terraform test
   python:
     runs-on: ubuntu-latest
+    env:
+      # Pytest config adjusts only its own interpreter, not child-process imports.
+      PYTHONPATH: pkg/polyad-benchmarks:.
     services:
       postgres:
         image: postgres:18.3
@@ -85,10 +88,7 @@ jobs:
         run: poetry run python -m pip install -e './pkg/polyad-sdk[protocols]'
       - run: bash scripts/tooling/install-helm-tools.sh helm shellcheck shfmt argocd
       - name: Build chart dependencies
-        run: |
-          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-          helm dependency build charts/polyad
-          helm dependency build charts/polyad-benchmarks
+        run: bash scripts/tooling/build-chart-dependencies.sh
       - run: poetry run pre-commit run --all-files
         if: matrix.python == '3.13'
       - name: Validate Flux health expressions
@@ -217,9 +217,7 @@ jobs:
           persist-credentials: false
       - run: bash scripts/tooling/install-helm-tools.sh helm
       - name: Build chart dependencies
-        run: |
-          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-          helm dependency build charts/polyad
+        run: bash scripts/tooling/build-chart-dependencies.sh charts/polyad
       - name: Helm to Docker Compose
         id: compose
         uses: astrivant/composer@v0.3.0
@@ -287,14 +285,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=operator-${{ matrix.dragonfly-ha }}-amd64
       - run: kind load docker-image polyad:test --name polyad-test
       - name: Build chart dependencies
-        run: |
-          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-          helm dependency build charts/polyad
+        run: bash scripts/tooling/build-chart-dependencies.sh charts/polyad
       - name: Install KEDA for HA cache scaling
         if: matrix.dragonfly-ha
-        run: |
-          helm repo add kedacore https://kedacore.github.io/charts --force-update
-          helm upgrade --install keda kedacore/keda --version 2.20.2 --namespace keda --create-namespace --wait --timeout=300s
+        run: helm upgrade --install keda kedacore/keda --version 2.20.2 --namespace keda --create-namespace --wait --timeout=300s
       - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set operator.image.repository=polyad --set operator.image.tag=test --set dragonfly.ha.enabled=${{ matrix.dragonfly-ha }} --wait --timeout=300s
       - name: Verify HA cache scaling bridge
         if: matrix.dragonfly-ha

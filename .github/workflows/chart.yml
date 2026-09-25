@@ -48,10 +48,7 @@ jobs:
           ref: ${{ inputs.release-tag }}
       - run: bash scripts/tooling/install-helm-tools.sh helm kubeconform
       - name: Build chart dependencies
-        run: |
-          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-          helm dependency build charts/polyad
-          helm dependency build charts/polyad-benchmarks
+        run: bash scripts/tooling/build-chart-dependencies.sh
       - name: Prepare monitoring CRD schemas from the locked chart
         if: matrix.chart == 'polyad-benchmarks'
         run: |
@@ -101,10 +98,7 @@ jobs:
           ref: ${{ inputs.release-tag }}
       - run: bash scripts/tooling/install-helm-tools.sh helm
       - name: Build chart dependencies
-        run: |
-          helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-          helm dependency build charts/polyad
-          helm dependency build charts/polyad-benchmarks
+        run: bash scripts/tooling/build-chart-dependencies.sh
       - name: Package validated chart
         id: package
         env:

@@ -19,6 +19,32 @@ from polyad.lua import script
 from polyad.sql import statement
 
 
+def check_optional_imports() -> None:
+    """
+    Verify importing handlers does not activate disabled application services.
+
+    Returns:
+        None: Raises when an optional application implementation loads eagerly.
+    """
+    from polyad.operator.lifecycle import handlers  # noqa: F401
+
+    # Redis probes cryptography's availability during its own import. Check our
+    # encryption implementation, not that third-party capability probe.
+    for module in (
+        "hypercorn",
+        "websockets",
+        "flask",
+        "flask_httpauth",
+        "flask_limiter",
+        "psycopg",
+        "prometheus_client",
+        "polyad.sql.encryption",
+        "opentelemetry.sdk",
+        "opentelemetry.exporter",
+    ):
+        assert not any(name == module or name.startswith(module + ".") for name in sys.modules), f"startup eagerly imported {module}"
+
+
 def main() -> None:
     """
     Fail when a container profile leaks tools or cannot import the operator runtime.
@@ -59,6 +85,7 @@ def main() -> None:
         "cattrs",
         "redis",
         "networkx",
+        "lupa",
         "flask",
         "numpy",
         "waitress",
@@ -76,24 +103,11 @@ def main() -> None:
         "opentelemetry-sdk",
         "opentelemetry-exporter-otlp-proto-http",
         "polyad-types",
+        "polyad-schemas",
     ):
         assert importlib.metadata.version(dependency)
     # Runtime dependencies are installed, but disabled optional services stay unloaded.
-    from polyad.operator.lifecycle import handlers  # noqa: F401
-
-    for module in (
-        "hypercorn",
-        "websockets",
-        "flask",
-        "flask_httpauth",
-        "flask_limiter",
-        "psycopg",
-        "prometheus_client",
-        "cryptography",
-        "opentelemetry.sdk",
-        "opentelemetry.exporter",
-    ):
-        assert module not in sys.modules, f"startup eagerly imported {module}"
+    check_optional_imports()
     source = Path(polyad.operator.runtime.__file__)
     if profile == "production":
         assert source.is_relative_to("/opt/venv")
