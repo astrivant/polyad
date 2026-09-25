@@ -364,6 +364,7 @@
     },
     "status": {
       "type": "object",
+      "default": {},
       "x-kubernetes-preserve-unknown-fields": true,
       "properties": {
         "replicas": {

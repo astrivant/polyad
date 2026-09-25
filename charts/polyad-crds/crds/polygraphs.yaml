@@ -1209,6 +1209,7 @@ spec:
               resources to finish cleanup.
           status:
             type: object
+            default: {}
             description: Operator-observed instance lifecycle and graph metrics. Inert templateOnly definitions do not
               publish execution status. Updates are fenced by resourceVersion.
             properties:

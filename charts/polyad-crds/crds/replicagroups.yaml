@@ -272,6 +272,7 @@ spec:
                 message: replica source identity is immutable
             status:
               type: object
+              default: {}
               x-kubernetes-preserve-unknown-fields: true
               properties:
                 replicas:

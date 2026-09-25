@@ -66,7 +66,8 @@ jobs:
         # The benchmark dependency merge currently trips the upstream YAML round-trip parser.
         # Its default and full monitoring profiles have strict render/schema checks below.
         if: matrix.chart != 'polyad-benchmarks'
-        uses: astrivant/hypothesis-helm@main
+        # Supports HH1107 and the kubeconform wrapper; newer revisions changed these inputs.
+        uses: astrivant/hypothesis-helm@05681f04b41256a41355e6320e52a7ca17f67b74
         with:
           chart: charts/${{ matrix.chart }}
           artifact-name: ${{ inputs.artifact-prefix }}-${{ matrix.chart }}

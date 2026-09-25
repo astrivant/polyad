@@ -81,5 +81,6 @@ spec:
                   description: Reusable target definition revision.
             status:
               type: object
+              default: {}
               x-kubernetes-preserve-unknown-fields: true
               description: Admission phase, timestamp, execution identity and reasons for rejection or coalescing.

@@ -178,4 +178,5 @@ spec:
                 message: Temporary connections require distinct endpoints.
             status:
               type: object
+              default: {}
               x-kubernetes-preserve-unknown-fields: true

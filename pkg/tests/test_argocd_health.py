@@ -85,10 +85,14 @@ def assess_lupa(argocd_config: Path, obj: dict[str, Any]) -> dict[str, str]:
 @pytest.mark.parametrize("case", FLUX_CASES, ids=lambda case: case["name"])
 def test_flux_cases_match_argocd_lifecycle(tmp_path, argocd_config, case):
     """
-    Keep Flux Current/InProgress/Failed equivalent to Argo Healthy/Progressing-or-Suspended/Degraded.
+    Match lifecycle results except for Flux's built-in stale-definition generation gate.
     """
     argo = assess(tmp_path, argocd_config, case["object"])["STATUS"]
     expected = {"Current": "Healthy", "InProgress": ("Progressing", "Suspended"), "Failed": "Degraded"}[case["expected"]]
+
+    # Flux rejects stale observedGeneration before running CEL, even for reusable
+    # definitions. Argo deliberately ignores old reports on those definitions.
+    expected = case.get("argoExpected", expected)
     assert argo in expected if isinstance(expected, tuple) else argo == expected
 
 

@@ -64,7 +64,7 @@ and startup to finish.<sup>[\[1\]](https://fluxcd.io/flux/components/kustomize/k
 | Current failed leaf, failed subgraph or invalid graph | Failed |
 | Missing/stale observations, admission delays, startup or cleanup | InProgress |
 | Suspended or stopped execution, including a suspended descendant | InProgress |
-| Reusable definition or `templateOnly` graph | Current; no execution is implied |
+| Reusable definition or `templateOnly` graph without a stale observed generation | Current; no execution is implied |
 | Daemon with a current Degraded or Unavailable service contract | Failed, even while an adaptation is progressing |
 | Applied Rewrite | Current |
 | Composition receipt | Mirrored root lifecycle |
@@ -80,7 +80,8 @@ operation: it stops Flux reconciliation. Use Polyad's suspension settings to
 pause graph workloads.
 
 The `inProgress` expression handles deletion and an explicitly published
-`status.progressing` metrics transition before failures; it does not broadly interpret
+`status.progressing` metrics transition before failures; a current Daemon service
+contract failure takes precedence over adaptation, but not deletion. It does not broadly interpret
 “not ready,” which would hide failures because Flux evaluates `inProgress` first.
 Current-generation metrics and descendant completeness are required before
 executable graphs report success.
@@ -88,6 +89,13 @@ executable graphs report success.
 SDK strategy invocations publish this transition on their reusable Workload or
 Daemon definition. A local change in one workload's organization therefore does
 not make its entire containing Graph progressing.
+
+Flux checks `status.observedGeneration` against `metadata.generation` **before**
+running any CEL expression. A mismatch returns InProgress, including on reusable
+definitions and templates. Thus, a Daemon edited after an adaptation report stays
+InProgress until a new report observes that generation. Argo instead ignores the
+stale report on reusable definitions. CEL cannot override Flux's built-in gate;
+the shared tests record this distinction explicitly.
 
 For [ReplicaGroups](../graphs/replication.md), `status.scaleCurrent` must also be
 true. The operator records the exact remote intent it reconciled in
@@ -107,10 +115,24 @@ status; the operator must refresh inherited counts, remote observations and
 descendant rollups. They do not independently query another cluster or impose a
 wall-clock freshness deadline on observations.
 
-Before the first operator status write, Flux's CEL evaluator can report an
-unresolved `status` variable. Flux keeps waiting and retries until status appears,
-or the health-check timeout expires. Expressions guard missing fields inside
-status; they do not use the invalid `has(status)` top-level macro.<sup>[\[1\]](https://fluxcd.io/flux/components/kustomize/kustomizations/#health-check-expressions)</sup>
+Polyad CRDs with a status schema default it to an empty object (`status: {}`).
+This makes CEL presence checks safe before the first operator report without
+inventing readiness, progress or an observed generation. Empty status is Current
+for reusable definitions and templates, but InProgress for executable resources.
+GraphPolicy currently has no status schema and its expressions never read `status`.
+Its Current result only identifies an inert definition; it is **not** a compliance
+verdict. Successful boundary evaluations are recorded on each graph in
+`status.structuralPolicies`, not aggregated onto the policy itself.
+Kubernetes also applies CRD defaults when reading existing objects, so upgrading
+the definitions covers resources created before this default was added.
+See [Kubernetes CRD defaulting](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#defaulting).
+
+**Upgrade the CRDs before using these checks.** Helm does not upgrade files in
+`crds/` automatically; follow the [CRD upgrade procedure](../../charts/polyad-crds/README.md#installation-and-upgrades).
+With older definitions, an entirely absent `status` still causes an unresolved
+CEL variable and Flux retries until timeout. `has(status.observedGeneration)`
+guards a field inside an existing status object, not the top-level variable;
+`has(status)` is not a valid CEL presence check.<sup>[\[1\]](https://fluxcd.io/flux/components/kustomize/kustomizations/#health-check-expressions)</sup>
 
 Native Jobs, Deployments, StatefulSets, Pods and claims retain Flux's built-in health checks.
 The root graph carries descendant failures into Flux health even when those
@@ -144,8 +166,10 @@ on the new checks; executable ReplicaGroups wait for its scale observation field
 
 ## Validation
 
-CI runs the generated expressions through Flux's actual CEL status evaluator,
-with parallel cases for all Polyad kinds, stale generations and remote intents,
+CI applies the shipped CRD defaults with Kubernetes' structural defaulting library,
+then runs the generated expressions through Flux's actual CEL status evaluator.
+Parallel cases cover absent, null and empty initial status for every Polyad kind,
+stale generations and remote intents,
 nested failures, activation receipts, cache replication, deletion and suspension.
 The pinned Go dependencies live under
 `pkg/tests/flux`; they are test tooling, not operator dependencies.

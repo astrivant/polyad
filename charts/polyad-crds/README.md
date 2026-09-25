@@ -75,6 +75,11 @@ Optional objects are not created unless supplied or given a CRD default: omittin
 `statefulSet` or `throughput` does not enable them. Within a supplied object, its
 missing defaulted fields are filled recursively.
 
+Status-bearing Polyad CRDs default `status` to `{}` so Flux can check optional
+observation fields before the operator's first report. This does not manufacture
+an observed generation or claim readiness. Apply upgraded CRDs to enable this
+default on existing clusters; see [Flux health semantics](../../docs/operations/fluxcd.md#semantics).
+
 All kind maps are empty in [values.yaml](values.yaml). Installing defaults creates
 API definitions, with no example workloads or graphs. These defaults remain the
 baseline for chart tests.
@@ -189,7 +194,11 @@ does not grant permission to bypass connection negotiation or remote-scale
 ownership.
 
 CI runs hypothesis-helm over both charts with three shards each. This chart
-explicitly permits an empty default instance bundle; Python tests independently
+explicitly permits an empty default instance bundle through rule `HH1107` (formerly
+`HH1009`). The action is pinned to a reviewed commit supporting that rule and the
+existing kubeconform wrapper, which supplies Polyad and dependency resource schemas.
+Update the action pin, rule exceptions and action inputs together; all other checks
+remain enabled. Python tests independently
 verify all 17 installed definitions, instance rendering, defaults, references,
 invalid results and use through the operator dependency.
 

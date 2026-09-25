@@ -72,6 +72,11 @@ subgraph. Both lifecycle and metrics must match the current generation before a
 graph can report success. After `spec.suspend` is requested, suspension is
 reported when cleanup completes.
 
+Reusable definitions ignore stale adaptation reports and remain Healthy unless
+a current report says otherwise. [Flux differs here](fluxcd.md#semantics): its
+built-in generation check returns InProgress before evaluating custom expressions
+when a published `status.observedGeneration` no longer matches the resource.
+
 Health reflects the latest operator observation; it does not actively probe
 services or replace the application's readiness checks. A Deployment that exceeds
 its rollout progress deadline, or a lost PersistentVolumeClaim, also contributes

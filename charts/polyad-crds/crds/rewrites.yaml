@@ -1169,6 +1169,7 @@ spec:
               do not apply the same rewrite twice.
           status:
             type: object
+            default: {}
             x-kubernetes-preserve-unknown-fields: true
             description: Operator receipt and validation state, including applied and observedGeneration. A committed
               rewrite is not reapplied.

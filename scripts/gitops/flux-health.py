@@ -65,13 +65,21 @@ def main() -> None:
         else:
             raise ValueError(f"Flux health semantics are not defined for {kind}")
         progressing = f"has(metadata.deletionTimestamp) || ({CURRENT_GENERATION} && has(status.progressing) && status.progressing)"
-        if kind == "Daemon":
-            progressing = f"({progressing}) && !({failed})"
+
+        # GraphPolicy has no status subresource. Other Polyad CRDs default status
+        # to an empty object so CEL can safely test its optional observation fields.
+        if kind == "GraphPolicy":
+            progressing = "has(metadata.deletionTimestamp)"
+        elif kind == "Daemon":
+            # Cleanup takes precedence over SLA failures, while adaptation does not.
+            progressing = (
+                f"has(metadata.deletionTimestamp) || ({CURRENT_GENERATION} && has(status.progressing) && status.progressing && !({failed}))"
+            )
         checks.append(
             {
                 "apiVersion": descriptor.api_version,
                 "kind": kind,
-                # Evaluated first by Flux: deletion and an explicitly published metrics transition mask failures.
+                # Flux checks progress first; Daemon service failures still win over adaptation.
                 "inProgress": progressing,
                 "failed": failed,
                 "current": current,

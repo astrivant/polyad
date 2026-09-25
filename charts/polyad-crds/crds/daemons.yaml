@@ -514,9 +514,10 @@ spec:
               Daemons become ready and stop explicitly; they do not complete.
           status:
             type: object
+            default: {}
             x-kubernetes-preserve-unknown-fields: true
-            description: Reserved operator observation subresource. This reusable definition does not execute independently
-              or currently publish lifecycle status.
+            description: SDK adaptation and service-level observations for this reusable definition. Empty status does
+              not imply execution; current-generation reports publish progress and service contract health.
         required:
         - spec
         description: Define a reusable persistent capability, instantiated by a graph as a Deployment or StatefulSet. Containers

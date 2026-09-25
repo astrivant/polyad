@@ -82,6 +82,7 @@
     },
     "status": {
       "type": "object",
+      "default": {},
       "x-kubernetes-preserve-unknown-fields": true,
       "description": "Reserved operator observation subresource. This reusable definition does not execute independently or currently publish lifecycle status."
     }

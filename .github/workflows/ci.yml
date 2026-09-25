@@ -362,10 +362,10 @@ jobs:
       - run: kubectl -n polyad delete graphs,polygraphs,replicagroups --all --wait=true --timeout=120s
       - run: bash scripts/testing/test-replacement.sh
       - run: bash scripts/testing/test-coordination.sh
-      - if: failure()
-        run: |
-          kubectl -n polyad get pods,leases,dragonflies,graphs,polygraphs,replicagroups -o yaml
-          kubectl -n polyad logs deployment/polyad-polyad --tail=200
+      - name: Collect operator failure diagnostics
+        if: failure()
+        continue-on-error: true
+        run: bash scripts/testing/collect-operator-diagnostics.sh
   verified:
     name: All checks passed
     if: always()

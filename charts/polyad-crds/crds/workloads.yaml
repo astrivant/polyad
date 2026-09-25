@@ -365,9 +365,10 @@ spec:
               A graph node instantiates this definition as a Job; creating the definition alone does not start execution.
           status:
             type: object
+            default: {}
             x-kubernetes-preserve-unknown-fields: true
-            description: Reserved operator observation subresource. This reusable definition does not execute independently
-              or currently publish lifecycle status.
+            description: SDK adaptation observations for this reusable definition. Empty status does not imply
+              execution; current-generation reports publish progressing while strategy invocations are active.
         required:
         - spec
         description: Define a reusable finite container workload. A graph node instantiates this definition as a

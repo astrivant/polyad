@@ -102,7 +102,7 @@ def test_tagged_chart_artifacts_cannot_collide_with_initial_validation():
     first = PIPELINE["jobs"]["chart"]["with"].get("artifact-prefix", prefix)
     second = tag["jobs"]["chart"]["with"]["artifact-prefix"]
     assert first != second
-    action = next(step for step in chart["jobs"]["chart"]["steps"] if step.get("uses") == "astrivant/hypothesis-helm@main")
+    action = next(step for step in chart["jobs"]["chart"]["steps"] if step.get("uses", "").startswith("astrivant/hypothesis-helm@"))
     assert action["with"]["artifact-name"] == "${{ inputs.artifact-prefix }}-${{ matrix.chart }}"
 
 

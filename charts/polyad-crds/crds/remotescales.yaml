@@ -74,6 +74,7 @@ spec:
                   message: target identity and approved generation are immutable
           status:
             type: object
+            default: {}
             properties:
               replicas:
                 type: integer

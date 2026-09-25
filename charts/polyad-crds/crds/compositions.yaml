@@ -54,6 +54,7 @@ spec:
               message: Composition intent is immutable; submit a new requestId for different work.
           status:
             type: object
+            default: {}
             description: Operator observations and audited identities; refreshed asynchronously.
             x-kubernetes-preserve-unknown-fields: true
         required:

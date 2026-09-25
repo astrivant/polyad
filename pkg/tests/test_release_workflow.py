@@ -304,17 +304,21 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
             "include": [{"chart": "polyad-benchmarks", "shard": "1"}],
         },
     }
-    action = next(step for step in chart["steps"] if step.get("uses") == "astrivant/hypothesis-helm@main")
+    action = next(step for step in chart["steps"] if step.get("uses", "").startswith("astrivant/hypothesis-helm@"))
+    assert action["uses"] == "astrivant/hypothesis-helm@05681f04b41256a41355e6320e52a7ca17f67b74"
     inputs = action["with"]
     assert inputs["chart"] == "charts/${{ matrix.chart }}"
     assert inputs["artifact-name"] == "${{ inputs.artifact-prefix }}-${{ matrix.chart }}"
     assert inputs["artifact-dir"] == "reports/hypothesis-helm/${{ matrix.chart }}"
     assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "2"
+    assert inputs["kubeconform"] == "true" and inputs["schema-version"] == "1.35.0"
+    assert inputs["kubeconform-binary"] == "scripts/validation/kubeconform.sh"
     assert not {"sample-random", "max-examples", "rerun", "cache", "filter", "exhaustive"}.intersection(inputs)
     assert "match" not in inputs and "continue-on-error" not in action
     policy = next(step for step in chart["steps"] if step.get("run", "").startswith("cp charts/polyad-crds/"))
     assert policy["if"] == "matrix.chart == 'polyad-crds'"
-    assert yaml.safe_load((ROOT / "charts/polyad-crds/.hypothesis-helm.yaml").read_text()) == {"ignored": ["HH1009"]}
+    assert chart["steps"].index(policy) < chart["steps"].index(action)
+    assert yaml.safe_load((ROOT / "charts/polyad-crds/.hypothesis-helm.yaml").read_text()) == {"ignored": ["HH1107"]}
     package = workflow["jobs"]["package"]
     assert package["needs"] == ["source", "chart"]
     assert package["if"] == "inputs.release-tag != ''"

@@ -41,6 +41,7 @@ spec:
                 maxReplicas: {type: integer, minimum: 2, maximum: 9}
             status:
               type: object
+              default: {}
               properties:
                 replicas: {type: integer, minimum: 0}
                 readyReplicas: {type: integer, minimum: 0}

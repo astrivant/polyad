@@ -33,6 +33,17 @@ def test_flux_configuration_covers_registry():
     for item in checks:
         assert item["apiVersion"] == RESOURCE_TYPES[item["kind"]].api_version
         assert set(item) == {"apiVersion", "kind", "inProgress", "failed", "current"}
-        assert "status.progressing" in item["inProgress"]
+
+        # GraphPolicy has no status schema or publisher; checking it would leave
+        # an inert policy waiting forever on a CEL variable that never exists.
+        if item["kind"] == "GraphPolicy":
+            assert item["inProgress"] == "has(metadata.deletionTimestamp)"
+            assert item["current"] == "true"
+            assert item["failed"] == "false"
+        else:
+            assert "status.progressing" in item["inProgress"]
+            crd = yaml.safe_load((ROOT / "charts/polyad-crds/crds" / f"{RESOURCE_TYPES[item['kind']].plural}.yaml").read_text())
+            status = crd["spec"]["versions"][0]["schema"]["openAPIV3Schema"]["properties"]["status"]
+            assert status["default"] == {}
     cases = json.loads((ROOT / "pkg/tests/flux/cases.json").read_text())
     assert {case["object"]["kind"] for case in cases} == POLYAD_KINDS
