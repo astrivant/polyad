@@ -17,6 +17,8 @@
 
 Run the commands below from the repository root. Choose the Kubernetes
 operator for container workloads, or the local scheduler for Python work.
+To try the operator locally without a registry or host Python setup, follow the
+[non-HA Minikube installation guide](../../integrations/minikube/README.md).
 
 ## Install
 
@@ -83,6 +85,23 @@ event journal.<sup>[\[4\]](../../pkg/polyad/scheduling/README.md#logs-and-diagra
 
 ### Quick start: Kubernetes
 
+For a local three-node cluster with one Polyad operator and one Dragonfly
+instance, install the
+[Minikube prerequisites](../../integrations/minikube/README.md#install-prerequisites),
+then activate and verify the integration:
+
+```sh
+bash integrations/minikube/minikube.sh start
+bash integrations/minikube/minikube.sh status
+```
+
+The helper builds and loads the production image, installs the non-HA Helm
+profile, and runs a fresh Graph smoke test. It preserves your current kubectl
+context. See the [full guide](../../integrations/minikube/README.md) for application
+examples, customization, developer rebuilds, troubleshooting, and cleanup.
+
+For an existing cluster instead, use the manual installation below.
+
 Build and publish an image to a registry your cluster can pull from. Replace
 `YOUR_REGISTRY` in these commands. Use the [Buildx setup instructions](../deployment/containers.md#production)
 to prepare a builder for AMD64 and ARM64:
@@ -90,8 +109,7 @@ to prepare a builder for AMD64 and ARM64:
 ```sh
 docker buildx build -f services/operator/Dockerfile --target production --platform linux/amd64,linux/arm64 \
   -t YOUR_REGISTRY/polyad:dev --push .
-helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-helm dependency build charts/polyad
+bash scripts/tooling/build-chart-dependencies.sh charts/polyad
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
   --set operator.image.repository=YOUR_REGISTRY/polyad --set operator.image.tag=dev --wait
 kubectl apply -n polyad -f examples/finite.yaml

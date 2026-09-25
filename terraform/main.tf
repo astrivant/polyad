@@ -34,7 +34,15 @@ provider "helm" {
   }
 }
 
+# Preserve existing Argo installations when making the resource optional.
+moved {
+  from = helm_release.argocd
+  to   = helm_release.argocd[0]
+}
+
 resource "helm_release" "argocd" {
+  count = var.gitops_controller == "argocd" ? 1 : 0
+
   name             = "argocd"
   namespace        = "argocd"
   create_namespace = true
@@ -63,20 +71,25 @@ resource "helm_release" "argocd" {
   depends_on = [module.gke]
 }
 
-# A small Helm release defers Application creation until Argo CRDs exist.
+# A small Helm release defers GitOps resources until their controller CRDs exist.
 # kubernetes_manifest would require those CRDs during the initial plan.
 resource "helm_release" "bootstrap" {
   name      = "polyad-bootstrap"
-  namespace = helm_release.argocd.namespace
+  namespace = var.gitops_controller == "argocd" ? "argocd" : "flux-system"
   chart     = "${path.module}/bootstrap"
   atomic    = true
   timeout   = 300
 
   values = [yamlencode({
+    controller    = var.gitops_controller
     revision      = var.polyad_revision
     valueFiles    = var.polyad_values_files
     values        = var.polyad_values_override
     automatedSync = var.polyad_automated_sync
+    flux = {
+      revisionType = var.flux_revision_type
+      interval     = var.flux_reconcile_interval
+    }
     benchmarks = {
       enabled       = var.benchmarks_enabled
       valueFiles    = var.benchmarks_values_files
@@ -85,5 +98,5 @@ resource "helm_release" "bootstrap" {
     }
   })]
 
-  depends_on = [helm_release.argocd]
+  depends_on = [helm_release.argocd, helm_release.flux]
 }

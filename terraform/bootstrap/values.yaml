@@ -1,16 +1,24 @@
 # yaml-language-server: $schema=values.schema.json
+## @param controller [string] One GitOps owner per environment: argocd or flux. Do not switch an existing installation without draining and migrating ownership.
+controller: argocd
+## @param flux [object] Flux-only reconciliation settings; the pinned controller supports the bundled Polyad CEL health checks.
+flux:
+  ## @param flux.revisionType [string] Interpret revision as branch, tag, or a full commit SHA.
+  revisionType: branch
+  ## @param flux.interval [string] Positive source and release reconciliation interval.
+  interval: 1m
 ## @param revision [string] Public Polyad Git revision; main follows updates, a commit SHA freezes an experiment.
 revision: main
 ## @param valueFiles [array] Values paths relative to charts/polyad in that Git revision, merged in order.
 valueFiles:
   - ../../terraform/polyad-values.yaml
-## @param values [string] Final YAML mapping of experiment overrides; stored visibly in the Application, so exclude secrets.
+## @param values [string] Final YAML mapping of experiment overrides; stored visibly in the Application or HelmRelease, so exclude secrets.
 values: '{}'
-## @param automatedSync [boolean] Enable automatic sync, self-healing and pruning; false leaves sync under administrator control.
+## @param automatedSync [boolean] Enable automatic reconciliation; false leaves Argo manual or suspends Flux, including its first install.
 automatedSync: true
-## @param benchmarks [object] Optional benchmark Application; it shares the operator's Git revision and never activates runners during sync.
+## @param benchmarks [object] Optional benchmark Application or HelmRelease; shares the operator's Git revision and never activates runners during sync.
 benchmarks:
-  ## @param benchmarks.enabled [boolean] Register the fixture and monitoring chart in the same Argo CD UI.
+  ## @param benchmarks.enabled [boolean] Register the fixture and monitoring chart with the selected controller.
   enabled: true
   ## @param benchmarks.valueFiles [array] Profile and placement overlays relative to charts/polyad-benchmarks; order matters.
   valueFiles:

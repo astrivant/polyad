@@ -27,6 +27,8 @@ def test_all_shipped_values_have_valid_types_and_schema_coverage():
     assert not list(CHART.glob("values-*.reference.yaml"))
     assert list((CHART / "references").glob("values-*.reference.yaml"))
     assert CHART.parents[1] / "examples/postgresql/operator-values.yaml" in paths
+    assert CHART.parents[1] / "integrations/minikube/values.yaml" in paths
+    assert CHART.parents[1] / "integrations/kind/values.yaml" in paths
     for path in paths:
         VALUES_CHECK["validate"](path)
 

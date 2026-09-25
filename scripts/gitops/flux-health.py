@@ -23,13 +23,16 @@ READY = (
 
 def main() -> None:
     """
-    Emit a Flux spec fragment, without changing an existing controller resource.
+    Emit a Flux spec fragment or explicitly refresh the bundled bootstrap artifact.
 
     Returns:
-        None: Writes YAML or JSON to standard output.
+        None: Writes YAML/JSON to stdout, or refreshes the artifact when requested.
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="Emit JSON for automated validation.")
+    artifact = parser.add_mutually_exclusive_group()
+    artifact.add_argument("--write-bootstrap", action="store_true", help="Regenerate the Terraform bootstrap health artifact.")
+    artifact.add_argument("--check-bootstrap", action="store_true", help="Fail if the Terraform bootstrap health artifact is stale.")
     args = parser.parse_args()
     directory = Path(__file__).resolve().parents[2] / "integrations/fluxcd"
     checks = []
@@ -86,6 +89,18 @@ def main() -> None:
             }
         )
     document = {"spec": {"healthCheckExprs": checks}}
+    if args.write_bootstrap or args.check_bootstrap:
+        # Terraform and Helm can consume this without a Python runtime during apply.
+        # The registry remains authoritative; CI compares the complete generated file.
+        destination = directory.parents[1] / "terraform/bootstrap/files/flux-health.json"
+        rendered = json.dumps(document, indent=2) + "\n"
+        if args.check_bootstrap:
+            if not destination.is_file() or destination.read_text() != rendered:
+                parser.exit(1, "Flux bootstrap health checks are stale; run scripts/gitops/flux-health.py --write-bootstrap\n")
+        else:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(rendered)
+        return
     if args.json:
         print(json.dumps(document))
     else:

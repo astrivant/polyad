@@ -49,6 +49,50 @@ variable "deletion_protection" {
   default     = false
 }
 
+variable "gitops_controller" {
+  description = "GitOps controller for this disposable environment: argocd or flux. Choose before creation; changing an existing environment is not an ownership migration."
+  type        = string
+  default     = "argocd"
+
+  validation {
+    condition     = contains(["argocd", "flux"], var.gitops_controller)
+    error_message = "gitops_controller must be argocd or flux, never both for the same Polyad release."
+  }
+}
+
+variable "flux_chart_version" {
+  description = "Pinned fluxcd-community flux2 chart for the test environment. 2.19.0 includes Flux 2.9.1 and HelmRelease CEL health checks."
+  type        = string
+  default     = "2.19.0"
+}
+
+variable "flux_revision_type" {
+  description = "Interpret polyad_revision as a Flux GitRepository branch, tag, or full commit SHA. Ignored by Argo CD."
+  type        = string
+  default     = "branch"
+
+  validation {
+    condition     = contains(["branch", "tag", "commit"], var.flux_revision_type)
+    error_message = "flux_revision_type must be branch, tag, or commit."
+  }
+
+  validation {
+    condition     = var.flux_revision_type != "commit" || can(regex("^[a-fA-F0-9]{40}$", var.polyad_revision))
+    error_message = "For a Flux commit reference, polyad_revision must be a full 40-character Git SHA."
+  }
+}
+
+variable "flux_reconcile_interval" {
+  description = "Flux source and Helm reconciliation interval, as a positive duration in seconds, minutes, or hours."
+  type        = string
+  default     = "1m"
+
+  validation {
+    condition     = can(regex("^[1-9][0-9]*(s|m|h)$", var.flux_reconcile_interval))
+    error_message = "Use a positive interval such as 30s, 1m, or 1h."
+  }
+}
+
 variable "argocd_chart_version" {
   description = "Pinned Argo CD Helm chart version. 10.9.2 (Argo CD v3.5.3) was the latest published chart on 2026-09-17."
   type        = string
@@ -59,10 +103,11 @@ variable "argocd_admin_password_hash" {
   description = "Bcrypt hash of your chosen Argo CD admin password, generated with argocd account bcrypt --password. Supply through TF_VAR_argocd_admin_password_hash."
   type        = string
   sensitive   = true
+  default     = null
 
   validation {
-    condition     = can(regex("^\\$2[aby]\\$[0-9]{2}\\$[./A-Za-z0-9]{53}$", var.argocd_admin_password_hash))
-    error_message = "Provide a bcrypt hash, not a plaintext password. Use argocd account bcrypt --password with your chosen password."
+    condition     = var.gitops_controller != "argocd" || can(regex("^\\$2[aby]\\$[0-9]{2}\\$[./A-Za-z0-9]{53}$", var.argocd_admin_password_hash))
+    error_message = "Argo CD requires a bcrypt hash, not plaintext. Use argocd account bcrypt --password. Flux does not require this credential."
   }
 }
 
@@ -78,7 +123,7 @@ variable "argocd_admin_password_mtime" {
 }
 
 variable "polyad_revision" {
-  description = "Public repository branch, tag or commit Argo CD follows. Use main for continuous updates or a commit SHA for a repeatable experiment."
+  description = "Public repository branch, tag or commit the selected controller follows. For Flux, also set flux_revision_type when not using a branch."
   type        = string
   default     = "main"
 }
@@ -90,7 +135,7 @@ variable "polyad_values_files" {
 }
 
 variable "polyad_values_override" {
-  description = "Optional final YAML overrides for experiment parameters or a published operator image. Keep secrets out: this text is stored in the Argo Application."
+  description = "Optional final YAML overrides for experiment parameters or a published operator image. Keep secrets out: stored in the Application or HelmRelease."
   type        = string
   default     = "{}"
 
@@ -101,7 +146,7 @@ variable "polyad_values_override" {
 }
 
 variable "polyad_automated_sync" {
-  description = "Automatically sync, prune and self-heal Polyad from Git. Disable while freezing an experiment or performing ordered teardown."
+  description = "Automatically reconcile Polyad from Git. False leaves Argo manual or suspends the Flux HelmRelease, including its initial install. Drain application boundaries before teardown."
   type        = bool
   default     = true
 }
@@ -151,7 +196,7 @@ variable "copolyad_max_nodes" {
 }
 
 variable "benchmarks_enabled" {
-  description = "Register the benchmark Application in Argo CD. Manual sync by default; registration and sync do not start load generation."
+  description = "Register the benchmark Application or HelmRelease. Manual/suspended by default; registration and sync do not start load generation."
   type        = bool
   default     = true
 }
@@ -163,7 +208,7 @@ variable "benchmarks_values_files" {
 }
 
 variable "benchmarks_values_override" {
-  description = "Final benchmark YAML mapping, for published fixture/runner images or run settings. Stored in the Application; exclude secrets."
+  description = "Final benchmark YAML mapping, for published fixture/runner images or run settings. Stored in the Application or HelmRelease; exclude secrets."
   type        = string
   default     = "{}"
 

@@ -1,7 +1,7 @@
 apiVersion: v2
 name: polyad-bootstrap
 description: >-
-  Configure an Argo CD AppProject and Git-synced Polyad operator and benchmark
-  Applications for isolated GKE scaling studies
+  Configure Argo CD Applications or Flux GitRepository and HelmReleases for
+  isolated Polyad operator and benchmark GKE scaling studies
 type: application
 version: 0.1.0

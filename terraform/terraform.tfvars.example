@@ -5,12 +5,18 @@ zone       = "us-central1-a"
 cluster_name = "polyad-load-test"
 machine_type = "c3-standard-4" # Shared by polyad, fixtures and copolyad.
 default_node_count = 1 # Untainted system nodes, separate from all experiment pools.
-fixtures_min_nodes = 1 # Consumers, monitoring and standalone Argo CD.
+fixtures_min_nodes = 1 # Consumers, monitoring and the selected GitOps controller.
 fixtures_max_nodes = 10
 copolyad_min_nodes = 1 # Load generators, isolated from consumers.
 copolyad_max_nodes = 10
 
-# Supply TF_VAR_argocd_admin_password_hash in the environment; never commit it.
+# Choose one controller before creating the environment; not a live migration toggle.
+gitops_controller = "argocd" # Set "flux" to test Flux instead; no Argo password needed.
+# flux_chart_version = "2.19.0" # Flux 2.9.1, including HelmRelease CEL health checks.
+# flux_revision_type = "branch" # Use "tag" or "commit" for a pinned polyad_revision.
+# flux_reconcile_interval = "1m"
+
+# Argo only: supply TF_VAR_argocd_admin_password_hash; never commit it.
 # Update this timestamp whenever the admin password changes.
 argocd_admin_password_mtime = "2026-09-17T00:00:00Z"
 
@@ -32,6 +38,10 @@ polyad_automated_sync = true
 
 # Register fixtures for inspection; first install monitoring CRDs as documented.
 # Keep manual sync while setting published images. Sync never starts load traffic.
+# Flux maps false to spec.suspend: true. Set true and apply to enable reconciliation;
+# inspect with kubectl -n flux-system get gitrepositories,helmreleases.
+# Before destroy, freeze reconciliation and drain Polyad application boundaries
+# while the operator is still available to process their deletion finalizers.
 benchmarks_enabled = true
 benchmarks_automated_sync = false
 # benchmarks_values_files = ["values-steady.yaml", "../../studies/load/fixtures/gke-values.yaml"]

@@ -1,0 +1,20 @@
+apiVersion: polyad.astrivant.com/v1alpha1
+kind: Workload
+metadata:
+  generateName: polyad-kind-smoke-
+  labels:
+    app.kubernetes.io/part-of: polyad-kind-smoke
+spec:
+  template:
+    spec:
+      containers:
+        - name: main
+          image: busybox:1.37
+          command: [sh, -c, 'echo "Polyad reconciled a fresh Kind Graph"']
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi

@@ -106,6 +106,12 @@ namespace; the root creates their execution Deployments in registered clusters.
 
 ## One dense operator
 
+For local development, the [Minikube integration](../../integrations/minikube/README.md)
+installs this non-HA pattern into a three-node cluster, including image builds,
+single-instance Dragonfly, storage setup, and a Graph smoke test. Three nodes
+do not imply three operator replicas. Follow its prerequisite and activation
+steps instead of the manual Helm command below when you want that local setup.
+
 ```bash
 helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
   --values examples/deployment-profiles/singular.yaml

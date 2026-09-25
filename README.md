@@ -88,6 +88,16 @@ with the Helm chart, or try the [local Python scheduler](docs/introduction/getti
 The [examples](docs/introduction/getting-started.md#examples) cover pipelines, services,
 spot work, storage and nested graphs.
 
+For a local Kubernetes environment, follow the
+[Minikube installation and activation guide](integrations/minikube/README.md).
+After installing its host prerequisites, this command starts three nodes, builds
+the checkout, and installs a standalone, non-HA operator and cache with an
+end-to-end Graph smoke test:
+
+```sh
+bash integrations/minikube/minikube.sh start
+```
+
 For application feedback, start with the [approved load-profile example](examples/load-profiles.yaml)
 and its [Helm reference values](charts/polyad/references/values-soul-searching.reference.yaml).
 The [demand guide](docs/graphs/load-profiles.md#define-demand) explains signal names,

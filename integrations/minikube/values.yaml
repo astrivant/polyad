@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# Local overlay for the canonical chart, not a second distribution of Polyad.
+## @param ha [boolean] Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true.
+ha: false
+## @param operator [object] Settings for operator.
+operator:
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha
+  replicaCount: 1
+  ## @param operator.image [object] Settings for operator.image.
+  image:
+    ## @param operator.image.repository [string] Operator image repository
+    repository: polyad
+    ## @param operator.image.tag [string] Operator image tag
+    tag: minikube
+    ## @param operator.image.pullPolicy [string] Operator image pull policy
+    pullPolicy: Never
+  ## @param operator.autoscaling [object] Settings for operator.autoscaling.
+  autoscaling:
+    ## @param operator.autoscaling.enabled [boolean] Enable operator HPA using CPU and optional memory utilization
+    enabled: false
+## @param architecture [object] Settings for architecture.
+architecture:
+  ## @param architecture.mode [string] Dense combines responsibilities; Distributed manages gateway, executor and telemetry ReplicaGroups inside a Graph; requires ha
+  mode: Dense
+  ## @param architecture.autoscaling [boolean] Enable KEDA scaling of all component ReplicaGroup definitions
+  autoscaling: false
+## @param worker [object] Settings for worker.
+worker:
+  ## @param worker.enabled [boolean] Install a Helm-owned execution worker connected to an existing root.
+  enabled: false
+## @param rootControlPlane [object] Settings for rootControlPlane.
+rootControlPlane:
+  ## @param rootControlPlane.enabled [boolean] Manage registered clusters and remote execution replicas through one root scheduler; requires ha
+  enabled: false
+## @param dragonfly [object] Settings for dragonfly.
+dragonfly:
+  ## @param dragonfly.enabled [boolean] Deploy Dragonfly through the upstream operator Helm dependency
+  enabled: true
+  ## @param dragonfly.ha [object] Settings for dragonfly.ha.
+  ha:
+    ## @param dragonfly.ha.enabled [boolean] Enable primary/replica replication and automatic failover
+    enabled: false
+  ## @param dragonfly.autoscaling [object] Settings for dragonfly.autoscaling.
+  autoscaling:
+    ## @param dragonfly.autoscaling.enabled [boolean] Use KEDA for bundled HA Dragonfly and enable Polyad metrics; inactive outside bundled HA
+    enabled: false
+  ## @param dragonfly.persistence [object] Settings for dragonfly.persistence.
+  persistence:
+    ## @param dragonfly.persistence.enabled [boolean] Persist bundled Dragonfly snapshots on a PVC
+    enabled: true
+    ## @param dragonfly.persistence.size [string] Snapshot volume capacity
+    size: 1Gi
+    ## @param dragonfly.persistence.storageClass [string] Snapshot volume storage class; empty uses the cluster default
+    storageClass: local-path
+## @param dragonflyOperator [object] Settings for dragonflyOperator.
+dragonflyOperator:
+  ## @param dragonflyOperator.replicaCount [integer] Leader-elected Dragonfly controller replicas
+  replicaCount: 1
+## @param keda [object] Settings for keda.
+keda:
+  ## @param keda.install [boolean] Install the pinned upstream KEDA dependency in the release namespace; false uses an existing installation.
+  install: false
+## @param mesh [object] Settings for mesh.
+mesh:
+  ## @param mesh.enabled [boolean] Allow graph HTTP and service-identity authorization and generate Istio security resources
+  enabled: false
+  ## @param mesh.install [boolean] Install the pinned upstream Istio base and istiod dependencies; requires mesh.enabled
+  install: false
+## @param metrics [object] Settings for metrics.
+metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
+  enabled: true
+  ## @param metrics.graphLabels [boolean] Expose per-graph topology, policy, Cheeger, spectrum, throughput and workload-signal series; increases cardinality, does not gate JSON or KEDA scalar routes
+  graphLabels: true

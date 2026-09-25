@@ -97,11 +97,14 @@ run "gitops_bootstrap" {
 
   assert {
     condition = (
-      helm_release.argocd.version == "10.9.2" &&
-      yamldecode(helm_release.argocd.values[0]).server.service.type == "ClusterIP" &&
-      yamldecode(helm_release.argocd.values[0]).global.nodeSelector["cloud.google.com/gke-nodepool"] == "fixtures" &&
-      yamldecode(helm_release.argocd.values[0]).global.tolerations[0].value == "fixtures" &&
-      yamldecode(helm_release.argocd.values[0]).configs.cm["application.resourceTrackingMethod"] == "annotation" &&
+      helm_release.argocd[0].version == "10.9.2" &&
+      length(helm_release.flux) == 0 &&
+      helm_release.bootstrap.namespace == "argocd" &&
+      yamldecode(helm_release.bootstrap.values[0]).controller == "argocd" &&
+      yamldecode(helm_release.argocd[0].values[0]).server.service.type == "ClusterIP" &&
+      yamldecode(helm_release.argocd[0].values[0]).global.nodeSelector["cloud.google.com/gke-nodepool"] == "fixtures" &&
+      yamldecode(helm_release.argocd[0].values[0]).global.tolerations[0].value == "fixtures" &&
+      yamldecode(helm_release.argocd[0].values[0]).configs.cm["application.resourceTrackingMethod"] == "annotation" &&
       yamldecode(helm_release.bootstrap.values[0]).revision == "main" &&
       yamldecode(helm_release.bootstrap.values[0]).automatedSync
     )
@@ -110,14 +113,14 @@ run "gitops_bootstrap" {
 
   assert {
     condition = (
-      yamldecode(helm_release.argocd.values[0]).controller.replicas == 1 &&
-      yamldecode(helm_release.argocd.values[0]).server.replicas == 1 &&
-      yamldecode(helm_release.argocd.values[0]).repoServer.replicas == 1 &&
-      yamldecode(helm_release.argocd.values[0]).applicationSet.replicas == 1 &&
-      !yamldecode(helm_release.argocd.values[0]).server.autoscaling.enabled &&
-      !yamldecode(helm_release.argocd.values[0]).repoServer.autoscaling.enabled &&
-      yamldecode(helm_release.argocd.values[0]).redis.enabled &&
-      !yamldecode(helm_release.argocd.values[0])["redis-ha"].enabled &&
+      yamldecode(helm_release.argocd[0].values[0]).controller.replicas == 1 &&
+      yamldecode(helm_release.argocd[0].values[0]).server.replicas == 1 &&
+      yamldecode(helm_release.argocd[0].values[0]).repoServer.replicas == 1 &&
+      yamldecode(helm_release.argocd[0].values[0]).applicationSet.replicas == 1 &&
+      !yamldecode(helm_release.argocd[0].values[0]).server.autoscaling.enabled &&
+      !yamldecode(helm_release.argocd[0].values[0]).repoServer.autoscaling.enabled &&
+      yamldecode(helm_release.argocd[0].values[0]).redis.enabled &&
+      !yamldecode(helm_release.argocd[0].values[0])["redis-ha"].enabled &&
       yamldecode(helm_release.bootstrap.values[0]).benchmarks.enabled &&
       !yamldecode(helm_release.bootstrap.values[0]).benchmarks.automatedSync
     )
@@ -163,6 +166,105 @@ run "frozen_experiment" {
     )
     error_message = "Support immutable revisions, manual sync and explicit experiment image overrides."
   }
+}
+
+run "flux_without_argo_credentials" {
+  command = plan
+
+  variables {
+    project_id        = "polyad-test-project"
+    gitops_controller = "flux"
+  }
+
+  assert {
+    condition = (
+      length(helm_release.argocd) == 0 &&
+      helm_release.flux[0].version == "2.19.0" &&
+      helm_release.flux[0].repository == "oci://ghcr.io/fluxcd-community/charts" &&
+      helm_release.flux[0].wait &&
+      helm_release.bootstrap.namespace == "flux-system" &&
+      yamldecode(helm_release.bootstrap.values[0]).controller == "flux" &&
+      yamldecode(helm_release.bootstrap.values[0]).flux.revisionType == "branch" &&
+      yamldecode(helm_release.bootstrap.values[0]).flux.interval == "1m" &&
+      yamldecode(helm_release.bootstrap.values[0]).automatedSync &&
+      !yamldecode(helm_release.bootstrap.values[0]).benchmarks.automatedSync
+    )
+    error_message = "Flux must bootstrap independently of Argo credentials, with benchmarks suspended."
+  }
+
+  assert {
+    condition = (
+      yamldecode(helm_release.flux[0].values[0]).installCRDs &&
+      !yamldecode(helm_release.flux[0].values[0]).imageAutomationController.create &&
+      !yamldecode(helm_release.flux[0].values[0]).imageReflectionController.create &&
+      alltrue([for controller in ["sourceController", "helmController", "kustomizeController", "notificationController"] :
+        yamldecode(helm_release.flux[0].values[0])[controller].create &&
+        yamldecode(helm_release.flux[0].values[0])[controller].nodeSelector["cloud.google.com/gke-nodepool"] == "fixtures" &&
+        yamldecode(helm_release.flux[0].values[0])[controller].tolerations[0].value == "fixtures"
+      ]) &&
+      output.argocd_port_forward_command == null &&
+      output.polyad_application == null &&
+      output.benchmarks_application == null &&
+      output.polyad_helmrelease == "flux-system/polyad" &&
+      output.benchmarks_helmrelease == "flux-system/polyad-benchmarks"
+    )
+    error_message = "Keep Flux on the fixtures pool, omit Git-writing image controllers, and expose only relevant outputs."
+  }
+}
+
+run "flux_frozen_commit" {
+  command = plan
+
+  variables {
+    project_id              = "polyad-test-project"
+    gitops_controller       = "flux"
+    flux_revision_type      = "commit"
+    polyad_revision         = "0123456789012345678901234567890123456789"
+    flux_reconcile_interval = "5m"
+    polyad_automated_sync   = false
+    benchmarks_enabled      = false
+    polyad_values_override  = "operator:\n  image:\n    tag: experiment-42\n"
+  }
+
+  assert {
+    condition = (
+      yamldecode(helm_release.bootstrap.values[0]).revision == var.polyad_revision &&
+      yamldecode(helm_release.bootstrap.values[0]).flux.revisionType == "commit" &&
+      yamldecode(helm_release.bootstrap.values[0]).flux.interval == "5m" &&
+      !yamldecode(helm_release.bootstrap.values[0]).automatedSync &&
+      !yamldecode(helm_release.bootstrap.values[0]).benchmarks.enabled &&
+      yamldecode(yamldecode(helm_release.bootstrap.values[0]).values).operator.image.tag == "experiment-42" &&
+      output.benchmarks_helmrelease == null
+    )
+    error_message = "Flux must preserve pinned revisions, overrides, suspension, and optional benchmark registration."
+  }
+}
+
+run "argo_still_requires_password" {
+  command = plan
+  variables { project_id = "polyad-test-project" }
+  expect_failures = [var.argocd_admin_password_hash]
+}
+
+run "invalid_gitops_controller" {
+  command = plan
+  variables {
+    project_id        = "polyad-test-project"
+    gitops_controller = "both"
+  }
+  expect_failures = [var.gitops_controller]
+}
+
+run "invalid_flux_settings" {
+  command = plan
+  variables {
+    project_id              = "polyad-test-project"
+    gitops_controller       = "flux"
+    flux_revision_type      = "commit"
+    polyad_revision         = "short-sha"
+    flux_reconcile_interval = "0m"
+  }
+  expect_failures = [var.flux_revision_type, var.flux_reconcile_interval]
 }
 
 run "independent_capacity" {

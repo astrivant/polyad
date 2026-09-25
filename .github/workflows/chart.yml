@@ -34,10 +34,13 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
   chart:
     needs: source
-    runs-on: ubuntu-latest
+    # Public-repository standard Linux runners provide 4 CPUs / 16 GB without fees.
+    # Larger runner labels are billed even for public repositories.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
+        # Six property-test jobs total until upstream supports recursive sharding.
         chart: [polyad, polyad-crds]
         shard: [1, 2, 3]
         include:
@@ -67,13 +70,14 @@ jobs:
         # Its default and full monitoring profiles have strict render/schema checks below.
         if: matrix.chart != 'polyad-benchmarks'
         # Supports HH1107 and the kubeconform wrapper; newer revisions changed these inputs.
+        # Upstream must support --filter with --shard before filtering can be enabled here.
         uses: astrivant/hypothesis-helm@05681f04b41256a41355e6320e52a7ca17f67b74
         with:
           chart: charts/${{ matrix.chart }}
           artifact-name: ${{ inputs.artifact-prefix }}-${{ matrix.chart }}
           artifact-dir: reports/hypothesis-helm/${{ matrix.chart }}
           shard: ${{ matrix.shard }}/3
-          jobs: '2'
+          jobs: '4'
           kubeconform: 'true'
           kubeconform-binary: scripts/validation/kubeconform.sh
           schema-version: '1.35.0'

@@ -51,7 +51,7 @@ repos:
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-values.py
         language: system
         pass_filenames: false
-        files: '^(charts/polyad(-crds|-benchmarks)?/values.*\.(yaml|json)|studies/.*values.*\.yaml|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|pkg/tests/data/.*values\.yaml|terraform/.*values.*\.(yaml|json)|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
+        files: '^(charts/polyad(-crds|-benchmarks)?/values.*\.(yaml|json)|studies/.*values.*\.yaml|integrations/.*values.*\.yaml|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|pkg/tests/data/.*values\.yaml|terraform/.*values.*\.(yaml|json)|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
       - id: schema-artifacts
         name: Generated chart and Python schema artifacts
         entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-all.py --check

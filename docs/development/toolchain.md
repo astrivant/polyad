@@ -4,6 +4,7 @@
 **Table of contents**
 
 - [Setup](#setup)
+- [Develop against local Kubernetes](#develop-against-local-kubernetes)
 - [Formatting and checks](#formatting-and-checks)
 - [Python types and serialization](#python-types-and-serialization)
 - [One pipeline per run](#one-pipeline-per-run)
@@ -61,6 +62,32 @@ runs Python through Poetry. Hooks therefore use the project's locked Python
 dependencies. Pre-commit installs its pinned docstring and Helm documentation
 tools in isolated environments. The Mermaid wrapper runs `npm ci` from its
 lockfile when the dependencies or Node version change.
+
+## Develop against local Kubernetes
+
+The [Minikube integration](../../integrations/minikube/README.md) starts three
+nodes and installs a single dense operator, one Dragonfly instance, and one
+Dragonfly controller. The cluster is intentionally non-HA. Install the guide's
+Docker/Buildx and Minikube prerequisites, then run from the checkout root:
+
+```sh
+bash integrations/minikube/minikube.sh start
+```
+
+After editing operator code, chart templates, or generated CRDs, rebuild and
+verify without recreating the profile:
+
+```sh
+bash integrations/minikube/minikube.sh enable
+bash integrations/minikube/minikube.sh test
+```
+
+Images are built from the checkout and loaded directly into the cluster; there
+is no registry push or live source mount. The guide documents
+[cluster-free integration tests](../../integrations/minikube/README.md#check-the-integration-without-a-running-cluster),
+profile-specific values, logs, metrics, and safe cleanup. Use explicit
+`--context polyad` for your own kubectl commands because the helper preserves
+your existing current context. This workflow does not change CI's Kind tests.
 
 ## Formatting and checks
 
@@ -332,13 +359,30 @@ PyPI. Add `--dry-run` to validate the publishing flow without uploading. See
 ## Verified Helm chart builds
 
 Main-branch pushes and pull requests call `.github/workflows/chart.yml` from the
-Polyad pipeline. Chart validation uses `astrivant/hypothesis-helm@main` across `charts/polyad` and `charts/polyad-crds`, with **three
-shards per chart and two workers per shard**. PRs, main-branch pushes and tagged builds
-inherit the action's defaults for test selection, sampling, example counts,
-reruns and result caching. The release path does not request a separate
-exhaustive mode. Since the action tracks `main`, those defaults follow upstream;
-consult its [action definition](https://github.com/astrivant/hypothesis-helm/blob/main/action.yml)
-for the current behavior.
+Polyad pipeline. Chart validation pins the Hypothesis Helm action to
+[`05681f04b41256a41355e6320e52a7ca17f67b74`](https://github.com/astrivant/hypothesis-helm/tree/05681f04b41256a41355e6320e52a7ca17f67b74)
+across `charts/polyad` and `charts/polyad-crds`, with **six property-test jobs total:
+three shards per chart and four workers per shard**. The jobs use `ubuntu-24.04`: GitHub's largest standard free
+Linux runner for public repositories, with 4 CPUs and 16 GB RAM. Larger runners
+are billed even for public repositories; see the
+[standard runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+and [larger runner billing](https://docs.github.com/en/actions/concepts/runners/larger-runners).
+GitHub account concurrency limits can still queue some of the six shard jobs.
+
+PRs, main-branch pushes, and tagged builds retain the pinned action's defaults:
+100 examples per property, seed zero, all eligible paths on each CI run, and
+strict Kubernetes 1.35 validation through the repository's Kubeconform wrapper.
+There is no additional random percentage sampling or separate exhaustive release
+scan. **Filtering is not enabled yet:** the pinned action has no `filter` input,
+and its CLI restricts `--filter` to a mode incompatible with `--shard`. Recursive
+chart discovery also rejects `--shard`. Upstream support is required to replace
+the per-chart matrix with one recursive filtered scan split across six shards.
+
+Each shard uploads its own reports, JUnit results, and JSON manifest stream even
+when validation fails. Report names distinguish the initial and tagged passes.
+Kubernetes schemas share a versioned cache; test-result caches remain local to
+each job. Benchmark-chart defaults and monitoring profiles retain their strict
+render/schema checks while the upstream dependency-merge parser issue remains.
 
 All six chart/shard jobs and the benchmark-chart validation must succeed before
 the pipeline can permit automatic tagging. The same component validates
@@ -356,7 +400,7 @@ dependency pin when releasing changed definitions or templates. These builds upl
 they do not publish to a Helm registry or GitHub Release.
 
 The resource chart has empty instance maps by default. Its scoped hypothesis-helm
-policy permits an empty instance bundle (`HH1009`); Python tests verify the CRD
+policy permits an empty instance bundle (`HH1107`); Python tests verify the CRD
 installation output and representative instances independently. All other checks
 remain enabled, and the operator chart retains its normal policy.
 

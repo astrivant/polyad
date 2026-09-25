@@ -41,5 +41,8 @@ the chart's documented types and defaults.
 
 The cluster tests in `testing/test-*.sh` require an installed operator and mutate
 their test cluster. CI provisions an isolated Kind cluster before running them.
+For local development, the [Minikube integration](../integrations/minikube/README.md)
+creates a three-node cluster, builds and installs a standalone operator, and runs
+its own uniquely named Graph smoke test without changing your current context.
 See the [toolchain guide](../docs/development/toolchain.md) for tool installation,
 validation prerequisites and release workflows.

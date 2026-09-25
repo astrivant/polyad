@@ -1,4 +1,4 @@
-{{- if .Values.benchmarks.enabled }}
+{{- if and (eq .Values.controller "argocd") .Values.benchmarks.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

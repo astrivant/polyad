@@ -25,6 +25,7 @@ then [run your first workload](introduction/getting-started.md).
 | --- | --- |
 | [Graph concepts](introduction/concepts.md) | Nodes, dependencies, subgraphs, placement and recurrence |
 | [Getting started](introduction/getting-started.md) | Installation, execution models and runnable examples |
+| [Install locally with Minikube](../integrations/minikube/README.md) | Host prerequisites, activation, verification, and cleanup for three nodes with standalone, non-HA Polyad |
 
 ## Graphs and scaling
 
@@ -124,6 +125,7 @@ then [run your first workload](introduction/getting-started.md).
 | [Mutation diagram patterns](development/mutation-diagrams.md) | Commuting squares, triangles, diamonds and cubes, with implementation boundaries |
 | [Python types and serialization](development/toolchain.md#python-types-and-serialization) | Custom graph references, Mypy checks and cattrs round trips |
 | [Development toolchain](development/toolchain.md) | Pinned tools, editor settings, formatting and generated documentation |
+| [Develop against Minikube](../integrations/minikube/README.md#developer-workflow) | Rebuild/load the operator image, update CRDs, test a fresh Graph, and troubleshoot a local cluster |
 | [Benchmark studies](../studies/README.md) | Repeatable load experiments, fixture images, pytest smoke checks and CI refresh phases |
 | [Soul process study](../studies/soul/README.md) | Six-service SDK strategy experiments, worker replacement, bounded admission and measured process plots |
 | [Nature process study](../studies/nature/README.md) | Composition changes above adaptive services, capability survival and retirement, and measured outcomes |

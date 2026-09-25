@@ -3,6 +3,8 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "controller",
+    "flux",
     "revision",
     "valueFiles",
     "values",
@@ -10,6 +12,19 @@
     "benchmarks"
   ],
   "properties": {
+    "controller": {
+      "type": "string",
+      "enum": ["argocd", "flux"]
+    },
+    "flux": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revisionType", "interval"],
+      "properties": {
+        "revisionType": {"type": "string", "enum": ["branch", "tag", "commit"]},
+        "interval": {"type": "string", "pattern": "^[1-9][0-9]*(s|m|h)$"}
+      }
+    },
     "revision": {
       "type": "string",
       "minLength": 1

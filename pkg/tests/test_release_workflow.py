@@ -296,6 +296,7 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     workflow = yaml.load((ROOT / ".github/workflows/chart.yml").read_text(), Loader=yaml.BaseLoader)
     chart = workflow["jobs"]["chart"]
     assert chart["needs"] == "source"
+    assert chart["runs-on"] == "ubuntu-24.04"
     assert chart["strategy"] == {
         "fail-fast": "false",
         "matrix": {
@@ -310,7 +311,7 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     assert inputs["chart"] == "charts/${{ matrix.chart }}"
     assert inputs["artifact-name"] == "${{ inputs.artifact-prefix }}-${{ matrix.chart }}"
     assert inputs["artifact-dir"] == "reports/hypothesis-helm/${{ matrix.chart }}"
-    assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "2"
+    assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "4"
     assert inputs["kubeconform"] == "true" and inputs["schema-version"] == "1.35.0"
     assert inputs["kubeconform-binary"] == "scripts/validation/kubeconform.sh"
     assert not {"sample-random", "max-examples", "rerun", "cache", "filter", "exhaustive"}.intersection(inputs)
