@@ -11,6 +11,10 @@ on:
         description: Version tag (optionally refs/tags-prefixed); empty skips packaging
         type: string
         default: ''
+      artifact-prefix:
+        description: Distinguish validation artifacts when this component is called twice in one pipeline
+        type: string
+        default: hypothesis-helm
 
 permissions:
   contents: read
@@ -65,7 +69,7 @@ jobs:
         uses: astrivant/hypothesis-helm@main
         with:
           chart: charts/${{ matrix.chart }}
-          artifact-name: hypothesis-helm-${{ matrix.chart }}
+          artifact-name: ${{ inputs.artifact-prefix }}-${{ matrix.chart }}
           artifact-dir: reports/hypothesis-helm/${{ matrix.chart }}
           shard: ${{ matrix.shard }}/3
           jobs: '2'

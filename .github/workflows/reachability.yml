@@ -1,17 +1,11 @@
 name: Reachability studies
 on:
-  pull_request:
-    paths:
-      - pkg/polyad-sdk/**
-      - pkg/polyad-benchmarks/**
-      - pkg/tests/test_reachability*
-      - pkg/tests/test_cheeger_reduction.py
-      - pkg/tests/test_study_plotting.py
-      - studies/**
-      - .github/workflows/reachability.yml
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Immutable source commit selected by the pipeline
+        type: string
+        required: true
 permissions:
   contents: read
 jobs:
@@ -23,6 +17,9 @@ jobs:
         python: ['3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -39,6 +36,9 @@ jobs:
       matrix: ${{ steps.prepare.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -60,6 +60,9 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -85,6 +88,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'

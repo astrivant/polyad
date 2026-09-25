@@ -1,12 +1,14 @@
 name: Publish to PyPI
 
 on:
-  push:
-    tags: ['v[0-9]*']
-  workflow_dispatch:
+  workflow_call:
     inputs:
+      ref:
+        description: Immutable source commit verified by the parent pipeline
+        required: true
+        type: string
       tag:
-        description: Existing version tag to verify and publish
+        description: Existing version tag verified by the parent pipeline
         required: true
         type: string
 
@@ -14,27 +16,22 @@ permissions:
   contents: read
 
 concurrency:
-  group: pypi-${{ inputs.tag || github.ref_name }}
+  group: pypi-${{ inputs.tag }}
   cancel-in-progress: false
 
 jobs:
-  verify:
-    uses: ./.github/workflows/ci.yml
-    with:
-      ref: refs/tags/${{ inputs.tag || github.ref_name }}
   publish:
-    needs: verify
     environment: pypi
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/prepare-release
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ inputs.tag }}
       - uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
@@ -43,7 +40,7 @@ jobs:
       - name: Check release version
         id: version
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ inputs.tag }}
         run: python .github/release-version.py --tag "$RELEASE_TAG" --output "$GITHUB_OUTPUT"
       - name: Download verified distributions
         uses: actions/download-artifact@v4

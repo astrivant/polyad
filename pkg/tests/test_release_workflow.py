@@ -216,16 +216,17 @@ def test_tagging_waits_for_all_checks_and_checks_out_the_tested_commit():
     """
     ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
     workflow = yaml.load((ROOT / ".github/workflows/tag.yml").read_text(), Loader=yaml.BaseLoader)
-    assert "tag" not in ci["jobs"]
     assert ci["permissions"] == {"contents": "read"}
-    trigger = workflow["on"]["workflow_run"]
-    assert trigger == {"workflows": ["Test"], "types": ["completed"]}
+    caller = ci["jobs"]["tag"]
+    assert caller["needs"] == ["source", "verified"]
+    assert caller["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+    assert caller["permissions"] == {"contents": "write"}
+    assert caller["uses"] == "./.github/workflows/tag.yml"
+    assert caller["with"]["ref"] == "${{ needs.source.outputs.sha }}"
+    assert set(workflow["on"]) == {"workflow_call"}
     tag = workflow["jobs"]["tag"]
-    assert "head_branch == 'main'" in tag["if"] and "conclusion == 'success'" in tag["if"]
-    assert "workflow_run.event == 'push'" in tag["if"]
     assert tag["permissions"] == {"contents": "write"}
-    assert tag["steps"][0]["with"] == {"ref": "${{ github.event.workflow_run.head_sha }}", "persist-credentials": "false"}
-    assert "workflow_call" in ci["on"]
+    assert tag["steps"][0]["with"] == {"ref": "${{ inputs.ref }}", "persist-credentials": "false"}
 
 
 @pytest.mark.parametrize(
@@ -270,12 +271,19 @@ def test_publishing_validates_the_package_tag(tmp_path, package, tag, normalized
 
 def test_publication_downloads_verified_artifacts_and_uses_environment_credentials():
     """
-    Gate publication on reusable CI and download its distributions without rebuilding.
+    Gate publication inside the one pipeline and download its distributions without rebuilding.
     """
+    ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
     workflow = yaml.load((ROOT / ".github/workflows/publish.yml").read_text(), Loader=yaml.BaseLoader)
-    assert workflow["jobs"]["verify"]["uses"] == "./.github/workflows/ci.yml"
+    caller = ci["jobs"]["publish"]
+    assert caller["needs"] == ["source", "verified", "python"]
+    assert caller["if"] == "needs.source.outputs.release-tag != ''"
+    assert caller["with"] == {"ref": "${{ needs.source.outputs.sha }}", "tag": "${{ needs.source.outputs.release-tag }}"}
+    assert caller["uses"] == "./.github/workflows/publish.yml"
+    assert set(workflow["on"]) == {"workflow_call"} and "verify" not in workflow["jobs"]
     publish = workflow["jobs"]["publish"]
-    assert publish["needs"] == "verify" and publish["environment"] == "pypi"
+    assert publish["environment"] == "pypi"
+    assert publish["steps"][0]["with"]["ref"] == "${{ inputs.ref }}"
     assert any(step.get("uses", "").startswith("actions/download-artifact@") for step in publish["steps"])
     assert not any("poetry build" in step.get("run", "") for step in publish["steps"])
     assert publish["steps"][-1]["env"]["POETRY_PYPI_TOKEN_PYPI"] == "${{ secrets.PYPI_API_TOKEN }}"
@@ -299,7 +307,7 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     action = next(step for step in chart["steps"] if step.get("uses") == "astrivant/hypothesis-helm@main")
     inputs = action["with"]
     assert inputs["chart"] == "charts/${{ matrix.chart }}"
-    assert inputs["artifact-name"] == "hypothesis-helm-${{ matrix.chart }}"
+    assert inputs["artifact-name"] == "${{ inputs.artifact-prefix }}-${{ matrix.chart }}"
     assert inputs["artifact-dir"] == "reports/hypothesis-helm/${{ matrix.chart }}"
     assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "2"
     assert not {"sample-random", "max-examples", "rerun", "cache", "filter", "exhaustive"}.intersection(inputs)
@@ -321,18 +329,24 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
 
 def test_main_and_automatic_tags_use_the_same_chart_gate():
     """
-    Main must validate before tagging; token-created tags explicitly invoke their chart build.
+    Main validates before tagging; tagged chart builds remain inside the same parent run.
     """
     ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
     tag = yaml.load((ROOT / ".github/workflows/tag.yml").read_text(), Loader=yaml.BaseLoader)
     assert ci["on"]["push"]["branches"] == ["main"]
     assert "pull_request" in ci["on"]
     assert ci["jobs"]["chart"]["uses"] == "./.github/workflows/chart.yml"
-    assert "startsWith" in ci["jobs"]["chart"]["with"]["release-tag"]
+    assert ci["jobs"]["chart"]["with"]["release-tag"] == "${{ needs.source.outputs.release-tag }}"
+    assert ci["jobs"]["chart"]["with"]["ref"] == "${{ needs.source.outputs.sha }}"
+    assert ci["jobs"]["tag"]["needs"] == ["source", "verified"]
     followup = tag["jobs"]["chart"]
     assert followup["needs"] == "tag"
     assert followup["if"] == "needs.tag.outputs.tag != ''"
     assert followup["uses"] == ci["jobs"]["chart"]["uses"]
-    assert followup["with"] == {"ref": "${{ needs.tag.outputs.sha }}", "release-tag": "${{ needs.tag.outputs.tag }}"}
+    assert followup["with"] == {
+        "ref": "${{ needs.tag.outputs.sha }}",
+        "release-tag": "${{ needs.tag.outputs.tag }}",
+        "artifact-prefix": "tagged-hypothesis-helm",
+    }
     create = next(step for step in tag["jobs"]["tag"]["steps"] if step.get("id") == "create")
     assert "existing.data.object.sha === process.env.TESTED_SHA" in create["with"]["script"]

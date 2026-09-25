@@ -273,8 +273,9 @@ Activation and collects the runner's Job logs. Use a fresh `RUN` directory for
 each experiment. A missing fixture, changed source/recipe, changed Graph generation or fixture definition,
 failed activation or timeout fails the run and retains diagnostics.
 
-The [Benchmarks workflow](../../.github/workflows/benchmarks.yml) uses these same
-phases. Its manual `full-refresh` requires an administrator-configured runner
+The [Polyad pipeline](../../.github/workflows/ci.yml) calls the reusable
+[benchmarks component](../../.github/workflows/benchmarks.yml) with these same
+phases. Its manual `full-refresh` input requires an administrator-configured runner
 inside the private cluster network, the `benchmarks` environment and an explicit
 context. It does not run against the cloud on pull requests.
 

@@ -6,6 +6,7 @@
 - [Setup](#setup)
 - [Formatting and checks](#formatting-and-checks)
 - [Python types and serialization](#python-types-and-serialization)
+- [One pipeline per run](#one-pipeline-per-run)
 - [Version tags](#version-tags)
 - [Verified package releases](#verified-package-releases)
   - [Manual PyPI publishing](#manual-pypi-publishing)
@@ -198,11 +199,41 @@ shared models, resource manifests, events and Helm values. Regenerate them with
 chart and Python copies for drift; release CI checks the
 artifacts in the installed standalone wheel.
 
+## One pipeline per run
+
+The [Polyad pipeline](../../.github/workflows/ci.yml) is the only Actions entry
+point for main pushes, pull requests, version-tag pushes and manual runs. Open
+that run to see infrastructure checks, Python and container matrices, chart
+validation, Cheeger benchmarks, reachability studies, and soul/nature process
+studies in one job graph. The component YAML files accept only `workflow_call`;
+they do not create independent runs or completion-triggered follow-up pipelines.
+
+Every branch checks out the same resolved commit. The **All checks passed** job
+joins every validation branch and rejects failures, cancellations and unexpected
+skips before tagging or publishing. Compose is intentionally main-push-only.
+Study failures now block releases as well as ordinary CI success.
+
+```mermaid
+flowchart LR
+    source["Resolve immutable source"] --> checks["Infrastructure, Python, containers, charts and operator"]
+    source --> studies["Benchmarks, reachability and soul/nature studies"]
+    checks --> verified["All checks passed"]
+    studies --> verified
+    verified --> tag["Main push: create version tag"]
+    tag --> charts["Validate and package tagged charts"]
+    verified --> publish["Explicit release tag: publish verified distributions"]
+```
+
+To rerun checks, use **Run workflow** on **Polyad pipeline**. Leave `tag` empty
+for validation only, or specify an existing `v...` tag to verify and publish it.
+`full-refresh` remains an explicit opt-in with a selected `context` and the
+protected `benchmarks` environment. Ordinary pushes and PRs never run cloud load.
+
 ## Version tags
 
-After every successful Test workflow for a push on `main`,
-`.github/workflows/tag.yml` receives its completion event. It waits for the Python,
-chart and both operator integration jobs, then tags that exact tested commit using
+After every successful validation gate for a push on `main`, the pipeline calls
+`.github/workflows/tag.yml` as a dependent job in the same run. It waits for all
+checks and studies, then tags that exact tested commit using
 `project.version` from `pyproject.toml`. Stable versions receive `vX.Y.Z`; Python
 prereleases use `vX.Y.Z-alphaN`, `vX.Y.Z-betaN` or `vX.Y.Z-rcN`. Pull requests and
 other branches cannot create tags.
@@ -215,14 +246,15 @@ write permission. New tags, and reruns for a tag already pointing to that tested
 commit, invoke the reusable chart workflow to validate and package the Helm chart.
 
 Tags use `GITHUB_TOKEN`, so creating one does not start another push-triggered
-workflow. The tagging workflow calls chart validation/build directly after creating
-the tag. The Publish to PyPI workflow accepts a manual version-tag input for these automatically created tags.
-User-pushed version tags start it directly.
+workflow. The tagging component calls chart validation/build directly after creating
+the tag, inside the current pipeline. To publish an automatically created tag,
+run **Polyad pipeline** manually with that `tag`. User-pushed version tags start
+the same pipeline and enter its publishing stage after all checks succeed.
 See [GitHub's workflow trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 ## Verified package releases
 
-The release path follows `hypothesis-helm`: reusable CI prepares the tagged source,
+The release path follows `hypothesis-helm`: the pipeline prepares the tagged source,
 checks its release metadata, builds a wheel and source distribution,
 and uploads them as `python-distributions-<version>`. The publishing job downloads
 those exact artifacts, runs in the `pypi` environment and uses its `PYPI_API_TOKEN`
@@ -300,7 +332,7 @@ PyPI. Add `--dry-run` to validate the publishing flow without uploading. See
 ## Verified Helm chart builds
 
 Main-branch pushes and pull requests call `.github/workflows/chart.yml` from the
-Test workflow. Chart validation uses `astrivant/hypothesis-helm@main` across `charts/polyad` and `charts/polyad-crds`, with **three
+Polyad pipeline. Chart validation uses `astrivant/hypothesis-helm@main` across `charts/polyad` and `charts/polyad-crds`, with **three
 shards per chart and two workers per shard**. PRs, main-branch pushes and tagged builds
 inherit the action's defaults for test selection, sampling, example counts,
 reruns and result caching. The release path does not request a separate
@@ -308,11 +340,12 @@ exhaustive mode. Since the action tracks `main`, those defaults follow upstream;
 consult its [action definition](https://github.com/astrivant/hypothesis-helm/blob/main/action.yml)
 for the current behavior.
 
-All six chart/shard jobs must succeed before Test can permit automatic tagging. The same
-workflow validates user-pushed/manual release tags through reusable CI, and is
-called directly after automatic tagging. For tagged builds, its package job
-requires all six validation jobs, packages both charts, and uploads
-`helm-chart-<tag>` containing both `.tgz` archives for 30 days. Main and PR runs
+All six chart/shard jobs and the benchmark-chart validation must succeed before
+the pipeline can permit automatic tagging. The same component validates
+user-pushed/manual release tags, and runs again after automatic tagging, without
+starting another pipeline. For tagged builds, its package job requires all chart
+validation jobs, packages all three charts, and uploads
+`helm-chart-<tag>` containing three `.tgz` archives for 30 days. Main and PR checks
 validate without producing a release chart archive.
 
 The workflow resolves the source commit once and uses that SHA for every shard
