@@ -294,6 +294,14 @@ service = NeighborhoodService.from_environment(
 service.run()  # Blocking: use the application's existing task/thread supervisor.
 ```
 
+Developers can construct multiple service instances or subclasses in one process.
+Each has its own read-only `service.instance_id` UUID, observation state and event
+subscription, even when created from the same environment or sharing `Telemetry`.
+Run each blocking `run()` through the application's supervisor and stop each with
+`stop()`. Creating another SDK instance does not create another Polyad workload or
+change its authorization. For several behaviors on one observation stream, compose
+multiple strategies in one service instead.
+
 The initial snapshot and an explicit replay reset establish a **baseline** with
 no deltas. A missing measurement remains unknown. A requested replica count
 changing from three to five yields `before=3`, `after=5`, `difference=2`. A newly observed
@@ -762,8 +770,19 @@ on the projected Workload or Daemon definition under `status.adaptation` and set
 its generic `status.progressing` flag. Generated Argo CD and Flux health checks
 therefore report that definition as Progressing while application adaptation is
 executing, without changing the containing Graph's health. Reports are fenced to
-both the graph and definition UIDs and use a stable invocation identity across an
-in-process retry.
+both the graph and definition UIDs. Invocation IDs combine the SDK instance,
+delivery and strategy registration position, so separate same-identity instances
+cannot close one another's active reports. Registering the same strategy object
+twice also produces distinct invocation IDs.
+
+`service.delivery_id` identifies the active or retry-pending observation. It is
+available inside strategy, adaptation, hook and checkpoint callbacks, and becomes
+`None` after successful delivery. Retries retain the delivery and invocation IDs
+but create new trace spans for each executed attempt. A new refresh or reset gets
+a new delivery ID even if the stream cursor is unchanged; an already committed
+duplicate event still does not execute again. New instances, including after a
+process restart, receive new IDs. These IDs do not replace application-owned
+durable idempotency keys.
 
 Transport errors and stream controls propagate to the application's supervisor.
 After a reset or HTTP 410, explicitly call `refresh(reset=True)` before resuming;
@@ -812,6 +831,24 @@ counts. Application metrics use `telemetry.meter`; spans use
 `telemetry.operation(...)` or `telemetry.tracer`. `Telemetry()` reuses existing
 providers; explicit `Telemetry.otlp(...)` starts HTTP exporters. Call `close()`
 after all work stops to flush providers created by the SDK.
+
+During adaptation delivery, SDK operation spans carry
+`polyad.sdk.service.instance.id` and `polyad.sdk.adaptation.delivery.id`.
+Strategy spans and their nested API requests additionally carry
+`polyad.sdk.adaptation.invocation.id`, matching the operator report's `invocationId`,
+and `polyad.sdk.strategy.index`. Context stays isolated across concurrent and
+nested service instances without mutating shared providers or clients. Existing
+parent traces remain intact; related services can share a trace while retaining
+distinct actor and invocation IDs. These correlation IDs are trace attributes,
+not metric labels or W3C baggage.
+
+Application operations can add trace-only attributes with
+`telemetry.operation(..., trace_attributes={...})`; nested SDK operations inherit
+them. `telemetry.scope({...})` replaces correlation for a block without creating a
+span, restoring the previous context on exit. Raw `telemetry.tracer` spans retain
+normal parentage but need explicitly supplied attributes. Application logs can
+include `service.instance_id` and `service.delivery_id`; the SDK does not install
+a global logging filter.
 
 `ProcessSpec` defines a command or Python module with readiness and drain
 callbacks. Named `ProcessPlan` objects define approved worker profiles and guards.

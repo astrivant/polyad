@@ -92,6 +92,10 @@ class AdaptiveService(ABC):
     Failure blocks later components and cursor advancement; retrying the same
     change resumes unfinished delivery.
 
+    Every constructed instance has its own instance_id, even when workload
+    identity and telemetry are shared. Each new delivery has a separate ID;
+    retries retain that ID and its strategy invocation identities.
+
     Construction requires at least one application-chosen strategy. Categories
     are selected by the application. Setting require_strategies=False permits an
     empty collection, with undefined adaptation behavior for uncovered cases.
@@ -150,16 +154,21 @@ class AdaptiveService(ABC):
             raise ValueError("workload context must match the service identity")
         self.settings = settings or Settings()
         self.telemetry = telemetry if telemetry is not None else Telemetry()
+
+        # Runtime actors are not workload identities. Two instances in the same
+        # Pod must never close one another's adaptation progress windows.
+        self._instance_id = uuid.uuid4()
         self._clock, self._checkpoint = clock, checkpoint
         self._state = State(identity, self.settings)
         self._lock = threading.RLock()
         self._operation = threading.Lock()
         self._published = self._state.view(clock())
         self._hooks: list[tuple[Callable[[Change], None], tuple[str, ...], Filter | None]] = [
-            (partial(self._adapt_strategy, strategy), (), None) for strategy in self._strategies
+            (partial(self._adapt_strategy, strategy, index), (), None) for index, strategy in enumerate(self._strategies)
         ]
         self._hooks.append((self.adapt, (), None))
         self._pending: Change | None = None
+        self._pending_delivery_id: uuid.UUID | None = None
         self._handled: set[int] = set()
         self._pending_cursor: str | None = None
         self._cursor: str | None = None
@@ -282,6 +291,26 @@ class AdaptiveService(ABC):
         )
 
     @property
+    def instance_id(self) -> str:
+        """
+        Identify this SDK runtime without changing its authorized workload identity.
+
+        Returns:
+            str: Random UUID allocated at construction, stable for this instance's lifetime.
+        """
+        return str(self._instance_id)
+
+    @property
+    def delivery_id(self) -> str | None:
+        """
+        Identify the active or retry-pending observation for application logs.
+
+        Returns:
+            str | None: Delivery UUID retained through retries; None after successful completion or before delivery.
+        """
+        return str(self._pending_delivery_id) if self._pending_delivery_id is not None else None
+
+    @property
     def strategies(self) -> tuple[AdaptationStrategy, ...]:
         """
         Return the component order fixed when this service was constructed.
@@ -291,30 +320,16 @@ class AdaptiveService(ABC):
         """
         return self._strategies
 
-    def _adapt_strategy(self, strategy: AdaptationStrategy, change: Change) -> None:
+    def _adapt_strategy(self, strategy: AdaptationStrategy, position: int, change: Change) -> None:
         name = type(strategy).__name__
         reporter = self.adaptations
         definition = self.context.definition
-        position = next(index for index, component in enumerate(self._strategies) if component is strategy)
 
-        # Retries of the same strategy/event share an invocation identity, while
-        # Pod and definition identities separate replacement incarnations.
-        invocation = str(
-            uuid.uuid5(
-                uuid.NAMESPACE_URL,
-                "|".join(
-                    (
-                        self.identity.graphUid,
-                        definition.uid if definition is not None else "inline",
-                        self.context.pod.uid or self.context.runtime_node_name or "local",
-                        self.identity.node,
-                        str(position),
-                        name,
-                        self._pending_cursor or "baseline",
-                    )
-                ),
-            )
-        )
+        # The pending delivery survives retry, while new refreshes can share a
+        # cursor without sharing an invocation. Positions distinguish repeated
+        # registrations of even the very same strategy object.
+        assert self._pending_delivery_id is not None
+        invocation = str(uuid.uuid5(self._instance_id, f"{self._pending_delivery_id}:{position}"))
 
         def report(phase: Literal["Running", "Succeeded", "Failed"]) -> None:
             if reporter is None or definition is None or self.context.definition_generation is None:
@@ -336,7 +351,11 @@ class AdaptiveService(ABC):
                 )
             )
 
-        with self.telemetry.operation("adaptation.strategy", attributes={"strategy": name}):
+        with self.telemetry.operation(
+            "adaptation.strategy",
+            attributes={"strategy": name},
+            trace_attributes={"polyad.sdk.adaptation.invocation.id": invocation, "polyad.sdk.strategy.index": position},
+        ):
             # Publish lifecycle state around the actual callback so operator
             # status can reflect an adaptation even when the callback fails.
             report("Running")
@@ -411,7 +430,18 @@ class AdaptiveService(ABC):
         return str(snapshot["cursor"])
 
     def _deliver(self, change: Change, cursor: str | None) -> None:
-        with self.telemetry.operation("adaptation.delivery", attributes={"baseline": change.baseline}):
+        if self._pending_delivery_id is None:
+            self._pending_delivery_id = uuid.uuid4()
+
+        # Replace correlation at the service boundary without replacing the
+        # caller's causal span. Nested or concurrent services cannot inherit a
+        # sibling's delivery/invocation ID, even with shared telemetry clients.
+        with (
+            self.telemetry.scope(
+                {"polyad.sdk.service.instance.id": self.instance_id, "polyad.sdk.adaptation.delivery.id": str(self._pending_delivery_id)}
+            ),
+            self.telemetry.operation("adaptation.delivery", attributes={"baseline": change.baseline}),
+        ):
             # Keep the change pending until every callback and checkpoint succeeds.
             # A retry resumes unfinished hooks instead of replaying completed work.
             self._pending, self._pending_cursor = change, cursor
@@ -439,6 +469,7 @@ class AdaptiveService(ABC):
             # delivery succeeds; failures leave enough state to retry this change.
             self._published, self._cursor = change.after, cursor
             self._pending, self._pending_cursor = None, None
+            self._pending_delivery_id = None
             self._handled.clear()
 
     def _change(self, event: Event | None, *, baseline: bool = False) -> Change:

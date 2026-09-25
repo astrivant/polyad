@@ -178,7 +178,7 @@ def test_strategy_invocation_reports_a_durable_progress_window(runtime):
     phases = []
     strategy = CallbackStrategy(lambda change, current: phases.append(reporter.report_adaptation.call_args.args[0].phase))
     service._strategies = (strategy,)
-    service._hooks[0] = (lambda change: service._adapt_strategy(strategy, change), (), None)
+    service._hooks[0] = (lambda change: service._adapt_strategy(strategy, 0, change), (), None)
     service.adaptations = reporter
 
     service.refresh()
@@ -212,7 +212,7 @@ def test_failed_strategy_closes_its_progress_window(runtime):
 
     strategy = CallbackStrategy(fail)
     service._strategies = (strategy,)
-    service._hooks[0] = (lambda change: service._adapt_strategy(strategy, change), (), None)
+    service._hooks[0] = (lambda change: service._adapt_strategy(strategy, 0, change), (), None)
     service.adaptations = reporter
     with pytest.raises(RuntimeError, match="strategy failed"):
         service.refresh()

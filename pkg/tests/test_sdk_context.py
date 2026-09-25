@@ -120,6 +120,19 @@ def test_missing_optional_context_and_explicit_defaults():
     assert context.api_url == "" and context.pod.ip == ""
 
 
+def test_environment_factory_allocates_independent_runtime_instances():
+    """
+    Repeated factory calls share workload identity, not runtime actor identity or delivery state.
+    """
+    values = {**projected(), "POLYAD_EVENTS_TOKEN": "reader"}
+    first = RecordingService.from_environment(environ=values, strategies=[ObserveStrategy()])
+    second = RecordingService.from_environment(environ=values, strategies=[ObserveStrategy()])
+    assert first.identity == second.identity and first.context == second.context
+    assert first.instance_id != second.instance_id
+    assert first.delivery_id is second.delivery_id is None
+    assert first.events is not second.events
+
+
 @pytest.mark.parametrize("raw", ["oops", "{}", "[]", '[{"kind": "Graph"}]', "[null]", '"' + "x" * 65537 + '"'])
 def test_invalid_ancestry_fails_without_echoing_contents(raw):
     """

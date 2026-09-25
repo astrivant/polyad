@@ -75,6 +75,33 @@ def test_service_stages_use_shared_instrumentation(runtime, telemetry):
     assert service.cursor is not None and len(service.changes) == 1
 
 
+def test_trace_scope_restores_parent_after_failure_and_copies_attributes(telemetry):
+    """
+    Nested correlation neither mutates callers nor leaks after failed operations.
+    """
+    instrument, spans, _ = telemetry
+    labels = {"actor": "outer"}
+    with instrument.scope(labels):
+        labels["actor"] = "mutated"
+        with instrument.operation("outer"):
+            with pytest.raises(ValueError), instrument.scope({"actor": "inner"}):
+                with instrument.operation("inner", trace_attributes={"invocation": "call"}):
+                    with instrument.operation("child"):
+                        pass
+                    raise ValueError("sensitive")
+            with instrument.operation("restored"):
+                pass
+    with instrument.operation("outside"):
+        pass
+    exported = {span.name: span for span in spans.get_finished_spans()}
+    assert exported["child"].attributes["invocation"] == "call"
+    assert exported["inner"].attributes["actor"] == exported["child"].attributes["actor"] == "inner"
+    assert exported["restored"].attributes["actor"] == exported["outer"].attributes["actor"] == "outer"
+    assert "invocation" not in exported["restored"].attributes
+    assert "actor" not in exported["outside"].attributes
+    assert exported["inner"].parent.span_id == exported["outer"].context.span_id
+
+
 def test_client_requests_propagate_current_trace_and_omit_credentials(telemetry):
     """
     An HTTP request gets a child span and W3C parent without exporting URL, body or bearer token.
@@ -128,15 +155,25 @@ def test_plan_reconciliation_retains_proposing_strategy_trace(telemetry):
         telemetry=instrument,
     )
     try:
-        with instrument.operation("adaptation.strategy"):
+        with (
+            instrument.scope({"polyad.sdk.service.instance.id": "proposing-service"}),
+            instrument.operation("adaptation.strategy", trace_attributes={"polyad.sdk.adaptation.invocation.id": "proposal"}),
+        ):
             owner.propose("empty")
         results = []
-        thread = threading.Thread(target=lambda: results.append(owner.reconcile()))
+
+        def reconcile():
+            with instrument.scope({"polyad.sdk.service.instance.id": "unrelated-worker"}):
+                results.append(owner.reconcile())
+
+        thread = threading.Thread(target=reconcile)
         thread.start()
         thread.join(timeout=2)
         assert not thread.is_alive() and results[0].state == "Blocked"
         parent, plan = spans.get_finished_spans()
         assert plan.parent.span_id == parent.context.span_id
+        assert plan.attributes["polyad.sdk.service.instance.id"] == "proposing-service"
+        assert plan.attributes["polyad.sdk.adaptation.invocation.id"] == "proposal"
         assert plan.attributes["plan.state"] == "Blocked" and plan.status.status_code.name != "ERROR"
     finally:
         owner.close()

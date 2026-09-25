@@ -7,8 +7,9 @@ from __future__ import annotations
 import os
 import time
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+from opentelemetry import context as otel_context
 from opentelemetry import metrics, trace
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
     from polyad_sdk.runtime.context import WorkloadContext
 
 __all__ = ("Telemetry",)
+
+_TRACE_ATTRIBUTES = otel_context.create_key("polyad_sdk.trace_attributes")
 
 
 class Telemetry:
@@ -152,8 +155,38 @@ class Telemetry:
             raise
 
     @contextmanager
+    def scope(self, attributes: Mapping[str, str | int | bool]) -> Iterator[None]:
+        """
+        Bind trace-only correlation to this execution context without changing shared providers.
+
+        A scope replaces inherited correlation attributes, preserving the current
+        parent span. Nested operations inherit the new attributes. Leaving the
+        scope restores the previous context, including when a callback fails.
+        These values are not metric labels or propagated W3C baggage.
+
+        Args:
+            attributes (Mapping[str, str | int | bool]): Non-sensitive trace correlation, copied on entry.
+
+        Yields:
+            None: SDK operations in this context use the scoped correlation.
+        """
+
+        # OpenTelemetry context is local to the executing thread/task. Copying
+        # attributes keeps callers and concurrent service instances independent.
+        token = otel_context.attach(otel_context.set_value(_TRACE_ATTRIBUTES, dict(attributes)))
+        try:
+            yield
+        finally:
+            otel_context.detach(token)
+
+    @contextmanager
     def operation(
-        self, name: str, *, attributes: Mapping[str, str | int | bool] | None = None, parent: Context | None = None
+        self,
+        name: str,
+        *,
+        attributes: Mapping[str, str | int | bool] | None = None,
+        trace_attributes: Mapping[str, str | int | bool] | None = None,
+        parent: Context | None = None,
     ) -> Iterator[trace.Span]:
         """
         Record operation attempts, elapsed seconds and error types without exception payloads.
@@ -161,6 +194,7 @@ class Telemetry:
         Args:
             name (str): Stable, low-cardinality operation name.
             attributes (Mapping[str, str | int | bool] | None): Non-sensitive dimensions shared by spans and metrics.
+            trace_attributes (Mapping[str, str | int | bool] | None): Trace-only correlation added to this operation and its descendants.
             parent (Context | None): Explicit causal context carried from another thread; None uses the current span.
 
         Yields:
@@ -171,10 +205,25 @@ class Telemetry:
         # Monotonic timing is immune to wall-clock adjustments during an operation.
         labels = dict(attributes or {})
         labels["operation"] = name
+
+        # Invocation IDs are useful for joining reports to traces, but must not
+        # create a new metric time series for every delivered observation.
+        inherited = cast("Mapping[str, str | int | bool] | None", otel_context.get_value(_TRACE_ATTRIBUTES, parent))
+        correlation = {**(inherited or {}), **(trace_attributes or {})}
         started, outcome = time.monotonic(), "success"
-        with self.tracer.start_as_current_span(
-            name, attributes=labels, context=parent, record_exception=False, set_status_on_exception=False
-        ) as span:
+
+        # Selecting a span's parent does not attach that parent's custom context
+        # values. Bind correlation explicitly so child operations inherit it too.
+        with (
+            self.scope(correlation),
+            self.tracer.start_as_current_span(
+                name,
+                attributes={**labels, **correlation},
+                context=parent,
+                record_exception=False,
+                set_status_on_exception=False,
+            ) as span,
+        ):
             try:
                 yield span
             except BaseException as error:

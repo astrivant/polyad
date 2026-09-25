@@ -6,6 +6,8 @@
 - [Runtime components](#runtime-components)
 - [Trace operations and collect metrics](#trace-operations-and-collect-metrics)
   - [Built-in signals](#built-in-signals)
+  - [Distinguish service instances and retry attempts](#distinguish-service-instances-and-retry-attempts)
+  - [Carry trace context into workers](#carry-trace-context-into-workers)
   - [Export configuration](#export-configuration)
 - [Construct workers and approved plans](#construct-workers-and-approved-plans)
 - [Connect strategies to the supervisor](#connect-strategies-to-the-supervisor)
@@ -111,11 +113,69 @@ exception messages. Keep application-added attributes bounded and non-sensitive.
 Pod, node and graph identities belong to the shared resource attributes supplied
 through `WorkloadContext`.
 
+### Distinguish service instances and retry attempts
+
+Every `AdaptiveService` construction, including `from_environment()`, allocates a
+read-only `service.instance_id` UUID. This identifies an SDK runtime actor, not a
+new workload, Pod, or authorization principal. Multiple instances may share the
+same workload identity and telemetry providers without sharing reporting IDs.
+The SDK does not overwrite the application's OpenTelemetry resource identity.
+
+Each new observation delivery also allocates a UUID, exposed as
+`service.delivery_id` during callbacks and while a failed delivery is pending.
+It becomes `None` after successful completion. Strategy invocation IDs are derived
+from the service instance, delivery and strategy registration position, including
+when one strategy object is registered twice.
+
+| Trace attribute | Meaning |
+| --- | --- |
+| `polyad.sdk.service.instance.id` | The SDK instance's lifetime UUID, also available as `service.instance_id`. |
+| `polyad.sdk.adaptation.delivery.id` | The baseline or change being delivered; stable while retrying that delivery. |
+| `polyad.sdk.adaptation.invocation.id` | One strategy registration's call within the delivery; matches `AdaptationReport.invocationId`. |
+| `polyad.sdk.strategy.index` | Zero-based registration position in the instance's strategy list. |
+
+Delivery, application-adaptation, hook and checkpoint spans carry the instance and
+delivery IDs. Strategy spans and SDK operations nested inside them, including
+API reports, also carry the invocation ID and strategy index. Separate deliveries
+remain distinct even when ordinary refreshes preserve the same stream cursor.
+Retries retain their reporting identity but produce new attempt spans; already
+completed components are skipped. A new instance or process restart starts new
+runtime identities. Durable business idempotency remains application-owned.
+
+Correlation uses execution-local context, not mutable labels on the shared
+`Telemetry` or client. Nested services replace actor correlation while preserving
+the caller's causal parent span. Independent deliveries normally start distinct
+traces; deliveries under a shared application parent intentionally share that
+trace, with distinct spans and correlation IDs. No service-wide long-lived root
+span is required.
+
+The UUIDs are **trace-only attributes**, not metric dimensions, to avoid creating
+a metric time series per observation. They are not exported as W3C baggage or
+automatically added to every application log. Include `service.instance_id` and
+`service.delivery_id` explicitly in application logs when useful. SDK operation
+counts and duration metrics retain their existing bounded dimensions.
+
+For application work outside a delivery, use
+`service.telemetry.scope({"polyad.sdk.service.instance.id": service.instance_id})`
+around SDK operations to associate them with an actor. A scope replaces inherited
+correlation, creates no span, and restores the previous context on exit, including
+failure. Add operation-specific trace fields with
+`telemetry.operation("application.work", trace_attributes={"job.id": job_id})`;
+they merge with scoped fields and follow nested SDK operations without becoming
+metric labels. Keep all attributes non-sensitive. Spans created directly through
+`telemetry.tracer` still require explicit attributes; their normal trace parentage
+is unchanged.
+
+### Carry trace context into workers
+
 The supervisor carries the proposing strategy's trace context into reconciliation,
-including when it runs later on another thread. The client sends W3C trace context
+including its SDK correlation attributes when it runs later on another thread.
+Arbitrary application-created threads need explicitly captured context; thread
+creation alone does not carry it. The client sends W3C trace context
 with HTTP requests. Constructed subprocesses
 receive `TRACEPARENT` and, when present, `TRACESTATE`; stale inherited carriers are
-replaced. A child explicitly extracts that context:
+replaced. Correlation UUIDs stay in the originating spans rather than being copied
+into child environments or HTTP headers. A child explicitly extracts its parent:
 
 ```python
 from polyad_sdk import Telemetry
