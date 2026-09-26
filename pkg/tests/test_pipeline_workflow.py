@@ -15,7 +15,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 DIRECTORY = ROOT / ".github/workflows"
 PIPELINE = yaml.load((DIRECTORY / "ci.yml").read_text(), Loader=yaml.BaseLoader)
-CHECKS = set(PIPELINE["jobs"]) - {"verified", "tag", "publish"}
+CHECKS = set(PIPELINE["jobs"]) - {"verified", "publish"}
 
 
 def test_only_one_workflow_accepts_events_and_every_component_is_reachable():
@@ -44,16 +44,15 @@ def test_only_one_workflow_accepts_events_and_every_component_is_reachable():
     assert reached == set(workflows)
 
 
-def test_all_validation_branches_join_before_tagging_or_publishing():
+def test_all_validation_branches_join_before_publishing():
     """
     Studies are required release checks rather than unrelated workflow statuses.
     """
     gate = PIPELINE["jobs"]["verified"]
     assert gate["if"] == "always()" and set(gate["needs"]) == CHECKS
     assert {"benchmarks", "reachability", "process-studies", "chart", "operator", "lightweight-packages"} <= CHECKS
-    for name in ("tag", "publish"):
-        assert "verified" in PIPELINE["jobs"][name]["needs"]
-        assert "always()" not in PIPELINE["jobs"][name]["if"]
+    assert "verified" in PIPELINE["jobs"]["publish"]["needs"]
+    assert "always()" not in PIPELINE["jobs"]["publish"]["if"]
 
 
 def test_all_checkout_and_workflow_calls_use_the_resolved_source():
@@ -92,18 +91,15 @@ def test_manual_cloud_benchmarks_remain_explicit_and_environment_protected():
     assert workflow["jobs"]["refresh-study"]["needs"] == "refresh-prepare"
 
 
-def test_tagged_chart_artifacts_cannot_collide_with_initial_validation():
+def test_releases_cannot_be_cancelled_by_newer_pr_commits():
     """
-    Initial checks and post-tag revalidation upload different names within the same workflow run.
+    Match hypothesis-helm's PR-only cancellation while isolating explicitly selected tags.
     """
-    chart = yaml.load((DIRECTORY / "chart.yml").read_text(), Loader=yaml.BaseLoader)
-    tag = yaml.load((DIRECTORY / "tag.yml").read_text(), Loader=yaml.BaseLoader)
-    prefix = chart["on"]["workflow_call"]["inputs"]["artifact-prefix"]["default"]
-    first = PIPELINE["jobs"]["chart"]["with"].get("artifact-prefix", prefix)
-    second = tag["jobs"]["chart"]["with"]["artifact-prefix"]
-    assert first != second
-    action = next(step for step in chart["jobs"]["chart"]["steps"] if step.get("uses", "").startswith("astrivant/hypothesis-helm@"))
-    assert action["with"]["artifact-name"] == "${{ inputs.artifact-prefix }}-${{ matrix.chart }}"
+    assert PIPELINE["concurrency"] == {
+        "group": "polyad-${{ github.event_name }}-${{ inputs.tag || github.event.pull_request.number || github.ref }}",
+        "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+    }
+    assert PIPELINE["defaults"]["run"]["shell"] == "bash"
 
 
 def run_gate(results, *, main):

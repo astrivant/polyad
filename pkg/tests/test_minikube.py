@@ -109,6 +109,7 @@ def test_start_scopes_kvm_nodes_and_pushes_production_image(commands: Runner) ->
         ["virsh", "--connect", "qemu:///system", "net-info", "default"],
     ]
     assert start[start.index("--nodes") + 1] == "3"
+    assert start[start.index("--memory") + 1] == "4096"
     assert "--keep-context" in start and "--ha=false" in start
     assert start[start.index("--container-runtime") + 1] == "containerd"
     assert (
@@ -364,6 +365,7 @@ def test_macos_starts_native_qemu_vms_and_pushes_from_host(commands: Runner, arc
     assert start[start.index("--driver") + 1] == "qemu2"
     assert start[start.index("--network") + 1] == "socket_vmnet"
     assert start[start.index("--nodes") + 1] == "3"
+    assert start[start.index("--memory") + 1] == "4096"
     assert "--kvm-qemu-uri" not in start and "--kvm-network" not in start
     build = next(call for call in calls if call[:3] == ["docker", "buildx", "build"])
     assert build[build.index("--platform") + 1] == f"linux/{platform}"

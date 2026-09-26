@@ -1,10 +1,11 @@
 """
-Validate safe tag derivation and release gating on the complete CI result.
+Validate explicit version tags and release gating on the complete CI result.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -157,7 +158,8 @@ def test_every_release_build_prepares_metadata_before_consuming_it():
     assert stamp["env"]["RELEASE_REF"] == "${{ inputs.ref }}"
     assert stamp["run"] == 'python .github/prepare-release.py --tag "$RELEASE_REF"'
     refresh = action["runs"]["steps"][-1]
-    assert refresh["if"] == stamp["if"]
+    assert refresh["if"] == f"inputs.refresh-locks == 'true' && ({stamp['if']})"
+    assert action["inputs"]["refresh-locks"]["default"] == "true"
     assert "poetry lock\n" in refresh["run"] and "poetry check --lock" in refresh["run"]
 
 
@@ -210,23 +212,16 @@ def test_invalid_versions_cannot_emit_tag_outputs(tmp_path, version):
     assert not output.exists()
 
 
-def test_tagging_waits_for_all_checks_and_checks_out_the_tested_commit():
+def test_only_explicit_tags_enable_releases_without_repository_write_permissions():
     """
-    Gate writes on successful main pushes and retain read-only permissions elsewhere.
+    Main and PR builds must never create tags or upload packages as a side effect.
     """
     ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
-    workflow = yaml.load((ROOT / ".github/workflows/tag.yml").read_text(), Loader=yaml.BaseLoader)
     assert ci["permissions"] == {"contents": "read"}
-    caller = ci["jobs"]["tag"]
-    assert caller["needs"] == ["source", "verified"]
-    assert caller["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/main'"
-    assert caller["permissions"] == {"contents": "write"}
-    assert caller["uses"] == "./.github/workflows/tag.yml"
-    assert caller["with"]["ref"] == "${{ needs.source.outputs.sha }}"
-    assert set(workflow["on"]) == {"workflow_call"}
-    tag = workflow["jobs"]["tag"]
-    assert tag["permissions"] == {"contents": "write"}
-    assert tag["steps"][0]["with"] == {"ref": "${{ inputs.ref }}", "persist-credentials": "false"}
+    assert "tag" not in ci["jobs"]
+    assert not (ROOT / ".github/workflows/tag.yml").exists()
+    assert all(job.get("permissions", {}).get("contents", "read") == "read" for job in ci["jobs"].values())
+    assert ci["jobs"]["publish"]["if"] == "needs.source.outputs.release-tag != ''"
 
 
 @pytest.mark.parametrize(
@@ -269,7 +264,7 @@ def test_publishing_validates_the_package_tag(tmp_path, package, tag, normalized
         assert output.read_text() == f"version={normalized}\n"
 
 
-def test_publication_downloads_verified_artifacts_and_uses_environment_credentials():
+def test_publication_downloads_verified_artifacts_and_passes_credentials():
     """
     Gate publication inside the one pipeline and download its distributions without rebuilding.
     """
@@ -280,13 +275,19 @@ def test_publication_downloads_verified_artifacts_and_uses_environment_credentia
     assert caller["if"] == "needs.source.outputs.release-tag != ''"
     assert caller["with"] == {"ref": "${{ needs.source.outputs.sha }}", "tag": "${{ needs.source.outputs.release-tag }}"}
     assert caller["uses"] == "./.github/workflows/publish.yml"
+    assert caller["secrets"] == {"PYPI_API_TOKEN": "${{ secrets.PYPI_API_TOKEN }}"}
     assert set(workflow["on"]) == {"workflow_call"} and "verify" not in workflow["jobs"]
+    assert workflow["on"]["workflow_call"]["secrets"]["PYPI_API_TOKEN"]["required"] == "false"
+    assert workflow["concurrency"]["cancel-in-progress"] == "false"
     publish = workflow["jobs"]["publish"]
     assert publish["environment"] == "pypi"
     assert publish["steps"][0]["with"]["ref"] == "${{ inputs.ref }}"
+    assert publish["steps"][1]["with"]["refresh-locks"] == "false"
     assert any(step.get("uses", "").startswith("actions/download-artifact@") for step in publish["steps"])
     assert not any("poetry build" in step.get("run", "") for step in publish["steps"])
     assert publish["steps"][-1]["env"]["POETRY_PYPI_TOKEN_PYPI"] == "${{ secrets.PYPI_API_TOKEN }}"
+    upload = next(step for step in ci["jobs"]["python"]["steps"] if step.get("name") == "Upload verified distributions")
+    assert upload["with"]["retention-days"] == "30"
 
 
 def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
@@ -309,7 +310,7 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     assert action["uses"] == "astrivant/hypothesis-helm@05681f04b41256a41355e6320e52a7ca17f67b74"
     inputs = action["with"]
     assert inputs["chart"] == "charts/${{ matrix.chart }}"
-    assert inputs["artifact-name"] == "${{ inputs.artifact-prefix }}-${{ matrix.chart }}"
+    assert inputs["artifact-name"] == "hypothesis-helm-${{ matrix.chart }}"
     assert inputs["artifact-dir"] == "reports/hypothesis-helm/${{ matrix.chart }}"
     assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "4"
     assert inputs["kubeconform"] == "true" and inputs["schema-version"] == "1.35.0"
@@ -332,26 +333,63 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     assert package["steps"][-1]["with"]["if-no-files-found"] == "error"
 
 
-def test_main_and_automatic_tags_use_the_same_chart_gate():
+def test_explicit_tags_use_the_same_chart_gate_and_source():
     """
-    Main validates before tagging; tagged chart builds remain inside the same parent run.
+    Tagged chart builds and publication remain inside the same verified parent run.
     """
     ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
-    tag = yaml.load((ROOT / ".github/workflows/tag.yml").read_text(), Loader=yaml.BaseLoader)
     assert ci["on"]["push"]["branches"] == ["main"]
     assert "pull_request" in ci["on"]
     assert ci["jobs"]["chart"]["uses"] == "./.github/workflows/chart.yml"
     assert ci["jobs"]["chart"]["with"]["release-tag"] == "${{ needs.source.outputs.release-tag }}"
     assert ci["jobs"]["chart"]["with"]["ref"] == "${{ needs.source.outputs.sha }}"
-    assert ci["jobs"]["tag"]["needs"] == ["source", "verified"]
-    followup = tag["jobs"]["chart"]
-    assert followup["needs"] == "tag"
-    assert followup["if"] == "needs.tag.outputs.tag != ''"
-    assert followup["uses"] == ci["jobs"]["chart"]["uses"]
-    assert followup["with"] == {
-        "ref": "${{ needs.tag.outputs.sha }}",
-        "release-tag": "${{ needs.tag.outputs.tag }}",
-        "artifact-prefix": "tagged-hypothesis-helm",
-    }
-    create = next(step for step in tag["jobs"]["tag"]["steps"] if step.get("id") == "create")
-    assert "existing.data.object.sha === process.env.TESTED_SHA" in create["with"]["script"]
+    assert ci["jobs"]["publish"]["with"]["tag"] == "${{ needs.source.outputs.release-tag }}"
+    assert "chart" in ci["jobs"]["verified"]["needs"]
+
+
+@pytest.mark.parametrize("problem", [None, "missing-token", "missing-wheel", "missing-sdist"])
+def test_publish_checks_all_five_artifact_pairs_before_any_upload(tmp_path, problem):
+    """
+    Reject incomplete releases up front and publish matching packages in dependency order.
+    """
+    version = "0.0.1a99"
+    packages = ("polyad_types", "polyad_schemas", "polyad_sdk", "polyad_benchmarks", "polyad")
+    distributions = tmp_path / "dist"
+    distributions.mkdir()
+    for package in packages:
+        for suffix in ("-py3-none-any.whl", ".tar.gz"):
+            (distributions / f"{package}-{version}{suffix}").write_text("verified artifact")
+
+    # A missing final package must fail before earlier packages can be uploaded.
+    if problem == "missing-wheel":
+        (distributions / f"polyad-{version}-py3-none-any.whl").unlink()
+    if problem == "missing-sdist":
+        (distributions / f"polyad-{version}.tar.gz").unlink()
+    poetry = tmp_path / "poetry"
+    poetry.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$PUBLISH_LOG"\n')
+    poetry.chmod(0o755)
+    log = tmp_path / "uploads"
+    workflow = yaml.load((ROOT / ".github/workflows/publish.yml").read_text(), Loader=yaml.BaseLoader)
+    command = workflow["jobs"]["publish"]["steps"][-1]["run"]
+    result = subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", command],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+            "POETRY_PYPI_TOKEN_PYPI": "" if problem == "missing-token" else "test-token-not-sent",
+            "PACKAGE_VERSION": version,
+            "PUBLISH_LOG": str(log),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert (result.returncode == 0) is (problem is None), result.stderr
+    if problem:
+        assert not log.exists()
+    else:
+        assert log.read_text().splitlines() == [
+            *(f"-C pkg/{name.replace('_', '-')} publish --dist-dir ../../dist --no-interaction" for name in packages[:-1]),
+            "publish --no-interaction",
+        ]

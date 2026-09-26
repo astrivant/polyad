@@ -20,6 +20,13 @@ on:
         default: ''
 permissions:
   contents: read
+concurrency:
+  group: polyad-${{ github.event_name }}-${{ inputs.tag || github.event.pull_request.number || github.ref }}
+  # Only superseded PR checks may be cancelled, never an in-flight release.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+defaults:
+  run:
+    shell: bash
 jobs:
   source:
     name: Resolve pipeline source
@@ -171,7 +178,7 @@ jobs:
           name: python-distributions-${{ steps.version.outputs.version }}
           path: dist/*
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
   lightweight-packages:
     needs: [source, python]
     runs-on: ubuntu-latest
@@ -394,20 +401,13 @@ jobs:
               raise SystemExit(f'Pipeline checks did not pass: {failures}')
           print('Every required pipeline branch passed.')
           PY
-  tag:
-    name: Tag verified main commit
-    needs: [source, verified]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: write
-    uses: ./.github/workflows/tag.yml
-    with:
-      ref: ${{ needs.source.outputs.sha }}
   publish:
     name: Publish verified release
     needs: [source, verified, python]
     if: needs.source.outputs.release-tag != ''
     uses: ./.github/workflows/publish.yml
+    secrets:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
     with:
       ref: ${{ needs.source.outputs.sha }}
       tag: ${{ needs.source.outputs.release-tag }}

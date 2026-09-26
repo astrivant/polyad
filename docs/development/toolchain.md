@@ -242,8 +242,10 @@ they do not create independent runs or completion-triggered follow-up pipelines.
 
 Every branch checks out the same resolved commit. The **All checks passed** job
 joins every validation branch and rejects failures, cancellations and unexpected
-skips before tagging or publishing. Compose is intentionally main-push-only.
+skips before publishing. Compose is intentionally main-push-only.
 Study failures now block releases as well as ordinary CI success.
+As in `hypothesis-helm`, newer PR commits cancel superseded PR checks; main,
+tag and manual runs do not cancel in-flight work. Publication is serialized per tag.
 
 ```mermaid
 flowchart LR
@@ -251,8 +253,8 @@ flowchart LR
     source --> studies["Benchmarks, reachability and soul/nature studies"]
     checks --> verified["All checks passed"]
     studies --> verified
-    verified --> tag["Main push: create version tag"]
-    tag --> charts["Validate and package tagged charts"]
+    checks --> charts["Explicit release tag: package validated charts"]
+    charts --> verified
     verified --> publish["Explicit release tag: publish verified distributions"]
 ```
 
@@ -263,34 +265,37 @@ protected `benchmarks` environment. Ordinary pushes and PRs never run cloud load
 
 ## Version tags
 
-After every successful validation gate for a push on `main`, the pipeline calls
-`.github/workflows/tag.yml` as a dependent job in the same run. It waits for all
-checks and studies, then tags that exact tested commit using
-`project.version` from `pyproject.toml`. Stable versions receive `vX.Y.Z`; Python
-prereleases use `vX.Y.Z-alphaN`, `vX.Y.Z-betaN` or `vX.Y.Z-rcN`. Pull requests and
-other branches cannot create tags.
+Releases follow `hypothesis-helm`'s explicit-tag model. Main pushes and pull
+requests validate without creating tags or publishing packages. Push a new
+`vX.Y.Z` tag, optionally using `-alphaN`, `-betaN` or `-rcN`, to verify and
+publish that commit. The tag determines the release version; the source's
+declared version does not need a separate version-bump commit.
 
-The first passing commit for a new version creates its tag. Later builds with
-the same version leave the existing tag unchanged; bump the package version to
-create another tag. Supported versions are `X.Y.Z` and Python prereleases such as
-`X.Y.Zrc1`. Tag creation is serialized and only the tagging job gets repository
-write permission. New tags, and reruns for a tag already pointing to that tested
-commit, invoke the reusable chart workflow to validate and package the Helm chart.
+For example, after choosing the commit and an unused release version:
 
-Tags use `GITHUB_TOKEN`, so creating one does not start another push-triggered
-workflow. The tagging component calls chart validation/build directly after creating
-the tag, inside the current pipeline. To publish an automatically created tag,
-run **Polyad pipeline** manually with that `tag`. User-pushed version tags start
-the same pipeline and enter its publishing stage after all checks succeed.
-See [GitHub's workflow trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+```sh
+git tag v0.0.1-alpha16 <release-commit>
+git push origin refs/tags/v0.0.1-alpha16
+```
+
+`python scripts/release/release-tag.py` can suggest a tag from the checkout's
+declared package version when that is the version you want to release. CI never
+creates or moves tags and needs only read access to repository contents.
+The old automatic-tag workflow has been removed; there is no detached follow-up
+run or second chart-validation pass. Existing tags, including previously
+auto-created tags, can be selected with the manual pipeline's `tag` input.
 
 ## Verified package releases
 
 The release path follows `hypothesis-helm`: the pipeline prepares the tagged source,
 checks its release metadata, builds a wheel and source distribution,
 and uploads them as `python-distributions-<version>`. The publishing job downloads
-those exact artifacts, runs in the `pypi` environment and uses its `PYPI_API_TOKEN`
-Secret. Configure environment protection and that credential before publishing.
+those exact artifacts, retained for 30 days, and runs in the `pypi` environment.
+Configure `PYPI_API_TOKEN` as an organization secret with access granted to this
+repository, a repository secret, or a `pypi` environment secret. The caller
+explicitly passes only this credential to the reusable publisher; an environment
+secret takes precedence. Configure environment protection and allowed release
+tags before publishing. See [GitHub's reusable-workflow secret rules](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#using-inputs-and-secrets-in-a-reusable-workflow).
 For tagged builds, the Git tag determines the release version. The shared
 `.github/actions/prepare-release` action runs `.github/prepare-release.py` in each
 build checkout before dependencies are installed or artifacts are built. For
@@ -299,14 +304,14 @@ example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the ch
 README's image-tag default. Alpha, beta and release-candidate spellings are
 normalized; malformed tags fail before metadata changes.
 
-The standalone `polyad-sdk`, [`polyad-types`](../../pkg/polyad-types/README.md)
-and [`polyad-schemas`](../../pkg/polyad-schemas/README.md) packages receive the same
+The standalone `polyad-sdk`, [`polyad-types`](../../pkg/polyad-types/README.md),
+[`polyad-schemas`](../../pkg/polyad-schemas/README.md) and `polyad-benchmarks` packages receive the same
 release version. The operator's `schemas` extra pins the matching schema package. The client and operator pin the matching
 types release; Poetry resolves that dependency from `pkg/polyad-types` in a checkout,
 while built distributions declare a version dependency suitable for PyPI. CI checks
 standalone types and client installations without operator dependencies and publishes
-types and schemas first, then the client and operator. The PyPI token must permit
-all four names. CI checks schemas in a separate environment without types, client
+types and schemas first, then the SDK, benchmarks and operator. The PyPI token must permit
+all five names. CI checks schemas in a separate environment without types, client
 or operator dependencies.
 
 Python builds, both Docker profiles, operator integration tests, every Helm
@@ -316,18 +321,24 @@ matches the tag. Changes exist only in the build checkout: CI does not commit
 version bumps or move tags. Release preparation updates the local types and schemas lock entries;
 Python and Docker builds refresh the lock metadata before installation, retaining
 the locked third-party versions.
+The publisher stamps metadata only: it does not resolve dependencies, refresh
+locks or rebuild artifacts. Before the first upload, it requires the matching
+wheel and source archive for all five packages. A missing token or incomplete
+artifact set fails without uploading any package. Uploads to PyPI are not atomic;
+a later upload failure can still leave a partially published release. Reruns do
+not silently skip existing files, so investigate and finish any partial release
+before retrying the full publication job.
 
-Branch and pull-request builds retain their declared versions. The automatic
-main-branch tagging workflow also continues to derive its tag from the declared
-package version; it does not increment that version on every push. To select a
-release manually, create its tag on a commit containing this pipeline. Older tags
-that contain the previous pipeline still use its strict version check when rerun.
+Branch and pull-request builds retain their declared versions. To select a
+release, create its tag on a commit containing this pipeline. Re-running an old
+workflow run still uses the workflow definition from that run.
 
 To reproduce release metadata locally before building:
 
 ```sh
 python .github/prepare-release.py --tag v0.0.1-alpha3
 poetry lock
+poetry -C pkg/polyad-benchmarks lock
 python .github/release-version.py --tag v0.0.1-alpha3
 ```
 
@@ -342,18 +353,21 @@ project's Python 3.13 interpreter selected:
 poetry -C pkg/polyad-types check --strict
 poetry -C pkg/polyad-schemas check --strict
 poetry -C pkg/polyad-sdk check --strict
+poetry -C pkg/polyad-benchmarks check --strict
 poetry check --strict
 
 poetry -C pkg/polyad-types publish --build
 poetry -C pkg/polyad-schemas publish --build
 poetry -C pkg/polyad-sdk publish --build
+poetry -C pkg/polyad-benchmarks publish --build
 poetry publish --build
 ```
 
 Run only the first publish command to release `polyad-types` on its own. When
-releasing all four, publish types and schemas first because the client and
-operator extras require their matching versions. Use the release-preparation commands above when changing
-versions so all four distributions and dependency pins stay aligned; PyPI
+releasing all five, publish types and schemas first, followed by the SDK,
+benchmarks and operator, because their dependencies require matching versions.
+Use the release-preparation commands above when changing
+versions so all five distributions and dependency pins stay aligned; PyPI
 requires a new version for a subsequent release.
 
 `publish --build` builds the wheel and source distribution, then uploads them to
@@ -384,15 +398,15 @@ chart discovery also rejects `--shard`. Upstream support is required to replace
 the per-chart matrix with one recursive filtered scan split across six shards.
 
 Each shard uploads its own reports, JUnit results, and JSON manifest stream even
-when validation fails. Report names distinguish the initial and tagged passes.
+when validation fails. Report names distinguish charts and shards.
 Kubernetes schemas share a versioned cache; test-result caches remain local to
 each job. Benchmark-chart defaults and monitoring profiles retain their strict
 render/schema checks while the upstream dependency-merge parser issue remains.
 
 All six chart/shard jobs and the benchmark-chart validation must succeed before
-the pipeline can permit automatic tagging. The same component validates
-user-pushed/manual release tags, and runs again after automatic tagging, without
-starting another pipeline. For tagged builds, its package job requires all chart
+the pipeline can permit publication. The same component validates
+user-pushed/manual release tags without starting another pipeline or repeating
+chart validation. For tagged builds, its package job requires all chart
 validation jobs, packages all three charts, and uploads
 `helm-chart-<tag>` containing three `.tgz` archives for 30 days. Main and PR checks
 validate without producing a release chart archive.

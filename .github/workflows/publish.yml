@@ -11,6 +11,10 @@ on:
         description: Existing version tag verified by the parent pipeline
         required: true
         type: string
+    secrets:
+      PYPI_API_TOKEN:
+        description: Organization or repository PyPI token; the pypi environment may override it
+        required: false
 
 permissions:
   contents: read
@@ -32,6 +36,8 @@ jobs:
       - uses: ./.github/actions/prepare-release
         with:
           ref: ${{ inputs.tag }}
+          # Publishing only needs metadata to locate already-verified distributions.
+          refresh-locks: 'false'
       - uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
@@ -50,11 +56,19 @@ jobs:
       - name: Publish wheel and source distribution
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           if [[ -z "$POETRY_PYPI_TOKEN_PYPI" ]]; then
-            echo '::error::Set PYPI_API_TOKEN in the pypi environment before publishing'
+            echo '::error::PYPI_API_TOKEN is unavailable. Grant this repository access to the organization secret, or set a repository/environment secret.'
             exit 1
           fi
+
+          # Check the complete release before uploading its first package.
+          for package in polyad_types polyad_schemas polyad_sdk polyad_benchmarks polyad; do
+            test -s "dist/${package}-${PACKAGE_VERSION}-py3-none-any.whl"
+            test -s "dist/${package}-${PACKAGE_VERSION}.tar.gz"
+          done
+          echo "Publishing all five Polyad distributions at $PACKAGE_VERSION to PyPI"
           poetry -C pkg/polyad-types publish --dist-dir ../../dist --no-interaction
           poetry -C pkg/polyad-schemas publish --dist-dir ../../dist --no-interaction
           poetry -C pkg/polyad-sdk publish --dist-dir ../../dist --no-interaction

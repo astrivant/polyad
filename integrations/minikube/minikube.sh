@@ -378,7 +378,7 @@ case "$1" in
             "${DRIVER_OPTIONS[@]}" \
             --insecure-registry localhost:5000 \
             --kubernetes-version "$KUBERNETES_VERSION" --container-runtime containerd \
-            --nodes "$NODES" --cpus "${POLYAD_MINIKUBE_CPUS:-2}" --memory "${POLYAD_MINIKUBE_MEMORY:-2048}" \
+            --nodes "$NODES" --cpus "${POLYAD_MINIKUBE_CPUS:-2}" --memory "${POLYAD_MINIKUBE_MEMORY:-4096}" \
             --disk-size 30g --wait-timeout "$TIMEOUT"
         check_vm_profile
 

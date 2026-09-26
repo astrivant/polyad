@@ -4,6 +4,9 @@ inputs:
   ref:
     description: Git ref or version tag; branch and commit builds retain their declared versions
     required: true
+  refresh-locks:
+    description: Refresh dependency metadata for builds; disable when publishing verified artifacts
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -18,7 +21,7 @@ runs:
         RELEASE_REF: ${{ inputs.ref }}
       run: python .github/prepare-release.py --tag "$RELEASE_REF"
     - name: Refresh lockfile after release version changes
-      if: startsWith(inputs.ref, 'refs/tags/') || startsWith(inputs.ref, 'v')
+      if: inputs.refresh-locks == 'true' && (startsWith(inputs.ref, 'refs/tags/') || startsWith(inputs.ref, 'v'))
       shell: bash
       env:
         POETRY_VIRTUALENVS_CREATE: 'false'

@@ -70,6 +70,8 @@ asdf setup below requires asdf 0.16 or newer and the developer toolchain's Bash
   `builtin` network is not used for this multi-node cluster. Install
   [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane)
   for host-side registry pushes. No libvirt installation is needed on this path.
+  On Apple Silicon, use QEMU 7 or newer so Minikube can enable high-memory
+  addressing for the default 4 GiB VMs.
 - **Linux:** [KVM2 driver prerequisites](https://minikube.sigs.k8s.io/docs/drivers/kvm2/),
   including hardware virtualization, libvirt services, and access from your
   normal user. If Linux itself runs in a VM, the outer host must expose nested
@@ -108,8 +110,8 @@ above. The helper checks capabilities and network access with `virsh`; it does
 not install host packages, change group membership, or reconfigure libvirt
 automatically. Log in again after an administrator changes your group membership.
 
-The default cluster has three VMs configured with 2 CPUs, 2048 MiB of memory, and
-a 30 GiB virtual disk each. Allow memory beyond the nodes' combined 6 GiB
+The default cluster has three VMs configured with 2 CPUs, 4096 MiB (4 GiB) of memory, and
+a 30 GiB virtual disk each. Allow memory beyond the nodes' combined 12 GiB
 allocation for Docker, the image build, and your other applications. Image layers
 and VM disks also need free host disk space, including a temporary image archive
 on macOS. Internet access is required for chart dependencies,
@@ -210,6 +212,22 @@ fresh profile, for example `export POLYAD_MINIKUBE_PROFILE=polyad-vm`, and run
 Docker-backed profiles, and macOS QEMU profiles using the `builtin` network are
 rejected for deployment and testing.
 
+Existing VMs keep their original memory allocation; changing the helper's default
+does not resize them. To move from the old 2 GiB allocation to 4 GiB without
+deleting existing data, create a fresh profile:
+
+```sh
+export POLYAD_MINIKUBE_PROFILE=polyad-4g
+export POLYAD_MINIKUBE_MEMORY=4096
+bash integrations/minikube/minikube.sh start
+```
+
+On Apple Silicon, Minikube also chooses the high-memory QEMU machine settings
+when it creates the new VM. Do not reuse an old `highmem=off` machine configuration
+with 4096 MiB; that configuration caps RAM at 3 GiB. The
+[Minikube QEMU configuration](https://github.com/kubernetes/minikube/blob/v1.39.0/pkg/minikube/registry/drvs/qemu2/qemu2.go)
+selects the appropriate settings automatically with QEMU 7 or newer.
+
 The storage setup disables Minikube's single-node hostpath provisioner and default
 class, then enables
 [Rancher local-path provisioning](https://minikube.sigs.k8s.io/docs/tutorials/local_path_provisioner/).
@@ -301,7 +319,7 @@ create an ingress or enable the application APIs. See the
 | `POLYAD_MINIKUBE_REGISTRY_PORT` | `5000` | Free host loopback port (1024-65535) for the temporary registry forward and push. The VM-side pull port remains 5000. |
 | `POLYAD_MINIKUBE_NODES` | `3` | Node count passed to `start`; changing an existing cluster's topology may require recreation. |
 | `POLYAD_MINIKUBE_CPUS` | `2` | CPUs per node passed to `start`. |
-| `POLYAD_MINIKUBE_MEMORY` | `2048` | Memory per node passed to `start`, in MiB or a Minikube-supported quantity. |
+| `POLYAD_MINIKUBE_MEMORY` | `4096` | Memory per node passed to `start`, in MiB or a Minikube-supported quantity. Defaults to 4 GiB per VM, 12 GiB for three nodes. Existing VMs are not resized. |
 | `POLYAD_MINIKUBE_TIMEOUT` | `10m` | Timeout per cluster startup, rollout, Helm, and smoke wait. |
 | `POLYAD_MINIKUBE_VALUES` | Unset | Optional values overlay path, relative to your current directory or absolute. |
 
@@ -310,7 +328,7 @@ Export custom settings consistently across lifecycle commands. For example:
 ```sh
 export POLYAD_MINIKUBE_PROFILE=polyad-dev
 export POLYAD_MINIKUBE_NAMESPACE=polyad-dev
-export POLYAD_MINIKUBE_MEMORY=3072
+export POLYAD_MINIKUBE_MEMORY=4096
 bash integrations/minikube/minikube.sh start
 ```
 
@@ -431,6 +449,12 @@ kubectl --context polyad -n polyad logs deployment/polyad-polyad -c operator --t
 - **QEMU/HVF or `crane` is missing on macOS.** Run `brew bundle install` and check
   the native QEMU binaries and `crane` are on `PATH`. The helper rejects a QEMU
   build without HVF instead of falling back to slow software emulation.
+- **DHCP timeout after a guest boot failure.** Check the selected VM's `serial.log`
+  under Minikube's `machines/` directory before changing host networking. A
+  2 GiB guest can fail with `Initramfs unpacking failed: write error` and a kernel
+  panic before it ever requests a DHCP lease. Use a fresh 4 GiB profile as above.
+  The default does not resize an existing 2 GiB VM. A missing DHCP leases file
+  alone does not prove a firewall problem; do not create an empty leases file.
 - **`socket_vmnet` is installed but networking fails.** Start its root-owned service
   using the command above and check its socket. On macOS 15 or later, also allow
   Local Network access for the terminal/IDE running Minikube in System Settings.
