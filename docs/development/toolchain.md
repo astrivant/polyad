@@ -237,12 +237,17 @@ The [Polyad pipeline](../../.github/workflows/ci.yml) is the only Actions entry
 point for main pushes, pull requests, version-tag pushes and manual runs. Open
 that run to see infrastructure checks, Python and container matrices, chart
 validation, Cheeger benchmarks, reachability studies, and soul/nature process
-studies in one job graph. The component YAML files accept only `workflow_call`;
-they do not create independent runs or completion-triggered follow-up pipelines.
+studies in one job graph. All 25 jobs are defined directly in `ci.yml`; there
+are no separate local action definitions, reusable-workflow files or
+completion-triggered follow-up pipelines. Third-party setup and validation
+actions remain ordinary steps in those jobs.
 
 Every branch checks out the same resolved commit. The **All checks passed** job
 joins every validation branch and rejects failures, cancellations and unexpected
 skips before publishing. Compose is intentionally main-push-only.
+Chart packaging may skip only when no release tag was selected, and the three
+cloud-refresh jobs may skip only when `full-refresh` is off. When selected,
+those jobs must succeed too; their failures or cancellations are never ignored.
 Study failures now block releases as well as ordinary CI success.
 As in `hypothesis-helm`, newer PR commits cancel superseded PR checks; main,
 tag and manual runs do not cancel in-flight work. Publication is serialized per tag.
@@ -292,13 +297,16 @@ checks its release metadata, builds a wheel and source distribution,
 and uploads them as `python-distributions-<version>`. The publishing job downloads
 those exact artifacts, retained for 30 days, and runs in the `pypi` environment.
 Configure `PYPI_API_TOKEN` as an organization secret with access granted to this
-repository, a repository secret, or a `pypi` environment secret. The caller
-explicitly passes only this credential to the reusable publisher; an environment
+repository, a repository secret, or a `pypi` environment secret. The inline
+publishing job reads this credential directly; an environment
 secret takes precedence. Configure environment protection and allowed release
-tags before publishing. See [GitHub's reusable-workflow secret rules](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#using-inputs-and-secrets-in-a-reusable-workflow).
-For tagged builds, the Git tag determines the release version. The shared
-`.github/actions/prepare-release` action runs `.github/prepare-release.py` in each
-build checkout before dependencies are installed or artifacts are built. For
+tags before publishing.
+
+For tagged builds, the Git tag determines the release version. Shared steps
+inside `ci.yml` run `.github/prepare-release.py` in each build checkout before
+dependencies are installed or artifacts are built. YAML anchors keep the Python
+setup, metadata stamping and lockfile refresh defined once in the file; the
+publisher reuses only setup and stamping. See [GitHub's YAML anchor documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases). For
 example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the chart,
 `appVersion` and default image tag to `0.0.1-alpha3`. It also refreshes the chart
 README's image-tag default. Alpha, beta and release-candidate spellings are
@@ -377,8 +385,8 @@ PyPI. Add `--dry-run` to validate the publishing flow without uploading. See
 
 ## Verified Helm chart builds
 
-Main-branch pushes and pull requests call `.github/workflows/chart.yml` from the
-Polyad pipeline. Chart validation pins the Hypothesis Helm action to
+Main-branch pushes and pull requests run the `chart` matrix in `ci.yml`.
+Chart validation pins the Hypothesis Helm action to
 [`05681f04b41256a41355e6320e52a7ca17f67b74`](https://github.com/astrivant/hypothesis-helm/tree/05681f04b41256a41355e6320e52a7ca17f67b74)
 across `charts/polyad` and `charts/polyad-crds`, with **six property-test jobs total:
 three shards per chart and four workers per shard**. The jobs use `ubuntu-24.04`: GitHub's largest standard free
@@ -404,15 +412,15 @@ each job. Benchmark-chart defaults and monitoring profiles retain their strict
 render/schema checks while the upstream dependency-merge parser issue remains.
 
 All six chart/shard jobs and the benchmark-chart validation must succeed before
-the pipeline can permit publication. The same component validates
+the pipeline can permit publication. The same matrix validates
 user-pushed/manual release tags without starting another pipeline or repeating
-chart validation. For tagged builds, its package job requires all chart
+chart validation. For tagged builds, the `chart-package` job requires all chart
 validation jobs, packages all three charts, and uploads
 `helm-chart-<tag>` containing three `.tgz` archives for 30 days. Main and PR checks
 validate without producing a release chart archive.
 
 The workflow resolves the source commit once and uses that SHA for every shard
-and the package job. Packaging also checks that the release tag still identifies
+and the `chart-package` job. Packaging also checks that the release tag still identifies
 that SHA. The operator chart follows the operator release tag. The resource chart retains
 its independently declared version; update its `Chart.yaml` and the parent
 dependency pin when releasing changed definitions or templates. These builds upload workflow artifacts;

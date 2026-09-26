@@ -18,30 +18,32 @@ PIPELINE = yaml.load((DIRECTORY / "ci.yml").read_text(), Loader=yaml.BaseLoader)
 CHECKS = set(PIPELINE["jobs"]) - {"verified", "publish"}
 
 
-def test_only_one_workflow_accepts_events_and_every_component_is_reachable():
+def test_one_workflow_contains_every_job_without_local_actions_or_workflow_calls():
     """
     Every push, pull request or manual run has one entry point with no detached follow-up run.
     """
     workflows = {path.name: yaml.load(path.read_text(), Loader=yaml.BaseLoader) for path in DIRECTORY.glob("*.yml")}
+    assert set(workflows) == {"ci.yml"}
+    assert not list((ROOT / ".github/actions").rglob("action.y*ml"))
     assert set(PIPELINE["on"]) == {"push", "pull_request", "workflow_dispatch"}
     assert PIPELINE["on"]["push"] == {"branches": ["main"], "tags": ["v[0-9]*"]}
-    for name, workflow in workflows.items():
-        if name != "ci.yml":
-            assert set(workflow["on"]) == {"workflow_call"}, name
+    for job in PIPELINE["jobs"].values():
+        assert "uses" not in job
+        assert "runs-on" in job and "steps" in job
+        assert all(not step.get("uses", "").startswith("./") for step in job["steps"])
 
-    # Traverse actual local calls, rejecting orphan workflow files and recursion.
+    # Traverse job dependencies, rejecting cycles and dangling edges after flattening.
     reached = set()
 
     def visit(name, ancestors=()):
         assert name not in ancestors
         reached.add(name)
-        for job in workflows[name]["jobs"].values():
-            target = job.get("uses", "")
-            if target.startswith("./.github/workflows/"):
-                visit(Path(target).name, (*ancestors, name))
+        dependencies = PIPELINE["jobs"][name].get("needs", [])
+        for dependency in [dependencies] if isinstance(dependencies, str) else dependencies:
+            visit(dependency, (*ancestors, name))
 
-    visit("ci.yml")
-    assert reached == set(workflows)
+    visit("publish")
+    assert reached == set(PIPELINE["jobs"])
 
 
 def test_all_validation_branches_join_before_publishing():
@@ -50,12 +52,31 @@ def test_all_validation_branches_join_before_publishing():
     """
     gate = PIPELINE["jobs"]["verified"]
     assert gate["if"] == "always()" and set(gate["needs"]) == CHECKS
-    assert {"benchmarks", "reachability", "process-studies", "chart", "operator", "lightweight-packages"} <= CHECKS
+    assert {
+        "cheeger-studies",
+        "benchmark-smoke",
+        "benchmark-images",
+        "benchmark-refresh-prepare",
+        "benchmark-refresh-study",
+        "benchmark-refresh-finish",
+        "reachability-sdk",
+        "reachability-prepare",
+        "reachability-study",
+        "reachability-finish",
+        "process-tests",
+        "process-prepare",
+        "process-study",
+        "process-finish",
+        "chart",
+        "chart-package",
+        "operator",
+        "lightweight-packages",
+    } <= CHECKS
     assert "verified" in PIPELINE["jobs"]["publish"]["needs"]
     assert "always()" not in PIPELINE["jobs"]["publish"]["if"]
 
 
-def test_all_checkout_and_workflow_calls_use_the_resolved_source():
+def test_all_checkouts_use_the_resolved_source():
     """
     Manual tag runs and pull-request merge runs test one immutable commit across every suite.
     """
@@ -64,17 +85,9 @@ def test_all_checkout_and_workflow_calls_use_the_resolved_source():
             continue
         dependencies = job["needs"]
         assert "source" in ([dependencies] if isinstance(dependencies, str) else dependencies)
-        if "uses" in job:
-            assert job["with"]["ref"] == "${{ needs.source.outputs.sha }}", name
-        else:
-            assert job["steps"][0]["with"]["ref"] == "${{ needs.source.outputs.sha }}", name
-    for filename in ("benchmarks.yml", "reachability.yml", "process-studies.yml"):
-        workflow = yaml.load((DIRECTORY / filename).read_text(), Loader=yaml.BaseLoader)
-        assert workflow["on"]["workflow_call"]["inputs"]["ref"]["required"] == "true"
-        for job in workflow["jobs"].values():
-            checkout = job["steps"][0]
-            assert checkout["uses"] == "actions/checkout@v4"
-            assert checkout["with"]["ref"] in {"${{ inputs.ref }}", "${{ needs.refresh-prepare.outputs.revision }}"}
+        checkout = job["steps"][0]
+        assert checkout["uses"] == "actions/checkout@v4"
+        assert checkout["with"]["ref"] == "${{ needs.source.outputs.sha }}", name
 
 
 def test_manual_cloud_benchmarks_remain_explicit_and_environment_protected():
@@ -83,12 +96,27 @@ def test_manual_cloud_benchmarks_remain_explicit_and_environment_protected():
     """
     inputs = PIPELINE["on"]["workflow_dispatch"]["inputs"]
     assert inputs["full-refresh"]["default"] == "false" and inputs["tag"]["default"] == ""
-    benchmarks = PIPELINE["jobs"]["benchmarks"]
-    assert benchmarks["with"]["full-refresh"] == "${{ github.event_name == 'workflow_dispatch' && inputs.full-refresh }}"
-    workflow = yaml.load((DIRECTORY / "benchmarks.yml").read_text(), Loader=yaml.BaseLoader)
-    assert workflow["jobs"]["refresh-prepare"]["if"] == "inputs.full-refresh"
-    assert workflow["jobs"]["refresh-study"]["environment"] == "benchmarks"
-    assert workflow["jobs"]["refresh-study"]["needs"] == "refresh-prepare"
+    prepare = PIPELINE["jobs"]["benchmark-refresh-prepare"]
+    assert prepare["if"] == "github.event_name == 'workflow_dispatch' && inputs.full-refresh"
+    assert prepare["needs"] == ["source", "benchmark-smoke", "benchmark-images"]
+    study = PIPELINE["jobs"]["benchmark-refresh-study"]
+    assert study["environment"] == "benchmarks"
+    assert study["needs"] == ["source", "benchmark-refresh-prepare"]
+    assert study["env"]["BENCHMARK_CONTEXT"] == "${{ inputs.context }}"
+    assert study["strategy"]["matrix"] == "${{ fromJSON(needs.benchmark-refresh-prepare.outputs.matrix) }}"
+
+
+@pytest.mark.parametrize("suite,prerequisite", [("reachability", "reachability-sdk"), ("process", "process-tests")])
+def test_study_matrices_keep_their_prepare_test_and_finish_barriers(suite, prerequisite):
+    """
+    Dynamic studies cannot run before their tests or finish before matrix artifacts arrive.
+    """
+    study = PIPELINE["jobs"][f"{suite}-study"]
+    assert study["needs"] == ["source", prerequisite, f"{suite}-prepare"]
+    assert study["strategy"]["matrix"] == f"${{{{ fromJSON(needs.{suite}-prepare.outputs.matrix) }}}}"
+    finish = PIPELINE["jobs"][f"{suite}-finish"]
+    assert finish["needs"] == ["source", f"{suite}-prepare", f"{suite}-study"]
+    assert finish["if"] == f"always() && needs.{suite}-prepare.result == 'success'"
 
 
 def test_releases_cannot_be_cancelled_by_newer_pr_commits():
@@ -102,13 +130,19 @@ def test_releases_cannot_be_cancelled_by_newer_pr_commits():
     assert PIPELINE["defaults"]["run"]["shell"] == "bash"
 
 
-def run_gate(results, *, main):
+def run_gate(results, *, main=False, release=False, full_refresh=False):
     """
     Execute the workflow's real aggregate check against synthetic job conclusions.
     """
     return subprocess.run(
         ["bash", "-e", "-o", "pipefail", "-c", PIPELINE["jobs"]["verified"]["steps"][0]["run"]],
-        env={**os.environ, "RESULTS_JSON": json.dumps(results), "MAIN_PUSH": str(main).lower()},
+        env={
+            **os.environ,
+            "RESULTS_JSON": json.dumps(results),
+            "MAIN_PUSH": str(main).lower(),
+            "RELEASE_TAG": "v0.0.1-alpha99" if release else "",
+            "FULL_REFRESH": str(full_refresh).lower(),
+        },
         text=True,
         capture_output=True,
     )
@@ -116,29 +150,42 @@ def run_gate(results, *, main):
 
 @pytest.mark.parametrize("name", sorted(CHECKS))
 @pytest.mark.parametrize("status", ["failure", "cancelled", "skipped"])
-def test_gate_rejects_incomplete_main_runs(name, status):
+def test_gate_rejects_every_incomplete_job_when_all_features_are_required(name, status):
     """
     A failed, cancelled or unexpectedly skipped suite must never permit release writes.
     """
     results = {job: {"result": "success"} for job in CHECKS}
     results[name]["result"] = status
-    result = run_gate(results, main=True)
+    result = run_gate(results, main=True, release=True, full_refresh=True)
     assert result.returncode != 0 and name in result.stderr
 
 
-@pytest.mark.parametrize("main", [True, False])
-def test_gate_accepts_success_and_only_the_expected_compose_skip(main):
+@pytest.mark.parametrize(
+    "main,release,full_refresh",
+    [(True, False, False), (False, False, False), (False, True, False), (False, False, True), (False, True, True)],
+)
+def test_gate_accepts_only_the_skips_expected_for_the_selected_features(main, release, full_refresh):
     """
-    PR and tag runs can skip main-only Compose while every study remains mandatory.
+    Main, PR, tag and manual runs allow only their unselected optional branches to skip.
     """
     results = {job: {"result": "success"} for job in CHECKS}
-    if not main:
-        results["compose"]["result"] = "skipped"
-    result = run_gate(results, main=main)
+    optional = set() if main else {"compose"}
+    if not release:
+        optional.add("chart-package")
+    if not full_refresh:
+        optional.update({"benchmark-refresh-prepare", "benchmark-refresh-study", "benchmark-refresh-finish"})
+    for name in optional:
+        results[name]["result"] = "skipped"
+    result = run_gate(results, main=main, release=release, full_refresh=full_refresh)
     assert result.returncode == 0, result.stderr
-    if not main:
-        results["benchmarks"]["result"] = "skipped"
-        assert run_gate(results, main=False).returncode != 0
+
+    # Even an optional job may not fail silently if it did run.
+    for name in optional:
+        results[name]["result"] = "failure"
+        assert run_gate(results, main=main, release=release, full_refresh=full_refresh).returncode != 0
+        results[name]["result"] = "skipped"
+    results["benchmark-smoke"]["result"] = "skipped"
+    assert run_gate(results, main=main, release=release, full_refresh=full_refresh).returncode != 0
 
 
 @pytest.fixture

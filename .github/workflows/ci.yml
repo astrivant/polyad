@@ -57,6 +57,7 @@ jobs:
             echo "sha=$(git rev-parse HEAD)"
             printf 'release-tag=%s\n' "$tag"
           } >> "$GITHUB_OUTPUT"
+
   terraform:
     needs: source
     runs-on: ubuntu-latest
@@ -74,6 +75,7 @@ jobs:
       - run: terraform -chdir=terraform validate
       - name: Test with mocked providers (no cloud credentials or resources)
         run: terraform -chdir=terraform test
+
   python:
     needs: source
     runs-on: ubuntu-latest
@@ -100,9 +102,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.source.outputs.sha }}
-      - uses: ./.github/actions/prepare-release
+      # Reuse these release steps below without a separate composite action.
+      - &release-python
+        uses: actions/setup-python@v5
+        if: needs.source.outputs.release-tag != ''
         with:
-          ref: ${{ needs.source.outputs.release-tag }}
+          python-version-file: .python-version
+      - &release-metadata
+        name: Stamp release metadata
+        if: needs.source.outputs.release-tag != ''
+        env:
+          RELEASE_REF: ${{ needs.source.outputs.release-tag }}
+        run: python .github/prepare-release.py --tag "$RELEASE_REF"
+      - &release-locks
+        name: Refresh lockfiles after release version changes
+        if: needs.source.outputs.release-tag != ''
+        env:
+          POETRY_VIRTUALENVS_CREATE: 'false'
+        run: |
+          python -m pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+          poetry lock
+          poetry check --lock
+          poetry -C pkg/polyad-benchmarks lock
+          poetry -C pkg/polyad-benchmarks check --lock
       - name: Read shared tool versions
         id: tools
         run: |
@@ -179,6 +201,7 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 30
+
   lightweight-packages:
     needs: [source, python]
     runs-on: ubuntu-latest
@@ -208,6 +231,7 @@ jobs:
           /tmp/polyad-sdk/bin/python -m pip install --find-links dist dist/polyad_sdk-*.whl
           /tmp/polyad-sdk/bin/python -I scripts/testing/check-sdk-package.py
           /tmp/polyad-sdk/bin/python -m pip check
+
   container:
     needs: source
     runs-on: ${{ matrix.platform.runner }}
@@ -222,9 +246,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.source.outputs.sha }}
-      - uses: ./.github/actions/prepare-release
-        with:
-          ref: ${{ needs.source.outputs.release-tag }}
+      - *release-python
+      - *release-metadata
+      - *release-locks
       - uses: docker/setup-buildx-action@v4
       - name: Read image metadata
         id: image
@@ -258,6 +282,7 @@ jobs:
       - name: Check development tests
         if: matrix.profile == 'development'
         run: docker run --rm --entrypoint /usr/bin/tini polyad:container-test -- python -m pytest -n 2 pkg/tests/test_scheduling_gates.py
+
   compose:
     needs: source
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -291,29 +316,529 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
+
   chart:
     needs: source
-    uses: ./.github/workflows/chart.yml
-    with:
-      ref: ${{ needs.source.outputs.sha }}
-      release-tag: ${{ needs.source.outputs.release-tag }}
-  benchmarks:
+    # Public-repository standard Linux runners provide 4 CPUs / 16 GB without fees.
+    # Larger runner labels are billed even for public repositories.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # Six property-test jobs total until upstream supports recursive sharding.
+        chart: [polyad, polyad-crds]
+        shard: [1, 2, 3]
+        include:
+          - {chart: polyad-benchmarks, shard: 1}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - *release-python
+      - *release-metadata
+      - *release-locks
+      - run: bash scripts/tooling/install-helm-tools.sh helm kubeconform
+      - name: Build chart dependencies
+        run: bash scripts/tooling/build-chart-dependencies.sh
+      - name: Prepare monitoring CRD schemas from the locked chart
+        if: matrix.chart == 'polyad-benchmarks'
+        run: |
+          python -m venv "$RUNNER_TEMP/polyad-schema-tools"
+          "$RUNNER_TEMP/polyad-schema-tools/bin/pip" install PyYAML==6.0.3
+          "$RUNNER_TEMP/polyad-schema-tools/bin/python" scripts/validation/benchmark-schemas.py
+      - name: Permit the resource chart's intentionally empty instance defaults
+        if: matrix.chart == 'polyad-crds'
+        run: cp charts/polyad-crds/.hypothesis-helm.yaml .hypothesis-helm.yaml
+      - name: Validate chart with hypothesis-helm
+        # The benchmark dependency merge currently trips the upstream YAML round-trip parser.
+        # Its default and full monitoring profiles have strict render/schema checks below.
+        if: matrix.chart != 'polyad-benchmarks'
+        # Supports HH1107 and the kubeconform wrapper; newer revisions changed these inputs.
+        # Upstream must support --filter with --shard before filtering can be enabled here.
+        uses: astrivant/hypothesis-helm@05681f04b41256a41355e6320e52a7ca17f67b74
+        with:
+          chart: charts/${{ matrix.chart }}
+          artifact-name: hypothesis-helm-${{ matrix.chart }}
+          artifact-dir: reports/hypothesis-helm/${{ matrix.chart }}
+          shard: ${{ matrix.shard }}/3
+          jobs: '4'
+          kubeconform: 'true'
+          kubeconform-binary: scripts/validation/kubeconform.sh
+          schema-version: '1.35.0'
+      - name: Validate benchmark profiles against locked CRD schemas
+        if: matrix.chart == 'polyad-benchmarks'
+        run: |
+          helm lint charts/polyad-benchmarks
+          helm template study charts/polyad-benchmarks > "$RUNNER_TEMP/benchmark-default.yaml"
+          for profile in smoke steady burst; do
+            helm lint charts/polyad-benchmarks -f "charts/polyad-benchmarks/values-$profile.yaml"
+            helm template study charts/polyad-benchmarks -f "charts/polyad-benchmarks/values-$profile.yaml" > "$RUNNER_TEMP/benchmark-$profile.yaml"
+          done
+          helm template study charts/polyad-benchmarks -n polyad -f studies/load/fixtures/gke-values.yaml > "$RUNNER_TEMP/benchmark-monitoring.yaml"
+          bash scripts/validation/kubeconform.sh -strict -summary -kubernetes-version 1.35.0 "$RUNNER_TEMP"/benchmark-*.yaml
+
+  chart-package:
+    needs: [source, chart]
+    if: needs.source.outputs.release-tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - *release-python
+      - *release-metadata
+      - *release-locks
+      - run: bash scripts/tooling/install-helm-tools.sh helm
+      - name: Build chart dependencies
+        run: bash scripts/tooling/build-chart-dependencies.sh
+      - name: Package validated chart
+        id: package
+        env:
+          RELEASE_TAG: ${{ needs.source.outputs.release-tag }}
+        run: |
+          tag="${RELEASE_TAG#refs/tags/}"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
+          helm package charts/polyad --destination dist/chart
+          helm package charts/polyad-crds --destination dist/chart
+          helm package charts/polyad-benchmarks --destination dist/chart
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Upload tagged Helm chart
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart-${{ steps.package.outputs.tag }}
+          path: dist/chart/*.tgz
+          if-no-files-found: error
+          retention-days: 30
+
+  cheeger-studies:
     needs: source
-    uses: ./.github/workflows/benchmarks.yml
-    with:
-      ref: ${{ needs.source.outputs.sha }}
-      full-refresh: ${{ github.event_name == 'workflow_dispatch' && inputs.full-refresh }}
-      context: ${{ inputs.context || '' }}
-  reachability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: pkg/polyad-benchmarks:.
+      MPLCONFIGDIR: .cache/matplotlib
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      VECLIB_MAXIMUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry sync
+      - name: Verify oracle comparisons and production tier observations
+        run: poetry run python -m pytest -o addopts='' pkg/tests/test_cheeger_strategies.py pkg/tests/test_cheeger_computation.py pkg/tests/test_cheeger_reduction.py
+      - name: Record the active Cheeger strategy study
+        run: |
+          poetry run python -m polyad_benchmarks.refresh --ci-phase prepare --suite cheeger --root .cache/benchmarks/cheeger
+          poetry run python -m polyad_benchmarks.refresh --ci-phase study --study cheeger-strategies --root .cache/benchmarks/cheeger
+          poetry run python -m polyad_benchmarks.refresh --ci-phase finish --root .cache/benchmarks/cheeger
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cheeger-studies
+          path: .cache/benchmarks/cheeger/
+          include-hidden-files: true
+          retention-days: 30
+
+  benchmark-smoke:
     needs: source
-    uses: ./.github/workflows/reachability.yml
-    with:
-      ref: ${{ needs.source.outputs.sha }}
-  process-studies:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: pkg/polyad-benchmarks:.
+    strategy:
+      matrix:
+        python: ['3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      # Plot regression tests also exercise Polyad's production Cheeger solver.
+      - run: poetry sync --all-extras
+      - run: bash scripts/tooling/install-helm-tools.sh helm
+      - run: bash scripts/tooling/build-chart-dependencies.sh charts/polyad-benchmarks
+      - run: poetry run python scripts/validation/benchmark-schemas.py
+      - name: Exercise harness and refresh barriers offline
+        run: |
+          mkdir -p .cache/benchmarks/smoke
+          poetry run python -m pytest -c pyproject.toml -o addopts='' pkg/tests/test_benchmarks.py pkg/tests/test_study_plotting.py --junitxml=.cache/benchmarks/smoke/pytest.xml
+          helm lint charts/polyad-benchmarks
+          helm template study charts/polyad-benchmarks -f studies/load/fixtures/gke-values.yaml > .cache/benchmarks/smoke/fixture.yaml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-smoke-${{ matrix.python }}
+          path: .cache/benchmarks/smoke/
+          include-hidden-files: true
+          retention-days: 30
+
+  benchmark-images:
     needs: source
-    uses: ./.github/workflows/process-studies.yml
-    with:
-      ref: ${{ needs.source.outputs.sha }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [runner, fixture]
+        platform:
+          - {runner: ubuntu-latest, name: linux/amd64, arch: amd64}
+          - {runner: ubuntu-24.04-arm, name: linux/arm64, arch: arm64}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          platforms: ${{ matrix.platform.name }}
+          load: true
+          push: false
+          tags: polyad-benchmarks:check
+          cache-from: type=gha,scope=benchmarks-${{ matrix.service }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,mode=max,scope=benchmarks-${{ matrix.service }}-${{ matrix.platform.arch }}
+      - run: docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges polyad-benchmarks:check --help
+
+  benchmark-refresh-prepare:
+    if: github.event_name == 'workflow_dispatch' && inputs.full-refresh
+    needs: [source, benchmark-smoke, benchmark-images]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+      revision: ${{ steps.prepare.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - id: prepare
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase prepare --root .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-prepared
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+          include-hidden-files: true
+          retention-days: 30
+
+  benchmark-refresh-study:
+    needs: [source, benchmark-refresh-prepare]
+    environment: benchmarks
+    runs-on: ${{ vars.POLYAD_BENCHMARK_RUNNER || 'polyad-benchmarks' }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.benchmark-refresh-prepare.outputs.matrix) }}
+    env:
+      BENCHMARK_CONTEXT: ${{ inputs.context }}
+      BENCHMARK_STUDY: ${{ matrix.study }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main --extras plots
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-prepared
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+      - name: Run installed fixture in the selected cluster
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase study --root .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }} --study "$BENCHMARK_STUDY" --context "$BENCHMARK_CONTEXT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-study-${{ matrix.study }}
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+          include-hidden-files: true
+          retention-days: 30
+
+  benchmark-refresh-finish:
+    if: always() && needs.benchmark-refresh-prepare.result == 'success'
+    needs: [source, benchmark-refresh-prepare, benchmark-refresh-study]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-prepared
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-study-*
+          merge-multiple: true
+          path: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+      - name: Verify complete matrix and refresh study results
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }} --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-refresh
+          path: |
+            .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+            studies/load/results.json
+            studies/load/figures/
+          include-hidden-files: true
+          retention-days: 30
+
+  reachability-sdk:
+    needs: source
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install ./pkg/polyad-types './pkg/polyad-sdk[reachability]' 'pytest>=9,<10'
+      - run: python -m pytest -o addopts='' pkg/tests/test_reachability.py --junitxml=reachability-tests.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reachability-tests-${{ matrix.python }}
+          path: reachability-tests.xml
+
+  reachability-prepare:
+    needs: source
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - id: prepare
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase prepare --suite reachability --root .cache/benchmarks/reachability
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reachability-prepared
+          path: .cache/benchmarks/reachability/
+          include-hidden-files: true
+
+  reachability-study:
+    needs: [source, reachability-sdk, reachability-prepare]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.reachability-prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main --extras reachability
+      - uses: actions/download-artifact@v4
+        with:
+          name: reachability-prepared
+          path: .cache/benchmarks/reachability/
+      - name: Run selected local study
+        env:
+          STUDY: ${{ matrix.study }}
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase study --study "$STUDY" --root .cache/benchmarks/reachability
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reachability-study-${{ matrix.study }}
+          path: .cache/benchmarks/reachability/
+          include-hidden-files: true
+
+  reachability-finish:
+    if: always() && needs.reachability-prepare.result == 'success'
+    needs: [source, reachability-prepare, reachability-study]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - uses: actions/download-artifact@v4
+        with:
+          name: reachability-prepared
+          path: .cache/benchmarks/reachability/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: reachability-study-*
+          merge-multiple: true
+          path: .cache/benchmarks/reachability/
+      - run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/reachability --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reachability-results
+          path: |
+            .cache/benchmarks/reachability/
+            studies/symbiosis/results.json
+            studies/reachability-state/results.json
+            studies/reachability-routing/results.json
+            studies/symbiosis/figures/
+            studies/reachability-state/figures/
+            studies/reachability-routing/figures/
+          include-hidden-files: true
+
+  process-tests:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install ./pkg/polyad-types ./pkg/polyad-sdk ./pkg/polyad-benchmarks 'pytest>=9,<10'
+      - run: python -m pytest -o addopts='' pkg/tests/test_process_studies.py --junitxml=process-tests.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: process-tests-${{ matrix.python }}
+          path: process-tests.xml
+
+  process-prepare:
+    needs: source
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.prepare.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - id: prepare
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase prepare --suite process --root .cache/benchmarks/process
+      - uses: actions/upload-artifact@v4
+        with:
+          name: process-prepared
+          path: .cache/benchmarks/process/
+          include-hidden-files: true
+
+  process-study:
+    needs: [source, process-tests, process-prepare]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.process-prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main --extras process-studies
+      - uses: actions/download-artifact@v4
+        with:
+          name: process-prepared
+          path: .cache/benchmarks/process/
+      - name: Run selected process study
+        env:
+          STUDY: ${{ matrix.study }}
+        run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase study --study "$STUDY" --root .cache/benchmarks/process
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: process-study-${{ matrix.study }}
+          path: .cache/benchmarks/process/
+          include-hidden-files: true
+
+  process-finish:
+    if: always() && needs.process-prepare.result == 'success'
+    needs: [source, process-prepare, process-study]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main
+      - uses: actions/download-artifact@v4
+        with:
+          name: process-prepared
+          path: .cache/benchmarks/process/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: process-study-*
+          merge-multiple: true
+          path: .cache/benchmarks/process/
+      - run: poetry --project pkg/polyad-benchmarks run polyad-benchmarks-refresh --ci-phase finish --root .cache/benchmarks/process --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: process-results
+          path: |
+            .cache/benchmarks/process/
+            studies/soul/results.json
+            studies/soul/figures/
+            studies/nature/results.json
+            studies/nature/figures/
+          include-hidden-files: true
+
   operator:
     needs: source
     runs-on: ubuntu-latest
@@ -327,9 +852,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.source.outputs.sha }}
-      - uses: ./.github/actions/prepare-release
-        with:
-          ref: ${{ needs.source.outputs.release-tag }}
+      - *release-python
+      - *release-metadata
+      - *release-locks
       - uses: helm/kind-action@v1
         with:
           cluster_name: polyad-test
@@ -375,23 +900,53 @@ jobs:
         if: failure()
         continue-on-error: true
         run: bash scripts/testing/collect-operator-diagnostics.sh
+
   verified:
     name: All checks passed
     if: always()
-    needs: [source, terraform, python, lightweight-packages, container, compose, chart, operator, benchmarks, reachability, process-studies]
+    needs:
+      - source
+      - terraform
+      - python
+      - lightweight-packages
+      - container
+      - compose
+      - chart
+      - chart-package
+      - cheeger-studies
+      - benchmark-smoke
+      - benchmark-images
+      - benchmark-refresh-prepare
+      - benchmark-refresh-study
+      - benchmark-refresh-finish
+      - reachability-sdk
+      - reachability-prepare
+      - reachability-study
+      - reachability-finish
+      - process-tests
+      - process-prepare
+      - process-study
+      - process-finish
+      - operator
     runs-on: ubuntu-latest
     steps:
       - name: Require every pipeline branch to succeed
         env:
           RESULTS_JSON: ${{ toJSON(needs) }}
           MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          RELEASE_TAG: ${{ needs.source.outputs.release-tag }}
+          FULL_REFRESH: ${{ github.event_name == 'workflow_dispatch' && inputs.full-refresh }}
         run: |
           python3 - <<'PY'
           import json
           import os
 
-          # Compose intentionally runs only on main pushes; no other check may skip.
+          # Skip only jobs whose feature was not selected for this run.
           optional = set() if os.environ['MAIN_PUSH'] == 'true' else {'compose'}
+          if not os.environ['RELEASE_TAG']:
+              optional.add('chart-package')
+          if os.environ['FULL_REFRESH'] != 'true':
+              optional.update({'benchmark-refresh-prepare', 'benchmark-refresh-study', 'benchmark-refresh-finish'})
           failures = {
               name: result['result']
               for name, result in json.loads(os.environ['RESULTS_JSON']).items()
@@ -401,13 +956,56 @@ jobs:
               raise SystemExit(f'Pipeline checks did not pass: {failures}')
           print('Every required pipeline branch passed.')
           PY
+
   publish:
     name: Publish verified release
     needs: [source, verified, python]
-    if: needs.source.outputs.release-tag != ''
-    uses: ./.github/workflows/publish.yml
-    secrets:
-      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-    with:
-      ref: ${{ needs.source.outputs.sha }}
-      tag: ${{ needs.source.outputs.release-tag }}
+    # Explicit success permits intentionally skipped optional jobs, but never failed checks.
+    if: "!cancelled() && needs.verified.result == 'success' && needs.source.outputs.release-tag != ''"
+    concurrency:
+      group: pypi-${{ needs.source.outputs.release-tag }}
+      cancel-in-progress: false
+    environment: pypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - *release-python
+      - *release-metadata
+      # Verified distributions need no dependency resolution or rebuild here.
+      - name: Install Poetry
+        run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - name: Check release version
+        id: version
+        env:
+          RELEASE_TAG: ${{ needs.source.outputs.release-tag }}
+        run: python .github/release-version.py --tag "$RELEASE_TAG" --output "$GITHUB_OUTPUT"
+      - name: Download verified distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions-${{ steps.version.outputs.version }}
+          path: dist/
+      - name: Publish wheel and source distribution
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [[ -z "$POETRY_PYPI_TOKEN_PYPI" ]]; then
+            echo '::error::PYPI_API_TOKEN is unavailable. Grant this repository access to the organization secret, or set a repository/environment secret.'
+            exit 1
+          fi
+
+          # Check the complete release before uploading its first package.
+          for package in polyad_types polyad_schemas polyad_sdk polyad_benchmarks polyad; do
+            test -s "dist/${package}-${PACKAGE_VERSION}-py3-none-any.whl"
+            test -s "dist/${package}-${PACKAGE_VERSION}.tar.gz"
+          done
+          echo "Publishing all five Polyad distributions at $PACKAGE_VERSION to PyPI"
+          poetry -C pkg/polyad-types publish --dist-dir ../../dist --no-interaction
+          poetry -C pkg/polyad-schemas publish --dist-dir ../../dist --no-interaction
+          poetry -C pkg/polyad-sdk publish --dist-dir ../../dist --no-interaction
+          poetry -C pkg/polyad-benchmarks publish --dist-dir ../../dist --no-interaction
+          poetry publish --no-interaction

@@ -142,25 +142,22 @@ def test_every_release_build_prepares_metadata_before_consuming_it():
     """
     Stamp every independent checkout, including all chart shards and the artifact publisher.
     """
-    for filename, jobs in {
-        "ci.yml": ("python", "container", "operator"),
-        "chart.yml": ("chart", "package"),
-        "publish.yml": ("publish",),
-    }.items():
-        workflow = yaml.load((ROOT / ".github/workflows" / filename).read_text(), Loader=yaml.BaseLoader)
-        for job in jobs:
-            steps = workflow["jobs"][job]["steps"]
-            assert steps[0]["uses"] == "actions/checkout@v4"
-            assert steps[1]["uses"] == "./.github/actions/prepare-release"
-    action = yaml.load((ROOT / ".github/actions/prepare-release/action.yml").read_text(), Loader=yaml.BaseLoader)
-    stamp = next(step for step in action["runs"]["steps"] if step.get("name") == "Stamp release metadata")
-    assert "refs/tags/" in stamp["if"]
-    assert stamp["env"]["RELEASE_REF"] == "${{ inputs.ref }}"
-    assert stamp["run"] == 'python .github/prepare-release.py --tag "$RELEASE_REF"'
-    refresh = action["runs"]["steps"][-1]
-    assert refresh["if"] == f"inputs.refresh-locks == 'true' && ({stamp['if']})"
-    assert action["inputs"]["refresh-locks"]["default"] == "true"
-    assert "poetry lock\n" in refresh["run"] and "poetry check --lock" in refresh["run"]
+    workflow = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
+    expected = workflow["jobs"]["python"]["steps"][1:4]
+    for job in ("python", "container", "operator", "chart", "chart-package", "publish"):
+        steps = workflow["jobs"][job]["steps"]
+        assert steps[0]["uses"] == "actions/checkout@v4"
+        assert steps[1:3] == expected[:2]
+        assert steps[1]["uses"] == "actions/setup-python@v5"
+        stamp = steps[2]
+        assert stamp["if"] == "needs.source.outputs.release-tag != ''"
+        assert stamp["env"]["RELEASE_REF"] == "${{ needs.source.outputs.release-tag }}"
+        assert stamp["run"] == 'python .github/prepare-release.py --tag "$RELEASE_REF"'
+        if job != "publish":
+            refresh = steps[3]
+            assert refresh == expected[2]
+            assert refresh["if"] == stamp["if"]
+            assert "poetry lock\n" in refresh["run"] and "poetry check --lock" in refresh["run"]
 
 
 @pytest.mark.parametrize(
@@ -221,7 +218,7 @@ def test_only_explicit_tags_enable_releases_without_repository_write_permissions
     assert "tag" not in ci["jobs"]
     assert not (ROOT / ".github/workflows/tag.yml").exists()
     assert all(job.get("permissions", {}).get("contents", "read") == "read" for job in ci["jobs"].values())
-    assert ci["jobs"]["publish"]["if"] == "needs.source.outputs.release-tag != ''"
+    assert ci["jobs"]["publish"]["if"] == ("!cancelled() && needs.verified.result == 'success' && needs.source.outputs.release-tag != ''")
 
 
 @pytest.mark.parametrize(
@@ -264,27 +261,20 @@ def test_publishing_validates_the_package_tag(tmp_path, package, tag, normalized
         assert output.read_text() == f"version={normalized}\n"
 
 
-def test_publication_downloads_verified_artifacts_and_passes_credentials():
+def test_publication_downloads_verified_artifacts_and_uses_protected_credentials():
     """
     Gate publication inside the one pipeline and download its distributions without rebuilding.
     """
     ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
-    workflow = yaml.load((ROOT / ".github/workflows/publish.yml").read_text(), Loader=yaml.BaseLoader)
-    caller = ci["jobs"]["publish"]
-    assert caller["needs"] == ["source", "verified", "python"]
-    assert caller["if"] == "needs.source.outputs.release-tag != ''"
-    assert caller["with"] == {"ref": "${{ needs.source.outputs.sha }}", "tag": "${{ needs.source.outputs.release-tag }}"}
-    assert caller["uses"] == "./.github/workflows/publish.yml"
-    assert caller["secrets"] == {"PYPI_API_TOKEN": "${{ secrets.PYPI_API_TOKEN }}"}
-    assert set(workflow["on"]) == {"workflow_call"} and "verify" not in workflow["jobs"]
-    assert workflow["on"]["workflow_call"]["secrets"]["PYPI_API_TOKEN"]["required"] == "false"
-    assert workflow["concurrency"]["cancel-in-progress"] == "false"
-    publish = workflow["jobs"]["publish"]
+    publish = ci["jobs"]["publish"]
+    assert publish["needs"] == ["source", "verified", "python"]
+    assert publish["if"] == "!cancelled() && needs.verified.result == 'success' && needs.source.outputs.release-tag != ''"
+    assert publish["concurrency"] == {"group": "pypi-${{ needs.source.outputs.release-tag }}", "cancel-in-progress": "false"}
     assert publish["environment"] == "pypi"
-    assert publish["steps"][0]["with"]["ref"] == "${{ inputs.ref }}"
-    assert publish["steps"][1]["with"]["refresh-locks"] == "false"
+    assert publish["steps"][0]["with"]["ref"] == "${{ needs.source.outputs.sha }}"
     assert any(step.get("uses", "").startswith("actions/download-artifact@") for step in publish["steps"])
     assert not any("poetry build" in step.get("run", "") for step in publish["steps"])
+    assert not any("poetry lock" in step.get("run", "") for step in publish["steps"])
     assert publish["steps"][-1]["env"]["POETRY_PYPI_TOKEN_PYPI"] == "${{ secrets.PYPI_API_TOKEN }}"
     upload = next(step for step in ci["jobs"]["python"]["steps"] if step.get("name") == "Upload verified distributions")
     assert upload["with"]["retention-days"] == "30"
@@ -294,7 +284,7 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     """
     Require every shard to pass before packaging the exact commit those shards validated.
     """
-    workflow = yaml.load((ROOT / ".github/workflows/chart.yml").read_text(), Loader=yaml.BaseLoader)
+    workflow = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
     chart = workflow["jobs"]["chart"]
     assert chart["needs"] == "source"
     assert chart["runs-on"] == "ubuntu-24.04"
@@ -321,9 +311,9 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     assert policy["if"] == "matrix.chart == 'polyad-crds'"
     assert chart["steps"].index(policy) < chart["steps"].index(action)
     assert yaml.safe_load((ROOT / "charts/polyad-crds/.hypothesis-helm.yaml").read_text()) == {"ignored": ["HH1107"]}
-    package = workflow["jobs"]["package"]
+    package = workflow["jobs"]["chart-package"]
     assert package["needs"] == ["source", "chart"]
-    assert package["if"] == "inputs.release-tag != ''"
+    assert package["if"] == "needs.source.outputs.release-tag != ''"
     for job in [chart, package]:
         assert job["steps"][0]["with"]["ref"] == "${{ needs.source.outputs.sha }}"
     assert package["steps"][0]["with"]["fetch-depth"] == "0"
@@ -340,11 +330,10 @@ def test_explicit_tags_use_the_same_chart_gate_and_source():
     ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
     assert ci["on"]["push"]["branches"] == ["main"]
     assert "pull_request" in ci["on"]
-    assert ci["jobs"]["chart"]["uses"] == "./.github/workflows/chart.yml"
-    assert ci["jobs"]["chart"]["with"]["release-tag"] == "${{ needs.source.outputs.release-tag }}"
-    assert ci["jobs"]["chart"]["with"]["ref"] == "${{ needs.source.outputs.sha }}"
-    assert ci["jobs"]["publish"]["with"]["tag"] == "${{ needs.source.outputs.release-tag }}"
+    for name in ("chart", "chart-package", "publish"):
+        assert ci["jobs"][name]["steps"][0]["with"]["ref"] == "${{ needs.source.outputs.sha }}"
     assert "chart" in ci["jobs"]["verified"]["needs"]
+    assert "chart-package" in ci["jobs"]["verified"]["needs"]
 
 
 @pytest.mark.parametrize("problem", [None, "missing-token", "missing-wheel", "missing-sdist"])
@@ -369,7 +358,7 @@ def test_publish_checks_all_five_artifact_pairs_before_any_upload(tmp_path, prob
     poetry.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$PUBLISH_LOG"\n')
     poetry.chmod(0o755)
     log = tmp_path / "uploads"
-    workflow = yaml.load((ROOT / ".github/workflows/publish.yml").read_text(), Loader=yaml.BaseLoader)
+    workflow = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
     command = workflow["jobs"]["publish"]["steps"][-1]["run"]
     result = subprocess.run(
         ["bash", "-e", "-o", "pipefail", "-c", command],

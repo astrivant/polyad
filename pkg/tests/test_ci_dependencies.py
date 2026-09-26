@@ -104,9 +104,9 @@ def test_ci_and_release_use_one_repository_bootstrap():
         ("ci.yml", "python"),
         ("ci.yml", "compose"),
         ("ci.yml", "operator"),
-        ("chart.yml", "chart"),
-        ("chart.yml", "package"),
-        ("benchmarks.yml", "smoke"),
+        ("ci.yml", "chart"),
+        ("ci.yml", "chart-package"),
+        ("ci.yml", "benchmark-smoke"),
     }
 
 
@@ -114,7 +114,7 @@ def test_plot_tests_have_operator_dependencies_and_child_process_import_paths():
     """
     Plot experiments use the production solver, while child interpreters cannot inherit pytest's sys.path.
     """
-    for filename, job in (("ci.yml", "python"), ("benchmarks.yml", "smoke")):
+    for filename, job in (("ci.yml", "python"), ("ci.yml", "benchmark-smoke")):
         workflow = yaml.load((ROOT / ".github/workflows" / filename).read_text(), Loader=yaml.BaseLoader)
         config = workflow["jobs"][job]
         assert "pkg/polyad-benchmarks" in config["env"]["PYTHONPATH"].split(":")
