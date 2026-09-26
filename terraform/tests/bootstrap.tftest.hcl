@@ -147,6 +147,55 @@ run "gitops_bootstrap" {
   }
 }
 
+run "project_and_project_local_identity" {
+  command = plan
+
+  module { source = "./modules/project" }
+  providers = { google = google.bootstrap }
+
+  variables {
+    project_id                = "polyad-test-project"
+    organization_id           = "123456789012"
+    billing_account_id        = "ABCDEF-123456-ABCDEF"
+    bootstrap_service_account = "terraform-bootstrap@organization-bootstrap-test.iam.gserviceaccount.com"
+  }
+
+  assert {
+    condition = (
+      google_project.polyad.name == "polyad" &&
+      google_project.polyad.project_id == var.project_id &&
+      google_project.polyad.org_id == var.organization_id &&
+      google_project.polyad.billing_account == var.billing_account_id &&
+      !google_project.polyad.auto_create_network &&
+      google_project.polyad.deletion_policy == "PREVENT" &&
+      google_service_account.deployer.account_id == "polyad-terraform" &&
+      google_service_account.deployer.project == var.project_id &&
+      google_service_account_iam_member.bootstrap_impersonation.role == "roles/iam.serviceAccountTokenCreator" &&
+      google_service_account_iam_member.bootstrap_impersonation.member == "serviceAccount:${var.bootstrap_service_account}"
+    )
+    error_message = "Create the protected polyad project and authorize only the bootstrap identity to impersonate its deployer."
+  }
+
+  assert {
+    condition = (
+      length(google_project_iam_member.deployer) == 6 &&
+      alltrue([for grant in google_project_iam_member.deployer : grant.project == var.project_id && !contains(["roles/owner", "roles/editor"], grant.role)]) &&
+      contains(keys(google_project_service.bootstrap), "iamcredentials.googleapis.com") &&
+      alltrue([for service in google_project_service.bootstrap : !service.disable_on_destroy])
+    )
+    error_message = "Scope infrastructure roles to the new project and keep credential APIs alive through teardown."
+  }
+}
+
+run "invalid_short_project_id" {
+  command = plan
+  variables {
+    project_id        = "poly"
+    gitops_controller = "flux"
+  }
+  expect_failures = [var.project_id]
+}
+
 run "frozen_experiment" {
   command = plan
 
@@ -197,8 +246,8 @@ run "flux_without_argo_credentials" {
       yamldecode(helm_release.flux[0].values[0]).installCRDs &&
       !yamldecode(helm_release.flux[0].values[0]).imageAutomationController.create &&
       !yamldecode(helm_release.flux[0].values[0]).imageReflectionController.create &&
-      alltrue([for controller in ["sourceController", "helmController", "kustomizeController", "notificationController"] :
-        yamldecode(helm_release.flux[0].values[0])[controller].create &&
+      alltrue([for controller in ["sourceController", "helmController", "kustomizeController", "notificationController", "cli"] :
+        try(yamldecode(helm_release.flux[0].values[0])[controller].create, controller == "cli") &&
         yamldecode(helm_release.flux[0].values[0])[controller].nodeSelector["cloud.google.com/gke-nodepool"] == "fixtures" &&
         yamldecode(helm_release.flux[0].values[0])[controller].tolerations[0].value == "fixtures"
       ]) &&
@@ -310,4 +359,20 @@ run "invalid_capacity" {
     copolyad_max_nodes = 1
   }
   expect_failures = [var.fixtures_max_nodes, var.copolyad_max_nodes]
+}
+variables {
+  organization_id            = "123456789012"
+  billing_account_id         = "ABCDEF-123456-ABCDEF"
+  bootstrap_credentials_file = "tests/data/bootstrap-service-account.json"
+}
+
+mock_provider "google" {
+  alias = "bootstrap"
+
+  mock_resource "google_service_account" {
+    defaults = {
+      email = "polyad-terraform@polyad-test-project.iam.gserviceaccount.com"
+      name  = "projects/polyad-test-project/serviceAccounts/polyad-terraform@polyad-test-project.iam.gserviceaccount.com"
+    }
+  }
 }

@@ -1,6 +1,58 @@
 variable "project_id" {
-  description = "Existing, billing-enabled Google Cloud project for this isolated test environment."
+  description = "Globally unique ID for the project Terraform creates. Defaults to polyad; use polyad-your-team if that ID is already taken. The display name remains polyad."
   type        = string
+  default     = "polyad"
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]{4,28}[a-z0-9]$", var.project_id))
+    error_message = "Use a globally unique 6-30 character GCP project ID, starting with a lowercase letter."
+  }
+}
+
+variable "organization_id" {
+  description = "Numeric GCP organization ID under which to create the polyad project. The bootstrap identity needs Project Creator on this organization."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.organization_id))
+    error_message = "organization_id must contain only digits."
+  }
+}
+
+variable "billing_account_id" {
+  description = "Billing account linked to the new project. The bootstrap identity needs Billing Account User on this account."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Fa-f0-9]{6}-[A-Fa-f0-9]{6}-[A-Fa-f0-9]{6}$", var.billing_account_id))
+    error_message = "Use the billing account ID in XXXXXX-XXXXXX-XXXXXX format."
+  }
+}
+
+variable "bootstrap_credentials_file" {
+  description = "Path to the organization-authorized service account JSON credentials, kept outside Git. Used only for project bootstrap and to mint short-lived project-deployer tokens."
+  type        = string
+
+  validation {
+    condition = try(
+      jsondecode(file(pathexpand(var.bootstrap_credentials_file))).type == "service_account" &&
+      can(regex("^[^@]+@[^@]+\\.iam\\.gserviceaccount\\.com$", jsondecode(file(pathexpand(var.bootstrap_credentials_file))).client_email)) &&
+      length(jsondecode(file(pathexpand(var.bootstrap_credentials_file))).project_id) >= 6,
+      false
+    )
+    error_message = "Supply a readable service-account JSON file with type, client_email, and project_id. Do not paste credentials into tfvars."
+  }
+}
+
+variable "project_deletion_policy" {
+  description = "PREVENT protects the new project from accidental destruction. Set DELETE explicitly for a disposable project after draining workloads; the project is destroyed last."
+  type        = string
+  default     = "PREVENT"
+
+  validation {
+    condition     = contains(["PREVENT", "DELETE"], var.project_deletion_policy)
+    error_message = "project_deletion_policy must be PREVENT or DELETE."
+  }
 }
 
 variable "region" {

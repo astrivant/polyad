@@ -1,13 +1,15 @@
 provider "google" {
-  project = var.project_id
-  region  = var.region
-  zone    = var.zone
+  credentials                 = local.bootstrap_credentials_path
+  impersonate_service_account = module.project.deployer_email
+  project                     = module.project.project_id
+  region                      = var.region
+  zone                        = var.zone
 }
 
 module "gke" {
   source = "./modules/gke"
 
-  project_id          = var.project_id
+  project_id          = module.project.project_id
   region              = var.region
   zone                = var.zone
   name                = var.cluster_name
@@ -18,10 +20,14 @@ module "gke" {
   copolyad_min_nodes  = var.copolyad_min_nodes
   copolyad_max_nodes  = var.copolyad_max_nodes
   deletion_protection = var.deletion_protection
+
+  # Credentials and IAM grants must survive until every project resource is gone.
+  depends_on = [module.project]
 }
 
 # Refresh credentials on demand, including long cluster creates and later destroys.
-# gke-gcloud-auth-plugin uses the same Application Default Credentials as Google.
+# ADC mode ignores the plugin's impersonation flag. Use gcloud's credential-file
+# override and explicit impersonation so Helm never falls back to the root identity.
 provider "helm" {
   kubernetes = {
     host                   = "https://${module.gke.endpoint}"
@@ -29,7 +35,15 @@ provider "helm" {
     exec = {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "gke-gcloud-auth-plugin"
-      args        = ["--use_application_default_credentials"]
+      args = [
+        "--account=${local.bootstrap_service_account}",
+        "--impersonate_service_account=${module.project.deployer_email}",
+      ]
+      env = {
+        CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE = local.bootstrap_credentials_path
+        # An inherited pre-minted token would bypass impersonation in the plugin.
+        CLOUDSDK_AUTH_ACCESS_TOKEN = ""
+      }
     }
   }
 }

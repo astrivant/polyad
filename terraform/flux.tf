@@ -22,12 +22,11 @@ resource "helm_release" "flux" {
     imageReflectionController = { create = false }
     sourceWatcher             = { create = false }
     }, {
-    for controller in ["sourceController", "helmController", "kustomizeController", "notificationController"] :
-    controller => {
-      create       = true
+    for controller in ["sourceController", "helmController", "kustomizeController", "notificationController", "cli"] :
+    controller => merge({
       nodeSelector = { "cloud.google.com/gke-nodepool" = "fixtures" }
       tolerations  = [{ key = "dedicated", operator = "Equal", value = "fixtures", effect = "NoSchedule" }]
-    }
+    }, controller == "cli" ? {} : { create = true })
   }))]
 
   depends_on = [module.gke]

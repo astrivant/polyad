@@ -5,7 +5,7 @@ output "cluster_name" {
 
 output "get_credentials_command" {
   description = "Configure kubectl for the new test cluster."
-  value       = "gcloud container clusters get-credentials ${module.gke.name} --zone ${var.zone} --project ${var.project_id}"
+  value       = "gcloud container clusters get-credentials ${module.gke.name} --zone ${var.zone} --project ${module.project.project_id} --impersonate-service-account=${module.project.deployer_email}"
 }
 
 output "argocd_port_forward_command" {
@@ -41,4 +41,14 @@ output "polyad_helmrelease" {
 output "benchmarks_helmrelease" {
   description = "Initially suspended benchmark HelmRelease; null for Argo CD or disabled benchmarks."
   value       = var.gitops_controller == "flux" && var.benchmarks_enabled ? "flux-system/polyad-benchmarks" : null
+}
+
+output "project_id" {
+  description = "Project created under the supplied organization, with display name polyad."
+  value       = module.project.project_id
+}
+
+output "deployer_service_account" {
+  description = "Project-local identity used by Terraform and Helm through renewable impersonation. No key is created."
+  value       = module.project.deployer_email
 }

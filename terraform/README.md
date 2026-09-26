@@ -14,8 +14,10 @@
 - [Validate without a cloud account](#validate-without-a-cloud-account)
 <!-- toc:end -->
 
-Create an isolated GKE cluster, install Argo CD, and let it sync Polyad from this
-public repository. This is the foundation for future load tests of
+Create a GCP project named `polyad` under your organization, create a project-local
+deployer service account, and use renewable impersonation to provision an isolated
+GKE cluster. Select Argo CD (default) or Flux to manage Polyad from this public
+repository. No project service-account private key is generated. This is the foundation for future load tests of
 [the operator's own Graph](../README.md#the-operator-as-a-graph): it provisions
 the services and exposes their scaling signals. The same standalone Argo CD UI
 includes a manually synced [benchmark fixture chart and load study](../studies/load/README.md),
@@ -23,7 +25,9 @@ with monitoring and tracing. Producers, consumers and the operator have separate
 
 ## What runs
 
-The root module calls [`modules/gke`](modules/gke/README.md). That module creates
+The root module first calls `modules/project` with your organization-authorized
+bootstrap credentials, then calls [`modules/gke`](modules/gke/README.md) as the new
+project's deployer. That module creates
 a dedicated VPC, a **zonal GKE Standard cluster**, and four Ubuntu pools:
 
 | Pool | Capacity | Placement |
@@ -118,20 +122,29 @@ experiment with additional credentials and clusters.
 
 ## Create the environment
 
-Install Terraform **1.9+**, Google Cloud CLI, `gke-gcloud-auth-plugin`, `kubectl`
-and the Argo CD CLI. Use a billing-enabled Google Cloud project with sufficient
-CPU and disk quota for the configured limits across all four pools. The provisioning identity needs permission to
-enable APIs, create GKE/network/service-account resources, and grant the node
-service account its project role. Authenticate with Application Default Credentials:
+Install Terraform **1.9+**, Google Cloud CLI, `gke-gcloud-auth-plugin`, `kubectl`,
+and the CLI for your selected GitOps controller. Supply a bootstrap service-account
+JSON file kept outside the repository. This account needs Project Creator on the
+organization, Billing Account User on the billing account, and permission to
+administer IAM, service accounts and enabled APIs in the project it creates.
+Enable Resource Manager, Billing, Service Usage, IAM and IAM Credentials APIs in
+the bootstrap account's own project beforehand. Only the new project receives
+infrastructure role grants; Terraform does not grant organization-wide roles.
+
+The new project defaults to ID and display name `polyad`. IDs are globally unique:
+choose another `project_id` if that ID is taken. Arrange sufficient CPU and disk
+quota in the new project for all four pools before creating the cluster.
 
 ```sh
-gcloud auth application-default login
-gcloud auth application-default set-quota-project YOUR_PROJECT_ID
+export TF_VAR_bootstrap_credentials_file=/absolute/path/outside/git/bootstrap-service-account.json
+# The printed get-credentials command uses this same bootstrap account.
+export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="$TF_VAR_bootstrap_credentials_file"
 cd terraform
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars` with your project and desired zone. Generate a bcrypt
+Edit `terraform.tfvars` with your organization, billing account, project ID and zone.
+For Argo CD, generate a bcrypt
 hash of your chosen **admin** password; `admin` is Argo CD's built-in
 administrative username. In Bash, read the password without
 echoing it and pass it to the local hash command:
@@ -141,9 +154,32 @@ read -r -s -p 'Argo CD admin password: ' polyad_admin_password
 export TF_VAR_argocd_admin_password_hash="$(argocd account bcrypt --password "$polyad_admin_password")"
 unset polyad_admin_password
 terraform init
+terraform apply -target=module.project
 terraform plan -out=environment.tfplan
 terraform apply environment.tfplan
 ```
+
+The first targeted apply creates only the project, required bootstrap APIs, deployer
+account and IAM grants. It is required because the impersonating provider cannot
+authenticate before that account exists. Once IAM propagation completes, normal
+plans and applies provision everything else with the project deployer. Re-run the
+full plan if initial impersonation receives a propagation-related denial. Do not
+use targeting for ordinary updates or teardown. Both Google API and Helm access
+refresh short-lived tokens; neither access tokens nor new private keys enter state.
+
+For Flux, set `gitops_controller = "flux"` and skip the Argo password commands.
+Terraform installs the pinned `flux2` chart `2.19.0` (Flux `2.9.1`) and creates
+`flux-system/polyad` GitRepository and HelmRelease resources. Set
+`flux_revision_type = "tag"` or `"commit"` when `polyad_revision` is not a branch.
+Benchmark reconciliation starts suspended; set `benchmarks_automated_sync = true`
+and apply when ready. Inspect with
+`kubectl -n flux-system get gitrepositories,helmreleases`.
+Flux preserves chart defaults and the same ordered values overlays, retries failed
+releases in place, and excludes known autoscaler replica counts from drift repair.
+Its HelmRelease CEL health checks use the shared Polyad registry during Helm actions,
+not continuous health polling between adaptations.
+The community Helm chart is a [Flux development installation option](https://fluxcd.io/flux/installation/#dev-install).
+Choose the controller before creation; switching it is not a live ownership migration.
 
 Retain that hash in your password manager for future Terraform runs. Generating
 a new bcrypt hash on each run changes the configuration even for the same
@@ -154,7 +190,7 @@ Local state, plans and `.tfvars` files are ignored by Git; use an access-control
 remote backend if multiple administrators will operate this environment.
 
 **Publish this Terraform profile to the selected Git revision before applying.**
-Argo fetches chart and values files from Git, not your working tree. A local edit
+Both controllers fetch chart and values files from Git, not your working tree. A local edit
 cannot sync until that commit exists in the public repository.
 
 After apply:
@@ -312,7 +348,13 @@ All Terraform inputs have explicit types and descriptions in
 
 | Input | Type | Default / purpose |
 | --- | --- | --- |
-| `project_id` | string | Required existing project |
+| `project_id` | string | `polyad`; globally unique ID for the newly created project |
+| `organization_id`, `billing_account_id` | string | Required parent organization and billing account |
+| `bootstrap_credentials_file` | string | Required path to an organization-authorized service-account JSON file outside Git |
+| `project_deletion_policy` | string | `PREVENT`; explicitly set `DELETE` before disposable project teardown |
+| `gitops_controller` | string | `argocd` or `flux`; choose before creation |
+| `flux_chart_version` | string | `2.19.0` |
+| `flux_revision_type`, `flux_reconcile_interval` | string | `branch`, `1m` |
 | `region`, `zone` | string | `us-central1`, `us-central1-a` |
 | `cluster_name` | string | `polyad-load-test` |
 | `machine_type` | string | `c3-standard-4` shared by `polyad`, `fixtures` and `copolyad` |
@@ -321,7 +363,7 @@ All Terraform inputs have explicit types and descriptions in
 | `copolyad_min_nodes`, `copolyad_max_nodes` | number (integer) | `1`, `10`; load-generator pool bounds |
 | `deletion_protection` | bool | `false` for disposable tests |
 | `argocd_chart_version` | string | `10.9.2` |
-| `argocd_admin_password_hash` | sensitive string | Required bcrypt hash |
+| `argocd_admin_password_hash` | sensitive string | Required bcrypt hash for Argo only; omitted for Flux |
 | `argocd_admin_password_mtime` | string | Stable RFC3339 rotation timestamp |
 | `polyad_revision` | string | `main`; use a commit for reproducibility |
 | `polyad_values_files` | list(string) | `../../terraform/polyad-values.yaml`, relative to `charts/polyad` in Git |
@@ -358,8 +400,8 @@ developer platforms. See [Terraform's provider locking command](https://develope
 
 ## Ownership and teardown
 
-Terraform owns GKE, Argo CD, repository configuration, health customizations, the
-AppProject and Applications. Argo owns the operator and synced benchmark chart resources. Polyad owns the
+Terraform owns the project, deployer IAM, GKE, and the selected GitOps controller
+and bootstrap resources. Argo or Flux owns the operator and synced benchmark chart resources. Polyad owns the
 component instances it creates; KEDA owns the requested replica counts of their
 three definitions. Argo ignores those count fields and respects that exception
 during sync, so self-healing cannot reset a scaled group to its initial two copies.
@@ -372,20 +414,25 @@ scaler and want Git to manage its count again, remove the corresponding
 annotation, preserving application instance labels used by selectors.
 
 For a disposable run, remove any external resources created by your test workload,
-save results, and run:
+save results, and set `project_deletion_policy = "DELETE"`. Apply that change while
+the project is still healthy. Freeze reconciliation and drain application graphs
+while Polyad is running, especially with Flux: deleting a HelmRelease triggers
+release uninstallation and honors deletion finalizers. Then run:
 
 ```sh
 terraform destroy
 unset TF_VAR_argocd_admin_password_hash
 ```
 
-If deletion protection was enabled, first apply with it set to `false`. The
-Applications deliberately have no cascading deletion finalizers: deleting only the
+If cluster deletion protection was enabled, first apply with it set to `false`.
+The project, deployer and impersonation grants are removed after its infrastructure.
+Argo Applications deliberately have no cascading deletion finalizers: deleting only the
 bootstrap release leaves Polyad running, and destroying the entire environment
 does not wait for graph cleanup after removing the controller. Before retaining a
 cluster but uninstalling Polyad, drain application graphs while the operator is
 still running. Inspect retained disks or other workload-created cloud resources
-separately. Enabled project APIs remain enabled after destroy.
+separately. APIs are not individually disabled ahead of infrastructure teardown;
+deleting the project removes the project itself.
 
 ## Validate without a cloud account
 

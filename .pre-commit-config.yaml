@@ -81,6 +81,12 @@ repos:
         entry: bash scripts/validation/check-shell.sh
         language: system
         types: [shell]
+      - id: shell-function-docs
+        name: Shell function descriptions and typed signatures
+        entry: bash scripts/tooling/project-python.sh scripts/validation/check-shell-functions.py
+        language: system
+        pass_filenames: false
+        files: '(^scripts/validation/check-shell-functions\.py$|^pkg/tests/test_shell_functions\.py$|^\.pre-commit-config\.yaml$)'
       - id: ruff-check
         name: Ruff lint
         entry: bash scripts/tooling/project-python.sh -m ruff check

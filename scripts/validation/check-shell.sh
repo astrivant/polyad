@@ -5,6 +5,10 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$root"
 # A Python virtual environment may shadow a correctly installed native formatter.
 # Search PATH for the exact pin, then retain that executable through the check.
+
+##
+# Print the path to a requested pinned executable, or return status two if none matches.
+# tool::string expected::string -> ret::string
 resolve_tool() {
     local tool="$1" expected="$2" candidate actual found=""
     while IFS= read -r candidate; do
@@ -39,4 +43,5 @@ fi
 if [[ ${#files[@]} != 0 ]]; then
     "$shellcheck_bin" "${files[@]}"
     "$shfmt_bin" -d "${files[@]}"
+    bash scripts/tooling/project-python.sh scripts/validation/check-shell-functions.py --shfmt "$shfmt_bin" "${files[@]}"
 fi

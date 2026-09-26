@@ -5,6 +5,9 @@ namespace="${POLYAD_TEST_NAMESPACE:-polyad}"
 diagnostics_failed=0
 kubectl_command=(kubectl --request-timeout=20s)
 
+##
+# Run one diagnostic command in a log group and record failure without stopping later checks.
+# command::string args::string[] -> ret::exit_code
 collect() {
     printf '::group::%s\n' "$*"
     if ! "$@"; then

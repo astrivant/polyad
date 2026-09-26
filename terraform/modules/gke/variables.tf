@@ -1,5 +1,5 @@
 variable "project_id" {
-  description = "Existing, billing-enabled Google Cloud project."
+  description = "Billing-enabled project created by the bootstrap module, with IAM enabled."
   type        = string
 }
 

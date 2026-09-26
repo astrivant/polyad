@@ -16,6 +16,9 @@ HELM_CACHE="$PROJECT_ROOT/.cache/minikube/helm"
 IMAGE_REPOSITORY=polyad
 IMAGE_TAG=minikube
 
+##
+# Print supported Minikube lifecycle commands.
+# -> ret::exit_code
 usage() {
     cat <<'EOF'
 Usage: integrations/minikube/minikube.sh COMMAND
@@ -33,11 +36,17 @@ See integrations/minikube/README.md for prerequisites and environment settings.
 EOF
 }
 
+##
+# Print an error and terminate the script with status one.
+# message::string[] -> ret::never
 fail() {
     printf 'ERROR: %s\n' "$*" >&2
     exit 1
 }
 
+##
+# Verify all requested executables are available before modifying infrastructure.
+# executables::string[] -> ret::exit_code
 require() {
     local executable
     for executable in "$@"; do
@@ -45,15 +54,24 @@ require() {
     done
 }
 
+##
+# Invoke kubectl using the selected Minikube context and Polyad namespace.
+# args::string[] -> ret::exit_code
 kube() {
     kubectl --context "$PROFILE" --namespace "$NAMESPACE" "$@"
 }
 
+##
+# Invoke Helm with repository metadata isolated from the caller's configuration.
+# args::string[] -> ret::exit_code
 helm_local() {
     HELM_REPOSITORY_CONFIG="$HELM_CACHE/repositories.yaml" \
         HELM_REPOSITORY_CACHE="$HELM_CACHE/repository-cache" helm "$@"
 }
 
+##
+# Register dependency repositories and build the locked Polyad chart dependencies.
+# -> ret::exit_code
 prepare_chart() {
     require helm
     mkdir -p "$HELM_CACHE/repository-cache"
@@ -64,6 +82,9 @@ prepare_chart() {
         bash "$PROJECT_ROOT/scripts/tooling/build-chart-dependencies.sh" charts/polyad >&2
 }
 
+##
+# Build the production image and load its content-addressed tag into Minikube nodes.
+# -> ret::exit_code
 build_image() {
     local image_id base_image
     base_image="$IMAGE_REPOSITORY:minikube-$PROFILE"
@@ -80,6 +101,9 @@ build_image() {
     minikube --profile "$PROFILE" image load --daemon "$IMAGE_REPOSITORY:$IMAGE_TAG"
 }
 
+##
+# Populate CHART_OPTIONS with image settings and enforced standalone configuration.
+# -> ret::exit_code
 chart_options() {
     CHART_OPTIONS=(--namespace "$NAMESPACE" --values "$INTEGRATION_DIR/values.yaml")
     if [[ -n "$EXTRA_VALUES" ]]; then
@@ -101,6 +125,9 @@ chart_options() {
     )
 }
 
+##
+# Enable local prerequisites, rebuild Polyad, and install its standalone release.
+# -> ret::exit_code
 enable() {
     require minikube docker helm kubectl
     minikube --profile "$PROFILE" status
@@ -116,6 +143,9 @@ enable() {
         --create-namespace --wait --timeout "$TIMEOUT" "${CHART_OPTIONS[@]}"
 }
 
+##
+# Verify readiness and execute a unique Graph, retaining failed smoke resources.
+# -> ret::exit_code
 smoke_test() {
     require minikube kubectl
     minikube --profile "$PROFILE" status

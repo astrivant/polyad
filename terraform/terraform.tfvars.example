@@ -1,4 +1,19 @@
-project_id = "your-billing-enabled-project"
+# A new project is created with display name polyad. The ID must be globally unique.
+project_id         = "polyad" # Use polyad-your-team if this globally unique ID is taken.
+organization_id    = "123456789012"
+billing_account_id = "ABCDEF-123456-ABCDEF"
+# Set TF_VAR_bootstrap_credentials_file to your organization-authorized SA JSON path.
+# Keep the file outside this repository. Required parent permissions:
+# Project Creator on the organization; Billing Account User on the billing account;
+# permission to administer IAM/services/service accounts in the project it creates.
+# Enable Resource Manager, Billing, Service Usage, IAM and IAM Credentials APIs in
+# the source credentials' project first. No project service-account key is generated.
+# First deployment: terraform init && terraform apply -target=module.project
+# Then: terraform plan -out=environment.tfplan && terraform apply environment.tfplan
+# The separate bootstrap apply is needed before the impersonating provider can plan.
+# If new IAM grants have not propagated yet, retry the full plan after propagation.
+# Never use -target for ordinary infrastructure updates or teardown.
+# project_deletion_policy = "DELETE" # Explicit opt-in before disposable project cleanup.
 region     = "us-central1"
 zone       = "us-central1-a"
 

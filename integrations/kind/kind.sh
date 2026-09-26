@@ -21,6 +21,9 @@ IMAGE_TAG=kind
 # Building and loading must use the same provider, regardless of host auto-detection.
 export KIND_EXPERIMENTAL_PROVIDER=docker
 
+##
+# Print command usage and supported environment settings.
+# -> ret::exit_code
 usage() {
     cat <<'EOF'
 Usage: integrations/kind/kind.sh COMMAND
@@ -48,11 +51,17 @@ Optional environment settings:
 EOF
 }
 
+##
+# Print an error and terminate the script with status one.
+# message::string[] -> ret::never
 fail() {
     printf 'ERROR: %s\n' "$*" >&2
     exit 1
 }
 
+##
+# Verify every named executable is available before modifying infrastructure.
+# executables::string[] -> ret::exit_code
 require() {
     local executable
     for executable in "$@"; do
@@ -60,15 +69,24 @@ require() {
     done
 }
 
+##
+# Invoke kubectl with this cluster's private credentials and namespace.
+# args::string[] -> ret::exit_code
 kube() {
     kubectl --kubeconfig "$KUBECONFIG_FILE" --context "$CONTEXT" --namespace "$NAMESPACE" "$@"
 }
 
+##
+# Invoke Helm with repository metadata isolated from the caller's configuration.
+# args::string[] -> ret::exit_code
 helm_local() {
     HELM_REPOSITORY_CONFIG="$HELM_CACHE/repositories.yaml" \
         HELM_REPOSITORY_CACHE="$HELM_CACHE/repository-cache" helm "$@"
 }
 
+##
+# Export private credentials for the selected existing cluster and check access.
+# -> ret::exit_code
 connect_cluster() {
     local nodes
     require kind kubectl
@@ -86,6 +104,9 @@ connect_cluster() {
     kube cluster-info
 }
 
+##
+# Register dependency repositories and build the locked Polyad chart dependencies.
+# -> ret::exit_code
 prepare_chart() {
     require helm
     mkdir -p "$HELM_CACHE/repository-cache"
@@ -96,6 +117,9 @@ prepare_chart() {
         bash "$PROJECT_ROOT/scripts/tooling/build-chart-dependencies.sh" charts/polyad >&2
 }
 
+##
+# Build the production image and load its content-addressed tag into all Kind nodes.
+# -> ret::exit_code
 build_image() {
     local image_id base_image
     base_image="$IMAGE_REPOSITORY:kind-$CLUSTER"
@@ -110,6 +134,9 @@ build_image() {
     kind load docker-image "$IMAGE_REPOSITORY:$IMAGE_TAG" --name "$CLUSTER"
 }
 
+##
+# Populate CHART_OPTIONS with user overlays followed by enforced standalone settings.
+# -> ret::exit_code
 chart_options() {
     CHART_OPTIONS=(--namespace "$NAMESPACE" --values "$INTEGRATION_DIR/values.yaml")
     if [[ -n "$EXTRA_VALUES" ]]; then
@@ -130,6 +157,9 @@ chart_options() {
     )
 }
 
+##
+# Rebuild Polyad and install its CRDs and standalone Helm release in the selected cluster.
+# -> ret::exit_code
 enable() {
     require docker helm
     connect_cluster
@@ -144,6 +174,9 @@ enable() {
         --create-namespace --wait --timeout "$TIMEOUT" "${CHART_OPTIONS[@]}"
 }
 
+##
+# Check controller readiness and execute a unique Graph, preserving failed resources.
+# -> ret::exit_code
 smoke_test() {
     connect_cluster
     kube wait nodes --all --for=condition=Ready --timeout "$TIMEOUT"
