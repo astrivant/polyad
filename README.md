@@ -3,7 +3,6 @@
 <!-- toc:start -->
 **Table of contents**
 
-- [Get started](#get-started)
   - [Deploy and configure](#deploy-and-configure)
   - [Develop and run local demos](#develop-and-run-local-demos)
   - [Find detailed guides](#find-detailed-guides)
@@ -36,50 +35,7 @@ changes, from a workflow in one cluster to a hierarchy spanning multiple cluster
 The Kubernetes operator is built on [Kopf](https://docs.kopf.dev/en/stable/),
 the Kubernetes Operators Framework for Python.
 
-**[Get started](docs/introduction/getting-started.md)** · **[Documentation](docs/README.md)** · **[Helm chart](charts/polyad/README.md)**
-
-- **Compose workloads and resources.** Run finite pipelines and persistent services
-  using Jobs, Deployments, StatefulSets or DaemonSets, with dependencies, activation policies,
-  [storage](docs/workloads/workload-storage.md) and [placement](#graphs-across-node-groups).
-- **Scale within graph constraints.** [KEDA and ReplicaGroups](docs/graphs/replication.md)
-  scale individual services, whole graphs or nested compositions. Polyad refreshes
-  live graph state and enforces [GraphPolicies](docs/graphs/graph-policies.md), including size,
-  shape and structural Cheeger bounds, before applying scaling changes.
-- **Adapt to administrator-defined demand.** [Soul searching](docs/graphs/soul-searching.md)
-  uses offered throughput or a named signal, such as queued jobs, to select approved
-  Cheeger targets, connection layouts, traffic splits and capacity lookahead.
-  Observe recommendations or allow bounded adaptation, including preparation before
-  throughput falls behind. Hard rules and resource ceilings stay fixed.
-- **Make connectivity explicit.** Choose replica connection patterns, including
-  custom edges, and enforce [network boundaries](docs/deployment/networking.md) with optional
-  NetworkPolicy and Istio integration. [Istio percentage routing](docs/graphs/traffic-balancing.md)
-  divides requests among workload or graph replicas using fixed splits, demand tiers
-  or measured spare capacity.
-- **Let services participate.** Through the [standalone Python SDK](pkg/polyad-sdk/README.md),
-  workloads can submit compositions, activate work, request [TTL-bound connections](docs/apis/temporary-connections.md)
-  and discover permitted services across the [atlas](docs/apis/discovery.md), with filtered
-  event hooks and peer-approved connections. This application model is
-  [**Service Symbiosis**](docs/workloads/adaptive-microservices.md): services with
-  different roles discover compatible peers and adjust their work together.
-  [Shared types](pkg/polyad-types/README.md) and [JSON Schemas](pkg/polyad-schemas/README.md)
-  are also available separately from the operator.
-- **Rebalance event subscriptions.** Subscribe over SSE or WebSocket and opt into
-  [paced reconnections](docs/operations/event-rebalancing.md) as operator replicas change.
-  Clients resume from their checkpoints through Service/Istio routing or discovered Pod IPs.
-- **Coordinate across clusters.** A [root operator](docs/deployment/root-control-plane.md) can
-  run in a dedicated management cluster, deploy graphs and execution replicas into
-  registered workload clusters, and collect their observations centrally.
-- **Choose the control-plane layout.** Select a [single-replica or HA Helm profile](docs/deployment/deployment-profiles.md).
-  HA can run dense operators or
-  [separate gateway, executor and telemetry components](docs/deployment/components.md)
-  managed through the operator's own Graph. Optionally persist graph state and
-  tracked measurements in [PostgreSQL](docs/deployment/postgresql.md).
-- **Observe and coordinate changes.** Inspect [Prometheus and JSON metrics](docs/operations/metrics.md) and
-  [OpenTelemetry traces and decision logs](docs/operations/tracing.md).
-  The [write pipeline](docs/development/write-pipeline.md) coalesces duplicate mutations,
-  checks dependencies before dispatch and returns stale decisions to reconciliation.
-
-## Get started
+**[Documentation](docs/README.md)** · **[Helm chart](charts/polyad/README.md)**
 
 ### Deploy and configure
 
@@ -88,10 +44,11 @@ with the Helm chart, or try the [local Python scheduler](docs/introduction/getti
 The [examples](docs/introduction/getting-started.md#examples) cover pipelines, services,
 spot work, storage and nested graphs.
 
-For a local Kubernetes environment, follow the
+For a local Kubernetes environment on macOS or Linux, follow the
 [Minikube installation and activation guide](integrations/minikube/README.md).
-After installing its host prerequisites, this command starts three nodes, builds
-the checkout, and installs a standalone, non-HA operator and cache with an
+After installing its QEMU/HVF (macOS) or KVM/libvirt (Linux) prerequisites, this command starts three VMs,
+builds and pushes the checkout's image to a local cluster registry, and installs
+a standalone, non-HA operator and cache with an
 end-to-end Graph smoke test:
 
 ```sh

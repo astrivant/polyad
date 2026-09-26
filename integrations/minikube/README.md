@@ -23,7 +23,8 @@
 Install Polyad on your own machine using the canonical
 [Polyad Helm chart](../../charts/polyad/README.md). This guide covers first-time
 installation for application developers and the rebuild/test loop for Polyad
-contributors. The commands use Bash on macOS or Linux and run from the checkout
+contributors. Cluster startup uses **QEMU/HVF on macOS** or **KVM2/libvirt on
+Linux**, selected automatically. The commands use Bash and run from the checkout
 root unless stated otherwise.
 
 This integration builds Polyad from a source checkout. You do not need a container
@@ -34,13 +35,15 @@ means running `minikube.sh start`, not `minikube addons enable polyad`.
 
 ## What runs
 
-The default profile creates **three Kubernetes nodes**: one control-plane node and
-two workers. Polyad itself runs **standalone, without HA**:
+The default profile creates **three native virtual machines**: one Kubernetes
+control-plane node and two workers, each using containerd. These nodes are not
+Docker containers. Polyad itself runs **standalone, without HA**:
 
 - One dense Polyad operator, using a production image built from this checkout.
 - One Dragonfly instance and one Dragonfly operator replica.
 - A 1 GiB Dragonfly snapshot claim using the multi-node-aware `local-path` class.
 - Metrics Server plus Polyad's internal metrics endpoint and per-graph metrics.
+- Minikube's local registry and per-node registry proxies for the built image.
 - No KEDA installation, horizontal autoscaling, distributed executor fleet, root
   control plane, or Istio installation by default.
 
@@ -48,38 +51,68 @@ Three nodes provide room to schedule application workloads, not control-plane or
 cache redundancy. Local-path volumes remain tied to one node and are not
 replicated. Dragonfly's periodic snapshots are not a zero-data-loss guarantee.
 This is a development environment, not a production availability configuration.
+On macOS, Minikube manages QEMU/HVF directly, with `socket_vmnet` connecting the
+VMs. On Linux it manages KVM2 through libvirt. `virsh` is not used on the macOS path.
 
 ## Install prerequisites
 
 ### Install host tools
 
-Install Git, Bash, Minikube, Docker with Buildx, Helm, and kubectl. The optional
+Install Git, Bash, Minikube, `jq`, `curl`, Docker with Buildx, Helm, and kubectl,
+plus the platform-specific VM tools below. The optional
 asdf setup below requires asdf 0.16 or newer and the developer toolchain's Bash
 4.4 or newer. Follow the upstream installers for your operating system:
 
+- **macOS:** [QEMU driver prerequisites](https://minikube.sigs.k8s.io/docs/drivers/qemu/),
+  including native QEMU with HVF acceleration and the running `socket_vmnet`
+  service. Use native Apple Silicon or Intel binaries, not Rosetta. The helper
+  explicitly selects `--driver qemu2 --network socket_vmnet`; the isolated
+  `builtin` network is not used for this multi-node cluster. Install
+  [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane)
+  for host-side registry pushes. No libvirt installation is needed on this path.
+- **Linux:** [KVM2 driver prerequisites](https://minikube.sigs.k8s.io/docs/drivers/kvm2/),
+  including hardware virtualization, libvirt services, and access from your
+  normal user. If Linux itself runs in a VM, the outer host must expose nested
+  virtualization. Configure the libvirt `default` network, or select another
+  existing network with `POLYAD_MINIKUBE_KVM_NETWORK`.
 - [Docker Desktop](https://docs.docker.com/desktop/) on macOS, or
-  [Docker Engine](https://docs.docker.com/engine/install/) with the Buildx plugin
-  on Linux. Start the Docker daemon and verify access from your normal user.
-- [Minikube](https://minikube.sigs.k8s.io/docs/start/) and its
-  [Docker driver prerequisites](https://minikube.sigs.k8s.io/docs/drivers/docker/).
+  [Docker Engine](https://docs.docker.com/engine/install/) with Buildx on Linux.
+  Docker builds the **application image only**, not the Kubernetes nodes. Linux
+  needs a local daemon for the loopback push; macOS exports the image and uses
+  `crane` because Docker Desktop's daemon runs in a separate VM.
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) and its platform's VM driver.
   Use a recent stable version; the required local-path addon needs Minikube newer
   than 1.27. Run the integration as your normal user, not with `sudo`.
 - [asdf](https://asdf-vm.com/guide/getting-started.html), if you want the repository
   helper to install the pinned Helm and kubectl versions.
 
-For macOS with Homebrew already installed, the CLI prerequisites can be installed
-with the following commands. Install and start Docker Desktop separately:
+On macOS, the repository [Brewfile](../../Brewfile) includes QEMU, `socket_vmnet`,
+`crane`, Minikube, Docker CLI/Buildx, and the common host tools. From a checkout:
 
 ```sh
-brew install git bash asdf minikube
-export PATH="$(brew --prefix)/bin:$PATH"
+brew bundle install
+sudo "$(command -v brew)" services start socket_vmnet
 ```
 
-The default cluster has three nodes configured with 2 CPUs and 2048 MiB each.
-Allow memory beyond the nodes' combined 6 GiB allocation for Docker, the image
-build, and your other applications. On Docker Desktop, check the VM's resource
-allocation as well as the host's available memory. Image layers and node storage
-also need free disk space. Internet access is required for chart dependencies,
+Installing `socket_vmnet` does not start its privileged networking service. Start
+that service explicitly as above, then run the integration as your normal user,
+not with `sudo`. The Brewfile installs Docker CLI tools, not a Docker daemon;
+start Docker Desktop separately. If `docker buildx version` cannot find the
+Homebrew plugin, follow its [plugin discovery instructions](https://formulae.brew.sh/formula/docker-buildx).
+Helm and kubectl still use the repository's asdf pins below rather than unpinned
+Homebrew versions. The Brewfile also includes Kind for its separate integration;
+it does not change Kind's container-based node model.
+
+On Linux, install the distribution's KVM/libvirt packages using the KVM2 guide
+above. The helper checks capabilities and network access with `virsh`; it does
+not install host packages, change group membership, or reconfigure libvirt
+automatically. Log in again after an administrator changes your group membership.
+
+The default cluster has three VMs configured with 2 CPUs, 2048 MiB of memory, and
+a 30 GiB virtual disk each. Allow memory beyond the nodes' combined 6 GiB
+allocation for Docker, the image build, and your other applications. Image layers
+and VM disks also need free host disk space, including a temporary image archive
+on macOS. Internet access is required for chart dependencies,
 Kubernetes components, Python build dependencies, and public container images.
 
 ### Get Polyad and install pinned clients
@@ -110,7 +143,10 @@ Run these checks from the repository root before creating the cluster:
 
 ```sh
 bash --version
+uname -s
 minikube version
+jq --version
+curl --version
 docker version
 docker buildx version
 docker info
@@ -118,9 +154,31 @@ helm version --short
 kubectl version --client
 ```
 
+On macOS, also check the native QEMU accelerator, registry client, and network:
+
+```sh
+# Apple Silicon; use qemu-system-x86_64 on an Intel Mac.
+qemu-system-aarch64 -accel help
+qemu-img --version
+crane version
+brew services info socket_vmnet
+test -S "$(brew --prefix)/var/run/socket_vmnet"
+```
+
+QEMU must list `hvf`, and `socket_vmnet` must be running with its socket present.
+On Linux, check libvirt instead:
+
+```sh
+virt-host-validate
+virsh --connect qemu:///system domcapabilities --virttype kvm
+virsh --connect qemu:///system net-info default
+```
+
+Resolve KVM/libvirt permission or capability failures and ensure the selected
+network is active before continuing. The default Linux connection is
+`qemu:///system`; substitute your overrides in these checks if applicable.
 `docker version` must report a reachable server, not only an installed client.
-Resolve missing executables or Docker permission/connection errors before
-continuing. Keep this shell, including its `PATH`, for the commands below.
+Keep this shell, including its `PATH`, for the commands below.
 
 ## Activate and verify Polyad
 
@@ -131,8 +189,9 @@ bash integrations/minikube/minikube.sh start
 bash integrations/minikube/minikube.sh status
 ```
 
-`start` creates or starts the selected profile, configures storage and metrics,
-builds and loads Polyad on all nodes, updates CRDs, installs the chart, and runs
+`start` creates or starts the selected native VM profile, configures storage and metrics,
+builds Polyad, enables the local registry, pushes the image through a temporary
+localhost port-forward, updates CRDs, installs the chart, and runs
 the smoke test. The first run downloads dependencies and builds the production
 image, so it can take several minutes. There is no separate activation, Helm
 repository registration, namespace creation, or image-push step to perform.
@@ -143,11 +202,34 @@ release `polyad`. All cluster commands explicitly target that profile, and
 addon changes affect the whole selected cluster. If you already have a profile
 named `polyad`, choose a different name using the settings below before starting.
 
+An existing Docker-backed profile **cannot be converted in place**. Select a
+fresh profile, for example `export POLYAD_MINIKUBE_PROFILE=polyad-vm`, and run
+`start`. The helper does not delete old profiles or migrate their data. Leave
+`POLYAD_MINIKUBE_DRIVER` unset for automatic selection, or explicitly use `qemu2`
+(`qemu` alias accepted) on macOS and `kvm2` on Linux. Incompatible overrides,
+Docker-backed profiles, and macOS QEMU profiles using the `builtin` network are
+rejected for deployment and testing.
+
 The storage setup disables Minikube's single-node hostpath provisioner and default
 class, then enables
 [Rancher local-path provisioning](https://minikube.sigs.k8s.io/docs/tutorials/local_path_provisioner/).
 Unlike the default provisioner, this addon supports multi-node clusters and waits
 for a consuming Pod before binding its volume.
+
+The [registry addon](https://minikube.sigs.k8s.io/docs/handbook/registry/) exposes
+the same registry as `localhost:5000` on each VM through its registry-proxy
+DaemonSet. The helper waits for the registry and proxies, forwards the registry
+Service to `127.0.0.1:5000` on the host, and pushes the built image there. It closes
+its port-forward before installing Helm, including on push failure. Nodes then
+pull `localhost:5000/polyad:<content-tag>` using `IfNotPresent`. No `minikube image
+load` or `docker-env` is needed.
+
+This is an **unauthenticated HTTP development registry**. The host port-forward
+binds only to loopback, but the addon's registry proxies expose port 5000 on the
+VMs. Use a trusted, isolated development network, not a shared production
+environment. Containerd is configured to allow `localhost:5000` as an insecure
+registry. The addon's registry storage is ephemeral; run `enable` to republish
+the image after registry data is lost.
 
 The smoke test checks node and controller readiness, confirms one operator and
 one cache instance, and creates a uniquely named Workload and Graph. It waits for
@@ -213,7 +295,10 @@ create an ingress or enable the application APIs. See the
 | --- | --- | --- |
 | `POLYAD_MINIKUBE_PROFILE` | `polyad` | Dedicated Minikube profile and kubectl context. |
 | `POLYAD_MINIKUBE_NAMESPACE` | `polyad` | Namespace for the fixed `polyad` Helm release and smoke resources. |
-| `POLYAD_MINIKUBE_DRIVER` | `docker` | Minikube driver; the host Docker daemon is still required for image builds. |
+| `POLYAD_MINIKUBE_DRIVER` | Automatic | `qemu2` on macOS, `kvm2` on Linux. Explicit overrides must match the host; `qemu` aliases `qemu2`. |
+| `POLYAD_MINIKUBE_KVM_QEMU_URI` | `qemu:///system` | Linux only: libvirt connection used by Minikube and the `virsh` preflight. |
+| `POLYAD_MINIKUBE_KVM_NETWORK` | `default` | Linux only: existing libvirt network selected for the KVM2 VMs. |
+| `POLYAD_MINIKUBE_REGISTRY_PORT` | `5000` | Free host loopback port (1024-65535) for the temporary registry forward and push. The VM-side pull port remains 5000. |
 | `POLYAD_MINIKUBE_NODES` | `3` | Node count passed to `start`; changing an existing cluster's topology may require recreation. |
 | `POLYAD_MINIKUBE_CPUS` | `2` | CPUs per node passed to `start`. |
 | `POLYAD_MINIKUBE_MEMORY` | `2048` | Memory per node passed to `start`, in MiB or a Minikube-supported quantity. |
@@ -262,8 +347,9 @@ Use `render` to inspect manifests without starting or accessing a cluster:
 bash integrations/minikube/minikube.sh render > /tmp/polyad-minikube.yaml
 ```
 
-Rendering still fetches locked chart dependencies. Its placeholder `polyad:minikube`
-image is illustrative; `enable` replaces it with the built image's content tag.
+Rendering still fetches locked chart dependencies. Its placeholder
+`localhost:5000/polyad:minikube` image is illustrative; `enable` publishes the
+built image and replaces the placeholder tag with its content tag.
 `enable` also refreshes cluster-scoped CRDs with server-side apply because Helm
 does not upgrade CRDs. It does not force conflicting field ownership. Resolve
 any reported conflict explicitly. Keep one Polyad installation per profile;
@@ -282,16 +368,23 @@ bash integrations/minikube/minikube.sh enable
 bash integrations/minikube/minikube.sh test
 ```
 
-`enable` builds `services/operator/Dockerfile` with the `production` target, loads
-the image into the selected cluster, refreshes CRDs, and upgrades the Helm release.
+`enable` builds `services/operator/Dockerfile` with the `production` target, pushes
+the image to the selected cluster's registry, refreshes CRDs, and upgrades the Helm release.
 It does not create a stopped/missing cluster or run the Graph smoke test; use
 `start` for startup, and `test` for verification. Source files are not live-mounted
 into the operator, so edits need a rebuild.
 
 The image is tagged with its content ID, so changed image contents change the
-Deployment's image reference. Loading uses the host Docker daemon and does not
-require `minikube docker-env` or a registry push. `imagePullPolicy: Never` requires
-that loaded image. Helm repositories and indexes live under the checkout's ignored
+Deployment's image reference. Buildx targets `linux/arm64` or `linux/amd64` to match
+the host's native VM architecture. On Linux, Docker pushes
+`127.0.0.1:<host-port>/polyad:<content-tag>` through the temporary forward. On
+macOS, `docker image save` exports the built image into a private temporary file
+and host-native `crane push --insecure` sends it through the same forward. This
+avoids needing a relay container in Docker Desktop's VM. The archive and forward
+are cleaned up after success or failure.
+The cluster pulls the same image as `localhost:5000/polyad:<content-tag>` with
+`imagePullPolicy: IfNotPresent`; changing the host forwarding port does not change
+the node-side repository. Helm repositories and indexes live under the checkout's ignored
 `.cache/minikube/helm/`; normal Helm repository settings are unchanged. Dependency
 versions come from the committed chart lock.
 
@@ -315,8 +408,10 @@ poetry run python scripts/validation/check-values.py
 ```
 
 The Python tests record infrastructure commands and render the real Helm chart;
-they do not start or delete a Minikube profile. They verify cluster targeting,
-failure handling, standalone settings, and smoke-test resource ownership. They
+they do not start or delete a Minikube profile. They verify KVM/HVF preflights, native
+architecture selection, macOS archive cleanup, Brewfile dependencies, cluster
+targeting, registry push ordering and port-forward cleanup, failure handling,
+standalone settings, and smoke-test resource ownership. They
 do not replace the live `start`/`test` check. When editing shared values or schemas,
 also run the normal repository pre-commit checks.
 
@@ -333,16 +428,42 @@ kubectl --context polyad -n polyad get events --sort-by=.metadata.creationTimest
 kubectl --context polyad -n polyad logs deployment/polyad-polyad -c operator --tail=100
 ```
 
-- **Docker is unavailable or Buildx is missing.** Start the daemon, confirm
+- **QEMU/HVF or `crane` is missing on macOS.** Run `brew bundle install` and check
+  the native QEMU binaries and `crane` are on `PATH`. The helper rejects a QEMU
+  build without HVF instead of falling back to slow software emulation.
+- **`socket_vmnet` is installed but networking fails.** Start its root-owned service
+  using the command above and check its socket. On macOS 15 or later, also allow
+  Local Network access for the terminal/IDE running Minikube in System Settings.
+  The [QEMU troubleshooting guide](https://minikube.sigs.k8s.io/docs/drivers/qemu/#cannot-connect-to-the-vm-on-macos)
+  covers this permission. The helper does not change your firewall or privacy settings.
+- **KVM2 is unavailable on Linux.** The Linux path requires hardware virtualization
+  (including nested virtualization when applicable), and permission to use
+  KVM/libvirt. Check `virt-host-validate` and the `virsh` commands above. There is
+  no automatic Docker-driver fallback on either platform.
+- **Libvirt connection or network fails.** Ensure your user can access the selected
+  URI and the network exists and is active. Ask the host administrator to fix
+  permissions or networking; the helper does not modify the host configuration.
+- **An existing profile uses Docker.** Select a fresh `POLYAD_MINIKUBE_PROFILE` for
+  native VMs. `status`, `stop`, `disable`, and `delete` remain available for an old
+  profile, but they do not migrate it. Back up any data before deleting it.
+- **Docker is unavailable or Buildx is missing.** Start the local daemon, confirm
   `docker info` works as your normal user, and install the Buildx component from
   Docker's instructions. Installing only the Docker CLI is insufficient.
 - **A Pod or claim stays Pending.** Inspect it with `kubectl describe` using the
   explicit context and namespace. Check node capacity and the `local-path`
   StorageClass. A claim can legitimately wait for its first consuming Pod;
   insufficient resources or a missing provisioner need to be resolved first.
-- **`ErrImageNeverPull` for the operator.** Run `enable` again to rebuild and load
-  the selected image on this profile. Do not change the pull policy to fetch a
-  local content tag from a public registry.
+- **Registry forwarding or push fails.** Check `kube-system` Deployment `registry`
+  and DaemonSet `registry-proxy`. If port 5000 is occupied, export
+  `POLYAD_MINIKUBE_REGISTRY_PORT=5500` (or another free port) and rerun `enable`.
+  The helper fails rather than pushing to an unrelated process already listening
+  on that port. On Linux, Docker must run on the same host as the forward. On
+  macOS, check `crane` is installed and there is space for the temporary image archive.
+- **`ImagePullBackOff` for the operator.** Check the registry/proxy readiness and
+  Pod events, then run `enable` again to rebuild and publish the selected image.
+  Restarted registry Pods can lose their ephemeral image storage. The intended
+  repository is `localhost:5000/polyad`, not a public registry. Existing VM
+  profiles must also allow this insecure registry; `start` supplies the flag.
 - **An upgrade or smoke test times out.** Inspect events and operator logs before
   retrying. If downloads or startup are merely slow, export
   `POLYAD_MINIKUBE_TIMEOUT=20m` and rerun `start` or `enable`, then `test`.
@@ -391,4 +512,5 @@ bash integrations/minikube/minikube.sh delete
 ```
 
 **Deletion is destructive.** Only the named Minikube profile is targeted. The
-helper never uses `minikube delete --all` or global Docker cleanup.
+helper never uses `minikube delete --all`, global Docker cleanup, or blanket
+`virsh` domain deletion. Minikube owns the selected profile's VMs and their cleanup.

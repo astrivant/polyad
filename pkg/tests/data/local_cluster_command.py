@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import sys
 from pathlib import Path
 
@@ -33,7 +34,40 @@ def main() -> int:
     # Fail after recording so tests can prove no later mutation was attempted.
     if (failure := os.environ.get("FAIL_COMMAND")) and failure in " ".join(command):
         return 43
-    if command[:3] == ["docker", "image", "inspect"]:
+    if command == ["uname", "-s"]:
+        print(os.environ.get("MINIKUBE_TEST_HOST_OS", "Linux"))
+    elif command == ["uname", "-m"]:
+        print(os.environ.get("MINIKUBE_TEST_HOST_ARCH", "x86_64"))
+    elif command[0].startswith("qemu-system-") and command[1:] == ["-accel", "help"]:
+        print(os.environ.get("MINIKUBE_TEST_ACCELERATORS", "Accelerators supported in QEMU binary:\nhvf\ntcg"))
+    elif command[0] == "minikube" and command[3:5] == ["profile", "list"]:
+        profile = command[command.index("--profile") + 1]
+        default_driver = "qemu2" if os.environ.get("MINIKUBE_TEST_HOST_OS") == "Darwin" else "kvm2"
+        print(
+            json.dumps(
+                {
+                    "valid": [
+                        {"Name": "unrelated", "Config": {"Driver": "docker"}},
+                        {
+                            "Name": profile,
+                            "Config": {
+                                "Driver": os.environ.get("MINIKUBE_TEST_PROFILE_DRIVER", default_driver),
+                                "Network": os.environ.get("MINIKUBE_TEST_PROFILE_NETWORK", "socket_vmnet"),
+                            },
+                        },
+                    ]
+                }
+            )
+        )
+    elif command[0] == "kubectl" and "port-forward" in command:
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+        print(f"Forwarding from 127.0.0.1:{command[-1].split(':')[0]} -> 5000", flush=True)
+        try:
+            signal.pause()
+        finally:
+            with Path(os.environ["COMMAND_LOG"]).open("a") as stream:
+                stream.write(json.dumps({**record, "forward_stopped": True}) + "\n")
+    elif command[:3] == ["docker", "image", "inspect"]:
         print("sha256:" + "a" * 64)
     elif command[:3] == ["kind", "get", "clusters"]:
         print(os.environ.get("EXISTING_CLUSTERS", ""), end="")

@@ -85,7 +85,7 @@ event journal.<sup>[\[4\]](../../pkg/polyad/scheduling/README.md#logs-and-diagra
 
 ### Quick start: Kubernetes
 
-For a local three-node cluster with one Polyad operator and one Dragonfly
+For a local three-VM cluster on macOS (QEMU/HVF) or Linux (KVM2/libvirt) with one Polyad operator and one Dragonfly
 instance, install the
 [Minikube prerequisites](../../integrations/minikube/README.md#install-prerequisites),
 then activate and verify the integration:
@@ -95,7 +95,8 @@ bash integrations/minikube/minikube.sh start
 bash integrations/minikube/minikube.sh status
 ```
 
-The helper builds and loads the production image, installs the non-HA Helm
+The helper builds and pushes the production image to the cluster's local registry
+through a temporary localhost port-forward, installs the non-HA Helm
 profile, and runs a fresh Graph smoke test. It preserves your current kubectl
 context. See the [full guide](../../integrations/minikube/README.md) for application
 examples, customization, developer rebuilds, troubleshooting, and cleanup.

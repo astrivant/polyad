@@ -49,8 +49,10 @@ Pass `charts/polyad` or `charts/polyad-benchmarks` to build only that chart.
 CI validation, integration tests and release packaging use the same helper;
 regression tests compare its repository inventory with every chart and lockfile.
 
-To install shfmt with Homebrew, run `brew bundle install` from the repository
-root. The [Brewfile](../../Brewfile) installs the current Homebrew release; the shell
+To install macOS host tools with Homebrew, run `brew bundle install` from the repository
+root. The [Brewfile](../../Brewfile) includes shfmt, ShellCheck, and local-cluster
+tools (QEMU, `socket_vmnet`, Minikube, Docker CLI/Buildx, and `crane`). It installs
+current Homebrew releases; the shell
 checker still enforces the version pinned in `.tool-versions`. It searches `PATH`
 for a matching executable, so an older formatter in an activated Python virtual
 environment does not shadow the correct Homebrew or asdf installation. If no
@@ -66,9 +68,9 @@ lockfile when the dependencies or Node version change.
 ## Develop against local Kubernetes
 
 The [Minikube integration](../../integrations/minikube/README.md) starts three
-nodes and installs a single dense operator, one Dragonfly instance, and one
+QEMU/HVF VMs on macOS or KVM2/libvirt VMs on Linux and installs a single dense operator, one Dragonfly instance, and one
 Dragonfly controller. The cluster is intentionally non-HA. Install the guide's
-Docker/Buildx and Minikube prerequisites, then run from the checkout root:
+platform-specific VM, Docker/Buildx, and Minikube prerequisites, then run from the checkout root:
 
 ```sh
 bash integrations/minikube/minikube.sh start
@@ -82,8 +84,11 @@ bash integrations/minikube/minikube.sh enable
 bash integrations/minikube/minikube.sh test
 ```
 
-Images are built from the checkout and loaded directly into the cluster; there
-is no registry push or live source mount. The guide documents
+Images are built from the checkout and pushed to Minikube's registry through a
+temporary loopback-only port-forward before Helm installs the release. Docker is
+only the image builder; the nodes are native VMs running containerd. macOS uses
+`crane` to push an exported image from the host, outside Docker Desktop's VM. There is no
+live source mount. The guide documents
 [cluster-free integration tests](../../integrations/minikube/README.md#check-the-integration-without-a-running-cluster),
 profile-specific values, logs, metrics, and safe cleanup. Use explicit
 `--context polyad` for your own kubectl commands because the helper preserves

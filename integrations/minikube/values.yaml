@@ -9,11 +9,11 @@ operator:
   ## @param operator.image [object] Settings for operator.image.
   image:
     ## @param operator.image.repository [string] Operator image repository
-    repository: polyad
+    repository: localhost:5000/polyad
     ## @param operator.image.tag [string] Operator image tag
     tag: minikube
     ## @param operator.image.pullPolicy [string] Operator image pull policy
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
   ## @param operator.autoscaling [object] Settings for operator.autoscaling.
   autoscaling:
     ## @param operator.autoscaling.enabled [boolean] Enable operator HPA using CPU and optional memory utilization

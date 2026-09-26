@@ -107,7 +107,8 @@ namespace; the root creates their execution Deployments in registered clusters.
 ## One dense operator
 
 For local development, the [Minikube integration](../../integrations/minikube/README.md)
-installs this non-HA pattern into a three-node cluster, including image builds,
+installs this non-HA pattern into three native VMs (QEMU/HVF on macOS, KVM2/libvirt on Linux), including image
+builds and pushes to an in-cluster registry through a localhost port-forward,
 single-instance Dragonfly, storage setup, and a Graph smoke test. Three nodes
 do not imply three operator replicas. Follow its prerequisite and activation
 steps instead of the manual Helm command below when you want that local setup.
