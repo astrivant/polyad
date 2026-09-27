@@ -45,6 +45,19 @@ def main() -> int:
     elif command[0] == "minikube" and command[3:5] == ["profile", "list"]:
         profile = command[command.index("--profile") + 1]
         default_driver = "qemu2" if os.environ.get("MINIKUBE_TEST_HOST_OS") == "Darwin" else "kvm2"
+        if os.environ.get("MINIKUBE_TEST_INVALID_INVENTORY"):
+            print('{"error": "cannot read profiles"}')
+            return 0
+
+        # A new profile appears only after start. Keep unrelated profiles in the
+        # inventory to ensure creation flags depend on the selected profile.
+        started = any(
+            json.loads(line)["command"][:4] == ["minikube", "--profile", profile, "start"]
+            for line in Path(os.environ["COMMAND_LOG"]).read_text().splitlines()
+        )
+        if os.environ.get("MINIKUBE_TEST_PROFILE_EXISTS") == "0" and not started:
+            print('{"valid": [{"Name": "unrelated", "Config": {"Driver": "docker"}}], "invalid": []}')
+            return 0
 
         # Model node additions across calls so recovery tests exercise real
         # reconciliation rather than an unchanging, always-healthy node count.

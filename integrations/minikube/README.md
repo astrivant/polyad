@@ -209,6 +209,8 @@ On an interrupted startup, Minikube may have saved only the first node. Repeatin
 The helper explicitly adds missing workers, preserves their configured memory
 allocation, and waits for all nodes to become Ready before installing addons or
 Polyad. It never shrinks the cluster or converts an HA topology.
+Creation-only `--nodes` and `--ha` flags are omitted when restarting an existing
+profile; their topology-change warnings do not require deleting the cluster.
 
 To repair just the VMs and Kubernetes, without requiring Docker or reinstalling
 Polyad, run:
@@ -480,6 +482,17 @@ kubectl --context polyad -n polyad logs deployment/polyad-polyad -c operator --t
   Local Network access for the terminal/IDE running Minikube in System Settings.
   The [QEMU troubleshooting guide](https://minikube.sigs.k8s.io/docs/drivers/qemu/#cannot-connect-to-the-vm-on-macos)
   covers this permission. The helper does not change your firewall or privacy settings.
+- **Local Network is enabled, but Minikube still reports `no route to host` inside
+  tmux.** A long-running tmux server can have a different network privacy context
+  from the terminal attached to it. Compare the same non-Apple networking tool
+  inside and outside tmux; a successful `/usr/bin/nc` or `/usr/bin/ssh` check alone
+  does not prove Minikube has access. Open a fresh macOS Terminal.app shell and
+  **do not attach to the existing tmux server**, then run `recover` from the
+  checkout. Once that succeeds, run `start` from that same shell to finish the
+  installation. Keep existing tmux sessions intact; do not run `tmux kill-server`
+  or delete the cluster. The helper warns when launched inside tmux on macOS.
+  Switching SSH clients does not fix this: Minikube's initial TCP readiness check
+  still runs inside the Minikube process.
 - **SSH timeout followed by `parsing IP:` in `profile list`.** An interrupted QEMU
   start can leave a running guest whose IP was never saved. Use
   `minikube profile list --light` to inspect metadata without the failing status

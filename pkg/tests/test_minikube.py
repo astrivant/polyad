@@ -67,6 +67,7 @@ def commands(tmp_path: Path) -> Runner:
     environment = {key: value for key, value in os.environ.items() if not key.startswith(("POLYAD_MINIKUBE_", "MINIKUBE_TEST_"))}
     environment.pop("FAIL_COMMAND", None)
     environment.pop("EXISTING_BOUNDARIES", None)
+    environment.pop("TMUX", None)
     environment.update(
         PATH=f"{bin_dir}:/usr/bin:/bin",
         COMMAND_LOG=str(log),
@@ -93,7 +94,7 @@ def test_start_scopes_kvm_nodes_and_pushes_production_image(commands: Runner) ->
     """
     Start three KVM VMs and publish the content-tagged production image before Helm.
     """
-    result, records = commands("start")
+    result, records = commands("start", overrides={"MINIKUBE_TEST_PROFILE_EXISTS": "0"})
     assert result.returncode == 0, result.stderr
     calls = [record["command"] for record in records]
     start = next(call for call in calls if call[:4] == ["minikube", "--profile", "isolated-test", "start"])
@@ -290,6 +291,7 @@ def test_node_and_resource_overrides_are_forwarded(commands: Runner) -> None:
             "POLYAD_MINIKUBE_CPUS": "3",
             "POLYAD_MINIKUBE_MEMORY": "3072",
             "MINIKUBE_TEST_NODES": "2",
+            "MINIKUBE_TEST_PROFILE_EXISTS": "0",
         },
     )
     assert result.returncode == 0, result.stderr
@@ -364,7 +366,10 @@ def test_macos_starts_native_qemu_vms_and_pushes_from_host(commands: Runner, arc
     """
     Use HVF and shared VM networking, then push from macOS rather than Docker Desktop.
     """
-    result, records = commands("start", overrides={"MINIKUBE_TEST_HOST_OS": "Darwin", "MINIKUBE_TEST_HOST_ARCH": arch})
+    result, records = commands(
+        "start",
+        overrides={"MINIKUBE_TEST_HOST_OS": "Darwin", "MINIKUBE_TEST_HOST_ARCH": arch, "MINIKUBE_TEST_PROFILE_EXISTS": "0"},
+    )
     assert result.returncode == 0, result.stderr
     calls = [record["command"] for record in records]
     assert [f"qemu-system-{qemu}", "-accel", "help"] in calls
@@ -477,6 +482,7 @@ def test_incomplete_cluster_adds_only_missing_workers(commands: Runner, command:
         assert record["minikube_native_ssh"] == "false"
     start = next(call for call in calls if call[:4] == ["minikube", "--profile", "isolated-test", "start"])
     assert "--native-ssh=false" in start
+    assert "--nodes" not in start and "--ha=false" not in start
     assert all("--light" in call for call in calls if call[0] == "minikube" and "list" in call)
     ready = next(call for call in calls if call[:6] == ["kubectl", "--context", "isolated-test", "--namespace", "test-namespace", "wait"])
     assert ready[6:9] == ["nodes", "--all", "--for=condition=Ready"]
@@ -537,6 +543,42 @@ def test_node_add_without_progress_fails_instead_of_looping(commands: Runner) ->
     result, records = commands("recover", overrides={"MINIKUBE_TEST_NODES": "1", "MINIKUBE_TEST_NODE_ADD_NO_PROGRESS": "1"})
     assert result.returncode != 0 and "Expected one new worker" in result.stderr
     assert sum(record["command"][3:5] == ["node", "add"] for record in records) == 1
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"MINIKUBE_TEST_NODES": "4"},
+        {"MINIKUBE_TEST_CONTROL_PLANES": "2"},
+        {"MINIKUBE_TEST_PROFILE_DRIVER": "docker"},
+        {"MINIKUBE_TEST_INVALID_INVENTORY": "1"},
+        {"FAIL_COMMAND": "profile list"},
+    ],
+)
+def test_start_validates_existing_profile_before_mutating(commands: Runner, overrides: dict[str, str]) -> None:
+    """
+    Do not create, restart, or replace a cluster when its inventory or topology is unsafe.
+
+    Args:
+        commands (Runner): Infrastructure command recorder.
+        overrides (dict[str, str]): Invalid inventory, topology, or driver to simulate.
+    """
+    result, records = commands("start", overrides=overrides)
+    assert result.returncode != 0
+    assert not any(set(record["command"]) & {"start", "stop", "add", "delete", "upgrade"} for record in records)
+
+
+def test_macos_tmux_warning_does_not_restart_terminal_sessions(commands: Runner) -> None:
+    """
+    Explain the inherited privacy context without killing tmux or changing host permissions.
+
+    Args:
+        commands (Runner): Infrastructure command recorder.
+    """
+    result, records = commands("recover", overrides={"MINIKUBE_TEST_HOST_OS": "Darwin", "TMUX": "/tmp/tmux-501/default,1102,0"})
+    assert result.returncode == 0, result.stderr
+    assert "fresh Terminal.app shell outside tmux" in result.stderr
+    assert not any(record["command"][0] in {"tmux", "kill", "sudo", "tccutil"} for record in records)
 
 
 def test_brewfile_covers_macos_cluster_dependencies() -> None:

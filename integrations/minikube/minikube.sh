@@ -116,6 +116,11 @@ check_vm_host() {
 
         # Minikube checks socket_vmnet's installed client and running service.
         # Its native QEMU driver owns these VMs; macOS does not use virsh here.
+        if [[ -n "${TMUX:-}" ]]; then
+            # A detached tmux server can retain a different macOS network privacy
+            # context from its terminal, even when iTerm's permission is enabled.
+            printf '%s\n' 'WARNING: Running inside tmux on macOS. If SSH reports "no route to host", retry from a fresh Terminal.app shell outside tmux; do not delete the VM or kill your existing tmux server.' >&2
+        fi
     else
         require virsh
 
@@ -183,14 +188,28 @@ ensure_vm_nodes() {
 # -> ret::exit_code
 start_vms() {
     if [[ "$NATIVE_SSH" == false ]]; then require ssh; fi
+    local profiles existing_nodes
+    local profile_options=(--keep-context)
+    profiles="$(minikube --profile "$PROFILE" profile list --light --output=json)"
+    jq -e '(.valid | type) == "array"' <<<"$profiles" >/dev/null || fail 'Minikube returned an invalid profile inventory'
+
+    # --nodes and --ha are creation-only flags. Passing them on a restart emits
+    # misleading topology-change warnings even when their values are unchanged.
+    if jq -e --arg profile "$PROFILE" 'any(.valid[]; .Name == $profile)' <<<"$profiles" >/dev/null; then
+        check_vm_profile
+        existing_nodes="$(vm_node_count)"
+        ((existing_nodes <= NODES)) || fail "Profile '$PROFILE' has more nodes than requested; no VMs were started or removed"
+    else
+        profile_options+=(--nodes "$NODES" --ha=false)
+    fi
 
     # Never delete a profile to resolve driver or topology mismatches. Keep the
     # caller's active kube context; every subsequent Kubernetes call is scoped.
-    minikube --profile "$PROFILE" start --driver "$DRIVER" --keep-context --ha=false \
+    minikube --profile "$PROFILE" start --driver "$DRIVER" "${profile_options[@]}" \
         "${DRIVER_OPTIONS[@]}" --native-ssh="$NATIVE_SSH" \
         --insecure-registry localhost:5000 \
         --kubernetes-version "$KUBERNETES_VERSION" --container-runtime containerd \
-        --nodes "$NODES" --cpus "${POLYAD_MINIKUBE_CPUS:-2}" --memory "${POLYAD_MINIKUBE_MEMORY:-4096}" \
+        --cpus "${POLYAD_MINIKUBE_CPUS:-2}" --memory "${POLYAD_MINIKUBE_MEMORY:-4096}" \
         --disk-size 30g --wait-timeout "$TIMEOUT"
     check_vm_profile
     ensure_vm_nodes
