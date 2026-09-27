@@ -10,6 +10,7 @@ KVM_QEMU_URI="${POLYAD_MINIKUBE_KVM_QEMU_URI:-qemu:///system}"
 KVM_NETWORK="${POLYAD_MINIKUBE_KVM_NETWORK:-default}"
 REGISTRY_PORT="${POLYAD_MINIKUBE_REGISTRY_PORT:-5000}"
 NODES="${POLYAD_MINIKUBE_NODES:-3}"
+NATIVE_SSH="${POLYAD_MINIKUBE_NATIVE_SSH:-true}"
 TIMEOUT="${POLYAD_MINIKUBE_TIMEOUT:-10m}"
 EXTRA_VALUES="${POLYAD_MINIKUBE_VALUES:-}"
 KUBERNETES_VERSION="v$(bash "$PROJECT_ROOT/scripts/tooling/tool-version.sh" kubectl)"
@@ -31,6 +32,7 @@ usage() {
 Usage: integrations/minikube/minikube.sh COMMAND
 
   start    Start three VMs, build/push Polyad, install the chart, and smoke-test it.
+  recover  Stop/start this VM profile and restore missing workers without installing Polyad.
   enable   Rebuild/push Polyad, refresh CRDs, and upgrade the running local release.
   test     Check cluster health and execute a fresh, uniquely named Graph.
   status   Show nodes, controller/cache workloads, and graph boundaries.
@@ -131,11 +133,67 @@ check_vm_host() {
 check_vm_profile() {
     require minikube jq
     local profiles
-    profiles="$(minikube --profile "$PROFILE" profile list --output=json)"
+    profiles="$(minikube --profile "$PROFILE" profile list --light --output=json)"
     jq -e --arg profile "$PROFILE" --arg driver "$DRIVER" \
         'any(.valid[]?; .Name == $profile and .Config.Driver == $driver
             and ($driver != "qemu2" or .Config.Network == "socket_vmnet"))' <<<"$profiles" >/dev/null ||
         fail "Profile '$PROFILE' does not match driver '$DRIVER' and its required network; choose a fresh POLYAD_MINIKUBE_PROFILE and run start. Existing profiles are never converted or deleted automatically"
+}
+
+##
+# Count this profile's configured nodes only when it has one control plane.
+# -> ret::integer
+vm_node_count() {
+    local profiles
+    profiles="$(minikube --profile "$PROFILE" profile list --light --output=json)"
+    jq -er --arg profile "$PROFILE" \
+        '.valid[]? | select(.Name == $profile) | .Config.Nodes | arrays
+            | select(length > 0 and ([.[] | select(.ControlPlane == true)] | length) == 1)
+            | length' <<<"$profiles" ||
+        fail "Profile '$PROFILE' must contain nodes and exactly one control plane; recovery does not convert HA clusters"
+}
+
+##
+# Complete an interrupted multi-node startup without removing any existing nodes.
+# -> ret::exit_code
+ensure_vm_nodes() {
+    local count previous
+    count="$(vm_node_count)"
+    ((count <= NODES)) || fail "Profile '$PROFILE' already has $count nodes, more than requested $NODES; no nodes were removed"
+    while ((count < NODES)); do
+        previous="$count"
+
+        # Minikube ignores --nodes for existing profiles. Its node-add path also
+        # auto-sizes memory when growing from one node unless this value is set.
+        # The environment override prevents that resizing; the saved profile
+        # still supplies the actual memory and CPU allocations for new workers.
+        MINIKUBE_MEMORY="${POLYAD_MINIKUBE_MEMORY:-4096}" MINIKUBE_NATIVE_SSH="$NATIVE_SSH" \
+            minikube --profile "$PROFILE" node add --worker --control-plane=false
+        count="$(vm_node_count)"
+        ((count == previous + 1)) || fail "Expected one new worker in '$PROFILE'; inspect the profile before retrying"
+    done
+
+    # A successful VM start is not sufficient: networking and kubelet must also
+    # report readiness before storage addons or application installation begins.
+    kube wait nodes --all --for=condition=Ready --timeout "$TIMEOUT"
+}
+
+##
+# Start the selected VM profile and restore any missing non-HA worker nodes.
+# -> ret::exit_code
+start_vms() {
+    if [[ "$NATIVE_SSH" == false ]]; then require ssh; fi
+
+    # Never delete a profile to resolve driver or topology mismatches. Keep the
+    # caller's active kube context; every subsequent Kubernetes call is scoped.
+    minikube --profile "$PROFILE" start --driver "$DRIVER" --keep-context --ha=false \
+        "${DRIVER_OPTIONS[@]}" --native-ssh="$NATIVE_SSH" \
+        --insecure-registry localhost:5000 \
+        --kubernetes-version "$KUBERNETES_VERSION" --container-runtime containerd \
+        --nodes "$NODES" --cpus "${POLYAD_MINIKUBE_CPUS:-2}" --memory "${POLYAD_MINIKUBE_MEMORY:-4096}" \
+        --disk-size 30g --wait-timeout "$TIMEOUT"
+    check_vm_profile
+    ensure_vm_nodes
 }
 
 ##
@@ -340,7 +398,7 @@ case "$1" in
         usage
         exit 0
         ;;
-    start | enable | test | status | render | disable | stop | delete) ;;
+    start | recover | enable | test | status | render | disable | stop | delete) ;;
     *)
         usage >&2
         exit 2
@@ -351,6 +409,7 @@ for name in "$PROFILE" "$NAMESPACE"; do
     [[ "$name" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ && ${#name} -le 63 ]] || fail 'Profile and namespace must be DNS labels of at most 63 characters'
 done
 [[ "$NODES" =~ ^[1-9][0-9]*$ ]] || fail 'Node count must be a positive integer'
+[[ "$NATIVE_SSH" == true || "$NATIVE_SSH" == false ]] || fail 'POLYAD_MINIKUBE_NATIVE_SSH must be true or false'
 [[ "$REGISTRY_PORT" =~ ^[1-9][0-9]{3,4}$ ]] ||
     fail 'Registry port must be an integer between 1024 and 65535'
 ((REGISTRY_PORT >= 1024 && REGISTRY_PORT <= 65535)) ||
@@ -358,7 +417,7 @@ done
 if [[ -n "$EXTRA_VALUES" && ("$1" == start || "$1" == enable || "$1" == render) ]]; then
     [[ -f "$EXTRA_VALUES" ]] || fail "Values file not found: $EXTRA_VALUES"
 fi
-if [[ "$1" == start || "$1" == enable || "$1" == test ]]; then
+if [[ "$1" == start || "$1" == recover || "$1" == enable || "$1" == test ]]; then
     case "${POLYAD_MINIKUBE_DRIVER:-}" in
         '' | kvm2 | qemu | qemu2) ;;
         *) fail 'This integration uses only native VMs; unset POLYAD_MINIKUBE_DRIVER for automatic selection' ;;
@@ -372,15 +431,7 @@ case "$1" in
         if [[ "$HOST_OS" == Darwin ]]; then require crane; fi
         check_vm_host
 
-        # Driver mismatches must fail, not delete existing profiles. The registry
-        # addon proxies port 5000 on each VM to the single in-cluster registry.
-        minikube --profile "$PROFILE" start --driver "$DRIVER" --keep-context --ha=false \
-            "${DRIVER_OPTIONS[@]}" \
-            --insecure-registry localhost:5000 \
-            --kubernetes-version "$KUBERNETES_VERSION" --container-runtime containerd \
-            --nodes "$NODES" --cpus "${POLYAD_MINIKUBE_CPUS:-2}" --memory "${POLYAD_MINIKUBE_MEMORY:-4096}" \
-            --disk-size 30g --wait-timeout "$TIMEOUT"
-        check_vm_profile
+        start_vms
 
         # The default hostpath provisioner is not multi-node aware. Local-path
         # storage pins each claim to its consumer's node; it is not replicated HA storage.
@@ -390,6 +441,22 @@ case "$1" in
         minikube --profile "$PROFILE" addons enable metrics-server
         enable
         smoke_test
+        ;;
+    recover)
+        require minikube kubectl jq
+        if [[ "$NATIVE_SSH" == false ]]; then require ssh; fi
+        check_vm_profile
+        check_vm_host
+
+        # QEMU only rediscovers its DHCP lease on VM start. A failed SSH wait
+        # can leave a running guest with no saved IP, so explicitly stop/start
+        # the selected profile while retaining disks, keys, and Kubernetes data.
+        existing_nodes="$(vm_node_count)"
+        ((existing_nodes <= NODES)) || fail "Profile '$PROFILE' has more nodes than requested; no VMs were stopped or removed"
+        minikube --profile "$PROFILE" stop --keep-context-active
+        start_vms
+        minikube --profile "$PROFILE" status
+        kube get nodes -o wide
         ;;
     enable) enable ;;
     test) smoke_test ;;

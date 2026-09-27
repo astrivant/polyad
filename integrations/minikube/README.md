@@ -204,6 +204,25 @@ release `polyad`. All cluster commands explicitly target that profile, and
 addon changes affect the whole selected cluster. If you already have a profile
 named `polyad`, choose a different name using the settings below before starting.
 
+On an interrupted startup, Minikube may have saved only the first node. Repeating
+`minikube start --nodes 3` does not add missing workers to an existing profile.
+The helper explicitly adds missing workers, preserves their configured memory
+allocation, and waits for all nodes to become Ready before installing addons or
+Polyad. It never shrinks the cluster or converts an HA topology.
+
+To repair just the VMs and Kubernetes, without requiring Docker or reinstalling
+Polyad, run:
+
+```sh
+bash integrations/minikube/minikube.sh recover
+```
+
+`recover` **temporarily stops all VMs in the selected profile**, then starts them
+again and adds missing workers up to `POLYAD_MINIKUBE_NODES`. It retains existing
+disks and workloads, preserves the active kube context, and requires an existing
+matching non-HA profile. Use this during a local maintenance window, not while
+depending on running workloads. It does not alter host networking or permissions.
+
 An existing Docker-backed profile **cannot be converted in place**. Select a
 fresh profile, for example `export POLYAD_MINIKUBE_PROFILE=polyad-vm`, and run
 `start`. The helper does not delete old profiles or migrate their data. Leave
@@ -317,7 +336,8 @@ create an ingress or enable the application APIs. See the
 | `POLYAD_MINIKUBE_KVM_QEMU_URI` | `qemu:///system` | Linux only: libvirt connection used by Minikube and the `virsh` preflight. |
 | `POLYAD_MINIKUBE_KVM_NETWORK` | `default` | Linux only: existing libvirt network selected for the KVM2 VMs. |
 | `POLYAD_MINIKUBE_REGISTRY_PORT` | `5000` | Free host loopback port (1024-65535) for the temporary registry forward and push. The VM-side pull port remains 5000. |
-| `POLYAD_MINIKUBE_NODES` | `3` | Node count passed to `start`; changing an existing cluster's topology may require recreation. |
+| `POLYAD_MINIKUBE_NODES` | `3` | Target node count for `start` and `recover`. Missing workers are added; existing nodes are never removed automatically. |
+| `POLYAD_MINIKUBE_NATIVE_SSH` | `true` | Minikube's embedded SSH client. Set `false` to use the host's `ssh` executable during startup and worker provisioning. This does not bypass the driver's TCP readiness probe or macOS Local Network permissions. |
 | `POLYAD_MINIKUBE_CPUS` | `2` | CPUs per node passed to `start`. |
 | `POLYAD_MINIKUBE_MEMORY` | `4096` | Memory per node passed to `start`, in MiB or a Minikube-supported quantity. Defaults to 4 GiB per VM, 12 GiB for three nodes. Existing VMs are not resized. |
 | `POLYAD_MINIKUBE_TIMEOUT` | `10m` | Timeout per cluster startup, rollout, Helm, and smoke wait. |
@@ -460,6 +480,15 @@ kubectl --context polyad -n polyad logs deployment/polyad-polyad -c operator --t
   Local Network access for the terminal/IDE running Minikube in System Settings.
   The [QEMU troubleshooting guide](https://minikube.sigs.k8s.io/docs/drivers/qemu/#cannot-connect-to-the-vm-on-macos)
   covers this permission. The helper does not change your firewall or privacy settings.
+- **SSH timeout followed by `parsing IP:` in `profile list`.** An interrupted QEMU
+  start can leave a running guest whose IP was never saved. Use
+  `minikube profile list --light` to inspect metadata without the failing status
+  probe, and `ps -axo pid,command | rg '[q]emu-system'` to inspect running VMs.
+  The first node's empty internal `Name` is normal; do not replace it manually.
+  Once connectivity is restored, run `recover` to rediscover DHCP leases through
+  a graceful stop/start. For SSH-client-specific problems, try
+  `POLYAD_MINIKUBE_NATIVE_SSH=false bash integrations/minikube/minikube.sh recover`.
+  The driver still requires direct TCP access to the guest, regardless of SSH client.
 - **KVM2 is unavailable on Linux.** The Linux path requires hardware virtualization
   (including nested virtualization when applicable), and permission to use
   KVM/libvirt. Check `virt-host-validate` and the `virsh` commands above. There is

@@ -259,6 +259,7 @@ def test_disable_requires_drained_boundaries(commands: Runner) -> None:
         (["start"], {"POLYAD_MINIKUBE_PROFILE": "invalid/profile"}),
         (["start"], {"POLYAD_MINIKUBE_NAMESPACE": "Invalid"}),
         (["start"], {"POLYAD_MINIKUBE_NODES": "0"}),
+        (["recover"], {"POLYAD_MINIKUBE_NATIVE_SSH": "sometimes"}),
         (["start"], {"POLYAD_MINIKUBE_VALUES": "/does/not/exist.yaml"}),
         (["start"], {"POLYAD_MINIKUBE_DRIVER": "docker"}),
         (["enable"], {"POLYAD_MINIKUBE_DRIVER": "podman"}),
@@ -283,7 +284,13 @@ def test_node_and_resource_overrides_are_forwarded(commands: Runner) -> None:
     Permit smaller local installations without changing the shared chart defaults.
     """
     result, records = commands(
-        "start", overrides={"POLYAD_MINIKUBE_NODES": "2", "POLYAD_MINIKUBE_CPUS": "3", "POLYAD_MINIKUBE_MEMORY": "3072"}
+        "start",
+        overrides={
+            "POLYAD_MINIKUBE_NODES": "2",
+            "POLYAD_MINIKUBE_CPUS": "3",
+            "POLYAD_MINIKUBE_MEMORY": "3072",
+            "MINIKUBE_TEST_NODES": "2",
+        },
     )
     assert result.returncode == 0, result.stderr
     start = next(record["command"] for record in records if record["command"][:4] == ["minikube", "--profile", "isolated-test", "start"])
@@ -337,7 +344,7 @@ def test_unsupported_host_fails_without_fallback(commands: Runner) -> None:
     assert [record["command"] for record in records] == [["uname", "-s"]]
 
 
-@pytest.mark.parametrize("command", ["enable", "test"])
+@pytest.mark.parametrize("command", ["enable", "test", "recover"])
 def test_existing_docker_profile_is_not_reused_or_deleted(commands: Runner, command: str) -> None:
     """
     Require a fresh KVM2 profile instead of modifying an existing Docker-backed cluster.
@@ -435,7 +442,7 @@ def test_incompatible_driver_override_fails_before_cluster_access(commands: Runn
     assert [record["command"] for record in records] == [["uname", "-s"]]
 
 
-@pytest.mark.parametrize("command", ["enable", "test"])
+@pytest.mark.parametrize("command", ["enable", "test", "recover"])
 def test_macos_rejects_builtin_network_profiles(commands: Runner, command: str) -> None:
     """
     Reject an isolated QEMU user network that cannot provide the required VM connectivity.
@@ -443,6 +450,93 @@ def test_macos_rejects_builtin_network_profiles(commands: Runner, command: str) 
     result, records = commands(command, overrides={"MINIKUBE_TEST_HOST_OS": "Darwin", "MINIKUBE_TEST_PROFILE_NETWORK": "builtin"})
     assert result.returncode != 0 and "required network" in result.stderr
     assert not any("addons" in record["command"] or "apply" in record["command"] for record in records)
+
+
+@pytest.mark.parametrize("command", ["start", "recover"])
+@pytest.mark.parametrize("existing", [1, 2, 3])
+def test_incomplete_cluster_adds_only_missing_workers(commands: Runner, command: str, existing: int) -> None:
+    """
+    Restore an interrupted topology without recreating VMs or auto-sizing worker memory.
+
+    Args:
+        commands (Runner): Infrastructure command recorder.
+        command (str): Full startup or VM-only recovery operation.
+        existing (int): Nodes already saved in the selected profile.
+    """
+    result, records = commands(
+        command,
+        overrides={"MINIKUBE_TEST_NODES": str(existing), "POLYAD_MINIKUBE_NATIVE_SSH": "false"},
+    )
+    assert result.returncode == 0, result.stderr
+    calls = [record["command"] for record in records]
+    additions = [record for record in records if record["command"][3:5] == ["node", "add"]]
+    assert len(additions) == 3 - existing
+    for record in additions:
+        assert record["command"] == ["minikube", "--profile", "isolated-test", "node", "add", "--worker", "--control-plane=false"]
+        assert record["minikube_memory"] == "4096"
+        assert record["minikube_native_ssh"] == "false"
+    start = next(call for call in calls if call[:4] == ["minikube", "--profile", "isolated-test", "start"])
+    assert "--native-ssh=false" in start
+    assert all("--light" in call for call in calls if call[0] == "minikube" and "list" in call)
+    ready = next(call for call in calls if call[:6] == ["kubectl", "--context", "isolated-test", "--namespace", "test-namespace", "wait"])
+    assert ready[6:9] == ["nodes", "--all", "--for=condition=Ready"]
+    assert all(calls.index(record["command"]) < calls.index(ready) for record in additions)
+    if command == "recover":
+        stop = ["minikube", "--profile", "isolated-test", "stop", "--keep-context-active"]
+        assert calls.index(stop) < calls.index(start) < calls.index(ready)
+        assert not any(call[0] in {"docker", "helm", "crane"} or "addons" in call or "delete" in call for call in calls)
+    else:
+        assert not any("stop" in call for call in calls)
+        assert calls.index(ready) < next(index for index, call in enumerate(calls) if "addons" in call)
+
+
+@pytest.mark.parametrize("failure", ["stop", "start", "node add", "wait nodes"])
+def test_recovery_stops_on_infrastructure_failure(commands: Runner, failure: str) -> None:
+    """
+    Retain failed nodes and never continue into an application deployment.
+
+    Args:
+        commands (Runner): Infrastructure command recorder.
+        failure (str): Lifecycle operation whose command should fail.
+    """
+    result, records = commands("recover", overrides={"MINIKUBE_TEST_NODES": "1", "FAIL_COMMAND": failure})
+    assert result.returncode == 43
+    calls = [record["command"] for record in records]
+    assert failure in " ".join(calls[-1])
+    assert not any(call[0] in {"docker", "helm", "crane"} or "delete" in call for call in calls)
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"MINIKUBE_TEST_NODES": "4"},
+        {"MINIKUBE_TEST_NODES": "0"},
+        {"MINIKUBE_TEST_CONTROL_PLANES": "2"},
+    ],
+)
+def test_recovery_refuses_incompatible_topology_before_stopping(commands: Runner, overrides: dict[str, str]) -> None:
+    """
+    Do not stop, shrink, or convert an existing cluster whose topology is out of scope.
+
+    Args:
+        commands (Runner): Infrastructure command recorder.
+        overrides (dict[str, str]): Simulated saved topology.
+    """
+    result, records = commands("recover", overrides=overrides)
+    assert result.returncode != 0
+    assert not any(set(record["command"]) & {"stop", "start", "add", "delete"} for record in records)
+
+
+def test_node_add_without_progress_fails_instead_of_looping(commands: Runner) -> None:
+    """
+    Stop recovery if Minikube reports success without recording the new worker.
+
+    Args:
+        commands (Runner): Infrastructure command recorder.
+    """
+    result, records = commands("recover", overrides={"MINIKUBE_TEST_NODES": "1", "MINIKUBE_TEST_NODE_ADD_NO_PROGRESS": "1"})
+    assert result.returncode != 0 and "Expected one new worker" in result.stderr
+    assert sum(record["command"][3:5] == ["node", "add"] for record in records) == 1
 
 
 def test_brewfile_covers_macos_cluster_dependencies() -> None:

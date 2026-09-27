@@ -25,6 +25,8 @@ def main() -> int:
         "repository_config": os.environ.get("HELM_REPOSITORY_CONFIG"),
         "repository_cache": os.environ.get("HELM_REPOSITORY_CACHE"),
         "kind_provider": os.environ.get("KIND_EXPERIMENTAL_PROVIDER"),
+        "minikube_memory": os.environ.get("MINIKUBE_MEMORY"),
+        "minikube_native_ssh": os.environ.get("MINIKUBE_NATIVE_SSH"),
     }
     if command[0] == "kubectl" and "create" in command and command[-2:] == ["-f", "-"]:
         record["stdin"] = sys.stdin.read()
@@ -43,6 +45,16 @@ def main() -> int:
     elif command[0] == "minikube" and command[3:5] == ["profile", "list"]:
         profile = command[command.index("--profile") + 1]
         default_driver = "qemu2" if os.environ.get("MINIKUBE_TEST_HOST_OS") == "Darwin" else "kvm2"
+
+        # Model node additions across calls so recovery tests exercise real
+        # reconciliation rather than an unchanging, always-healthy node count.
+        node_count = int(os.environ.get("MINIKUBE_TEST_NODES", "3"))
+        if not os.environ.get("MINIKUBE_TEST_NODE_ADD_NO_PROGRESS"):
+            node_count += sum(
+                json.loads(line)["command"][:5] == ["minikube", "--profile", profile, "node", "add"]
+                for line in Path(os.environ["COMMAND_LOG"]).read_text().splitlines()
+            )
+        control_planes = int(os.environ.get("MINIKUBE_TEST_CONTROL_PLANES", "1"))
         print(
             json.dumps(
                 {
@@ -53,6 +65,7 @@ def main() -> int:
                             "Config": {
                                 "Driver": os.environ.get("MINIKUBE_TEST_PROFILE_DRIVER", default_driver),
                                 "Network": os.environ.get("MINIKUBE_TEST_PROFILE_NETWORK", "socket_vmnet"),
+                                "Nodes": [{"ControlPlane": index < control_planes} for index in range(node_count)],
                             },
                         },
                     ]
