@@ -244,6 +244,58 @@ def test_managed_dragonfly_contract(ha, persistence):
     assert cache_url(objects) == {"name": "POLYAD_CACHE_URL", "value": "redis://test-queue:6379/0"}
 
 
+@pytest.mark.parametrize("profile", [None, "minikube", "kind"])
+def test_default_dragonfly_arguments_render_without_merge_warnings(profile: str | None) -> None:
+    """
+    Keep the default chart and local profiles free of upstream map/list warnings.
+
+    Args:
+        profile (str | None): Optional standalone integration values overlay.
+    """
+    command = ["helm", "template", "test", str(CHART)]
+    if profile is not None:
+        command.extend(["--values", str(CHART.parents[1] / "integrations" / profile / "values.yaml")])
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+    assert "cannot overwrite table" not in result.stderr
+
+    # The upstream empty-map sentinel omits extras, not the controller's normal flags.
+    objects = list(filter(None, yaml.safe_load_all(result.stdout)))
+    controller = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-dragonfly-operator")
+    containers = {container["name"]: container for container in controller["spec"]["template"]["spec"]["containers"]}
+    assert "--leader-elect" in containers["manager"]["args"]
+    assert "--secure-listen-address=0.0.0.0:8443" in containers["kube-rbac-proxy"]["args"]
+    assert all(isinstance(argument, str) for container in containers.values() for argument in container["args"])
+
+
+@pytest.mark.parametrize("custom", [False, True])
+def test_dragonfly_argument_lists_remain_supported(custom: bool) -> None:
+    """
+    Preserve explicit empty and populated argument lists for both containers.
+
+    Args:
+        custom (bool): Whether to append user-supplied flags to the upstream flags.
+    """
+    manager = ["--zap-log-level=debug"] if custom else []
+    proxy = ["--v=1"] if custom else []
+    options = {"manager": {"extraArgs": manager}, "rbacProxy": {"extraArgs": proxy}}
+    result = subprocess.run(
+        ["helm", "template", "test", str(CHART), "--set-json", "dragonflyOperator=" + json.dumps(options)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    objects = list(filter(None, yaml.safe_load_all(result.stdout)))
+    controller = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-dragonfly-operator")
+    containers = {container["name"]: container for container in controller["spec"]["template"]["spec"]["containers"]}
+    assert "--leader-elect" in containers["manager"]["args"]
+    for name, arguments in (("manager", manager), ("kube-rbac-proxy", proxy)):
+        assert all(isinstance(argument, str) for argument in containers[name]["args"])
+        if arguments:
+            assert containers[name]["args"][-len(arguments) :] == arguments
+
+
 def cache_url(objects):
     """
     Read the actual connection configuration used by Polyad.

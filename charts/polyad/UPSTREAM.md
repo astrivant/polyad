@@ -13,6 +13,14 @@ The OCI artifact digest inspected for this version is
 `sha256:a2e9f431f46b0dfb4aee426b70efb4394f970525516ea3f51c8d60a345bbc260`.
 Downloaded dependencies under `charts/` are build artifacts, excluded from Git.
 
+The pinned chart defaults `manager.extraArgs` and `rbacProxy.extraArgs` to empty
+maps, but its Deployment template expects argument lists. Polyad retains those
+empty-map defaults to avoid map/list merge warnings without changing the controller's
+built-in arguments. Explicit lists remain supported and validated; Helm may
+still warn about the upstream map default when a list is supplied. Nonempty maps
+are rejected because they would produce invalid container arguments. The empty
+object is only a compatibility default, not a flag-to-value mapping interface.
+
 `../polyad-crds/crds/dragonflies.yaml` is the upstream chart's rendered `templates/crds.yaml`,
 with a provenance comment added. Its Apache-2.0 license is retained in
 [LICENSE.dragonfly-operator](LICENSE.dragonfly-operator). Polyad disables the

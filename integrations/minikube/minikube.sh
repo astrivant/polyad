@@ -361,10 +361,11 @@ enable() {
 
     # Helm does not upgrade its crds/ definitions. Own their local updates explicitly
     # without force-conflicts, so another manager's incompatible edits fail safely.
+    # Skip Helm's CRD installation after this step to keep one field manager.
     kube apply --server-side --field-manager=polyad-minikube -f "$PROJECT_ROOT/charts/polyad-crds/crds"
     kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/charts/polyad-crds/crds"
     helm_local upgrade --install polyad "$CHART" --kube-context "$PROFILE" \
-        --create-namespace --wait --timeout "$TIMEOUT" "${CHART_OPTIONS[@]}"
+        --skip-crds --create-namespace --wait --timeout "$TIMEOUT" "${CHART_OPTIONS[@]}"
 }
 
 ##

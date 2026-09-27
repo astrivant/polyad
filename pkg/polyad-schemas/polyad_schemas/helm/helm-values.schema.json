@@ -1572,12 +1572,16 @@
           "type": "object",
           "properties": {
             "extraArgs": {
-              "type": "array",
+              "type": [
+                "array",
+                "object"
+              ],
+              "maxProperties": 0,
               "items": {
                 "type": "string",
                 "pattern": "^--[^\\r\\n]+$"
               },
-              "description": "Additional Dragonfly controller command arguments"
+              "description": "Additional Dragonfly controller argument list; an empty object preserves the upstream no-extra-arguments default"
             },
             "nodeSelector": {
               "type": "object",
@@ -1600,12 +1604,16 @@
           "type": "object",
           "properties": {
             "extraArgs": {
-              "type": "array",
+              "type": [
+                "array",
+                "object"
+              ],
+              "maxProperties": 0,
               "items": {
                 "type": "string",
                 "pattern": "^--[^\\r\\n]+$"
               },
-              "description": "Additional metrics proxy command arguments"
+              "description": "Additional metrics proxy argument list; an empty object preserves the upstream no-extra-arguments default"
             }
           }
         }

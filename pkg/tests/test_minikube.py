@@ -149,6 +149,7 @@ def test_start_scopes_kvm_nodes_and_pushes_production_image(commands: Runner) ->
     registry_ready = next(call for call in calls if "daemonset/registry-proxy" in call)
     assert calls.index(registry_ready) < calls.index(forward) < calls.index(image_push)
     upgrade = next(call for call in calls if call[:2] == ["helm", "upgrade"])
+    assert "--skip-crds" in upgrade
     assert upgrade[upgrade.index("--kube-context") + 1] == "isolated-test"
     assert upgrade[upgrade.index("--namespace") + 1] == "test-namespace"
     assert "operator.image.tag=local-" + "a" * 64 in upgrade
@@ -157,7 +158,9 @@ def test_start_scopes_kvm_nodes_and_pushes_production_image(commands: Runner) ->
     assert calls.index(image_push) < calls.index(upgrade)
     crds = next(call for call in calls if "apply" in call)
     assert "--server-side" in crds and "--force-conflicts" not in crds
-    assert calls.index(image_push) < calls.index(crds) < calls.index(upgrade)
+    assert "--field-manager=polyad-minikube" in crds
+    established = next(call for call in calls if "--for=condition=Established" in call)
+    assert calls.index(image_push) < calls.index(crds) < calls.index(established) < calls.index(upgrade)
     assert any("exec" in call and "polyad.operator.lifecycle.probes" in call for call in calls)
     assert not any("--delete-on-failure" in call or "load" in call or call[:2] == ["docker", "run"] for call in calls)
 
@@ -180,7 +183,14 @@ def test_smoke_test_creates_and_cleans_only_its_unique_resources(commands: Runne
 
 @pytest.mark.parametrize(
     "failure",
-    ["docker buildx build", "helm dependency build", "addons enable registry", "rollout status deployment/registry", "apply --server-side"],
+    [
+        "docker buildx build",
+        "helm dependency build",
+        "addons enable registry",
+        "rollout status deployment/registry",
+        "apply --server-side",
+        "wait --for=condition=Established",
+    ],
 )
 def test_install_failure_stops_without_upgrade_or_cleanup(commands: Runner, failure: str) -> None:
     """

@@ -120,12 +120,17 @@ def test_start_loads_image_and_isolates_every_cluster_command(commands: Runner) 
     image_load = next(call for call in calls if call[:3] == ["kind", "load", "docker-image"])
     assert image_load[3] == "polyad:local-" + "a" * 64
     upgrade = next(call for call in calls if call[:2] == ["helm", "upgrade"])
+    assert "--skip-crds" in upgrade
     assert calls.index(build) < calls.index(image_load) < calls.index(upgrade)
     assert upgrade[upgrade.index("--kubeconfig") + 1] == kubeconfig
     assert upgrade[upgrade.index("--kube-context") + 1] == "kind-isolated-test"
     assert "operator.image.tag=local-" + "a" * 64 in upgrade
     assert "operator.replicaCount=1" in upgrade and "dragonflyOperator.replicaCount=1" in upgrade
-    assert any("--server-side" in call and "--force-conflicts" not in call for call in calls)
+    crds = next(call for call in calls if "apply" in call)
+    assert "--server-side" in crds and "--force-conflicts" not in crds
+    assert "--field-manager=polyad-kind" in crds
+    established = next(call for call in calls if "--for=condition=Established" in call)
+    assert calls.index(image_load) < calls.index(crds) < calls.index(established) < calls.index(upgrade)
     assert any("--for=jsonpath={.status.metrics.execution.completedNodes}=1" in call for call in calls)
     graph = yaml.safe_load(next(record["stdin"] for record in records if "stdin" in record))
     assert graph["spec"]["nodes"][0]["ref"] == graph["metadata"]["name"] == "polyad-kind-smoke-abc12"
@@ -147,7 +152,10 @@ def test_start_reuses_only_exact_cluster_match(commands: Runner) -> None:
     assert any(record["command"][:3] == ["kind", "create", "cluster"] for record in records)
 
 
-@pytest.mark.parametrize("failure", ["docker buildx build", "helm dependency build", "kind load docker-image", "apply --server-side"])
+@pytest.mark.parametrize(
+    "failure",
+    ["docker buildx build", "helm dependency build", "kind load docker-image", "apply --server-side", "wait --for=condition=Established"],
+)
 def test_failed_install_never_upgrades_or_cleans_up(commands: Runner, failure: str) -> None:
     """
     Propagate prerequisite failures and leave diagnostic resources untouched.

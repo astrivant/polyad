@@ -474,12 +474,12 @@ dragonflyOperator:
     install: false
   ## @param dragonflyOperator.manager [object] Settings for dragonflyOperator.manager.
   manager:
-    ## @param dragonflyOperator.manager.extraArgs [array] Additional Dragonfly controller command arguments
-    extraArgs: []
+    ## @param dragonflyOperator.manager.extraArgs [array, object] Additional Dragonfly controller argument list; an empty object preserves the upstream no-extra-arguments default
+    extraArgs: {}
   ## @param dragonflyOperator.rbacProxy [object] Settings for dragonflyOperator.rbacProxy.
   rbacProxy:
-    ## @param dragonflyOperator.rbacProxy.extraArgs [array] Additional metrics proxy command arguments
-    extraArgs: []
+    ## @param dragonflyOperator.rbacProxy.extraArgs [array, object] Additional metrics proxy argument list; an empty object preserves the upstream no-extra-arguments default
+    extraArgs: {}
 
 ## @section Composition API
 ## @param api [object] Settings for api.

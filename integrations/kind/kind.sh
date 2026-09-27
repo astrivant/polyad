@@ -168,10 +168,11 @@ enable() {
     chart_options
 
     # Helm does not upgrade crds/. Fail on conflicting ownership instead of forcing it.
+    # Skip Helm's CRD installation after this step to keep one field manager.
     kube apply --server-side --field-manager=polyad-kind -f "$PROJECT_ROOT/charts/polyad-crds/crds"
     kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/charts/polyad-crds/crds"
     helm_local upgrade --install polyad "$CHART" --kubeconfig "$KUBECONFIG_FILE" --kube-context "$CONTEXT" \
-        --create-namespace --wait --timeout "$TIMEOUT" "${CHART_OPTIONS[@]}"
+        --skip-crds --create-namespace --wait --timeout "$TIMEOUT" "${CHART_OPTIONS[@]}"
 }
 
 ##

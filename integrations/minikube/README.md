@@ -390,10 +390,12 @@ bash integrations/minikube/minikube.sh render > /tmp/polyad-minikube.yaml
 Rendering still fetches locked chart dependencies. Its placeholder
 `localhost:5000/polyad:minikube` image is illustrative; `enable` publishes the
 built image and replaces the placeholder tag with its content tag.
-`enable` also refreshes cluster-scoped CRDs with server-side apply because Helm
-does not upgrade CRDs. It does not force conflicting field ownership. Resolve
-any reported conflict explicitly. Keep one Polyad installation per profile;
-separate namespaces do not isolate shared CRDs and controllers.
+`enable` also refreshes cluster-scoped CRDs with server-side apply, waits for them
+to become established, and passes `--skip-crds` to Helm. This keeps CRD field
+ownership with `polyad-minikube` instead of having Helm apply them a second time.
+It does not force conflicting field ownership. Resolve any reported conflict
+from the explicit CRD apply step before retrying. Keep one Polyad installation
+per profile; separate namespaces do not isolate shared CRDs and controllers.
 
 ## Developer workflow
 

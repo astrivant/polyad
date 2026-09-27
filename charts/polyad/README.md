@@ -476,13 +476,13 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### Upstream Dragonfly operator dependency
 
-| Name                                    | Description                                                                                                        | Value                |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| `dragonflyOperator.nameOverride`        | **Type: string.** Upstream controller resource name                                                                | `dragonfly-operator` |
-| `dragonflyOperator.replicaCount`        | **Type: integer.** Leader-elected Dragonfly controller replicas                                                    | `2` |
-| `dragonflyOperator.crds.install`        | **Type: boolean.** Must remain false; Polyad installs the pinned upstream CRD from crds before rendering instances | `false` |
-| `dragonflyOperator.manager.extraArgs`   | **Type: array.** Additional Dragonfly controller command arguments                                                 | `[]` |
-| `dragonflyOperator.rbacProxy.extraArgs` | **Type: array.** Additional metrics proxy command arguments                                                        | `[]` |
+| Name                                    | Description                                                                                                                                 | Value                |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `dragonflyOperator.nameOverride`        | **Type: string.** Upstream controller resource name                                                                                         | `dragonfly-operator` |
+| `dragonflyOperator.replicaCount`        | **Type: integer.** Leader-elected Dragonfly controller replicas                                                                             | `2` |
+| `dragonflyOperator.crds.install`        | **Type: boolean.** Must remain false; Polyad installs the pinned upstream CRD from crds before rendering instances                          | `false` |
+| `dragonflyOperator.manager.extraArgs`   | **Type: array or object.** Additional Dragonfly controller argument list; an empty object preserves the upstream no-extra-arguments default | `{}` |
+| `dragonflyOperator.rbacProxy.extraArgs` | **Type: array or object.** Additional metrics proxy argument list; an empty object preserves the upstream no-extra-arguments default        | `{}` |
 
 ### Composition API
 
