@@ -238,14 +238,24 @@ The [Polyad pipeline](../../.github/workflows/ci.yml) is the only Actions entry
 point for pushes to any branch or tag, pull requests and manual runs. Open
 that run to see infrastructure checks, Python and container matrices, chart
 validation, Cheeger benchmarks, reachability studies, and soul/nature process
-studies in one job graph. All 19 jobs are defined directly in `ci.yml`; there
-are no separate local action definitions, reusable-workflow files or
-completion-triggered follow-up pipelines. Third-party setup and validation
-actions remain ordinary steps in those jobs.
+studies in one job graph. Like `hypothesis-helm`, `ci.yml` orchestrates four
+reusable stage files. Only `ci.yml` has push, PR and manual triggers; the stage
+files use `workflow_call`, so they remain part of the same run rather than
+starting separate pipelines.
 
-Every branch checks out the same resolved commit. The **All checks passed** job
-joins every validation branch and rejects failures, cancellations and unexpected
-skips before publishing. Tests, compatibility matrices, benchmark smoke tests,
+- [Test](../../.github/workflows/stage-test.yml): Python, coverage, standalone
+  package compatibility, Terraform, benchmark smoke tests and operator integration.
+- [Build](../../.github/workflows/stage-build.yml): container images, Compose,
+  chart validation and tagged chart packages.
+- [Measure](../../.github/workflows/stage-measure.yml): manually requested PR
+  study suites and optional protected cloud benchmarks.
+- [Deploy](../../.github/workflows/stage-deploy.yml): protected publication of
+  the exact Python distributions already built and tested in this run.
+
+Every stage receives the same resolved commit as an explicit input. Test and
+Build start in parallel. Each stage checks its complete job inventory, then
+**CI verification** rejects failed, cancelled or unexpectedly skipped stages
+before allowing Measure or Deploy. Tests, compatibility matrices, benchmark smoke tests,
 image builds and Compose generation run on every invocation. Only version tags
 matching `v[0-9]*` select release publication; other tag pushes run validation.
 Chart packaging may skip only when no release tag was selected.
@@ -260,22 +270,22 @@ does not suppress its siblings, and incomplete or failed suites cannot publish
 results. Compatibility tests remain required independent checks.
 
 The optional `benchmark-refresh` cloud job similarly keeps all three phases
-together, after its smoke and image checks. Unrequested refresh jobs may skip;
+together within Measure. The entire stage waits for Test and Build, including
+the smoke and image checks. Local suites and cloud measurements can then start
+at the same dependency depth. Unrequested refresh jobs may skip;
 when requested, failures, cancellations and unexpected skips fail the pipeline.
 As in `hypothesis-helm`, newer PR commits cancel superseded PR checks; main,
 tag and manual runs do not cancel in-flight work. Publication is serialized per tag.
 
 ```mermaid
 flowchart LR
-    source["Resolve immutable source"] --> checks["Infrastructure, Python, containers, charts and operator"]
-    source --> studies["Manual PR refresh: local study suite matrix"]
-    checks --> verified["All checks passed"]
-    studies --> verified
-    checks --> cloud["Opt-in PR refresh: cloud benchmarks"]
-    cloud --> verified
-    checks --> charts["Explicit release tag: package validated charts"]
-    charts --> verified
-    verified --> publish["Explicit release tag: publish verified distributions"]
+    source["Resolve immutable source"] --> test["Test"]
+    source --> build["Build"]
+    test --> verified["CI verification"]
+    build --> verified
+    verified --> measure["Measure: manual PR refresh"]
+    verified --> deploy["Deploy: explicit release tag"]
+    test --> badge["Main only: coverage badge"]
 ```
 
 To rerun checks, use **Run workflow** on **Polyad pipeline**. Leave `tag` empty
@@ -357,16 +367,20 @@ checks its release metadata, builds a wheel and source distribution,
 and uploads them as `python-distributions-<version>`. The publishing job downloads
 those exact artifacts, retained for 30 days, and runs in the `pypi` environment.
 Configure `PYPI_API_TOKEN` as an organization secret with access granted to this
-repository, a repository secret, or a `pypi` environment secret. The inline
-publishing job reads this credential directly; an environment
+repository, a repository secret, or a `pypi` environment secret. Only the Deploy
+stage receives the explicitly named repository/organization token; an environment
 secret takes precedence. Configure environment protection and allowed release
 tags before publishing.
 
-For tagged builds, the Git tag determines the release version. Shared steps
-inside `ci.yml` run `.github/prepare-release.py` in each build checkout before
-dependencies are installed or artifacts are built. YAML anchors keep the Python
-setup, metadata stamping and lockfile refresh defined once in the file; the
-publisher reuses only setup and stamping. See [GitHub's YAML anchor documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases).
+For tagged builds, the Git tag determines the release version. Each stage calls
+the shared [release preparation script](../../.github/prepare-release.py) before
+dependencies are installed or artifacts are built. File-local YAML anchors reuse
+Python setup, metadata stamping and lockfile refresh within each stage. Keeping
+these steps in the workflow avoids requiring a newly added local action inside
+older tag checkouts. Deploy uses setup and stamping only, then publishes the
+verified artifacts without rebuilding or resolving dependencies.
+See [GitHub's reusable workflow documentation](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
+for stage inputs, secret boundaries and same-run artifact sharing.
 
 For example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the chart,
 `appVersion` and default image tag to `0.0.1-alpha3`. It also refreshes the chart
@@ -446,7 +460,8 @@ PyPI. Add `--dry-run` to validate the publishing flow without uploading. See
 
 ## Verified Helm chart builds
 
-Branch pushes, tag pushes and pull requests run the `chart` matrix in `ci.yml`.
+Branch pushes, tag pushes and pull requests run the `chart` matrix in the
+[Build stage](../../.github/workflows/stage-build.yml).
 Chart validation pins the Hypothesis Helm **v1.3.5** action to its immutable commit
 [`dbc07922420fa38ddeead026f7c857eeaae66910`](https://github.com/astrivant/hypothesis-helm/tree/dbc07922420fa38ddeead026f7c857eeaae66910)
 across `charts/polyad` and `charts/polyad-crds`, with **six property-test jobs total:

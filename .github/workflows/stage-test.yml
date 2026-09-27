@@ -1,0 +1,430 @@
+name: Test stage
+
+# Called only by ci.yml, so these groups stay inside its single pipeline run.
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: Immutable source commit resolved by the entry workflow
+        type: string
+        required: true
+      release-tag:
+        description: Explicit release tag, or empty for ordinary validation
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.4
+      - run: terraform -chdir=terraform fmt -check -recursive
+      # Commit platform content hashes with `providers lock` (see terraform/README.md).
+      # Read-only initialization keeps missing Linux checksums from being masked in CI.
+      - run: terraform -chdir=terraform init -backend=false -lockfile=readonly
+      - run: terraform -chdir=terraform validate
+      - name: Test with mocked providers (no cloud credentials or resources)
+        run: terraform -chdir=terraform test
+
+  python:
+    runs-on: ubuntu-latest
+    env:
+      # Pytest config adjusts only its own interpreter, not child-process imports.
+      PYTHONPATH: pkg/polyad-benchmarks:.
+    services:
+      postgres:
+        image: postgres:18.3
+        env:
+          POSTGRES_PASSWORD: polyad-test
+          POSTGRES_DB: polyad
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d polyad"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.13', '3.14']
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+      # File-local steps also support older release checkouts without new local actions.
+      - &release-python
+        uses: actions/setup-python@v5
+        if: inputs.release-tag != ''
+        with:
+          python-version-file: .python-version
+      - &release-metadata
+        name: Stamp release metadata
+        if: inputs.release-tag != ''
+        env:
+          RELEASE_REF: ${{ inputs.release-tag }}
+        run: python .github/prepare-release.py --tag "$RELEASE_REF"
+      - &release-locks
+        name: Refresh lockfiles after release version changes
+        if: inputs.release-tag != ''
+        env:
+          POETRY_VIRTUALENVS_CREATE: 'false'
+        run: |
+          python -m pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+          poetry lock
+          poetry check --lock
+          poetry -C pkg/polyad-benchmarks lock
+          poetry -C pkg/polyad-benchmarks check --lock
+      - name: Read shared tool versions
+        id: tools
+        run: |
+          echo "nodejs=$(bash scripts/tooling/tool-version.sh nodejs)" >> "$GITHUB_OUTPUT"
+          echo "poetry=$(bash scripts/tooling/tool-version.sh poetry)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: pkg/tests/flux/go.mod
+          cache-dependency-path: pkg/tests/flux/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.tools.outputs.nodejs }}
+          cache: npm
+          cache-dependency-path: scripts/validation/mermaid/package-lock.json
+      - name: Install Mermaid test dependencies
+        run: npm ci --prefix scripts/validation/mermaid --ignore-scripts --no-audit --no-fund
+      - run: pip install "poetry==${{ steps.tools.outputs.poetry }}"
+      - name: Validate distribution version
+        id: version
+        env:
+          BUILD_REF: ${{ inputs.release-tag && format('refs/tags/{0}', inputs.release-tag) || inputs.sha }}
+        run: |
+          if [[ "$BUILD_REF" == refs/tags/* ]]; then
+            python .github/release-version.py --tag "${BUILD_REF#refs/tags/}" --output "$GITHUB_OUTPUT"
+          else
+            python .github/release-version.py --output "$GITHUB_OUTPUT"
+          fi
+      - run: poetry lock && poetry install --all-extras
+      - name: Install opt-in SDK clients for protocol tests
+        run: poetry run python -m pip install -e './pkg/polyad-sdk[protocols]'
+      - run: bash scripts/tooling/install-helm-tools.sh helm shellcheck shfmt argocd
+      - name: Build chart dependencies
+        run: bash scripts/tooling/build-chart-dependencies.sh
+      - run: poetry run pre-commit run --all-files
+        if: matrix.python == '3.13'
+      - name: Validate CRD admission and Flux health expressions
+        env:
+          POLYAD_FLUX_CHECKS: ${{ runner.temp }}/polyad-flux-checks.json
+        run: |
+          poetry run python scripts/gitops/flux-health.py --json > "$POLYAD_FLUX_CHECKS"
+          test -z "$(gofmt -l pkg/tests/flux/*.go)"
+          go -C pkg/tests/flux test -mod=readonly -parallel 8 ./...
+      - run: npm test --prefix scripts/validation/mermaid
+      - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0 --proactor_threads=1 --maxmemory=256mb
+      - run: |
+          for _attempt in $(seq 1 30); do
+            if poetry run python -c "import redis; redis.Redis().ping()"; then break; fi
+            sleep 1
+          done
+          poetry run python -c "import redis; redis.Redis().ping()"
+      - name: Run Python tests in parallel
+        run: |
+          mkdir -p .cache/tests
+          poetry run pytest --junitxml=.cache/tests/pytest.xml --cov --cov-config=pyproject.toml --cov-report=
+        env:
+          COVERAGE_FILE: .cache/tests/.coverage.${{ matrix.python }}
+          POLYAD_TEST_DRAGONFLY_URL: redis://localhost:6379/0
+          POLYAD_TEST_POSTGRES_DSN: postgresql://postgres:polyad-test@localhost:5432/polyad
+      - name: Upload Python test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-test-results-${{ matrix.python }}
+          path: .cache/tests/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+      - name: Check installed wheel typing
+        run: |
+          poetry build
+          poetry -C pkg/polyad-types build --output ../../dist
+          poetry -C pkg/polyad-schemas build --output ../../dist
+          poetry -C pkg/polyad-sdk build --output ../../dist
+          poetry -C pkg/polyad-benchmarks build --output ../../dist
+          poetry run python -m venv /tmp/polyad-typing
+          /tmp/polyad-typing/bin/python -m pip install dist/*.whl
+          POLYAD_TYPING_PYTHON=/tmp/polyad-typing/bin/python poetry run pytest pkg/tests/test_typing.py
+      - name: Upload verified distributions
+        if: matrix.python == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions-${{ steps.version.outputs.version }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  coverage:
+    name: Python coverage (${{ matrix.package }})
+    needs: python
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {package: all, files: 'pkg/*'}
+          - {package: polyad, files: 'pkg/polyad/*'}
+          - {package: polyad-sdk, files: 'pkg/polyad-sdk/polyad_sdk/*'}
+          - {package: polyad-types, files: 'pkg/polyad-types/polyad_types/*'}
+          - {package: polyad-schemas, files: 'pkg/polyad-schemas/polyad_schemas/*'}
+          - {package: polyad-benchmarks, files: 'pkg/polyad-benchmarks/polyad_benchmarks/*'}
+    env:
+      COVERAGE_PACKAGE: ${{ matrix.package }}
+      COVERAGE_INCLUDE: ${{ matrix.files }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install locked coverage tools
+        run: |
+          pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+          poetry install --only coverage --no-root --no-interaction
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: python-test-results-*
+          path: .cache/coverage-shards/
+      - name: Combine both Python versions and export coverage
+        run: |
+          # Require every matrix member so a partial upload cannot inflate the badge.
+          for version in 3.13 3.14; do
+            test -s ".cache/coverage-shards/python-test-results-${version}/.coverage.${version}"
+          done
+          poetry run coverage combine .cache/coverage-shards/python-test-results-*/.coverage.*
+
+          # Slice the combined data, rather than executing the test suite again per package.
+          poetry run coverage json -o coverage.json --include "$COVERAGE_INCLUDE"
+          poetry run coverage html -d .cache/coverage-html --include "$COVERAGE_INCLUDE"
+          printf '### %s coverage\n\n' "$COVERAGE_PACKAGE" >> "$GITHUB_STEP_SUMMARY"
+          poetry run coverage report --include "$COVERAGE_INCLUDE" --format=markdown >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-${{ matrix.package }}
+          path: |
+            coverage.json
+            .cache/coverage-html/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+  lightweight-packages:
+    needs: python
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions-${{ needs.python.outputs.version }}
+          path: dist/
+      - name: Check standalone schemas, types and SDK wheels
+        run: |
+          python -m venv /tmp/polyad-schemas
+          /tmp/polyad-schemas/bin/python -m pip install --no-deps dist/polyad_schemas-*.whl
+          /tmp/polyad-schemas/bin/python -I scripts/testing/check-schemas-package.py
+          /tmp/polyad-schemas/bin/python -m pip check
+          python -m venv /tmp/polyad-sdk
+          /tmp/polyad-sdk/bin/python -m pip install dist/polyad_types-*.whl
+          /tmp/polyad-sdk/bin/python -I scripts/testing/check-types-package.py
+          /tmp/polyad-sdk/bin/python -m pip install --find-links dist dist/polyad_sdk-*.whl
+          /tmp/polyad-sdk/bin/python -I scripts/testing/check-sdk-package.py
+          /tmp/polyad-sdk/bin/python -m pip check
+
+  benchmark-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: pkg/polyad-benchmarks:.
+    strategy:
+      matrix:
+        python: ['3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      # Plot regression tests also exercise Polyad's production Cheeger solver.
+      - run: poetry sync --all-extras
+      - run: bash scripts/tooling/install-helm-tools.sh helm
+      - run: bash scripts/tooling/build-chart-dependencies.sh charts/polyad-benchmarks
+      - run: poetry run python scripts/validation/benchmark-schemas.py
+      - name: Exercise harness and refresh barriers offline
+        run: |
+          mkdir -p .cache/benchmarks/smoke
+          poetry run python -m pytest -c pyproject.toml -o addopts='' pkg/tests/test_benchmarks.py pkg/tests/test_study_plotting.py --junitxml=.cache/benchmarks/smoke/pytest.xml
+          helm lint charts/polyad-benchmarks
+          helm template study charts/polyad-benchmarks -f studies/load/fixtures/gke-values.yaml > .cache/benchmarks/smoke/fixture.yaml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-smoke-${{ matrix.python }}
+          path: .cache/benchmarks/smoke/
+          include-hidden-files: true
+          retention-days: 30
+
+  reachability-sdk:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install ./pkg/polyad-types './pkg/polyad-sdk[reachability]' 'pytest>=9,<10'
+      - run: python -m pytest -o addopts='' pkg/tests/test_reachability.py --junitxml=reachability-tests.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reachability-tests-${{ matrix.python }}
+          path: reachability-tests.xml
+
+  process-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install ./pkg/polyad-types ./pkg/polyad-sdk ./pkg/polyad-benchmarks 'pytest>=9,<10'
+      - run: python -m pytest -o addopts='' pkg/tests/test_process_studies.py --junitxml=process-tests.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: process-tests-${{ matrix.python }}
+          path: process-tests.xml
+
+  operator:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dragonfly-ha: [false, true]
+    env:
+      POLYAD_TEST_DRAGONFLY_HA: ${{ matrix.dragonfly-ha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+      - *release-python
+      - *release-metadata
+      - *release-locks
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: polyad-test
+          config: pkg/tests/kind.yaml
+      - name: Read Helm version
+        id: tools
+        run: echo "helm=v$(bash scripts/tooling/tool-version.sh helm)" >> "$GITHUB_OUTPUT"
+      - uses: azure/setup-helm@v4.3.0
+        with:
+          version: ${{ steps.tools.outputs.helm }}
+      - uses: docker/setup-buildx-action@v4
+      - name: Build and load Kind image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: services/operator/Dockerfile
+          target: production
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: polyad:test
+          cache-from: |
+            type=gha,scope=operator-${{ matrix.dragonfly-ha }}-amd64
+            type=gha,scope=container-production-amd64
+          cache-to: type=gha,mode=max,scope=operator-${{ matrix.dragonfly-ha }}-amd64
+      - run: kind load docker-image polyad:test --name polyad-test
+      - name: Build chart dependencies
+        run: bash scripts/tooling/build-chart-dependencies.sh charts/polyad
+      - name: Install KEDA for HA cache scaling
+        if: matrix.dragonfly-ha
+        run: helm upgrade --install keda kedacore/keda --version 2.20.2 --namespace keda --create-namespace --wait --timeout=300s
+      - run: helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace --set operator.image.repository=polyad --set operator.image.tag=test --set dragonfly.ha.enabled=${{ matrix.dragonfly-ha }} --wait --timeout=300s
+      - name: Verify HA cache scaling bridge
+        if: matrix.dragonfly-ha
+        run: |
+          kubectl -n polyad wait dragonflypool/polyad-queue --for=jsonpath='{.status.phase}'=Ready --timeout=300s
+          kubectl -n polyad wait scaledobject/polyad-queue --for=condition=Ready --timeout=300s
+      - run: bash scripts/testing/test-operator.sh
+      - run: kubectl -n polyad delete graphs,polygraphs,replicagroups --all --wait=true --timeout=120s
+      - run: bash scripts/testing/test-replacement.sh
+      - run: bash scripts/testing/test-coordination.sh
+      - name: Collect operator failure diagnostics
+        if: failure()
+        continue-on-error: true
+        run: bash scripts/testing/collect-operator-diagnostics.sh
+
+  test-complete:
+    name: Require complete test stage
+    if: always()
+    needs: [terraform, python, coverage, lightweight-packages, benchmark-smoke, reachability-sdk, process-tests, operator]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reject failed, cancelled or unexpectedly skipped checks
+        env:
+          RESULTS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          optional = set()
+          failures = {
+              name: result['result']
+              for name, result in json.loads(os.environ['RESULTS_JSON']).items()
+              if result['result'] != 'success' and not (name in optional and result['result'] == 'skipped')
+          }
+          if failures:
+              raise SystemExit(f'Pipeline checks did not pass: {failures}')
+          print('Every required stage check passed.')
+          PY

@@ -106,14 +106,16 @@ Full measurements and plots refresh only on explicit manual PR requests, followi
 hypothesis-helm's request model. In **Run workflow**, select an open, non-draft,
 same-repository PR's current head branch, enable `refresh`, enter `pull-request`
 and leave `tag` empty. The pipeline validates the PR and SHA, then runs one
-`studies` matrix for Cheeger, reachability and Soul/Nature. Each suite keeps
+`studies` matrix for Cheeger, reachability and Soul/Nature in the reusable
+[Measure stage](../.github/workflows/stage-measure.yml), after Test and Build pass.
+These stages remain inside the same pipeline run. Each suite keeps
 prepare, execution and verified publication as steps within one job. It checks
 raw evidence and figure checksums and retains plots, measurements and failure logs
 in artifacts without committing to the PR. See the [local suite commands](symbiosis/README.md#run).
 
 Adding `full-refresh` to that manual PR request enables one cloud benchmark job,
 with prepare → study → finish as steps using the same Python entry point as local
-runs. It waits for smoke and image checks and uses an administrator-provided runner inside
+runs. The Measure stage waits for smoke and image checks and uses an administrator-provided runner inside
 the cluster network with an explicit kubeconfig context. They require read access
 to the fixture Graph, definitions, Pods and activation receipts, Pod logs and
 `pods/exec` on the fixture. Configure the `benchmarks` GitHub environment and the

@@ -1,0 +1,191 @@
+name: Measure stage
+
+# Called only by ci.yml, so these groups stay inside its single pipeline run.
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: Immutable source commit resolved by the entry workflow
+        type: string
+        required: true
+      full-refresh:
+        description: Also run installed cloud fixtures on the protected runner
+        type: boolean
+        default: false
+      context:
+        description: Explicit Kubernetes context for cloud measurements
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  studies:
+    name: Studies (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: cheeger
+            project: .
+            extras: ''
+            published: |
+              studies/cheeger-strategies/results.json
+              studies/cheeger-strategies/figures/
+          - suite: reachability
+            project: pkg/polyad-benchmarks
+            extras: reachability
+            published: |
+              studies/symbiosis/results.json
+              studies/symbiosis/figures/
+              studies/reachability-state/results.json
+              studies/reachability-state/figures/
+              studies/reachability-routing/results.json
+              studies/reachability-routing/figures/
+          - suite: process
+            project: pkg/polyad-benchmarks
+            extras: process-studies
+            published: |
+              studies/soul/results.json
+              studies/soul/figures/
+              studies/nature/results.json
+              studies/nature/figures/
+    env:
+      STUDY_SUITE: ${{ matrix.suite }}
+      STUDY_PROJECT: ${{ matrix.project }}
+      STUDY_EXTRAS: ${{ matrix.extras }}
+      STUDY_ROOT: .cache/benchmarks/${{ matrix.suite }}
+      PYTHONPATH: pkg/polyad-benchmarks:.
+      MPLCONFIGDIR: .cache/matplotlib
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      VECLIB_MAXIMUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - name: Install the selected study backend
+        run: |
+          if [[ "$STUDY_SUITE" == cheeger ]]; then
+            poetry sync
+          else
+            poetry -C "$STUDY_PROJECT" sync --only main --extras "$STUDY_EXTRAS"
+          fi
+      - name: Prepare the complete suite inventory
+        id: prepare
+        run: poetry --project "$STUDY_PROJECT" run python -m polyad_benchmarks.refresh --ci-phase prepare --suite "$STUDY_SUITE" --root "$STUDY_ROOT"
+      - &run-prepared-studies
+        name: Run every prepared study and retain individual failures
+        run: |
+          poetry --project "$STUDY_PROJECT" run python - <<'PY'
+          import os
+          import sys
+          import traceback
+          from pathlib import Path
+
+          from polyad_benchmarks.refresh import selected_studies, study_phase
+
+          root = Path(os.environ['STUDY_ROOT'])
+          failures = []
+
+          # Use the prepared inventory so newly registered studies cannot be omitted.
+          # One failure must not suppress the other studies' measurements or diagnostics.
+          for study in selected_studies(root):
+              try:
+                  study_phase(Path.cwd(), root, study, os.environ.get('BENCHMARK_CONTEXT', ''))
+              except Exception:
+                  traceback.print_exc(file=sys.stderr)
+                  failures.append(study)
+          if failures:
+              raise SystemExit(f'Studies failed: {failures}')
+          PY
+      - &finish-studies
+        name: Verify the whole suite before publishing its results
+        if: "!cancelled() && steps.prepare.outcome == 'success'"
+        run: poetry --project "$STUDY_PROJECT" run python -m polyad_benchmarks.refresh --ci-phase finish --root "$STUDY_ROOT" --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studies-${{ matrix.suite }}
+          path: |
+            .cache/benchmarks/${{ matrix.suite }}/
+            ${{ matrix.published }}
+          include-hidden-files: true
+          retention-days: 30
+
+  benchmark-refresh:
+    name: Cloud benchmark refresh
+    if: inputs.full-refresh
+    environment: benchmarks
+    runs-on: ${{ vars.POLYAD_BENCHMARK_RUNNER || 'polyad-benchmarks' }}
+    timeout-minutes: 30
+    env:
+      BENCHMARK_CONTEXT: ${{ inputs.context }}
+      STUDY_PROJECT: pkg/polyad-benchmarks
+      STUDY_ROOT: .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - run: poetry -C pkg/polyad-benchmarks sync --only main --extras plots
+      - name: Prepare installed cloud fixtures
+        id: prepare
+        run: poetry --project "$STUDY_PROJECT" run python -m polyad_benchmarks.refresh --ci-phase prepare --suite cluster --root "$STUDY_ROOT"
+      - *run-prepared-studies
+      - *finish-studies
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-refresh
+          path: |
+            .cache/benchmarks/refresh-${{ github.run_id }}-${{ github.run_attempt }}/
+            studies/load/results.json
+            studies/load/figures/
+          include-hidden-files: true
+          retention-days: 30
+
+  measure-complete:
+    name: Require complete measure stage
+    if: always()
+    needs: [studies, benchmark-refresh]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reject failed, cancelled or unexpectedly skipped checks
+        env:
+          RESULTS_JSON: ${{ toJSON(needs) }}
+          FULL_REFRESH: ${{ inputs.full-refresh }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          optional = set()
+          if os.environ['FULL_REFRESH'] != 'true':
+              optional.add('benchmark-refresh')
+          failures = {
+              name: result['result']
+              for name, result in json.loads(os.environ['RESULTS_JSON']).items()
+              if result['result'] != 'success' and not (name in optional and result['result'] == 'skipped')
+          }
+          if failures:
+              raise SystemExit(f'Pipeline checks did not pass: {failures}')
+          print('Every required stage check passed.')
+          PY

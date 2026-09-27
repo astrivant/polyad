@@ -10,94 +10,105 @@ import subprocess
 from pathlib import Path
 
 import pytest
-import yaml
+
+from tests.workflows import BUILD, JOBS, MEASURE, PIPELINE, TEST, WORKFLOWS
 
 ROOT = Path(__file__).resolve().parents[2]
 DIRECTORY = ROOT / ".github/workflows"
-PIPELINE = yaml.load((DIRECTORY / "ci.yml").read_text(), Loader=yaml.BaseLoader)
-CHECKS = set(PIPELINE["jobs"]) - {"verified", "publish", "coverage-badge"}
+GATES = ("verified", "test-complete", "build-complete", "measure-complete")
+CHECKS = {name: set(JOBS[name]["needs"]) for name in GATES}
 
 
-def test_one_workflow_contains_every_job_without_local_actions_or_workflow_calls():
+def test_only_the_entry_workflow_has_triggers_and_stages_remain_in_the_same_run():
     """
-    Every push, pull request or manual run has one entry point with no detached follow-up run.
+    Split implementation files without introducing independent pipelines or mutable stage refs.
     """
-    workflows = {path.name: yaml.load(path.read_text(), Loader=yaml.BaseLoader) for path in DIRECTORY.glob("*.yml")}
-    assert set(workflows) == {"ci.yml"}
-    assert not list((ROOT / ".github/actions").rglob("action.y*ml"))
+    assert set(WORKFLOWS) == {"ci.yml", "stage-test.yml", "stage-build.yml", "stage-measure.yml", "stage-deploy.yml"}
     assert set(PIPELINE["on"]) == {"push", "pull_request", "workflow_dispatch"}
     assert PIPELINE["on"]["push"] == {"branches": ["**"], "tags": ["**"]}
-    for job in PIPELINE["jobs"].values():
-        assert "uses" not in job
-        assert "runs-on" in job and "steps" in job
-        assert all(not step.get("uses", "").startswith("./") for step in job["steps"])
+    assert len(JOBS) == sum(len(workflow["jobs"]) for workflow in WORKFLOWS.values())
 
-    # Traverse job dependencies, rejecting cycles and dangling edges after flattening.
-    reached = set()
+    for name in ("test", "build", "measure", "deploy"):
+        workflow = WORKFLOWS[f"stage-{name}.yml"]
+        call = JOBS[f"{name}-stage"]
+        assert set(workflow["on"]) == {"workflow_call"}
+        assert call["uses"] == f"./.github/workflows/stage-{name}.yml"
+        assert call["with"]["sha"] == "${{ needs.source.outputs.sha }}"
+        assert set(call["with"]) <= set(workflow["on"]["workflow_call"]["inputs"])
+        assert workflow["on"]["workflow_call"]["inputs"]["sha"]["required"] == "true"
+        assert workflow["permissions"] == {"contents": "read"}
+        assert workflow["defaults"]["run"]["shell"] == "bash"
 
-    def visit(name, ancestors=()):
-        assert name not in ancestors
-        reached.add(name)
-        dependencies = PIPELINE["jobs"][name].get("needs", [])
+    # Dependencies must stay within their file; reusable calls form the parent graph.
+    def visit(jobs, name, ancestors=()):
+        assert name not in ancestors and name in jobs
+        dependencies = jobs[name].get("needs", [])
         for dependency in [dependencies] if isinstance(dependencies, str) else dependencies:
-            visit(dependency, (*ancestors, name))
+            visit(jobs, dependency, (*ancestors, name))
 
-    visit("publish")
-    visit("coverage-badge")
-    assert reached == set(PIPELINE["jobs"])
+    for workflow in WORKFLOWS.values():
+        jobs = workflow["jobs"]
+        for name, job in jobs.items():
+            visit(jobs, name)
+            if "uses" in job:
+                assert "runs-on" not in job and "steps" not in job
+            else:
+                assert "runs-on" in job and "steps" in job
+                for step in job["steps"]:
+                    action = step.get("uses", "")
+                    if action.startswith("./"):
+                        assert (ROOT / action / "action.yml").is_file()
 
 
 def test_all_validation_branches_join_before_publishing():
     """
-    Requested studies and ordinary checks must succeed inside the same pipeline.
+    Require complete stage results, while allowing Test and Build to start in parallel.
     """
-    gate = PIPELINE["jobs"]["verified"]
-    assert gate["if"] == "always()" and set(gate["needs"]) == CHECKS
-    assert {
-        "studies",
-        "benchmark-smoke",
-        "benchmark-images",
-        "benchmark-refresh",
-        "reachability-sdk",
-        "process-tests",
-        "chart",
-        "chart-package",
-        "operator",
-        "lightweight-packages",
-        "coverage",
-    } <= CHECKS
-    assert "verified" in PIPELINE["jobs"]["publish"]["needs"]
-    assert "always()" not in PIPELINE["jobs"]["publish"]["if"]
+    assert CHECKS["verified"] == {"source", "test-stage", "build-stage"}
+    for name in ("test-stage", "build-stage"):
+        assert JOBS[name]["needs"] == "source" and "if" not in JOBS[name]
+    for workflow, gate in ((TEST, "test-complete"), (BUILD, "build-complete"), (MEASURE, "measure-complete")):
+        assert CHECKS[gate] == set(workflow["jobs"]) - {gate}
+    assert all(JOBS[name]["if"] == "always()" for name in GATES)
+    for name in ("measure-stage", "deploy-stage"):
+        assert JOBS[name]["needs"] == ["source", "verified"]
+        assert "!cancelled() && needs.verified.result == 'success'" in JOBS[name]["if"]
+    assert "coverage-badge" not in set().union(*CHECKS.values())
+    assert "secrets" not in JOBS["test-stage"] and "secrets" not in JOBS["build-stage"]
+    assert "secrets" not in JOBS["measure-stage"]
 
 
 def test_all_checkouts_use_the_resolved_source():
     """
-    Manual tag runs and pull-request merge runs test one immutable commit across every suite.
+    Pass the selected immutable source through every reusable workflow boundary.
     """
-    for name, job in PIPELINE["jobs"].items():
-        if name in {"source", "verified"}:
-            continue
-        dependencies = job["needs"]
-        assert "source" in ([dependencies] if isinstance(dependencies, str) else dependencies)
-        checkout = job["steps"][0]
-        assert checkout["uses"] == "actions/checkout@v4"
-        assert checkout["with"]["ref"] == "${{ needs.source.outputs.sha }}", name
+    for filename, workflow in WORKFLOWS.items():
+        for name, job in workflow["jobs"].items():
+            if name == "source":
+                continue
+            checkouts = [step for step in job.get("steps", []) if step.get("uses") == "actions/checkout@v4"]
+            for checkout in checkouts:
+                expected = "${{ needs.source.outputs.sha }}" if filename == "ci.yml" else "${{ inputs.sha }}"
+                assert checkout["with"]["ref"] == expected, (filename, name)
 
 
 def test_manual_cloud_benchmarks_remain_explicit_and_environment_protected():
     """
-    Consolidation must not grant ordinary pushes or pull requests access to the cloud runner.
+    Reusable workflows must not grant ordinary pushes or pull requests access to the cloud runner.
     """
     inputs = PIPELINE["on"]["workflow_dispatch"]["inputs"]
     assert inputs["full-refresh"]["default"] == "false" and inputs["tag"]["default"] == ""
     assert inputs["refresh"]["default"] == "false" and inputs["pull-request"]["default"] == ""
-    study = PIPELINE["jobs"]["benchmark-refresh"]
-    assert study["if"] == "needs.source.outputs.refresh == 'true' && inputs.full-refresh"
+    assert JOBS["measure-stage"]["if"] == ("!cancelled() && needs.verified.result == 'success' && needs.source.outputs.refresh == 'true'")
+    assert JOBS["measure-stage"]["with"]["full-refresh"] == "${{ inputs.full-refresh || false }}"
+    assert JOBS["measure-stage"]["with"]["context"] == "${{ inputs.context || '' }}"
+    study = JOBS["benchmark-refresh"]
+    assert study["if"] == "inputs.full-refresh"
     assert study["environment"] == "benchmarks"
-    assert study["needs"] == ["source", "benchmark-smoke", "benchmark-images"]
+    assert "needs" not in study
     assert study["env"]["BENCHMARK_CONTEXT"] == "${{ inputs.context }}"
     assert study["runs-on"] == "${{ vars.POLYAD_BENCHMARK_RUNNER || 'polyad-benchmarks' }}"
-    source = PIPELINE["jobs"]["source"]
+    source = JOBS["source"]
     request = source["steps"][-1]
     assert request["if"] == "github.event_name == 'workflow_dispatch' && (inputs.refresh || inputs.full-refresh)"
     assert source["outputs"]["refresh"] == "${{ steps.request.outputs.refresh }}"
@@ -108,12 +119,11 @@ def test_studies_share_one_optional_matrix_and_validation_tests_run_on_every_ref
     """
     Preparation and collection are steps, not extra job columns or mandatory benchmark runs.
     """
-    study = PIPELINE["jobs"]["studies"]
-    assert study["needs"] == "source"
-    assert study["if"] == "needs.source.outputs.refresh == 'true'"
+    study = JOBS["studies"]
+    assert "needs" not in study and "if" not in study
     assert study["strategy"]["fail-fast"] == "false"
     assert {row["suite"] for row in study["strategy"]["matrix"]["include"]} == {"cheeger", "reachability", "process"}
-    assert not any(name.endswith(("-prepare", "-study", "-finish")) for name in PIPELINE["jobs"])
+    assert not any(name.endswith(("-prepare", "-study", "-finish")) for name in JOBS)
     for name in (
         "python",
         "terraform",
@@ -126,9 +136,9 @@ def test_studies_share_one_optional_matrix_and_validation_tests_run_on_every_ref
         "reachability-sdk",
         "process-tests",
     ):
-        assert "if" not in PIPELINE["jobs"][name], name
-    assert PIPELINE["jobs"]["reachability-sdk"]["strategy"]["matrix"]["python"] == ["3.11", "3.12", "3.13", "3.14"]
-    assert PIPELINE["jobs"]["process-tests"]["strategy"]["matrix"]["python"] == ["3.13", "3.14"]
+        assert "if" not in JOBS[name], name
+    assert JOBS["reachability-sdk"]["strategy"]["matrix"]["python"] == ["3.11", "3.12", "3.13", "3.14"]
+    assert JOBS["process-tests"]["strategy"]["matrix"]["python"] == ["3.13", "3.14"]
 
 
 @pytest.mark.parametrize("name", ["studies", "benchmark-refresh"])
@@ -136,7 +146,7 @@ def test_consolidated_studies_keep_completion_checks_and_failure_artifacts(name)
     """
     Finish still validates every prepared result, including after a measurement failure.
     """
-    steps = PIPELINE["jobs"][name]["steps"]
+    steps = JOBS[name]["steps"]
     prepare = next(index for index, step in enumerate(steps) if step.get("id") == "prepare")
     assert "--ci-phase prepare" in steps[prepare]["run"]
     assert "selected_studies(root)" in steps[prepare + 1]["run"]
@@ -169,7 +179,7 @@ def test_suite_runner_attempts_every_prepared_study_and_propagates_failure(tmp_p
     monkeypatch.setenv("BENCHMARK_CONTEXT", "test-context")
     monkeypatch.setattr(refresh, "selected_studies", lambda root: ("first", "second", "newly-registered"))
     monkeypatch.setattr(refresh, "study_phase", study_phase)
-    command = next(step["run"] for step in PIPELINE["jobs"]["studies"]["steps"] if "selected_studies(root)" in step.get("run", ""))
+    command = next(step["run"] for step in JOBS["studies"]["steps"] if "selected_studies(root)" in step.get("run", ""))
     script = command.split("<<'PY'\n", 1)[1].removesuffix("PY\n")
     if failed:
         with pytest.raises(SystemExit, match="Studies failed:.*first"):
@@ -258,7 +268,7 @@ def test_manual_refresh_requires_the_current_head_of_an_open_same_repository_pr(
     gh = tmp_path / "gh"
     gh.write_text('#!/bin/sh\ncat "$PR_METADATA"\n')
     gh.chmod(0o755)
-    command = PIPELINE["jobs"]["source"]["steps"][-1]["run"]
+    command = JOBS["source"]["steps"][-1]["run"]
     result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", command], env=env, text=True, capture_output=True)
     allowed = problem in {None, "local-only"}
     assert (result.returncode == 0) is allowed, result.stdout + result.stderr
@@ -279,17 +289,16 @@ def test_releases_cannot_be_cancelled_by_newer_pr_commits():
     assert PIPELINE["defaults"]["run"]["shell"] == "bash"
 
 
-def run_gate(results, *, release=False, refresh=False, full_refresh=False):
+def run_gate(gate, results, *, release=False, full_refresh=False):
     """
-    Execute the workflow's real aggregate check against synthetic job conclusions.
+    Execute each workflow's real gate against synthetic job conclusions.
     """
     return subprocess.run(
-        ["bash", "-e", "-o", "pipefail", "-c", PIPELINE["jobs"]["verified"]["steps"][0]["run"]],
+        ["bash", "-e", "-o", "pipefail", "-c", JOBS[gate]["steps"][0]["run"]],
         env={
             **os.environ,
             "RESULTS_JSON": json.dumps(results),
             "RELEASE_TAG": "v0.0.1-alpha99" if release else "",
-            "REFRESH": str(refresh).lower(),
             "FULL_REFRESH": str(full_refresh).lower(),
         },
         text=True,
@@ -297,46 +306,40 @@ def run_gate(results, *, release=False, refresh=False, full_refresh=False):
     )
 
 
-@pytest.mark.parametrize("name", sorted(CHECKS))
+@pytest.mark.parametrize("gate,name", [(gate, name) for gate in GATES for name in sorted(CHECKS[gate])])
 @pytest.mark.parametrize("status", ["failure", "cancelled", "skipped"])
-def test_gate_rejects_every_incomplete_job_when_all_features_are_required(name, status):
+def test_gate_rejects_every_incomplete_job_when_all_features_are_required(gate, name, status):
     """
-    A failed, cancelled or unexpectedly skipped suite must never permit release writes.
+    A failed, cancelled or unexpectedly skipped suite must never permit downstream execution.
     """
-    results = {job: {"result": "success"} for job in CHECKS}
+    results = {job: {"result": "success"} for job in CHECKS[gate]}
     results[name]["result"] = status
-    result = run_gate(results, release=True, refresh=True, full_refresh=True)
+    result = run_gate(gate, results, release=True, full_refresh=True)
     assert result.returncode != 0 and name in result.stderr
 
 
-@pytest.mark.parametrize(
-    "release,refresh,full_refresh",
-    [(False, False, False), (True, False, False), (False, True, False), (False, True, True)],
-)
-def test_gate_accepts_only_the_skips_expected_for_the_selected_features(release, refresh, full_refresh):
+@pytest.mark.parametrize("gate", GATES)
+@pytest.mark.parametrize("release,full_refresh", [(False, False), (True, False), (False, True)])
+def test_gate_accepts_only_the_skips_expected_for_the_selected_features(gate, release, full_refresh):
     """
-    Main, PR, tag and manual runs allow only their unselected optional branches to skip.
+    Only unselected chart packaging and cloud measurements may skip inside their stages.
     """
-    results = {job: {"result": "success"} for job in CHECKS}
+    results = {job: {"result": "success"} for job in CHECKS[gate]}
     optional = set()
-    if not release:
+    if gate == "build-complete" and not release:
         optional.add("chart-package")
-    if not refresh:
-        optional.add("studies")
-    if not full_refresh:
+    if gate == "measure-complete" and not full_refresh:
         optional.add("benchmark-refresh")
     for name in optional:
         results[name]["result"] = "skipped"
-    result = run_gate(results, release=release, refresh=refresh, full_refresh=full_refresh)
+    result = run_gate(gate, results, release=release, full_refresh=full_refresh)
     assert result.returncode == 0, result.stderr
 
-    # Even an optional job may not fail silently if it did run.
+    # An optional job still fails the stage if it actually ran and failed.
     for name in optional:
         results[name]["result"] = "failure"
-        assert run_gate(results, release=release, refresh=refresh, full_refresh=full_refresh).returncode != 0
+        assert run_gate(gate, results, release=release, full_refresh=full_refresh).returncode != 0
         results[name]["result"] = "skipped"
-    results["benchmark-smoke"]["result"] = "skipped"
-    assert run_gate(results, release=release, refresh=refresh, full_refresh=full_refresh).returncode != 0
 
 
 @pytest.fixture
@@ -379,7 +382,7 @@ def test_source_selection_fences_tags_and_preserves_safe_outputs(source_reposito
     directory, sha = source_repository
     output = directory / "output"
     result = subprocess.run(
-        ["bash", "-e", "-o", "pipefail", "-c", PIPELINE["jobs"]["source"]["steps"][1]["run"]],
+        ["bash", "-e", "-o", "pipefail", "-c", JOBS["source"]["steps"][1]["run"]],
         cwd=directory,
         env={**os.environ, "GITHUB_REF": ref, "REQUESTED_TAG": requested, "GITHUB_OUTPUT": str(output)},
         text=True,

@@ -101,12 +101,12 @@ def test_ci_and_release_use_one_repository_bootstrap():
                 if HELPER in command:
                     consumers.add((path.name, job))
     assert consumers == {
-        ("ci.yml", "python"),
-        ("ci.yml", "compose"),
-        ("ci.yml", "operator"),
-        ("ci.yml", "chart"),
-        ("ci.yml", "chart-package"),
-        ("ci.yml", "benchmark-smoke"),
+        ("stage-test.yml", "python"),
+        ("stage-build.yml", "compose"),
+        ("stage-test.yml", "operator"),
+        ("stage-build.yml", "chart"),
+        ("stage-build.yml", "chart-package"),
+        ("stage-test.yml", "benchmark-smoke"),
     }
 
 
@@ -114,7 +114,7 @@ def test_plot_tests_have_operator_dependencies_and_child_process_import_paths():
     """
     Plot experiments use the production solver, while child interpreters cannot inherit pytest's sys.path.
     """
-    for filename, job in (("ci.yml", "python"), ("ci.yml", "benchmark-smoke")):
+    for filename, job in (("stage-test.yml", "python"), ("stage-test.yml", "benchmark-smoke")):
         workflow = yaml.load((ROOT / ".github/workflows" / filename).read_text(), Loader=yaml.BaseLoader)
         config = workflow["jobs"][job]
         assert "pkg/polyad-benchmarks" in config["env"]["PYTHONPATH"].split(":")
@@ -127,7 +127,7 @@ def test_mermaid_dependencies_are_installed_for_every_python_version():
     """
     An npm download cache or a matrix-specific pre-commit run cannot supply node_modules.
     """
-    workflow = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
+    workflow = yaml.load((ROOT / ".github/workflows/stage-test.yml").read_text(), Loader=yaml.BaseLoader)
     steps = workflow["jobs"]["python"]["steps"]
     install = next(index for index, step in enumerate(steps) if "npm ci --prefix scripts/validation/mermaid" in step.get("run", ""))
     test = next(index for index, step in enumerate(steps) if "npm test --prefix scripts/validation/mermaid" in step.get("run", ""))

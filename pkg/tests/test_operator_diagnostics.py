@@ -106,7 +106,7 @@ def test_operator_workflow_collects_best_effort_diagnostics_only_after_failure()
     """
     Diagnostics cannot suppress the original job failure or run on successful installations.
     """
-    workflow = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
+    workflow = yaml.load((ROOT / ".github/workflows/stage-test.yml").read_text(), Loader=yaml.BaseLoader)
     steps = workflow["jobs"]["operator"]["steps"]
     step = next(step for step in steps if HELPER in step.get("run", ""))
     assert step["if"] == "failure()"

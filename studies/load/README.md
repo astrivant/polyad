@@ -274,7 +274,9 @@ each experiment. A missing fixture, changed source/recipe, changed Graph generat
 failed activation or timeout fails the run and retains diagnostics.
 
 The [Polyad pipeline](../../.github/workflows/ci.yml) runs these same phases as
-steps within one `benchmark-refresh` job. Select the current head branch of an
+steps within one `benchmark-refresh` job in its reusable
+[Measure stage](../../.github/workflows/stage-measure.yml), after Test and Build
+succeed. Select the current head branch of an
 open, non-draft PR in this repository, enter its `pull-request` number and enable
 both `refresh` and `full-refresh`, leaving `tag` empty. The source job rejects
 stale heads, fork PRs and unrelated branches before any benchmark runs.

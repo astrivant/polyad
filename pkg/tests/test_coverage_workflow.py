@@ -12,10 +12,10 @@ import tomllib
 from pathlib import Path
 
 import pytest
-import yaml
+
+from tests.workflows import JOBS, PIPELINE
 
 ROOT = Path(__file__).resolve().parents[2]
-PIPELINE = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
 
 
 def test_coverage_measures_every_runtime_package_with_portable_paths():
@@ -42,7 +42,7 @@ def test_matrix_results_and_combined_reports_are_uploaded():
     """
     Upload hidden databases for both interpreters and retain reports for PRs as well as main.
     """
-    python = PIPELINE["jobs"]["python"]
+    python = JOBS["python"]
     test = next(step for step in python["steps"] if step.get("name") == "Run Python tests in parallel")
     assert "--cov --cov-config=pyproject.toml --cov-report=" in test["run"]
     assert "--junitxml=.cache/tests/pytest.xml" in test["run"]
@@ -52,8 +52,8 @@ def test_matrix_results_and_combined_reports_are_uploaded():
     assert upload["with"]["include-hidden-files"] == "true"
     assert upload["with"]["name"] == "python-test-results-${{ matrix.python }}"
 
-    combined = PIPELINE["jobs"]["coverage"]
-    assert combined["needs"] == ["source", "python"] and "if" not in combined
+    combined = JOBS["coverage"]
+    assert combined["needs"] == "python" and "if" not in combined
     combine = next(step["run"] for step in combined["steps"] if "coverage combine" in step.get("run", ""))
     versions = python["strategy"]["matrix"]["python"]
     assert f"for version in {' '.join(versions)}; do" in combine
@@ -65,14 +65,14 @@ def test_matrix_results_and_combined_reports_are_uploaded():
     artifact = combined["steps"][-1]["with"]
     assert artifact["name"] == "python-coverage-${{ matrix.package }}" and artifact["retention-days"] == "30"
     assert "coverage.json" in artifact["path"] and ".cache/coverage-html/" in artifact["path"]
-    assert "coverage" in PIPELINE["jobs"]["verified"]["needs"]
+    assert "coverage" in JOBS["test-complete"]["needs"]
 
 
 def test_coverage_matrix_reports_each_package_without_rerunning_tests():
     """
     Slice shared coverage data into package reports and a properly weighted overall report.
     """
-    job = PIPELINE["jobs"]["coverage"]
+    job = JOBS["coverage"]
     assert job["strategy"]["fail-fast"] == "false"
     assert job["strategy"]["matrix"]["include"] == [
         {"package": "all", "files": "pkg/*"},
@@ -94,7 +94,7 @@ def test_combination_rejects_missing_matrix_members_before_reporting(tmp_path, m
     """
     An incomplete artifact set must fail before any summary or badge can be produced.
     """
-    for version in PIPELINE["jobs"]["python"]["strategy"]["matrix"]["python"]:
+    for version in JOBS["python"]["strategy"]["matrix"]["python"]:
         if version == missing:
             continue
         path = tmp_path / f".cache/coverage-shards/python-test-results-{version}/.coverage.{version}"
@@ -104,7 +104,7 @@ def test_combination_rejects_missing_matrix_members_before_reporting(tmp_path, m
     poetry.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$POETRY_LOG"\n')
     poetry.chmod(0o755)
     log = tmp_path / "commands"
-    command = next(step["run"] for step in PIPELINE["jobs"]["coverage"]["steps"] if "coverage combine" in step.get("run", ""))
+    command = next(step["run"] for step in JOBS["coverage"]["steps"] if "coverage combine" in step.get("run", ""))
     result = subprocess.run(
         ["bash", "-e", "-o", "pipefail", "-c", command],
         cwd=tmp_path,
@@ -128,15 +128,15 @@ def test_badge_is_the_only_writer_and_never_blocks_package_publication():
     """
     Match hypothesis-helm's badge action without granting write access to PR or tag jobs.
     """
-    badge = PIPELINE["jobs"]["coverage-badge"]
-    assert badge["needs"] == ["source", "coverage"]
+    badge = JOBS["coverage-badge"]
+    assert badge["needs"] == ["source", "test-stage"]
     assert badge["if"] == ("github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)")
     assert badge["permissions"] == {"contents": "write"}
     assert badge["concurrency"] == {"group": "coverage-badge", "cancel-in-progress": "false"}
     assert PIPELINE["permissions"] == {"contents": "read"}
-    assert {name for name, job in PIPELINE["jobs"].items() if job.get("permissions", {}).get("contents") == "write"} == {"coverage-badge"}
-    assert "coverage-badge" not in PIPELINE["jobs"]["verified"]["needs"]
-    assert "coverage-badge" not in PIPELINE["jobs"]["publish"]["needs"]
+    assert {name for name, job in JOBS.items() if job.get("permissions", {}).get("contents") == "write"} == {"coverage-badge"}
+    assert "coverage-badge" not in JOBS["verified"]["needs"]
+    assert "coverage-badge" not in JOBS["deploy-stage"]["needs"]
     action = badge["steps"][-1]
     assert action["uses"] == "we-cli/coverage-badge-action@8a0b6ee05f6dd0f294089cbe7a848452a2b43eef"
     assert action["if"] == "steps.badge.outputs.changed == 'true'"
@@ -167,7 +167,7 @@ def test_badge_only_updates_when_displayed_coverage_changes(tmp_path, previous, 
     git.chmod(0o755)
     (tmp_path / "python").symlink_to(sys.executable)
     output = tmp_path / "output"
-    command = next(step["run"] for step in PIPELINE["jobs"]["coverage-badge"]["steps"] if step.get("id") == "badge")
+    command = next(step["run"] for step in JOBS["coverage-badge"]["steps"] if step.get("id") == "badge")
     result = subprocess.run(
         ["bash", "-e", "-o", "pipefail", "-c", command],
         cwd=tmp_path,

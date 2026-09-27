@@ -1,0 +1,84 @@
+name: Deploy stage
+
+# Called only by ci.yml, so these groups stay inside its single pipeline run.
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: Immutable source commit resolved by the entry workflow
+        type: string
+        required: true
+      release-tag:
+        description: Explicit release tag, or empty for ordinary validation
+        type: string
+        default: ''
+    secrets:
+      PYPI_API_TOKEN:
+        description: PyPI credential, optionally supplied by the protected pypi environment
+        required: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    name: Publish verified release
+    if: inputs.release-tag != ''
+    concurrency:
+      group: pypi-${{ inputs.release-tag }}
+      cancel-in-progress: false
+    environment: pypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        if: inputs.release-tag != ''
+        with:
+          python-version-file: .python-version
+      - name: Stamp release metadata
+        if: inputs.release-tag != ''
+        env:
+          RELEASE_REF: ${{ inputs.release-tag }}
+        run: python .github/prepare-release.py --tag "$RELEASE_REF"
+      # Verified distributions need no dependency resolution or rebuild here.
+      - name: Install Poetry
+        run: pip install "poetry==$(bash scripts/tooling/tool-version.sh poetry)"
+      - name: Check release version
+        id: version
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        run: python .github/release-version.py --tag "$RELEASE_TAG" --output "$GITHUB_OUTPUT"
+      - name: Download verified distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions-${{ steps.version.outputs.version }}
+          path: dist/
+      - name: Publish wheel and source distribution
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [[ -z "$POETRY_PYPI_TOKEN_PYPI" ]]; then
+            echo '::error::PYPI_API_TOKEN is unavailable. Grant this repository access to the organization secret, or set a repository/environment secret.'
+            exit 1
+          fi
+
+          # Check the complete release before uploading its first package.
+          for package in polyad_types polyad_schemas polyad_sdk polyad_benchmarks polyad; do
+            test -s "dist/${package}-${PACKAGE_VERSION}-py3-none-any.whl"
+            test -s "dist/${package}-${PACKAGE_VERSION}.tar.gz"
+          done
+          echo "Publishing all five Polyad distributions at $PACKAGE_VERSION to PyPI"
+          poetry -C pkg/polyad-types publish --dist-dir ../../dist --no-interaction
+          poetry -C pkg/polyad-schemas publish --dist-dir ../../dist --no-interaction
+          poetry -C pkg/polyad-sdk publish --dist-dir ../../dist --no-interaction
+          poetry -C pkg/polyad-benchmarks publish --dist-dir ../../dist --no-interaction
+          poetry publish --no-interaction
