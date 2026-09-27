@@ -4,6 +4,7 @@ Verify profile selection, HA floors and management-cluster ownership of remote p
 
 from __future__ import annotations
 
+import json
 import subprocess
 
 import jsonschema
@@ -95,6 +96,76 @@ def test_ha_root_pools_belong_to_management_release(mode):
     groups = [obj for obj in objects if obj["kind"] == "ReplicaGroup"]
     assert len(groups) == (3 if mode == "Distributed" else 0)
     assert all(obj["spec"]["minReplicas"] >= 2 for obj in groups)
+
+
+@pytest.mark.parametrize("ha", [False, True])
+def test_local_root_observes_installation_without_remote_credentials(ha: bool) -> None:
+    """
+    Run the existing atlas reconciler with local credentials and unchanged replica floors.
+
+    Args:
+        ha (bool): Whether the root has one or multiple operator replicas.
+    """
+    objects = render(
+        f"ha={str(ha).lower()}",
+        "rootControlPlane.enabled=true",
+        "rootControlPlane.mode=Local",
+        "global.multiCluster.clusterName=local",
+        "metrics.enabled=true",
+        "keda.observation.enabled=false",
+    )
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
+    assert deployment["spec"]["replicas"] == (2 if ha else 1)
+    pod = deployment["spec"]["template"]["spec"]
+    container = pod["containers"][0]
+    env = {item["name"]: item.get("value") for item in container["env"]}
+    assert env["POLYAD_ROOT_ENABLED"] == "true"
+    assert env["POLYAD_SELF_GRAPH"] == "test-atlas"
+    assert env["POLYAD_SELF_GRAPH_KIND"] == "PolyGraph"
+    assert env["POLYAD_ROOT_DEPLOYMENT"] == "test-polyad"
+    assert env["POLYAD_CLUSTER_NAME"] == "local"
+    assert set(json.loads(env["POLYAD_LOCAL_SERVICES"])) == {"endpoints", "dragonfly"}
+    assert "KUBECONFIG" not in env
+    assert not any(item["name"] == "root-credentials" for item in pod["volumes"] + container["volumeMounts"])
+    assert not any(obj["kind"] == "OperatorPool" for obj in objects)
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "rootControlPlane.mode=Unknown",
+        "global.multiCluster.clusterName=",
+        "federation.enabled=true",
+        "federation.clusters[0].name=remote,federation.clusters[0].namespace=workers,federation.clusters[0].kubeconfigSecret=remote",
+        "rootControlPlane.pools[0].name=remote,rootControlPlane.pools[0].cluster=remote,rootControlPlane.pools[0].replicas=1",
+        "metrics.enabled=false",
+    ],
+)
+def test_local_root_rejects_remote_configuration_and_missing_observability(setting: str) -> None:
+    """
+    Reject invalid local roots before rendering a workload or mounting credentials.
+
+    Args:
+        setting (str): Invalid override of the otherwise valid local profile.
+    """
+    from tests.test_chart import CHART
+
+    result = subprocess.run(
+        [
+            "helm",
+            "template",
+            "test",
+            str(CHART),
+            "--set",
+            "rootControlPlane.enabled=true,rootControlPlane.mode=Local,global.multiCluster.clusterName=local,metrics.enabled=true",
+            "--set",
+            setting,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
 
 
 @pytest.mark.parametrize(

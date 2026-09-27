@@ -43,9 +43,16 @@ Docker containers. Polyad itself runs **standalone, without HA**:
 - One Dragonfly instance and one Dragonfly operator replica.
 - A 1 GiB Dragonfly snapshot claim using the multi-node-aware `local-path` class.
 - Metrics Server plus Polyad's internal metrics endpoint and per-graph metrics.
+- A local-only root control plane and its reserved `PolyGraph/polyad-atlas`,
+  containing the bootstrap, Dragonfly, and endpoint observation Graphs.
 - Minikube's local registry and per-node registry proxies for the built image.
-- No KEDA installation, horizontal autoscaling, distributed executor fleet, root
-  control plane, or Istio installation by default.
+- No KEDA installation, horizontal autoscaling, remote worker fleet, or Istio
+  installation by default. Root mode requires no remote kubeconfig or cache Secret.
+
+The atlas makes this installation self-observing through Polyad's own graph
+reconciler. Helm still owns the bootstrap Deployment and chart services; the
+reserved Graphs observe them rather than creating duplicate operator or cache
+workloads. This does not provide failover for the single operator or cache.
 
 Three nodes provide room to schedule application workloads, not control-plane or
 cache redundancy. Local-path volumes remain tied to one node and are not
@@ -271,7 +278,8 @@ registry. The addon's registry storage is ephemeral; run `enable` to republish
 the image after registry data is lost.
 
 The smoke test checks node and controller readiness, confirms one operator and
-one cache instance, and creates a uniquely named Workload and Graph. It waits for
+one cache instance, waits for the reserved atlas to exist and report ready, and
+creates a uniquely named Workload and Graph. It waits for
 both graph completion and the completed-node metric. Successful runs remove only
 their own Graph and Workload; failed runs retain them and print their names for
 inspection. It does not apply or delete your application examples.
@@ -282,6 +290,8 @@ inspection. It does not apply or delete your application examples.
 kubectl --context polyad get nodes
 kubectl --context polyad -n polyad get deployments polyad-polyad polyad-dragonfly-operator
 kubectl --context polyad -n polyad get dragonfly polyad-queue -o jsonpath='{.spec.replicas}'
+kubectl --context polyad -n polyad get polygraph polyad-atlas
+kubectl --context polyad -n polyad get graphs -l polyad.astrivant.com/internal=true
 helm --kube-context polyad --namespace polyad list
 bash integrations/minikube/minikube.sh test
 ```
@@ -289,13 +299,21 @@ bash integrations/minikube/minikube.sh test
 Expect three `Ready` nodes, both Deployments ready at `1/1`, Dragonfly's replica
 count `1`, and Helm release `polyad` listed as deployed. The helper prints
 `Polyad standalone smoke test passed.` on success. The smoke Graph is removed
-after success, so an empty Graph list immediately afterward is expected.
+after success, but the atlas, its reusable definitions and its live internal
+Graph instances remain. `polyad-atlas.status.ready` should be `true`.
 
 `ha: false` selects one dense Polyad operator. The integration also fixes
 `dragonfly.ha.enabled: false` and one Dragonfly controller replica. These are
 separate settings: three Kubernetes nodes do not turn any of these components
 into HA. See [deployment profiles](../../docs/deployment/deployment-profiles.md)
 for installations that do need replicated control-plane components.
+
+The helper enforces `rootControlPlane.enabled: true` and
+`rootControlPlane.mode: Local`. Its cluster identity follows
+`POLYAD_MINIKUBE_PROFILE`; federation, remote pools and KEDA observation remain
+disabled. The generic chart still defaults to root mode disabled. See the
+[local-root reference](../../charts/polyad/references/values-local-root.reference.yaml)
+to use this configuration outside Minikube.
 
 ### Run an application example
 
@@ -565,7 +583,12 @@ kubectl --context polyad -n polyad delete workload hello --wait=true --timeout=3
 To uninstall only the release, first drain/delete your Graph, PolyGraph,
 ReplicaGroup, Composition, and Rewrite resources while the operator still runs,
 then use `disable`. The helper refuses to uninstall while those boundaries remain
-in its namespace. It does not explicitly delete the namespace, CRDs, or PVCs;
+in its namespace. It recognizes its own reserved definitions by root ownership
+and its instances by controller-owner UID, not merely an internal label. Once
+application boundaries are gone, it disables the topology producer through a
+Helm upgrade, drains the atlas and removes its reusable definitions, then
+uninstalls the release. Any drain failure leaves the controller installed for
+recovery; `enable` restores local root mode. It does not explicitly delete the namespace, CRDs, or PVCs;
 normal Kubernetes ownership and storage reclaim policies still apply, so back up
 anything important before uninstalling.
 

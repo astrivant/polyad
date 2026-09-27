@@ -13,16 +13,18 @@
 
 Set the chart's top-level `ha` Boolean: `false` (the default) runs one dense
 operator; `true` runs at least two replicas. `architecture.mode` and
-`rootControlPlane.enabled` configure optional layouts within HA.
+`rootControlPlane.enabled` configure optional layouts. Distributed components
+and Federated root management require HA; a Local root atlas also supports one
+dense operator.
 
 | Profile | Operator resources in the Helm release cluster | Optional extensions |
 | --- | --- | --- |
-| `ha: false` (singular) | One dense operator replica and enabled endpoint Services | Workload APIs, networking, observers and optional PostgreSQL |
+| `ha: false` (singular) | One dense operator replica and enabled endpoint Services | Local root atlas, workload APIs, networking, observers and optional PostgreSQL |
 | `ha: true` | At least two dense operator replicas sharing queues and leases | Split components, root-managed execution pools, and the same optional integrations |
 
 `operator.replicaCount: null` selects one replica for singular and two for HA.
 An explicit count must be one for singular or at least two for HA. Singular
-rejects operator autoscaling, split components and root-managed execution.
+rejects operator autoscaling, split components and root-managed remote execution.
 The HA operator CPU/memory HPA must keep at least two replicas. Distributed component
 groups likewise require at least two copies and a minimum of two when scaled.
 

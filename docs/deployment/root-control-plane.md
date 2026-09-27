@@ -29,6 +29,18 @@ CRDs and projected credentials. Administrators can instead
 while retaining lifecycle ownership. This is optional; an ordinary single-cluster install
 continues to work without remote credentials.
 
+For a single-cluster installation that should represent itself in the same
+reserved atlas, set `rootControlPlane.enabled: true` and
+`rootControlPlane.mode: Local`. This supports either one dense operator or HA,
+uses in-cluster credentials, and rejects federation registrations, remote pools
+and mesh peers. Metrics and a stable `global.multiCluster.clusterName` are
+required. Disable `keda.observation.enabled` when KEDA is absent. The
+[local-root reference](../../charts/polyad/references/values-local-root.reference.yaml)
+provides a single-replica example; Minikube enables this mode automatically.
+Helm retains ownership of the bootstrap and native services, while their live
+health rolls up through the operator's internal Graphs into the root PolyGraph.
+It does not turn a single replica into a highly available deployment.
+
 All graph observations, topology events, queue demand and scaling intent converge
 at the root. Application payloads travel over the graphs' configured networking;
 they do not pass through the operator. Read-only observers remain optional readers,
@@ -178,9 +190,10 @@ this same root registry, so every additional destination is registered at the ro
 
 | Field | Meaning |
 | --- | --- |
-| `rootControlPlane.enabled` | Opt in to central reconciliation, reports and worker management; default `false`. Requires the HA profile, federation and metrics. |
+| `rootControlPlane.enabled` | Maintain the reserved atlas and local service hierarchy; default `false`. Requires metrics. |
+| `rootControlPlane.mode` | `Federated` (default) adds remote worker management and requires HA, federation and shared credentials. `Local` limits the atlas to this installation and permits a single dense operator. |
 | `rootControlPlane.pools` | Optional Helm-owned OperatorPool declarations with name, cluster, replicas and placement/resource overrides, or `existingDeployment` and `scalingAuthority` for attachments. Empty when pools are managed separately. Requires the HA profile and root mode. |
-| `rootControlPlane.kubeconfigSecret` | Root namespace Secret holding root credentials under `config`; required in root mode. |
+| `rootControlPlane.kubeconfigSecret` | Root namespace Secret holding root credentials under `config`; required and mounted for Federated root mode, not Local mode. |
 | `rootControlPlane.endpoints.api` | Reachable root composition URL advertised to workloads. |
 | `rootControlPlane.endpoints.events` | Reachable root events URL advertised to workloads. |
 | `rootControlPlane.endpoints.metrics` | Reachable root metrics URL advertised to workloads. |

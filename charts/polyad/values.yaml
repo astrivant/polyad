@@ -1047,8 +1047,10 @@ capacity:
 ## @section Root control plane
 ## @param rootControlPlane [object] Settings for rootControlPlane.
 rootControlPlane:
-  ## @param rootControlPlane.enabled [boolean] Manage registered clusters and remote execution replicas through one root scheduler; requires ha
+  ## @param rootControlPlane.enabled [boolean] Maintain the reserved root PolyGraph and local service hierarchy; Federated mode also manages remote workers and requires ha
   enabled: false
+  ## @param rootControlPlane.mode [string] Local observes this installation without remote credentials; Federated also manages registered clusters and remote workers
+  mode: Federated
   ## @param rootControlPlane.pools [array] Root-owned OperatorPools; set existingDeployment to attach a Helm-installed worker and scalingAuthority to Root or Local instead of provisioning it
   pools: []
   ## @param rootControlPlane.kubeconfigSecret [string] Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters

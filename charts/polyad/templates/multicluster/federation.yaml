@@ -10,9 +10,11 @@
 {{- end }}
 
 {{- if .Values.rootControlPlane.enabled }}
+{{- if eq .Values.rootControlPlane.mode "Federated" }}
 {{- if not .Values.federation.enabled }}{{ fail "rootControlPlane requires federation.enabled" }}{{ end }}
 {{- if not .Values.rootControlPlane.kubeconfigSecret }}{{ fail "rootControlPlane requires kubeconfigSecret for worker access to the root" }}{{ end }}
 {{- if not .Values.dragonfly.existingSecret }}{{ fail "rootControlPlane requires dragonfly.existingSecret with a cache URL reachable from every worker cluster" }}{{ end }}
+{{- end }}
 {{- if not .Values.metrics.enabled }}{{ fail "rootControlPlane requires metrics.enabled for centralized observations" }}{{ end }}
 {{- end }}
 {{- end -}}

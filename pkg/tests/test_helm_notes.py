@@ -6,10 +6,14 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from tests.helm import render_with_notes
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 CHART = Path(__file__).resolve().parents[2] / "charts/polyad"
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="requires Helm and chart dependencies")
@@ -39,6 +43,26 @@ def test_default_notes_do_not_advertise_disabled_apis(notes):
     assert "127.0.0.1:8080" not in text
     assert "helm get notes example -n apps" in text
     assert "/v1/" not in text and "/openapi.json" not in text
+
+
+def test_local_root_notes_describe_the_atlas_without_remote_worker_instructions(notes: Callable[..., str]) -> None:
+    """
+    Describe local self-management without advertising federated execution pools.
+
+    Args:
+        notes (Callable[..., str]): Isolated chart renderer returning install notes.
+    """
+    text = notes(
+        "rootControlPlane.enabled=true",
+        "rootControlPlane.mode=Local",
+        "global.multiCluster.clusterName=local",
+        "metrics.enabled=true",
+        "keda.observation.enabled=false",
+    )
+    assert "Local self-management is enabled" in text
+    assert "kubectl -n apps get polygraph example-atlas" in text
+    assert "Remote worker management is disabled" in text
+    assert "OperatorPools request execution replicas" not in text
 
 
 def test_internal_notes_include_enabled_services_without_credentials(notes):

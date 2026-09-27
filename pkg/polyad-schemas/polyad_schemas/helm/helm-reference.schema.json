@@ -1621,6 +1621,9 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "mode": {
+          "$ref": "#/definitions/helmValues/properties/rootControlPlane/properties/mode"
+        },
         "kubeconfigSecret": {
           "$ref": "#/definitions/helmValues/properties/rootControlPlane/properties/kubeconfigSecret"
         },
@@ -15671,6 +15674,14 @@
             "enabled"
           ],
           "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "Local",
+                "Federated"
+              ],
+              "description": "Local observes this installation without remote credentials; Federated also manages registered clusters and remote workers"
+            },
             "kubeconfigSecret": {
               "type": "string",
               "maxLength": 63,
@@ -15907,7 +15918,7 @@
             },
             "enabled": {
               "type": "boolean",
-              "description": "Manage registered clusters and remote execution replicas through one root scheduler; requires ha"
+              "description": "Maintain the reserved root PolyGraph and local service hierarchy; Federated mode also manages remote workers and requires ha"
             }
           }
         },

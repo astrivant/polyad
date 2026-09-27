@@ -18,9 +18,16 @@ It does not elect a root or start application API listeners. Configure OperatorP
 and scalingAuthority: {{ .Values.worker.scalingAuthority }} to attach its Graph to {{ .Values.worker.rootGraph }}.
 Install/upgrade through this release. Replica scaling authority: {{ .Values.worker.scalingAuthority }}.
 {{- else if .Values.rootControlPlane.enabled }}
+{{- if eq .Values.rootControlPlane.mode "Local" }}
+Local self-management is enabled. The reserved PolyGraph {{ .Release.Name }}-atlas
+observes this operator and its local services; Helm retains their native ownership.
+Remote worker management is disabled. Inspect the root hierarchy:
+  kubectl -n {{ .Release.Namespace }} get polygraph {{ .Release.Name }}-atlas
+{{- else }}
 This is the management release. Root components and their Services run here.
 OperatorPools request execution replicas in registered workload clusters; do not
 install a second root release there for the same graph families.
+{{- end }}
 {{- else }}
 The dense operator and enabled Services run in this release's cluster and namespace.
 {{- end }}

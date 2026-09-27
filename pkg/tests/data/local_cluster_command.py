@@ -106,6 +106,26 @@ def main() -> int:
             print("1")
         elif "jsonpath={.metadata.name}" in command:
             print("polyad-kind-smoke-abc12" if "--kubeconfig" in command else "polyad-minikube-smoke-abc12")
+        elif "get" in command and "graphs,polygraphs,replicagroups,compositions,rewrites,daemons" in command:
+            objects = json.loads(os.environ.get("MINIKUBE_TEST_ROOT_RESOURCES", "[]"))
+            for name in os.environ.get("EXISTING_BOUNDARIES", "").splitlines():
+                objects.append({"kind": "Graph", "metadata": {"name": name.split("/")[-1], "uid": name}})
+
+            # Deleting an atlas drains its controller-owned descendants before
+            # returning. Reusable definitions disappear only on explicit delete.
+            calls = [json.loads(line)["command"] for line in Path(os.environ["COMMAND_LOG"]).read_text().splitlines()]
+            deleted = {call[call.index("delete") + 1].lower() for call in calls if call[0] == "kubectl" and "delete" in call}
+            removed = {obj["metadata"]["uid"] for obj in objects if f"{obj['kind']}/{obj['metadata']['name']}".lower() in deleted}
+            while True:
+                descendants = {
+                    obj["metadata"]["uid"]
+                    for obj in objects
+                    if any(owner.get("controller") and owner["uid"] in removed for owner in obj["metadata"].get("ownerReferences", []))
+                }
+                if descendants <= removed:
+                    break
+                removed |= descendants
+            print(json.dumps({"items": [obj for obj in objects if obj["metadata"]["uid"] not in removed]}))
         elif "get" in command and "graphs,polygraphs,replicagroups,compositions,rewrites" in command:
             print(os.environ.get("EXISTING_BOUNDARIES", ""), end="")
     return 0

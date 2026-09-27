@@ -230,8 +230,16 @@ def test_render_accepts_overlay_paths_with_spaces_and_enforces_standalone(comman
         "dragonflyOperator.replicaCount=1",
         "architecture.mode=Dense",
         "worker.enabled=false",
-        "rootControlPlane.enabled=false",
+        "rootControlPlane.enabled=true",
+        "rootControlPlane.mode=Local",
+        "rootControlPlane.pools=[]",
+        "rootControlPlane.meshPeers=[]",
+        "global.multiCluster.clusterName=isolated-test",
+        "federation.enabled=false",
+        "federation.clusters=[]",
+        "metrics.enabled=true",
         "keda.install=false",
+        "keda.observation.enabled=false",
     ):
         assert setting in render
 
@@ -259,6 +267,87 @@ def test_disable_requires_drained_boundaries(commands: Runner) -> None:
     assert uninstall[:3] == ["helm", "uninstall", "polyad"]
     assert uninstall[uninstall.index("--kube-context") + 1] == "isolated-test"
     assert not any("delete" in record["command"] for record in records)
+
+
+def atlas_objects() -> list[dict[str, Any]]:
+    """
+    Provide reserved definitions and two generations of real controller-owned children.
+
+    Returns:
+        list[dict[str, Any]]: Minimal inventory for scoped teardown command tests.
+    """
+    objects = [
+        {"kind": kind, "metadata": {"name": name, "uid": name}}
+        for kind, name in [("PolyGraph", "polyad-atlas"), ("Graph", "polyad-atlas-root"), ("Daemon", "polyad-atlas-root")]
+    ]
+    for obj in objects:
+        obj["metadata"]["labels"] = {"polyad.astrivant.com/internal": "true"}
+        obj["metadata"]["annotations"] = {
+            "polyad.astrivant.com/root-owner": json.dumps(["isolated-test", "test-namespace", "Deployment", "polyad-polyad"])
+        }
+    for name, parent in (("root-instance", "polyad-atlas"), ("bootstrap-instance", "root-instance")):
+        objects.append({"kind": "Graph", "metadata": {"name": name, "uid": name, "ownerReferences": [{"uid": parent, "controller": True}]}})
+    return objects
+
+
+def test_disable_drains_only_its_root_before_uninstall(commands: Runner) -> None:
+    """
+    Stop topology creation, drain instances, and then remove reusable definitions.
+
+    Args:
+        commands (Runner): Isolated infrastructure command recorder.
+    """
+    result, records = commands("disable", overrides={"MINIKUBE_TEST_ROOT_RESOURCES": json.dumps(atlas_objects())})
+    assert result.returncode == 0, result.stderr
+    calls = [record["command"] for record in records]
+    pause = next(call for call in calls if call[:2] == ["helm", "upgrade"])
+    assert "rootControlPlane.enabled=false" in pause and "--reuse-values" in pause and "--wait" in pause
+    deletes = [call for call in calls if call[0] == "kubectl" and "delete" in call]
+    assert [call[call.index("delete") + 1] for call in deletes] == [
+        "polygraph/polyad-atlas",
+        "Graph/polyad-atlas-root",
+        "Daemon/polyad-atlas-root",
+    ]
+    assert all("--wait=true" in call for call in deletes)
+    uninstall = next(call for call in calls if call[:2] == ["helm", "uninstall"])
+    assert calls.index(pause) < calls.index(deletes[0]) < calls.index(deletes[-1]) < calls.index(uninstall)
+
+
+@pytest.mark.parametrize("failure", ["helm upgrade", "delete polygraph/polyad-atlas", "delete Graph/polyad-atlas-root"])
+def test_disable_preserves_controller_after_failed_root_drain(commands: Runner, failure: str) -> None:
+    """
+    Keep the controller installed whenever pausing or draining the atlas fails.
+
+    Args:
+        commands (Runner): Isolated infrastructure command recorder.
+        failure (str): Teardown operation to fail.
+    """
+    result, records = commands("disable", overrides={"MINIKUBE_TEST_ROOT_RESOURCES": json.dumps(atlas_objects()), "FAIL_COMMAND": failure})
+    assert result.returncode == 43
+    assert not any(record["command"][:2] == ["helm", "uninstall"] for record in records)
+
+
+@pytest.mark.parametrize("foreign", ["application", "another-root", "label-only"])
+def test_disable_never_treats_other_boundaries_as_its_root(commands: Runner, foreign: str) -> None:
+    """
+    Require root ownership or a controller-owner chain, not a name or internal label.
+
+    Args:
+        commands (Runner): Isolated infrastructure command recorder.
+        foreign (str): Unowned application, other root, or internal-label-only boundary.
+    """
+    objects = atlas_objects()
+    stranger = {"kind": "Graph", "metadata": {"name": "keep-me", "uid": "foreign", "labels": {"polyad.astrivant.com/internal": "true"}}}
+    if foreign == "another-root":
+        stranger["metadata"]["annotations"] = {
+            "polyad.astrivant.com/root-owner": json.dumps(["elsewhere", "test-namespace", "Deployment", "polyad-polyad"])
+        }
+    elif foreign == "application":
+        stranger["metadata"]["labels"] = {}
+    objects.append(stranger)
+    result, records = commands("disable", overrides={"MINIKUBE_TEST_ROOT_RESOURCES": json.dumps(objects)})
+    assert result.returncode != 0 and "keep-me" in result.stderr
+    assert not any(record["command"][0] == "helm" or "delete" in record["command"] for record in records)
 
 
 @pytest.mark.parametrize(
@@ -643,9 +732,29 @@ def test_local_overlay_renders_one_operator_and_one_cache() -> None:
     env = {item["name"]: item.get("value") for item in operator["env"]}
     assert "--ha" not in operator["args"]
     assert env["POLYAD_COMPONENT"] == "dense"
+    assert env["POLYAD_ROOT_ENABLED"] == "true"
+    assert env["POLYAD_SELF_GRAPH"] == "polyad-atlas"
+    assert env["POLYAD_SELF_GRAPH_KIND"] == "PolyGraph"
+    assert env["POLYAD_CLUSTER_NAME"] == "polyad"
+    assert set(json.loads(env["POLYAD_LOCAL_SERVICES"])) == {"endpoints", "dragonfly"}
+    assert not any(volume["name"] == "root-credentials" for volume in deployments["polyad-polyad"]["spec"]["template"]["spec"]["volumes"])
     dragonfly = next(obj for obj in objects if obj["kind"] == "Dragonfly")
     assert dragonfly["metadata"]["name"] == "polyad-queue" and dragonfly["spec"]["replicas"] == 1
     assert dragonfly["spec"]["snapshot"]["persistentVolumeClaimSpec"]["storageClassName"] == "local-path"
     assert not any(
         obj["kind"] in {"HorizontalPodAutoscaler", "ScaledObject", "VirtualService", "Graph", "PodDisruptionBudget"} for obj in objects
     )
+
+
+@pytest.mark.parametrize("condition", ["--for=create", "--for=jsonpath={.status.ready}=true"])
+def test_smoke_requires_reserved_atlas_before_application_work(commands: Runner, condition: str) -> None:
+    """
+    Stop before creating application resources when the root hierarchy cannot converge.
+
+    Args:
+        commands (Runner): Isolated infrastructure command recorder.
+        condition (str): Atlas existence or readiness check to fail.
+    """
+    result, records = commands("test", overrides={"FAIL_COMMAND": f"wait polygraph/polyad-atlas {condition}"})
+    assert result.returncode == 43
+    assert not any("create" in record["command"] or "delete" in record["command"] for record in records)

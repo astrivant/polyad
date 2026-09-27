@@ -388,7 +388,7 @@ spec:
               mountPath: /var/run/polyad/postgresql
               readOnly: true
             {{- end }}
-            {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled }}
+            {{- if or .Values.worker.enabled (and .Values.rootControlPlane.enabled (eq .Values.rootControlPlane.mode "Federated")) }}
             - name: root-credentials
               mountPath: /var/run/polyad/root
               readOnly: true
@@ -492,7 +492,7 @@ spec:
               - key: {{ ternary "uri" .Values.postgresql.secretKey .Values.postgresql.managed | quote }}
                 path: uri
         {{- end }}
-        {{- if or .Values.worker.enabled .Values.rootControlPlane.enabled }}
+        {{- if or .Values.worker.enabled (and .Values.rootControlPlane.enabled (eq .Values.rootControlPlane.mode "Federated")) }}
         - name: root-credentials
           secret:
             secretName: {{ .Values.rootControlPlane.kubeconfigSecret | quote }}

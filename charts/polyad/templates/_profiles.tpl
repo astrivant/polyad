@@ -58,12 +58,17 @@
 {{/* Replica intent belongs to the root; ha selects no local replica floor here. */}}
 {{- else if eq $profile "singular" -}}
 {{- if or (ne (int $values.operator.replicaCount) 1) $values.operator.autoscaling.enabled }}{{ fail "singular requires one operator replica and operator.autoscaling.enabled=false" }}{{ end -}}
-{{- if or (eq $values.architecture.mode "Distributed") $values.rootControlPlane.enabled }}{{ fail "split components and remote execution management require the ha profile" }}{{ end -}}
+{{- if or (eq $values.architecture.mode "Distributed") (and $values.rootControlPlane.enabled (eq $values.rootControlPlane.mode "Federated")) }}{{ fail "split components and remote execution management require the ha profile" }}{{ end -}}
 {{- else -}}
 {{- if or (lt (int $values.operator.replicaCount) 2) (and $values.operator.autoscaling.enabled (lt (int $values.operator.autoscaling.minReplicas) 2)) }}{{ fail "ha requires at least two operator replicas and an autoscaling minimum of two" }}{{ end -}}
 {{- end -}}
 {{- if and $values.architecture.autoscaling (ne $values.architecture.mode "Distributed") }}{{ fail "component autoscaling requires architecture.mode=Distributed" }}{{ end -}}
 {{- if and $values.rootControlPlane.pools (not $values.rootControlPlane.enabled) }}{{ fail "rootControlPlane.pools requires rootControlPlane.enabled=true" }}{{ end -}}
+{{/* A local atlas uses in-cluster identity and cannot acquire remote execution duties. */}}
+{{- if and $values.rootControlPlane.enabled (eq $values.rootControlPlane.mode "Local") -}}
+{{- if or $values.federation.enabled $values.federation.clusters $values.rootControlPlane.pools $values.rootControlPlane.meshPeers }}{{ fail "Local root mode requires federation disabled, no registered clusters, no remote pools and no mesh peers" }}{{ end -}}
+{{- if not $values.global.multiCluster.clusterName }}{{ fail "Local root mode requires global.multiCluster.clusterName" }}{{ end -}}
+{{- end -}}
 {{- if $values.operator.autoscaling.connections.enabled -}}
 {{- if or (not $values.ha) $values.worker.enabled }}{{ fail "connection-pressure autoscaling requires ha and a local operator/component target; remote workers retain their pool scaling authority" }}{{ end -}}
 {{- if not (or $values.operator.autoscaling.enabled $values.architecture.autoscaling) }}{{ fail "connection-pressure autoscaling requires operator.autoscaling.enabled or architecture.autoscaling" }}{{ end -}}

@@ -179,6 +179,7 @@ default values. Schema checks keep annotations in all shipped values files in sy
 | [`values-components.reference.yaml`](references/values-components.reference.yaml) | HA bootstrap plus a self-managed gateway/executor/telemetry Graph and KEDA scaling in the release cluster | [Components](../../docs/deployment/components.md) |
 | [`values-federation.reference.yaml`](references/values-federation.reference.yaml) | Remote cluster registrations for PolyGraph placement; destinations have independent execution operators | [Federation](../../docs/deployment/multicluster.md#placement-and-ownership) |
 | [`values-root-control-plane.reference.yaml`](references/values-root-control-plane.reference.yaml) | HA management release that installs and controls remote execution pools | [Root control plane](../../docs/deployment/root-control-plane.md) |
+| [`values-local-root.reference.yaml`](references/values-local-root.reference.yaml) | Single-replica local atlas and service observations without remote credentials; used by Minikube | [Local Minikube root](../../integrations/minikube/README.md#what-runs) |
 | [`values-worker.reference.yaml`](references/values-worker.reference.yaml) | Downstream Helm-owned executors attached to a root, with explicit root or local scaling authority | [Helm workers](../../docs/deployment/helm-workers.md) |
 | [`values-multicluster.reference.yaml`](references/values-multicluster.reference.yaml) | Istio transport, peer gateways and local network identity; adapt separately per cluster | [Multicluster networking](../../docs/deployment/multicluster.md#istio-across-different-networks) |
 | [`values-istio-bundled.reference.yaml`](references/values-istio-bundled.reference.yaml) | Release-owned, pinned Istio base and control plane with native operator sidecars | [Bundled Istio](../../docs/deployment/istio-features.md#deployment-strategies) |
@@ -747,9 +748,10 @@ See [Dense and Distributed deployments](../../docs/deployment/components.md) and
 
 ### Root control plane
 
-| Name                                 | Description                                                                                                                                                          | Value   |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `rootControlPlane.enabled`           | **Type: boolean.** Manage registered clusters and remote execution replicas through one root scheduler; requires ha                                                  | `false` |
+| Name                                 | Description                                                                                                                                                          | Value       |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `rootControlPlane.enabled`           | **Type: boolean.** Maintain the reserved root PolyGraph and local service hierarchy; Federated mode also manages remote workers and requires ha                      | `false` |
+| `rootControlPlane.mode`              | **Type: string.** Local observes this installation without remote credentials; Federated also manages registered clusters and remote workers                         | `Federated` |
 | `rootControlPlane.pools`             | **Type: array.** Root-owned OperatorPools; set existingDeployment to attach a Helm-installed worker and scalingAuthority to Root or Local instead of provisioning it | `[]` |
 | `rootControlPlane.kubeconfigSecret`  | **Type: string.** Existing root-namespace Secret with embedded, verified root kubeconfig under config, reachable from worker clusters                                | `""` |
 | `rootControlPlane.meshPeers`         | **Type: array.** Complete workload-cluster mesh peer registry; the controller excludes its current execution cluster                                                 | `[]` |

@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=../values.reference.schema.json
+# Local self-management with one operator and one cache, without federation.
+# Helm owns the bootstrap Deployment; the operator creates its reserved atlas
+# and observes local service health without duplicating those native resources.
+## @param ha [boolean] Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true.
+ha: false
+## @param operator [object] Settings for operator.
+operator:
+  ## @param operator.replicaCount [integer, nullable] Operator replicas; null selects 1 for singular or 2 for ha
+  replicaCount: 1
+  ## @param operator.autoscaling [object] Settings for operator.autoscaling.
+  autoscaling:
+    ## @param operator.autoscaling.enabled [boolean] Enable operator HPA using CPU and optional memory utilization
+    enabled: false
+## @param rootControlPlane [object] Settings for rootControlPlane.
+rootControlPlane:
+  ## @param rootControlPlane.enabled [boolean] Maintain the reserved root PolyGraph and local service hierarchy; Federated mode also manages remote workers and requires ha
+  enabled: true
+  ## @param rootControlPlane.mode [string] Local observes this installation without remote credentials; Federated also manages registered clusters and remote workers
+  mode: Local
+## @param global [object] Settings for global.
+global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
+  multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad
+    clusterName: local
+## @param metrics [object] Settings for metrics.
+metrics:
+  ## @param metrics.enabled [boolean] Serve cached queue, write, inventory, component, backend and root-worker metrics on internal port 8092; optional families follow their feature enablement
+  enabled: true
+## @param dragonfly [object] Settings for dragonfly.
+dragonfly:
+  ## @param dragonfly.ha [object] Settings for dragonfly.ha.
+  ha:
+    ## @param dragonfly.ha.enabled [boolean] Enable primary/replica replication and automatic failover
+    enabled: false
+  ## @param dragonfly.autoscaling [object] Settings for dragonfly.autoscaling.
+  autoscaling:
+    ## @param dragonfly.autoscaling.enabled [boolean] Use KEDA for bundled HA Dragonfly and enable Polyad metrics; inactive outside bundled HA
+    enabled: false
+## @param dragonflyOperator [object] Settings for dragonflyOperator.
+dragonflyOperator:
+  ## @param dragonflyOperator.replicaCount [integer] Leader-elected Dragonfly controller replicas
+  replicaCount: 1
+## @param keda [object] Settings for keda.
+keda:
+  ## @param keda.observation [object] Settings for keda.observation.
+  observation:
+    ## @param keda.observation.enabled [boolean] Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA
+    enabled: false

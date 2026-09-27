@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
-# Local overlay for the canonical chart, not a second distribution of Polyad.
+# Single-replica local root with a reserved atlas; no remote cluster credentials.
 ## @param ha [boolean] Enable replicated operators; false runs one dense operator. Split components and root-managed remote workers require true.
 ha: false
 ## @param operator [object] Settings for operator.
@@ -30,8 +30,16 @@ worker:
   enabled: false
 ## @param rootControlPlane [object] Settings for rootControlPlane.
 rootControlPlane:
-  ## @param rootControlPlane.enabled [boolean] Manage registered clusters and remote execution replicas through one root scheduler; requires ha
-  enabled: false
+  ## @param rootControlPlane.enabled [boolean] Maintain the reserved root PolyGraph and local service hierarchy; Federated mode also manages remote workers and requires ha
+  enabled: true
+  ## @param rootControlPlane.mode [string] Local observes this installation without remote credentials; Federated also manages registered clusters and remote workers
+  mode: Local
+## @param global [object] Settings for global.
+global:
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
+  multiCluster:
+    ## @param global.multiCluster.clusterName [string] Unique, stable cluster identity used by Istio and Polyad
+    clusterName: polyad
 ## @param dragonfly [object] Settings for dragonfly.
 dragonfly:
   ## @param dragonfly.enabled [boolean] Deploy Dragonfly through the upstream operator Helm dependency
@@ -60,6 +68,10 @@ dragonflyOperator:
 keda:
   ## @param keda.install [boolean] Install the pinned upstream KEDA dependency in the release namespace; false uses an existing installation.
   install: false
+  ## @param keda.observation [object] Settings for keda.observation.
+  observation:
+    ## @param keda.observation.enabled [boolean] Include KEDA workloads and Services in the reserved root Graph when root mode is enabled; disable if this installation does not use KEDA
+    enabled: false
 ## @param mesh [object] Settings for mesh.
 mesh:
   ## @param mesh.enabled [boolean] Allow graph HTTP and service-identity authorization and generate Istio security resources

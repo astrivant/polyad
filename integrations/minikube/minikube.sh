@@ -331,16 +331,20 @@ chart_options() {
         CHART_OPTIONS+=(--values "$EXTRA_VALUES")
     fi
 
-    # The integration stays standalone even when an optional overlay sets HA fields.
+    # Keep one local root and cache even when an overlay requests HA or remote work.
     # Other feature/resource settings remain configurable through the normal chart.
     CHART_OPTIONS+=(
         --set ha=false --set worker.enabled=false --set architecture.mode=Dense
-        --set architecture.autoscaling=false --set rootControlPlane.enabled=false
+        --set architecture.autoscaling=false --set rootControlPlane.enabled=true
+        --set rootControlPlane.mode=Local --set federation.enabled=false
+        --set-json 'rootControlPlane.pools=[]' --set-json 'rootControlPlane.meshPeers=[]'
+        --set-json 'federation.clusters=[]' --set-string "global.multiCluster.clusterName=$PROFILE"
+        --set metrics.enabled=true
         --set operator.replicaCount=1 --set operator.autoscaling.enabled=false
         --set operator.autoscaling.connections.enabled=false
         --set dragonfly.enabled=true --set dragonfly.ha.enabled=false
         --set dragonfly.autoscaling.enabled=false --set dragonflyOperator.replicaCount=1
-        --set keda.install=false
+        --set keda.install=false --set keda.observation.enabled=false
         --set-string "operator.image.repository=$IMAGE_REPOSITORY"
         --set-string "operator.image.tag=$IMAGE_TAG" --set operator.image.pullPolicy=IfNotPresent
     )
@@ -383,6 +387,11 @@ smoke_test() {
     [[ "$(kube get dragonfly polyad-queue -o jsonpath='{.spec.replicas}')" == 1 ]] || fail 'Expected one Dragonfly instance'
     kube exec deployment/polyad-polyad -c operator -- python -m polyad.operator.lifecycle.probes --ready
 
+    # The controller creates its reserved hierarchy after bootstrap. A ready Pod
+    # alone does not prove that the atlas and observed local services converged.
+    kube wait polygraph/polyad-atlas --for=create --timeout "$TIMEOUT"
+    kube wait polygraph/polyad-atlas --for=jsonpath='{.status.ready}'=true --timeout "$TIMEOUT"
+
     # Server-generated names cannot overwrite a developer's Graph or Workload.
     # Retain failed runs for inspection; delete only this run's objects on success.
     local smoke_name
@@ -407,6 +416,51 @@ EOF
     kube delete "graph/$smoke_name" --wait=true --timeout "$TIMEOUT"
     kube delete "workload/$smoke_name" --wait=true --timeout "$TIMEOUT"
     printf 'Polyad standalone smoke test passed.\n'
+}
+
+##
+# Separate the local atlas and its owned descendants from application boundaries.
+# -> ret::json
+root_inventory() {
+    kube get graphs,polygraphs,replicagroups,compositions,rewrites,daemons -o json |
+        jq -e --arg cluster "$PROFILE" --arg namespace "$NAMESPACE" -f "$INTEGRATION_DIR/root-inventory.jq"
+}
+
+##
+# Drain only the verified self-management hierarchy before removing its controller.
+# -> ret::exit_code
+disable_polyad() {
+    require minikube helm kubectl jq
+    check_vm_profile
+    minikube --profile "$PROFILE" status
+    local inventory boundaries resource
+    inventory="$(root_inventory)"
+    boundaries="$(jq -r '.applications[] | "\(.kind)/\(.metadata.name)"' <<<"$inventory")"
+    [[ -z "$boundaries" ]] || fail "Drain/delete application boundaries before disabling Polyad: $boundaries"
+    if jq -e '.managed | length > 0' <<<"$inventory" >/dev/null; then
+
+        # Stop the topology producer and release the reserved graph's self-protection
+        # while keeping the ordinary reconciler alive to process drain finalizers.
+        helm_local upgrade polyad "$CHART" --kube-context "$PROFILE" --namespace "$NAMESPACE" \
+            --reuse-values --set rootControlPlane.enabled=false --skip-crds --wait --timeout "$TIMEOUT"
+        inventory="$(root_inventory)"
+        if jq -e '.managed[] | select(.kind == "PolyGraph" and .metadata.name == "polyad-atlas")' <<<"$inventory" >/dev/null; then
+            kube delete polygraph/polyad-atlas --ignore-not-found --wait=true --timeout "$TIMEOUT"
+        fi
+
+        # The atlas drains its instances first. Reusable definitions remain, but
+        # only objects with this root's ownership annotation may be removed here.
+        inventory="$(root_inventory)"
+        while IFS= read -r resource; do
+            [[ -n "$resource" ]] || continue
+            kube delete "$resource" --ignore-not-found --wait=true --timeout "$TIMEOUT"
+        done < <(jq -r '.managed[] | "\(.kind)/\(.metadata.name)"' <<<"$inventory")
+        inventory="$(root_inventory)"
+        jq -e '(.applications | length) == 0 and (.managed | length) == 0' <<<"$inventory" >/dev/null ||
+            fail 'Boundaries appeared or did not drain; the operator was left running'
+    fi
+    helm_local uninstall polyad --kube-context "$PROFILE" --namespace "$NAMESPACE" \
+        --ignore-not-found --wait --timeout "$TIMEOUT"
 }
 
 if [[ $# -ne 1 ]]; then
@@ -437,7 +491,7 @@ done
 if [[ -n "$EXTRA_VALUES" && ("$1" == start || "$1" == enable || "$1" == render) ]]; then
     [[ -f "$EXTRA_VALUES" ]] || fail "Values file not found: $EXTRA_VALUES"
 fi
-if [[ "$1" == start || "$1" == recover || "$1" == enable || "$1" == test ]]; then
+if [[ "$1" == start || "$1" == recover || "$1" == enable || "$1" == test || "$1" == disable ]]; then
     case "${POLYAD_MINIKUBE_DRIVER:-}" in
         '' | kvm2 | qemu | qemu2) ;;
         *) fail 'This integration uses only native VMs; unset POLYAD_MINIKUBE_DRIVER for automatic selection' ;;
@@ -491,17 +545,7 @@ case "$1" in
         kube get nodes -o wide
         kube get deployments,statefulsets,pods,services,pvc,dragonflies,graphs,polygraphs,replicagroups
         ;;
-    disable)
-        require minikube helm kubectl
-        minikube --profile "$PROFILE" status
-
-        # Stop application graphs while their controller still exists. Never erase
-        # arbitrary application resources or strand their drain finalizers on uninstall.
-        boundaries="$(kube get graphs,polygraphs,replicagroups,compositions,rewrites -o name)"
-        [[ -z "$boundaries" ]] || fail "Drain/delete application boundaries before disabling Polyad: $boundaries"
-        helm_local uninstall polyad --kube-context "$PROFILE" --namespace "$NAMESPACE" \
-            --ignore-not-found --wait --timeout "$TIMEOUT"
-        ;;
+    disable) disable_polyad ;;
     stop | delete)
         require minikube
         minikube --profile "$PROFILE" "$1"

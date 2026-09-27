@@ -1621,6 +1621,9 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "mode": {
+          "$ref": "values.schema.json#/properties/rootControlPlane/properties/mode"
+        },
         "kubeconfigSecret": {
           "$ref": "values.schema.json#/properties/rootControlPlane/properties/kubeconfigSecret"
         },
