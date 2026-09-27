@@ -92,24 +92,28 @@ remain with each run and in its CI artifacts, even when publication fails.
 
 ## Tests and CI
 
-Ordinary pytest includes `pkg/tests/test_benchmarks.py`. The **Benchmarks** workflow
-runs those tests and chart rendering on pull requests and pushes, retaining JUnit
-and Helm output. It builds both images with Buildx, for AMD64 and ARM64.
+Ordinary pytest includes `pkg/tests/test_benchmarks.py`. The single **Polyad pipeline**
+runs tests and chart rendering on every branch push, tag push and PR update,
+retaining JUnit and Helm output. It builds both images with Buildx, for AMD64 and ARM64.
 Plotting tests verify every study's inventory, preserve failure and missing-data
 semantics, and reject missing or altered images before publication.
 
-The **Reachability studies** workflow tests the SDK extra on Python 3.11 through
-3.14, then runs the local prepare, study matrix and finish phases on ordinary
-hosted runners. It retains numerical and real-process measurements as artifacts
-without requiring cluster credentials. See the [local suite commands](symbiosis/README.md#run).
+The reachability compatibility matrix tests the SDK extra on Python 3.11 through
+3.14. Process tests check guard reactions, planner isolation and process ownership
+on Python 3.13 and 3.14. These checks run independently of measurement refreshes.
 
-The **Process studies** workflow tests guard reactions, planner isolation and
-process ownership on Python 3.13 and 3.14, then runs Soul and Nature through the
-same preparation, matrix and verified publication stages. It checks raw evidence
-and figure checksums and retains plots, measurements and failure logs.
+Full measurements and plots refresh only on explicit manual PR requests, following
+hypothesis-helm's request model. In **Run workflow**, select an open, non-draft,
+same-repository PR's current head branch, enable `refresh`, enter `pull-request`
+and leave `tag` empty. The pipeline validates the PR and SHA, then runs one
+`studies` matrix for Cheeger, reachability and Soul/Nature. Each suite keeps
+prepare, execution and verified publication as steps within one job. It checks
+raw evidence and figure checksums and retains plots, measurements and failure logs
+in artifacts without committing to the PR. See the [local suite commands](symbiosis/README.md#run).
 
-Manual `full-refresh` uses prepare → study matrix → finish, with the same Python
-entry point as local runs. Study jobs use an administrator-provided runner inside
+Adding `full-refresh` to that manual PR request enables one cloud benchmark job,
+with prepare → study → finish as steps using the same Python entry point as local
+runs. It waits for smoke and image checks and uses an administrator-provided runner inside
 the cluster network with an explicit kubeconfig context. They require read access
 to the fixture Graph, definitions, Pods and activation receipts, Pod logs and
 `pods/exec` on the fixture. Configure the `benchmarks` GitHub environment and the
@@ -117,5 +121,5 @@ to the fixture Graph, definitions, Pods and activation receipts, Pod logs and
 Cloud jobs do not provision or destroy GKE or deploy the operator.
 
 Artifacts are uploaded even on failure. Failed measurements remain available but
-cannot replace successful published results. Local studies run sequentially;
-independent CI study jobs may run in parallel against separately scoped fixtures.
+cannot replace successful published results. Study suites run in parallel;
+studies within each suite run sequentially and retain failures independently.

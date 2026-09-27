@@ -217,7 +217,7 @@ def test_only_explicit_tags_enable_releases_without_repository_write_permissions
     assert ci["permissions"] == {"contents": "read"}
     assert "tag" not in ci["jobs"]
     assert not (ROOT / ".github/workflows/tag.yml").exists()
-    assert all(job.get("permissions", {}).get("contents", "read") == "read" for job in ci["jobs"].values())
+    assert all(job.get("permissions", {}).get("contents", "read") == "read" for name, job in ci["jobs"].items() if name != "coverage-badge")
     assert ci["jobs"]["publish"]["if"] == ("!cancelled() && needs.verified.result == 'success' && needs.source.outputs.release-tag != ''")
 
 
@@ -297,19 +297,17 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
         },
     }
     action = next(step for step in chart["steps"] if step.get("uses", "").startswith("astrivant/hypothesis-helm@"))
-    assert action["uses"] == "astrivant/hypothesis-helm@05681f04b41256a41355e6320e52a7ca17f67b74"
+    assert action["uses"] == "astrivant/hypothesis-helm@dbc07922420fa38ddeead026f7c857eeaae66910"
     inputs = action["with"]
     assert inputs["chart"] == "charts/${{ matrix.chart }}"
     assert inputs["artifact-name"] == "hypothesis-helm-${{ matrix.chart }}"
     assert inputs["artifact-dir"] == "reports/hypothesis-helm/${{ matrix.chart }}"
     assert inputs["shard"] == "${{ matrix.shard }}/3" and inputs["jobs"] == "4"
-    assert inputs["kubeconform"] == "true" and inputs["schema-version"] == "1.35.0"
-    assert inputs["kubeconform-binary"] == "scripts/validation/kubeconform.sh"
-    assert not {"sample-random", "max-examples", "rerun", "cache", "filter", "exhaustive"}.intersection(inputs)
+    assert inputs["schema-validation"] == "true" and inputs["schema-version"] == "1.35.0"
+    assert inputs["paths"] == "true" and inputs["max-examples"] == "100"
+    assert not {"kubeconform", "kubeconform-binary", "sample-random", "rerun", "cache", "filter", "exhaustive"}.intersection(inputs)
     assert "match" not in inputs and "continue-on-error" not in action
-    policy = next(step for step in chart["steps"] if step.get("run", "").startswith("cp charts/polyad-crds/"))
-    assert policy["if"] == "matrix.chart == 'polyad-crds'"
-    assert chart["steps"].index(policy) < chart["steps"].index(action)
+    assert inputs["config"] == "${{ matrix.chart == 'polyad-crds' && 'charts/polyad-crds/.hypothesis-helm.yaml' || '' }}"
     assert yaml.safe_load((ROOT / "charts/polyad-crds/.hypothesis-helm.yaml").read_text()) == {"ignored": ["HH1107"]}
     package = workflow["jobs"]["chart-package"]
     assert package["needs"] == ["source", "chart"]
@@ -323,12 +321,34 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
     assert package["steps"][-1]["with"]["if-no-files-found"] == "error"
 
 
+def test_hypothesis_native_validation_registers_every_custom_resource_schema():
+    """
+    Preserve strict custom-resource validation when upgrading from the Kubeconform wrapper.
+    """
+    workflow = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["chart"]["steps"]
+    action = next(step for step in steps if step.get("uses", "").startswith("astrivant/hypothesis-helm@"))
+    policy = yaml.safe_load(action["with"]["config-inline"])
+    assert policy["strict"] is True
+
+    # New or renamed served APIs must be registered before CI can silently miss them.
+    expected = {}
+    for path in (ROOT / "charts/polyad/schemas").glob("*.json"):
+        properties = json.loads(path.read_text())["properties"]
+        identity = f"{properties['apiVersion']['const']}/{properties['kind']['const']}"
+        assert identity not in expected
+        expected[identity] = path.relative_to(ROOT).as_posix()
+    assert expected
+    assert policy["resource_schemas"] == expected
+    assert "ignored" not in policy
+
+
 def test_explicit_tags_use_the_same_chart_gate_and_source():
     """
     Tagged chart builds and publication remain inside the same verified parent run.
     """
     ci = yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
-    assert ci["on"]["push"]["branches"] == ["main"]
+    assert ci["on"]["push"]["branches"] == ["**"]
     assert "pull_request" in ci["on"]
     for name in ("chart", "chart-package", "publish"):
         assert ci["jobs"][name]["steps"][0]["with"]["ref"] == "${{ needs.source.outputs.sha }}"

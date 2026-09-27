@@ -15,7 +15,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 DIRECTORY = ROOT / ".github/workflows"
 PIPELINE = yaml.load((DIRECTORY / "ci.yml").read_text(), Loader=yaml.BaseLoader)
-CHECKS = set(PIPELINE["jobs"]) - {"verified", "publish"}
+CHECKS = set(PIPELINE["jobs"]) - {"verified", "publish", "coverage-badge"}
 
 
 def test_one_workflow_contains_every_job_without_local_actions_or_workflow_calls():
@@ -26,7 +26,7 @@ def test_one_workflow_contains_every_job_without_local_actions_or_workflow_calls
     assert set(workflows) == {"ci.yml"}
     assert not list((ROOT / ".github/actions").rglob("action.y*ml"))
     assert set(PIPELINE["on"]) == {"push", "pull_request", "workflow_dispatch"}
-    assert PIPELINE["on"]["push"] == {"branches": ["main"], "tags": ["v[0-9]*"]}
+    assert PIPELINE["on"]["push"] == {"branches": ["**"], "tags": ["**"]}
     for job in PIPELINE["jobs"].values():
         assert "uses" not in job
         assert "runs-on" in job and "steps" in job
@@ -43,34 +43,28 @@ def test_one_workflow_contains_every_job_without_local_actions_or_workflow_calls
             visit(dependency, (*ancestors, name))
 
     visit("publish")
+    visit("coverage-badge")
     assert reached == set(PIPELINE["jobs"])
 
 
 def test_all_validation_branches_join_before_publishing():
     """
-    Studies are required release checks rather than unrelated workflow statuses.
+    Requested studies and ordinary checks must succeed inside the same pipeline.
     """
     gate = PIPELINE["jobs"]["verified"]
     assert gate["if"] == "always()" and set(gate["needs"]) == CHECKS
     assert {
-        "cheeger-studies",
+        "studies",
         "benchmark-smoke",
         "benchmark-images",
-        "benchmark-refresh-prepare",
-        "benchmark-refresh-study",
-        "benchmark-refresh-finish",
+        "benchmark-refresh",
         "reachability-sdk",
-        "reachability-prepare",
-        "reachability-study",
-        "reachability-finish",
         "process-tests",
-        "process-prepare",
-        "process-study",
-        "process-finish",
         "chart",
         "chart-package",
         "operator",
         "lightweight-packages",
+        "coverage",
     } <= CHECKS
     assert "verified" in PIPELINE["jobs"]["publish"]["needs"]
     assert "always()" not in PIPELINE["jobs"]["publish"]["if"]
@@ -96,27 +90,182 @@ def test_manual_cloud_benchmarks_remain_explicit_and_environment_protected():
     """
     inputs = PIPELINE["on"]["workflow_dispatch"]["inputs"]
     assert inputs["full-refresh"]["default"] == "false" and inputs["tag"]["default"] == ""
-    prepare = PIPELINE["jobs"]["benchmark-refresh-prepare"]
-    assert prepare["if"] == "github.event_name == 'workflow_dispatch' && inputs.full-refresh"
-    assert prepare["needs"] == ["source", "benchmark-smoke", "benchmark-images"]
-    study = PIPELINE["jobs"]["benchmark-refresh-study"]
+    assert inputs["refresh"]["default"] == "false" and inputs["pull-request"]["default"] == ""
+    study = PIPELINE["jobs"]["benchmark-refresh"]
+    assert study["if"] == "needs.source.outputs.refresh == 'true' && inputs.full-refresh"
     assert study["environment"] == "benchmarks"
-    assert study["needs"] == ["source", "benchmark-refresh-prepare"]
+    assert study["needs"] == ["source", "benchmark-smoke", "benchmark-images"]
     assert study["env"]["BENCHMARK_CONTEXT"] == "${{ inputs.context }}"
-    assert study["strategy"]["matrix"] == "${{ fromJSON(needs.benchmark-refresh-prepare.outputs.matrix) }}"
+    assert study["runs-on"] == "${{ vars.POLYAD_BENCHMARK_RUNNER || 'polyad-benchmarks' }}"
+    source = PIPELINE["jobs"]["source"]
+    request = source["steps"][-1]
+    assert request["if"] == "github.event_name == 'workflow_dispatch' && (inputs.refresh || inputs.full-refresh)"
+    assert source["outputs"]["refresh"] == "${{ steps.request.outputs.refresh }}"
+    assert source["permissions"] == {"contents": "read", "pull-requests": "read"}
 
 
-@pytest.mark.parametrize("suite,prerequisite", [("reachability", "reachability-sdk"), ("process", "process-tests")])
-def test_study_matrices_keep_their_prepare_test_and_finish_barriers(suite, prerequisite):
+def test_studies_share_one_optional_matrix_and_validation_tests_run_on_every_ref():
     """
-    Dynamic studies cannot run before their tests or finish before matrix artifacts arrive.
+    Preparation and collection are steps, not extra job columns or mandatory benchmark runs.
     """
-    study = PIPELINE["jobs"][f"{suite}-study"]
-    assert study["needs"] == ["source", prerequisite, f"{suite}-prepare"]
-    assert study["strategy"]["matrix"] == f"${{{{ fromJSON(needs.{suite}-prepare.outputs.matrix) }}}}"
-    finish = PIPELINE["jobs"][f"{suite}-finish"]
-    assert finish["needs"] == ["source", f"{suite}-prepare", f"{suite}-study"]
-    assert finish["if"] == f"always() && needs.{suite}-prepare.result == 'success'"
+    study = PIPELINE["jobs"]["studies"]
+    assert study["needs"] == "source"
+    assert study["if"] == "needs.source.outputs.refresh == 'true'"
+    assert study["strategy"]["fail-fast"] == "false"
+    assert {row["suite"] for row in study["strategy"]["matrix"]["include"]} == {"cheeger", "reachability", "process"}
+    assert not any(name.endswith(("-prepare", "-study", "-finish")) for name in PIPELINE["jobs"])
+    for name in (
+        "python",
+        "terraform",
+        "chart",
+        "container",
+        "compose",
+        "operator",
+        "benchmark-smoke",
+        "benchmark-images",
+        "reachability-sdk",
+        "process-tests",
+    ):
+        assert "if" not in PIPELINE["jobs"][name], name
+    assert PIPELINE["jobs"]["reachability-sdk"]["strategy"]["matrix"]["python"] == ["3.11", "3.12", "3.13", "3.14"]
+    assert PIPELINE["jobs"]["process-tests"]["strategy"]["matrix"]["python"] == ["3.13", "3.14"]
+
+
+@pytest.mark.parametrize("name", ["studies", "benchmark-refresh"])
+def test_consolidated_studies_keep_completion_checks_and_failure_artifacts(name):
+    """
+    Finish still validates every prepared result, including after a measurement failure.
+    """
+    steps = PIPELINE["jobs"][name]["steps"]
+    prepare = next(index for index, step in enumerate(steps) if step.get("id") == "prepare")
+    assert "--ci-phase prepare" in steps[prepare]["run"]
+    assert "selected_studies(root)" in steps[prepare + 1]["run"]
+    finish = steps[prepare + 2]
+    assert finish["if"] == "!cancelled() && steps.prepare.outcome == 'success'"
+    assert "--ci-phase finish" in finish["run"] and "--publish" in finish["run"]
+    artifact = steps[-1]
+    assert artifact["if"] == "always()"
+    assert artifact["with"]["include-hidden-files"] == "true"
+    assert artifact["with"]["retention-days"] == "30"
+    assert not any(step.get("uses", "").startswith("actions/download-artifact@") for step in steps)
+
+
+@pytest.mark.parametrize("failed", [None, "first"])
+def test_suite_runner_attempts_every_prepared_study_and_propagates_failure(tmp_path, monkeypatch, failed):
+    """
+    Exercise the workflow's shared loop without generating measurements or contacting a cluster.
+    """
+    from polyad_benchmarks import refresh
+
+    attempted = []
+
+    def study_phase(project, root, study, context):
+        assert project == Path.cwd() and root == tmp_path and context == "test-context"
+        attempted.append(study)
+        if study == failed:
+            raise RuntimeError("measurement failed")
+
+    monkeypatch.setenv("STUDY_ROOT", str(tmp_path))
+    monkeypatch.setenv("BENCHMARK_CONTEXT", "test-context")
+    monkeypatch.setattr(refresh, "selected_studies", lambda root: ("first", "second", "newly-registered"))
+    monkeypatch.setattr(refresh, "study_phase", study_phase)
+    command = next(step["run"] for step in PIPELINE["jobs"]["studies"]["steps"] if "selected_studies(root)" in step.get("run", ""))
+    script = command.split("<<'PY'\n", 1)[1].removesuffix("PY\n")
+    if failed:
+        with pytest.raises(SystemExit, match="Studies failed:.*first"):
+            exec(compile(script, "<study-workflow>", "exec"), {})
+    else:
+        exec(compile(script, "<study-workflow>", "exec"), {})
+    assert attempted == ["first", "second", "newly-registered"]
+
+
+@pytest.mark.parametrize(
+    "problem",
+    [
+        None,
+        "local-only",
+        "closed",
+        "draft",
+        "fork",
+        "wrong-base-repo",
+        "wrong-base",
+        "default-branch",
+        "stale-sha",
+        "wrong-ref",
+        "bad-number",
+        "no-refresh",
+        "release",
+        "no-context",
+    ],
+)
+def test_manual_refresh_requires_the_current_head_of_an_open_same_repository_pr(tmp_path, problem):
+    """
+    Reject stale, forked or unrelated requests before exposing a validated refresh output.
+    """
+    metadata = {
+        "state": "open",
+        "draft": False,
+        "head": {"repo": {"full_name": "astrivant/polyad"}, "ref": "study-change", "sha": "a" * 40},
+        "base": {"repo": {"full_name": "astrivant/polyad"}, "ref": "main"},
+    }
+    output = tmp_path / "output"
+    env = {
+        **os.environ,
+        "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+        "PR_METADATA": str(tmp_path / "pr.json"),
+        "PR_NUMBER": "42",
+        "GITHUB_REPOSITORY": "astrivant/polyad",
+        "GITHUB_REF": "refs/heads/study-change",
+        "SOURCE_SHA": "a" * 40,
+        "DEFAULT_BRANCH": "main",
+        "REFRESH": "true",
+        "FULL_REFRESH": "true",
+        "BENCHMARK_CONTEXT": "test-context",
+        "RELEASE_TAG": "",
+        "GITHUB_OUTPUT": str(output),
+    }
+
+    # Each mutation represents a request that must fail before study or cloud execution.
+    if problem == "local-only":
+        env["FULL_REFRESH"] = "false"
+        env["BENCHMARK_CONTEXT"] = ""
+    elif problem == "closed":
+        metadata["state"] = "closed"
+    elif problem == "draft":
+        metadata["draft"] = True
+    elif problem == "fork":
+        metadata["head"]["repo"]["full_name"] = "fork/polyad"
+    elif problem == "wrong-base-repo":
+        metadata["base"]["repo"]["full_name"] = "another/polyad"
+    elif problem == "wrong-base":
+        metadata["base"]["ref"] = "release"
+    elif problem == "default-branch":
+        metadata["head"]["ref"] = "main"
+        env["GITHUB_REF"] = "refs/heads/main"
+    elif problem == "stale-sha":
+        metadata["head"]["sha"] = "b" * 40
+    elif problem == "wrong-ref":
+        env["GITHUB_REF"] = "refs/heads/another-branch"
+    elif problem == "bad-number":
+        env["PR_NUMBER"] = "../42"
+    elif problem == "no-refresh":
+        env["REFRESH"] = "false"
+    elif problem == "release":
+        env["RELEASE_TAG"] = "v0.0.1-alpha99"
+    elif problem == "no-context":
+        env["BENCHMARK_CONTEXT"] = ""
+    Path(env["PR_METADATA"]).write_text(json.dumps(metadata))
+    gh = tmp_path / "gh"
+    gh.write_text('#!/bin/sh\ncat "$PR_METADATA"\n')
+    gh.chmod(0o755)
+    command = PIPELINE["jobs"]["source"]["steps"][-1]["run"]
+    result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", command], env=env, text=True, capture_output=True)
+    allowed = problem in {None, "local-only"}
+    assert (result.returncode == 0) is allowed, result.stdout + result.stderr
+    if allowed:
+        assert output.read_text() == "refresh=true\n"
+    else:
+        assert not output.exists()
 
 
 def test_releases_cannot_be_cancelled_by_newer_pr_commits():
@@ -130,7 +279,7 @@ def test_releases_cannot_be_cancelled_by_newer_pr_commits():
     assert PIPELINE["defaults"]["run"]["shell"] == "bash"
 
 
-def run_gate(results, *, main=False, release=False, full_refresh=False):
+def run_gate(results, *, release=False, refresh=False, full_refresh=False):
     """
     Execute the workflow's real aggregate check against synthetic job conclusions.
     """
@@ -139,8 +288,8 @@ def run_gate(results, *, main=False, release=False, full_refresh=False):
         env={
             **os.environ,
             "RESULTS_JSON": json.dumps(results),
-            "MAIN_PUSH": str(main).lower(),
             "RELEASE_TAG": "v0.0.1-alpha99" if release else "",
+            "REFRESH": str(refresh).lower(),
             "FULL_REFRESH": str(full_refresh).lower(),
         },
         text=True,
@@ -156,36 +305,38 @@ def test_gate_rejects_every_incomplete_job_when_all_features_are_required(name, 
     """
     results = {job: {"result": "success"} for job in CHECKS}
     results[name]["result"] = status
-    result = run_gate(results, main=True, release=True, full_refresh=True)
+    result = run_gate(results, release=True, refresh=True, full_refresh=True)
     assert result.returncode != 0 and name in result.stderr
 
 
 @pytest.mark.parametrize(
-    "main,release,full_refresh",
-    [(True, False, False), (False, False, False), (False, True, False), (False, False, True), (False, True, True)],
+    "release,refresh,full_refresh",
+    [(False, False, False), (True, False, False), (False, True, False), (False, True, True)],
 )
-def test_gate_accepts_only_the_skips_expected_for_the_selected_features(main, release, full_refresh):
+def test_gate_accepts_only_the_skips_expected_for_the_selected_features(release, refresh, full_refresh):
     """
     Main, PR, tag and manual runs allow only their unselected optional branches to skip.
     """
     results = {job: {"result": "success"} for job in CHECKS}
-    optional = set() if main else {"compose"}
+    optional = set()
     if not release:
         optional.add("chart-package")
+    if not refresh:
+        optional.add("studies")
     if not full_refresh:
-        optional.update({"benchmark-refresh-prepare", "benchmark-refresh-study", "benchmark-refresh-finish"})
+        optional.add("benchmark-refresh")
     for name in optional:
         results[name]["result"] = "skipped"
-    result = run_gate(results, main=main, release=release, full_refresh=full_refresh)
+    result = run_gate(results, release=release, refresh=refresh, full_refresh=full_refresh)
     assert result.returncode == 0, result.stderr
 
     # Even an optional job may not fail silently if it did run.
     for name in optional:
         results[name]["result"] = "failure"
-        assert run_gate(results, main=main, release=release, full_refresh=full_refresh).returncode != 0
+        assert run_gate(results, release=release, refresh=refresh, full_refresh=full_refresh).returncode != 0
         results[name]["result"] = "skipped"
     results["benchmark-smoke"]["result"] = "skipped"
-    assert run_gate(results, main=main, release=release, full_refresh=full_refresh).returncode != 0
+    assert run_gate(results, release=release, refresh=refresh, full_refresh=full_refresh).returncode != 0
 
 
 @pytest.fixture
@@ -213,6 +364,7 @@ def source_repository(tmp_path):
     [
         ("refs/heads/main", "", ""),
         ("refs/pull/1/merge", "", ""),
+        ("refs/tags/experiment", "", ""),
         ("refs/tags/v0.0.1-alpha2", "", "v0.0.1-alpha2"),
         ("refs/heads/main", "v0.0.1-alpha2", "v0.0.1-alpha2"),
         ("refs/heads/main", "v0.0.1-alpha1", None),

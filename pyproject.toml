@@ -85,6 +85,11 @@ types-waitress = ">=3,<4"
 jsonschema = ">=4.26,<5"
 openapi-spec-validator = ">=0.7,<0.9"
 pytest-xdist = ">=3.8,<4"
+pytest-cov = ">=7,<8"
+
+# Report aggregation needs no operator, SDK or plotting dependencies.
+[tool.poetry.group.coverage.dependencies]
+coverage = ">=7.10.6,<8"
 
 [build-system]
 requires = ["poetry-core>=2.2,<3.0"]
@@ -94,6 +99,17 @@ build-backend = "poetry.core.masonry.api"
 testpaths = ["pkg/tests"]
 pythonpath = [".", "pkg", "pkg/polyad-sdk", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]
 addopts = "-n auto --maxprocesses=8 --dist=worksteal"
+
+[tool.coverage.run]
+relative_files = true
+source = [
+    "pkg/polyad",
+    "pkg/polyad-sdk/polyad_sdk",
+    "pkg/polyad-types/polyad_types",
+    "pkg/polyad-schemas/polyad_schemas",
+    "pkg/polyad-benchmarks/polyad_benchmarks",
+]
+omit = ["*/tests/*"]
 
 [tool.ruff]
 src = [".", "pkg", "pkg/polyad-sdk", "pkg/polyad-types", "pkg/polyad-schemas", "pkg/polyad-benchmarks"]

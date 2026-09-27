@@ -22,6 +22,8 @@
 - [References](#references)
 <!-- toc:end -->
 
+[![Python coverage](https://raw.githubusercontent.com/astrivant/polyad/gh-pages/badges/coverage.svg)](https://github.com/astrivant/polyad/actions/workflows/ci.yml)
+
 <img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoes fading toward the right" width="630" height="140">
 
 Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics)

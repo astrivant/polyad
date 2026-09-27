@@ -8,12 +8,13 @@
 - [Formatting and checks](#formatting-and-checks)
 - [Python types and serialization](#python-types-and-serialization)
 - [One pipeline per run](#one-pipeline-per-run)
+  - [Python coverage badge](#python-coverage-badge)
 - [Version tags](#version-tags)
 - [Verified package releases](#verified-package-releases)
   - [Manual PyPI publishing](#manual-pypi-publishing)
 - [Verified Helm chart builds](#verified-helm-chart-builds)
 - [Helm documentation](#helm-documentation)
-- [Compose artifact on main](#compose-artifact-on-main)
+- [Compose artifact](#compose-artifact)
 <!-- toc:end -->
 
 Polyad uses pre-commit checks and four-space indentation for Python and shell
@@ -234,30 +235,44 @@ artifacts in the installed standalone wheel.
 ## One pipeline per run
 
 The [Polyad pipeline](../../.github/workflows/ci.yml) is the only Actions entry
-point for main pushes, pull requests, version-tag pushes and manual runs. Open
+point for pushes to any branch or tag, pull requests and manual runs. Open
 that run to see infrastructure checks, Python and container matrices, chart
 validation, Cheeger benchmarks, reachability studies, and soul/nature process
-studies in one job graph. All 25 jobs are defined directly in `ci.yml`; there
+studies in one job graph. All 19 jobs are defined directly in `ci.yml`; there
 are no separate local action definitions, reusable-workflow files or
 completion-triggered follow-up pipelines. Third-party setup and validation
 actions remain ordinary steps in those jobs.
 
 Every branch checks out the same resolved commit. The **All checks passed** job
 joins every validation branch and rejects failures, cancellations and unexpected
-skips before publishing. Compose is intentionally main-push-only.
-Chart packaging may skip only when no release tag was selected, and the three
-cloud-refresh jobs may skip only when `full-refresh` is off. When selected,
-those jobs must succeed too; their failures or cancellations are never ignored.
-Study failures now block releases as well as ordinary CI success.
+skips before publishing. Tests, compatibility matrices, benchmark smoke tests,
+image builds and Compose generation run on every invocation. Only version tags
+matching `v[0-9]*` select release publication; other tag pushes run validation.
+Chart packaging may skip only when no release tag was selected.
+
+Full measurements and graph regeneration are **manual PR refreshes**, not routine
+push, PR or release checks. One `studies` matrix covers Cheeger, reachability and
+soul/nature process suites at the same dependency depth. Each suite prepares its
+inventory, runs every registered study and verifies the complete results in one
+job, without intermediate preparation/collection jobs or artifact downloads.
+Suites run in parallel; studies within a suite run sequentially. A failed study
+does not suppress its siblings, and incomplete or failed suites cannot publish
+results. Compatibility tests remain required independent checks.
+
+The optional `benchmark-refresh` cloud job similarly keeps all three phases
+together, after its smoke and image checks. Unrequested refresh jobs may skip;
+when requested, failures, cancellations and unexpected skips fail the pipeline.
 As in `hypothesis-helm`, newer PR commits cancel superseded PR checks; main,
 tag and manual runs do not cancel in-flight work. Publication is serialized per tag.
 
 ```mermaid
 flowchart LR
     source["Resolve immutable source"] --> checks["Infrastructure, Python, containers, charts and operator"]
-    source --> studies["Benchmarks, reachability and soul/nature studies"]
+    source --> studies["Manual PR refresh: local study suite matrix"]
     checks --> verified["All checks passed"]
     studies --> verified
+    checks --> cloud["Opt-in PR refresh: cloud benchmarks"]
+    cloud --> verified
     checks --> charts["Explicit release tag: package validated charts"]
     charts --> verified
     verified --> publish["Explicit release tag: publish verified distributions"]
@@ -265,8 +280,52 @@ flowchart LR
 
 To rerun checks, use **Run workflow** on **Polyad pipeline**. Leave `tag` empty
 for validation only, or specify an existing `v...` tag to verify and publish it.
-`full-refresh` remains an explicit opt-in with a selected `context` and the
+
+To regenerate studies, select the current head branch of an open, non-draft PR
+in this repository, enable `refresh`, enter its `pull-request` number and leave
+`tag` empty. The source job validates the PR, branch and exact head SHA before
+allowing any study to run, matching hypothesis-helm's manual PR request model.
+Fork PRs, closed PRs, stale heads and mixed release/refresh requests are rejected.
+Results, figures and failure diagnostics are retained in `studies-<suite>`
+artifacts for 30 days. Refresh does not commit or push changes to the PR branch.
+
+Enable `full-refresh` **in addition to** `refresh` to run installed cloud fixtures.
+This also requires a selected `context`, an administrator-provided runner and the
 protected `benchmarks` environment. Ordinary pushes and PRs never run cloud load.
+
+### Python coverage badge
+
+The README badge follows `hypothesis-helm`: both Python 3.13 and 3.14 test runs
+record coverage and JUnit results, then the `coverage` matrix requires both data
+files before combining them. Five package entries produce separate reports for
+`polyad`, `polyad-sdk`, `polyad-types`, `polyad-schemas` and `polyad-benchmarks`.
+An `all` entry produces the combined report used by the README badge, weighting
+the actual covered statements rather than averaging package percentages. These
+jobs filter the collected data; they do not rerun the test suite.
+
+The reports measure Python statement coverage
+across the operator, SDK, types, schemas and benchmarks packages, including
+unimported files and excluding tests. Lua, Go, shell scripts and live-cluster
+integration jobs are not included in this percentage.
+
+The pipeline uploads `python-coverage-<package>` (including `python-coverage-all`)
+with JSON and HTML reports for 30 days and adds each package's summary to the
+Actions run. Collection and combination are required
+checks; badge publication is a separate main-push-only job, outside the package
+release gate. It uses the same pinned badge action as `hypothesis-helm`, writing
+`badges/coverage.svg` on `gh-pages` only when the displayed percentage changes.
+Only that job receives repository write permission. No additional secret or
+GitHub Pages deployment is needed for the raw-file badge URL. The image becomes
+available after the first successful coverage/badge run on main.
+
+To generate a local report after installing the updated development dependencies:
+
+```sh
+poetry install
+poetry run pytest --cov --cov-config=pyproject.toml --cov-report=term --cov-report=html
+```
+
+Coverage is opt-in locally; ordinary `pytest` invocations remain unchanged.
 
 ## Version tags
 
@@ -285,7 +344,8 @@ git push origin refs/tags/v0.0.1-alpha16
 
 `python scripts/release/release-tag.py` can suggest a tag from the checkout's
 declared package version when that is the version you want to release. CI never
-creates or moves tags and needs only read access to repository contents.
+creates or moves tags. Validation and package release jobs have read-only
+repository access; only the main-branch coverage badge job can write its output branch.
 The old automatic-tag workflow has been removed; there is no detached follow-up
 run or second chart-validation pass. Existing tags, including previously
 auto-created tags, can be selected with the manual pipeline's `tag` input.
@@ -306,8 +366,9 @@ For tagged builds, the Git tag determines the release version. Shared steps
 inside `ci.yml` run `.github/prepare-release.py` in each build checkout before
 dependencies are installed or artifacts are built. YAML anchors keep the Python
 setup, metadata stamping and lockfile refresh defined once in the file; the
-publisher reuses only setup and stamping. See [GitHub's YAML anchor documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases). For
-example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the chart,
+publisher reuses only setup and stamping. See [GitHub's YAML anchor documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases).
+
+For example, `v0.0.1-alpha3` sets the Python package version to `0.0.1a3` and the chart,
 `appVersion` and default image tag to `0.0.1-alpha3`. It also refreshes the chart
 README's image-tag default. Alpha, beta and release-candidate spellings are
 normalized; malformed tags fail before metadata changes.
@@ -385,9 +446,9 @@ PyPI. Add `--dry-run` to validate the publishing flow without uploading. See
 
 ## Verified Helm chart builds
 
-Main-branch pushes and pull requests run the `chart` matrix in `ci.yml`.
-Chart validation pins the Hypothesis Helm action to
-[`05681f04b41256a41355e6320e52a7ca17f67b74`](https://github.com/astrivant/hypothesis-helm/tree/05681f04b41256a41355e6320e52a7ca17f67b74)
+Branch pushes, tag pushes and pull requests run the `chart` matrix in `ci.yml`.
+Chart validation pins the Hypothesis Helm **v1.3.5** action to its immutable commit
+[`dbc07922420fa38ddeead026f7c857eeaae66910`](https://github.com/astrivant/hypothesis-helm/tree/dbc07922420fa38ddeead026f7c857eeaae66910)
 across `charts/polyad` and `charts/polyad-crds`, with **six property-test jobs total:
 three shards per chart and four workers per shard**. The jobs use `ubuntu-24.04`: GitHub's largest standard free
 Linux runner for public repositories, with 4 CPUs and 16 GB RAM. Larger runners
@@ -396,20 +457,25 @@ are billed even for public repositories; see the
 and [larger runner billing](https://docs.github.com/en/actions/concepts/runners/larger-runners).
 GitHub account concurrency limits can still queue some of the six shard jobs.
 
-PRs, main-branch pushes, and tagged builds retain the pinned action's defaults:
-100 examples per property, seed zero, all eligible paths on each CI run, and
-strict Kubernetes 1.35 validation through the repository's Kubeconform wrapper.
-There is no additional random percentage sampling or separate exhaustive release
-scan. **Filtering is not enabled yet:** the pinned action has no `filter` input,
-and its CLI restricts `--filter` to a mode incompatible with `--shard`. Recursive
-chart discovery also rejects `--shard`. Upstream support is required to replace
-the per-chart matrix with one recursive filtered scan split across six shards.
+PRs, main-branch pushes, and tagged builds explicitly retain per-path testing
+and 100 examples per property, with seed zero and all eligible paths on each CI
+run. This preserves the previous coverage rather than adopting the newer
+action's ten-example default. Native Kubernetes 1.35 schema validation replaces
+the removed `kubeconform`/`kubeconform-binary` action inputs. The inline policy
+enables strict mode and registers every custom-resource schema under
+`charts/polyad/schemas`; tests reject a missing registration. The resource chart
+loads its existing `HH1107` exception separately, without weakening other charts.
+
+The action now exposes filtering and recursive discovery. This version upgrade
+retains the existing per-chart shard matrix, with no filtering, random percentage
+sampling or separate exhaustive release scan.
 
 Each shard uploads its own reports, JUnit results, and JSON manifest stream even
 when validation fails. Report names distinguish charts and shards.
 Kubernetes schemas share a versioned cache; test-result caches remain local to
-each job. Benchmark-chart defaults and monitoring profiles retain their strict
-render/schema checks while the upstream dependency-merge parser issue remains.
+each job. Benchmark-chart defaults and monitoring profiles retain their existing
+strict render/schema fallback through the repository's Kubeconform wrapper;
+this dependency upgrade does not expand that chart's property-test coverage.
 
 All six chart/shard jobs and the benchmark-chart validation must succeed before
 the pipeline can permit publication. The same matrix validates
@@ -476,9 +542,9 @@ temporarily cordons the primary's node in its disposable kind cluster, deletes
 the primary pod, and checks graph progress through the promoted replica before
 allowing the old primary to return.
 
-## Compose artifact on main
+## Compose artifact
 
-Each main-branch push runs `astrivant/composer@v0.3.0` against `charts/polyad`.
+Each pipeline invocation runs `astrivant/composer@v0.3.0` against `charts/polyad`.
 The `polyad-compose` workflow artifact contains the generated Compose file, its
 mount files and the compiler report. Generation uses the chart defaults and does
 not commit back to the branch. Kubernetes scheduling and controller behavior still

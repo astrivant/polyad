@@ -273,11 +273,15 @@ Activation and collects the runner's Job logs. Use a fresh `RUN` directory for
 each experiment. A missing fixture, changed source/recipe, changed Graph generation or fixture definition,
 failed activation or timeout fails the run and retains diagnostics.
 
-The [Polyad pipeline](../../.github/workflows/ci.yml) calls the reusable
-[benchmarks component](../../.github/workflows/benchmarks.yml) with these same
-phases. Its manual `full-refresh` input requires an administrator-configured runner
-inside the private cluster network, the `benchmarks` environment and an explicit
-context. It does not run against the cloud on pull requests.
+The [Polyad pipeline](../../.github/workflows/ci.yml) runs these same phases as
+steps within one `benchmark-refresh` job. Select the current head branch of an
+open, non-draft PR in this repository, enter its `pull-request` number and enable
+both `refresh` and `full-refresh`, leaving `tag` empty. The source job rejects
+stale heads, fork PRs and unrelated branches before any benchmark runs.
+Cloud execution also requires an administrator-configured runner inside the
+private cluster network, the `benchmarks` environment and an explicit `context`.
+Ordinary pushes, tags and PR updates run tests without refreshing measurements.
+Verified results and graphs are uploaded as artifacts, not committed to the branch.
 
 ## Read measurements
 
