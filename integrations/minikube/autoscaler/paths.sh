@@ -10,7 +10,6 @@ AUTOSCALER_CACHE="$PROJECT_ROOT/.cache/minikube/addons/minikube-cluster-autoscal
 AUTOSCALER_SOURCE="$AUTOSCALER_CACHE/$AUTOSCALER_REVISION"
 AUTOSCALER_BINARY="${MINIKUBE_AUTOSCALER_BINARY:-$AUTOSCALER_SOURCE/bin/minikube-cluster-autoscaler-addon}"
 AUTOSCALER_STATE="${MINIKUBE_AUTOSCALER_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/minikube-cluster-autoscaler-addon/$PROFILE}"
-AUTOSCALER_LEGACY_STATE="$PROJECT_ROOT/.cache/minikube/autoscaler/$PROFILE"
 [[ "$AUTOSCALER_STATE" == /* && "$AUTOSCALER_BINARY" == /* ]] || {
     printf 'Autoscaler state and binary paths must be absolute\n' >&2
     exit 2

@@ -160,34 +160,23 @@ vm_node_count() {
 }
 
 ##
-# Refuse overlapping VM owners and preserve the autoscaler's current VM count.
+# Pause the published addon during VM maintenance and preserve its current VM count.
 # command::string -> ret::exit_code
 check_autoscaler_lifecycle() {
-    # Keep guarding old journals until the operator explicitly completes migration.
     # shellcheck source=integrations/minikube/autoscaler/paths.sh
     source "$INTEGRATION_DIR/autoscaler/paths.sh"
-    local state binary container found=false
-    for state in "$AUTOSCALER_LEGACY_STATE" "$AUTOSCALER_STATE"; do
-        [[ -f "$state/provider/state.json" ]] || continue
-        found=true
-        [[ "$1" != delete ]] || fail 'Autoscaler ownership is initialized; disable it and archive its journals before explicitly deleting this cluster'
-        if [[ "$state" == "$AUTOSCALER_LEGACY_STATE" ]]; then
-            binary="$PROJECT_ROOT/.cache/minikube/autoscaler/bin/provider"
-            container="polyad-minikube-autoscaler-$PROFILE"
-        else
-            binary="$AUTOSCALER_BINARY"
-            container="minikube-cluster-autoscaler-addon-$PROFILE"
-        fi
-        require docker jq
-        docker info >/dev/null 2>&1 || fail 'Cannot verify the autoscaler container is stopped'
-        if docker container inspect "$container" >/dev/null 2>&1; then
-            [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == false ]] || fail 'Disable the autoscaler before changing VM lifecycle'
-        fi
-        [[ -x "$binary" ]] || fail "Autoscaler bridge missing at $binary; restore its matching build before VM maintenance"
-        "$binary" --mode=maintenance-check --config="$state/config.json" --state-dir="$state"
-        jq -e 'all(.Workers[]; .Phase == "ready")' "$state/provider/state.json" >/dev/null || fail 'Resolve pending autoscaler operations before VM maintenance'
-    done
-    [[ "$found" == true ]] || return 0
+    [[ -f "$AUTOSCALER_STATE/provider/state.json" ]] || return 0
+    [[ "$1" != delete ]] || fail 'Autoscaler ownership is initialized; disable it and archive its journals before explicitly deleting this cluster'
+    require docker jq python3
+    local helper="$INTEGRATION_DIR/autoscaler/maintenance.py"
+    if [[ -n "${POLYAD_MINIKUBE_MAINTENANCE_FD:-}" ]]; then
+        # A private inherited file descriptor proves the parent still holds the
+        # bridge lock. An environment flag alone must never bypass ownership.
+        python3 "$helper" check --state-dir "$AUTOSCALER_STATE"
+    else
+        exec python3 "$helper" run --profile "$PROFILE" --state-dir "$AUTOSCALER_STATE" \
+            --binary "$AUTOSCALER_BINARY" --action "$1" -- bash "$INTEGRATION_DIR/minikube.sh" "$1"
+    fi
 
     # The autoscaler, not the original three-node bootstrap, owns elastic size.
     NODES="$(vm_node_count)"

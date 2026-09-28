@@ -31,7 +31,7 @@ POLYAD_MINIKUBE_AUTOSCALER_CONFIG selects an edited config.example.json for init
 MINIKUBE_AUTOSCALER_STATE_DIR and other upstream settings are passed through.
 The provider, container, chart and VM lifecycle are maintained upstream:
 https://github.com/astrivant/minikube-cluster-autoscaler-addon
-See integrations/minikube/autoscaler/README.md before migrating an older lab.
+See integrations/minikube/autoscaler/README.md for activation and lifecycle handling.
 EOF
 }
 
@@ -92,12 +92,6 @@ esac
 # Shared paths keep the parent VM lifecycle guard aware of the upstream owner.
 # shellcheck source=integrations/minikube/autoscaler/paths.sh
 source "$ADDON_DIR/paths.sh"
-case "$1" in
-    fetch | path | build | render) ;;
-    *)
-        [[ ! -f "$AUTOSCALER_LEGACY_STATE/provider/state.json" ]] || fail 'Legacy autoscaler ownership exists; follow the README migration steps before using the standalone addon'
-        ;;
-esac
 if [[ "$1" == path ]]; then
     printf '%s\n' "$AUTOSCALER_SOURCE"
     exit 0

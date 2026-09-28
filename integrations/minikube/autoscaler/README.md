@@ -7,7 +7,6 @@
 - [Limits and placement](#limits-and-placement)
 - [Exercise growth and shrinkage](#exercise-growth-and-shrinkage)
 - [Stop, restart and recover](#stop-restart-and-recover)
-- [Migrate an existing Polyad addon](#migrate-an-existing-polyad-addon)
 - [Update the dependency](#update-the-dependency)
 <!-- toc:end -->
 
@@ -29,6 +28,8 @@ addon state. No download or cluster change happens unless this integration is us
 Start the three-node [Polyad Minikube lab](../README.md) first. Follow the
 upstream [host prerequisites](https://github.com/astrivant/minikube-cluster-autoscaler-addon#activate-on-a-cluster).
 The launcher also needs curl, tar, jq and either sha256sum or shasum.
+Automatic VM maintenance additionally uses Python 3.10+ (standard library only),
+`lsof` and `ps` on macOS/Linux.
 Polyad's VM lab uses macOS QEMU/HVF or Linux amd64 KVM2/libvirt. The standalone
 addon's Linux arm64 Docker-node option is not a VM backend for this lab.
 
@@ -105,58 +106,28 @@ bash integrations/minikube/autoscaler/autoscaler.sh disable
 
 Disabling retains VMs, journals, credentials and base placement. It is not a
 scale-to-zero command. Drain idle elastic workers before disabling if desired.
-Before `minikube.sh start`, `recover` or `stop`, disable the addon and stop its
-bridge. Polyad verifies the provider container and native maintenance lock and
-preserves the current dynamic VM count. Cluster deletion is refused while
-either the old or new ownership journal exists.
+On `minikube.sh start` or `recover`, Polyad automatically pauses the published
+addon's provider container and native bridge, holds the bridge's exclusive lock
+throughout maintenance, and restores previously running components after success.
+It keeps the Helm release installed and preserves the dynamic VM count, journals,
+credentials and container configuration. A previously disabled addon stays disabled.
+`stop` leaves it paused; the next successful `start` or `recover` restores it.
+Cluster deletion still requires explicit addon shutdown and state archival.
 
-Inspect `<state-dir>/provider/state.json` on errors. After repairing the cause,
-use `autoscaler.sh resume` with both bridge and container stopped, then restart
-them. Never reuse journals with a replacement cluster, remove active journals,
-or copy old journals into the standalone addon's state directory.
+An in-flight worker operation, unknown bridge process or mismatched container
+mount aborts maintenance instead of guessing ownership. Failures and interruptions
+leave the addon paused with a private `host/polyad-maintenance.json` receipt; retry
+`start` after fixing the cause. Existing provider error flags are never cleared
+automatically. Use upstream `resume` only after repairing the reported problem.
 
-## Migrate an existing Polyad addon
+A bridge previously running in a foreground terminal is restored as a detached
+process, with output in `<state-dir>/host/polyad-bridge.log`. Polyad identifies
+only the process holding this addon's bridge lock and matching its configured
+binary, bridge mode and state directory; it never uses broad process-name kills.
+Use `MINIKUBE_AUTOSCALER_BINARY` consistently if your bridge was built elsewhere.
 
-Migration is deliberately **not automatic**. The legacy addon has different
-worker identities, labels, release/container names and state ownership. The
-launcher refuses activation while `.cache/minikube/autoscaler/<profile>/provider/state.json`
-exists. Removing source code does not stop the running legacy addon.
-
-For the default `polyad` profile:
-
-1. Stop test demand and let the **legacy** autoscaler drain all elastic workers.
-   Confirm `.Workers` is empty in its provider journal and only base VMs remain.
-   Do not migrate while workers or incomplete operations remain.
-2. Uninstall only the old autoscaler release and stop its host provider:
-
-   ```bash
-   helm uninstall polyad-minikube-autoscaler --kube-context polyad -n polyad --wait --timeout 5m
-   docker stop --timeout 30 polyad-minikube-autoscaler-polyad
-   docker rm polyad-minikube-autoscaler-polyad
-   ```
-
-3. Stop the legacy native bridge. The retained, ignored legacy binary can verify
-   that its lock is released before you archive state:
-
-   ```bash
-   .cache/minikube/autoscaler/bin/provider --mode=maintenance-check \
-     --config="$PWD/.cache/minikube/autoscaler/polyad/config.json" \
-     --state-dir="$PWD/.cache/minikube/autoscaler/polyad"
-   jq -e '.Workers | length == 0' .cache/minikube/autoscaler/polyad/provider/state.json
-   ```
-
-4. Privately archive that exact profile directory outside its active path.
-   Preserve its permissions, credentials and journals. If the legacy binary is
-   missing, recover it from the old Polyad revision before proceeding; do not
-   bypass the maintenance check. No migration step should delete VM data.
-5. Follow [Activate](#activate) to build and initialize **fresh** upstream state.
-   Initialization labels the base nodes for the new addon. Refresh the full lab
-   with `bash integrations/minikube/full/full.sh enable` to align Helm-managed
-   placement. Existing legacy labels can remain inert.
-6. Update any custom elastic workload selectors and tolerations to the new keys
-   in [Limits and placement](#limits-and-placement), then rerun the growth test.
-
-Adjust every command consistently if the old profile or namespace was customized.
+Inspect `<state-dir>/provider/state.json` on errors. Never reuse journals with a
+replacement cluster or remove active journals.
 
 ## Update the dependency
 

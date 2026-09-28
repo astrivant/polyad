@@ -139,25 +139,16 @@ case "$1" in
         minikube --profile "$PROFILE" status
         kube wait nodes --all --for=condition=Ready --timeout "$TIMEOUT"
 
-        # Both addon generations reserve their own workers. Never recapture an
-        # elastic worker as base infrastructure during a full-profile upgrade.
+        # Never recapture the addon's elastic workers as base infrastructure
+        # during a full-profile upgrade.
         # shellcheck source=integrations/minikube/autoscaler/paths.sh
         source "$FULL_DIR/../autoscaler/paths.sh"
         journal="$AUTOSCALER_STATE/provider/state.json"
-        legacy_journal="$AUTOSCALER_LEGACY_STATE/provider/state.json"
-        if [[ -f "$legacy_journal" ]]; then
-            [[ ! -f "$journal" ]] || {
-                printf 'Both addon generations have ownership journals; resolve migration first\n' >&2
-                exit 1
-            }
-            journal="$legacy_journal"
-        fi
         if [[ -f "$journal" ]]; then
             base_nodes="$(jq -er '.Base | keys | select(length > 0) | .[]' "$journal")"
         else
             inventory="$(kube get nodes -o json)"
-            jq -e 'all(.items[]; .metadata.labels["minikube-autoscaler.astrivant.com/pool"] != "elastic"
-                and .metadata.labels["polyad.astrivant.com/minikube-pool"] != "elastic")' <<<"$inventory" >/dev/null || {
+            jq -e 'all(.items[]; .metadata.labels["minikube-autoscaler.astrivant.com/pool"] != "elastic")' <<<"$inventory" >/dev/null || {
                 printf 'Elastic workers exist but their ownership journal is missing; restore addon state first\n' >&2
                 exit 1
             }
