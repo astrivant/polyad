@@ -40,7 +40,7 @@ def build_dependencies(*charts, fail=""):
     return result, [shlex.split(line) for line in result.stdout.splitlines()]
 
 
-@pytest.mark.parametrize("charts", [(), ("charts/polyad",), ("charts/polyad-benchmarks",)])
+@pytest.mark.parametrize("charts", [(), ("charts/polyad",), ("charts/polyad-benchmarks",), ("integrations/minikube/full/chart",)])
 def test_repository_setup_covers_all_declared_and_locked_dependencies(charts):
     """
     Register all HTTP repositories before the first locked build, including disabled features.
@@ -121,6 +121,22 @@ def test_plot_tests_have_operator_dependencies_and_child_process_import_paths():
         commands = [step.get("run", "") for step in config["steps"]]
         assert any("poetry sync --all-extras" in command or "poetry install --all-extras" in command for command in commands)
         assert not any("poetry --project pkg/polyad-benchmarks run python -m pytest" in command for command in commands)
+
+
+def test_python_ci_uses_locked_dependencies_and_uploads_only_started_tests():
+    """
+    Keep matrix dependencies reproducible and preserve results from failed test executions.
+    """
+    workflow = yaml.load((ROOT / ".github/workflows/stage-test.yml").read_text(), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["python"]["steps"]
+    assert any(step.get("run") == "poetry sync --all-extras --no-interaction" for step in steps)
+    assert not any("poetry lock &&" in step.get("run", "") for step in steps)
+    build = next(step for step in steps if step.get("name") == "Build chart dependencies")
+    assert shlex.split(build["run"]) == ["bash", HELPER, "charts/polyad", "charts/polyad-benchmarks", "integrations/minikube/full/chart"]
+    tests = next(step for step in steps if step.get("name") == "Run Python tests in parallel")
+    upload = next(step for step in steps if step.get("name") == "Upload Python test results")
+    assert upload["if"] == f"always() && steps.{tests['id']}.outcome != 'skipped'"
+    assert upload["with"]["if-no-files-found"] == "error"
 
 
 def test_mermaid_dependencies_are_installed_for_every_python_version():

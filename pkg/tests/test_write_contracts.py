@@ -291,13 +291,15 @@ def test_earlier_write_invalidates_later_dependency_validation():
     asyncio.run(run())
 
 
-def test_unnamed_write_invalidates_cached_collection_dependencies():
+@pytest.mark.parametrize("overlap", [False, True])
+def test_unnamed_write_invalidates_cached_collection_dependencies(overlap):
     """
     An unknown target cannot preserve a later approval through a generated-name creation.
     """
 
     async def run():
         api, state = transport(resource("Deployment", "target"))
+        checked, release = asyncio.Event(), asyncio.Event()
         original = api.client.call_api.side_effect
 
         def generated(path, method, **kwargs):
@@ -314,10 +316,29 @@ def test_unnamed_write_invalidates_cached_collection_dependencies():
                 await api.request("GET", "Graph", "test")
                 second = asyncio.create_task(api.request("PATCH", "Deployment", "test", "target", patch("target")))
             await until(lambda: len(api.validations.pending) == 2 and all(item.fresh() for item in api.validations.pending.values()))
+            # Choose both legal schedules explicitly: validate after the POST,
+            # or join a read that finished before it and was invalidated in flight.
+            api.validations.task.cancel()
+            await asyncio.gather(api.validations.task, return_exceptions=True)
+            if overlap:
+                receipt = next(item for item in api.validations.pending.values() if item.contract is not None)
+
+                async def overlapping_validation():
+                    """
+                    Hold a completed read until the preceding write invalidates its receipt.
+                    """
+                    await receipt.run()
+                    checked.set()
+                    await release.wait()
+
+                receipt.task = asyncio.create_task(overlapping_validation())
+                await until(checked.is_set)
         await first
+        release.set()
         with pytest.raises(WriteConflict) as error:
             await second
-        assert error.value.conflict_reason == "dependency_state_changed"
+        reason = "validation_window_expired_or_invalidated" if overlap else "dependency_state_changed"
+        assert error.value.conflict_reason == reason
         assert not any(call.args[1] == "PATCH" for call in api.client.call_api.call_args_list)
 
     asyncio.run(run())

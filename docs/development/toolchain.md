@@ -462,8 +462,8 @@ PyPI. Add `--dry-run` to validate the publishing flow without uploading. See
 
 Branch pushes, tag pushes and pull requests run the `chart` matrix in the
 [Build stage](../../.github/workflows/stage-build.yml).
-Chart validation pins the Hypothesis Helm **v1.3.5** action to its immutable commit
-[`dbc07922420fa38ddeead026f7c857eeaae66910`](https://github.com/astrivant/hypothesis-helm/tree/dbc07922420fa38ddeead026f7c857eeaae66910)
+Chart validation pins the Hypothesis Helm **v1.3.7** action to its immutable commit
+[`24b6db61f50563d1bd773c65a8ba5b84c58bc983`](https://github.com/astrivant/hypothesis-helm/tree/24b6db61f50563d1bd773c65a8ba5b84c58bc983)
 across `charts/polyad` and `charts/polyad-crds`, with **six property-test jobs total:
 three shards per chart and four workers per shard**. The jobs use `ubuntu-24.04`: GitHub's largest standard free
 Linux runner for public repositories, with 4 CPUs and 16 GB RAM. Larger runners

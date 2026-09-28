@@ -116,12 +116,12 @@ jobs:
           else
             python .github/release-version.py --output "$GITHUB_OUTPUT"
           fi
-      - run: poetry lock && poetry install --all-extras
+      - run: poetry sync --all-extras --no-interaction
       - name: Install opt-in SDK clients for protocol tests
         run: poetry run python -m pip install -e './pkg/polyad-sdk[protocols]'
       - run: bash scripts/tooling/install-helm-tools.sh helm shellcheck shfmt argocd
       - name: Build chart dependencies
-        run: bash scripts/tooling/build-chart-dependencies.sh
+        run: bash scripts/tooling/build-chart-dependencies.sh charts/polyad charts/polyad-benchmarks integrations/minikube/full/chart
       - run: poetry run pre-commit run --all-files
         if: matrix.python == '3.13'
       - name: Validate CRD admission and Flux health expressions
@@ -140,6 +140,7 @@ jobs:
           done
           poetry run python -c "import redis; redis.Redis().ping()"
       - name: Run Python tests in parallel
+        id: python-tests
         run: |
           mkdir -p .cache/tests
           poetry run pytest --junitxml=.cache/tests/pytest.xml --cov --cov-config=pyproject.toml --cov-report=
@@ -148,7 +149,7 @@ jobs:
           POLYAD_TEST_DRAGONFLY_URL: redis://localhost:6379/0
           POLYAD_TEST_POSTGRES_DSN: postgresql://postgres:polyad-test@localhost:5432/polyad
       - name: Upload Python test results
-        if: always()
+        if: always() && steps.python-tests.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: python-test-results-${{ matrix.python }}
