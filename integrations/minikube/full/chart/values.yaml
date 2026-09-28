@@ -1,0 +1,118 @@
+# yaml-language-server: $schema=values.schema.json
+## @param kindnetCompat [object] Settings for kindnetCompat.
+kindnetCompat:
+  # Minikube 1.39's ISO lacks NETFILTER_NETLINK_GLUE_CT. See the lab README.
+  ## @param kindnetCompat.enabled [boolean] Settings for kindnetCompat.enabled.
+  enabled: true
+  ## @param kindnetCompat.image [string] Settings for kindnetCompat.image.
+  image: docker.io/kindest/kindnetd:v20260820-69b56db7@sha256:526969f0a1a7a788a7a96f53a4ad3b51607bde7bb2841edf52a02916e8d52650
+## @param global [object] Settings for global.
+global:
+  ## @param global.istioNamespace [string] Settings for global.istioNamespace.
+  istioNamespace: polyad
+## @param istiod [object] Settings for istiod.
+istiod:
+  ## @param istiod.nodeSelector [object] Settings for istiod.nodeSelector.
+  ## @param istiod.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for istiod.nodeSelector.polyad.astrivant.com/minikube-pool.
+  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param istiod.pilot [object] Settings for istiod.pilot.
+  pilot:
+    ## @param istiod.pilot.replicaCount [integer] Settings for istiod.pilot.replicaCount.
+    replicaCount: 2
+    ## @param istiod.pilot.autoscaleEnabled [boolean] Settings for istiod.pilot.autoscaleEnabled.
+    autoscaleEnabled: true
+    ## @param istiod.pilot.autoscaleMin [integer] Settings for istiod.pilot.autoscaleMin.
+    autoscaleMin: 2
+    ## @param istiod.pilot.autoscaleMax [integer] Settings for istiod.pilot.autoscaleMax.
+    autoscaleMax: 3
+    ## @param istiod.pilot.resources [object] Settings for istiod.pilot.resources.
+    resources:
+      ## @param istiod.pilot.resources.requests [object] Settings for istiod.pilot.resources.requests.
+      ## @param istiod.pilot.resources.requests.cpu [string] Settings for istiod.pilot.resources.requests.cpu.
+      ## @param istiod.pilot.resources.requests.memory [string] Settings for istiod.pilot.resources.requests.memory.
+      requests: {cpu: 100m, memory: 128Mi}
+      ## @param istiod.pilot.resources.limits [object] Settings for istiod.pilot.resources.limits.
+      ## @param istiod.pilot.resources.limits.memory [string] Settings for istiod.pilot.resources.limits.memory.
+      limits: {memory: 512Mi}
+  ## @param istiod.env [object] Settings for istiod.env.
+  env:
+    ## @param istiod.env.ENABLE_NATIVE_SIDECARS [string] Settings for istiod.env.ENABLE_NATIVE_SIDECARS.
+    ENABLE_NATIVE_SIDECARS: 'true'
+  ## @param istiod.meshConfig [object] Settings for istiod.meshConfig.
+  meshConfig:
+    ## @param istiod.meshConfig.enableAutoMtls [boolean] Settings for istiod.meshConfig.enableAutoMtls.
+    enableAutoMtls: true
+    ## @param istiod.meshConfig.defaultConfig [object] Settings for istiod.meshConfig.defaultConfig.
+    defaultConfig:
+      ## @param istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts [boolean] Settings for istiod.meshConfig.defaultConfig.holdApplicationUntilProxyStarts.
+      holdApplicationUntilProxyStarts: true
+    ## @param istiod.meshConfig.extensionProviders [array] Settings for istiod.meshConfig.extensionProviders.
+    extensionProviders:
+      ## @param istiod.meshConfig.extensionProviders[].name [string] Settings for istiod.meshConfig.extensionProviders[].name.
+      - name: otel
+        ## @param istiod.meshConfig.extensionProviders[].opentelemetry [object] Settings for istiod.meshConfig.extensionProviders[].opentelemetry.
+        opentelemetry:
+          ## @param istiod.meshConfig.extensionProviders[].opentelemetry.service [string] Settings for istiod.meshConfig.extensionProviders[].opentelemetry.service.
+          service: polyad-telemetry-otlp.polyad.svc.cluster.local
+          ## @param istiod.meshConfig.extensionProviders[].opentelemetry.port [integer] Settings for istiod.meshConfig.extensionProviders[].opentelemetry.port.
+          port: 4317
+## @param cloudnative-pg [object] Settings for cloudnative-pg.
+cloudnative-pg:
+  ## @param cloudnative-pg.nodeSelector [object] Settings for cloudnative-pg.nodeSelector.
+  ## @param cloudnative-pg.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for cloudnative-pg.nodeSelector.polyad.astrivant.com/minikube-pool.
+  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param cloudnative-pg.replicaCount [integer] Settings for cloudnative-pg.replicaCount.
+  replicaCount: 2
+  ## @param cloudnative-pg.resources [object] Settings for cloudnative-pg.resources.
+  resources:
+    ## @param cloudnative-pg.resources.requests [object] Settings for cloudnative-pg.resources.requests.
+    ## @param cloudnative-pg.resources.requests.cpu [string] Settings for cloudnative-pg.resources.requests.cpu.
+    ## @param cloudnative-pg.resources.requests.memory [string] Settings for cloudnative-pg.resources.requests.memory.
+    requests: {cpu: 50m, memory: 128Mi}
+    ## @param cloudnative-pg.resources.limits [object] Settings for cloudnative-pg.resources.limits.
+    ## @param cloudnative-pg.resources.limits.memory [string] Settings for cloudnative-pg.resources.limits.memory.
+    limits: {memory: 512Mi}
+## @param vpa [object] Settings for vpa.
+vpa:
+  ## @param vpa.recommender [object] Settings for vpa.recommender.
+  recommender:
+    ## @param vpa.recommender.nodeSelector [object] Settings for vpa.recommender.nodeSelector.
+    ## @param vpa.recommender.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for vpa.recommender.nodeSelector.polyad.astrivant.com/minikube-pool.
+    nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+    ## @param vpa.recommender.resources [object] Settings for vpa.recommender.resources.
+    resources:
+      ## @param vpa.recommender.resources.requests [object] Settings for vpa.recommender.resources.requests.
+      ## @param vpa.recommender.resources.requests.cpu [string] Settings for vpa.recommender.resources.requests.cpu.
+      ## @param vpa.recommender.resources.requests.memory [string] Settings for vpa.recommender.resources.requests.memory.
+      requests: {cpu: 50m, memory: 128Mi}
+      ## @param vpa.recommender.resources.limits [object] Settings for vpa.recommender.resources.limits.
+      ## @param vpa.recommender.resources.limits.memory [string] Settings for vpa.recommender.resources.limits.memory.
+      limits: {memory: 512Mi}
+  ## @param vpa.updater [object] Settings for vpa.updater.
+  updater:
+    ## @param vpa.updater.nodeSelector [object] Settings for vpa.updater.nodeSelector.
+    ## @param vpa.updater.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for vpa.updater.nodeSelector.polyad.astrivant.com/minikube-pool.
+    nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+    ## @param vpa.updater.resources [object] Settings for vpa.updater.resources.
+    resources:
+      ## @param vpa.updater.resources.requests [object] Settings for vpa.updater.resources.requests.
+      ## @param vpa.updater.resources.requests.cpu [string] Settings for vpa.updater.resources.requests.cpu.
+      ## @param vpa.updater.resources.requests.memory [string] Settings for vpa.updater.resources.requests.memory.
+      requests: {cpu: 50m, memory: 128Mi}
+      ## @param vpa.updater.resources.limits [object] Settings for vpa.updater.resources.limits.
+      ## @param vpa.updater.resources.limits.memory [string] Settings for vpa.updater.resources.limits.memory.
+      limits: {memory: 512Mi}
+  ## @param vpa.admissionController [object] Settings for vpa.admissionController.
+  admissionController:
+    ## @param vpa.admissionController.nodeSelector [object] Settings for vpa.admissionController.nodeSelector.
+    ## @param vpa.admissionController.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for vpa.admissionController.nodeSelector.polyad.astrivant.com/minikube-pool.
+    nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+    ## @param vpa.admissionController.resources [object] Settings for vpa.admissionController.resources.
+    resources:
+      ## @param vpa.admissionController.resources.requests [object] Settings for vpa.admissionController.resources.requests.
+      ## @param vpa.admissionController.resources.requests.cpu [string] Settings for vpa.admissionController.resources.requests.cpu.
+      ## @param vpa.admissionController.resources.requests.memory [string] Settings for vpa.admissionController.resources.requests.memory.
+      requests: {cpu: 50m, memory: 64Mi}
+      ## @param vpa.admissionController.resources.limits [object] Settings for vpa.admissionController.resources.limits.
+      ## @param vpa.admissionController.resources.limits.memory [string] Settings for vpa.admissionController.resources.limits.memory.
+      limits: {memory: 256Mi}

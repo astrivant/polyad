@@ -1,0 +1,1162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "ha": {
+      "type": "boolean"
+    },
+    "architecture": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "autoscaling": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "rootControlPlane": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "global": {
+      "type": "object",
+      "properties": {
+        "istioNamespace": {
+          "type": "string"
+        },
+        "multiCluster": {
+          "type": "object",
+          "properties": {
+            "clusterName": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "operator": {
+      "type": "object",
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "properties": {
+            "polyad.astrivant.com/minikube-pool": {
+              "type": "string"
+            },
+            "polyad.astrivant.com/minikube-worker": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "replicaCount": {
+          "type": "integer"
+        },
+        "terminationGracePeriodSeconds": {
+          "type": "integer"
+        },
+        "writeQueue": {
+          "type": "object",
+          "properties": {
+            "maxInFlight": {
+              "type": "integer"
+            },
+            "maxPending": {
+              "type": "integer"
+            },
+            "plannerParallelism": {
+              "type": "integer"
+            },
+            "validationWorkers": {
+              "type": "integer"
+            },
+            "reconciliationWorkers": {
+              "type": "integer"
+            },
+            "validationWindowSeconds": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": true
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minReplicas": {
+              "type": "integer"
+            },
+            "maxReplicas": {
+              "type": "integer"
+            },
+            "connections": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "cheeger": {
+          "type": "object",
+          "properties": {
+            "reduction": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "strategy": {
+                  "type": "string"
+                },
+                "feedback": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "dragonfly": {
+      "type": "object",
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "properties": {
+            "polyad.astrivant.com/minikube-pool": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "ha": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "replicas": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": true
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minReplicas": {
+              "type": "integer"
+            },
+            "maxReplicas": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": true
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "size": {
+              "type": "string"
+            },
+            "storageClass": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "dragonflyOperator": {
+      "type": "object",
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "properties": {
+            "polyad.astrivant.com/minikube-pool": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "replicaCount": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": true
+    },
+    "postgresql": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "managed": {
+          "type": "boolean"
+        },
+        "ha": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "instances": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": true
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "string"
+            },
+            "storageClass": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minInstances": {
+              "type": "integer"
+            },
+            "maxInstances": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": true
+        },
+        "recordEncryption": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "privateKeyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "api": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "existingSecret": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "events": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "websockets": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "rebalance": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "istio": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "connections": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "graphLabels": {
+          "type": "boolean"
+        },
+        "graphSpectra": {
+          "type": "boolean"
+        },
+        "authentication": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "existingSecret": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "authentication": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "separateDatabase": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "operators": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "direction": {
+                "type": "string"
+              },
+              "existingSecret": {
+                "type": "string"
+              },
+              "secretKey": {
+                "type": "string"
+              },
+              "endpoints": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requestsPerMinute": {
+                "type": "integer"
+              },
+              "maxConcurrentRequests": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "keda": {
+      "type": "object",
+      "properties": {
+        "install": {
+          "type": "boolean"
+        },
+        "observation": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "authentication": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "metricsServer": {
+              "type": "object",
+              "properties": {
+                "minReplicas": {
+                  "type": "integer"
+                },
+                "maxReplicas": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            },
+            "webhooks": {
+              "type": "object",
+              "properties": {
+                "minReplicas": {
+                  "type": "integer"
+                },
+                "maxReplicas": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "kedaOperator": {
+      "type": "object",
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "properties": {
+            "polyad.astrivant.com/minikube-pool": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "crds": {
+          "type": "object",
+          "properties": {
+            "install": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "podLabels": {
+          "type": "object",
+          "properties": {
+            "keda": {
+              "type": "object",
+              "properties": {
+                "sidecar.istio.io/inject": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "podAnnotations": {
+          "type": "object",
+          "properties": {
+            "keda": {
+              "type": "object",
+              "properties": {
+                "sidecar.istio.io/inject": {
+                  "type": "string"
+                },
+                "sidecar.istio.io/nativeSidecar": {
+                  "type": "string"
+                },
+                "proxy.istio.io/config": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "operator": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            },
+            "metricServer": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            },
+            "webhooks": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "verticalPodAutoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "capacity": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "maxPods": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": true
+    },
+    "observer": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "replicaCount": {
+          "type": "integer"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "mesh": {
+          "type": "boolean"
+        },
+        "principals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "mesh": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "install": {
+          "type": "boolean"
+        },
+        "operator": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "compositionPrincipals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "metricsPrincipals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "eventPrincipals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "connectionPrincipals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "telemetry": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "tracing": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "randomSamplingPercentage": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "authorization": {
+          "type": "object",
+          "properties": {
+            "audit": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": true
+            },
+            "dryRunDeny": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "ingress": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tlsSecret": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "istiod": {
+      "type": "object",
+      "properties": {
+        "pilot": {
+          "type": "object",
+          "properties": {
+            "replicaCount": {
+              "type": "integer"
+            },
+            "autoscaleEnabled": {
+              "type": "boolean"
+            },
+            "autoscaleMin": {
+              "type": "integer"
+            },
+            "autoscaleMax": {
+              "type": "integer"
+            },
+            "resources": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "meshConfig": {
+          "type": "object",
+          "properties": {
+            "extensionProviders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "opentelemetry": {
+                    "type": "object",
+                    "properties": {
+                      "service": {
+                        "type": "string"
+                      },
+                      "port": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "istioIngress": {
+      "type": "object",
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "properties": {
+            "polyad.astrivant.com/minikube-pool": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "replicaCount": {
+          "type": "integer"
+        },
+        "autoscaling": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minReplicas": {
+              "type": "integer"
+            },
+            "maxReplicas": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": true
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "tracing": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "samplingRatio": {
+          "type": "number"
+        },
+        "logs": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "telemetry": {
+      "type": "object",
+      "properties": {
+        "nodeSelector": {
+          "type": "object",
+          "properties": {
+            "polyad.astrivant.com/minikube-pool": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "replicas": {
+          "type": "integer"
+        },
+        "remoteWrite": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "logs": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "traces": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "routeOperator": {
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "operatorMetricsSecret": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "string"
+            },
+            "storageClass": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

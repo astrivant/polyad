@@ -1,0 +1,63 @@
+{{- if .Values.kindnetCompat.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-kindnet-compat
+data:
+  kindnet-compat.nft: |
+{{ .Files.Get "files/kindnet-compat.nft" | indent 4 }}
+  kindnet-compat.sh: |
+{{ .Files.Get "files/kindnet-compat.sh" | indent 4 }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}-kindnet-compat
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-kindnet-compat
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-kindnet-compat
+        sidecar.istio.io/inject: "false"
+      annotations:
+        checksum/config: {{ printf "%s%s" (.Files.Get "files/kindnet-compat.nft") (.Files.Get "files/kindnet-compat.sh") | sha256sum }}
+    spec:
+      # This service modifies only its own nftables table in the VM network
+      # namespace. It needs NET_ADMIN, not privileged mode or host filesystem.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: compat
+          image: {{ .Values.kindnetCompat.image | quote }}
+          command: ["/bin/sh", "/config/kindnet-compat.sh"]
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_ADMIN"]
+          resources:
+            requests: {cpu: 1m, memory: 16Mi}
+            limits: {memory: 64Mi}
+          readinessProbe:
+            exec:
+              command: ["nft", "list", "chain", "inet", "polyad_kindnet_compat", "postrouting"]
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-kindnet-compat
+{{- end }}

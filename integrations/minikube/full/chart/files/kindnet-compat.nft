@@ -1,0 +1,10 @@
+# Minikube 1.39's ISO omits CONFIG_NETFILTER_NETLINK_GLUE_CT. Kindnet's
+# NFQUEUE verdict therefore cannot set its accepted-connection label.
+# Priority 96 is AFTER kindnet's policy hook (95), BEFORE source NAT (100).
+# A denied packet is already dropped and can never reach this chain.
+# Preserve other consumers' label bits. Never accept, bypass, or rewrite a
+# policy verdict here: only remember NEW connections already allowed by it.
+add table inet polyad_kindnet_compat
+add chain inet polyad_kindnet_compat postrouting { type filter hook postrouting priority 96; policy accept; }
+flush chain inet polyad_kindnet_compat postrouting
+add rule inet polyad_kindnet_compat postrouting ct state new ct label set ct label | 28

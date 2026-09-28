@@ -1,0 +1,10 @@
+{
+  "profile": "polyad",
+  "namespace": "polyad",
+  "listen": "192.168.105.1:50051",
+  "minWorkers": 0,
+  "maxWorkers": 2,
+  "maxTotalMemoryMiB": 20480,
+  "provisionTimeoutSeconds": 900,
+  "cooldownSeconds": 30
+}

@@ -50,6 +50,23 @@ def test_cache_restart_recreates_consumer_groups():
     asyncio.run(scenario())
 
 
+def test_deferred_retry_requires_current_consumer_ownership():
+    """
+    A lost lease or completed delivery cannot enqueue an unfenced replacement.
+    """
+
+    async def scenario():
+        queue = SharedQueue("redis://localhost", "test", "worker")
+        queue.client = AsyncMock()
+        queue.client.eval.return_value = None
+        with pytest.raises(RuntimeError, match="no longer pending"):
+            await queue.retry(0, "1-0", ("Graph", "test", "root"))
+        queue.client.xack.assert_not_called()
+        queue.client.xdel.assert_not_called()
+
+    asyncio.run(scenario())
+
+
 def test_demoted_primary_connection_is_discarded():
     """
     Reconnect on the next pass instead of reusing a live but read-only socket.
@@ -136,6 +153,23 @@ def test_dragonfly_queue_recovery():
             assert await second.client.xlen(second.stream(0)) == 0
             await first.sample_backlog(range(2))
             assert first.backlog([0])["total"] == 0
+
+            # Known write deferrals yield to siblings but retain a durable retry.
+            retry_key = "Graph", namespace, "deferred"
+            await first.publish(0, retry_key)
+            deferred = await first.take(0)
+            assert deferred is not None
+            await first.publish(0, ("Graph", namespace, "dependency"))
+            await first.retry(0, deferred[0], retry_key)
+            with pytest.raises(RuntimeError, match="no longer pending"):
+                await first.retry(0, deferred[0], retry_key)
+            dependency = await second.take(0)
+            assert dependency is not None and dependency[1][2] == "dependency"
+            await second.acknowledge(0, dependency[0])
+            retried = await second.take(0)
+            assert retried is not None and retried[1] == retry_key
+            await second.acknowledge(0, retried[0])
+            assert await first.client.xlen(first.stream(0)) == 0
 
             # Simulate cache loss only for this test's keys, then repopulate from intent.
             await first.client.delete(first.stream(0))

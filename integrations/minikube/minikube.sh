@@ -34,6 +34,7 @@ Usage: integrations/minikube/minikube.sh COMMAND
   start    Start three VMs, build/push Polyad, install the chart, and smoke-test it.
   recover  Stop/start this VM profile and restore missing workers without installing Polyad.
   enable   Rebuild/push Polyad, refresh CRDs, and upgrade the running local release.
+  full     Upgrade the running local release to HA with local dependencies and Istio.
   test     Check cluster health and execute a fresh, uniquely named Graph.
   status   Show nodes, controller/cache workloads, and graph boundaries.
   render   Build locked dependencies and print manifests without accessing a cluster.
@@ -156,6 +157,28 @@ vm_node_count() {
             | select(length > 0 and ([.[] | select(.ControlPlane == true)] | length) == 1)
             | length' <<<"$profiles" ||
         fail "Profile '$PROFILE' must contain nodes and exactly one control plane; recovery does not convert HA clusters"
+}
+
+##
+# Refuse overlapping VM owners and preserve the autoscaler's current VM count.
+# command::string -> ret::exit_code
+check_autoscaler_lifecycle() {
+    local state="$PROJECT_ROOT/.cache/minikube/autoscaler/$PROFILE"
+    local binary="$PROJECT_ROOT/.cache/minikube/autoscaler/bin/provider"
+    local container="polyad-minikube-autoscaler-$PROFILE"
+    [[ -f "$state/provider/state.json" ]] || return 0
+    [[ "$1" != delete ]] || fail 'Autoscaler ownership is initialized; disable it and archive its journals before explicitly deleting this cluster'
+    require docker jq
+    docker info >/dev/null 2>&1 || fail 'Cannot verify the autoscaler container is stopped'
+    if docker container inspect "$container" >/dev/null 2>&1; then
+        [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == false ]] || fail 'Disable the autoscaler before changing VM lifecycle'
+    fi
+    [[ -x "$binary" ]] || fail 'Rebuild the autoscaler bridge to verify its lifecycle lock'
+    "$binary" --mode=maintenance-check --config="$state/config.json" --state-dir="$state"
+    jq -e 'all(.Workers[]; .Phase == "ready")' "$state/provider/state.json" >/dev/null || fail 'Resolve pending autoscaler operations before VM maintenance'
+
+    # The autoscaler, not the original three-node bootstrap, owns elastic size.
+    NODES="$(vm_node_count)"
 }
 
 ##
@@ -361,6 +384,11 @@ enable() {
     prepare_chart
     build_image
     publish_image
+    if [[ -f "$PROJECT_ROOT/.cache/minikube/full/$PROFILE/enabled" ]]; then
+        # Preserve the selected HA profile, but still deploy this source build.
+        POLYAD_MINIKUBE_IMAGE="$IMAGE_REPOSITORY:$IMAGE_TAG" bash "$INTEGRATION_DIR/full/full.sh" enable
+        return
+    fi
     chart_options
 
     # Helm does not upgrade its crds/ definitions. Own their local updates explicitly
@@ -376,6 +404,10 @@ enable() {
 # Verify readiness and execute a unique Graph, retaining failed smoke resources.
 # -> ret::exit_code
 smoke_test() {
+    if [[ -f "$PROJECT_ROOT/.cache/minikube/full/$PROFILE/enabled" ]]; then
+        bash "$INTEGRATION_DIR/full/full.sh" test
+        return
+    fi
     require minikube kubectl
     check_vm_profile
     minikube --profile "$PROFILE" status
@@ -472,7 +504,7 @@ case "$1" in
         usage
         exit 0
         ;;
-    start | recover | enable | test | status | render | disable | stop | delete) ;;
+    start | recover | enable | full | test | status | render | disable | stop | delete) ;;
     *)
         usage >&2
         exit 2
@@ -504,6 +536,7 @@ case "$1" in
         require minikube docker helm kubectl jq curl
         if [[ "$HOST_OS" == Darwin ]]; then require crane; fi
         check_vm_host
+        check_autoscaler_lifecycle start
 
         start_vms
 
@@ -521,6 +554,7 @@ case "$1" in
         if [[ "$NATIVE_SSH" == false ]]; then require ssh; fi
         check_vm_profile
         check_vm_host
+        check_autoscaler_lifecycle recover
 
         # QEMU only rediscovers its DHCP lease on VM start. A failed SSH wait
         # can leave a running guest with no saved IP, so explicitly stop/start
@@ -533,6 +567,7 @@ case "$1" in
         kube get nodes -o wide
         ;;
     enable) enable ;;
+    full) exec bash "$INTEGRATION_DIR/full/full.sh" enable ;;
     test) smoke_test ;;
     render)
         prepare_chart
@@ -548,6 +583,7 @@ case "$1" in
     disable) disable_polyad ;;
     stop | delete)
         require minikube
+        check_autoscaler_lifecycle "$1"
         minikube --profile "$PROFILE" "$1"
         ;;
 esac

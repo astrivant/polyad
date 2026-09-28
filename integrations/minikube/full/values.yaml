@@ -1,0 +1,513 @@
+# yaml-language-server: $schema=values.schema.json
+# Bounded single-cluster HA lab. External accounts and remote clusters stay opt-in.
+## @param ha [boolean] Settings for ha.
+ha: true
+## @param architecture [object] Settings for architecture.
+architecture:
+  ## @param architecture.mode [string] Settings for architecture.mode.
+  mode: Dense
+  ## @param architecture.autoscaling [boolean] Settings for architecture.autoscaling.
+  autoscaling: false
+## @param rootControlPlane [object] Settings for rootControlPlane.
+rootControlPlane:
+  ## @param rootControlPlane.enabled [boolean] Settings for rootControlPlane.enabled.
+  enabled: true
+  ## @param rootControlPlane.mode [string] Settings for rootControlPlane.mode.
+  mode: Local
+## @param global [object] Settings for global.
+global:
+  ## @param global.istioNamespace [string] Settings for global.istioNamespace.
+  istioNamespace: polyad
+  ## @param global.multiCluster [object] Settings for global.multiCluster.
+  multiCluster:
+    ## @param global.multiCluster.clusterName [string] Settings for global.multiCluster.clusterName.
+    clusterName: polyad
+## @param operator [object] Settings for operator.
+operator:
+  ## @param operator.nodeSelector [object] Settings for operator.nodeSelector.
+  ## @param operator.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for operator.nodeSelector.polyad.astrivant.com/minikube-pool.
+  ## @param operator.nodeSelector.polyad.astrivant.com/minikube-worker [string] Settings for operator.nodeSelector.polyad.astrivant.com/minikube-worker.
+  nodeSelector: {polyad.astrivant.com/minikube-pool: base, polyad.astrivant.com/minikube-worker: 'true'}
+  ## @param operator.replicaCount [integer] Settings for operator.replicaCount.
+  replicaCount: 2
+  ## @param operator.terminationGracePeriodSeconds [integer] Settings for operator.terminationGracePeriodSeconds.
+  terminationGracePeriodSeconds: 90
+  # The full atlas validates more dependencies than the standalone three-branch
+  # graph. Allow independent writes to progress on these resource-limited VMs.
+  ## @param operator.writeQueue [object] Settings for operator.writeQueue.
+  writeQueue:
+    ## @param operator.writeQueue.maxInFlight [integer] Settings for operator.writeQueue.maxInFlight.
+    maxInFlight: 2
+    ## @param operator.writeQueue.maxPending [integer] Settings for operator.writeQueue.maxPending.
+    maxPending: 4
+    ## @param operator.writeQueue.plannerParallelism [integer] Settings for operator.writeQueue.plannerParallelism.
+    plannerParallelism: 2
+    ## @param operator.writeQueue.validationWorkers [integer] Settings for operator.writeQueue.validationWorkers.
+    validationWorkers: 2
+    ## @param operator.writeQueue.reconciliationWorkers [integer] Settings for operator.writeQueue.reconciliationWorkers.
+    reconciliationWorkers: 2
+    ## @param operator.writeQueue.validationWindowSeconds [integer] Settings for operator.writeQueue.validationWindowSeconds.
+    validationWindowSeconds: 15
+  ## @param operator.resources [object] Settings for operator.resources.
+  resources:
+    ## @param operator.resources.requests [object] Settings for operator.resources.requests.
+    ## @param operator.resources.requests.cpu [string] Settings for operator.resources.requests.cpu.
+    ## @param operator.resources.requests.memory [string] Settings for operator.resources.requests.memory.
+    requests: {cpu: 250m, memory: 512Mi}
+    ## @param operator.resources.limits [object] Settings for operator.resources.limits.
+    ## @param operator.resources.limits.cpu [string] Settings for operator.resources.limits.cpu.
+    ## @param operator.resources.limits.memory [string] Settings for operator.resources.limits.memory.
+    limits: {cpu: '1', memory: 1Gi}
+  ## @param operator.autoscaling [object] Settings for operator.autoscaling.
+  autoscaling:
+    ## @param operator.autoscaling.enabled [boolean] Settings for operator.autoscaling.enabled.
+    enabled: true
+    ## @param operator.autoscaling.minReplicas [integer] Settings for operator.autoscaling.minReplicas.
+    minReplicas: 2
+    ## @param operator.autoscaling.maxReplicas [integer] Settings for operator.autoscaling.maxReplicas.
+    maxReplicas: 3
+    ## @param operator.autoscaling.connections [object] Settings for operator.autoscaling.connections.
+    connections:
+      ## @param operator.autoscaling.connections.enabled [boolean] Settings for operator.autoscaling.connections.enabled.
+      enabled: true
+  ## @param operator.cheeger [object] Settings for operator.cheeger.
+  cheeger:
+    ## @param operator.cheeger.reduction [object] Settings for operator.cheeger.reduction.
+    reduction:
+      ## @param operator.cheeger.reduction.enabled [boolean] Settings for operator.cheeger.reduction.enabled.
+      enabled: true
+      ## @param operator.cheeger.reduction.strategy [string] Settings for operator.cheeger.reduction.strategy.
+      strategy: AdaptivePID
+      ## @param operator.cheeger.reduction.feedback [string] Settings for operator.cheeger.reduction.feedback.
+      feedback: CertificateGap
+## @param dragonfly [object] Settings for dragonfly.
+dragonfly:
+  ## @param dragonfly.nodeSelector [object] Settings for dragonfly.nodeSelector.
+  ## @param dragonfly.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for dragonfly.nodeSelector.polyad.astrivant.com/minikube-pool.
+  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param dragonfly.ha [object] Settings for dragonfly.ha.
+  ha:
+    ## @param dragonfly.ha.enabled [boolean] Settings for dragonfly.ha.enabled.
+    enabled: true
+    ## @param dragonfly.ha.replicas [integer] Settings for dragonfly.ha.replicas.
+    replicas: 2
+  ## @param dragonfly.autoscaling [object] Settings for dragonfly.autoscaling.
+  autoscaling:
+    ## @param dragonfly.autoscaling.enabled [boolean] Settings for dragonfly.autoscaling.enabled.
+    enabled: true
+    ## @param dragonfly.autoscaling.minReplicas [integer] Settings for dragonfly.autoscaling.minReplicas.
+    minReplicas: 2
+    ## @param dragonfly.autoscaling.maxReplicas [integer] Settings for dragonfly.autoscaling.maxReplicas.
+    maxReplicas: 3
+  ## @param dragonfly.persistence [object] Settings for dragonfly.persistence.
+  persistence:
+    ## @param dragonfly.persistence.enabled [boolean] Settings for dragonfly.persistence.enabled.
+    enabled: true
+    ## @param dragonfly.persistence.size [string] Settings for dragonfly.persistence.size.
+    size: 1Gi
+    ## @param dragonfly.persistence.storageClass [string] Settings for dragonfly.persistence.storageClass.
+    storageClass: local-path
+## @param dragonflyOperator [object] Settings for dragonflyOperator.
+dragonflyOperator:
+  ## @param dragonflyOperator.nodeSelector [object] Settings for dragonflyOperator.nodeSelector.
+  ## @param dragonflyOperator.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for dragonflyOperator.nodeSelector.polyad.astrivant.com/minikube-pool.
+  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param dragonflyOperator.replicaCount [integer] Settings for dragonflyOperator.replicaCount.
+  replicaCount: 2
+## @param postgresql [object] Settings for postgresql.
+postgresql:
+  ## @param postgresql.enabled [boolean] Settings for postgresql.enabled.
+  enabled: true
+  ## @param postgresql.managed [boolean] Settings for postgresql.managed.
+  managed: true
+  ## @param postgresql.ha [object] Settings for postgresql.ha.
+  ha:
+    ## @param postgresql.ha.enabled [boolean] Settings for postgresql.ha.enabled.
+    enabled: true
+    ## @param postgresql.ha.instances [integer] Settings for postgresql.ha.instances.
+    instances: 3
+  ## @param postgresql.storage [object] Settings for postgresql.storage.
+  storage:
+    ## @param postgresql.storage.size [string] Settings for postgresql.storage.size.
+    size: 2Gi
+    ## @param postgresql.storage.storageClass [string] Settings for postgresql.storage.storageClass.
+    storageClass: local-path
+  ## @param postgresql.resources [object] Settings for postgresql.resources.
+  resources:
+    ## @param postgresql.resources.requests [object] Settings for postgresql.resources.requests.
+    ## @param postgresql.resources.requests.cpu [string] Settings for postgresql.resources.requests.cpu.
+    ## @param postgresql.resources.requests.memory [string] Settings for postgresql.resources.requests.memory.
+    requests: {cpu: 100m, memory: 256Mi}
+    ## @param postgresql.resources.limits [object] Settings for postgresql.resources.limits.
+    ## @param postgresql.resources.limits.memory [string] Settings for postgresql.resources.limits.memory.
+    limits: {memory: 768Mi}
+  ## @param postgresql.autoscaling [object] Settings for postgresql.autoscaling.
+  autoscaling:
+    ## @param postgresql.autoscaling.enabled [boolean] Settings for postgresql.autoscaling.enabled.
+    enabled: true
+    ## @param postgresql.autoscaling.minInstances [integer] Settings for postgresql.autoscaling.minInstances.
+    minInstances: 3
+    ## @param postgresql.autoscaling.maxInstances [integer] Settings for postgresql.autoscaling.maxInstances.
+    maxInstances: 3
+  ## @param postgresql.recordEncryption [object] Settings for postgresql.recordEncryption.
+  recordEncryption:
+    ## @param postgresql.recordEncryption.enabled [boolean] Settings for postgresql.recordEncryption.enabled.
+    enabled: true
+    ## @param postgresql.recordEncryption.existingSecret [string] Settings for postgresql.recordEncryption.existingSecret.
+    existingSecret: polyad-record-encryption
+    ## @param postgresql.recordEncryption.privateKeyKey [string] Settings for postgresql.recordEncryption.privateKeyKey.
+    privateKeyKey: private.pem
+## @param api [object] Settings for api.
+api:
+  ## @param api.enabled [boolean] Settings for api.enabled.
+  enabled: true
+  ## @param api.existingSecret [string] Settings for api.existingSecret.
+  existingSecret: polyad-api
+## @param events [object] Settings for events.
+events:
+  ## @param events.enabled [boolean] Settings for events.enabled.
+  enabled: true
+  ## @param events.existingSecret [string] Settings for events.existingSecret.
+  existingSecret: polyad-events
+  ## @param events.websockets [object] Settings for events.websockets.
+  websockets:
+    ## @param events.websockets.enabled [boolean] Settings for events.websockets.enabled.
+    enabled: true
+  ## @param events.rebalance [object] Settings for events.rebalance.
+  rebalance:
+    ## @param events.rebalance.enabled [boolean] Settings for events.rebalance.enabled.
+    enabled: true
+  ## @param events.istio [object] Settings for events.istio.
+  istio:
+    ## @param events.istio.enabled [boolean] Settings for events.istio.enabled.
+    enabled: true
+## @param connections [object] Settings for connections.
+connections:
+  ## @param connections.enabled [boolean] Settings for connections.enabled.
+  enabled: true
+## @param metrics [object] Settings for metrics.
+metrics:
+  ## @param metrics.enabled [boolean] Settings for metrics.enabled.
+  enabled: true
+  ## @param metrics.graphLabels [boolean] Settings for metrics.graphLabels.
+  graphLabels: true
+  ## @param metrics.graphSpectra [boolean] Settings for metrics.graphSpectra.
+  graphSpectra: true
+  ## @param metrics.authentication [object] Settings for metrics.authentication.
+  authentication:
+    ## @param metrics.authentication.enabled [boolean] Settings for metrics.authentication.enabled.
+    enabled: true
+    ## @param metrics.authentication.existingSecret [string] Settings for metrics.authentication.existingSecret.
+    existingSecret: polyad-metrics
+## @param authentication [object] Settings for authentication.
+authentication:
+  ## @param authentication.mode [string] Settings for authentication.mode.
+  mode: Required
+  ## @param authentication.storage [object] Settings for authentication.storage.
+  storage:
+    ## @param authentication.storage.enabled [boolean] Settings for authentication.storage.enabled.
+    enabled: true
+    ## @param authentication.storage.separateDatabase [boolean] Settings for authentication.storage.separateDatabase.
+    separateDatabase: false
+  ## @param authentication.operators [array] Settings for authentication.operators.
+  operators:
+    ## @param authentication.operators[].name [string] Settings for authentication.operators[].name.
+    - name: local-metrics
+      ## @param authentication.operators[].direction [string] Settings for authentication.operators[].direction.
+      direction: Inbound
+      ## @param authentication.operators[].existingSecret [string] Settings for authentication.operators[].existingSecret.
+      existingSecret: polyad-metrics
+      ## @param authentication.operators[].secretKey [string] Settings for authentication.operators[].secretKey.
+      secretKey: token
+      ## @param authentication.operators[].endpoints [array] Settings for authentication.operators[].endpoints.
+      endpoints: [metrics]
+      ## @param authentication.operators[].requestsPerMinute [integer] Settings for authentication.operators[].requestsPerMinute.
+      requestsPerMinute: 1200
+      ## @param authentication.operators[].maxConcurrentRequests [integer] Settings for authentication.operators[].maxConcurrentRequests.
+      maxConcurrentRequests: 32
+## @param keda [object] Settings for keda.
+keda:
+  ## @param keda.install [boolean] Settings for keda.install.
+  install: true
+  ## @param keda.observation [object] Settings for keda.observation.
+  observation:
+    ## @param keda.observation.enabled [boolean] Settings for keda.observation.enabled.
+    enabled: true
+  ## @param keda.authentication [object] Settings for keda.authentication.
+  authentication:
+    ## @param keda.authentication.enabled [boolean] Settings for keda.authentication.enabled.
+    enabled: true
+  ## @param keda.autoscaling [object] Settings for keda.autoscaling.
+  autoscaling:
+    ## @param keda.autoscaling.metricsServer [object] Settings for keda.autoscaling.metricsServer.
+    metricsServer:
+      ## @param keda.autoscaling.metricsServer.minReplicas [integer] Settings for keda.autoscaling.metricsServer.minReplicas.
+      minReplicas: 2
+      ## @param keda.autoscaling.metricsServer.maxReplicas [integer] Settings for keda.autoscaling.metricsServer.maxReplicas.
+      maxReplicas: 3
+    ## @param keda.autoscaling.webhooks [object] Settings for keda.autoscaling.webhooks.
+    webhooks:
+      ## @param keda.autoscaling.webhooks.minReplicas [integer] Settings for keda.autoscaling.webhooks.minReplicas.
+      minReplicas: 2
+      ## @param keda.autoscaling.webhooks.maxReplicas [integer] Settings for keda.autoscaling.webhooks.maxReplicas.
+      maxReplicas: 3
+## @param kedaOperator [object] Settings for kedaOperator.
+kedaOperator:
+  ## @param kedaOperator.nodeSelector [object] Settings for kedaOperator.nodeSelector.
+  ## @param kedaOperator.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for kedaOperator.nodeSelector.polyad.astrivant.com/minikube-pool.
+  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  # CRDs are applied before installation by full.sh, with one stable field owner.
+  ## @param kedaOperator.crds [object] Settings for kedaOperator.crds.
+  crds:
+    ## @param kedaOperator.crds.install [boolean] Settings for kedaOperator.crds.install.
+    install: false
+  ## @param kedaOperator.podLabels [object] Settings for kedaOperator.podLabels.
+  podLabels:
+    ## @param kedaOperator.podLabels.keda [object] Settings for kedaOperator.podLabels.keda.
+    keda:
+      ## @param kedaOperator.podLabels.keda.sidecar.istio.io/inject [string] Settings for kedaOperator.podLabels.keda.sidecar.istio.io/inject.
+      sidecar.istio.io/inject: 'true'
+  ## @param kedaOperator.podAnnotations [object] Settings for kedaOperator.podAnnotations.
+  podAnnotations:
+    ## @param kedaOperator.podAnnotations.keda [object] Settings for kedaOperator.podAnnotations.keda.
+    keda:
+      ## @param kedaOperator.podAnnotations.keda.sidecar.istio.io/inject [string] Settings for kedaOperator.podAnnotations.keda.sidecar.istio.io/inject.
+      sidecar.istio.io/inject: 'true'
+      ## @param kedaOperator.podAnnotations.keda.sidecar.istio.io/nativeSidecar [string] Settings for kedaOperator.podAnnotations.keda.sidecar.istio.io/nativeSidecar.
+      sidecar.istio.io/nativeSidecar: 'true'
+      ## @param kedaOperator.podAnnotations.keda.proxy.istio.io/config [string] Settings for kedaOperator.podAnnotations.keda.proxy.istio.io/config.
+      proxy.istio.io/config: '{"holdApplicationUntilProxyStarts":true}'
+  ## @param kedaOperator.resources [object] Settings for kedaOperator.resources.
+  resources:
+    ## @param kedaOperator.resources.operator [object] Settings for kedaOperator.resources.operator.
+    operator:
+      ## @param kedaOperator.resources.operator.requests [object] Settings for kedaOperator.resources.operator.requests.
+      ## @param kedaOperator.resources.operator.requests.cpu [string] Settings for kedaOperator.resources.operator.requests.cpu.
+      ## @param kedaOperator.resources.operator.requests.memory [string] Settings for kedaOperator.resources.operator.requests.memory.
+      requests: {cpu: 50m, memory: 100Mi}
+      ## @param kedaOperator.resources.operator.limits [object] Settings for kedaOperator.resources.operator.limits.
+      ## @param kedaOperator.resources.operator.limits.cpu [string] Settings for kedaOperator.resources.operator.limits.cpu.
+      ## @param kedaOperator.resources.operator.limits.memory [string] Settings for kedaOperator.resources.operator.limits.memory.
+      limits: {cpu: 500m, memory: 512Mi}
+    ## @param kedaOperator.resources.metricServer [object] Settings for kedaOperator.resources.metricServer.
+    metricServer:
+      ## @param kedaOperator.resources.metricServer.requests [object] Settings for kedaOperator.resources.metricServer.requests.
+      ## @param kedaOperator.resources.metricServer.requests.cpu [string] Settings for kedaOperator.resources.metricServer.requests.cpu.
+      ## @param kedaOperator.resources.metricServer.requests.memory [string] Settings for kedaOperator.resources.metricServer.requests.memory.
+      requests: {cpu: 50m, memory: 100Mi}
+      ## @param kedaOperator.resources.metricServer.limits [object] Settings for kedaOperator.resources.metricServer.limits.
+      ## @param kedaOperator.resources.metricServer.limits.cpu [string] Settings for kedaOperator.resources.metricServer.limits.cpu.
+      ## @param kedaOperator.resources.metricServer.limits.memory [string] Settings for kedaOperator.resources.metricServer.limits.memory.
+      limits: {cpu: 500m, memory: 512Mi}
+    ## @param kedaOperator.resources.webhooks [object] Settings for kedaOperator.resources.webhooks.
+    webhooks:
+      ## @param kedaOperator.resources.webhooks.requests [object] Settings for kedaOperator.resources.webhooks.requests.
+      ## @param kedaOperator.resources.webhooks.requests.cpu [string] Settings for kedaOperator.resources.webhooks.requests.cpu.
+      ## @param kedaOperator.resources.webhooks.requests.memory [string] Settings for kedaOperator.resources.webhooks.requests.memory.
+      requests: {cpu: 50m, memory: 100Mi}
+      ## @param kedaOperator.resources.webhooks.limits [object] Settings for kedaOperator.resources.webhooks.limits.
+      ## @param kedaOperator.resources.webhooks.limits.cpu [string] Settings for kedaOperator.resources.webhooks.limits.cpu.
+      ## @param kedaOperator.resources.webhooks.limits.memory [string] Settings for kedaOperator.resources.webhooks.limits.memory.
+      limits: {cpu: 500m, memory: 256Mi}
+## @param verticalPodAutoscaling [object] Settings for verticalPodAutoscaling.
+verticalPodAutoscaling:
+  ## @param verticalPodAutoscaling.enabled [boolean] Settings for verticalPodAutoscaling.enabled.
+  enabled: true
+## @param capacity [object] Settings for capacity.
+capacity:
+  ## @param capacity.enabled [boolean] Settings for capacity.enabled.
+  enabled: true
+  ## @param capacity.maxPods [integer] Settings for capacity.maxPods.
+  maxPods: 16
+## @param observer [object] Settings for observer.
+observer:
+  ## @param observer.enabled [boolean] Settings for observer.enabled.
+  enabled: true
+  ## @param observer.replicaCount [integer] Settings for observer.replicaCount.
+  replicaCount: 2
+  ## @param observer.existingSecret [string] Settings for observer.existingSecret.
+  existingSecret: polyad-observer
+  ## @param observer.resources [object] Settings for observer.resources.
+  resources:
+    ## @param observer.resources.requests [object] Settings for observer.resources.requests.
+    ## @param observer.resources.requests.cpu [string] Settings for observer.resources.requests.cpu.
+    ## @param observer.resources.requests.memory [string] Settings for observer.resources.requests.memory.
+    requests: {cpu: 100m, memory: 128Mi}
+    ## @param observer.resources.limits [object] Settings for observer.resources.limits.
+    ## @param observer.resources.limits.cpu [string] Settings for observer.resources.limits.cpu.
+    ## @param observer.resources.limits.memory [string] Settings for observer.resources.limits.memory.
+    limits: {cpu: 500m, memory: 512Mi}
+  ## @param observer.mesh [boolean] Settings for observer.mesh.
+  mesh: true
+  ## @param observer.principals [array] Settings for observer.principals.
+  principals: [cluster.local/ns/polyad/sa/polyad-polyad]
+## @param mesh [object] Settings for mesh.
+mesh:
+  ## @param mesh.enabled [boolean] Settings for mesh.enabled.
+  enabled: true
+  # The prerequisite release installs Istio before Polyad's security resources.
+  ## @param mesh.install [boolean] Settings for mesh.install.
+  install: false
+  ## @param mesh.operator [object] Settings for mesh.operator.
+  operator:
+    ## @param mesh.operator.enabled [boolean] Settings for mesh.operator.enabled.
+    enabled: true
+    ## @param mesh.operator.compositionPrincipals [array] Settings for mesh.operator.compositionPrincipals.
+    compositionPrincipals: [cluster.local/ns/polyad/sa/polyad, cluster.local/ns/polyad/sa/polyad-polyad]
+    ## @param mesh.operator.metricsPrincipals [array] Settings for mesh.operator.metricsPrincipals.
+    metricsPrincipals: [cluster.local/ns/polyad/sa/keda-operator, cluster.local/ns/polyad/sa/polyad-telemetry, cluster.local/ns/polyad/sa/polyad-polyad]
+    ## @param mesh.operator.eventPrincipals [array] Settings for mesh.operator.eventPrincipals.
+    eventPrincipals: [cluster.local/ns/polyad/sa/polyad, cluster.local/ns/polyad/sa/polyad-polyad]
+    ## @param mesh.operator.connectionPrincipals [array] Settings for mesh.operator.connectionPrincipals.
+    connectionPrincipals: [cluster.local/ns/polyad/sa/polyad-polyad]
+  ## @param mesh.telemetry [object] Settings for mesh.telemetry.
+  telemetry:
+    ## @param mesh.telemetry.enabled [boolean] Settings for mesh.telemetry.enabled.
+    enabled: true
+    ## @param mesh.telemetry.tracing [object] Settings for mesh.telemetry.tracing.
+    tracing:
+      ## @param mesh.telemetry.tracing.enabled [boolean] Settings for mesh.telemetry.tracing.enabled.
+      enabled: true
+      ## @param mesh.telemetry.tracing.providers [array] Settings for mesh.telemetry.tracing.providers.
+      providers: [otel]
+      ## @param mesh.telemetry.tracing.randomSamplingPercentage [integer] Settings for mesh.telemetry.tracing.randomSamplingPercentage.
+      randomSamplingPercentage: 10
+  ## @param mesh.authorization [object] Settings for mesh.authorization.
+  authorization:
+    ## @param mesh.authorization.audit [object] Settings for mesh.authorization.audit.
+    audit:
+      ## @param mesh.authorization.audit.enabled [boolean] Settings for mesh.authorization.audit.enabled.
+      enabled: true
+      ## @param mesh.authorization.audit.paths [array] Settings for mesh.authorization.audit.paths.
+      paths: [/v1/*]
+    ## @param mesh.authorization.dryRunDeny [object] Settings for mesh.authorization.dryRunDeny.
+    dryRunDeny:
+      ## @param mesh.authorization.dryRunDeny.enabled [boolean] Settings for mesh.authorization.dryRunDeny.enabled.
+      enabled: true
+      ## @param mesh.authorization.dryRunDeny.paths [array] Settings for mesh.authorization.dryRunDeny.paths.
+      paths: [/v1/compositions/*]
+      ## @param mesh.authorization.dryRunDeny.methods [array] Settings for mesh.authorization.dryRunDeny.methods.
+      methods: [DELETE]
+  ## @param mesh.ingress [object] Settings for mesh.ingress.
+  ingress:
+    ## @param mesh.ingress.enabled [boolean] Settings for mesh.ingress.enabled.
+    enabled: true
+    ## @param mesh.ingress.hosts [array] Settings for mesh.ingress.hosts.
+    hosts: [polyad.local]
+    ## @param mesh.ingress.tlsSecret [string] Settings for mesh.ingress.tlsSecret.
+    tlsSecret: polyad-ingress-tls
+## @param istiod [object] Settings for istiod.
+istiod:
+  ## @param istiod.pilot [object] Settings for istiod.pilot.
+  pilot:
+    ## @param istiod.pilot.replicaCount [integer] Settings for istiod.pilot.replicaCount.
+    replicaCount: 2
+    ## @param istiod.pilot.autoscaleEnabled [boolean] Settings for istiod.pilot.autoscaleEnabled.
+    autoscaleEnabled: true
+    ## @param istiod.pilot.autoscaleMin [integer] Settings for istiod.pilot.autoscaleMin.
+    autoscaleMin: 2
+    ## @param istiod.pilot.autoscaleMax [integer] Settings for istiod.pilot.autoscaleMax.
+    autoscaleMax: 3
+    ## @param istiod.pilot.resources [object] Settings for istiod.pilot.resources.
+    resources:
+      ## @param istiod.pilot.resources.requests [object] Settings for istiod.pilot.resources.requests.
+      ## @param istiod.pilot.resources.requests.cpu [string] Settings for istiod.pilot.resources.requests.cpu.
+      ## @param istiod.pilot.resources.requests.memory [string] Settings for istiod.pilot.resources.requests.memory.
+      requests: {cpu: 100m, memory: 128Mi}
+      ## @param istiod.pilot.resources.limits [object] Settings for istiod.pilot.resources.limits.
+      ## @param istiod.pilot.resources.limits.memory [string] Settings for istiod.pilot.resources.limits.memory.
+      limits: {memory: 512Mi}
+  ## @param istiod.meshConfig [object] Settings for istiod.meshConfig.
+  meshConfig:
+    ## @param istiod.meshConfig.extensionProviders [array] Settings for istiod.meshConfig.extensionProviders.
+    extensionProviders:
+      ## @param istiod.meshConfig.extensionProviders[].name [string] Settings for istiod.meshConfig.extensionProviders[].name.
+      - name: otel
+        ## @param istiod.meshConfig.extensionProviders[].opentelemetry [object] Settings for istiod.meshConfig.extensionProviders[].opentelemetry.
+        opentelemetry:
+          ## @param istiod.meshConfig.extensionProviders[].opentelemetry.service [string] Settings for istiod.meshConfig.extensionProviders[].opentelemetry.service.
+          service: polyad-telemetry-otlp.polyad.svc.cluster.local
+          ## @param istiod.meshConfig.extensionProviders[].opentelemetry.port [integer] Settings for istiod.meshConfig.extensionProviders[].opentelemetry.port.
+          port: 4317
+## @param istioIngress [object] Settings for istioIngress.
+istioIngress:
+  ## @param istioIngress.nodeSelector [object] Settings for istioIngress.nodeSelector.
+  ## @param istioIngress.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for istioIngress.nodeSelector.polyad.astrivant.com/minikube-pool.
+  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param istioIngress.replicaCount [integer] Settings for istioIngress.replicaCount.
+  replicaCount: 2
+  ## @param istioIngress.autoscaling [object] Settings for istioIngress.autoscaling.
+  autoscaling:
+    ## @param istioIngress.autoscaling.enabled [boolean] Settings for istioIngress.autoscaling.enabled.
+    enabled: true
+    ## @param istioIngress.autoscaling.minReplicas [integer] Settings for istioIngress.autoscaling.minReplicas.
+    minReplicas: 2
+    ## @param istioIngress.autoscaling.maxReplicas [integer] Settings for istioIngress.autoscaling.maxReplicas.
+    maxReplicas: 3
+  ## @param istioIngress.service [object] Settings for istioIngress.service.
+  service:
+    ## @param istioIngress.service.type [string] Settings for istioIngress.service.type.
+    type: ClusterIP
+  ## @param istioIngress.resources [object] Settings for istioIngress.resources.
+  resources:
+    ## @param istioIngress.resources.requests [object] Settings for istioIngress.resources.requests.
+    ## @param istioIngress.resources.requests.cpu [string] Settings for istioIngress.resources.requests.cpu.
+    ## @param istioIngress.resources.requests.memory [string] Settings for istioIngress.resources.requests.memory.
+    requests: {cpu: 50m, memory: 64Mi}
+    ## @param istioIngress.resources.limits [object] Settings for istioIngress.resources.limits.
+    ## @param istioIngress.resources.limits.memory [string] Settings for istioIngress.resources.limits.memory.
+    limits: {memory: 256Mi}
+## @param tracing [object] Settings for tracing.
+tracing:
+  ## @param tracing.enabled [boolean] Settings for tracing.enabled.
+  enabled: true
+  ## @param tracing.samplingRatio [number] Settings for tracing.samplingRatio.
+  samplingRatio: 0.1
+  ## @param tracing.logs [object] Settings for tracing.logs.
+  logs:
+    ## @param tracing.logs.enabled [boolean] Settings for tracing.logs.enabled.
+    enabled: true
+    ## @param tracing.logs.endpoint [string] Settings for tracing.logs.endpoint.
+    endpoint: http://polyad-lab-loki.polyad.svc:3100/otlp/v1/logs
+## @param telemetry [object] Settings for telemetry.
+telemetry:
+  # Retain collectors beside their node-bound local PVCs during an HA upgrade.
+  ## @param telemetry.nodeSelector [object] Settings for telemetry.nodeSelector.
+  ## @param telemetry.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for telemetry.nodeSelector.polyad.astrivant.com/minikube-pool.
+  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param telemetry.enabled [boolean] Settings for telemetry.enabled.
+  enabled: true
+  ## @param telemetry.mode [string] Settings for telemetry.mode.
+  mode: Alloy
+  ## @param telemetry.replicas [integer] Settings for telemetry.replicas.
+  replicas: 2
+  ## @param telemetry.remoteWrite [object] Settings for telemetry.remoteWrite.
+  remoteWrite:
+    ## @param telemetry.remoteWrite.url [string] Settings for telemetry.remoteWrite.url.
+    url: http://polyad-lab-prometheus.polyad.svc:9090/api/v1/write
+  ## @param telemetry.logs [object] Settings for telemetry.logs.
+  logs:
+    ## @param telemetry.logs.enabled [boolean] Settings for telemetry.logs.enabled.
+    enabled: true
+    ## @param telemetry.logs.url [string] Settings for telemetry.logs.url.
+    url: http://polyad-lab-loki.polyad.svc:3100/loki/api/v1/push
+  ## @param telemetry.traces [object] Settings for telemetry.traces.
+  traces:
+    ## @param telemetry.traces.enabled [boolean] Settings for telemetry.traces.enabled.
+    enabled: true
+    ## @param telemetry.traces.routeOperator [boolean] Settings for telemetry.traces.routeOperator.
+    routeOperator: true
+    ## @param telemetry.traces.endpoint [string] Settings for telemetry.traces.endpoint.
+    endpoint: http://polyad-lab-tempo.polyad.svc:4318
+  ## @param telemetry.operatorMetricsSecret [object] Settings for telemetry.operatorMetricsSecret.
+  operatorMetricsSecret:
+    ## @param telemetry.operatorMetricsSecret.name [string] Settings for telemetry.operatorMetricsSecret.name.
+    name: polyad-metrics
+    ## @param telemetry.operatorMetricsSecret.key [string] Settings for telemetry.operatorMetricsSecret.key.
+    key: token
+  ## @param telemetry.storage [object] Settings for telemetry.storage.
+  storage:
+    ## @param telemetry.storage.size [string] Settings for telemetry.storage.size.
+    size: 1Gi
+    ## @param telemetry.storage.storageClass [string] Settings for telemetry.storage.storageClass.
+    storageClass: local-path

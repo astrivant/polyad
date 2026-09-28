@@ -16,6 +16,9 @@ from polyad.exceptions.kubernetes import WriteConflict
 from polyad.operator.coordination.contracts import without_capture
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from typing import Any
+
     from polyad.operator.adapters.kubernetes import API
     from polyad.operator.coordination.contracts import ReadContract
     from polyad.operator.coordination.queue import Key
@@ -200,19 +203,38 @@ class Validation:
 receipts: WeakSet[Validation] = WeakSet()
 
 
-def invalidate(api: API, key: Key) -> None:
+def invalidate(api: API, key: Key, document: Mapping[str, Any] | None = None) -> None:
     """
     Invalidate affected queued receipts from watches, scans or concrete write transitions.
 
     Args:
         api (API): Adapter identifying the observed cluster.
         key (Key): Changed resource, including a disappeared object.
+        document (Mapping[str, Any] | None): Complete watch body; omit for deletion or an uncertain write.
 
     Returns:
         None: An event only requests validation; it never authorizes a write.
     """
     for receipt in list(receipts):
         if receipt.depends_on(api, key):
+            if document is not None and receipt.contract is not None and key[0] != "*":
+                dependencies = [
+                    observation
+                    for observation in receipt.contract.reads.values()
+                    if observation.api is api and observation.key[:2] == key[:2] and observation.key[2] in {"", key[2]}
+                ]
+                target_only = (
+                    receipt.api is api
+                    and receipt.intent is not None
+                    and receipt.intent.target == key
+                    and not any(observation.key == key for observation in dependencies)
+                )
+
+                # A Dragonfly/Helm controller may update unrelated objects in
+                # the same namespace every few seconds. Such events cannot
+                # invalidate an empty owner-filtered read of that resource kind.
+                if dependencies and not target_only and not any(item.changed_by(key[2], document) for item in dependencies):
+                    continue
             receipt.generation += 1
             receipt.wake.set()
 

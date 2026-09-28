@@ -20,6 +20,7 @@ from polyad.cache import cache_url
 from polyad.compiler.registry import DEFINITION_KINDS, GRAPH_OWNED_KINDS, RECONCILED_KINDS, RESOURCE_TYPES
 from polyad.events.visibility import observation_ancestry, public_observation
 from polyad.exceptions.coordination import NotOwner, PulseDeferred
+from polyad.exceptions.kubernetes import WriteConflict
 from polyad.exceptions.reconciliation import Pending
 from polyad.metrics.inventory import inventory
 from polyad.operator.adapters.kubernetes import API, GROUP, VERSION
@@ -517,6 +518,13 @@ async def consume_loop() -> None:
             else:
                 try:
                     await queue.submit(key)
+                except WriteConflict as error:
+                    # A fresh retry still needs its siblings to reconcile. Retaining
+                    # this entry at the head would block the entire graph family.
+                    await coordinator.guard()
+                    await shared.retry(shard, message_id, key)
+                    logger.info("Shard %s decision deferred and requeued: %s", shard, error.conflict_reason)
+                    return
                 except Pending:
                     pass  # Rescan will retry the intent after refreshed observations.
             await coordinator.guard()
@@ -556,7 +564,7 @@ async def handle(namespace: str | None, name: str, body: kopf.Body, **_: Any) ->
     """
     assert namespace is not None
     if controller is not None:
-        invalidate(controller.api, (body["kind"], namespace, name))
+        invalidate(controller.api, (body["kind"], namespace, name), None if _.get("type") == "DELETED" else body)
     if role() not in {"dense", "bootstrap"}:
         return
     if body["kind"] in KINDS:

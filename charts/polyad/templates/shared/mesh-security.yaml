@@ -137,6 +137,9 @@ spec:
             methods: {{ toJson . }}
             {{- end }}
             paths: {{ toJson .Values.mesh.authorization.dryRunDeny.paths }}
+            # Missing HTTP attributes match DENY on TCP. Limit this experiment
+            # to the operator's HTTP APIs, never unrelated mesh TCP listeners.
+            ports: ['8090', '8091', '8092']
 {{- end }}
 {{- if .Values.mesh.ingress.jwt.enabled }}
 {{- if not (or .Values.mesh.ingress.enabled .Values.mesh.ingress.gatewayAPI.enabled) }}{{ fail "ingress JWT requires a managed mesh ingress" }}{{ end }}

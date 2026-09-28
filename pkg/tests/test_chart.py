@@ -633,6 +633,7 @@ def test_mesh_telemetry_sidecar_and_observation_policies_are_opt_in():
     dry_run = policies["test-polyad-dry-run-deny"]
     assert dry_run["metadata"]["annotations"]["istio.io/dry-run"] == "true"
     assert dry_run["spec"]["action"] == "DENY"
+    assert dry_run["spec"]["rules"][0]["to"][0]["operation"]["ports"] == ["8090", "8091", "8092"]
     for obj, schema_name in ((telemetry, "telemetry-telemetry-v1.json"), (sidecar, "sidecar-networking-v1.json")):
         jsonschema.Draft7Validator(json.loads((CHART / "schemas" / schema_name).read_text())).validate(obj)
 
@@ -810,6 +811,7 @@ def test_multicluster_gateways_and_optional_observers():
     service = next(item for item in objects if item["kind"] == "Service" and item["metadata"]["name"] == "polyad-eastwest")
     assert {port["port"] for port in service["spec"]["ports"]} == {15012, 15017, 15021, 15443}
     observer = next(item for item in objects if item["kind"] == "Deployment" and item["metadata"]["name"] == "test-polyad-observer")
+    assert observer["spec"]["template"]["metadata"]["labels"]["sidecar.istio.io/inject"] == "true"
     assert observer["spec"]["template"]["spec"]["containers"][0]["command"] == [
         "/usr/bin/tini",
         "--",

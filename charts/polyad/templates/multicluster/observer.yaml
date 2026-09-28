@@ -98,6 +98,9 @@ spec:
       labels:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/name: polyad-observer
+        {{- if .Values.observer.mesh }}
+        sidecar.istio.io/inject: 'true'
+        {{- end }}
       {{- if or .Values.observer.mesh $named }}
       annotations:
         {{- if $named }}
@@ -111,6 +114,10 @@ spec:
         {{- end }}
       {{- end }}
     spec:
+      {{- with .Values.operator.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccountName: {{ .Release.Name }}-polyad-observer
       terminationGracePeriodSeconds: 45
       securityContext:

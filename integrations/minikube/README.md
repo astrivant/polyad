@@ -35,6 +35,10 @@ means running `minikube.sh start`, not `minikube addons enable polyad`.
 
 ## What runs
 
+For the opt-in HA operator, Istio, KEDA, PostgreSQL, VPA and observability stack,
+see the [full local HA lab](full/README.md). For a fluctuating three-to-five-VM
+cluster capped at 20 GiB, see the [Cluster Autoscaler addon](autoscaler/README.md).
+
 The default profile creates **three native virtual machines**: one Kubernetes
 control-plane node and two workers, each using containerd. These nodes are not
 Docker containers. Polyad itself runs **standalone, without HA**:

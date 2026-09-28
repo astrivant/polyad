@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: polyad-minikube-autoscaler-provider
+data:
+  cloud-config.yaml: |
+    address: {{ required "provider.address must be the host-published provider IP:50051" .Values.provider.address | quote }}
+    key: /etc/provider-tls/autoscaler-client.key
+    cert: /etc/provider-tls/autoscaler-client.crt
+    cacert: /etc/provider-tls/ca.crt
+    grpc_timeout: 5s

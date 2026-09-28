@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import time
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -18,7 +19,7 @@ from polyad.exceptions.kubernetes import WriteConflict
 from polyad_types.resources import GROUP, VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
     from datetime import datetime
     from typing import Any
 
@@ -92,6 +93,39 @@ class Observation:
         if not isinstance(result, dict) or result.get("metadata", {}).get("continue"):
             raise WriteConflict("dependency_collection_incomplete")
         return {item["metadata"]["name"]: resource_digest(item) for item in result.get("items", [])}
+
+    def changed_by(self, name: str, document: Mapping[str, Any]) -> bool:
+        """
+        Distinguish relevant watch changes from unrelated collection members.
+
+        Args:
+            name (str): Name carried by the watch notification.
+            document (Mapping[str, Any]): Complete, non-deleted watched resource.
+
+        Returns:
+            bool: True for drift or any selector whose membership is uncertain.
+        """
+        metadata = document.get("metadata", {})
+        if metadata.get("name") != name or not metadata.get("uid"):
+            return True
+        expected = self.expected.get("" if self.key[2] else name)
+        if expected is not None:
+            return resource_digest(document) != expected
+        if self.key[2]:
+            return True  # A formerly absent named object now exists.
+
+        # The owned-child scans use one exact equality selector. Keep other
+        # selectors conservative rather than implementing a partial Kubernetes
+        # selector language that might overlook a new dependency.
+        for selector, expression in self.query:
+            if selector != "labelSelector" or re.fullmatch(r"[A-Za-z0-9_./-]+=[A-Za-z0-9_.-]+", expression) is None:
+                return True
+            label, value = expression.split("=", 1)
+            if not label or not value:
+                return True
+            if metadata.get("labels", {}).get(label) != value:
+                return False
+        return True
 
 
 @dataclass

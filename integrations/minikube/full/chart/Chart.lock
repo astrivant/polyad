@@ -1,0 +1,15 @@
+dependencies:
+- name: base
+  repository: https://istio-release.storage.googleapis.com/charts
+  version: 1.30.4
+- name: istiod
+  repository: https://istio-release.storage.googleapis.com/charts
+  version: 1.30.4
+- name: cloudnative-pg
+  repository: https://cloudnative-pg.github.io/charts
+  version: 0.29.0
+- name: vpa
+  repository: https://charts.fairwinds.com/stable
+  version: 5.1.0
+digest: sha256:16e6f103cabce6537e45bac478841796f69a9949aaf0604279b7e22f66e733d4
+generated: "2026-09-27T19:48:57.853976-04:00"

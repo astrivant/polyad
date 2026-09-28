@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "cluster-autoscaler": {
+      "type": "object",
+      "properties": {
+        "fullnameOverride": {
+          "type": "string"
+        },
+        "cloudProvider": {
+          "type": "string"
+        },
+        "autoDiscovery": {
+          "type": "object",
+          "properties": {
+            "clusterName": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "tag": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "replicaCount": {
+          "type": "integer"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "properties": {
+            "polyad.astrivant.com/minikube-pool": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "extraArgs": {
+          "type": "object",
+          "properties": {
+            "cloud-config": {
+              "type": "string"
+            },
+            "max-node-provision-time": {
+              "type": "string"
+            },
+            "scale-down-delay-after-add": {
+              "type": "string"
+            },
+            "scale-down-unneeded-time": {
+              "type": "string"
+            },
+            "scale-down-unready-time": {
+              "type": "string"
+            },
+            "max-scale-down-parallelism": {
+              "type": "integer"
+            },
+            "max-nodes-per-scaleup": {
+              "type": "integer"
+            },
+            "enable-provisioning-requests": {
+              "type": "boolean"
+            },
+            "skip-nodes-with-local-storage": {
+              "type": "boolean"
+            },
+            "skip-nodes-with-system-pods": {
+              "type": "boolean"
+            },
+            "leader-elect": {
+              "type": "boolean"
+            },
+            "v": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": true
+        },
+        "extraVolumes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "configMap": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "secret": {
+                "type": "object",
+                "properties": {
+                  "secretName": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "extraVolumeMounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "mountPath": {
+                "type": "string"
+              },
+              "readOnly": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string"
+                },
+                "memory": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

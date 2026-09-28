@@ -20,6 +20,7 @@ from polyad.operator.coordination.settings import WorkGraphSettings
 __all__ = (
     "BACKLOG",
     "PUBLISH",
+    "RETRY",
     "SharedQueue",
 )
 
@@ -36,6 +37,7 @@ PUBLISH = script("coordination/publish.lua")
 
 
 BACKLOG = script("coordination/backlog.lua")
+RETRY = script("coordination/retry.lua")
 
 
 class SharedQueue:
@@ -155,6 +157,29 @@ class SharedQueue:
         except ResponseError:
             self.groups.discard(shard)  # A restarted cache may have lost the stream/group.
             raise
+
+    async def retry(self, shard: int, message_id: str, key: Key) -> None:
+        """
+        Requeue a known deferred decision behind siblings without losing its retry.
+
+        Args:
+            shard (int): Shard whose lease the caller has just revalidated.
+            message_id (str): Pending delivery owned by this consumer.
+            key (Key): Original resource identity, reread on the next attempt.
+
+        Returns:
+            None: Replacement and acknowledgement are one server-side operation.
+
+        Raises:
+            RuntimeError: Another consumer owns the delivery or it already completed.
+        """
+        replacement = await cast(
+            "Awaitable[Any]",
+            self.client.eval(RETRY, 1, self.stream(shard), self.group, message_id, self.consumer, json.dumps(key)),
+        )
+        if not replacement:
+            raise RuntimeError("Deferred delivery is no longer pending for this consumer")
+        self.last_success = time.monotonic()
 
     async def acknowledge(self, shard: int, message_id: str) -> None:
         """

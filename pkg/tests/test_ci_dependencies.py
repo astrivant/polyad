@@ -51,7 +51,7 @@ def test_repository_setup_covers_all_declared_and_locked_dependencies(charts):
     expected = {
         dependency["repository"]
         for pattern in ("*/Chart.yaml", "*/Chart.lock")
-        for path in (ROOT / "charts").glob(pattern)
+        for path in [*(ROOT / "charts").glob(pattern), *(ROOT / "integrations").rglob(pattern.removeprefix("*/"))]
         for dependency in yaml.safe_load(path.read_text()).get("dependencies", [])
         if dependency["repository"].startswith(("https://", "http://"))
     }

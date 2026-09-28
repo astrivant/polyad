@@ -97,7 +97,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: pkg/tests/flux/go.mod
-          cache-dependency-path: pkg/tests/flux/go.sum
+          cache-dependency-path: |
+            pkg/tests/flux/go.sum
+            pkg/minikube-cluster-autoscaler/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ steps.tools.outputs.nodejs }}
@@ -131,6 +133,12 @@ jobs:
           poetry run python scripts/gitops/flux-health.py --json > "$POLYAD_FLUX_CHECKS"
           test -z "$(gofmt -l pkg/tests/flux/*.go)"
           go -C pkg/tests/flux test -mod=readonly -parallel 8 ./...
+      - name: Validate optional native Minikube autoscaler
+        if: matrix.python == '3.13'
+        run: |
+          test -z "$(gofmt -l pkg/minikube-cluster-autoscaler/*.go)"
+          go -C pkg/minikube-cluster-autoscaler vet ./...
+          go -C pkg/minikube-cluster-autoscaler test -mod=readonly -race ./...
       - run: npm test --prefix scripts/validation/mermaid
       - run: docker run -d --name dragonfly -p 6379:6379 docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0 --proactor_threads=1 --maxmemory=256mb
       - run: |

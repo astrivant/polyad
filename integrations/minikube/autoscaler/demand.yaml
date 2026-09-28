@@ -1,0 +1,38 @@
+# Applying this explicit opt-in workload requests an elastic VM without busy-looping.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: polyad-elastic-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demand
+  namespace: polyad-elastic-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: polyad-elastic-demand
+  template:
+    metadata:
+      labels:
+        app: polyad-elastic-demand
+    spec:
+      nodeSelector:
+        polyad.astrivant.com/minikube-pool: elastic
+      tolerations:
+        - key: polyad.astrivant.com/elastic
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+      containers:
+        - name: reservation
+          image: registry.k8s.io/pause:3.10
+          resources:
+            requests:
+              cpu: 1200m
+              memory: 1Gi
+            limits:
+              cpu: 1200m
+              memory: 1Gi

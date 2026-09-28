@@ -19,6 +19,7 @@ from polyad.events.store import EventStore
 from polyad.events.topology import topology_snapshot
 from polyad.events.visibility import observation_ancestry, public_observation
 from polyad.exceptions.coordination import NotOwner, PulseDeferred
+from polyad.exceptions.kubernetes import WriteConflict
 from polyad.exceptions.reconciliation import Pending
 from polyad.metrics.inventory import inventory
 from polyad.operator.clusters.federation import Federation
@@ -120,7 +121,7 @@ class ClusterWorker:
             if listing is None:
                 raise ValueError(f"remote {kind} API is unavailable; install the pool before executing workloads")
             for obj in (listing or {}).get("items", []):
-                invalidate(self.controller.api, (kind, self.namespace, obj["metadata"]["name"]))
+                invalidate(self.controller.api, (kind, self.namespace, obj["metadata"]["name"]), obj)
                 obj.setdefault("kind", kind)
                 objects.append(obj)
                 if kind in RECONCILED_KINDS:
@@ -193,6 +194,13 @@ class ClusterWorker:
                     async with self.root.coordinator.duty(key, api=self.controller.api, cluster=self.cluster):
                         try:
                             await self.controller.reconcile(key)
+                        except WriteConflict as error:
+                            # Revalidate the lease before moving this retry behind
+                            # siblings; unexpected failures still stay pending.
+                            await self.root.coordinator.guard()
+                            await self.shared.retry(shard, message_id, key)
+                            logger.info("Remote shard %s deferred and requeued: %s", shard, error.conflict_reason)
+                            return
                         except Pending:
                             pass
                         except (ValueError, TypeError, KeyError, CattrsError, ApiException) as error:

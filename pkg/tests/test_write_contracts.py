@@ -18,7 +18,7 @@ from kubernetes.client.exceptions import ApiException
 from polyad.compiler.registry import RESOURCE_TYPES
 from polyad.exceptions.kubernetes import WriteConflict
 from polyad.operator.adapters.kubernetes import API
-from polyad.operator.coordination.contracts import capture_decision, expires_before
+from polyad.operator.coordination.contracts import Observation, capture_decision, expires_before
 from polyad.operator.coordination.validation import ValidationQueue, ValidationSettings, invalidate
 from tests.test_operator import resource
 
@@ -194,6 +194,58 @@ def test_background_walks_third_and_fourth_items_and_dispatch_reuses_receipts():
         assert not api.validations.pending and api.validations.task.done()
 
     asyncio.run(run())
+
+
+@pytest.mark.parametrize("change", ["unrelated", "same", "joined", "changed", "deleted", "uncertain"])
+def test_owner_filtered_watch_invalidation_is_scoped(change):
+    """
+    Unrelated native churn cannot starve a graph's validated writes.
+    """
+
+    async def run():
+        dependency = resource("Deployment", "dependency")
+        dependency["metadata"]["labels"] = {"owner": "graph"}
+        api, state = transport(dependency, resource("Deployment", "target"))
+        async with api.write_lock:
+            with capture_decision(api, ("Graph", "test", "origin")):
+                await api.request("GET", "Deployment", "test", query=[("labelSelector", "owner=graph")])
+                task = asyncio.create_task(api.request("PATCH", "Deployment", "test", "target", patch("target")))
+            await until(lambda: api.validations.pending and all(item.fresh() for item in api.validations.pending.values()))
+            receipt = next(iter(api.validations.pending.values()))
+            generation = receipt.generation
+            body = copy.deepcopy(dependency)
+            if change in {"unrelated", "joined"}:
+                body = resource("Deployment", "other")
+                body["metadata"]["labels"] = {"owner": "another" if change == "unrelated" else "graph"}
+                state[("Deployment", "test", "other")] = body
+            elif change == "changed":
+                body["status"] = {"readyReplicas": 0}
+                state[("Deployment", "test", "dependency")] = body
+            elif change == "deleted":
+                del state[("Deployment", "test", "dependency")]
+            elif change == "same":
+                body["metadata"]["resourceVersion"] = "99"
+            invalidate(api, ("Deployment", "test", body["metadata"]["name"]), None if change in {"deleted", "uncertain"} else body)
+            assert (receipt.generation == generation) == (change in {"unrelated", "same"})
+        if change in {"joined", "changed", "deleted"}:
+            with pytest.raises(WriteConflict):
+                await task
+        else:
+            await task
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("expression", ["owner!=another", "owner in (graph)", "owner=graph,tier=control", "owner = graph"])
+def test_unrecognized_watch_selectors_remain_conservative(expression):
+    """
+    Membership shortcuts never reinterpret richer Kubernetes label selectors.
+    """
+    body = resource("Deployment", "new")
+    body["metadata"]["labels"] = {"owner": "graph"}
+    api, _ = transport()
+    observation = Observation(api, ("Deployment", "test", ""), (("labelSelector", expression),), {})
+    assert observation.changed_by("new", body)
 
 
 def test_receipt_expiry_requires_a_new_read_even_without_watch_events(monkeypatch):

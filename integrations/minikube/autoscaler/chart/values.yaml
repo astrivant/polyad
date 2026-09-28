@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=values.schema.json
+# Reachable address of the host-published provider; never a Pod or Docker IP.
+## @param provider [object] Settings for provider.
+provider:
+  ## @param provider.address [string] Settings for provider.address.
+  address: ""
+
+## @param cluster-autoscaler [object] Settings for cluster-autoscaler.
+cluster-autoscaler:
+  ## @param cluster-autoscaler.fullnameOverride [string] Settings for cluster-autoscaler.fullnameOverride.
+  fullnameOverride: polyad-minikube-autoscaler
+  ## @param cluster-autoscaler.cloudProvider [string] Settings for cluster-autoscaler.cloudProvider.
+  cloudProvider: externalgrpc
+  ## @param cluster-autoscaler.autoDiscovery [object] Settings for cluster-autoscaler.autoDiscovery.
+  autoDiscovery:
+    ## @param cluster-autoscaler.autoDiscovery.clusterName [string] Settings for cluster-autoscaler.autoDiscovery.clusterName.
+    clusterName: polyad
+  ## @param cluster-autoscaler.image [object] Settings for cluster-autoscaler.image.
+  image:
+    ## @param cluster-autoscaler.image.tag [string] Settings for cluster-autoscaler.image.tag.
+    tag: v1.35.0
+  ## @param cluster-autoscaler.replicaCount [integer] Settings for cluster-autoscaler.replicaCount.
+  replicaCount: 1
+  ## @param cluster-autoscaler.nodeSelector [object] Settings for cluster-autoscaler.nodeSelector.
+  nodeSelector:
+    ## @param cluster-autoscaler.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for cluster-autoscaler.nodeSelector.polyad.astrivant.com/minikube-pool.
+    polyad.astrivant.com/minikube-pool: base
+  ## @param cluster-autoscaler.extraArgs [object] Settings for cluster-autoscaler.extraArgs.
+  extraArgs:
+    ## @param cluster-autoscaler.extraArgs.cloud-config [string] Settings for cluster-autoscaler.extraArgs.cloud-config.
+    cloud-config: /etc/provider/cloud-config.yaml
+    ## @param cluster-autoscaler.extraArgs.max-node-provision-time [string] Settings for cluster-autoscaler.extraArgs.max-node-provision-time.
+    max-node-provision-time: 16m
+    ## @param cluster-autoscaler.extraArgs.scale-down-delay-after-add [string] Settings for cluster-autoscaler.extraArgs.scale-down-delay-after-add.
+    scale-down-delay-after-add: 5m
+    ## @param cluster-autoscaler.extraArgs.scale-down-unneeded-time [string] Settings for cluster-autoscaler.extraArgs.scale-down-unneeded-time.
+    scale-down-unneeded-time: 5m
+    ## @param cluster-autoscaler.extraArgs.scale-down-unready-time [string] Settings for cluster-autoscaler.extraArgs.scale-down-unready-time.
+    scale-down-unready-time: 10m
+    ## @param cluster-autoscaler.extraArgs.max-scale-down-parallelism [integer] Settings for cluster-autoscaler.extraArgs.max-scale-down-parallelism.
+    max-scale-down-parallelism: 1
+    ## @param cluster-autoscaler.extraArgs.max-nodes-per-scaleup [integer] Settings for cluster-autoscaler.extraArgs.max-nodes-per-scaleup.
+    max-nodes-per-scaleup: 1
+    ## @param cluster-autoscaler.extraArgs.enable-provisioning-requests [boolean] Settings for cluster-autoscaler.extraArgs.enable-provisioning-requests.
+    enable-provisioning-requests: true
+    ## @param cluster-autoscaler.extraArgs.skip-nodes-with-local-storage [boolean] Settings for cluster-autoscaler.extraArgs.skip-nodes-with-local-storage.
+    skip-nodes-with-local-storage: true
+    ## @param cluster-autoscaler.extraArgs.skip-nodes-with-system-pods [boolean] Settings for cluster-autoscaler.extraArgs.skip-nodes-with-system-pods.
+    skip-nodes-with-system-pods: true
+    ## @param cluster-autoscaler.extraArgs.leader-elect [boolean] Settings for cluster-autoscaler.extraArgs.leader-elect.
+    leader-elect: true
+    ## @param cluster-autoscaler.extraArgs.v [integer] Settings for cluster-autoscaler.extraArgs.v.
+    v: 4
+  ## @param cluster-autoscaler.extraVolumes [array] Settings for cluster-autoscaler.extraVolumes.
+  extraVolumes:
+    ## @param cluster-autoscaler.extraVolumes[].name [string] Settings for cluster-autoscaler.extraVolumes[].name.
+    - name: provider-config
+      ## @param cluster-autoscaler.extraVolumes[].configMap [object] Settings for cluster-autoscaler.extraVolumes[].configMap.
+      configMap:
+        ## @param cluster-autoscaler.extraVolumes[].configMap.name [string] Settings for cluster-autoscaler.extraVolumes[].configMap.name.
+        name: polyad-minikube-autoscaler-provider
+    ## @param cluster-autoscaler.extraVolumes[].name [string] Settings for cluster-autoscaler.extraVolumes[].name.
+    - name: provider-client
+      ## @param cluster-autoscaler.extraVolumes[].secret [object] Settings for cluster-autoscaler.extraVolumes[].secret.
+      secret:
+        ## @param cluster-autoscaler.extraVolumes[].secret.secretName [string] Settings for cluster-autoscaler.extraVolumes[].secret.secretName.
+        secretName: polyad-minikube-autoscaler-client
+  ## @param cluster-autoscaler.extraVolumeMounts [array] Settings for cluster-autoscaler.extraVolumeMounts.
+  extraVolumeMounts:
+    ## @param cluster-autoscaler.extraVolumeMounts[].name [string] Settings for cluster-autoscaler.extraVolumeMounts[].name.
+    - name: provider-config
+      ## @param cluster-autoscaler.extraVolumeMounts[].mountPath [string] Settings for cluster-autoscaler.extraVolumeMounts[].mountPath.
+      mountPath: /etc/provider
+      ## @param cluster-autoscaler.extraVolumeMounts[].readOnly [boolean] Settings for cluster-autoscaler.extraVolumeMounts[].readOnly.
+      readOnly: true
+    ## @param cluster-autoscaler.extraVolumeMounts[].name [string] Settings for cluster-autoscaler.extraVolumeMounts[].name.
+    - name: provider-client
+      ## @param cluster-autoscaler.extraVolumeMounts[].mountPath [string] Settings for cluster-autoscaler.extraVolumeMounts[].mountPath.
+      mountPath: /etc/provider-tls
+      ## @param cluster-autoscaler.extraVolumeMounts[].readOnly [boolean] Settings for cluster-autoscaler.extraVolumeMounts[].readOnly.
+      readOnly: true
+  ## @param cluster-autoscaler.resources [object] Settings for cluster-autoscaler.resources.
+  resources:
+    ## @param cluster-autoscaler.resources.requests [object] Settings for cluster-autoscaler.resources.requests.
+    requests:
+      ## @param cluster-autoscaler.resources.requests.cpu [string] Settings for cluster-autoscaler.resources.requests.cpu.
+      cpu: 100m
+      ## @param cluster-autoscaler.resources.requests.memory [string] Settings for cluster-autoscaler.resources.requests.memory.
+      memory: 128Mi
+    ## @param cluster-autoscaler.resources.limits [object] Settings for cluster-autoscaler.resources.limits.
+    limits:
+      ## @param cluster-autoscaler.resources.limits.cpu [string] Settings for cluster-autoscaler.resources.limits.cpu.
+      cpu: 500m
+      ## @param cluster-autoscaler.resources.limits.memory [string] Settings for cluster-autoscaler.resources.limits.memory.
+      memory: 512Mi

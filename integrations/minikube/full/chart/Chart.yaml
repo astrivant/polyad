@@ -1,0 +1,19 @@
+apiVersion: v2
+name: polyad-minikube-lab
+description: Local HA prerequisites and metrics, logs, and trace backends
+type: application
+version: 0.1.0
+dependencies:
+  - name: base
+    alias: istioBase
+    version: 1.30.4
+    repository: https://istio-release.storage.googleapis.com/charts
+  - name: istiod
+    version: 1.30.4
+    repository: https://istio-release.storage.googleapis.com/charts
+  - name: cloudnative-pg
+    version: 0.29.0
+    repository: https://cloudnative-pg.github.io/charts
+  - name: vpa
+    version: 5.1.0
+    repository: https://charts.fairwinds.com/stable
