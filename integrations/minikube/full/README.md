@@ -19,7 +19,10 @@ bash integrations/minikube/full/full.sh test
 This opt-in profile reuses the local operator image and persistent cache. It
 installs a separate `polyad-lab` prerequisite release before upgrading `polyad`.
 KEDA APIs are installed before its admission webhook and scaling targets.
-Once selected, ordinary `minikube.sh enable` and `test` retain this profile.
+Once selected, ordinary `minikube.sh start`, `enable` and `test` retain this profile.
+The choice also survives cluster recreation: `start` builds the local image, then
+the HA setup creates the namespace before credentials, establishes the CRDs, and
+installs missing Helm releases. Existing namespaces and Secrets are preserved.
 Namespace `polyad` is intentional: service addresses and mesh identities in these
 reference values are scoped to this namespace. This is not a general-purpose chart.
 

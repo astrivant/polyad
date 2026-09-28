@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Upgrade the existing local root to a bounded single-cluster HA feature lab.
+# Install or upgrade the local root as a bounded single-cluster HA feature lab.
 set -euo pipefail
 
 FULL_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,6 +16,24 @@ umask 077
 # args::string[] -> ret::exit_code
 kube() {
     kubectl --context "$PROFILE" --namespace "$NAMESPACE" "$@"
+}
+
+##
+# Ensure the release namespace is active before creating any namespaced credentials.
+# -> ret::exit_code
+prepare_namespace() {
+    local namespace
+
+    # Only NotFound means a namespace should be created. Authorization and API
+    # errors must stop bootstrap, not be mistaken for an absent namespace.
+    namespace="$(kube get namespace "$NAMESPACE" --ignore-not-found -o json)"
+    if [[ -z "$namespace" ]]; then
+        kube create namespace "$NAMESPACE" >/dev/null
+    elif jq -e '.metadata.deletionTimestamp != null' <<<"$namespace" >/dev/null; then
+        printf 'Namespace %s is terminating; wait for deletion to finish before retrying\n' "$NAMESPACE" >&2
+        exit 1
+    fi
+    kube wait "namespace/$NAMESPACE" --for=jsonpath='{.status.phase}'=Active --timeout "$TIMEOUT"
 }
 
 ##
@@ -161,6 +179,7 @@ case "$1" in
             fi
         done <<<"$base_nodes"
         prepare_charts
+        prepare_namespace
         prepare_credentials
 
         # Remember the explicit HA choice so ordinary enable/test commands do
@@ -174,6 +193,12 @@ case "$1" in
             printf 'Expected an existing local Polyad image\n' >&2
             exit 1
         }
+
+        # The remembered HA choice can outlive a deleted Minikube cluster. Apply
+        # the same CRDs with the same field owner as standalone bootstrap before
+        # Helm encounters any Polyad or Dragonfly custom resources.
+        kube apply --server-side --field-manager=polyad-minikube -f "$PROJECT_ROOT/charts/polyad-crds/crds"
+        kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/charts/polyad-crds/crds"
         kube apply --server-side --field-manager=polyad-minikube-full -f "$FULL_DIR/chart/crds/provisioningrequests.yaml"
         helm upgrade --install polyad-lab "$FULL_DIR/chart" --kube-context "$PROFILE" -n "$NAMESPACE" --skip-crds --wait --timeout "$TIMEOUT"
 
@@ -194,7 +219,7 @@ case "$1" in
             --set-string "operator.image.repository=${image%:*}" --set-string "operator.image.tag=${image##*:}")
 
         # Let KEDA's admission webhook become ready before creating its targets.
-        helm upgrade polyad "$CHART" "${common[@]}" --set operator.autoscaling.enabled=false \
+        helm upgrade --install polyad "$CHART" "${common[@]}" --set operator.autoscaling.enabled=false \
             --set operator.autoscaling.connections.enabled=false --set dragonfly.autoscaling.enabled=false \
             --set postgresql.autoscaling.enabled=false
         kube rollout status deployment/keda-admission-webhooks --timeout "$TIMEOUT"

@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tarfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -34,6 +35,7 @@ def checkout(tmp_path: Path) -> tuple[Path, dict[str, str], Runner]:
     for relative in (
         ADDON / "autoscaler.sh",
         ADDON / "paths.sh",
+        ADDON / "maintenance.py",
         Path("integrations/minikube/minikube.sh"),
         Path("integrations/minikube/full/full.sh"),
         Path("scripts/tooling/tool-version.sh"),
@@ -67,6 +69,7 @@ exit "${ADDON_EXIT:-0}"
 
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
+    (bin_dir / "python3").symlink_to(sys.executable)
     curl = bin_dir / "curl"
     curl.write_text("""#!/usr/bin/env bash
 printf '%s\\n' "$@" >> "$CURL_LOG"
@@ -197,89 +200,75 @@ def test_reject_ambiguous_settings(checkout: tuple[Path, dict[str, str], Runner]
     assert not Path(environment["CURL_LOG"]).exists()
 
 
-@pytest.mark.parametrize("command", ["init", "bridge", "enable", "disable", "resume"])
-def test_legacy_journals_require_explicit_handoff(checkout: tuple[Path, dict[str, str], Runner], command: str) -> None:
+def lifecycle_owner(checkout: tuple[Path, dict[str, str], Runner]) -> Path:
     """
-    Never silently adopt workers or pretend that upstream disable stops the old owner.
+    Install a published-addon journal without starting infrastructure.
     """
-    root, environment, run = checkout
-    journal = root / ".cache/minikube/autoscaler/polyad/provider/state.json"
-    journal.parent.mkdir(parents=True)
-    journal.write_text('{"Workers": {}}')
-    result = run(command)
-    assert result.returncode != 0
-    assert "Legacy autoscaler ownership" in result.stderr
-    assert not Path(environment["CURL_LOG"]).exists()
-    assert journal.read_text() == '{"Workers": {}}'
-
-
-def lifecycle_owner(checkout: tuple[Path, dict[str, str], Runner], *, legacy: bool) -> Path:
-    """
-    Install a journal and harmless provider/container recorders for maintenance tests.
-    """
-    root, environment, _ = checkout
-    state = (
-        root / ".cache/minikube/autoscaler/polyad"
-        if legacy
-        else Path(environment["XDG_STATE_HOME"]) / "minikube-cluster-autoscaler-addon/polyad"
-    )
+    _, environment, _ = checkout
+    state = Path(environment["XDG_STATE_HOME"]) / "minikube-cluster-autoscaler-addon/polyad"
     journal = state / "provider/state.json"
     journal.parent.mkdir(parents=True)
-    journal.write_text('{"Workers": {"worker": {"Phase": "ready"}}}')
-    binary = (
-        root / ".cache/minikube/autoscaler/bin/provider"
-        if legacy
-        else root / f".cache/minikube/addons/minikube-cluster-autoscaler-addon/{REVISION}/bin/minikube-cluster-autoscaler-addon"
-    )
-    binary.parent.mkdir(parents=True)
-    binary.write_text('#!/usr/bin/env bash\nprintf "bridge %s\\n" "$*" >> "$OPS_LOG"\nexit "${BRIDGE_EXIT:-0}"\n')
-    binary.chmod(0o755)
-    bin_dir = root.parent / "bin"
-    for tool in ("docker", "minikube"):
-        mock = bin_dir / tool
-        mock.write_text("""#!/usr/bin/env bash
-printf '%s %s\\n' "${0##*/}" "$*" >> "$OPS_LOG"
-case "$*" in
-    'inspect --format '*) printf '%s\\n' "${CONTAINER_RUNNING:-false}" ;;
-    *'profile list'*) printf '%s\\n' '{"valid":[{"Name":"polyad","Config":{"Nodes":[{"ControlPlane":true},{},{},{},{}]}}]}' ;;
-esac
-""")
-        mock.chmod(0o755)
+    journal.write_text('{"ClusterUID":"test-cluster","Workers":[]}')
     return journal
 
 
-@pytest.mark.parametrize("legacy", [True, False])
-@pytest.mark.parametrize("failure", ["container", "lock", "pending", "delete", "none"])
-def test_parent_lifecycle_checks_each_ownership_generation(
-    checkout: tuple[Path, dict[str, str], Runner], legacy: bool, failure: str
-) -> None:
+def test_deletion_still_requires_explicit_shutdown(checkout: tuple[Path, dict[str, str], Runner]) -> None:
     """
-    Preserve maintenance safety for retained old journals and independently stored new ones.
+    Automatic maintenance never authorizes deleting an initialized cluster.
     """
-    _, environment, run = checkout
-    journal = lifecycle_owner(checkout, legacy=legacy)
-    if failure == "pending":
-        journal.write_text('{"Workers": {"worker": {"Phase": "creating"}}}')
-    result = run(
-        "delete" if failure == "delete" else "stop",
-        script="minikube",
-        CONTAINER_RUNNING="true" if failure == "container" else "false",
-        BRIDGE_EXIT="1" if failure == "lock" else "0",
-    )
-    log = Path(environment["OPS_LOG"])
-    commands = log.read_text() if log.exists() else ""
+    root, environment, run = checkout
+    journal = lifecycle_owner(checkout)
+    mock = root.parent / "bin/minikube"
+    mock.write_text('#!/usr/bin/env bash\nprintf "minikube called\\n" >> "$OPS_LOG"\n')
+    mock.chmod(0o755)
+    result = run("delete", script="minikube")
+    assert result.returncode != 0
+    assert "ownership is initialized" in result.stderr
+    assert not Path(environment["OPS_LOG"]).exists()
     assert journal.exists()
-    if failure != "none":
-        assert result.returncode != 0, result.stdout
-        assert "minikube --profile polyad stop" not in commands
-        assert "minikube --profile polyad delete" not in commands
-    else:
-        assert result.returncode == 0, result.stderr
-        container = "polyad-minikube-autoscaler-polyad" if legacy else "minikube-cluster-autoscaler-addon-polyad"
-        assert f"docker container inspect {container}" in commands
-        assert "bridge --mode=maintenance-check" in commands
-        assert "minikube --profile polyad profile list" in commands
-        assert "minikube --profile polyad stop" in commands
+
+
+def test_start_reenters_under_maintenance_and_preserves_dynamic_size(checkout: tuple[Path, dict[str, str], Runner]) -> None:
+    """
+    Execute the complete shell startup using the real lock helper and fake infrastructure.
+    """
+    root, environment, run = checkout
+    journal = lifecycle_owner(checkout)
+    state = journal.parent.parent
+    (state / "host").mkdir()
+    (state / "config.json").write_text('{"profile":"polyad"}')
+    binary = root / f".cache/minikube/addons/minikube-cluster-autoscaler-addon/{REVISION}/bin/minikube-cluster-autoscaler-addon"
+    binary.parent.mkdir(parents=True)
+    binary.write_text("#!/usr/bin/env bash\nexit 0\n")
+    binary.chmod(0o755)
+    bin_dir = root.parent / "bin"
+    recorder = bin_dir / "record"
+    shutil.copyfile(ROOT / "pkg/tests/data/local_cluster_command.py", recorder)
+    recorder.chmod(0o755)
+    for tool in ("docker", "helm", "minikube", "kubectl", "virsh", "uname", "curl"):
+        target = bin_dir / tool
+        target.unlink(missing_ok=True)
+        target.symlink_to(recorder)
+
+    # Chart and registry commands are recorded, not run; supply the checked-in
+    # inputs that the shell itself resolves before calling those commands.
+    for relative in (
+        "scripts/tooling/build-chart-dependencies.sh",
+        "charts/polyad/Chart.lock",
+        "integrations/minikube/values.yaml",
+        "integrations/minikube/workload.yaml",
+    ):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, target)
+    result = run("start", script="minikube", COMMAND_LOG=environment["OPS_LOG"], MINIKUBE_TEST_NODES="5")
+    assert result.returncode == 0, result.stderr
+    assert "Pausing autoscaler" in result.stdout
+    assert "Autoscaler restored" in result.stdout
+    calls = [json.loads(line)["command"] for line in Path(environment["OPS_LOG"]).read_text().splitlines()]
+    assert sum(call[:4] == ["minikube", "--profile", "polyad", "start"] for call in calls) == 1
+    assert not any("node" in call and "add" in call for call in calls)
+    assert not (state / "host/polyad-maintenance.json").exists()
 
 
 def test_pin_is_immutable_and_implementation_is_external() -> None:
@@ -297,16 +286,15 @@ def test_pin_is_immutable_and_implementation_is_external() -> None:
     assert "pkg/tests/flux/go.mod" in workflow
 
 
-@pytest.mark.parametrize("ownership", ["legacy", "upstream", "both", "missing"])
+@pytest.mark.parametrize("ownership", ["upstream", "missing"])
 def test_full_lab_never_promotes_elastic_workers_to_base(checkout: tuple[Path, dict[str, str], Runner], ownership: str) -> None:
     """
-    Use the correct journal for placement and refuse missing or ambiguous ownership.
+    Use the published addon journal for placement and refuse missing ownership.
     """
     root, environment, run = checkout
-    for legacy in (True, False):
-        if ownership == "both" or ownership == ("legacy" if legacy else "upstream"):
-            journal = lifecycle_owner(checkout, legacy=legacy)
-            journal.write_text('{"Base":{"polyad":{},"polyad-m02":{}},"Workers":{"polyad-m04":{}}}')
+    if ownership == "upstream":
+        journal = lifecycle_owner(checkout)
+        journal.write_text('{"Base":{"polyad":{},"polyad-m02":{}},"Workers":[{"Name":"polyad-m04"}]}')
 
     # Stop at chart preparation after recording placement. No Helm rollout or
     # credential creation is needed to exercise this early ownership boundary.
@@ -328,7 +316,7 @@ esac
     result = run("enable", script="full")
     commands = Path(environment["OPS_LOG"]).read_text()
     assert "label node polyad-m04" not in commands
-    if ownership in ("legacy", "upstream"):
+    if ownership == "upstream":
         assert result.returncode == 19, result.stderr
         assert "label node polyad minikube-autoscaler.astrivant.com/pool=base" in commands
         assert "label node polyad-m02 minikube-autoscaler.astrivant.com/pool=base" in commands

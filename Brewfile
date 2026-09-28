@@ -6,6 +6,9 @@ brew "jq"
 brew "shellcheck"
 brew "shfmt"
 
+# Optional autoscaler pause/resume uses only Python's standard library.
+brew "python"
+
 # Application image builds still need a running Docker daemon (for example, Docker Desktop).
 brew "docker"
 brew "docker-buildx"

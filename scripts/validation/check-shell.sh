@@ -41,7 +41,7 @@ if [[ ${#files[@]} == 0 ]]; then
     done <"$manifest"
 fi
 if [[ ${#files[@]} != 0 ]]; then
-    "$shellcheck_bin" "${files[@]}"
+    "$shellcheck_bin" -x "${files[@]}"
     "$shfmt_bin" -d "${files[@]}"
     bash scripts/tooling/project-python.sh scripts/validation/check-shell-functions.py --shfmt "$shfmt_bin" "${files[@]}"
 fi
