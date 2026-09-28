@@ -29,7 +29,7 @@ def test_full_profile_renders_ha_local_root_and_authenticated_mesh():
     pod = deployment["spec"]["template"]
     assert pod["metadata"]["labels"]["sidecar.istio.io/inject"] == "true"
     assert pod["spec"]["nodeSelector"] == {
-        "polyad.astrivant.com/minikube-pool": "base",
+        "minikube-autoscaler.astrivant.com/pool": "base",
         "polyad.astrivant.com/minikube-worker": "true",
     }
     env = {entry["name"]: entry.get("value") for entry in pod["spec"]["containers"][0]["env"]}
@@ -55,21 +55,17 @@ def test_full_prerequisites_include_capacity_api_and_real_trace_receiver():
     assert receiver == {"service": "polyad-telemetry-otlp.polyad.svc.cluster.local", "port": 4317}
 
 
-def test_autoscaler_ceiling_and_safe_startup_defaults():
+def test_autoscaler_ceiling_and_upstream_placement():
     """
-    Cap VM memory independently of Pod requests and avoid removed upstream flags.
+    Cap VM memory independently of Pod requests and target the upstream elastic pool.
     """
     config = json.loads((ADDON / "config.example.json").read_text())
     assert config["minWorkers"] == 0
     assert (3 + config["maxWorkers"]) * 4096 == config["maxTotalMemoryMiB"] == 20480
-    values = yaml.safe_load((ADDON / "chart/values.yaml").read_text())["cluster-autoscaler"]
-    assert values["image"]["tag"] == "v1.35.0"
-    flags = values["extraArgs"]
-    assert flags["max-scale-down-parallelism"] == flags["max-nodes-per-scaleup"] == 1
-    assert flags["enable-provisioning-requests"] is True
-    assert "max-empty-bulk-delete" not in flags
-    assert "max-nodegroup-parallelism" not in flags
-    assert flags["skip-nodes-with-local-storage"] is True
+    objects = list(yaml.safe_load_all((ADDON / "demand.yaml").read_text()))
+    pod = next(item for item in objects if item["kind"] == "Deployment")["spec"]["template"]["spec"]
+    assert pod["nodeSelector"] == {"minikube-autoscaler.astrivant.com/pool": "elastic"}
+    assert pod["tolerations"][0]["key"] == "minikube-autoscaler.astrivant.com/elastic"
 
 
 @pytest.mark.skipif(shutil.which("helm") is None, reason="requires Helm and chart dependencies")

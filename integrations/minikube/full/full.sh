@@ -138,15 +138,33 @@ case "$1" in
     enable)
         minikube --profile "$PROFILE" status
         kube wait nodes --all --for=condition=Ready --timeout "$TIMEOUT"
-        # Infrastructure stays on protected base VMs, never disposable workers.
-        journal="$PROJECT_ROOT/.cache/minikube/autoscaler/$PROFILE/provider/state.json"
+
+        # Both addon generations reserve their own workers. Never recapture an
+        # elastic worker as base infrastructure during a full-profile upgrade.
+        # shellcheck source=integrations/minikube/autoscaler/paths.sh
+        source "$FULL_DIR/../autoscaler/paths.sh"
+        journal="$AUTOSCALER_STATE/provider/state.json"
+        legacy_journal="$AUTOSCALER_LEGACY_STATE/provider/state.json"
+        if [[ -f "$legacy_journal" ]]; then
+            [[ ! -f "$journal" ]] || {
+                printf 'Both addon generations have ownership journals; resolve migration first\n' >&2
+                exit 1
+            }
+            journal="$legacy_journal"
+        fi
         if [[ -f "$journal" ]]; then
-            base_nodes="$(jq -r '.Base | keys[]' "$journal")"
+            base_nodes="$(jq -er '.Base | keys | select(length > 0) | .[]' "$journal")"
         else
-            base_nodes="$(kube get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')"
+            inventory="$(kube get nodes -o json)"
+            jq -e 'all(.items[]; .metadata.labels["minikube-autoscaler.astrivant.com/pool"] != "elastic"
+                and .metadata.labels["polyad.astrivant.com/minikube-pool"] != "elastic")' <<<"$inventory" >/dev/null || {
+                printf 'Elastic workers exist but their ownership journal is missing; restore addon state first\n' >&2
+                exit 1
+            }
+            base_nodes="$(jq -er '.items[].metadata.name' <<<"$inventory")"
         fi
         while IFS= read -r node; do
-            kube label node "$node" polyad.astrivant.com/minikube-pool=base --overwrite
+            kube label node "$node" minikube-autoscaler.astrivant.com/pool=base --overwrite
             if kube get node "$node" -o json | jq -e '.metadata.labels | has("node-role.kubernetes.io/control-plane") | not' >/dev/null; then
                 kube label node "$node" polyad.astrivant.com/minikube-worker=true --overwrite
             fi

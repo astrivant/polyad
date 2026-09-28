@@ -29,7 +29,7 @@
         "nodeSelector": {
           "type": "object",
           "properties": {
-            "polyad.astrivant.com/minikube-pool": {
+            "minikube-autoscaler.astrivant.com/pool": {
               "type": "string"
             }
           },
@@ -140,7 +140,7 @@
         "nodeSelector": {
           "type": "object",
           "properties": {
-            "polyad.astrivant.com/minikube-pool": {
+            "minikube-autoscaler.astrivant.com/pool": {
               "type": "string"
             }
           },
@@ -188,7 +188,7 @@
             "nodeSelector": {
               "type": "object",
               "properties": {
-                "polyad.astrivant.com/minikube-pool": {
+                "minikube-autoscaler.astrivant.com/pool": {
                   "type": "string"
                 }
               },
@@ -230,7 +230,7 @@
             "nodeSelector": {
               "type": "object",
               "properties": {
-                "polyad.astrivant.com/minikube-pool": {
+                "minikube-autoscaler.astrivant.com/pool": {
                   "type": "string"
                 }
               },
@@ -272,7 +272,7 @@
             "nodeSelector": {
               "type": "object",
               "properties": {
-                "polyad.astrivant.com/minikube-pool": {
+                "minikube-autoscaler.astrivant.com/pool": {
                   "type": "string"
                 }
               },

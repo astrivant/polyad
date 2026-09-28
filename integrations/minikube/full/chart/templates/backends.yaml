@@ -62,7 +62,7 @@ spec:
         checksum/config: {{ $.Files.Get (printf "files/%s.yaml" .name) | sha256sum }}
     spec:
       nodeSelector:
-        polyad.astrivant.com/minikube-pool: base
+        minikube-autoscaler.astrivant.com/pool: base
       securityContext:
         runAsUser: 65532
         runAsGroup: 65532

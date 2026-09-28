@@ -1,42 +1,13 @@
 #!/usr/bin/env bash
-# Repository-local Minikube Helm addon, with a containerized host provider.
+# Delegate to the checksum-pinned, independently maintained Minikube addon.
 set -euo pipefail
 
 ADDON_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "$ADDON_DIR/../../.." && pwd)"
 PROFILE="${POLYAD_MINIKUBE_PROFILE:-polyad}"
-STATE_DIR="$PROJECT_ROOT/.cache/minikube/autoscaler/$PROFILE"
-BINARY="$PROJECT_ROOT/.cache/minikube/autoscaler/bin/provider"
-CONTAINER="polyad-minikube-autoscaler-$PROFILE"
-RELEASE=polyad-minikube-autoscaler
-CONFIG="${POLYAD_MINIKUBE_AUTOSCALER_CONFIG:-$STATE_DIR/config.json}"
-CHART="$ADDON_DIR/chart"
 
 ##
-# Show the addon lifecycle and its explicit activation requirements.
-# -> ret::exit_code
-usage() {
-    cat <<'EOF'
-Usage: integrations/minikube/autoscaler/autoscaler.sh COMMAND
-
-  build    Build the optional native bridge and host provider container.
-  init     Capture/protect existing VMs and create private journals and TLS identities.
-  bridge   Run the native host VM bridge in this terminal; stop with Ctrl-C.
-  enable   Start the provider container and install Cluster Autoscaler through Helm.
-  test     Authenticate to the provider and check the Cluster Autoscaler rollout.
-  status   Show provider state, container status, and worker placement.
-  render   Render the Helm addon without accessing Kubernetes.
-  disable  Remove Cluster Autoscaler and its container; retain VMs, journals and credentials.
-  resume   Clear a recoverable provider error while its container is stopped.
-
-init requires POLYAD_MINIKUBE_AUTOSCALER_CONFIG pointing to an edited config.example.json.
-The native bridge must be running before enable; Docker cannot control macOS HVF directly.
-This is a repository-local addon, not a compiled `minikube addons enable` extension.
-EOF
-}
-
-##
-# Fail without broad cleanup or implicit VM removal.
+# Report a dependency or ownership failure without modifying the cluster.
 # message::string[] -> ret::never
 fail() {
     printf 'ERROR: %s\n' "$*" >&2
@@ -44,40 +15,60 @@ fail() {
 }
 
 ##
-# Scope every Kubernetes operation to the configured cluster and namespace.
-# args::string[] -> ret::exit_code
-kube() {
-    kubectl --context "$PROFILE" --namespace "$NAMESPACE" "$@"
+# Describe the upstream command interface and Polyad's local defaults.
+# -> ret::exit_code
+usage() {
+    cat <<'EOF'
+Usage: integrations/minikube/autoscaler/autoscaler.sh COMMAND
+
+  fetch    Download and verify the pinned published source; print its directory.
+  path     Print the pinned source directory without downloading anything.
+  build|init|bridge|enable|test|status|render|disable|resume
+           Delegate to the standalone addon's scripts/addon.sh.
+
+POLYAD_MINIKUBE_PROFILE defaults to polyad.
+POLYAD_MINIKUBE_AUTOSCALER_CONFIG selects an edited config.example.json for init.
+MINIKUBE_AUTOSCALER_STATE_DIR and other upstream settings are passed through.
+The provider, container, chart and VM lifecycle are maintained upstream:
+https://github.com/astrivant/minikube-cluster-autoscaler-addon
+See integrations/minikube/autoscaler/README.md before migrating an older lab.
+EOF
 }
 
 ##
-# Build locked chart dependencies without changing global Helm repository settings.
-# -> ret::exit_code
-prepare_chart() {
-    local cache="$PROJECT_ROOT/.cache/minikube/autoscaler/helm"
-    mkdir -p "$cache/repository-cache"
-    export HELM_REPOSITORY_CONFIG="$cache/repositories.yaml"
-    export HELM_REPOSITORY_CACHE="$cache/repository-cache"
-    helm repo add autoscaler https://kubernetes.github.io/autoscaler --force-update >&2
-    helm dependency build "$CHART" --skip-refresh >&2
+# Verify a published archive before extracting or executing any of its code.
+# archive::path -> ret::exit_code
+verify_archive() {
+    local actual
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual="$(sha256sum "$1")"
+    else
+        actual="$(shasum -a 256 "$1")"
+    fi
+    [[ "${actual%% *}" == "$AUTOSCALER_SHA256" ]] || fail 'Published addon checksum mismatch; nothing was executed'
 }
 
 ##
-# Pin existing infrastructure controllers to protected base nodes before adding workers.
+# Cache one immutable upstream source tree without storing cluster state in it.
 # -> ret::exit_code
-protect_base() {
-    local node namespace controller inventory
-    while IFS= read -r node; do
-        kube label node "$node" polyad.astrivant.com/minikube-pool=base --overwrite
-    done < <(jq -r '.Base | keys[]' "$STATE_DIR/provider/state.json")
-    for namespace in "$NAMESPACE" kube-system; do
-        inventory="$(kubectl --context "$PROFILE" --namespace "$namespace" get deployments,statefulsets -o name)"
-        while IFS= read -r controller; do
-            [[ -n "$controller" ]] || continue
-            kubectl --context "$PROFILE" --namespace "$namespace" patch "$controller" --type=merge \
-                -p '{"spec":{"template":{"spec":{"nodeSelector":{"polyad.astrivant.com/minikube-pool":"base"}}}}}'
-        done <<<"$inventory"
-    done
+prepare_source() {
+    if [[ -f "$AUTOSCALER_SOURCE/scripts/addon.sh" ]]; then return; fi
+    [[ ! -e "$AUTOSCALER_SOURCE" ]] || fail "Incomplete addon cache at $AUTOSCALER_SOURCE; inspect it before retrying"
+    mkdir -p "$AUTOSCALER_CACHE"
+    local download
+    download="$(mktemp -d "$AUTOSCALER_CACHE/.fetch.XXXXXX")"
+
+    # Keep failed downloads for inspection. Only verified source is made active.
+    curl --fail --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
+        --connect-timeout 15 --max-time 300 --retry 2 \
+        "https://codeload.github.com/astrivant/minikube-cluster-autoscaler-addon/tar.gz/$AUTOSCALER_REVISION" \
+        --output "$download/source.tar.gz"
+    verify_archive "$download/source.tar.gz"
+    tar -xzf "$download/source.tar.gz" -C "$download"
+    [[ -f "$download/minikube-cluster-autoscaler-addon-$AUTOSCALER_REVISION/scripts/addon.sh" ]] || fail 'Archive has no addon entry point'
+    mv "$download/minikube-cluster-autoscaler-addon-$AUTOSCALER_REVISION" "$AUTOSCALER_SOURCE"
+    rm -f "$download/source.tar.gz"
+    rmdir "$download"
 }
 
 [[ $# -eq 1 ]] || {
@@ -89,94 +80,41 @@ case "$1" in
         usage
         exit 0
         ;;
-    build | init | bridge | enable | test | status | render | disable | resume) ;;
+    fetch | path | build | init | bridge | enable | test | status | render | disable | resume) ;;
     *)
         usage >&2
         exit 2
         ;;
 esac
-[[ "$PROFILE" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ && ${#PROFILE} -le 40 ]] || fail 'Invalid profile'
+[[ "$PROFILE" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ && ${#PROFILE} -le 40 ]] || fail 'Invalid Polyad Minikube profile'
+[[ -z "${MINIKUBE_AUTOSCALER_PROFILE:-}" || "$MINIKUBE_AUTOSCALER_PROFILE" == "$PROFILE" ]] || fail 'Upstream and Polyad profiles differ'
 
-if [[ "$1" == build ]]; then
-    mkdir -p "$(dirname "$BINARY")"
-    go -C "$PROJECT_ROOT/pkg/minikube-cluster-autoscaler" build -mod=readonly -trimpath -o "$BINARY" .
-    docker build --file "$PROJECT_ROOT/services/minikube-cluster-autoscaler/Dockerfile" \
-        --tag polyad/minikube-cluster-autoscaler:local "$PROJECT_ROOT"
-    exit 0
-fi
-[[ -f "$CONFIG" ]] || fail 'Set POLYAD_MINIKUBE_AUTOSCALER_CONFIG to an edited config.example.json, then run init'
-[[ "$(jq -r '.profile' "$CONFIG")" == "$PROFILE" ]] || fail 'Configuration profile differs from POLYAD_MINIKUBE_PROFILE'
-NAMESPACE="$(jq -er '.namespace' "$CONFIG")"
-ADDRESS="$(jq -er '.listen' "$CONFIG")"
-[[ "$NAMESPACE" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]] || fail 'Invalid namespace'
-
+# Shared paths keep the parent VM lifecycle guard aware of the upstream owner.
+# shellcheck source=integrations/minikube/autoscaler/paths.sh
+source "$ADDON_DIR/paths.sh"
 case "$1" in
-    init)
-        [[ -x "$BINARY" ]] || fail 'Run build first'
-        "$BINARY" --mode=init --config="$CONFIG" --state-dir="$STATE_DIR"
-        protect_base
-        ;;
-    bridge | resume)
-        if [[ "$1" == resume ]] && docker container inspect "$CONTAINER" >/dev/null 2>&1; then
-            [[ "$(docker inspect --format '{{.State.Running}}' "$CONTAINER")" == false ]] || fail 'Disable the addon before resuming'
-        fi
-        exec "$BINARY" --mode="$1" --config="$CONFIG" --state-dir="$STATE_DIR"
-        ;;
-    enable)
-        [[ -f "$STATE_DIR/provider/state.json" ]] || fail 'Run init first'
-        [[ "$(jq -r '.Error' "$STATE_DIR/provider/state.json")" == '' ]] || fail 'Provider is paused; inspect status and use resume after repair'
-        protect_base
-        # Validate host connectivity before starting a container that can request VMs.
-        "$BINARY" --mode=bridge-check --config="$CONFIG" --state-dir="$STATE_DIR"
-
-        # Mount only provider-owned state and its two TLS identities, never the
-        # Docker socket, kubeconfig, SSH keys, Minikube disks or the CA private key.
-        if docker container inspect "$CONTAINER" >/dev/null 2>&1; then
-            docker start "$CONTAINER" >/dev/null
-        else
-            docker run --detach --name "$CONTAINER" --read-only --cap-drop=ALL \
-                --security-opt=no-new-privileges --pids-limit=64 --memory=256m --cpus=0.5 \
-                --user "$(id -u):$(id -g)" --add-host=host.docker.internal:host-gateway \
-                --publish "$ADDRESS:50051" --mount "type=bind,src=$STATE_DIR/provider,dst=/state" \
-                polyad/minikube-cluster-autoscaler:local >/dev/null
-        fi
-        "$BINARY" --mode=check --config="$CONFIG" --state-dir="$STATE_DIR"
-        kube create secret generic "$RELEASE-client" \
-            --from-file="$STATE_DIR/client/tls/ca.crt" \
-            --from-file="$STATE_DIR/client/tls/autoscaler-client.crt" \
-            --from-file="$STATE_DIR/client/tls/autoscaler-client.key" \
-            --dry-run=client -o yaml | kube apply -f - >/dev/null
-        prepare_chart
-        kube apply --server-side --field-manager=polyad-minikube-full \
-            -f "$PROJECT_ROOT/integrations/minikube/full/chart/crds/provisioningrequests.yaml"
-        timeout_seconds="$(jq -r '.provisionTimeoutSeconds + 60' "$CONFIG")"
-        helm upgrade --install "$RELEASE" "$CHART" --kube-context "$PROFILE" --namespace "$NAMESPACE" \
-            --set-string "provider.address=$ADDRESS" \
-            --set-string "cluster-autoscaler.autoDiscovery.clusterName=$PROFILE" \
-            --set-string "cluster-autoscaler.extraArgs.max-node-provision-time=${timeout_seconds}s" \
-            --wait --timeout 5m
-        ;;
-    test)
-        "$BINARY" --mode=check --config="$CONFIG" --state-dir="$STATE_DIR"
-        kube rollout status deployment/"$RELEASE" --timeout 2m
-        ;;
-    status)
-        jq '{ClusterUID, Base, Workers, Error, LastChange}' "$STATE_DIR/provider/state.json"
-        docker ps -a --filter "name=^/$CONTAINER$"
-        kube get nodes -L polyad.astrivant.com/minikube-pool
-        ;;
-    render)
-        prepare_chart
-        helm template "$RELEASE" "$CHART" --namespace "$NAMESPACE" --kube-version 1.35.0 \
-            --set-string "provider.address=$ADDRESS"
-        ;;
-    disable)
-        # Stop decisions before the provider. No VMs or persistent state are removed.
-        helm uninstall "$RELEASE" --kube-context "$PROFILE" --namespace "$NAMESPACE" --ignore-not-found --wait --timeout 5m
-        if docker container inspect "$CONTAINER" >/dev/null 2>&1; then
-            docker stop --time 30 "$CONTAINER" >/dev/null
-            docker rm "$CONTAINER" >/dev/null
-        fi
-        printf '%s\n' 'Addon disabled. VMs, base placement, TLS Secret, and journals were retained. Stop the bridge with Ctrl-C.'
+    fetch | path | build | render) ;;
+    *)
+        [[ ! -f "$AUTOSCALER_LEGACY_STATE/provider/state.json" ]] || fail 'Legacy autoscaler ownership exists; follow the README migration steps before using the standalone addon'
         ;;
 esac
+if [[ "$1" == path ]]; then
+    printf '%s\n' "$AUTOSCALER_SOURCE"
+    exit 0
+fi
+
+# The addon owns all implementation and lifecycle commands. Only translate the
+# existing Polyad configuration option and select this lab's cluster identity.
+if [[ -n "${POLYAD_MINIKUBE_AUTOSCALER_CONFIG:-}" ]]; then
+    [[ -z "${MINIKUBE_AUTOSCALER_CONFIG:-}" || "$MINIKUBE_AUTOSCALER_CONFIG" == "$POLYAD_MINIKUBE_AUTOSCALER_CONFIG" ]] || fail 'Upstream and Polyad configuration paths differ'
+    export MINIKUBE_AUTOSCALER_CONFIG="$POLYAD_MINIKUBE_AUTOSCALER_CONFIG"
+fi
+prepare_source
+if [[ "$1" == fetch ]]; then
+    printf '%s\n' "$AUTOSCALER_SOURCE"
+    exit 0
+fi
+export MINIKUBE_AUTOSCALER_PROFILE="$PROFILE"
+export MINIKUBE_AUTOSCALER_STATE_DIR="$AUTOSCALER_STATE"
+export MINIKUBE_AUTOSCALER_BINARY="$AUTOSCALER_BINARY"
+exec bash "$AUTOSCALER_SOURCE/scripts/addon.sh" "$1"

@@ -14,7 +14,6 @@ helm repo add stakater https://stakater.github.io/stakater-charts --force-update
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
 helm repo add grafana-community https://grafana-community.github.io/helm-charts --force-update
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update
-helm repo add autoscaler https://kubernetes.github.io/autoscaler --force-update
 helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
 helm repo add fairwinds https://charts.fairwinds.com/stable --force-update
 

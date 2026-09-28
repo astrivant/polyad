@@ -25,9 +25,9 @@ global:
 ## @param operator [object] Settings for operator.
 operator:
   ## @param operator.nodeSelector [object] Settings for operator.nodeSelector.
-  ## @param operator.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for operator.nodeSelector.polyad.astrivant.com/minikube-pool.
+  ## @param operator.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for operator.nodeSelector.minikube-autoscaler.astrivant.com/pool.
   ## @param operator.nodeSelector.polyad.astrivant.com/minikube-worker [string] Settings for operator.nodeSelector.polyad.astrivant.com/minikube-worker.
-  nodeSelector: {polyad.astrivant.com/minikube-pool: base, polyad.astrivant.com/minikube-worker: 'true'}
+  nodeSelector: {minikube-autoscaler.astrivant.com/pool: base, polyad.astrivant.com/minikube-worker: 'true'}
   ## @param operator.replicaCount [integer] Settings for operator.replicaCount.
   replicaCount: 2
   ## @param operator.terminationGracePeriodSeconds [integer] Settings for operator.terminationGracePeriodSeconds.
@@ -83,8 +83,8 @@ operator:
 ## @param dragonfly [object] Settings for dragonfly.
 dragonfly:
   ## @param dragonfly.nodeSelector [object] Settings for dragonfly.nodeSelector.
-  ## @param dragonfly.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for dragonfly.nodeSelector.polyad.astrivant.com/minikube-pool.
-  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param dragonfly.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for dragonfly.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+  nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
   ## @param dragonfly.ha [object] Settings for dragonfly.ha.
   ha:
     ## @param dragonfly.ha.enabled [boolean] Settings for dragonfly.ha.enabled.
@@ -110,8 +110,8 @@ dragonfly:
 ## @param dragonflyOperator [object] Settings for dragonflyOperator.
 dragonflyOperator:
   ## @param dragonflyOperator.nodeSelector [object] Settings for dragonflyOperator.nodeSelector.
-  ## @param dragonflyOperator.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for dragonflyOperator.nodeSelector.polyad.astrivant.com/minikube-pool.
-  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param dragonflyOperator.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for dragonflyOperator.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+  nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
   ## @param dragonflyOperator.replicaCount [integer] Settings for dragonflyOperator.replicaCount.
   replicaCount: 2
 ## @param postgresql [object] Settings for postgresql.
@@ -254,8 +254,8 @@ keda:
 ## @param kedaOperator [object] Settings for kedaOperator.
 kedaOperator:
   ## @param kedaOperator.nodeSelector [object] Settings for kedaOperator.nodeSelector.
-  ## @param kedaOperator.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for kedaOperator.nodeSelector.polyad.astrivant.com/minikube-pool.
-  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param kedaOperator.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for kedaOperator.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+  nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
   # CRDs are applied before installation by full.sh, with one stable field owner.
   ## @param kedaOperator.crds [object] Settings for kedaOperator.crds.
   crds:
@@ -432,8 +432,8 @@ istiod:
 ## @param istioIngress [object] Settings for istioIngress.
 istioIngress:
   ## @param istioIngress.nodeSelector [object] Settings for istioIngress.nodeSelector.
-  ## @param istioIngress.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for istioIngress.nodeSelector.polyad.astrivant.com/minikube-pool.
-  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param istioIngress.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for istioIngress.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+  nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
   ## @param istioIngress.replicaCount [integer] Settings for istioIngress.replicaCount.
   replicaCount: 2
   ## @param istioIngress.autoscaling [object] Settings for istioIngress.autoscaling.
@@ -473,8 +473,8 @@ tracing:
 telemetry:
   # Retain collectors beside their node-bound local PVCs during an HA upgrade.
   ## @param telemetry.nodeSelector [object] Settings for telemetry.nodeSelector.
-  ## @param telemetry.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for telemetry.nodeSelector.polyad.astrivant.com/minikube-pool.
-  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param telemetry.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for telemetry.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+  nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
   ## @param telemetry.enabled [boolean] Settings for telemetry.enabled.
   enabled: true
   ## @param telemetry.mode [string] Settings for telemetry.mode.

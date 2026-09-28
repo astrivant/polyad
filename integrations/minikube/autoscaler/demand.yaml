@@ -20,9 +20,9 @@ spec:
         app: polyad-elastic-demand
     spec:
       nodeSelector:
-        polyad.astrivant.com/minikube-pool: elastic
+        minikube-autoscaler.astrivant.com/pool: elastic
       tolerations:
-        - key: polyad.astrivant.com/elastic
+        - key: minikube-autoscaler.astrivant.com/elastic
           operator: Equal
           value: "true"
           effect: NoSchedule

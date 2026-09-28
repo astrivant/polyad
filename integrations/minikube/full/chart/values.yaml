@@ -13,8 +13,8 @@ global:
 ## @param istiod [object] Settings for istiod.
 istiod:
   ## @param istiod.nodeSelector [object] Settings for istiod.nodeSelector.
-  ## @param istiod.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for istiod.nodeSelector.polyad.astrivant.com/minikube-pool.
-  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param istiod.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for istiod.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+  nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
   ## @param istiod.pilot [object] Settings for istiod.pilot.
   pilot:
     ## @param istiod.pilot.replicaCount [integer] Settings for istiod.pilot.replicaCount.
@@ -59,8 +59,8 @@ istiod:
 ## @param cloudnative-pg [object] Settings for cloudnative-pg.
 cloudnative-pg:
   ## @param cloudnative-pg.nodeSelector [object] Settings for cloudnative-pg.nodeSelector.
-  ## @param cloudnative-pg.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for cloudnative-pg.nodeSelector.polyad.astrivant.com/minikube-pool.
-  nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+  ## @param cloudnative-pg.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for cloudnative-pg.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+  nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
   ## @param cloudnative-pg.replicaCount [integer] Settings for cloudnative-pg.replicaCount.
   replicaCount: 2
   ## @param cloudnative-pg.resources [object] Settings for cloudnative-pg.resources.
@@ -77,8 +77,8 @@ vpa:
   ## @param vpa.recommender [object] Settings for vpa.recommender.
   recommender:
     ## @param vpa.recommender.nodeSelector [object] Settings for vpa.recommender.nodeSelector.
-    ## @param vpa.recommender.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for vpa.recommender.nodeSelector.polyad.astrivant.com/minikube-pool.
-    nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+    ## @param vpa.recommender.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for vpa.recommender.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+    nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
     ## @param vpa.recommender.resources [object] Settings for vpa.recommender.resources.
     resources:
       ## @param vpa.recommender.resources.requests [object] Settings for vpa.recommender.resources.requests.
@@ -91,8 +91,8 @@ vpa:
   ## @param vpa.updater [object] Settings for vpa.updater.
   updater:
     ## @param vpa.updater.nodeSelector [object] Settings for vpa.updater.nodeSelector.
-    ## @param vpa.updater.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for vpa.updater.nodeSelector.polyad.astrivant.com/minikube-pool.
-    nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+    ## @param vpa.updater.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for vpa.updater.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+    nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
     ## @param vpa.updater.resources [object] Settings for vpa.updater.resources.
     resources:
       ## @param vpa.updater.resources.requests [object] Settings for vpa.updater.resources.requests.
@@ -105,8 +105,8 @@ vpa:
   ## @param vpa.admissionController [object] Settings for vpa.admissionController.
   admissionController:
     ## @param vpa.admissionController.nodeSelector [object] Settings for vpa.admissionController.nodeSelector.
-    ## @param vpa.admissionController.nodeSelector.polyad.astrivant.com/minikube-pool [string] Settings for vpa.admissionController.nodeSelector.polyad.astrivant.com/minikube-pool.
-    nodeSelector: {polyad.astrivant.com/minikube-pool: base}
+    ## @param vpa.admissionController.nodeSelector.minikube-autoscaler.astrivant.com/pool [string] Settings for vpa.admissionController.nodeSelector.minikube-autoscaler.astrivant.com/pool.
+    nodeSelector: {minikube-autoscaler.astrivant.com/pool: base}
     ## @param vpa.admissionController.resources [object] Settings for vpa.admissionController.resources.
     resources:
       ## @param vpa.admissionController.resources.requests [object] Settings for vpa.admissionController.resources.requests.

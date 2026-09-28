@@ -1,6 +1,5 @@
 .venv/
 .cache/
-integrations/minikube/autoscaler/chart/charts/
 integrations/minikube/full/chart/charts/
 __pycache__/
 *.pyc

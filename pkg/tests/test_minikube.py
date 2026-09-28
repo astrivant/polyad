@@ -64,7 +64,11 @@ def commands(tmp_path: Path) -> Runner:
     log = tmp_path / "commands.jsonl"
 
     # Ignore developer overrides and launch outside the checkout to test path handling.
-    environment = {key: value for key, value in os.environ.items() if not key.startswith(("POLYAD_MINIKUBE_", "MINIKUBE_TEST_"))}
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(("POLYAD_MINIKUBE_", "MINIKUBE_AUTOSCALER_", "MINIKUBE_TEST_"))
+    }
     environment.pop("FAIL_COMMAND", None)
     environment.pop("EXISTING_BOUNDARIES", None)
     environment.pop("TMUX", None)
@@ -73,6 +77,7 @@ def commands(tmp_path: Path) -> Runner:
         COMMAND_LOG=str(log),
         POLYAD_MINIKUBE_PROFILE="isolated-test",
         POLYAD_MINIKUBE_NAMESPACE="test-namespace",
+        XDG_STATE_HOME=str(tmp_path / "state"),
     )
 
     def run(*args: str, overrides: dict[str, str] | None = None) -> tuple[subprocess.CompletedProcess[str], list[dict[str, Any]]]:
