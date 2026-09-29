@@ -48,7 +48,8 @@ def test_matrix_results_and_combined_reports_are_uploaded():
     assert "--junitxml=.cache/tests/pytest.xml" in test["run"]
     assert test["env"]["COVERAGE_FILE"] == ".cache/tests/.coverage.${{ matrix.python }}"
     upload = next(step for step in python["steps"] if step.get("name") == "Upload Python test results")
-    assert upload["if"] == "always()"
+    # Failed test runs retain their results; setup failures have no results to upload.
+    assert upload["if"] == f"always() && steps.{test['id']}.outcome != 'skipped'"
     assert upload["with"]["include-hidden-files"] == "true"
     assert upload["with"]["name"] == "python-test-results-${{ matrix.python }}"
 

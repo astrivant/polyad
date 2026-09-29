@@ -77,7 +77,7 @@ while time.monotonic() < deadline:
     ]))
     targets = [
         endpoint['targetRef']['name']
-        for item in slices['items'] for endpoint in item.get('endpoints', [])
+        for item in slices['items'] for endpoint in (item.get('endpoints') or [])
         if endpoint.get('conditions', {}).get('ready') is True
     ]
     if len(targets) == 1 and targets[0] != previous:
