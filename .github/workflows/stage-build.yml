@@ -166,6 +166,8 @@ jobs:
           jobs: '4'
           # Preserve per-path coverage and the previous example budget across the upgrade.
           paths: 'true'
+          # Test root charts without traversing dependency charts.
+          max-depth: '0'
           max-examples: '100'
           schema-validation: 'true'
           schema-version: '1.35.0'

@@ -4,6 +4,7 @@
 **Table of contents**
 
 - [Studies](#studies)
+- [Proposed studies](#proposed-studies)
 - [Refresh protocol](#refresh-protocol)
 - [Study figures](#study-figures)
 - [Tests and CI](#tests-and-ci)
@@ -37,6 +38,15 @@ remain at the study root. Soul and Nature map directly to
 `pkg/polyad-benchmarks/polyad_benchmarks/studies/<study_name>/`, with their own
 monitors and strategy modules. Their `figures/` directories contain measured PNG
 and SVG plots. Shared execution code stays in `polyad-benchmarks`.
+
+## Proposed studies
+
+Design notes describe potential experiments without registering runnable refresh
+jobs or claiming measured results.
+
+| Proposal | Question | Status |
+| --- | --- | --- |
+| [Adaptive shard scheduling](adaptive-shard-scheduling/README.md) | Can consecutive fan-out/fan-in runs use measured durations and bounded feedback to reduce shard imbalance and barrier time? | Design only; no runtime integration or measurement harness |
 
 ## Refresh protocol
 
