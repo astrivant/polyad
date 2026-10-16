@@ -1,0 +1,1 @@
+Coverage publication helpers adapted from [Astrivant Identity](https://github.com/astrivant/identity/tree/54426c98d11a881789b45ce8838c07faacd47f75/scripts/ci), under the repository Business Source License 1.1. Polyad measures its five runtime packages and publishes only the badge and source receipt.

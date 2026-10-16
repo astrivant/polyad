@@ -21,7 +21,7 @@ application checkpoint.
 
 ## Enable and tune
 
-Use [values-event-rebalancing.reference.yaml](../../charts/polyad/references/values-event-rebalancing.reference.yaml)
+Use [event-rebalancing/values.yaml](../../helm/polyad/references/event-rebalancing/values.yaml)
 as an overlay on your credentials, network permissions and Istio configuration.
 The feature defaults off. It works for both transports and for dense operators
 or the gateway group in a [split deployment](../deployment/components.md).

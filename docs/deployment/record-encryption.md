@@ -17,7 +17,7 @@ combined with [volume encryption](postgresql.md#encryption-at-rest).
 
 ## Configure key Secrets
 
-Use [the typed reference values](../../charts/polyad/references/values-postgresql-record-encryption.reference.yaml)
+Use [the typed reference values](../../helm/polyad/references/postgresql-record-encryption/values.yaml)
 with an existing Secret in the Helm release namespace:
 
 ```yaml

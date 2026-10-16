@@ -7,7 +7,7 @@ PROJECT_ROOT="$(cd -- "$FULL_DIR/../../.." && pwd)"
 PROFILE="${POLYAD_MINIKUBE_PROFILE:-polyad}"
 NAMESPACE=polyad
 STATE_DIR="$PROJECT_ROOT/.cache/minikube/full/$PROFILE"
-CHART="$PROJECT_ROOT/charts/polyad"
+CHART="$PROJECT_ROOT/helm/polyad"
 TIMEOUT="${POLYAD_MINIKUBE_TIMEOUT:-15m}"
 umask 077
 
@@ -197,8 +197,8 @@ case "$1" in
         # The remembered HA choice can outlive a deleted Minikube cluster. Apply
         # the same CRDs with the same field owner as standalone bootstrap before
         # Helm encounters any Polyad or Dragonfly custom resources.
-        kube apply --server-side --field-manager=polyad-minikube -f "$PROJECT_ROOT/charts/polyad-crds/crds"
-        kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/charts/polyad-crds/crds"
+        kube apply --server-side --field-manager=polyad-minikube -f "$PROJECT_ROOT/helm/polyad-crds/crds"
+        kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/helm/polyad-crds/crds"
         kube apply --server-side --field-manager=polyad-minikube-full -f "$FULL_DIR/chart/crds/provisioningrequests.yaml"
         helm upgrade --install polyad-lab "$FULL_DIR/chart" --kube-context "$PROFILE" -n "$NAMESPACE" --skip-crds --wait --timeout "$TIMEOUT"
 

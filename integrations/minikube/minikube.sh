@@ -14,7 +14,7 @@ NATIVE_SSH="${POLYAD_MINIKUBE_NATIVE_SSH:-true}"
 TIMEOUT="${POLYAD_MINIKUBE_TIMEOUT:-10m}"
 EXTRA_VALUES="${POLYAD_MINIKUBE_VALUES:-}"
 KUBERNETES_VERSION="v$(bash "$PROJECT_ROOT/scripts/tooling/tool-version.sh" kubectl)"
-CHART="$PROJECT_ROOT/charts/polyad"
+CHART="$PROJECT_ROOT/helm/polyad"
 HELM_CACHE="$PROJECT_ROOT/.cache/minikube/helm"
 IMAGE_REPOSITORY=localhost:5000/polyad
 IMAGE_TAG=minikube
@@ -264,7 +264,7 @@ prepare_chart() {
     # Reuse CI's complete repository inventory and committed dependency locks.
     HELM_REPOSITORY_CONFIG="$HELM_CACHE/repositories.yaml" \
         HELM_REPOSITORY_CACHE="$HELM_CACHE/repository-cache" \
-        bash "$PROJECT_ROOT/scripts/tooling/build-chart-dependencies.sh" charts/polyad >&2
+        bash "$PROJECT_ROOT/scripts/tooling/build-chart-dependencies.sh" helm/polyad >&2
 }
 
 ##
@@ -395,8 +395,8 @@ enable() {
     # Helm does not upgrade its crds/ definitions. Own their local updates explicitly
     # without force-conflicts, so another manager's incompatible edits fail safely.
     # Skip Helm's CRD installation after this step to keep one field manager.
-    kube apply --server-side --field-manager=polyad-minikube -f "$PROJECT_ROOT/charts/polyad-crds/crds"
-    kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/charts/polyad-crds/crds"
+    kube apply --server-side --field-manager=polyad-minikube -f "$PROJECT_ROOT/helm/polyad-crds/crds"
+    kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/helm/polyad-crds/crds"
     helm_local upgrade --install polyad "$CHART" --kube-context "$PROFILE" \
         --skip-crds --create-namespace --wait --timeout "$TIMEOUT" "${CHART_OPTIONS[@]}"
 }

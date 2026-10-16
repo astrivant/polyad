@@ -21,7 +21,7 @@
 <!-- toc:end -->
 
 Install Polyad on your own machine using the canonical
-[Polyad Helm chart](../../charts/polyad/README.md). This guide covers first-time
+[Polyad Helm chart](../../helm/polyad/README.md). This guide covers first-time
 installation for application developers and the rebuild/test loop for Polyad
 contributors. Cluster startup uses **QEMU/HVF on macOS** or **KVM2/libvirt on
 Linux**, selected automatically. The commands use Bash and run from the checkout
@@ -321,7 +321,7 @@ The helper enforces `rootControlPlane.enabled: true` and
 `rootControlPlane.mode: Local`. Its cluster identity follows
 `POLYAD_MINIKUBE_PROFILE`; federation, remote pools and KEDA observation remain
 disabled. The generic chart still defaults to root mode disabled. See the
-[local-root reference](../../charts/polyad/references/values-local-root.reference.yaml)
+[local-root reference](../../helm/polyad/references/local-root/values.yaml)
 to use this configuration outside Minikube.
 
 ### Run an application example
@@ -404,7 +404,7 @@ variables automatically. Keep private overrides out of version control.
 The script applies [the local values overlay](values.yaml), then your optional
 overlay, then enforces standalone mode, one operator/cache/controller, disabled
 autoscaling, and the locally built image. Other options use the main chart's
-[complete values reference](../../charts/polyad/values.yaml). Defaults outside
+[complete values reference](../../helm/polyad/values.yaml). Defaults outside
 this integration are unchanged. Remove incompatible settings from optional
 overlays if the chart rejects them.
 
@@ -470,8 +470,8 @@ bash integrations/minikube/minikube.sh test
 After installing developer dependencies and building the chart dependencies:
 
 ```sh
-bash scripts/tooling/build-chart-dependencies.sh charts/polyad
-poetry run pytest pkg/tests/test_minikube.py -n 2
+bash scripts/tooling/build-chart-dependencies.sh helm/polyad
+poetry run pytest tests/features/test_minikube.py -n 2
 bash scripts/validation/check-shell.sh integrations/minikube/minikube.sh
 poetry run python scripts/validation/check-values.py
 ```

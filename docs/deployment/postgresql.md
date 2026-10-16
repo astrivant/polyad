@@ -118,7 +118,7 @@ classes externally, without enabling the shared selection above.
 
 ### Provision GKE storage with a KMS key
 
-Use [values-postgresql-encryption.reference.yaml](../../charts/polyad/references/values-postgresql-encryption.reference.yaml)
+Use [postgresql-encryption/values.yaml](../../helm/polyad/references/postgresql-encryption/values.yaml)
 as an overlay on your deployment values. Replace its example key name before
 installation. GKE encrypts stored content by default; this option adds control
 through a customer-managed key. The regional symmetric KMS key and the
@@ -206,7 +206,7 @@ This works with managed or external databases, independently of volume encryptio
 
 See [record encryption](record-encryption.md) for the complete configuration,
 payload boundaries, decryption examples and rotation procedure, or start with
-[the typed reference values](../../charts/polyad/references/values-postgresql-record-encryption.reference.yaml).
+[the typed reference values](../../helm/polyad/references/postgresql-record-encryption/values.yaml).
 
 ## State and tracked parameters
 
@@ -235,7 +235,7 @@ they install the package; no source checkout or SQL download is needed at runtim
 | [`polyad/sql/state`](../../pkg/polyad/sql/state) | State schema, version check, namespace snapshots, graph writes, event retention and connection metrics |
 | [`polyad/sql/authentication`](../../pkg/polyad/sql/authentication) | Authentication schema, credential records and lane revocation checks |
 | [`polyad/sql/advisory-lock.sql`](../../pkg/polyad/sql/advisory-lock.sql) | Transaction lock used to serialize schema initialization |
-| [Chart PostgreSQL files](../../charts/polyad/files/postgresql) | Database and schema access restrictions included in the Helm archive and rendered into CloudNativePG bootstrap settings |
+| [Chart PostgreSQL files](../../helm/polyad/files/postgresql) | Database and schema access restrictions included in the Helm archive and rendered into CloudNativePG bootstrap settings |
 
 The [SQL resource loader](../../pkg/polyad/sql/__init__.py) reads installed package
 resources independently of the working directory. Python binds query values
@@ -291,7 +291,7 @@ manage a retained database.
 Install KEDA, then use [the HA values](../../examples/postgresql/values.yaml):
 
 ```bash
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --values examples/postgresql/values.yaml
 ```
 
@@ -373,7 +373,7 @@ If processes in other clusters need database access, the DSN must use an address
 reachable from those clusters; a root-cluster Service DNS name alone is not
 cross-cluster routing.
 
-All knobs are listed in the [Helm parameters](../../charts/polyad/README.md), under
+All knobs are listed in the [Helm parameters](../../helm/polyad/README.md), under
 “Optional PostgreSQL state storage.” The feature can be combined independently
 with [component deployments](components.md) and [root-managed clusters](root-control-plane.md).
 

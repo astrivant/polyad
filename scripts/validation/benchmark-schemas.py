@@ -58,7 +58,7 @@ def main() -> None:
     Returns:
         None: Write schemas under the ignored cache, using only already-built dependencies.
     """
-    chart = ROOT / "charts/polyad-benchmarks"
+    chart = ROOT / "helm/polyad-benchmarks"
     metadata = yaml.safe_load((chart / "Chart.lock").read_text())
     version = next(item["version"] for item in metadata["dependencies"] if item["name"] == "kube-prometheus-stack")
     output = ROOT / ".cache/benchmarks/schemas"

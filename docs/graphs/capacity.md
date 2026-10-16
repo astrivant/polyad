@@ -35,7 +35,7 @@ ceilings; existing KEDA/HPA replica scaling remains separate.
 Enable the additional namespaced permissions and placeholder PriorityClass:
 
 ```sh
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
     --set capacity.enabled=true
 ```
 

@@ -232,12 +232,12 @@ searching's local response. `round_verified` reports exact completion counts and
 the achieved rate for the whole round, including warmup and quiet recovery.
 `nature_success` reports an empty, joined population.
 
-The [tests](../../pkg/tests/test_local_nature.py) exercise changed selection
+The [tests](../../tests/features/test_local_nature.py) exercise changed selection
 costs, infeasible contracts and bounds, plan fences, real dataflow, stable
 survivor identity, readiness before handoff, cancellation and process cleanup:
 
 ```sh
-poetry run pytest pkg/tests/test_local_nature.py
+poetry run pytest tests/features/test_local_nature.py
 ```
 
 ## Relationship to Copolyad

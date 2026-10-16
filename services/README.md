@@ -38,6 +38,6 @@ docker buildx build --platform linux/amd64,linux/arm64 \
   -f services/fixture/Dockerfile -t YOUR_REGISTRY/polyad-benchmarks-fixture:RUN --push .
 ```
 
-Pass both repositories and their shared tag in the [benchmark chart](../charts/polyad-benchmarks/README.md).
+Pass both repositories and their shared tag in the [benchmark chart](../helm/polyad-benchmarks/README.md).
 The CI workflow builds and smoke-checks both architectures; it does not publish
 images or deploy a cloud test. See [the load study](../studies/load/README.md).

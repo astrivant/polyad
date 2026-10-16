@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import re
 import runpy
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-CHART = ROOT / "charts/polyad-crds"
+CHART = ROOT / "helm/polyad-crds"
 NAMES = {"PolyGraph": "polygraphs", "GraphPolicy": "graphPolicies", "ShutdownPolicy": "shutdownPolicies", "Dragonfly": "dragonflies"}
 DNS_NAME = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
 TEMPLATE = {"type": "string", "pattern": r"\{\{[\s\S]*\}\}"}
@@ -48,6 +49,8 @@ def reference_fields(node: dict[str, Any], path: str, indent: int = 0) -> list[s
         if field.get("enum"):
             description += " Choices: " + ", ".join(json.dumps(value) for value in field["enum"]) + "."
         description += " " + " ".join(field.get("description", "").split())
+        # Resource substitutions are literal code in generated Markdown, not math delimiters.
+        description = re.sub(r"(?<!`)(\$\{[^}]+\})(?!`)", r"`\1`", description)
         lines.append(f"{padding}## @param {full} {description.strip()}")
         branch = next((part for part in field.get("anyOf", []) if part.get("type") != "null"), field)
         kind = branch.get("type")
@@ -98,7 +101,7 @@ def reference_values(key: str, entry: dict[str, Any], schema: dict[str, Any]) ->
     annotated = annotate("\n".join(example) + "\n", schema)
     return "\n".join(
         [
-            "# yaml-language-server: $schema=values.reference.schema.json",
+            "# yaml-language-server: $schema=../../values.reference.schema.json",
             "# Generated from the CRDs; regenerate with scripts/schemas/generate-all.py.",
             f"# {entry['kind']} field catalog. This overlay creates no instances.",
             "# Copy selected fields into your values; optional alternatives may be mutually exclusive.",
@@ -221,11 +224,11 @@ def generate() -> dict[Path, str]:
         "additionalProperties": False,
         "properties": properties,
     }
-    main_path = ROOT / "charts/polyad/values.schema.json"
+    main_path = ROOT / "helm/polyad/values.schema.json"
     main_schema = json.loads(main_path.read_text())
     main_schema["properties"]["polyadResources"] = {key: value for key, value in schema.items() if key not in {"$schema", "title"}}
     main_schema["properties"]["polyadResources"]["description"] = (
-        "Generated dependency contract from charts/polyad-crds; edit the CRDs and regenerate."
+        "Generated dependency contract from helm/polyad-crds; edit the CRDs and regenerate."
     )
     outputs = {
         CHART / "values.yaml": "\n".join(lines) + "\n",
@@ -233,7 +236,7 @@ def generate() -> dict[Path, str]:
         CHART / "files/resource-catalog.json": json.dumps(catalog, indent=2) + "\n",
         main_path: json.dumps(main_schema, indent=2) + "\n",
     }
-    outputs.update({CHART / f"values-{key}.reference.yaml": reference_values(key, entry, schema) for key, entry in catalog.items()})
+    outputs.update({CHART / "references" / key / "values.yaml": reference_values(key, entry, schema) for key, entry in catalog.items()})
     return outputs
 
 

@@ -70,8 +70,8 @@ def sources(project: Path) -> dict[str, str]:
         "pkg/polyad-benchmarks",
         "pkg/polyad-sdk",
         "pkg/polyad-types",
-        "charts/polyad-benchmarks",
-        "charts/polyad-crds",
+        "helm/polyad-benchmarks",
+        "helm/polyad-crds",
         "services",
         "studies",
     ):

@@ -71,9 +71,9 @@ Useful temporal properties include â€œa stopped boundary never admits new work,â
 
 ## API and Python abstractions
 
-All CRDs are namespaced under `polyad.astrivant.com/v1alpha1` and shipped in `charts/polyad-crds/crds`. These are alpha APIs.
+All CRDs are namespaced under `polyad.astrivant.com/v1alpha1` and shipped in `helm/polyad-crds/crds`. These are alpha APIs.
 
-The [resource chart](../../charts/polyad-crds/README.md) versions these definitions
+The [resource chart](../../helm/polyad-crds/README.md) versions these definitions
 independently and also generates instances from name-keyed values, with defaults
 and references between fields. The operator chart includes it as `polyadResources`.
 
@@ -570,7 +570,7 @@ The default is `INFO`. Supported levels are `DEBUG`, `INFO`, `WARNING`, `ERROR`
 and `CRITICAL`.
 
 ```sh
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --set operator.logLevel=DEBUG
 kubectl logs -n polyad -l app.kubernetes.io/name=polyad -c operator --prefix=true --follow
 ```
@@ -718,8 +718,8 @@ autoscaling with:
 
 ```sh
 helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-helm dependency build charts/polyad
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm dependency build helm/polyad
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --set dragonfly.ha.enabled=true --set dragonfly.ha.replicas=2
 ```
 
@@ -743,13 +743,13 @@ For an externally managed Dragonfly deployment, disable the bundled dependency
 and supply a connection Secret (`url` key, supporting `rediss://` and credentials):
 
 ```sh
-helm upgrade --install polyad charts/polyad --namespace polyad \
+helm upgrade --install polyad helm/polyad --namespace polyad \
   --set dragonfly.enabled=false --set dragonfly.existingSecret=polyad-dragonfly
 ```
 
 Install one bundled Dragonfly controller per cluster. Other Polyad releases may
 share its primary endpoint; queue keys include the Polyad namespace. See the
-[chart guide](../../charts/polyad/README.md) for CRD upgrades and migration from the
+[chart guide](../../helm/polyad/README.md) for CRD upgrades and migration from the
 previous hand-written StatefulSet.
 
 Operator replicas use `polyad.cache.Cache` for bounded Redis/Dragonfly
@@ -772,7 +772,7 @@ one Polyad release per namespace; its replicas share the fixed coordination name
 Enable HPA with CPU and memory utilization targets:
 
 ```sh
-helm upgrade --install polyad charts/polyad --namespace polyad \
+helm upgrade --install polyad helm/polyad --namespace polyad \
   --set operator.autoscaling.enabled=true --set operator.autoscaling.minReplicas=2 \
   --set operator.autoscaling.maxReplicas=8 \
   --set operator.autoscaling.targetMemoryUtilizationPercentage=80
@@ -800,8 +800,8 @@ References: [Kubernetes Leases](https://kubernetes.io/docs/concepts/architecture
 docker buildx build -f services/operator/Dockerfile --target production --platform linux/amd64,linux/arm64 \
   -t YOUR_REGISTRY/polyad:dev --push .
 helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
-helm dependency build charts/polyad
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm dependency build helm/polyad
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --set operator.image.repository=YOUR_REGISTRY/polyad --set operator.image.tag=dev
 kubectl -n polyad apply -f examples/finite.yaml
 kubectl -n polyad get graphs -o yaml

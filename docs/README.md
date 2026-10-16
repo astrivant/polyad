@@ -76,7 +76,7 @@ then [run your first workload](introduction/getting-started.md).
 | Guide | Contents |
 | --- | --- |
 | [Helm deployment profiles](deployment/deployment-profiles.md) | One `ha` Boolean, optional split components, replica floors and cluster placement |
-| [CRDs and named resource templates](../charts/polyad-crds/README.md) | Independently versioned APIs, name-keyed instance maps, cross-resource TPL references and complete commented reference values |
+| [CRDs and named resource templates](../helm/polyad-crds/README.md) | Independently versioned APIs, name-keyed instance maps, cross-resource TPL references and complete commented reference values |
 | [Development and production containers](deployment/containers.md) | Development and production builds, runtime permissions and image checks |
 | [Operator processes, threads and async tasks](deployment/process-hierarchy.md) | Tini, Python threads, async tasks, shared HTTP workers, observers and graceful shutdown |
 | [Pod context and health binding](deployment/pod-context.md) | Pod-only health listeners, Downward API identity and addresses, node placement and container resource variables |
@@ -149,6 +149,6 @@ then [run your first workload](introduction/getting-started.md).
 | [Polyad types](../pkg/polyad-types/README.md) | Validated resource, graph, networking, event and API models with shared serialization |
 | [Polyad schemas](../pkg/polyad-schemas/README.md) | Versioned model, resource, event and Helm JSON Schemas with offline Python loaders |
 | [Polyad benchmarks](../pkg/polyad-benchmarks/README.md) | API-driven plans, mock fixtures, bounded load generation, activation measurements and study refreshes |
-| [Polyad Helm chart](../charts/polyad/README.md) | Single-replica and HA deployments, multicluster coordination, autoscaling, storage and telemetry |
-| [Polyad CRD chart](../charts/polyad-crds/README.md) | Versioned CRDs and named resource instances with defaults, schemas and cross-resource templates |
-| [Polyad benchmark chart](../charts/polyad-benchmarks/README.md) | Graph-managed fixtures and runners, JSON test plans, metrics, dashboards and tracing |
+| [Polyad Helm chart](../helm/polyad/README.md) | Single-replica and HA deployments, multicluster coordination, autoscaling, storage and telemetry |
+| [Polyad CRD chart](../helm/polyad-crds/README.md) | Versioned CRDs and named resource instances with defaults, schemas and cross-resource templates |
+| [Polyad benchmark chart](../helm/polyad-benchmarks/README.md) | Graph-managed fixtures and runners, JSON test plans, metrics, dashboards and tracing |

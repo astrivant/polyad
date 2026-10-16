@@ -1,0 +1,18 @@
+apiVersion: v2
+name: polyad-crds
+description: >-
+  Versioned Polyad CRDs and named resource instances with schema-validated defaults
+  and cross-resource Helm templates
+type: application
+version: 0.0.1-alpha3
+appVersion: v1alpha1
+kubeVersion: '>=1.30.0-0'
+annotations:
+  artifacthub.io/license: BUSL-1.1
+home: https://github.com/astrivant/polyad
+sources:
+  - https://github.com/astrivant/polyad
+keywords: [kubernetes, orchestration, graphs, polyad]
+maintainers:
+  - name: Astrivant
+    url: https://github.com/astrivant

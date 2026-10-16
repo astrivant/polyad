@@ -60,5 +60,5 @@
     "metadata",
     "spec"
   ],
-  "$comment": "Generated from charts/polyad-crds/crds/compositions.yaml; do not edit this artifact."
+  "$comment": "Generated from helm/polyad-crds/crds/compositions.yaml; do not edit this artifact."
 }

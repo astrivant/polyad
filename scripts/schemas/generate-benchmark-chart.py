@@ -21,7 +21,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    resources = json.loads((ROOT / "charts/polyad-crds/values.schema.json").read_text())
+    resources = json.loads((ROOT / "helm/polyad-crds/values.schema.json").read_text())
     resources.pop("$schema", None)
     resources["properties"]["variables"] = json.loads((ROOT / "pkg/polyad-benchmarks/polyad_benchmarks/variables.schema.json").read_text())
     value = {
@@ -35,7 +35,7 @@ def main() -> int:
         },
     }
     value["properties"].update(json.loads((ROOT / "schemas/benchmark-services.schema.json").read_text())["properties"])
-    target = ROOT / "charts/polyad-benchmarks/values.schema.json"
+    target = ROOT / "helm/polyad-benchmarks/values.schema.json"
     content = json.dumps(value, indent=2) + "\n"
     if args.check:
         if not target.exists() or target.read_text() != content:

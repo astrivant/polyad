@@ -142,7 +142,7 @@ def main() -> None:
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=Path, required=True)
-    parser.add_argument("--chart", type=Path, default=Path("charts/polyad-benchmarks"))
+    parser.add_argument("--chart", type=Path, default=Path("helm/polyad-benchmarks"))
     parser.add_argument("--namespace", default="polyad")
     parser.add_argument("--render-only", action="store_true")
     parser.add_argument("--run-id", help="Reuse a previously generated ID only when retrying that same run")

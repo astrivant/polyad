@@ -2057,7 +2057,7 @@
     },
     "polyadResources": {
       "type": "object",
-      "description": "Generated dependency contract from charts/polyad-crds; edit the CRDs and regenerate.",
+      "description": "Generated dependency contract from helm/polyad-crds; edit the CRDs and regenerate.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -53296,7 +53296,7 @@
               "additionalProperties": false
             }
           },
-          "description": "Generated dependency contract from charts/polyad-crds; edit the CRDs and regenerate."
+          "description": "Generated dependency contract from helm/polyad-crds; edit the CRDs and regenerate."
         },
         "telemetry": {
           "type": "object",

@@ -181,7 +181,7 @@ variable "polyad_revision" {
 }
 
 variable "polyad_values_files" {
-  description = "Ordered values files, relative to charts/polyad in the selected Git revision. The default enables self-managed components, KEDA and internal demo APIs."
+  description = "Ordered values files, relative to helm/polyad in the selected Git revision. The default enables self-managed components, KEDA and internal demo APIs."
   type        = list(string)
   default     = ["../../terraform/polyad-values.yaml"]
 }
@@ -254,7 +254,7 @@ variable "benchmarks_enabled" {
 }
 
 variable "benchmarks_values_files" {
-  description = "Ordered values paths relative to charts/polyad-benchmarks in polyad_revision; choose a test profile before the GKE placement overlay."
+  description = "Ordered values paths relative to helm/polyad-benchmarks in polyad_revision; choose a test profile before the GKE placement overlay."
   type        = list(string)
   default     = ["values-smoke.yaml", "../../studies/load/fixtures/gke-values.yaml"]
 }

@@ -97,7 +97,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    directory = Path(__file__).resolve().parents[2] / "charts/polyad-crds/crds"
+    directory = Path(__file__).resolve().parents[2] / "helm/polyad-crds/crds"
     changed = []
     for kind in ("graphs", "polygraphs", "rewrites", "graphpolicies"):
         path = directory / f"{kind}.yaml"

@@ -94,5 +94,5 @@
     "spec"
   ],
   "description": "Define a reusable namespaced core resource or optional VerticalPodAutoscaler owned by a graph. The operator generates its name and ownership metadata and waits for deletion during graph cleanup.",
-  "$comment": "Generated from charts/polyad-crds/crds/resources.yaml; do not edit this artifact."
+  "$comment": "Generated from helm/polyad-crds/crds/resources.yaml; do not edit this artifact."
 }

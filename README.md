@@ -1,11 +1,30 @@
 # Polyad
 
+<img src="https://raw.githubusercontent.com/astrivant/polyad/main/docs/images/ballet-shoes.svg" alt="Polyad ballet shoes fading toward the right" width="630" height="140">
+
+[![Python coverage](https://raw.githubusercontent.com/astrivant/polyad/gh-pages/badges/coverage.svg)](https://github.com/astrivant/polyad/actions/workflows/ci.yml)
+
+Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics)
+is a Kubernetes operator and Python SDK for writing and orchestrating adaptive microservices. Deploy,
+connect and scale applications as graphs within and across clusters, enforce
+Cheeger bounds, and adjust topology, traffic and capacity to application demand.
+Compose batch jobs, persistent services and supporting resources into reusable
+Graphs and PolyGraphs. Define how work starts, how components communicate, how
+they respond to application demand and which constraints must hold as the application
+changes, from a workflow in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deployment/operator.md#api-and-python-abstractions)</sup>
+The Kubernetes operator is built on [Kopf](https://docs.kopf.dev/en/stable/),
+the Kubernetes Operators Framework for Python.
+
+**[Documentation](docs/README.md)** · **[Helm chart](helm/polyad/README.md)**
+
 <!-- toc:start -->
 **Table of contents**
 
+- [Quick start](#quick-start)
   - [Deploy and configure](#deploy-and-configure)
   - [Develop and run local demos](#develop-and-run-local-demos)
   - [Find detailed guides](#find-detailed-guides)
+- [Configuration inputs](#configuration-inputs)
 - [Why Polyad exists](#why-polyad-exists)
   - [Motivation and inspiration](#motivation-and-inspiration)
   - [Problems that grow with the application](#problems-that-grow-with-the-application)
@@ -22,22 +41,14 @@
 - [References](#references)
 <!-- toc:end -->
 
-[![Python coverage](https://raw.githubusercontent.com/astrivant/polyad/gh-pages/badges/coverage.svg)](https://github.com/astrivant/polyad/actions/workflows/ci.yml)
+## Quick start
 
-<img src="docs/images/ballet-shoes.svg" alt="Polyad ballet shoes fading toward the right" width="630" height="140">
+Python 3.13 or newer is required for the operator:
 
-Polyad (named after [*polyads*](https://en.wikipedia.org/wiki/Polyad_%28mathematics%29) in mathematics)
-is a Kubernetes operator and Python SDK for writing and orchestrating adaptive microservices. Deploy,
-connect and scale applications as graphs within and across clusters, enforce
-Cheeger bounds, and adjust topology, traffic and capacity to application demand.
-Compose batch jobs, persistent services and supporting resources into reusable
-Graphs and PolyGraphs. Define how work starts, how components communicate, how
-they respond to application demand and which constraints must hold as the application
-changes, from a workflow in one cluster to a hierarchy spanning multiple clusters.<sup>[\[2\]](docs/deployment/operator.md#api-and-python-abstractions)</sup>
-The Kubernetes operator is built on [Kopf](https://docs.kopf.dev/en/stable/),
-the Kubernetes Operators Framework for Python.
-
-**[Documentation](docs/README.md)** · **[Helm chart](charts/polyad/README.md)**
+```sh
+python -m pip install --pre polyad
+polyad-operator --help
+```
 
 ### Deploy and configure
 
@@ -58,7 +69,7 @@ bash integrations/minikube/minikube.sh start
 ```
 
 For application feedback, start with the [approved load-profile example](examples/load-profiles.yaml)
-and its [Helm reference values](charts/polyad/references/values-soul-searching.reference.yaml).
+and its [Helm reference values](helm/polyad/references/soul-searching/values.yaml).
 The [demand guide](docs/graphs/load-profiles.md#define-demand) explains signal names,
 units and thresholds; use `Observe` mode to inspect recommendations before enabling adaptation.
 
@@ -90,6 +101,24 @@ Explore [graph concepts](docs/introduction/concepts.md), [graph policies](docs/g
 [API keys and shared request lanes](docs/operations/api-keys.md), or the
 [development guide](docs/development/toolchain.md). See the [documentation index](docs/README.md)
 for lifecycle, status, health and configuration references.
+
+## Configuration inputs
+
+The [generated Helm values reference](helm/polyad/README.md#parameters) is the complete input contract.
+Start from a [reviewed overlay](helm/polyad/references/README.md) and keep secrets in Kubernetes Secrets.
+
+| Input | Purpose |
+| --- | --- |
+| `ha` and `operator.replicaCount` | Select standalone or replicated control-plane operation. |
+| `operator.image` | Select the operator image built for the intended source or release. |
+| `operator.resources`, `operator.nodeSelector`, `operator.tolerations` | Set resource budgets and placement. |
+| `operator.writeQueue` | Configure bounded, leased mutation work. |
+| `dragonfly` | Configure shared coordination storage and its availability profile. |
+| `postgresql` | Configure optional durable records and the managed database integration. |
+| `mesh`, `events`, `tracing` | Configure connectivity, event delivery and telemetry. |
+
+See [the toolchain](docs/development/toolchain.md) for pinned development tools and
+[the portable project skill](SKILL.md) for agent-assisted changes.
 
 ## Why Polyad exists
 
@@ -372,7 +401,7 @@ checkpoint, refresh ready endpoints and reconnect through Service/Istio routing
 or direct client-side round robin. Graceful shutdown gives subscriptions a bounded
 window to reconnect. See the [scale-out](docs/operations/event-rebalancing.md#scale-out-and-subscription-migration)
 and [scale-down](docs/operations/event-rebalancing.md#scale-down-and-shutdown)
-sequence diagrams and [typed Helm reference](charts/polyad/references/values-event-rebalancing.reference.yaml).
+sequence diagrams and [typed Helm reference](helm/polyad/references/event-rebalancing/values.yaml).
 
 With a capacity policy, Polyad forecasts upcoming stages while earlier work
 runs, giving a compatible node autoscaler advance notice. Dependencies and gates
@@ -1071,7 +1100,7 @@ The [local service inventory](docs/deployment/local-services.md) observes the
 chart's enabled infrastructure while Helm and upstream operators retain lifecycle
 ownership. Set `keda.install: true` to install the optional pinned KEDA dependency,
 or configure references to existing KEDA with the
-[typed KEDA values](charts/polyad/references/values-keda.reference.yaml).
+[typed KEDA values](helm/polyad/references/keda/values.yaml).
 
 Administrators can also [install downstream workers with Helm](docs/deployment/helm-workers.md)
 and attach their existing Deployments. Helm retains installation and upgrades;

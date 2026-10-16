@@ -32,7 +32,7 @@ Study-specific deployment and run inputs live in [`fixtures/`](fixtures/):
 | [plan.json](fixtures/plan.json) | Client-submitted composition, replica counts and run parameters |
 | [scenario.json](fixtures/scenario.json) | Installed fixture selection and refresh execution settings |
 
-Reusable chart templates and test profiles remain in `charts/polyad-benchmarks`.
+Reusable chart templates and test profiles remain in `helm/polyad-benchmarks`.
 The refresh runner snapshots `fixtures/scenario.json` and fingerprints all study
 inputs. Raw run outputs go under the chosen `.cache/benchmarks/refresh-RUN`
 directory; verified published measurements go to `studies/load/results.json`.
@@ -55,7 +55,7 @@ GraphPolicy requires structural Cheeger expansion of at least 0.5 and bounds exp
 vertices/edges. The batch policy permits two concurrent Jobs and 32 pending pulses.
 The runner policy rejects simultaneous runs. Neither Workload starts on install;
 only the fixture, discovery Service and plan ConfigMap start automatically. Their definitions
-come from the [CRD template chart](../../charts/polyad-crds/README.md).
+come from the [CRD template chart](../../helm/polyad-crds/README.md).
 
 ## Deploy
 
@@ -64,8 +64,8 @@ First provision the [GKE experiment environment](../../terraform/README.md) and
 namespace after its CRDs and API are ready:
 
 ```sh
-helm dependency build charts/polyad-benchmarks
-helm upgrade --install benchmarks charts/polyad-benchmarks -n polyad \
+helm dependency build helm/polyad-benchmarks
+helm upgrade --install benchmarks helm/polyad-benchmarks -n polyad \
   -f studies/load/fixtures/gke-values.yaml \
   --set polyadResources.variables.images.runner=YOUR_REGISTRY/polyad-benchmarks-runner \
   --set polyadResources.variables.images.fixture=YOUR_REGISTRY/polyad-benchmarks-fixture \
@@ -102,11 +102,11 @@ AuthorizationPolicy and NetworkPolicy. No cluster-admin token is mounted in Pods
 
 ## Plans and replica counts
 
-Choose a [test profile](../../charts/polyad-benchmarks/README.md#test-profiles):
-[smoke](../../charts/polyad-benchmarks/values-smoke.yaml),
-[steady](../../charts/polyad-benchmarks/values-steady.yaml), or
-[burst](../../charts/polyad-benchmarks/values-burst.yaml). Each selects its matching
-JSON plan under `charts/polyad-benchmarks/plans/`. Add that values file before
+Choose a [test profile](../../helm/polyad-benchmarks/README.md#test-profiles):
+[smoke](../../helm/polyad-benchmarks/values-smoke.yaml),
+[steady](../../helm/polyad-benchmarks/values-steady.yaml), or
+[burst](../../helm/polyad-benchmarks/values-burst.yaml). Each selects its matching
+JSON plan under `helm/polyad-benchmarks/plans/`. Add that values file before
 the GKE placement overlay in the install command. Smoke remains the default.
 
 The chart merges that plan with explicit `polyadResources.variables` overrides,

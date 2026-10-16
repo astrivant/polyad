@@ -18,12 +18,12 @@ regenerate both copies. Generated JSON files are never independent sources.
 | Contract | Canonical source |
 | --- | --- |
 | Shared Python models and events | `pkg/polyad-types/polyad_types/` attrs models and field metadata |
-| Polyad manifests | `charts/polyad-crds/crds/`, with modeled subtrees regenerated first |
-| Helm configuration | `charts/polyad/values.schema.json` |
-| Named resource values, defaults and commented examples | Generated from `charts/polyad-crds/crds/` by `scripts/schemas/generate-resource-chart.py`; the parent embeds the generated dependency contract |
-| Dragonfly | Vendored `charts/polyad-crds/crds/dragonflies.yaml`; no second snapshot |
+| Polyad manifests | `helm/polyad-crds/crds/`, with modeled subtrees regenerated first |
+| Helm configuration | `helm/polyad/values.schema.json` |
+| Named resource values, defaults and commented examples | Generated from `helm/polyad-crds/crds/` by `scripts/schemas/generate-resource-chart.py`; the parent embeds the generated dependency contract |
+| Dragonfly | Vendored `helm/polyad-crds/crds/dragonflies.yaml`; no second snapshot |
 | Gateway API, Istio, KEDA and External Secrets | [sources.json](sources.json) and verified snapshots under [upstream](upstream/) |
-| Upstream licenses | Catalogued files under [licenses](licenses/) and `charts/polyad/LICENSE.dragonfly-operator` |
+| Upstream licenses | Catalogued files under [licenses](licenses/) and `helm/polyad/LICENSE.dragonfly-operator` |
 
 ```mermaid
 flowchart TD
@@ -46,7 +46,7 @@ chart version. Generation fails if a dependency pin disagrees with `Chart.yaml`
 or a snapshot or license digest changes unexpectedly.
 
 Generated `$comment` annotations identify source provenance. The chart outputs
-live under `charts/polyad/schemas/` and `charts/polyad-crds/schemas/`; package outputs are grouped into
+live under `helm/polyad/schemas/` and `helm/polyad-crds/schemas/`; package outputs are grouped into
 `polyad_schemas.models`, `.resources`, `.events` and `.helm`.
 
 ## Regenerate and check
@@ -83,7 +83,7 @@ extraction must all succeed before any snapshots are written. Review source and
 generated changes, then run chart tests and Kubeconform before committing.
 
 Dragonfly's installable CRD remains sourced from its locked Helm dependency;
-follow the [Dragonfly refresh instructions](../charts/polyad/UPSTREAM.md).
+follow the [Dragonfly refresh instructions](../helm/polyad/UPSTREAM.md).
 
 ## Distribution formats
 

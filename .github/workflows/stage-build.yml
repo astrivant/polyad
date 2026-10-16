@@ -31,12 +31,12 @@ jobs:
           - {runner: ubuntu-latest, name: linux/amd64, arch: amd64}
           - {runner: ubuntu-24.04-arm, name: linux/arm64, arch: arm64}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.sha }}
       # File-local steps also support older release checkouts without new local actions.
       - &release-python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         if: inputs.release-tag != ''
         with:
           python-version-file: .python-version
@@ -57,7 +57,7 @@ jobs:
           poetry check --lock
           poetry -C pkg/polyad-benchmarks lock
           poetry -C pkg/polyad-benchmarks check --lock
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Read image metadata
         id: image
         run: |
@@ -67,7 +67,7 @@ jobs:
             echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
       - name: Build and load container profile
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: services/operator/Dockerfile
@@ -89,25 +89,25 @@ jobs:
           docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges polyad:container-test --help
       - name: Check development tests
         if: matrix.profile == 'development'
-        run: docker run --rm --entrypoint /usr/bin/tini polyad:container-test -- python -m pytest -n 2 pkg/tests/test_scheduling_gates.py
+        run: docker run --rm --entrypoint /usr/bin/tini polyad:container-test -- python -m pytest -n 2 tests/features/test_scheduling_gates.py
 
   compose:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: false
       - run: bash scripts/tooling/install-helm-tools.sh helm
       - name: Build chart dependencies
-        run: bash scripts/tooling/build-chart-dependencies.sh charts/polyad
+        run: bash scripts/tooling/build-chart-dependencies.sh helm/polyad
       - name: Helm to Docker Compose
         id: compose
-        uses: astrivant/composer@v0.3.0
+        uses: astrivant/composer@4ee8ce8507e10b6cbbac607d7bda01e22740cd37
         with:
           watch-directory: '.'
-          chart: charts/polyad
+          chart: helm/polyad
           commit: 'false'
           release: polyad
           namespace: polyad
@@ -115,7 +115,7 @@ jobs:
           report: dist/compose/report.json
       - name: Upload generated Compose
         if: steps.compose.outputs.skipped != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: polyad-compose
           path: dist/compose/
@@ -136,7 +136,7 @@ jobs:
         include:
           - {chart: polyad-benchmarks, shard: 1}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.sha }}
           persist-credentials: false
@@ -157,9 +157,9 @@ jobs:
         # Its default and full monitoring profiles have strict render/schema checks below.
         if: matrix.chart != 'polyad-benchmarks'
         # v1.3.7: file-backed schema policies avoid OS argument-size limits.
-        uses: astrivant/hypothesis-helm@24b6db61f50563d1bd773c65a8ba5b84c58bc983
+        uses: astrivant/hypothesis-helm@7ad5b937dd554a82889fe06665feaf4bf76691cc
         with:
-          chart: charts/${{ matrix.chart }}
+          chart: helm/${{ matrix.chart }}
           artifact-name: hypothesis-helm-${{ matrix.chart }}
           artifact-dir: reports/hypothesis-helm/${{ matrix.chart }}
           shard: ${{ matrix.shard }}/3
@@ -171,52 +171,52 @@ jobs:
           max-examples: '100'
           schema-validation: 'true'
           schema-version: '1.35.0'
-          config: ${{ matrix.chart == 'polyad-crds' && 'charts/polyad-crds/.hypothesis-helm.yaml' || '' }}
+          config: ${{ matrix.chart == 'polyad-crds' && 'helm/polyad-crds/.hypothesis-helm.yaml' || '' }}
           # Native validation needs explicit custom-resource contracts in strict mode.
           # Inline paths resolve from the workspace, independent of the policy file above.
           config-inline: |
             strict: true
             resource_schemas:
-              dragonflydb.io/v1alpha1/Dragonfly: charts/polyad/schemas/dragonfly-dragonflydb-v1alpha1.json
-              external-secrets.io/v1/ExternalSecret: charts/polyad/schemas/externalsecret-external-secrets-v1.json
-              gateway.networking.k8s.io/v1/Gateway: charts/polyad/schemas/gateway-gateway-v1.json
-              gateway.networking.k8s.io/v1/HTTPRoute: charts/polyad/schemas/httproute-gateway-v1.json
-              keda.sh/v1alpha1/TriggerAuthentication: charts/polyad/schemas/triggerauthentication-keda-v1alpha1.json
-              networking.istio.io/v1/DestinationRule: charts/polyad/schemas/destinationrule-networking-v1.json
-              networking.istio.io/v1/Gateway: charts/polyad/schemas/gateway-networking-v1.json
-              networking.istio.io/v1/ServiceEntry: charts/polyad/schemas/serviceentry-networking-v1.json
-              networking.istio.io/v1/Sidecar: charts/polyad/schemas/sidecar-networking-v1.json
-              networking.istio.io/v1/VirtualService: charts/polyad/schemas/virtualservice-networking-v1.json
-              polyad.astrivant.com/v1alpha1/Activation: charts/polyad/schemas/activation-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/Composition: charts/polyad/schemas/composition-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/Daemon: charts/polyad/schemas/daemon-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/DragonflyPool: charts/polyad/schemas/dragonflypool-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/Gate: charts/polyad/schemas/gate-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/Graph: charts/polyad/schemas/graph-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/GraphPolicy: charts/polyad/schemas/graphpolicy-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/OperatorPool: charts/polyad/schemas/operatorpool-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/PolyGraph: charts/polyad/schemas/polygraph-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/RemoteScale: charts/polyad/schemas/remotescale-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/ReplicaGroup: charts/polyad/schemas/replicagroup-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/Resource: charts/polyad/schemas/resource-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/Rewrite: charts/polyad/schemas/rewrite-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/ShutdownPolicy: charts/polyad/schemas/shutdownpolicy-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/TemporaryConnection: charts/polyad/schemas/temporaryconnection-polyad-v1alpha1.json
-              polyad.astrivant.com/v1alpha1/Workload: charts/polyad/schemas/workload-polyad-v1alpha1.json
-              security.istio.io/v1/AuthorizationPolicy: charts/polyad/schemas/authorizationpolicy-security-v1.json
-              security.istio.io/v1/PeerAuthentication: charts/polyad/schemas/peerauthentication-security-v1.json
-              security.istio.io/v1/RequestAuthentication: charts/polyad/schemas/requestauthentication-security-v1.json
-              telemetry.istio.io/v1/Telemetry: charts/polyad/schemas/telemetry-telemetry-v1.json
+              dragonflydb.io/v1alpha1/Dragonfly: helm/polyad/schemas/dragonfly-dragonflydb-v1alpha1.json
+              external-secrets.io/v1/ExternalSecret: helm/polyad/schemas/externalsecret-external-secrets-v1.json
+              gateway.networking.k8s.io/v1/Gateway: helm/polyad/schemas/gateway-gateway-v1.json
+              gateway.networking.k8s.io/v1/HTTPRoute: helm/polyad/schemas/httproute-gateway-v1.json
+              keda.sh/v1alpha1/TriggerAuthentication: helm/polyad/schemas/triggerauthentication-keda-v1alpha1.json
+              networking.istio.io/v1/DestinationRule: helm/polyad/schemas/destinationrule-networking-v1.json
+              networking.istio.io/v1/Gateway: helm/polyad/schemas/gateway-networking-v1.json
+              networking.istio.io/v1/ServiceEntry: helm/polyad/schemas/serviceentry-networking-v1.json
+              networking.istio.io/v1/Sidecar: helm/polyad/schemas/sidecar-networking-v1.json
+              networking.istio.io/v1/VirtualService: helm/polyad/schemas/virtualservice-networking-v1.json
+              polyad.astrivant.com/v1alpha1/Activation: helm/polyad/schemas/activation-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/Composition: helm/polyad/schemas/composition-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/Daemon: helm/polyad/schemas/daemon-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/DragonflyPool: helm/polyad/schemas/dragonflypool-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/Gate: helm/polyad/schemas/gate-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/Graph: helm/polyad/schemas/graph-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/GraphPolicy: helm/polyad/schemas/graphpolicy-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/OperatorPool: helm/polyad/schemas/operatorpool-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/PolyGraph: helm/polyad/schemas/polygraph-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/RemoteScale: helm/polyad/schemas/remotescale-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/ReplicaGroup: helm/polyad/schemas/replicagroup-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/Resource: helm/polyad/schemas/resource-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/Rewrite: helm/polyad/schemas/rewrite-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/ShutdownPolicy: helm/polyad/schemas/shutdownpolicy-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/TemporaryConnection: helm/polyad/schemas/temporaryconnection-polyad-v1alpha1.json
+              polyad.astrivant.com/v1alpha1/Workload: helm/polyad/schemas/workload-polyad-v1alpha1.json
+              security.istio.io/v1/AuthorizationPolicy: helm/polyad/schemas/authorizationpolicy-security-v1.json
+              security.istio.io/v1/PeerAuthentication: helm/polyad/schemas/peerauthentication-security-v1.json
+              security.istio.io/v1/RequestAuthentication: helm/polyad/schemas/requestauthentication-security-v1.json
+              telemetry.istio.io/v1/Telemetry: helm/polyad/schemas/telemetry-telemetry-v1.json
       - name: Validate benchmark profiles against locked CRD schemas
         if: matrix.chart == 'polyad-benchmarks'
         run: |
-          helm lint charts/polyad-benchmarks
-          helm template study charts/polyad-benchmarks > "$RUNNER_TEMP/benchmark-default.yaml"
+          helm lint helm/polyad-benchmarks
+          helm template study helm/polyad-benchmarks > "$RUNNER_TEMP/benchmark-default.yaml"
           for profile in smoke steady burst; do
-            helm lint charts/polyad-benchmarks -f "charts/polyad-benchmarks/values-$profile.yaml"
-            helm template study charts/polyad-benchmarks -f "charts/polyad-benchmarks/values-$profile.yaml" > "$RUNNER_TEMP/benchmark-$profile.yaml"
+            helm lint helm/polyad-benchmarks -f "helm/polyad-benchmarks/values-$profile.yaml"
+            helm template study helm/polyad-benchmarks -f "helm/polyad-benchmarks/values-$profile.yaml" > "$RUNNER_TEMP/benchmark-$profile.yaml"
           done
-          helm template study charts/polyad-benchmarks -n polyad -f studies/load/fixtures/gke-values.yaml > "$RUNNER_TEMP/benchmark-monitoring.yaml"
+          helm template study helm/polyad-benchmarks -n polyad -f studies/load/fixtures/gke-values.yaml > "$RUNNER_TEMP/benchmark-monitoring.yaml"
           bash scripts/validation/kubeconform.sh -strict -summary -kubernetes-version 1.35.0 "$RUNNER_TEMP"/benchmark-*.yaml
 
   chart-package:
@@ -224,7 +224,7 @@ jobs:
     if: inputs.release-tag != ''
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.sha }}
           persist-credentials: false
@@ -242,12 +242,12 @@ jobs:
         run: |
           tag="${RELEASE_TAG#refs/tags/}"
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
-          helm package charts/polyad --destination dist/chart
-          helm package charts/polyad-crds --destination dist/chart
-          helm package charts/polyad-benchmarks --destination dist/chart
+          helm package helm/polyad --destination dist/chart
+          helm package helm/polyad-crds --destination dist/chart
+          helm package helm/polyad-benchmarks --destination dist/chart
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Upload tagged Helm chart
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: helm-chart-${{ steps.package.outputs.tag }}
           path: dist/chart/*.tgz
@@ -264,12 +264,12 @@ jobs:
           - {runner: ubuntu-latest, name: linux/amd64, arch: amd64}
           - {runner: ubuntu-24.04-arm, name: linux/arm64, arch: arm64}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.sha }}
           persist-credentials: false
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: services/${{ matrix.service }}/Dockerfile

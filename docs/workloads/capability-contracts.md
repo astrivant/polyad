@@ -51,7 +51,7 @@ or authorization assertions. Readers need actual graph grants regardless of labe
 ## Administrator setup
 
 Enable the existing connections listener for publication and the events listener
-for discovery. See the [reference values](../../charts/polyad/references/values-capabilities.reference.yaml).
+for discovery. See the [reference values](../../helm/polyad/references/capabilities/values.yaml).
 No new Python extra is required, and nothing advertises automatically.
 
 Publication uses a Pod-bound projected service-account token with audience
@@ -97,7 +97,7 @@ permission to read peer contracts or connect to them.
 
 Discovery uses a **different named API key**, with endpoint `discovery`, a fixed
 `home` graph and explicit `graphs` grants. Existing inherited discovery ceilings
-still apply. Use [named credentials](../../charts/polyad/references/values-authentication.reference.yaml)
+still apply. Use [named credentials](../../helm/polyad/references/authentication/values.yaml)
 and the [discovery guide](../apis/discovery.md); a namespace events bearer token
 alone does not authorize directory reads.
 

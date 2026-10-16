@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-CHART = ROOT / "charts/polyad"
+CHART = ROOT / "helm/polyad"
 PARAMETER = re.compile(r"^(\s*##\s*@param\s+)(\S+)\s+(?:\[([^]]+)\]\s*)?(.*)$")
 
 
@@ -187,15 +187,15 @@ def value_files() -> list[Path]:
     return sorted(
         {
             CHART / "values.yaml",
-            ROOT / "charts/polyad-crds/values.yaml",
-            *(ROOT / "charts/polyad-benchmarks").glob("values*.yaml"),
+            ROOT / "helm/polyad-crds/values.yaml",
+            *(ROOT / "helm/polyad-benchmarks").glob("values*.yaml"),
             *(ROOT / "studies").rglob("*values.yaml"),
             *(ROOT / "integrations").rglob("*values.yaml"),
-            *(ROOT / "charts/polyad-crds").glob("values-*.reference.yaml"),
-            *(CHART / "references").glob("values-*.reference.yaml"),
+            *(ROOT / "helm/polyad-crds/references").glob("*/values.yaml"),
+            *(CHART / "references").glob("*/values.yaml"),
             *(ROOT / "examples").rglob("*values.yaml"),
             *(ROOT / "examples/deployment-profiles").glob("*.yaml"),
-            *(ROOT / "pkg/tests/data").rglob("*values.yaml"),
+            *(ROOT / "tests/data").rglob("*values.yaml"),
             *(ROOT / "terraform").glob("*values.yaml"),
             ROOT / "terraform/bootstrap/values.yaml",
         }

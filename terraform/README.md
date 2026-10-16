@@ -65,7 +65,7 @@ admin password hash to this profile; there is only one Argo installation.
 
 
 The `polyad` Application follows `https://github.com/astrivant/polyad.git`,
-revision `main`, path `charts/polyad`. Terraform registers that public Git source
+revision `main`, path `helm/polyad`. Terraform registers that public Git source
 and the Argo, KEDA, Istio, Dragonfly OCI, Stakater, Prometheus Community,
 Grafana Community and OpenTelemetry Helm repositories. The operator and benchmark
 charts use their committed `Chart.lock` files; remote optional dependencies are registered
@@ -220,7 +220,7 @@ the initial experiment. For a shared cluster, replace that policy with
 ## Inspect the benchmark Application
 
 The UI contains `polyad` and, by default, `polyad-benchmarks`. The latter uses
-`charts/polyad-benchmarks`, the smoke profile and the GKE placement overlay from
+`helm/polyad-benchmarks`, the smoke profile and the GKE placement overlay from
 `polyad_revision`. It is **manual sync** by default. Set
 `benchmarks_values_override` to published runner and fixture images before syncing;
 see [terraform.tfvars.example](terraform.tfvars.example). Select another profile
@@ -232,8 +232,8 @@ owns the shared resource definitions. Before its first sync, install the pinned
 monitoring CRDs from the same checkout (review them before applying):
 
 ```sh
-helm dependency build charts/polyad-benchmarks
-helm show crds charts/polyad-benchmarks/charts/kube-prometheus-stack-91.4.1.tgz > /tmp/polyad-monitoring-crds.yaml
+helm dependency build helm/polyad-benchmarks
+helm show crds helm/polyad-benchmarks/charts/kube-prometheus-stack-91.4.1.tgz > /tmp/polyad-monitoring-crds.yaml
 kubectl apply --server-side -f /tmp/polyad-monitoring-crds.yaml
 ```
 
@@ -336,7 +336,7 @@ replica bounds while holding workload shape and offered load constant. See
 [write pipeline tuning](../docs/development/write-pipeline.md) and
 [component scaling](../docs/deployment/components.md). Turning on traffic
 balancing, cache HA, PostgreSQL or additional tracing changes the experiment;
-their [typed chart references](../charts/polyad/README.md) expose those choices.
+their [typed chart references](../helm/polyad/README.md) expose those choices.
 Keep optional Polyad-chart services on `polyad`, supporting services and consumers
 on `fixtures`, and generators on `copolyad`. The study overlay and client plan
 include these selectors and tolerations; arbitrary user workloads do not inherit them.
@@ -366,11 +366,11 @@ All Terraform inputs have explicit types and descriptions in
 | `argocd_admin_password_hash` | sensitive string | Required bcrypt hash for Argo only; omitted for Flux |
 | `argocd_admin_password_mtime` | string | Stable RFC3339 rotation timestamp |
 | `polyad_revision` | string | `main`; use a commit for reproducibility |
-| `polyad_values_files` | list(string) | `../../terraform/polyad-values.yaml`, relative to `charts/polyad` in Git |
+| `polyad_values_files` | list(string) | `../../terraform/polyad-values.yaml`, relative to `helm/polyad` in Git |
 | `polyad_values_override` | string | Final YAML mapping, initially `{}`; no secrets |
 | `polyad_automated_sync` | bool | `true`; sync, prune and self-heal |
 | `benchmarks_enabled` | bool | `true`; register the fixture Application |
-| `benchmarks_values_files` | list(string) | Smoke and GKE overlays, relative to `charts/polyad-benchmarks` |
+| `benchmarks_values_files` | list(string) | Smoke and GKE overlays, relative to `helm/polyad-benchmarks` |
 | `benchmarks_values_override` | string | Final benchmark YAML mapping, initially `{}`; published images and run settings |
 | `benchmarks_automated_sync` | bool | `false`; manually install/update fixtures without starting traffic |
 
@@ -444,7 +444,7 @@ terraform -chdir=terraform fmt -check -recursive
 terraform -chdir=terraform validate
 terraform -chdir=terraform test
 helm lint terraform/bootstrap
-poetry run pytest pkg/tests/test_terraform.py
+poetry run pytest tests/features/test_terraform.py
 ```
 
 Terraform tests use mocked Google and Helm providers. They check total capacity

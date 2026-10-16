@@ -70,16 +70,16 @@ def prepare(tag: str) -> None:
         rf'\g<1>"{package}"',
     )
     replace("poetry.lock", r'(^name = "polyad-schemas"\nversion = )"[^"\n]+"', rf'\g<1>"{package}"')
-    replace("charts/polyad/Chart.yaml", r"^version: .+$", f"version: {chart}")
-    replace("charts/polyad/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
-    replace("charts/polyad/values.yaml", r"^    tag: .+$", f"    tag: '{chart}'")
-    replace("charts/polyad-benchmarks/Chart.yaml", r"^version: .+$", f"version: {chart}")
-    replace("charts/polyad-benchmarks/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
-    replace("charts/polyad-benchmarks/values.yaml", r"^      tag: .+$", f"      tag: '{chart}'")
+    replace("helm/polyad/Chart.yaml", r"^version: .+$", f"version: {chart}")
+    replace("helm/polyad/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
+    replace("helm/polyad/values.yaml", r"^    tag: .+$", f"    tag: '{chart}'")
+    replace("helm/polyad-benchmarks/Chart.yaml", r"^version: .+$", f"version: {chart}")
+    replace("helm/polyad-benchmarks/Chart.yaml", r"^appVersion: .+$", f"appVersion: {chart}")
+    replace("helm/polyad-benchmarks/values.yaml", r"^      tag: .+$", f"      tag: '{chart}'")
     for dependency in ("polyad-types", "polyad-sdk"):
         replace("pkg/polyad-benchmarks/poetry.lock", rf'(^name = "{dependency}"\nversion = )"[^"\n]+"', rf'\g<1>"{package}"')
     for chart_name, parameter in (("polyad", "operator.image.tag"), ("polyad-benchmarks", "polyadResources.variables.images.tag")):
-        readme = Path(f"charts/{chart_name}/README.md")
+        readme = Path(f"helm/{chart_name}/README.md")
         source = readme.read_text()
         row = re.search(rf"^(\| `{re.escape(parameter)}`[^\n]*\|)([^|]+)(\|)$", source, re.MULTILINE)
         if row is None:

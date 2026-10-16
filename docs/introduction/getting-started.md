@@ -36,7 +36,7 @@ poetry install --with dev
 
 Matplotlib is a development dependency. The Kubernetes backend also needs a
 cluster, Helm, and an operator image available to that cluster. The
-[Helm chart](../../charts/polyad/README.md) installs CRDs, namespace-scoped RBAC, probes,
+[Helm chart](../../helm/polyad/README.md) installs CRDs, namespace-scoped RBAC, probes,
 operator replicas, and a shared Dragonfly queue with optional HA.<sup>[\[1\]](../deployment/operator.md#replicas-shared-queues-and-autoscaling)</sup>
 Tool versions are pinned in
 [`.tool-versions`](../../.tool-versions).
@@ -110,8 +110,8 @@ to prepare a builder for AMD64 and ARM64:
 ```sh
 docker buildx build -f services/operator/Dockerfile --target production --platform linux/amd64,linux/arm64 \
   -t YOUR_REGISTRY/polyad:dev --push .
-bash scripts/tooling/build-chart-dependencies.sh charts/polyad
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+bash scripts/tooling/build-chart-dependencies.sh helm/polyad
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --set operator.image.repository=YOUR_REGISTRY/polyad --set operator.image.tag=dev --wait
 kubectl apply -n polyad -f examples/finite.yaml
 kubectl get graphs -n polyad -o wide

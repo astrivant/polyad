@@ -31,7 +31,7 @@ The same project license accompanies all five Python distributions and the Helm
 charts. Container metadata also declares `BUSL-1.1`.
 
 Vendored Kubernetes resources and schemas keep their upstream Apache-2.0 notices:
-see [provider licenses](../schemas/licenses/), [Dragonfly attribution](../charts/polyad/UPSTREAM.md),
+see [provider licenses](../schemas/licenses/), [Dragonfly attribution](../helm/polyad/UPSTREAM.md),
 the `*-LICENSE` files beside generated schema copies in the charts and
 `polyad-schemas`, and [the Kubernetes notice](../integrations/minikube/full/chart/LICENSE.kubernetes).
 Chart dependencies retain their bundled upstream licenses.

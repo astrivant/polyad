@@ -1,6 +1,6 @@
 locals {
   charts = [for name in ["polyad", "polyad-benchmarks"] :
-    yamldecode(file("${path.module}/../charts/${name}/Chart.yaml"))
+    yamldecode(file("${path.module}/../helm/${name}/Chart.yaml"))
   ]
 
   # Register remote dependencies, including currently disabled optional charts.
@@ -27,8 +27,8 @@ locals {
     "-- REGISTRY_DEFINITIONS",
     "local definitions = {${join(", ", [for kind in local.definition_kinds : "${kind} = true"])}}"
   )
-  crds = [for filename in fileset("${path.module}/../charts/polyad-crds/crds", "*.yaml") :
-    yamldecode(file("${path.module}/../charts/polyad-crds/crds/${filename}"))
+  crds = [for filename in fileset("${path.module}/../helm/polyad-crds/crds", "*.yaml") :
+    yamldecode(file("${path.module}/../helm/polyad-crds/crds/${filename}"))
   ]
   polyad_health = {
     for crd in local.crds :

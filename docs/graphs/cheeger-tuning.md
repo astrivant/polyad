@@ -82,7 +82,7 @@ evaluations do not double-update one history. Failover starts cold and changes
 efficiency, not certificate validity. Standalone `compute_cheeger` callers should
 pass a distinct `cache_scope` for each independent boundary.
 
-The [Helm reference](../../charts/polyad/references/values-cheeger.reference.yaml)
+The [Helm reference](../../helm/polyad/references/cheeger/values.yaml)
 lists the controls. Reduction remains disabled by default. Numeric callers such
 as Soul's exact expansion measurements still enumerate exactly; the scheduler
 does not substitute an estimate for that scalar. `cheegerComputation.scheduler` exposes
@@ -192,7 +192,7 @@ connected-shape policy still applies if the minimum is lowered to zero.
 These settings affect the component boundary in Distributed mode. They do not
 set defaults for application GraphPolicies, child ReplicaGroups or throughput tiers.
 Component KEDA demand and `architecture.expandedNodes` control capacity separately.
-Use the typed [component reference values](../../charts/polyad/references/values-components.reference.yaml)
+Use the typed [component reference values](../../helm/polyad/references/components/values.yaml)
 with the installation prerequisites in the component guide.
 
 ## Prioritize important cuts

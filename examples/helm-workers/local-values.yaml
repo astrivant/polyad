@@ -1,5 +1,5 @@
-# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
-# Overlay values-worker.reference.yaml in the downstream cluster.
+# yaml-language-server: $schema=../../helm/polyad/values.reference.schema.json
+# Overlay worker/values.yaml in the downstream cluster.
 ## @param ha [boolean] Local ownership uses the normal profile: HA permits two or more replicas and optional HPA.
 ha: true
 ## @param worker [object] Settings for worker.

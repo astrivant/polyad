@@ -1,6 +1,6 @@
 # Guide: ../docs/graphs/load-profiles.md
 # Health-only demo: replace the workers with your pipeline and report actual rates.
-# Enable capacity via values-soul-searching.reference.yaml and configure a node autoscaler.
+# Enable capacity via soul-searching/values.yaml and configure a node autoscaler.
 apiVersion: polyad.astrivant.com/v1alpha1
 kind: Workload
 metadata:

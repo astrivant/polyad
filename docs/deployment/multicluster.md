@@ -435,8 +435,8 @@ For example, after creating the `polyad` namespaces and provisioning trust:
 ```bash
 kubectl --context east label namespace polyad topology.istio.io/network=east-network --overwrite
 kubectl --context west label namespace polyad topology.istio.io/network=west-network --overwrite
-helm --kube-context east upgrade --install polyad charts/polyad -n polyad -f examples/multicluster/east-values.yaml
-helm --kube-context west upgrade --install polyad charts/polyad -n polyad -f examples/multicluster/west-values.yaml
+helm --kube-context east upgrade --install polyad helm/polyad -n polyad -f examples/multicluster/east-values.yaml
+helm --kube-context west upgrade --install polyad helm/polyad -n polyad -f examples/multicluster/west-values.yaml
 istioctl --context east --istioNamespace polyad create-remote-secret --name=east --namespace=polyad | kubectl --context west apply -f -
 istioctl --context west --istioNamespace polyad create-remote-secret --name=west --namespace=polyad | kubectl --context east apply -f -
 ```

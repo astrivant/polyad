@@ -53,7 +53,7 @@ def main() -> int:
     args = parser.parse_args()
     stale = False
     for name in ("polyad", "polyad-crds"):
-        chart = Path(__file__).resolve().parents[2] / "charts" / name
+        chart = Path(__file__).resolve().parents[2] / "helm" / name
         canonical = json.loads((chart / "values.schema.json").read_text())
         schema = {"$schema": canonical["$schema"], **partial(canonical, "")}
         output = json.dumps(schema, indent=2) + "\n"

@@ -36,8 +36,8 @@ OUTPUT = ROOT / "pkg/polyad-schemas/polyad_schemas"
 DIALECT = "https://json-schema.org/draft/2020-12/schema"
 BASE_ID = "https://github.com/astrivant/polyad/raw/main/pkg/polyad-schemas/polyad_schemas/"
 CATALOG = ROOT / "schemas/sources.json"
-CHART_SCHEMAS = ROOT / "charts/polyad/schemas"
-RESOURCE_CHART_SCHEMAS = ROOT / "charts/polyad-crds/schemas"
+CHART_SCHEMAS = ROOT / "helm/polyad/schemas"
+RESOURCE_CHART_SCHEMAS = ROOT / "helm/polyad-crds/schemas"
 
 
 def upstream_catalog() -> dict[str, Any]:
@@ -48,7 +48,7 @@ def upstream_catalog() -> dict[str, Any]:
         dict[str, Any]: Catalog with release, source, digest and license provenance.
     """
     catalog = json.loads(CATALOG.read_text())
-    chart = yaml.safe_load((ROOT / "charts/polyad/Chart.yaml").read_text())
+    chart = yaml.safe_load((ROOT / "helm/polyad/Chart.yaml").read_text())
     dependencies = {item["name"]: item["version"] for item in chart["dependencies"]}
     for provider in catalog["providers"]:
         pin = provider.get("dependency")
@@ -294,7 +294,7 @@ def artifacts() -> dict[str, dict[str, Any]]:
         dict[str, dict[str, Any]]: Stable artifact names mapped to generated documents.
     """
     documents = {"models": model_schema()}
-    for path in sorted((ROOT / "charts/polyad-crds/crds").glob("*.yaml")):
+    for path in sorted((ROOT / "helm/polyad-crds/crds").glob("*.yaml")):
         crd = yaml.safe_load(path.read_text())
         group = crd["spec"]["group"]
         kind = crd["spec"]["names"]["kind"]
@@ -312,15 +312,15 @@ def artifacts() -> dict[str, dict[str, Any]]:
                 f"Apache-2.0; see {provider['name']}-LICENSE. Do not edit this artifact."
             )
             documents[name] = schema
-    canonical = json.loads((ROOT / "charts/polyad/values.schema.json").read_text())
+    canonical = json.loads((ROOT / "helm/polyad/values.schema.json").read_text())
     documents["helm-values"] = {**canonical, "$id": BASE_ID + "helm/helm-values.schema.json", "title": "Polyad merged Helm values"}
-    overlay = json.loads((ROOT / "charts/polyad/values.reference.schema.json").read_text())
+    overlay = json.loads((ROOT / "helm/polyad/values.reference.schema.json").read_text())
     overlay = rewrite_refs(overlay, "values.schema.json#", "#/definitions/helmValues")
     overlay.setdefault("definitions", {})["helmValues"] = rewrite_refs(canonical, "#", "#/definitions/helmValues")
     documents["helm-reference"] = {**overlay, "$id": BASE_ID + "helm/helm-reference.schema.json", "title": "Polyad partial Helm values"}
-    resource_values = json.loads((ROOT / "charts/polyad-crds/values.schema.json").read_text())
+    resource_values = json.loads((ROOT / "helm/polyad-crds/values.schema.json").read_text())
     documents["helm-crds-values"] = {**resource_values, "$id": BASE_ID + "helm/helm-crds-values.schema.json"}
-    resource_overlay = json.loads((ROOT / "charts/polyad-crds/values.reference.schema.json").read_text())
+    resource_overlay = json.loads((ROOT / "helm/polyad-crds/values.reference.schema.json").read_text())
     resource_overlay = rewrite_refs(resource_overlay, "values.schema.json#", "#/definitions/resourceValues")
     resource_overlay.setdefault("definitions", {})["resourceValues"] = rewrite_refs(resource_values, "#", "#/definitions/resourceValues")
     documents["helm-crds-reference"] = {**resource_overlay, "$id": BASE_ID + "helm/helm-crds-reference.schema.json"}
@@ -373,7 +373,7 @@ def outputs() -> dict[Path, str]:
         license_text = checked_source(provider["license"]).decode()
         for directory in (OUTPUT / "resources", CHART_SCHEMAS):
             rendered[directory / f"{provider['name']}-LICENSE"] = license_text
-    license_text = (ROOT / "charts/polyad/LICENSE.dragonfly-operator").read_text()
+    license_text = (ROOT / "helm/polyad/LICENSE.dragonfly-operator").read_text()
     for directory in (OUTPUT / "resources", CHART_SCHEMAS, RESOURCE_CHART_SCHEMAS):
         rendered[directory / "dragonfly-operator-LICENSE"] = license_text
     return rendered

@@ -14,7 +14,7 @@ alongside `dragonfly.ha.enabled`. Set `dragonfly.autoscaling.enabled: false` for
 `dragonfly.ha.replicas` count. Single-instance and externally managed caches do
 not get a scaler. PostgreSQL remains independent and optional.
 
-The [HA reference values](../../charts/polyad/references/values-ha.reference.yaml) include:
+The [HA reference values](../../helm/polyad/references/ha/values.yaml) include:
 
 ```yaml
 dragonfly:
@@ -106,7 +106,7 @@ For an existing release, install the new CRD before upgrading because Helm does
 not add CRDs during upgrades:
 
 ```sh
-kubectl apply -f charts/polyad-crds/crds/dragonflypools.yaml
+kubectl apply -f helm/polyad-crds/crds/dragonflypools.yaml
 ```
 
 Exclude `DragonflyPool.spec.replicas` and `Dragonfly.spec.replicas` from continuous

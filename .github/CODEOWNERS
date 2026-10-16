@@ -1,15 +1,15 @@
-# Review contacts for the project license and distribution metadata.
+# Review contacts by repository directory; narrower exceptions retain last-match priority.
 /.github/CODEOWNERS @emmeowzing
+/.github/workflows/ @emmeowzing
+/.gitignore @emmeowzing
 /.pre-commit-config.yaml @emmeowzing
+/.tool-versions @emmeowzing
 /LICENSE @emmeowzing
 /README.md @emmeowzing
-/charts/polyad/Chart.yaml @emmeowzing
-/charts/polyad/LICENSE @emmeowzing
-/charts/polyad-benchmarks/Chart.yaml @emmeowzing
-/charts/polyad-benchmarks/LICENSE @emmeowzing
-/charts/polyad-crds/Chart.yaml @emmeowzing
-/charts/polyad-crds/LICENSE @emmeowzing
+/SKILL.md @emmeowzing
+/docs/development/ @emmeowzing
 /docs/licensing.md @emmeowzing
+/helm/ @emmeowzing
 /integrations/minikube/full/chart/Chart.yaml @emmeowzing
 /integrations/minikube/full/chart/LICENSE @emmeowzing
 /pkg/polyad-benchmarks/LICENSE @emmeowzing
@@ -20,8 +20,12 @@
 /pkg/polyad-sdk/pyproject.toml @emmeowzing
 /pkg/polyad-types/LICENSE @emmeowzing
 /pkg/polyad-types/pyproject.toml @emmeowzing
+/poetry.lock @emmeowzing
+/pyproject.toml @emmeowzing
+/scripts/ @emmeowzing
 /services/fixture/Dockerfile @emmeowzing
 /services/operator/Dockerfile @emmeowzing
 /services/runner/Dockerfile @emmeowzing
 /terraform/bootstrap/Chart.yaml @emmeowzing
 /terraform/bootstrap/LICENSE @emmeowzing
+/tests/ @emmeowzing

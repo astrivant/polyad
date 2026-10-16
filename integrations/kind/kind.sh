@@ -14,7 +14,7 @@ NODE_IMAGE="${POLYAD_KIND_NODE_IMAGE:-kindest/node:$KUBERNETES_VERSION}"
 CONTEXT="kind-$CLUSTER"
 KUBECONFIG_FILE="$PROJECT_ROOT/.cache/kind/$CLUSTER/kubeconfig"
 HELM_CACHE="$PROJECT_ROOT/.cache/kind/helm"
-CHART="$PROJECT_ROOT/charts/polyad"
+CHART="$PROJECT_ROOT/helm/polyad"
 IMAGE_REPOSITORY=polyad
 IMAGE_TAG=kind
 
@@ -114,7 +114,7 @@ prepare_chart() {
     # Register disabled dependency repositories too, before consuming the lockfile.
     HELM_REPOSITORY_CONFIG="$HELM_CACHE/repositories.yaml" \
         HELM_REPOSITORY_CACHE="$HELM_CACHE/repository-cache" \
-        bash "$PROJECT_ROOT/scripts/tooling/build-chart-dependencies.sh" charts/polyad >&2
+        bash "$PROJECT_ROOT/scripts/tooling/build-chart-dependencies.sh" helm/polyad >&2
 }
 
 ##
@@ -169,8 +169,8 @@ enable() {
 
     # Helm does not upgrade crds/. Fail on conflicting ownership instead of forcing it.
     # Skip Helm's CRD installation after this step to keep one field manager.
-    kube apply --server-side --field-manager=polyad-kind -f "$PROJECT_ROOT/charts/polyad-crds/crds"
-    kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/charts/polyad-crds/crds"
+    kube apply --server-side --field-manager=polyad-kind -f "$PROJECT_ROOT/helm/polyad-crds/crds"
+    kube wait --for=condition=Established --timeout "$TIMEOUT" -f "$PROJECT_ROOT/helm/polyad-crds/crds"
     helm_local upgrade --install polyad "$CHART" --kubeconfig "$KUBECONFIG_FILE" --kube-context "$CONTEXT" \
         --skip-crds --create-namespace --wait --timeout "$TIMEOUT" "${CHART_OPTIONS[@]}"
 }

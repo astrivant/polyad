@@ -1,3 +1,5 @@
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
 default_language_version:
   python: python3.13
 repos:
@@ -7,45 +9,86 @@ repos:
       - id: pydocstyle
         args: [--config=pyproject.toml]
         files: ^(pkg|scripts|examples|demo)/.*\.py$
-        exclude: ^pkg/tests/
+        exclude: ^tests/
   - repo: https://github.com/jsh9/pydoclint
     rev: 0.6.6
     hooks:
       - id: pydoclint
         args: [--config=pyproject.toml]
         files: ^(pkg|scripts|examples|demo)/.*\.py$
-        exclude: ^pkg/tests/
+        exclude: ^tests/
   - repo: https://github.com/bitnami/readme-generator-for-helm
     rev: 4d29f59abac6aeed6fbc2467e24fc17560057bcb # 3.0.1
     hooks:
       - id: helm-readme-generator
         entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-helm-readme.py
-        files: ^(charts/polyad/|scripts/schemas/generate-helm-readme\.py$|\.pre-commit-config\.yaml$)
-        language_version: 24.14.0
+        files: ^(helm/polyad/|scripts/schemas/generate-helm-readme\.py$|\.pre-commit-config\.yaml$)
+        language_version: 26.10.0
         args:
-          - --readme=charts/polyad/README.md
-          - --values=charts/polyad/values.yaml
+          - --readme=helm/polyad/README.md
+          - --values=helm/polyad/values.yaml
+          - --references
         pass_filenames: false
       - id: helm-readme-generator
         name: Resource chart README generator
         entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-helm-readme.py
-        files: ^(charts/polyad-crds/|scripts/schemas/generate-helm-readme\.py$|\.pre-commit-config\.yaml$)
-        language_version: 24.14.0
+        files: ^(helm/polyad-crds/|scripts/schemas/generate-helm-readme\.py$|\.pre-commit-config\.yaml$)
+        language_version: 26.10.0
         args:
-          - --readme=charts/polyad-crds/README.md
-          - --values=charts/polyad-crds/values.yaml
+          - --readme=helm/polyad-crds/README.md
+          - --values=helm/polyad-crds/values.yaml
+          - --references
         pass_filenames: false
       - id: helm-readme-generator
         name: Benchmark chart README generator
         entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-helm-readme.py
-        files: ^(charts/polyad-benchmarks/|scripts/schemas/generate-helm-readme\.py$|\.pre-commit-config\.yaml$)
-        language_version: 24.14.0
+        files: ^(helm/polyad-benchmarks/|scripts/schemas/generate-helm-readme\.py$|\.pre-commit-config\.yaml$)
+        language_version: 26.10.0
         args:
-          - --readme=charts/polyad-benchmarks/README.md
-          - --values=charts/polyad-benchmarks/values.yaml
+          - --readme=helm/polyad-benchmarks/README.md
+          - --values=helm/polyad-benchmarks/values.yaml
         pass_filenames: false
   - repo: local
     hooks:
+      - id: codeowners-tree
+        name: Normalize CODEOWNERS in directory order
+        entry: bash scripts/tooling/project-python.sh -m scripts.ownership --write
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: codeowners-tree-push
+        name: Verify committed CODEOWNERS tree
+        entry: bash scripts/tooling/project-python.sh -m scripts.ownership --check --revision HEAD
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: documentation-syntax
+        name: Hosted Markdown math and Mermaid syntax
+        entry: npm --prefix scripts/documentation run check
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: markdown-structure
+        name: Markdown table and heading structure
+        entry: npm --prefix scripts/documentation run markdown:lint
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: javascript
+        name: Documentation JavaScript lint
+        entry: npm --prefix scripts/documentation run lint
+        language: system
+        pass_filenames: false
+        files: ^scripts/(documentation|release|coverage)/.*\.[cm]js$
+      - id: actionlint
+        name: Workflow syntax and embedded ShellCheck
+        entry: actionlint
+        language: golang
+        language_version: 1.27.2
+        additional_dependencies: [github.com/rhysd/actionlint/cmd/actionlint@v1.7.12]
+        pass_filenames: false
+        files: ^\.github/workflows/
       - id: codeowners
         name: CODEOWNERS syntax and paths
         entry: env REPOSITORY_PATH=. CHECKS=files,duppatterns,syntax EXPERIMENTAL_CHECKS= CHECK_FAILURE_LEVEL=warning codeowners-validator
@@ -60,13 +103,13 @@ repos:
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-values.py
         language: system
         pass_filenames: false
-        files: '^(charts/polyad(-crds|-benchmarks)?/values.*\.(yaml|json)|studies/.*values.*\.yaml|integrations/.*values.*\.yaml|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|pkg/tests/data/.*values\.yaml|terraform/.*values.*\.(yaml|json)|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
+        files: '^(helm/polyad(-crds|-benchmarks)?/values.*\.(yaml|json)|studies/.*values.*\.yaml|integrations/.*values.*\.yaml|examples/.*\.yaml|examples/postgresql/operator-values\.schema\.json|tests/data/.*values\.yaml|terraform/.*values.*\.(yaml|json)|scripts/validation/check-values\.py|\.pre-commit-config\.yaml)$'
       - id: schema-artifacts
         name: Generated chart and Python schema artifacts
         entry: bash scripts/tooling/project-python.sh scripts/schemas/generate-all.py --check
         language: system
         pass_filenames: false
-        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-(types|schemas|benchmarks)/|schemas/|charts/polyad(-crds|-benchmarks)?/(crds/|files/resource-catalog\.json|schemas/|values.*\.(json|yaml)|Chart\.(yaml|lock)|LICENSE.*)|scripts/schemas/|\.pre-commit-config\.yaml$)'
+        files: '^(pkg/polyad/(graph|compiler)/|pkg/polyad-(types|schemas|benchmarks)/|schemas/|helm/polyad(-crds|-benchmarks)?/(crds/|files/resource-catalog\.json|schemas/|values.*\.(json|yaml)|Chart\.(yaml|lock)|LICENSE.*)|scripts/schemas/|\.pre-commit-config\.yaml$)'
       - id: docstring-layout
         name: Multiline docstring layout
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-docstrings.py
@@ -77,7 +120,7 @@ repos:
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-exports.py
         language: system
         pass_filenames: false
-        files: '^(pkg/.*\.py|scripts/validation/check-exports\.py|\.pre-commit-config\.yaml)$'
+        files: '^((pkg|tests)/.*\.py|scripts/validation/check-exports\.py|\.pre-commit-config\.yaml)$'
       - id: mermaid-check
         name: Validate Mermaid diagrams
         entry: bash scripts/validation/check-mermaid.sh
@@ -95,7 +138,7 @@ repos:
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-shell-functions.py
         language: system
         pass_filenames: false
-        files: '(^scripts/validation/check-shell-functions\.py$|^pkg/tests/test_shell_functions\.py$|^\.pre-commit-config\.yaml$)'
+        files: '(^scripts/validation/check-shell-functions\.py$|^tests/contracts/test_shell_functions\.py$|^\.pre-commit-config\.yaml$)'
       - id: ruff-check
         name: Ruff lint
         entry: bash scripts/tooling/project-python.sh -m ruff check

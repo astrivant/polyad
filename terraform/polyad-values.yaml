@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../charts/polyad/values.reference.schema.json
+# yaml-language-server: $schema=../helm/polyad/values.reference.schema.json
 # Disposable, cluster-internal load-test baseline. Argo CD remains authenticated.
 # Separate component demand from GKE node capacity; no load is generated here.
 ## @param ha [boolean] Keep two bootstrap replicas while the component Graph scales independently.

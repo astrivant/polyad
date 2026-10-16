@@ -128,7 +128,7 @@ the definitions covers resources created before this default was added.
 See [Kubernetes CRD defaulting](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#defaulting).
 
 **Upgrade the CRDs before using these checks.** Helm does not upgrade files in
-`crds/` automatically; follow the [CRD upgrade procedure](../../charts/polyad-crds/README.md#installation-and-upgrades).
+`crds/` automatically; follow the [CRD upgrade procedure](../../helm/polyad-crds/README.md#installation-and-upgrades).
 With older definitions, an entirely absent `status` still causes an unresolved
 CEL variable and Flux retries until timeout. `has(status.observedGeneration)`
 guards a field inside an existing status object, not the top-level variable;
@@ -172,10 +172,10 @@ Parallel cases cover absent, null and empty initial status for every Polyad kind
 stale generations and remote intents,
 nested failures, activation receipts, cache replication, deletion and suspension.
 The pinned Go dependencies live under
-`pkg/tests/flux`; they are test tooling, not operator dependencies.
+`tests/flux`; they are test tooling, not operator dependencies.
 
 ```sh
 bash scripts/tooling/install-asdf-tools.sh golang
 poetry run python scripts/gitops/flux-health.py --json > /tmp/polyad-flux-checks.json
-POLYAD_FLUX_CHECKS=/tmp/polyad-flux-checks.json go -C pkg/tests/flux test -mod=readonly -parallel 8 ./...
+POLYAD_FLUX_CHECKS=/tmp/polyad-flux-checks.json go -C tests/flux test -mod=readonly -parallel 8 ./...
 ```

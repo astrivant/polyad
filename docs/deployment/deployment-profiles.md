@@ -38,7 +38,7 @@ listed in their feature guides.
 
 ## Combine reference values
 
-The chart includes [commented reference values](../../charts/polyad/README.md#reference-values)
+The chart includes [commented reference values](../../helm/polyad/README.md#reference-values)
 for both profiles, split components, federation, root management, mesh transport,
 observers and optional PostgreSQL. Each file highlights the related fields,
 required credentials, prerequisites and cluster placement. The small examples
@@ -46,8 +46,8 @@ below remain useful for minimal installations; the reference files provide more
 configuration detail. Each reference includes an editor schema directive and
 typed `@param` descriptions, including choices and prerequisites. Helm validates
 the merged values against `values.schema.json`. See also the
-[authentication reference](../../charts/polyad/references/values-authentication.reference.yaml)
-and [unauthenticated demo reference](../../charts/polyad/references/values-demo.reference.yaml).
+[authentication reference](../../helm/polyad/references/authentication/values.yaml)
+and [unauthenticated demo reference](../../helm/polyad/references/demo/values.yaml).
 
 Defaults, references and example values all declare their editor schema. Nested
 resources, label selectors, ports and tolerations are validated too: use Boolean
@@ -67,30 +67,30 @@ credentials and operators described in [placement and ownership](multicluster.md
 then combine HA with the federation registry in the source cluster:
 
 ```bash
-helm upgrade --install polyad charts/polyad --kube-context east \
+helm upgrade --install polyad helm/polyad --kube-context east \
   --namespace polyad --create-namespace \
-  --values charts/polyad/references/values-ha.reference.yaml \
-  --values charts/polyad/references/values-federation.reference.yaml
+  --values helm/polyad/references/ha/values.yaml \
+  --values helm/polyad/references/federation/values.yaml
 ```
 
 For root-owned execution, use the root reference, which includes its own HA
 selection and cluster registry. This example also splits the root into components:
 
 ```bash
-helm upgrade --install polyad charts/polyad --kube-context management \
+helm upgrade --install polyad helm/polyad --kube-context management \
   --namespace polyad --create-namespace \
-  --values charts/polyad/references/values-root-control-plane.reference.yaml \
-  --values charts/polyad/references/values-components.reference.yaml
+  --values helm/polyad/references/root-control-plane/values.yaml \
+  --values helm/polyad/references/components/values.yaml
 ```
 
 Prepare the [root credentials and shared cache](root-control-plane.md#install-and-register-clusters)
 and [component prerequisites](components.md#install) first. The reference files
 use the same `polyad-api`, `polyad-events` and `polyad-metrics` Secret names so
 combining them preserves endpoint credentials. Add
-[`values-postgresql.reference.yaml`](../../charts/polyad/references/values-postgresql.reference.yaml)
+[`postgresql/values.yaml`](../../helm/polyad/references/postgresql/values.yaml)
 last to enable optional durable state, database HA and KEDA instance scaling;
 install CloudNativePG and provide KEDA through an existing installation or the
-[KEDA values reference](../../charts/polyad/references/values-keda.reference.yaml).
+[KEDA values reference](../../helm/polyad/references/keda/values.yaml).
 
 Helm merges files in order, with later values taking precedence. Lists replace
 earlier lists entirely, including cluster registries, execution pools and network
@@ -116,7 +116,7 @@ do not imply three operator replicas. Follow its prerequisite and activation
 steps instead of the manual Helm command below when you want that local setup.
 
 ```bash
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --values examples/deployment-profiles/singular.yaml
 ```
 
@@ -127,7 +127,7 @@ connections as needed. Their Services select the same dense operator Pods.
 ## HA in one cluster
 
 ```bash
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --values examples/deployment-profiles/ha.yaml
 ```
 
@@ -136,7 +136,7 @@ To split responsibilities, use the [component values](../../examples/components/
 instead. They also select HA and set `architecture.mode: Distributed`:
 
 ```bash
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --values examples/components/values.yaml
 ```
 
@@ -154,7 +154,7 @@ or Distributed mode. Prepare credentials and destination access using the
 then install the management release:
 
 ```bash
-helm upgrade --install polyad charts/polyad --kube-context management \
+helm upgrade --install polyad helm/polyad --kube-context management \
   --namespace polyad --create-namespace \
   --values examples/root-control-plane/values.yaml
 ```
@@ -209,7 +209,7 @@ counts with that autoscaler so configuration updates do not reset its intent.
 
 Use `worker.enabled: true` to install a downstream executor connected to the
 root through the same chart. The
-[worker reference](../../charts/polyad/references/values-worker.reference.yaml) separates root
+[worker reference](../../helm/polyad/references/worker/values.yaml) separates root
 identity from the hosting cluster and documents required local Secrets. Follow
 the [attachment guide](helm-workers.md) to register its existing Deployment in
 the root's reserved PolyGraph.
