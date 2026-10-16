@@ -1,0 +1,27 @@
+# Review contacts for the project license and distribution metadata.
+/.github/CODEOWNERS @emmeowzing
+/.pre-commit-config.yaml @emmeowzing
+/LICENSE @emmeowzing
+/README.md @emmeowzing
+/charts/polyad/Chart.yaml @emmeowzing
+/charts/polyad/LICENSE @emmeowzing
+/charts/polyad-benchmarks/Chart.yaml @emmeowzing
+/charts/polyad-benchmarks/LICENSE @emmeowzing
+/charts/polyad-crds/Chart.yaml @emmeowzing
+/charts/polyad-crds/LICENSE @emmeowzing
+/docs/licensing.md @emmeowzing
+/integrations/minikube/full/chart/Chart.yaml @emmeowzing
+/integrations/minikube/full/chart/LICENSE @emmeowzing
+/pkg/polyad-benchmarks/LICENSE @emmeowzing
+/pkg/polyad-benchmarks/pyproject.toml @emmeowzing
+/pkg/polyad-schemas/LICENSE @emmeowzing
+/pkg/polyad-schemas/pyproject.toml @emmeowzing
+/pkg/polyad-sdk/LICENSE @emmeowzing
+/pkg/polyad-sdk/pyproject.toml @emmeowzing
+/pkg/polyad-types/LICENSE @emmeowzing
+/pkg/polyad-types/pyproject.toml @emmeowzing
+/services/fixture/Dockerfile @emmeowzing
+/services/operator/Dockerfile @emmeowzing
+/services/runner/Dockerfile @emmeowzing
+/terraform/bootstrap/Chart.yaml @emmeowzing
+/terraform/bootstrap/LICENSE @emmeowzing

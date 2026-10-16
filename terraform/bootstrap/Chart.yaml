@@ -5,3 +5,5 @@ description: >-
   isolated Polyad operator and benchmark GKE scaling studies
 type: application
 version: 0.1.0
+annotations:
+  artifacthub.io/license: BUSL-1.1

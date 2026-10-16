@@ -1132,7 +1132,10 @@ Polyad coordinates application graphs alongside existing cluster components.
 
 ## License
 
-[GNU General Public License v3.0 only](LICENSE).
+Polyad is source-available under [Business Source License 1.1](LICENSE), with
+Astrivant LLC as licensor and no additional production-use grant. Each version
+converts to GPLv3 four years after its first public distribution under BSL.
+See [licensing and separately licensed components](docs/licensing.md).
 
 ## References
 

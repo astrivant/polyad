@@ -47,3 +47,5 @@ dependencies:
     version: 1.30.4
     repository: https://istio-release.storage.googleapis.com/charts
     condition: mesh.egress.gateway.enabled
+annotations:
+  artifacthub.io/license: BUSL-1.1
