@@ -46,6 +46,15 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: codeowners
+        name: CODEOWNERS syntax and paths
+        entry: env REPOSITORY_PATH=. CHECKS=files,duppatterns,syntax EXPERIMENTAL_CHECKS= CHECK_FAILURE_LEVEL=warning codeowners-validator
+        language: golang
+        language_version: 1.27.2
+        additional_dependencies:
+          - github.com/mszostok/codeowners-validator@7f3f5e28c6d7b8dfae5731e54ce2272ca384592f # v0.7.4
+        pass_filenames: false
+        always_run: true
       - id: helm-values-types
         name: Helm values types and schema coverage
         entry: bash scripts/tooling/project-python.sh scripts/validation/check-values.py

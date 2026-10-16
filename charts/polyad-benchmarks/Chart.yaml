@@ -30,3 +30,5 @@ dependencies:
   version: 0.173.1
   repository: https://open-telemetry.github.io/opentelemetry-helm-charts
   condition: collector.enabled
+annotations:
+  artifacthub.io/license: BUSL-1.1
