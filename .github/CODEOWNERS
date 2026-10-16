@@ -1,5 +1,6 @@
 # Review contacts by repository directory; narrower exceptions retain last-match priority.
 /.github/CODEOWNERS @emmeowzing
+/.github/generated-artifacts.json @emmeowzing
 /.github/workflows/ @emmeowzing
 /.gitignore @emmeowzing
 /.pre-commit-config.yaml @emmeowzing

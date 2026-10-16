@@ -51,6 +51,10 @@ create resources and require an explicitly selected disposable environment.
 - Preserve saved measurements and their provenance. Do not rewrite historical results
   merely because current source directories moved.
 
+Keep [generated-artifact ownership](docs/development/generated-artifacts.md) current
+when adding or changing pipeline generators. Only reviewed base-owned adapters may
+automatically repair conflicts; source-policy ambiguity remains a review task.
+
 ## Validate and hand off
 
 ```sh

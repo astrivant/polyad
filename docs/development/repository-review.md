@@ -6,6 +6,7 @@
 - [Applied changes](#applied-changes)
 - [Existing behavior retained](#existing-behavior-retained)
 - [Verification boundaries](#verification-boundaries)
+- [Diff review follow-up](#diff-review-follow-up)
 <!-- toc:end -->
 
 This review strengthens Polyad's contributor and delivery contracts. It does not
@@ -49,3 +50,29 @@ Before tagging, configure and verify the release inputs in [release operations](
 Legacy typing scope and operational limits remain governed by their existing
 contracts; this review does not claim that every historical test is strictly typed
 or that synthetic checks establish production capacity.
+
+## Diff review follow-up
+
+The follow-up reviewed the PR comparison from
+[2666f45](https://github.com/astrivant/polyad/commit/2666f45dc1640d1986204be227b8c388b4f4c3c9)
+through the current head, concentrating on changed delivery, documentation,
+ownership, generated output and direct path consumers.
+
+- **Host enforcement gap:** the live `main` protection API on 2026-10-16 returned
+  an empty required-check context list. Repository merge settings also still allow
+  merge commits and rebases. Apply and verify the declaration in
+  [repository settings](../../.github/settings.yml) before relying on the intended
+  `CI verification`, independent review and squash-only merge baseline.
+- **Generated conflicts:** the inventory and trusted repair stage now make safe
+  conflict handling explicit. Only conservative literal CODEOWNERS merges and
+  exact generated copies are automatic. See [the repair contract](generated-artifacts.md).
+- **Verification remains revision-specific:** hosted chart property tests were
+  still running when inspected. A passing source subset does not establish a
+  successful full pipeline or a verified live release.
+- **Automated audit coverage:** the retained 61.8 MB study-results file exceeds
+  the current audit tool's 32 MiB per-file limit. The measurements are preserved;
+  no full-workspace automated compliance claim is made.
+
+Other applicable checks retain the existing release-signature, package, coverage,
+layout, source-generation and ownership contracts. Runtime APIs, storage and
+saved measurement semantics are outside this follow-up's changed surface.

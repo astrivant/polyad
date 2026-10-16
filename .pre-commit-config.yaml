@@ -50,6 +50,12 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: generated-inventory
+        name: Validate generated artifact repair inventory
+        entry: bash scripts/tooling/project-python.sh -m scripts.repair.plan --check
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: codeowners-tree
         name: Normalize CODEOWNERS in directory order
         entry: bash scripts/tooling/project-python.sh -m scripts.ownership --write
@@ -80,7 +86,7 @@ repos:
         entry: npm --prefix scripts/documentation run lint
         language: system
         pass_filenames: false
-        files: ^scripts/(documentation|release|coverage)/.*\.[cm]js$
+        files: ^scripts/(documentation|release|coverage|repair)/.*\.[cm]js$
       - id: actionlint
         name: Workflow syntax and embedded ShellCheck
         entry: actionlint

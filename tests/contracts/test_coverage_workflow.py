@@ -138,6 +138,8 @@ def test_badge_is_a_separate_writer_and_never_blocks_package_publication():
         "coverage-badge",
         "deploy-stage",
         "publish",
+        "generated-repair",
+        "repair",
     }
     assert "coverage-badge" not in JOBS["verified"]["needs"]
     assert "coverage-badge" not in JOBS["deploy-stage"]["needs"]

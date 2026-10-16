@@ -7,8 +7,8 @@
   },
   "scripts": {
     "check": "node check-markdown.mjs",
-    "test": "node --test *.test.mjs ../release/*.test.cjs ../coverage/*.test.mjs",
-    "lint": "cd ../.. && scripts/documentation/node_modules/.bin/eslint --config scripts/documentation/eslint.config.mjs scripts/documentation/*.mjs scripts/release/*.cjs scripts/coverage/*.mjs",
+    "test": "node --test *.test.mjs ../release/*.test.cjs ../coverage/*.test.mjs ../repair/*.test.mjs",
+    "lint": "cd ../.. && scripts/documentation/node_modules/.bin/eslint --config scripts/documentation/eslint.config.mjs scripts/documentation/*.mjs scripts/release/*.cjs scripts/coverage/*.mjs scripts/repair/*.mjs",
     "markdown:lint": "node lint-markdown.mjs"
   },
   "overrides": {

@@ -218,7 +218,7 @@ def test_only_explicit_tags_enable_scoped_release_write_permissions():
     assert all(
         job.get("permissions", {}).get("contents", "read") == "read"
         for name, job in JOBS.items()
-        if name not in {"coverage-badge", "deploy-stage", "publish"}
+        if name not in {"coverage-badge", "deploy-stage", "publish", "generated-repair", "repair"}
     )
     assert JOBS["deploy-stage"]["if"] == ("!cancelled() && needs.verified.result == 'success' && needs.source.outputs.release-tag != ''")
     assert JOBS["publish"]["if"] == "inputs.release-tag != ''"
@@ -353,7 +353,7 @@ def test_explicit_tags_use_the_same_chart_gate_and_source():
     """
     Tagged chart builds and publication remain inside the same verified parent run.
     """
-    assert PIPELINE["on"]["push"]["branches"] == ["**"]
+    assert PIPELINE["on"]["push"]["branches"] == ["**", "!pr-assets"]
     assert "pull_request" in PIPELINE["on"]
     for name in ("chart", "chart-package", "publish"):
         assert JOBS[name]["steps"][0]["with"]["ref"] == "${{ inputs.sha }}"
