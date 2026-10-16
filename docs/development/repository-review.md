@@ -21,6 +21,7 @@ certify a deployment or substitute for verification of the eventual tagged relea
 | CI | Maintained actions use reviewed immutable revisions. Independent build and test stages converge at `CI verification`. Source settings require that check and an independent approving review. |
 | Packaging | Every Python distribution retains a PyPI publication path. Signed release verification binds all Python and Helm artifacts to the tag, commit and independently configured key. |
 | Coverage | Main publishes measured coverage and its exact source receipt through a verified atomic API commit on the artifact branch. Invalid or superseded inputs cannot publish. |
+| Dependency security | Documentation parsers and the Flux test module use patched dependency locks; validate both JavaScript graphs and the Go contracts when refreshing them. |
 | Contributor feedback | Verified releases produce categorized notes and idempotent version notifications on included merged PRs. |
 | Onboarding | Root `SKILL.md` describes supported local workflows; README inputs link to the complete generated chart parameters. |
 

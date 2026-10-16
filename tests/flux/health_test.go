@@ -40,9 +40,9 @@ func readChecks(t *testing.T) []kustomize.CustomHealthCheck {
 // applies these defaults on reads as well as creates, including existing objects.
 func readSchemas(t *testing.T) map[string]*schema.Structural {
 	t.Helper()
-	paths, err := filepath.Glob("../../../helm/polyad-crds/crds/*.yaml")
-	if err != nil {
-		t.Fatal(err)
+	paths, err := filepath.Glob("../../helm/polyad-crds/crds/*.yaml")
+	if err != nil || len(paths) == 0 {
+		t.Fatalf("cannot locate shipped CRDs: %v", err)
 	}
 	schemas := make(map[string]*schema.Structural)
 	for _, path := range paths {

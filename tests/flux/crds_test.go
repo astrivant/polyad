@@ -19,7 +19,7 @@ import (
 // TestCRDAdmission runs Kubernetes' definition validator, including structural
 // schema, defaults and CEL checks that a JSON Schema validator cannot enforce.
 func TestCRDAdmission(t *testing.T) {
-	paths, err := filepath.Glob("../../../helm/polyad-crds/crds/*.yaml")
+	paths, err := filepath.Glob("../../helm/polyad-crds/crds/*.yaml")
 	if err != nil || len(paths) == 0 {
 		t.Fatalf("cannot locate shipped CRDs: %v", err)
 	}
