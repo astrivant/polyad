@@ -1,0 +1,217 @@
+{
+  "inputs": {
+    "renderer/image_provenance/__init__.py": "4f6fbee00f2aaec7b9603b4501711ecad6481df8dea44c2061e59c80aef7fdd6",
+    "renderer/image_provenance/cli.py": "8bf7fd1726fc851d2b1c2f52b262886a7065b39cbe2934a77cc813119a447fc6",
+    "renderer/image_provenance/core.py": "19d15d127c0b30fff8d3c3ff19763375a0acbad3c3145b535d42af742e4e5e3f",
+    "renderer/pr_files/__init__.py": "8ba23c3c18fb2390baa4b588062636cc4c347be53500b388084edc94b81df1e0",
+    "renderer/pr_files/cli.py": "082d92c3c6ae5276fe035cb8de4fa28c993d33ee0e741993b361796d8bfa0525",
+    "renderer/pr_files/descriptions.py": "38f75acbd8a930cc9bdb82a6ba1537dc1bb77550a998924216262dec8dc8636d",
+    "renderer/pr_files/grouping.py": "f32cc09ecbca42a26a978c7e2dfa8aa36353cc2c0ae4c43a03faaaf51f9fc750",
+    "renderer/pr_files/models.py": "1543595d1fac65d569f225d02714c5ab13231753181ade47622a3fb515c97b5d",
+    "renderer/pr_files/plotting.py": "b76c9be9f537b3265d16288526bda395141bf4417687894769e9df08013443de",
+    "renderer/pr_intent/__init__.py": "0cc1ccc65f5e7f158bb61bbb067e64990a4e45763ce03e4747fe04200a09adfc",
+    "renderer/pr_intent/cli.py": "7588b63eb966df5f2507f8bc52bafbe7547b2d143b292dfc0fe95331c2be0d87",
+    "renderer/pr_intent/graph.py": "487f8897e19e1cfc4b6ed9c0041746fc3c7170573bc732c296b03572270dd586",
+    "renderer/pr_intent/plotting.py": "fa1311bca351175a50ee36f850bc6573132812975d8d8b9c24eb8732e5fd4b75",
+    "renderer/pr_intent/source.py": "a2043d3d78a91cd08e3f0c3c4b8398da680c15ca670ea393f417b90441ccf1cd",
+    "renderer/pr_language.py": "f837eab96ca93df61d4973d74a764e2fa59e6d08f76391c697d923c0e6792884",
+    "renderer/pr_presentation.py": "e1502b1ceea631fe8f631e65b55655a4d14613fd8eb2a885b1df44edc0f8982f",
+    "renderer/resources/fonts/EBGaramond-Regular.otf": "d3e1471a4a0f836716bad35326d3c0ab5caddb74ae5c1917f99f8225abf43a7d",
+    "renderer/resources/intent-result.schema.json": "19e00a10d5a159220f5035bd378da53110017ece9e6286aeb2438b858f01f9a4",
+    "renderer/review_paths/core.py": "dae80a01a58b368925ca69bfc9498ba27f68678d1c95d41e366517fd6937df04",
+    "environment/poetry.lock": "5c2d202a6160bc7999f0a33fa4eb602fe9a6dbce09d8840fda6e2e1c9b188157",
+    "data/palette": "df3607dacd40a0c4dbfb4b0053752953f4b40d060401fe4e42a3d842f6a8a15c"
+  },
+  "source": {
+    "target": "de7115d208ec2d02e6cb73a13016302c0bc70085",
+    "base": "de7115d208ec2d02e6cb73a13016302c0bc70085",
+    "head": "d5439a9667234c9318cadff85d3c459342a2f5c2",
+    "tree": "50cef5456f31113aba58990e3581d159b1ac8020",
+    "staged": false,
+    "deltas": [
+      {
+        "before": ".pre-commit-config.yaml",
+        "after": ".pre-commit-config.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "SKILL.md",
+        "after": "SKILL.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/development/repository-review.md",
+        "after": "docs/development/repository-review.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "poetry.lock",
+        "after": "poetry.lock",
+        "added": 26,
+        "deleted": 10
+      },
+      {
+        "before": "pyproject.toml",
+        "after": "pyproject.toml",
+        "added": 7,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/ownership/__init__.py",
+        "after": "scripts/ownership/__init__.py",
+        "added": 0,
+        "deleted": 5
+      },
+      {
+        "before": "scripts/ownership/__main__.py",
+        "after": "scripts/ownership/__main__.py",
+        "added": 0,
+        "deleted": 9
+      },
+      {
+        "before": "scripts/ownership/cli.py",
+        "after": "scripts/ownership/cli.py",
+        "added": 0,
+        "deleted": 137
+      },
+      {
+        "before": "scripts/ownership/compiler.py",
+        "after": "scripts/ownership/compiler.py",
+        "added": 0,
+        "deleted": 242
+      },
+      {
+        "before": "tests/contracts/test_ownership_compiler.py",
+        "after": "tests/contracts/test_ownership_compiler.py",
+        "added": 2,
+        "deleted": 3
+      }
+    ]
+  },
+  "view": {
+    "nodes": [
+      {
+        "id": "F1",
+        "label": ".pre-commit-config.yaml",
+        "kind": "file",
+        "status": "changed",
+        "weight": 4.0,
+        "group": ".",
+        "context": false
+      },
+      {
+        "id": "F2",
+        "label": "SKILL.md",
+        "kind": "file",
+        "status": "changed",
+        "weight": 2.0,
+        "group": ".",
+        "context": false
+      },
+      {
+        "id": "F3",
+        "label": "docs/development/repository-review.md",
+        "kind": "file",
+        "status": "changed",
+        "weight": 2.0,
+        "group": "docs/development",
+        "context": false
+      },
+      {
+        "id": "F4",
+        "label": "poetry.lock",
+        "kind": "file",
+        "status": "changed",
+        "weight": 36.0,
+        "group": ".",
+        "context": false
+      },
+      {
+        "id": "F5",
+        "label": "pyproject.toml",
+        "kind": "file",
+        "status": "changed",
+        "weight": 8.0,
+        "group": ".",
+        "context": false
+      },
+      {
+        "id": "F6",
+        "label": "scripts/ownership/__init__.py",
+        "kind": "file",
+        "status": "changed",
+        "weight": 5.0,
+        "group": "scripts/ownership",
+        "context": false
+      },
+      {
+        "id": "F7",
+        "label": "scripts/ownership/__main__.py",
+        "kind": "file",
+        "status": "changed",
+        "weight": 9.0,
+        "group": "scripts/ownership",
+        "context": false
+      },
+      {
+        "id": "F8",
+        "label": "scripts/ownership/cli.py",
+        "kind": "file",
+        "status": "changed",
+        "weight": 137.0,
+        "group": "scripts/ownership",
+        "context": false
+      },
+      {
+        "id": "F9",
+        "label": "scripts/ownership/compiler.py",
+        "kind": "file",
+        "status": "changed",
+        "weight": 242.0,
+        "group": "scripts/ownership",
+        "context": false
+      },
+      {
+        "id": "F10",
+        "label": "tests/contracts/test_ownership_compiler.py",
+        "kind": "file",
+        "status": "changed",
+        "weight": 5.0,
+        "group": "tests/contracts",
+        "context": false
+      }
+    ],
+    "links": [],
+    "missing": [
+      ".pre-commit-config.yaml",
+      "SKILL.md",
+      "docs/development/repository-review.md",
+      "poetry.lock",
+      "pyproject.toml",
+      "scripts/ownership/__init__.py",
+      "scripts/ownership/__main__.py",
+      "scripts/ownership/cli.py",
+      "scripts/ownership/compiler.py",
+      "tests/contracts/test_ownership_compiler.py"
+    ],
+    "state": "unavailable: no local intent export",
+    "graph_revision": "",
+    "input_sha256": "",
+    "omitted_dependencies": 0,
+    "omitted_evidence": 0
+  },
+  "palette_sha256": "df3607dacd40a0c4dbfb4b0053752953f4b40d060401fe4e42a3d842f6a8a15c",
+  "seed": 1729,
+  "renderer": 1,
+  "implementation_sha256": "83b32a57d48c7e2514400a5330f9a21b88aafa1a945fcc1a6c377e460801220c",
+  "matplotlib": "3.11.2",
+  "networkx": "3.7",
+  "numpy": "2.5.3",
+  "witful": "0.6.0",
+  "model_calls": 0,
+  "evaluated_at": null,
+  "image_sha256": "3f3c70b3abc3d9cd3d76d507a1ff19c5ea0b0aa12dc9b82eca0196f7bc300295"
+}

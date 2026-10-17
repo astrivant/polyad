@@ -1,0 +1,314 @@
+{
+  "measurement": {
+    "base": "de7115d208ec2d02e6cb73a13016302c0bc70085",
+    "merge_base": "de7115d208ec2d02e6cb73a13016302c0bc70085",
+    "head": "d5439a9667234c9318cadff85d3c459342a2f5c2",
+    "classifier": "Pygments 2.21.0",
+    "deltas": [
+      {
+        "before": ".pre-commit-config.yaml",
+        "after": ".pre-commit-config.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "SKILL.md",
+        "after": "SKILL.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/development/repository-review.md",
+        "after": "docs/development/repository-review.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "poetry.lock",
+        "after": "poetry.lock",
+        "added": 26,
+        "deleted": 10
+      },
+      {
+        "before": "pyproject.toml",
+        "after": "pyproject.toml",
+        "added": 7,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/ownership/__init__.py",
+        "after": "scripts/ownership/__init__.py",
+        "added": 0,
+        "deleted": 5
+      },
+      {
+        "before": "scripts/ownership/__main__.py",
+        "after": "scripts/ownership/__main__.py",
+        "added": 0,
+        "deleted": 9
+      },
+      {
+        "before": "scripts/ownership/cli.py",
+        "after": "scripts/ownership/cli.py",
+        "added": 0,
+        "deleted": 137
+      },
+      {
+        "before": "scripts/ownership/compiler.py",
+        "after": "scripts/ownership/compiler.py",
+        "added": 0,
+        "deleted": 242
+      },
+      {
+        "before": "tests/contracts/test_ownership_compiler.py",
+        "after": "tests/contracts/test_ownership_compiler.py",
+        "added": 2,
+        "deleted": 3
+      }
+    ],
+    "shares": [
+      {
+        "language": "Python",
+        "added": 2,
+        "deleted": 396
+      },
+      {
+        "language": "TOML",
+        "added": 33,
+        "deleted": 11
+      },
+      {
+        "language": "Markdown",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "language": "YAML",
+        "added": 2,
+        "deleted": 2
+      }
+    ]
+  },
+  "rows": [
+    {
+      "delta": {
+        "before": "scripts/ownership/compiler.py",
+        "after": "scripts/ownership/compiler.py",
+        "added": 0,
+        "deleted": 242
+      },
+      "description": "+0 added / -242 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": "scripts/ownership/cli.py",
+        "after": "scripts/ownership/cli.py",
+        "added": 0,
+        "deleted": 137
+      },
+      "description": "+0 added / -137 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": "poetry.lock",
+        "after": "poetry.lock",
+        "added": 26,
+        "deleted": 10
+      },
+      "description": "+26 added / -10 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": "scripts/ownership/__main__.py",
+        "after": "scripts/ownership/__main__.py",
+        "added": 0,
+        "deleted": 9
+      },
+      "description": "+0 added / -9 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": "pyproject.toml",
+        "after": "pyproject.toml",
+        "added": 7,
+        "deleted": 1
+      },
+      "description": "+7 added / -1 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": "scripts/ownership/__init__.py",
+        "after": "scripts/ownership/__init__.py",
+        "added": 0,
+        "deleted": 5
+      },
+      "description": "+0 added / -5 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": "tests/contracts/test_ownership_compiler.py",
+        "after": "tests/contracts/test_ownership_compiler.py",
+        "added": 2,
+        "deleted": 3
+      },
+      "description": "+2 added / -3 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": ".pre-commit-config.yaml",
+        "after": ".pre-commit-config.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      "description": "+2 added / -2 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": "SKILL.md",
+        "after": "SKILL.md",
+        "added": 1,
+        "deleted": 1
+      },
+      "description": "+1 added / -1 removed",
+      "kind": "diff"
+    },
+    {
+      "delta": {
+        "before": "docs/development/repository-review.md",
+        "after": "docs/development/repository-review.md",
+        "added": 1,
+        "deleted": 1
+      },
+      "description": "+1 added / -1 removed",
+      "kind": "diff"
+    }
+  ],
+  "pages": [
+    {
+      "file": "files-001.png",
+      "paths": [
+        "scripts/ownership/compiler.py",
+        "scripts/ownership/cli.py",
+        "poetry.lock",
+        "scripts/ownership/__main__.py",
+        "pyproject.toml",
+        "scripts/ownership/__init__.py",
+        "tests/contracts/test_ownership_compiler.py",
+        ".pre-commit-config.yaml",
+        "SKILL.md",
+        "docs/development/repository-review.md"
+      ],
+      "sha256": "a5990da2bbd6a33d0398fc62eb0de26fbe7c94ed179ddb2c993ef4b30fdf1e0e"
+    }
+  ],
+  "projection": {
+    "version": "directory-partition/1",
+    "max_rows": 10,
+    "height_inches": 4.8,
+    "groups": [
+      {
+        "label": "scripts/ownership/compiler.py",
+        "paths": [
+          "scripts/ownership/compiler.py"
+        ],
+        "added": 0,
+        "deleted": 242,
+        "binary": 0
+      },
+      {
+        "label": "scripts/ownership/cli.py",
+        "paths": [
+          "scripts/ownership/cli.py"
+        ],
+        "added": 0,
+        "deleted": 137,
+        "binary": 0
+      },
+      {
+        "label": "poetry.lock",
+        "paths": [
+          "poetry.lock"
+        ],
+        "added": 26,
+        "deleted": 10,
+        "binary": 0
+      },
+      {
+        "label": "scripts/ownership/__main__.py",
+        "paths": [
+          "scripts/ownership/__main__.py"
+        ],
+        "added": 0,
+        "deleted": 9,
+        "binary": 0
+      },
+      {
+        "label": "pyproject.toml",
+        "paths": [
+          "pyproject.toml"
+        ],
+        "added": 7,
+        "deleted": 1,
+        "binary": 0
+      },
+      {
+        "label": "scripts/ownership/__init__.py",
+        "paths": [
+          "scripts/ownership/__init__.py"
+        ],
+        "added": 0,
+        "deleted": 5,
+        "binary": 0
+      },
+      {
+        "label": "tests/",
+        "paths": [
+          "tests/contracts/test_ownership_compiler.py"
+        ],
+        "added": 2,
+        "deleted": 3,
+        "binary": 0
+      },
+      {
+        "label": ".pre-commit-config.yaml",
+        "paths": [
+          ".pre-commit-config.yaml"
+        ],
+        "added": 2,
+        "deleted": 2,
+        "binary": 0
+      },
+      {
+        "label": "SKILL.md",
+        "paths": [
+          "SKILL.md"
+        ],
+        "added": 1,
+        "deleted": 1,
+        "binary": 0
+      },
+      {
+        "label": "docs/",
+        "paths": [
+          "docs/development/repository-review.md"
+        ],
+        "added": 1,
+        "deleted": 1,
+        "binary": 0
+      }
+    ]
+  },
+  "palette_sha256": "df3607dacd40a0c4dbfb4b0053752953f4b40d060401fe4e42a3d842f6a8a15c",
+  "matplotlib": "3.11.2",
+  "description_inputs": {},
+  "intent_checked_at": null,
+  "model_calls": 0
+}

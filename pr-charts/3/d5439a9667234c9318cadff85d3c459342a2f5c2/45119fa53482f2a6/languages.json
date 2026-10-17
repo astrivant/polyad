@@ -1,0 +1,94 @@
+{
+  "measurement": {
+    "base": "de7115d208ec2d02e6cb73a13016302c0bc70085",
+    "merge_base": "de7115d208ec2d02e6cb73a13016302c0bc70085",
+    "head": "d5439a9667234c9318cadff85d3c459342a2f5c2",
+    "classifier": "Pygments 2.21.0",
+    "deltas": [
+      {
+        "before": ".pre-commit-config.yaml",
+        "after": ".pre-commit-config.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "SKILL.md",
+        "after": "SKILL.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/development/repository-review.md",
+        "after": "docs/development/repository-review.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "poetry.lock",
+        "after": "poetry.lock",
+        "added": 26,
+        "deleted": 10
+      },
+      {
+        "before": "pyproject.toml",
+        "after": "pyproject.toml",
+        "added": 7,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/ownership/__init__.py",
+        "after": "scripts/ownership/__init__.py",
+        "added": 0,
+        "deleted": 5
+      },
+      {
+        "before": "scripts/ownership/__main__.py",
+        "after": "scripts/ownership/__main__.py",
+        "added": 0,
+        "deleted": 9
+      },
+      {
+        "before": "scripts/ownership/cli.py",
+        "after": "scripts/ownership/cli.py",
+        "added": 0,
+        "deleted": 137
+      },
+      {
+        "before": "scripts/ownership/compiler.py",
+        "after": "scripts/ownership/compiler.py",
+        "added": 0,
+        "deleted": 242
+      },
+      {
+        "before": "tests/contracts/test_ownership_compiler.py",
+        "after": "tests/contracts/test_ownership_compiler.py",
+        "added": 2,
+        "deleted": 3
+      }
+    ],
+    "shares": [
+      {
+        "language": "Python",
+        "added": 2,
+        "deleted": 396
+      },
+      {
+        "language": "TOML",
+        "added": 33,
+        "deleted": 11
+      },
+      {
+        "language": "Markdown",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "language": "YAML",
+        "added": 2,
+        "deleted": 2
+      }
+    ]
+  },
+  "palette_sha256": "df3607dacd40a0c4dbfb4b0053752953f4b40d060401fe4e42a3d842f6a8a15c",
+  "matplotlib": "3.11.2"
+}
