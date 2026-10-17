@@ -23,9 +23,9 @@ def test_only_the_entry_workflow_has_triggers_and_stages_remain_in_the_same_run(
     """
     Split implementation files without introducing independent pipelines or mutable stage refs.
     """
-    assert set(WORKFLOWS) == {"ci.yml", "stage-test.yml", "stage-build.yml", "stage-measure.yml", "stage-deploy.yml"}
-    assert set(PIPELINE["on"]) == {"push", "pull_request", "workflow_dispatch"}
-    assert PIPELINE["on"]["push"] == {"branches": ["**"], "tags": ["**"]}
+    assert set(WORKFLOWS) == {"ci.yml", "stage-test.yml", "stage-build.yml", "stage-measure.yml", "stage-deploy.yml", "stage-repair.yml"}
+    assert set(PIPELINE["on"]) == {"push", "pull_request", "pull_request_target", "schedule", "workflow_dispatch"}
+    assert PIPELINE["on"]["push"] == {"branches": ["**", "!pr-assets"], "tags": ["**"]}
     assert len(JOBS) == sum(len(workflow["jobs"]) for workflow in WORKFLOWS.values())
 
     for name in ("test", "build", "measure", "deploy"):
@@ -38,6 +38,13 @@ def test_only_the_entry_workflow_has_triggers_and_stages_remain_in_the_same_run(
         assert workflow["on"]["workflow_call"]["inputs"]["sha"]["required"] == "true"
         assert workflow["permissions"] == {"contents": "read"}
         assert workflow["defaults"]["run"]["shell"] == "bash"
+
+    # Repair reads only the trusted event revision and stays outside candidate stages.
+    repair = WORKFLOWS["stage-repair.yml"]
+    assert set(repair["on"]) == {"workflow_call"}
+    assert repair["permissions"] == {"contents": "read"}
+    assert JOBS["generated-repair"]["uses"] == "./.github/workflows/stage-repair.yml"
+    assert "with" not in JOBS["generated-repair"]
 
     # Dependencies must stay within their file; reusable calls form the parent graph.
     def visit(jobs, name, ancestors=()):
@@ -69,7 +76,8 @@ def test_all_validation_branches_join_before_publishing():
         assert JOBS[name]["needs"] == "source" and "if" not in JOBS[name]
     for workflow, gate in ((TEST, "test-complete"), (BUILD, "build-complete"), (MEASURE, "measure-complete")):
         assert CHECKS[gate] == set(workflow["jobs"]) - {gate}
-    assert all(JOBS[name]["if"] == "always()" for name in GATES)
+    assert JOBS["verified"]["if"] == ("always() && github.event_name != 'pull_request_target' && github.event_name != 'schedule'")
+    assert all(JOBS[name]["if"] == "always()" for name in GATES if name != "verified")
     for name in ("measure-stage", "deploy-stage"):
         assert JOBS[name]["needs"] == ["source", "verified"]
         assert "!cancelled() && needs.verified.result == 'success'" in JOBS[name]["if"]
@@ -82,14 +90,19 @@ def test_all_checkouts_use_the_resolved_source():
     """
     Pass the selected immutable source through every reusable workflow boundary.
     """
+    checked = set()
     for filename, workflow in WORKFLOWS.items():
         for name, job in workflow["jobs"].items():
             if name == "source":
                 continue
-            checkouts = [step for step in job.get("steps", []) if step.get("uses") == "actions/checkout@v4"]
+            checkouts = [step for step in job.get("steps", []) if step.get("uses", "").startswith("actions/checkout@")]
             for checkout in checkouts:
                 expected = "${{ needs.source.outputs.sha }}" if filename == "ci.yml" else "${{ inputs.sha }}"
+                if filename == "stage-repair.yml":
+                    expected = "${{ github.sha }}"
                 assert checkout["with"]["ref"] == expected, (filename, name)
+                checked.add(filename)
+    assert checked == set(WORKFLOWS)
 
 
 def test_manual_cloud_benchmarks_remain_explicit_and_environment_protected():
