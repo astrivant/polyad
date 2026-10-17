@@ -45,7 +45,7 @@ create resources and require an explicitly selected disposable environment.
   its own `references/<profile>/values.yaml` and generated README.
 - Keep API routes in the single composed Flask application. Runtime owners control
   admission, queue bounds and shutdown; preserve authentication and tenancy contracts.
-- Run the ownership compiler whenever changing `.github/CODEOWNERS`. Commit hooks
+- Run the pinned Ownerloom dependency whenever changing `.github/CODEOWNERS`. Commit hooks
   normalize literal paths; push hooks verify the committed tree. The separate linter
   validates syntax and path coverage.
 - Preserve saved measurements and their provenance. Do not rewrite historical results

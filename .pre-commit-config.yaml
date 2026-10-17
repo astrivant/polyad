@@ -58,13 +58,13 @@ repos:
         always_run: true
       - id: codeowners-tree
         name: Normalize CODEOWNERS in directory order
-        entry: bash scripts/tooling/project-python.sh -m scripts.ownership --write
+        entry: bash scripts/tooling/project-python.sh -m ownerloom --write
         language: system
         pass_filenames: false
         always_run: true
       - id: codeowners-tree-push
         name: Verify committed CODEOWNERS tree
-        entry: bash scripts/tooling/project-python.sh -m scripts.ownership --check --revision HEAD
+        entry: bash scripts/tooling/project-python.sh -m ownerloom --check --revision HEAD
         language: system
         pass_filenames: false
         always_run: true

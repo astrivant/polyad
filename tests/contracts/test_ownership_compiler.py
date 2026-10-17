@@ -12,9 +12,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 import pytest
-
-from scripts.ownership.cli import main
-from scripts.ownership.compiler import compile_owners
+from ownerloom import compile_owners
+from ownerloom.cli import main
 
 
 def owners(source: str, path: str) -> tuple[str, ...]:
