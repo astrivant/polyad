@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/astrivant/polyad.git
     targetRevision: {{ .Values.revision | quote }}
-    path: charts/polyad-benchmarks
+    path: helm/polyad-benchmarks
     helm:
       releaseName: benchmarks
       # Polyad owns its CRDs. Install monitoring CRDs separately before first sync.

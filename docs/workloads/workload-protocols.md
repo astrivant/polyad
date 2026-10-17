@@ -167,7 +167,7 @@ Polyad's templates, write the same standard Service fields directly; do not
 install an additional operator just to obtain this helper. Keep endpoints and
 graph connection ports aligned with the actual Service and Pod manifests.
 
-[Reference values](../../charts/polyad/references/values-workload-protocols.reference.yaml)
+[Reference values](../../helm/polyad/references/workload-protocols/values.yaml)
 list the existing operator switches for optional mesh installation, consent and
 events. These transports introduce no new global enable switch or CRD fields.
 Static graph network access can be used without temporary connections.

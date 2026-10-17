@@ -27,7 +27,7 @@ time-targeted **Adaptive-target PID** remains a separate comparator and selectab
 runtime mode (`feedback: ComputationTime`). Reduction itself remains
 opt-in at both operator and policy levels; `strategy: CacheFirst` at either level
 retains legacy ordering. The production scheduler and study use the same PID
-implementation. See the [operator values reference](../../charts/polyad/references/values-cheeger.reference.yaml)
+implementation. See the [operator values reference](../../helm/polyad/references/cheeger/values.yaml)
 and [configuration guide](../../docs/graphs/cheeger-tuning.md).
 The archived [PCA reduction study](../cheeger-reduction-deprecated/README.md) keeps its
 original dimension and compression experiments; this study adds the production

@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# yaml-language-server: $schema=../../helm/polyad/values.reference.schema.json
 # Overlay examples/root-control-plane/values.yaml in the management cluster.
 ## @param rootControlPlane [object] Settings for rootControlPlane.
 rootControlPlane:

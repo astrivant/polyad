@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "artifacts": [
+    {
+      "output": ".github/CODEOWNERS",
+      "inputs": [
+        ".github/CODEOWNERS"
+      ],
+      "renderer": "codeowners",
+      "reason": "Three-way literal rules with one unchanged owner group; changed owners or syntax require review."
+    },
+    {
+      "output": "pkg/polyad-schemas/polyad_schemas/resources/external-secrets-LICENSE",
+      "inputs": [
+        "schemas/licenses/external-secrets-LICENSE"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "helm/polyad/schemas/external-secrets-LICENSE",
+      "inputs": [
+        "schemas/licenses/external-secrets-LICENSE"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "pkg/polyad-schemas/polyad_schemas/resources/keda-LICENSE",
+      "inputs": [
+        "schemas/licenses/keda-LICENSE"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "helm/polyad/schemas/keda-LICENSE",
+      "inputs": [
+        "schemas/licenses/keda-LICENSE"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "pkg/polyad-schemas/polyad_schemas/resources/gateway-api-LICENSE",
+      "inputs": [
+        "schemas/licenses/gateway-api-LICENSE"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "helm/polyad/schemas/gateway-api-LICENSE",
+      "inputs": [
+        "schemas/licenses/gateway-api-LICENSE"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "pkg/polyad-schemas/polyad_schemas/resources/istio-LICENSE",
+      "inputs": [
+        "schemas/licenses/istio-LICENSE"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "helm/polyad/schemas/istio-LICENSE",
+      "inputs": [
+        "schemas/licenses/istio-LICENSE"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "pkg/polyad-schemas/polyad_schemas/resources/dragonfly-operator-LICENSE",
+      "inputs": [
+        "helm/polyad/LICENSE.dragonfly-operator"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "helm/polyad/schemas/dragonfly-operator-LICENSE",
+      "inputs": [
+        "helm/polyad/LICENSE.dragonfly-operator"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "helm/polyad-crds/schemas/dragonfly-operator-LICENSE",
+      "inputs": [
+        "helm/polyad/LICENSE.dragonfly-operator"
+      ],
+      "renderer": "copy",
+      "reason": "Exact generated copy of the canonical upstream license notice."
+    },
+    {
+      "output": "helm/**/*.json",
+      "inputs": [
+        "scripts/schemas",
+        "pkg",
+        "schemas"
+      ],
+      "renderer": "manual",
+      "reason": "Schema generators import application models; run after source review with generate-all.py."
+    },
+    {
+      "output": "pkg/polyad-schemas/**/*.json",
+      "inputs": [
+        "scripts/schemas",
+        "pkg",
+        "schemas"
+      ],
+      "renderer": "manual",
+      "reason": "Schema generators import application models; run after source review with generate-all.py."
+    },
+    {
+      "output": "helm/polyad-crds/values*.yaml",
+      "inputs": [
+        "scripts/schemas",
+        "helm/polyad-crds/crds"
+      ],
+      "renderer": "manual",
+      "reason": "Generated values require the reviewed schema pipeline."
+    },
+    {
+      "output": "helm/polyad-crds/references/*/values.yaml",
+      "inputs": [
+        "scripts/schemas",
+        "helm/polyad-crds/crds"
+      ],
+      "renderer": "manual",
+      "reason": "Generated reference overlays require the reviewed schema pipeline."
+    },
+    {
+      "output": "**/README.md",
+      "inputs": [
+        "scripts/documentation/update-contents.py",
+        "scripts/schemas",
+        "helm"
+      ],
+      "renderer": "manual",
+      "reason": "Mixed authored prose, generated tables and TOCs; never replace the complete file."
+    },
+    {
+      "output": "studies/**/*.svg",
+      "inputs": [
+        "scripts",
+        "studies"
+      ],
+      "renderer": "manual",
+      "reason": "Measured figures require reviewed measurements and renderer; never discard evidence to merge."
+    },
+    {
+      "output": "studies/**/*.png",
+      "inputs": [
+        "scripts",
+        "studies"
+      ],
+      "renderer": "manual",
+      "reason": "Measured figures require reviewed measurements and renderer; never discard evidence to merge."
+    },
+    {
+      "output": "README.md",
+      "inputs": [
+        "scripts/documentation/update-contents.py"
+      ],
+      "renderer": "manual",
+      "reason": "Root README mixes authored onboarding with a generated TOC; preserve authored content."
+    },
+    {
+      "output": "helm/polyad-crds/crds/*.yaml",
+      "inputs": [
+        "pkg",
+        "scripts/schemas"
+      ],
+      "renderer": "manual",
+      "reason": "Generated status and network subtrees share files with authored CRD contracts."
+    },
+    {
+      "output": "helm/polyad-benchmarks/values*.yaml",
+      "inputs": [
+        "helm/polyad-benchmarks",
+        "scripts/schemas"
+      ],
+      "renderer": "manual",
+      "reason": "Generated references and annotated values require the reviewed chart generators."
+    },
+    {
+      "output": "dist/*",
+      "inputs": [
+        "pkg",
+        "pyproject.toml",
+        "poetry.lock",
+        "helm",
+        "scripts/release"
+      ],
+      "renderer": "manual",
+      "reason": "Release deliverables and signatures belong to the verified release run, never conflict repair."
+    }
+  ]
+}

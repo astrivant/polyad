@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/astrivant/polyad.git
     targetRevision: main # Pin to the exact commit used for a measured run.
-    path: charts/polyad-benchmarks
+    path: helm/polyad-benchmarks
     helm:
       releaseName: benchmarks
       skipTests: true

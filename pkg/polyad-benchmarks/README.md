@@ -84,7 +84,7 @@ and includes it in its results. Optional Reloader support rolls the fixture
 Daemon after plan updates; it never restarts finite batch or runner Jobs.
 Change plans between runs. See [plan configuration](../../studies/load/README.md#plans-and-replica-counts).
 
-The [chart reference](../../charts/polyad-benchmarks/README.md#parameters) types
+The [chart reference](../../helm/polyad-benchmarks/README.md#parameters) types
 arrival rate, window, request cap, concurrency, execution deadline, HTTP timeout
 and polling interval. `POLYAD_BENCHMARK_CONFIG` remains a JSON fallback for direct
 CLI runs without `--plan`. `POLYAD_BENCHMARK_FIXTURE_TOKEN` authenticates fixture

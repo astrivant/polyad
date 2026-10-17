@@ -45,7 +45,7 @@ Prepare the `polyad-api`, `polyad-events` and `polyad-metrics` token Secrets,
 or configure ESO to create them. Then:
 
 ```bash
-helm upgrade --install polyad charts/polyad --namespace polyad --create-namespace \
+helm upgrade --install polyad helm/polyad --namespace polyad --create-namespace \
   --values examples/components/values.yaml
 ```
 
@@ -142,7 +142,7 @@ Cheeger constant 1. Its referenced GraphPolicy uses `scope: Boundary`,
 `architecture.cheegerMinimum` (default 1). Optional `architecture.cheegerMaximum`
 defaults to `null` (unbounded); set it to `1` to permit the chain but reject a
 fully connected triangle, whose expansion is `2`. See the
-[typed component reference](../../charts/polyad/references/values-components.reference.yaml)
+[typed component reference](../../helm/polyad/references/components/values.yaml)
 and [practical tuning guide](../graphs/cheeger-tuning.md). `architecture.expandedNodes` bounds
 the three group vertices plus their Daemon copies. The default 27 permits all
 three groups to reach eight copies; smaller budgets can block a scaling request.

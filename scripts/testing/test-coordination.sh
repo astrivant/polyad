@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 # Exercise shard handoff and queue recovery in an isolated installed namespace.
 set -euo pipefail
+
+##
+# Restore scheduling on the test node, retaining the failed test's status.
+# -> ret::exit_code
+restore_test_node() {
+    local status="$?"
+    trap - EXIT
+    if ! kubectl uncordon "$primary_node"; then
+        if [ "$status" -eq 0 ]; then status=1; fi
+    fi
+    exit "$status"
+}
 namespace="${POLYAD_TEST_NAMESPACE:-polyad}"
 export POLYAD_TEST_NAMESPACE="$namespace"
 kubectl -n "$namespace" scale deployment/polyad-polyad --replicas=3
@@ -57,7 +69,7 @@ primary="$(kubectl -n "$namespace" get pod -l app=polyad-queue,role=master -o js
 if [[ "${POLYAD_TEST_DRAGONFLY_HA:-false}" == true ]]; then
     # Prevent the old primary from returning until a replica serves real work.
     primary_node="$(kubectl -n "$namespace" get pod "$primary" -o jsonpath='{.spec.nodeName}')"
-    trap 'kubectl uncordon "$primary_node"' EXIT
+    trap restore_test_node EXIT
     kubectl cordon "$primary_node"
     kubectl -n "$namespace" delete pod "$primary" --wait=true
     export POLYAD_TEST_PREVIOUS_PRIMARY="$primary"

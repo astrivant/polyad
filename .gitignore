@@ -12,5 +12,8 @@ htmlcov/
 .ruff_cache/
 dist/
 node_modules/
-charts/polyad/charts/
-charts/polyad-benchmarks/charts/
+helm/polyad/charts/
+helm/polyad-benchmarks/charts/
+
+# Finder metadata is never source evidence.
+.DS_Store

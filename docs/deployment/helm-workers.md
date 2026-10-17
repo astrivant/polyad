@@ -41,7 +41,7 @@ Configure each downstream release's internal worker counts, planner parallelism,
 write admission and validation cadence with `operator.writeQueue`. Those settings
 remain under the downstream administrator's control for either scaling authority.
 See the [configuration flow and example](../development/write-pipeline.md#configuration)
-and [typed tuning overlay](../../charts/polyad/references/values-tuning.reference.yaml).
+and [typed tuning overlay](../../helm/polyad/references/tuning/values.yaml).
 
 ```mermaid
 flowchart TB
@@ -74,7 +74,7 @@ use a [root-provisioned DaemonSet pool](root-control-plane.md#reserved-graphs-fo
 
 ## Prepare credentials and configuration
 
-Start with [`values-worker.reference.yaml`](../../charts/polyad/references/values-worker.reference.yaml).
+Start with [`worker/values.yaml`](../../helm/polyad/references/worker/values.yaml).
 It is a typed, commented overlay for the same chart, installed in the **downstream**
 cluster and namespace. Root settings identify the existing management release:
 
@@ -129,7 +129,7 @@ For the example identities above, install the root with an attachment declaratio
 instead of its usual root-provisioned pool:
 
 ```bash
-helm upgrade --install polyad charts/polyad \
+helm upgrade --install polyad helm/polyad \
   --kube-context management --namespace polyad --create-namespace \
   --values examples/root-control-plane/values.yaml \
   --values examples/helm-workers/root-values.yaml
@@ -153,9 +153,9 @@ namespace. It does not install it. Install the downstream release after preparin
 the Secrets above and selecting the same image as the root:
 
 ```bash
-helm upgrade --install west charts/polyad \
+helm upgrade --install west helm/polyad \
   --kube-context west --namespace workloads --create-namespace \
-  --values charts/polyad/references/values-worker.reference.yaml --wait
+  --values helm/polyad/references/worker/values.yaml --wait
 ```
 
 The root validates the local grant, creates the observation Graph and links it
@@ -172,7 +172,7 @@ root replica change. Concurrent edits to the pool or downstream Deployment
 invalidate the pending write and trigger a fresh reconciliation.
 
 On existing installations, update the chart's
-[`OperatorPool` CRD](../../charts/polyad-crds/crds/operatorpools.yaml) before using the new
+[`OperatorPool` CRD](../../helm/polyad-crds/crds/operatorpools.yaml) before using the new
 fields. Helm installs CRDs on first installation but does not upgrade them;
 administrators also maintain the downstream CRDs for Helm-installed workers.
 
@@ -182,16 +182,16 @@ Set `scalingAuthority: Local` on the root pool, and use the
 [local worker overlay](../../examples/helm-workers/local-values.yaml) downstream:
 
 ```bash
-helm upgrade --install west charts/polyad \
+helm upgrade --install west helm/polyad \
   --kube-context west --namespace workloads --create-namespace \
-  --values charts/polyad/references/values-worker.reference.yaml \
+  --values helm/polyad/references/worker/values.yaml \
   --values examples/helm-workers/local-values.yaml --wait
 ```
 
 That overlay sets `worker.scalingAuthority: Local`, `ha: true` and
 `operator.replicaCount: 2`. Enable `operator.autoscaling.enabled: true` to let the
 downstream HPA own replicas instead. Its optional CPU and memory metrics use the
-normal [operator autoscaling settings](../../charts/polyad/README.md#operator-and-shared-queue-parameters).
+normal [operator autoscaling settings](../../helm/polyad/README.md#operator-and-shared-queue-parameters).
 Use `ha: false` with the default replica count for a single local worker.
 
 The root reports the native Deployment's actual replica count and readiness. The

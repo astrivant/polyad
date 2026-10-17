@@ -12,9 +12,9 @@ spec:
   url: https://github.com/astrivant/polyad.git
   ref:
     {{ .Values.flux.revisionType }}: {{ .Values.revision | quote }}
-{{- $releases := list (dict "name" "polyad" "releaseName" "polyad" "chart" "charts/polyad" "settings" .Values) }}
+{{- $releases := list (dict "name" "polyad" "releaseName" "polyad" "chart" "helm/polyad" "settings" .Values) }}
 {{- if .Values.benchmarks.enabled }}
-{{- $releases = append $releases (dict "name" "polyad-benchmarks" "releaseName" "benchmarks" "chart" "charts/polyad-benchmarks" "settings" .Values.benchmarks) }}
+{{- $releases = append $releases (dict "name" "polyad-benchmarks" "releaseName" "benchmarks" "chart" "helm/polyad-benchmarks" "settings" .Values.benchmarks) }}
 {{- end }}
 {{- range $release := $releases }}
 {{- $benchmark := eq $release.name "polyad-benchmarks" }}

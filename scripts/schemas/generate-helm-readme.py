@@ -9,6 +9,7 @@ import json
 import re
 import runpy
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -25,10 +26,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--readme", required=True)
     parser.add_argument("--values", required=True)
+    parser.add_argument("--references", action="store_true")
     args = parser.parse_args()
     source = Path(args.values).read_text()
     checker = runpy.run_path(str(Path(__file__).resolve().parents[1] / "validation/check-values.py"))
     source = checker["commented_example"](source) or source
+    # Bitnami groups parameters beneath sections; overlays often have no section marker.
+    if not re.search(r"^\s*##\s*@section\s", source, flags=re.MULTILINE):
+        source = "## @section Configuration\n" + source
     values = yaml.safe_load(source)
     names = re.findall(r"^\s*##\s*@param\s+(\S+)", source, flags=re.MULTILINE)
     parents = {name for name in names if any(other.startswith(name + ".") for other in names)}
@@ -74,7 +79,11 @@ def main() -> int:
 
     readme = Path(args.readme)
     output = re.sub(r"^(\|\s*`([^`]+)`\s*\|.*)\|\s*`[^`]*`\s*\|$", default, readme.read_text(), flags=re.MULTILINE)
-    readme.write_text(output)
+    readme.write_text(output.rstrip() + "\n")
+    if args.references:
+        # Each overlay owns its parameter table; the hook checks the entire chart surface.
+        for values in sorted(Path(args.values).parent.glob("references/*/values.yaml")):
+            subprocess.run([sys.executable, __file__, "--readme", str(values.with_name("README.md")), "--values", str(values)], check=True)
     return 0
 
 

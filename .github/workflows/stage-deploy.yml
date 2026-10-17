@@ -17,6 +17,10 @@ on:
         description: PyPI credential, optionally supplied by the protected pypi environment
         required: false
 
+      COSIGN_PRIVATE_KEY:
+        required: true
+      COSIGN_PASSWORD:
+        required: true
 permissions:
   contents: read
 
@@ -33,13 +37,14 @@ jobs:
       cancel-in-progress: false
     environment: pypi
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.sha }}
           persist-credentials: false
-      - uses: actions/setup-python@v5
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         if: inputs.release-tag != ''
         with:
           python-version-file: .python-version
@@ -57,28 +62,106 @@ jobs:
           RELEASE_TAG: ${{ inputs.release-tag }}
         run: python .github/release-version.py --tag "$RELEASE_TAG" --output "$GITHUB_OUTPUT"
       - name: Download verified distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: python-distributions-${{ steps.version.outputs.version }}
           path: dist/
-      - name: Publish wheel and source distribution
+      - name: Download verified Helm charts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: helm-chart-${{ inputs.release-tag }}
+          path: dist/chart/
+      - name: Read signing tool pin
+        id: tools
+        run: echo "cosign=v$(bash scripts/tooling/tool-version.sh cosign)" >> "$GITHUB_OUTPUT"
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+        with:
+          cosign-release: ${{ steps.tools.outputs.cosign }}
+      - name: Prepare release notes from the verified signed tag
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          SOURCE_SHA: ${{ inputs.sha }}
+          RELEASE_OPERATION: prepare
+        with:
+          script: |
+            const operation = require('./scripts/release/feedback.cjs');
+            await operation({github, context, core});
+      - name: Publish signed artifacts and Python packages
+        env:
+          GH_TOKEN: ${{ github.token }}
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if [[ -z "$POETRY_PYPI_TOKEN_PYPI" ]]; then
-            echo '::error::PYPI_API_TOKEN is unavailable. Grant this repository access to the organization secret, or set a repository/environment secret.'
-            exit 1
-          fi
-
-          # Check the complete release before uploading its first package.
-          for package in polyad_types polyad_schemas polyad_sdk polyad_benchmarks polyad; do
-            test -s "dist/${package}-${PACKAGE_VERSION}-py3-none-any.whl"
-            test -s "dist/${package}-${PACKAGE_VERSION}.tar.gz"
-          done
-          echo "Publishing all five Polyad distributions at $PACKAGE_VERSION to PyPI"
-          poetry -C pkg/polyad-types publish --dist-dir ../../dist --no-interaction
-          poetry -C pkg/polyad-schemas publish --dist-dir ../../dist --no-interaction
-          poetry -C pkg/polyad-sdk publish --dist-dir ../../dist --no-interaction
-          poetry -C pkg/polyad-benchmarks publish --dist-dir ../../dist --no-interaction
-          poetry publish --no-interaction
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          SOURCE_SHA: ${{ inputs.sha }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_PUBLIC_KEY_SHA256: ${{ vars.COSIGN_PUBLIC_KEY_SHA256 }}
+        run: bash scripts/release/publish.sh
+      - name: Retain contributor inventory
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: release-feedback-${{ inputs.release-tag }}
+          path: |-
+            ${{ runner.temp }}/release-prs.json
+            ${{ runner.temp }}/release-notes.md
+          if-no-files-found: error
+    permissions:
+      contents: write
+      pull-requests: read
+  release-acceptance:
+    name: Verify published release
+    needs: publish
+    if: "!cancelled() && inputs.release-tag != ''"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version-file: .python-version
+      - name: Read signing tool pin
+        id: tools
+        run: echo "cosign=v$(bash scripts/tooling/tool-version.sh cosign)" >> "$GITHUB_OUTPUT"
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+        with:
+          cosign-release: ${{ steps.tools.outputs.cosign }}
+      - name: Require complete published attachments
+        env:
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          SOURCE_SHA: ${{ inputs.sha }}
+          COSIGN_PUBLIC_KEY_SHA256: ${{ vars.COSIGN_PUBLIC_KEY_SHA256 }}
+        run: bash scripts/release/verify-published.sh
+  release-feedback:
+    name: Close the contributor release loop
+    needs:
+      - publish
+      - release-acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: release-feedback-${{ inputs.release-tag }}
+          path: ${{ runner.temp }}
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          SOURCE_SHA: ${{ inputs.sha }}
+          RELEASE_OPERATION: notify
+        with:
+          script: |
+            const operation = require('./scripts/release/feedback.cjs');
+            await operation({github, context, core});

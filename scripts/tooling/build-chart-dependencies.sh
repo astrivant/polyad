@@ -3,7 +3,7 @@
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$root"
-if [[ $# == 0 ]]; then set -- charts/polyad charts/polyad-benchmarks; fi
+if [[ $# == 0 ]]; then set -- helm/polyad helm/polyad-benchmarks; fi
 
 # Even disabled dependencies must be resolvable on a fresh Helm installation.
 # OCI and file:// dependencies are fetched directly, not registered as repositories.

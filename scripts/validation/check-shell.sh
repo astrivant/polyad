@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 # Check shell lint and four-space formatting with the pinned tools.
 set -euo pipefail
+##
+# Remove the owned temporary path and preserve the original exit status.
+# -> ret::exit_code
+cleanup_manifest() {
+    local status="$?"
+    trap - EXIT
+    if ! rm -f -- "$manifest"; then
+        if [ "$status" -eq 0 ]; then status=1; fi
+    fi
+    exit "$status"
+}
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$root"
 # A Python virtual environment may shadow a correctly installed native formatter.
@@ -33,7 +44,7 @@ shfmt_bin=$(resolve_tool shfmt "$(bash scripts/tooling/tool-version.sh shfmt)")
 files=("$@")
 if [[ ${#files[@]} == 0 ]]; then
     manifest=$(mktemp)
-    trap 'rm -f "$manifest"' EXIT
+    trap cleanup_manifest EXIT
     git ls-files -z --cached --others --exclude-standard -- '*.sh' '*.bash' >"$manifest"
     while IFS= read -r -d '' file; do
         # Unstaged moves leave deleted paths in the index until the rename is staged.

@@ -24,7 +24,7 @@ Prometheus endpoint for KEDA.
 The operator chart can install [Grafana Alloy](telemetry-agents.md) to collect
 traces alongside component metrics and container logs, or use your existing collector.
 
-Use the typed [tracing values reference](../../charts/polyad/references/values-tracing.reference.yaml)
+Use the typed [tracing values reference](../../helm/polyad/references/tracing/values.yaml)
 with any deployment architecture:
 
 ```yaml

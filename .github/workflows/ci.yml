@@ -1,9 +1,13 @@
 name: Polyad pipeline
 on:
   push:
-    branches: ['**']
+    branches: ['**', '!pr-assets']
     tags: ['**']
   pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, edited, closed]
+  schedule:
+    - cron: "23 */6 * * *"
   workflow_dispatch:
     inputs:
       tag:
@@ -38,6 +42,7 @@ defaults:
 jobs:
   # Pin all stage checkouts to one commit and validate manual PR requests up front.
   source:
+    if: github.event_name != 'pull_request_target' && github.event_name != 'schedule'
     name: Resolve pipeline source
     runs-on: ubuntu-latest
     permissions:
@@ -48,7 +53,7 @@ jobs:
       release-tag: ${{ steps.source.outputs.release-tag }}
       refresh: ${{ steps.request.outputs.refresh }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.sha }}
           fetch-depth: 0
@@ -125,7 +130,7 @@ jobs:
 
   verified:
     name: CI verification
-    if: always()
+    if: always() && github.event_name != 'pull_request_target' && github.event_name != 'schedule'
     needs: [source, test-stage, build-stage]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -171,6 +176,11 @@ jobs:
     secrets:
       PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
 
+      COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+    permissions:
+      contents: write
+      pull-requests: write
   # Reporting remains a leaf, outside the required validation and release stages.
   coverage-badge:
     name: Publish coverage badge
@@ -184,40 +194,55 @@ jobs:
       group: coverage-badge
       cancel-in-progress: false
     steps:
-      # The badge action embeds checkout@v3; both checkouts must use direct-header credentials.
-      - uses: actions/checkout@v4
+      # Publication uses a verified API commit on the artifact branch, without persisted checkout credentials.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.source.outputs.sha }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version-file: .python-version
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - uses: actions/download-artifact@v4
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: python-coverage-all
-      - name: Check whether the badge percentage changed
-        id: badge
+      - name: Read Node pin
+        id: tools
+        run: echo "nodejs=$(bash scripts/tooling/tool-version.sh nodejs)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: ${{ steps.tools.outputs.nodejs }}
+      - name: Bind measured coverage to the source commit
+        env:
+          SOURCE_SHA: ${{ needs.source.outputs.sha }}
+        run: node scripts/coverage/coverage-badge.mjs coverage.json .cache/coverage/badges "$SOURCE_SHA"
+      - name: Publish verified coverage API commit
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          script: |-
+            const { main } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/coverage/publish-coverage.mjs`);
+            await main({github, context, core});
+  release-complete:
+    name: Release verification
+    needs:
+      - source
+      - verified
+      - deploy-stage
+    if: "!cancelled() && needs.source.outputs.release-tag != ''"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reject absent or skipped publication
+        env:
+          VALIDATION_RESULT: ${{ needs.verified.result }}
+          DEPLOY_RESULT: ${{ needs.deploy-stage.result }}
         run: |
-          previous="$RUNNER_TEMP/previous-coverage.svg"
-          if [[ -n "$(git ls-remote --heads origin refs/heads/gh-pages)" ]]; then
-            git fetch origin gh-pages
-            git show FETCH_HEAD:badges/coverage.svg > "$previous" || truncate -s 0 "$previous"
-          else
-            touch "$previous"
-          fi
-          python - "$previous" >> "$GITHUB_OUTPUT" <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-          from xml.etree import ElementTree
+          test "$VALIDATION_RESULT" = success
+          test "$DEPLOY_RESULT" = success
 
-          percent = str(json.loads(Path('coverage.json').read_text())['totals']['percent_covered_display'])
-          previous = Path(sys.argv[1]).read_text()
-          labels = set(ElementTree.fromstring(previous).itertext()) if previous else set()
-          print(f"changed={str(f'{percent}%' not in labels).lower()}")
-          PY
-      # Match hypothesis-helm's Python-capable revision, not the older marketplace tag.
-      - uses: we-cli/coverage-badge-action@8a0b6ee05f6dd0f294089cbe7a848452a2b43eef
-        if: steps.badge.outputs.changed == 'true'
+  generated-repair:
+    name: Repair generated conflicts
+    if: >-
+      github.event_name == 'pull_request_target'
+      || github.event_name == 'schedule'
+      || (github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
+    uses: ./.github/workflows/stage-repair.yml
+    permissions:
+      contents: write
+      pull-requests: read

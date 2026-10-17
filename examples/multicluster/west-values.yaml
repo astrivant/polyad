@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../charts/polyad/values.reference.schema.json
+# yaml-language-server: $schema=../../helm/polyad/values.reference.schema.json
 ## @param global [object] Settings for global.
 global:
   ## @param global.istioNamespace [string] Istio control-plane namespace; must equal the release namespace when mesh.install is enabled

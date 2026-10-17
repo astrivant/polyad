@@ -117,7 +117,7 @@ optional peer identities and extensible admission-status JSON. Receiving an even
 does not approve it; see [service consent](temporary-connections.md#service-consent).
 
 Complete examples of every variant, including local and atlas connection events,
-live in the validated [event fixtures](../../pkg/tests/data/events.json). The
+live in the validated [event fixtures](../../tests/data/events.json). The
 [workload events guide](../workloads/workload-events.md) describes visibility,
 startup, topology refresh and connection hooks.
 
@@ -157,7 +157,7 @@ poetry run python scripts/schemas/generate-event-schemas.py
 
 ## Administrator tuning
 
-Use the typed [event reference values](../../charts/polyad/references/values-events.reference.yaml):
+Use the typed [event reference values](../../helm/polyad/references/events/values.yaml):
 
 ```yaml
 events:

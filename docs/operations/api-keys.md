@@ -33,7 +33,7 @@ alone grants no additional API permissions.
 
 ## Configuration
 
-Use [the complete reference values](../../charts/polyad/references/values-authentication.reference.yaml)
+Use [the complete reference values](../../helm/polyad/references/authentication/values.yaml)
 alongside a deployment profile. Tokens stay in administrator-managed Secrets;
 the chart projects them with a ConfigMap containing only policy and Secret
 references. [External Secrets Operator](authentication.md) can populate them.
@@ -257,7 +257,7 @@ retention separately from graph-event retention.
 
 ## Demonstrations without authentication
 
-Use [values-demo.reference.yaml](../../charts/polyad/references/values-demo.reference.yaml), or
+Use [demo/values.yaml](../../helm/polyad/references/demo/values.yaml), or
 set `authentication.mode: Disabled`. Enabled HTTP listeners then omit credential
 checks and configured request/concurrency quotas, including named-key lanes and
 Flask-Limiter. Event stream slots still reserve shared HTTP workers for other APIs;

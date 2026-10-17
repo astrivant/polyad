@@ -17,7 +17,7 @@ Deployment, StatefulSet or DaemonSet in the same graph. It also parses every
 container policy's CPU and memory `minAllowed` and `maxAllowed`, rejects invalid
 or inverted quantities, and prevents multiple graph-owned VPAs from targeting
 the same controller. The chart compatibility switch is demonstrated in
-[`values-vpa.reference.yaml`](../../charts/polyad/references/values-vpa.reference.yaml).
+[`vpa/values.yaml`](../../helm/polyad/references/vpa/values.yaml).
 
 The VPA itself is a resource definition referenced by a graph node:
 

@@ -19,7 +19,7 @@ disabled by default and does not add another Python API server.
 
 ## Choose a collector
 
-Start with the typed [Alloy reference](../../charts/polyad/references/values-telemetry.reference.yaml).
+Start with the typed [Alloy reference](../../helm/polyad/references/telemetry/values.yaml).
 Set the remote-write URL, Loki push URL and OTLP/HTTP destination for your stack.
 The chart supplies collectors; it does not install those backends.
 
@@ -47,7 +47,7 @@ to port `4317`, or OTLP/HTTP traces to port `4318` at `/v1/traces`. Trace sampli
 remains an application setting; see [OpenTelemetry tracing](tracing.md).
 
 For metrics only, use the
-[Prometheus Agent reference](../../charts/polyad/references/values-prometheus-agent.reference.yaml).
+[Prometheus Agent reference](../../helm/polyad/references/prometheus-agent/values.yaml).
 Select `PrometheusAgent`, one replica, and disable `logs.enabled` and
 `traces.enabled`. Helm rejects a mixed configuration. Metrics collection enables
 the operator's existing metrics listener except in downstream worker mode, where
@@ -154,8 +154,8 @@ so the GKE study collector stays on the dedicated `polyad` pool.
 ## Benchmark deployment
 
 Keep selecting an experiment through the benchmark chart's
-[test profiles](../../charts/polyad-benchmarks/README.md#test-profiles).
-Layer [values-agent-metrics.yaml](../../charts/polyad-benchmarks/values-agent-metrics.yaml)
+[test profiles](../../helm/polyad-benchmarks/README.md#test-profiles).
+Layer [values-agent-metrics.yaml](../../helm/polyad-benchmarks/values-agent-metrics.yaml)
 onto that benchmark release to enable its private Prometheus remote-write
 receiver and disable the duplicate operator ServiceMonitor. The dashboard remains.
 

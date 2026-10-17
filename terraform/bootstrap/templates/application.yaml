@@ -30,7 +30,7 @@ spec:
   source:
     repoURL: https://github.com/astrivant/polyad.git
     targetRevision: {{ .Values.revision | quote }}
-    path: charts/polyad
+    path: helm/polyad
     helm:
       releaseName: polyad
       skipTests: true

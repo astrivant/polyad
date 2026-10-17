@@ -46,7 +46,7 @@ The dependency helper registers Istio, KEDA, Stakater, Prometheus Community,
 Grafana Community and OpenTelemetry before building both charts from their
 committed `Chart.lock` files. Optional dependencies still need their repositories
 when disabled. Local `file://` and OCI dependencies do not use `helm repo add`.
-Pass `charts/polyad` or `charts/polyad-benchmarks` to build only that chart.
+Pass `helm/polyad` or `helm/polyad-benchmarks` to build only that chart.
 CI validation, integration tests and release packaging use the same helper;
 regression tests compare its repository inventory with every chart and lockfile.
 
@@ -117,8 +117,8 @@ dependency. The project defaults to automatic CPU-based worker selection, capped
 at eight workers. Work stealing redistributes pending tests as workers finish.
 The installed-wheel typing checks use the same configuration.
 
-The Python suite and its fixtures live in `pkg/tests/`; pytest discovers them
-automatically. Run a specific file with `poetry run pytest pkg/tests/test_operator.py`.
+The Python suite and its fixtures live in `tests/`; pytest discovers them
+automatically. Run a specific file with `poetry run pytest tests/features/test_operator.py`.
 
 Use `poetry run pytest -n 4` to choose a worker count, or
 `poetry run pytest -n 0` for serial debugging. See the
@@ -335,7 +335,9 @@ poetry install
 poetry run pytest --cov --cov-config=pyproject.toml --cov-report=term --cov-report=html
 ```
 
-Coverage is opt-in locally; ordinary `pytest` invocations remain unchanged.
+Coverage is opt-in locally; ordinary `pytest` invocations remain unchanged. Main
+publishes the aggregate line-coverage badge and source receipt to `gh-pages`
+through a GitHub-verified API commit, leaving protected source history untouched.
 
 ## Version tags
 
@@ -348,14 +350,15 @@ declared version does not need a separate version-bump commit.
 For example, after choosing the commit and an unused release version:
 
 ```sh
-git tag v0.0.1-alpha16 <release-commit>
-git push origin refs/tags/v0.0.1-alpha16
+git tag --sign "$RELEASE_TAG" <release-commit> --message "Polyad $RELEASE_TAG"
+git push origin "refs/tags/$RELEASE_TAG"
 ```
 
 `python scripts/release/release-tag.py` can suggest a tag from the checkout's
 declared package version when that is the version you want to release. CI never
-creates or moves tags. Validation and package release jobs have read-only
-repository access; only the main-branch coverage badge job can write its output branch.
+creates or moves tags. Validation remains read-only. Only the explicit release
+stage and main-branch badge publisher receive scoped write permissions. See
+[signed releases](releases.md) for key setup, verification and recovery.
 The old automatic-tag workflow has been removed; there is no detached follow-up
 run or second chart-validation pass. Existing tags, including previously
 auto-created tags, can be selected with the manual pipeline's `tag` input.
@@ -464,7 +467,7 @@ Branch pushes, tag pushes and pull requests run the `chart` matrix in the
 [Build stage](../../.github/workflows/stage-build.yml).
 Chart validation pins the Hypothesis Helm **v1.3.7** action to its immutable commit
 [`24b6db61f50563d1bd773c65a8ba5b84c58bc983`](https://github.com/astrivant/hypothesis-helm/tree/24b6db61f50563d1bd773c65a8ba5b84c58bc983)
-across `charts/polyad` and `charts/polyad-crds`, with **six property-test jobs total:
+across `helm/polyad` and `helm/polyad-crds`, with **six property-test jobs total:
 three shards per chart and four workers per shard**. The jobs use `ubuntu-24.04`: GitHub's largest standard free
 Linux runner for public repositories, with 4 CPUs and 16 GB RAM. Larger runners
 are billed even for public repositories; see the
@@ -478,7 +481,7 @@ run. This preserves the previous coverage rather than adopting the newer
 action's ten-example default. Native Kubernetes 1.35 schema validation replaces
 the removed `kubeconform`/`kubeconform-binary` action inputs. The inline policy
 enables strict mode and registers every custom-resource schema under
-`charts/polyad/schemas`; tests reject a missing registration. The resource chart
+`helm/polyad/schemas`; tests reject a missing registration. The resource chart
 loads its existing `HH1107` exception separately, without weakening other charts.
 
 The action now exposes filtering and recursive discovery. This version upgrade
@@ -559,7 +562,7 @@ allowing the old primary to return.
 
 ## Compose artifact
 
-Each pipeline invocation runs `astrivant/composer@v0.3.0` against `charts/polyad`.
+Each pipeline invocation runs `astrivant/composer@v0.3.0` against `helm/polyad`.
 The `polyad-compose` workflow artifact contains the generated Compose file, its
 mount files and the compiler report. Generation uses the chart defaults and does
 not commit back to the branch. Kubernetes scheduling and controller behavior still

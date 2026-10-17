@@ -102,7 +102,7 @@ remain with each run and in its CI artifacts, even when publication fails.
 
 ## Tests and CI
 
-Ordinary pytest includes `pkg/tests/test_benchmarks.py`. The single **Polyad pipeline**
+Ordinary pytest includes `tests/features/test_benchmarks.py`. The single **Polyad pipeline**
 runs tests and chart rendering on every branch push, tag push and PR update,
 retaining JUnit and Helm output. It builds both images with Buildx, for AMD64 and ARM64.
 Plotting tests verify every study's inventory, preserve failure and missing-data

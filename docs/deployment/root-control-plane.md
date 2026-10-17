@@ -35,7 +35,7 @@ reserved atlas, set `rootControlPlane.enabled: true` and
 uses in-cluster credentials, and rejects federation registrations, remote pools
 and mesh peers. Metrics and a stable `global.multiCluster.clusterName` are
 required. Disable `keda.observation.enabled` when KEDA is absent. The
-[local-root reference](../../charts/polyad/references/values-local-root.reference.yaml)
+[local-root reference](../../helm/polyad/references/local-root/values.yaml)
 provides a single-replica example; Minikube enables this mode automatically.
 Helm retains ownership of the bootstrap and native services, while their live
 health rolls up through the operator's internal Graphs into the root PolyGraph.
@@ -143,7 +143,7 @@ The runnable configuration lives in
    execution replicas in the registered workload cluster:
 
 ```bash
-helm upgrade --install polyad charts/polyad \
+helm upgrade --install polyad helm/polyad \
   --kube-context management --namespace polyad --create-namespace \
   --values examples/root-control-plane/values.yaml
 ```

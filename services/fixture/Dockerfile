@@ -2,7 +2,10 @@
 ARG PYTHON_IMAGE=python:3.13.12-slim-bookworm@sha256:a58daefb915e1e03ad48f3ca4df8832065412c5c35cacb9d39f4229184de12b6
 FROM ${PYTHON_IMAGE} AS build
 ARG TARGETARCH
-RUN python -m venv /opt/poetry && /opt/poetry/bin/pip install --no-cache-dir poetry==2.1.3
+COPY .tool-versions /tmp/.tool-versions
+COPY scripts/tooling/tool-version.sh /tmp/scripts/tooling/tool-version.sh
+RUN python -m venv /opt/poetry \
+    && /opt/poetry/bin/pip install --no-cache-dir "poetry==$(bash /tmp/scripts/tooling/tool-version.sh poetry)"
 ENV POETRY_VIRTUALENVS_CREATE=false VIRTUAL_ENV=/opt/venv PATH="/opt/venv/bin:${PATH}"
 RUN python -m venv /opt/venv
 COPY pkg/polyad-types /src/pkg/polyad-types
@@ -16,7 +19,9 @@ FROM ${PYTHON_IMAGE}
 ARG TINI_VERSION=0.19.0-1+b3
 RUN apt-get update && apt-get install --yes --no-install-recommends "tini=${TINI_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/opt/venv/bin:${PATH}"
+RUN groupadd --gid 65532 polyad \
+    && useradd --no-log-init --uid 65532 --gid 65532 --create-home --home-dir /home/polyad --shell /bin/sh polyad
+ENV HOME=/home/polyad PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/opt/venv/bin:${PATH}"
 COPY --from=build /opt/venv /opt/venv
 # Poetry installs the root in editable mode; retain only this lightweight package's sources.
 COPY --from=build /src/pkg /src/pkg

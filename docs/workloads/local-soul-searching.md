@@ -284,12 +284,12 @@ zero outstanding work. `baseline_restored` confirms one worker with all work don
 `trial_verified` and `comparison` report measurements. `success` confirms 1,088
 verified default results across both trials and complete process cleanup.
 
-The [tests](../../pkg/tests/test_local_soul.py) cover SDK strategy dispatch, stale
+The [tests](../../tests/features/test_local_soul.py) cover SDK strategy dispatch, stale
 views, capacity races, result validation, partial TCP frames, removal during
 outstanding work, process limits and interruption cleanup:
 
 ```sh
-poetry run pytest pkg/tests/test_local_soul.py pkg/tests/test_local_nature.py
+poetry run pytest tests/features/test_local_soul.py tests/features/test_local_nature.py
 ```
 
 ## From approved profiles to Natural Selection

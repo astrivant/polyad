@@ -27,13 +27,13 @@ Use the references as composable examples; Helm never loads them automatically:
 
 | Reference | What it offers |
 | --- | --- |
-| [`values-istio-bundled.reference.yaml`](../../charts/polyad/references/values-istio-bundled.reference.yaml) | A release-owned, version-pinned Istio base and control plane with native operator sidecars. |
-| [`values-istio-existing.reference.yaml`](../../charts/polyad/references/values-istio-existing.reference.yaml) | Policies on a platform-owned mesh, demonstrated with Gateway API ingress. |
-| [`values-istio-features.reference.yaml`](../../charts/polyad/references/values-istio-features.reference.yaml) | Proxy telemetry, configuration scoping, AUDIT/dry-run policy evaluation and explicit egress. |
-| [`values-istio-traffic.reference.yaml`](../../charts/polyad/references/values-istio-traffic.reference.yaml) | Locality-aware routing, endpoint ejection and event connection balancing. |
-| [`values-multicluster.reference.yaml`](../../charts/polyad/references/values-multicluster.reference.yaml) | Cross-network identity, peer registration and east-west gateway deployment. |
+| [`istio-bundled/values.yaml`](../../helm/polyad/references/istio-bundled/values.yaml) | A release-owned, version-pinned Istio base and control plane with native operator sidecars. |
+| [`istio-existing/values.yaml`](../../helm/polyad/references/istio-existing/values.yaml) | Policies on a platform-owned mesh, demonstrated with Gateway API ingress. |
+| [`istio-features/values.yaml`](../../helm/polyad/references/istio-features/values.yaml) | Proxy telemetry, configuration scoping, AUDIT/dry-run policy evaluation and explicit egress. |
+| [`istio-traffic/values.yaml`](../../helm/polyad/references/istio-traffic/values.yaml) | Locality-aware routing, endpoint ejection and event connection balancing. |
+| [`multicluster/values.yaml`](../../helm/polyad/references/multicluster/values.yaml) | Cross-network identity, peer registration and east-west gateway deployment. |
 
-The generated [Graph values reference](../../charts/polyad-crds/values-graphs.reference.yaml)
+The generated [Graph values reference](../../helm/polyad-crds/references/graphs/values.yaml)
 documents every `spec.traffic[].resilience` field used for route-level retries,
 timeouts, circuit breaking and endpoint ejection. Equivalent generated references
 exist for PolyGraph and Rewrite resources.

@@ -118,7 +118,7 @@ and runs a fresh application Graph. A Helm release marked deployed is not enough
 
 Values are in [values.yaml](values.yaml); prerequisite settings are in
 [chart/values.yaml](chart/values.yaml). Application feature semantics remain in
-the canonical [chart references](../../../charts/polyad/references/).
+the canonical [chart references](../../../helm/polyad/references/).
 
 The vendored ProvisioningRequest CRD comes from the official Kubernetes
 [Cluster Autoscaler 1.35.0 source](https://github.com/kubernetes/autoscaler/blob/cluster-autoscaler-1.35.0/cluster-autoscaler/apis/config/crd/autoscaling.x-k8s.io_provisioningrequests.yaml).

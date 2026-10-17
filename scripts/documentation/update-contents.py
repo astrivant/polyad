@@ -79,6 +79,8 @@ def with_contents(document: str, *, max_depth: int = 3) -> str:
         str: Markdown with visible linked contents after its title. Deeper headings remain in
             the document body; pages without included sections link to their title.
     """
+    existing = re.search(r"<!-- toc:start -->.*?<!-- toc:end -->\n*", document, flags=re.DOTALL)
+    original_prefix = document[: existing.start()] if existing else None
     document = re.sub(r"<!-- toc:start -->.*?<!-- toc:end -->\n*", "", document, flags=re.DOTALL)
     lines = document.splitlines(keepends=True)
     for index, _, label, _ in reversed(heading_inventory(document)):
@@ -106,7 +108,8 @@ def with_contents(document: str, *, max_depth: int = 3) -> str:
     block = [START, "**Table of contents**", ""]
     block.extend(entries)
     block.extend([END, "", ""])
-    position = title[0] + 1 if title else 0
+    # Preserve an established introduction and badge placement when refreshing navigation.
+    position = len(original_prefix.splitlines()) if original_prefix is not None else (title[0] + 1 if title else 0)
     while position < len(lines) and not lines[position].strip():
         position += 1
     prefix = "".join(lines[:position])

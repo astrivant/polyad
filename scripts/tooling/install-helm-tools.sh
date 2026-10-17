@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 # Install selected Helm validation CLIs in Linux CI using the shared asdf pins.
 set -euo pipefail
+##
+# Remove the owned temporary path and preserve the original exit status.
+# -> ret::exit_code
+cleanup_scratch() {
+    local status="$?"
+    trap - EXIT
+    if ! rm -rf -- "$scratch"; then
+        if [ "$status" -eq 0 ]; then status=1; fi
+    fi
+    exit "$status"
+}
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 case "$(uname -s)/$(uname -m)" in
     Linux/x86_64)
@@ -17,7 +28,7 @@ case "$(uname -s)/$(uname -m)" in
         ;;
 esac
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT
+trap cleanup_scratch EXIT
 cd "$scratch"
 if [[ $# == 0 ]]; then set -- helm kubeconform shellcheck shfmt; fi
 elevate=()
