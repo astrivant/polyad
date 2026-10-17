@@ -19,7 +19,8 @@ def test_repair_is_a_trusted_leaf_with_no_secret_or_candidate_checkout() -> None
     assert caller["uses"] == "./.github/workflows/stage-repair.yml"
     assert "needs" not in caller
     assert "pull_request_target" in caller["if"] and "schedule" in caller["if"]
-    assert "github.event.repository.default_branch" in caller["if"]
+    assert "github.event.pull_request.base.ref == github.event.repository.default_branch" in caller["if"]
+    assert PIPELINE["on"]["pull_request_target"]["branches"] == ["main"]
     assert caller["permissions"] == job["permissions"] == {"contents": "write", "pull-requests": "read"}
     assert "secrets" not in caller and "environment" not in job
     assert job["concurrency"] == {"group": "generated-conflict-repair", "cancel-in-progress": "false"}

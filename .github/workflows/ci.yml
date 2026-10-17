@@ -5,6 +5,7 @@ on:
     tags: ['**']
   pull_request:
   pull_request_target:
+    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
   schedule:
     - cron: "23 */6 * * *"
@@ -239,9 +240,9 @@ jobs:
   generated-repair:
     name: Repair generated conflicts
     if: >-
-      github.event_name == 'pull_request_target' ||
-      github.event_name == 'schedule' ||
-      (github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
+      (github.event_name == 'pull_request_target' && github.event.pull_request.base.ref == github.event.repository.default_branch)
+      || github.event_name == 'schedule'
+      || (github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
     uses: ./.github/workflows/stage-repair.yml
     permissions:
       contents: write
