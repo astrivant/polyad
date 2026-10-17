@@ -156,8 +156,8 @@ jobs:
         # Keep the existing benchmark-chart fallback during this dependency upgrade.
         # Its default and full monitoring profiles have strict render/schema checks below.
         if: matrix.chart != 'polyad-benchmarks'
-        # v1.3.7: file-backed schema policies avoid OS argument-size limits.
-        uses: astrivant/hypothesis-helm@7ad5b937dd554a82889fe06665feaf4bf76691cc
+        # v1.3.12: field policies preserve shared schema definitions.
+        uses: astrivant/hypothesis-helm@216777eab8f3bedef7f0659b0912b9abb4dfa40c
         with:
           chart: helm/${{ matrix.chart }}
           artifact-name: hypothesis-helm-${{ matrix.chart }}

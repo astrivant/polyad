@@ -303,7 +303,7 @@ def test_default_chart_action_is_sharded_and_gates_tagged_packaging():
         },
     }
     action = next(step for step in chart["steps"] if step.get("uses", "").startswith("astrivant/hypothesis-helm@"))
-    assert action["uses"] == "astrivant/hypothesis-helm@7ad5b937dd554a82889fe06665feaf4bf76691cc"
+    assert action["uses"] == "astrivant/hypothesis-helm@216777eab8f3bedef7f0659b0912b9abb4dfa40c"
     inputs = action["with"]
     assert inputs["chart"] == "helm/${{ matrix.chart }}"
     assert inputs["artifact-name"] == "hypothesis-helm-${{ matrix.chart }}"
