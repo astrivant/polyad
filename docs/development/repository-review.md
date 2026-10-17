@@ -17,7 +17,7 @@ certify a deployment or substitute for verification of the eventual tagged relea
 | Surface | Contract and evidence |
 | --- | --- |
 | Repository layout | Charts live under `helm/`; Python tests live under `tests/contracts/` and `tests/features/`. Build, schema, container, Terraform and documentation consumers use those paths. |
-| Ownership | A semantics-preserving CODEOWNERS compiler groups tracked paths; commit and push hooks complement the existing syntax/path validator. |
+| Ownership | The pinned Ownerloom dependency groups tracked CODEOWNERS paths; commit and push hooks complement the existing syntax/path validator. |
 | Documentation | TOCs preserve the introduction; Markdown table, math and Mermaid checks run with JavaScript lint and regressions. Each chart reference has its own values file and generated README. |
 | CI | Maintained actions use reviewed immutable revisions. Independent build and test stages converge at `CI verification`. Source settings require that check and an independent approving review. |
 | Packaging | Every Python distribution retains a PyPI publication path. Signed release verification binds all Python and Helm artifacts to the tag, commit and independently configured key. |

@@ -66,10 +66,16 @@ include = [
 ]
 
 [tool.poetry.dependencies]
+# Keep the older graph dependency only for the Python patch excluded by NetworkX 3.7.
+networkx = [
+    {version = ">=3.6,<3.7", python = "3.14.1"},
+    {version = ">=3.7,<4", python = ">=3.13,!=3.14.1,<4.0"},
+]
 polyad-types = {path = "pkg/polyad-types"}
 polyad-schemas = {path = "pkg/polyad-schemas", optional = true}
 
 [tool.poetry.group.dev.dependencies]
+ownerloom = {version = "0.0.1", python = ">=3.13,!=3.14.1,<4.0"}
 polyad-sdk = {path = "pkg/polyad-sdk", develop = true}
 pytest = ">=9.0.3,<10"
 deepdiff = ">=9.1,<10"
@@ -143,7 +149,7 @@ convention = "google"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["pkg", "examples", "demo", "scripts/release/attest.py", "scripts/ownership"]
+files = ["pkg", "examples", "demo", "scripts/release/attest.py"]
 exclude = ["^tests/"]
 
 [[tool.mypy.overrides]]
