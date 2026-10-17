@@ -43756,6 +43756,123 @@
           }
         }
       }
+    },
+    {
+      "$comment": "Mirror replica ownership and profile floors from polyad.profileValues before input generation or rendering.",
+      "if": {
+        "required": [
+          "worker"
+        ],
+        "properties": {
+          "worker": {
+            "required": [
+              "enabled",
+              "scalingAuthority"
+            ],
+            "properties": {
+              "enabled": {
+                "const": true
+              },
+              "scalingAuthority": {
+                "const": "Root"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "operator": {
+            "properties": {
+              "replicaCount": {
+                "type": "null"
+              },
+              "autoscaling": {
+                "properties": {
+                  "enabled": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "ha": {
+              "const": true
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "operator": {
+              "properties": {
+                "replicaCount": {
+                  "minimum": 2
+                }
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "operator": {
+                    "properties": {
+                      "autoscaling": {
+                        "properties": {
+                          "enabled": {
+                            "const": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "operator": {
+                    "properties": {
+                      "autoscaling": {
+                        "properties": {
+                          "minReplicas": {
+                            "minimum": 2
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "else": {
+          "properties": {
+            "operator": {
+              "properties": {
+                "replicaCount": {
+                  "enum": [
+                    null,
+                    1
+                  ]
+                },
+                "autoscaling": {
+                  "properties": {
+                    "enabled": {
+                      "const": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

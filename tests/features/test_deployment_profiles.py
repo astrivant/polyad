@@ -9,9 +9,10 @@ import subprocess
 
 import jsonschema
 import pytest
+import yaml
 
+from tests.features.test_chart import CHART, render
 from tests.features.test_chart import pytestmark as pytestmark
-from tests.features.test_chart import render
 
 
 @pytest.mark.parametrize(("ha", "mode"), [(False, "Dense"), (True, "Dense"), (True, "Distributed")])
@@ -225,3 +226,65 @@ def test_pool_can_pause_without_scaling_the_root_to_zero():
     root = next(obj for obj in objects if obj["kind"] == "Deployment" and obj["metadata"]["name"] == "test-polyad")
     assert pool["spec"]["replicas"] == 0
     assert root["spec"]["replicas"] == 2
+
+
+@pytest.mark.parametrize(
+    ("ha", "replicas", "autoscaling", "minimum", "accepted"),
+    [
+        (False, None, False, 1, True),
+        (False, 1, False, 1, True),
+        (False, 2, False, 1, False),
+        (False, 1, True, 1, False),
+        (True, None, False, 1, True),
+        (True, 1, False, 1, False),
+        (True, 2, False, 1, True),
+        (True, 2, True, 1, False),
+        (True, 2, True, 2, True),
+    ],
+)
+def test_values_schema_respects_profile_replica_and_hpa_contracts(
+    ha: bool, replicas: int | None, autoscaling: bool, minimum: int, accepted: bool
+) -> None:
+    """
+    Keep generated input domains aligned with the template's existing profile rules.
+
+    Args:
+        ha (bool): Whether the deployment selects the HA profile.
+        replicas (int | None): Explicit count or the template-selected default.
+        autoscaling (bool): Whether Helm owns an HPA.
+        minimum (int): HPA replica floor, irrelevant when disabled.
+        accepted (bool): Expected validity before attempting a render.
+
+    Returns:
+        None: The schema preserves valid defaults and rejects contradictory profiles.
+    """
+    values = yaml.safe_load((CHART / "values.yaml").read_text())
+    values["ha"] = ha
+    values["operator"]["replicaCount"] = replicas
+    values["operator"]["autoscaling"].update(enabled=autoscaling, minReplicas=minimum)
+    schema = json.loads((CHART / "values.schema.json").read_text())
+    assert jsonschema.Draft7Validator(schema).is_valid(values) is accepted
+
+
+@pytest.mark.parametrize("ha", [False, True])
+@pytest.mark.parametrize(("replicas", "autoscaling", "accepted"), [(None, False, True), (1, False, False), (None, True, False)])
+def test_values_schema_retains_root_worker_replica_ownership(ha: bool, replicas: int | None, autoscaling: bool, accepted: bool) -> None:
+    """
+    Exempt root-controlled workers from local profile floors while rejecting two owners.
+
+    Args:
+        ha (bool): Local profile flag, which must not claim remote replica ownership.
+        replicas (int | None): Helm replica intent, absent for root-controlled workers.
+        autoscaling (bool): Whether Helm attempts to install its own HPA.
+        accepted (bool): Expected schema validity of replica ownership.
+
+    Returns:
+        None: Root-owned replicas remain compatible with either local profile flag.
+    """
+    values = yaml.safe_load((CHART / "values.yaml").read_text())
+    values["ha"] = ha
+    values["worker"].update(enabled=True, scalingAuthority="Root")
+    values["operator"]["replicaCount"] = replicas
+    values["operator"]["autoscaling"]["enabled"] = autoscaling
+    schema = json.loads((CHART / "values.schema.json").read_text())
+    assert jsonschema.Draft7Validator(schema).is_valid(values) is accepted
