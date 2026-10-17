@@ -1,0 +1,3632 @@
+{
+  "measurement": {
+    "base": "2666f45dc1640d1986204be227b8c388b4f4c3c9",
+    "merge_base": "2666f45dc1640d1986204be227b8c388b4f4c3c9",
+    "head": "f2db6fa7e9a18a48f3ff153b2abfdde27df70d90",
+    "classifier": "Pygments 2.21.0",
+    "deltas": [
+      {
+        "before": ".github/CODEOWNERS",
+        "after": ".github/CODEOWNERS",
+        "added": 12,
+        "deleted": 7
+      },
+      {
+        "before": ".github/generated-artifacts.json",
+        "after": ".github/generated-artifacts.json",
+        "added": 205,
+        "deleted": 0
+      },
+      {
+        "before": ".github/prepare-release.py",
+        "after": ".github/prepare-release.py",
+        "added": 7,
+        "deleted": 7
+      },
+      {
+        "before": ".github/settings.yml",
+        "after": ".github/settings.yml",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": ".github/workflows/ci.yml",
+        "after": ".github/workflows/ci.yml",
+        "added": 58,
+        "deleted": 33
+      },
+      {
+        "before": ".github/workflows/stage-build.yml",
+        "after": ".github/workflows/stage-build.yml",
+        "added": 57,
+        "deleted": 57
+      },
+      {
+        "before": ".github/workflows/stage-deploy.yml",
+        "after": ".github/workflows/stage-deploy.yml",
+        "added": 105,
+        "deleted": 22
+      },
+      {
+        "before": ".github/workflows/stage-measure.yml",
+        "after": ".github/workflows/stage-measure.yml",
+        "added": 6,
+        "deleted": 6
+      },
+      {
+        "before": ".github/workflows/stage-repair.yml",
+        "after": ".github/workflows/stage-repair.yml",
+        "added": 34,
+        "deleted": 0
+      },
+      {
+        "before": ".github/workflows/stage-test.yml",
+        "after": ".github/workflows/stage-test.yml",
+        "added": 59,
+        "deleted": 47
+      },
+      {
+        "before": ".gitignore",
+        "after": ".gitignore",
+        "added": 5,
+        "deleted": 2
+      },
+      {
+        "before": ".pre-commit-config.yaml",
+        "after": ".pre-commit-config.yaml",
+        "added": 67,
+        "deleted": 18
+      },
+      {
+        "before": ".tool-versions",
+        "after": ".tool-versions",
+        "added": 4,
+        "deleted": 2
+      },
+      {
+        "before": "README.md",
+        "after": "README.md",
+        "added": 46,
+        "deleted": 17
+      },
+      {
+        "before": "SKILL.md",
+        "after": "SKILL.md",
+        "added": 73,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/README.md",
+        "after": "charts/polyad/references/README.md",
+        "added": 0,
+        "deleted": 23
+      },
+      {
+        "before": "docs/README.md",
+        "after": "docs/README.md",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "docs/apis/discovery.md",
+        "after": "docs/apis/discovery.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/apis/event-contract.md",
+        "after": "docs/apis/event-contract.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/apis/temporary-connections.md",
+        "after": "docs/apis/temporary-connections.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/deployment/components.md",
+        "after": "docs/deployment/components.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/deployment/containers.md",
+        "after": "docs/deployment/containers.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/deployment/deployment-profiles.md",
+        "after": "docs/deployment/deployment-profiles.md",
+        "added": 16,
+        "deleted": 16
+      },
+      {
+        "before": "docs/deployment/dragonfly.md",
+        "after": "docs/deployment/dragonfly.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/deployment/helm-workers.md",
+        "after": "docs/deployment/helm-workers.md",
+        "added": 9,
+        "deleted": 9
+      },
+      {
+        "before": "docs/deployment/istio-features.md",
+        "after": "docs/deployment/istio-features.md",
+        "added": 6,
+        "deleted": 6
+      },
+      {
+        "before": "docs/deployment/local-services.md",
+        "after": "docs/deployment/local-services.md",
+        "added": 6,
+        "deleted": 6
+      },
+      {
+        "before": "docs/deployment/multicluster.md",
+        "after": "docs/deployment/multicluster.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/deployment/operator.md",
+        "after": "docs/deployment/operator.md",
+        "added": 10,
+        "deleted": 10
+      },
+      {
+        "before": "docs/deployment/postgresql.md",
+        "after": "docs/deployment/postgresql.md",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "docs/deployment/record-encryption.md",
+        "after": "docs/deployment/record-encryption.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/deployment/root-control-plane.md",
+        "after": "docs/deployment/root-control-plane.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/deployment/vpa.md",
+        "after": "docs/deployment/vpa.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/development/generated-artifacts.md",
+        "after": "docs/development/generated-artifacts.md",
+        "added": 67,
+        "deleted": 0
+      },
+      {
+        "before": "docs/development/operator-layout.md",
+        "after": "docs/development/operator-layout.md",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "docs/development/releases.md",
+        "after": "docs/development/releases.md",
+        "added": 80,
+        "deleted": 0
+      },
+      {
+        "before": "docs/development/repository-review.md",
+        "after": "docs/development/repository-review.md",
+        "added": 78,
+        "deleted": 0
+      },
+      {
+        "before": "docs/development/toolchain.md",
+        "after": "docs/development/toolchain.md",
+        "added": 14,
+        "deleted": 11
+      },
+      {
+        "before": "docs/development/write-pipeline.md",
+        "after": "docs/development/write-pipeline.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/graphs/capacity.md",
+        "after": "docs/graphs/capacity.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/graphs/cheeger-tuning.md",
+        "after": "docs/graphs/cheeger-tuning.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/graphs/graph-policies.md",
+        "after": "docs/graphs/graph-policies.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/graphs/load-profiles.md",
+        "after": "docs/graphs/load-profiles.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/introduction/concepts.md",
+        "after": "docs/introduction/concepts.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/introduction/getting-started.md",
+        "after": "docs/introduction/getting-started.md",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "docs/licensing.md",
+        "after": "docs/licensing.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/operations/api-keys.md",
+        "after": "docs/operations/api-keys.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/operations/argocd.md",
+        "after": "docs/operations/argocd.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/operations/event-rebalancing.md",
+        "after": "docs/operations/event-rebalancing.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/operations/fluxcd.md",
+        "after": "docs/operations/fluxcd.md",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "docs/operations/metrics.md",
+        "after": "docs/operations/metrics.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/operations/performance.md",
+        "after": "docs/operations/performance.md",
+        "added": 6,
+        "deleted": 6
+      },
+      {
+        "before": "docs/operations/telemetry-agents.md",
+        "after": "docs/operations/telemetry-agents.md",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "docs/operations/tracing.md",
+        "after": "docs/operations/tracing.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/workloads/capability-contracts.md",
+        "after": "docs/workloads/capability-contracts.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/workloads/local-natural-selection.md",
+        "after": "docs/workloads/local-natural-selection.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/workloads/local-soul-searching.md",
+        "after": "docs/workloads/local-soul-searching.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "docs/workloads/workload-events.md",
+        "after": "docs/workloads/workload-events.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "docs/workloads/workload-protocols.md",
+        "after": "docs/workloads/workload-protocols.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/components/values.yaml",
+        "after": "examples/components/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/deployment-profiles/ha.yaml",
+        "after": "examples/deployment-profiles/ha.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/deployment-profiles/singular.yaml",
+        "after": "examples/deployment-profiles/singular.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/helm-workers/local-values.yaml",
+        "after": "examples/helm-workers/local-values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "examples/helm-workers/root-values.yaml",
+        "after": "examples/helm-workers/root-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/load-profiles.yaml",
+        "after": "examples/load-profiles.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/multicluster/east-values.yaml",
+        "after": "examples/multicluster/east-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/multicluster/west-values.yaml",
+        "after": "examples/multicluster/west-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/postgresql/values.yaml",
+        "after": "examples/postgresql/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "examples/root-control-plane/values.yaml",
+        "after": "examples/root-control-plane/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-benchmarks/.helmignore",
+        "after": "helm/polyad-benchmarks/.helmignore",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/Chart.lock",
+        "after": "helm/polyad-benchmarks/Chart.lock",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/Chart.yaml",
+        "after": "helm/polyad-benchmarks/Chart.yaml",
+        "added": 7,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/LICENSE",
+        "after": "helm/polyad-benchmarks/LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/README.md",
+        "after": "helm/polyad-benchmarks/README.md",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "charts/polyad-benchmarks/files/dashboard.json",
+        "after": "helm/polyad-benchmarks/files/dashboard.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/files/fixture.yaml",
+        "after": "helm/polyad-benchmarks/files/fixture.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/plans/burst.json",
+        "after": "helm/polyad-benchmarks/plans/burst.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/plans/smoke.json",
+        "after": "helm/polyad-benchmarks/plans/smoke.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/plans/steady.json",
+        "after": "helm/polyad-benchmarks/plans/steady.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/templates/NOTES.txt",
+        "after": "helm/polyad-benchmarks/templates/NOTES.txt",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/templates/_plan.tpl",
+        "after": "helm/polyad-benchmarks/templates/_plan.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/templates/fixture.yaml",
+        "after": "helm/polyad-benchmarks/templates/fixture.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/templates/monitoring.yaml",
+        "after": "helm/polyad-benchmarks/templates/monitoring.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/values-agent-metrics.yaml",
+        "after": "helm/polyad-benchmarks/values-agent-metrics.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/values-burst.yaml",
+        "after": "helm/polyad-benchmarks/values-burst.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/values-smoke.yaml",
+        "after": "helm/polyad-benchmarks/values-smoke.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/values-steady.yaml",
+        "after": "helm/polyad-benchmarks/values-steady.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/values.schema.json",
+        "after": "helm/polyad-benchmarks/values.schema.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-benchmarks/values.yaml",
+        "after": "helm/polyad-benchmarks/values.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/.helmignore",
+        "after": "helm/polyad-crds/.helmignore",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/.hypothesis-helm.yaml",
+        "after": "helm/polyad-crds/.hypothesis-helm.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/Chart.yaml",
+        "after": "helm/polyad-crds/Chart.yaml",
+        "added": 7,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/LICENSE",
+        "after": "helm/polyad-crds/LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/LICENSE.dragonfly-operator",
+        "after": "helm/polyad-crds/LICENSE.dragonfly-operator",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/README.md",
+        "after": "helm/polyad-crds/README.md",
+        "added": 25,
+        "deleted": 20
+      },
+      {
+        "before": "charts/polyad-crds/crds/activations.yaml",
+        "after": "helm/polyad-crds/crds/activations.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/compositions.yaml",
+        "after": "helm/polyad-crds/crds/compositions.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/daemons.yaml",
+        "after": "helm/polyad-crds/crds/daemons.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/dragonflies.yaml",
+        "after": "helm/polyad-crds/crds/dragonflies.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/dragonflypools.yaml",
+        "after": "helm/polyad-crds/crds/dragonflypools.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/gates.yaml",
+        "after": "helm/polyad-crds/crds/gates.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/graphpolicies.yaml",
+        "after": "helm/polyad-crds/crds/graphpolicies.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/graphs.yaml",
+        "after": "helm/polyad-crds/crds/graphs.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/operatorpools.yaml",
+        "after": "helm/polyad-crds/crds/operatorpools.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/polygraphs.yaml",
+        "after": "helm/polyad-crds/crds/polygraphs.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/remotescales.yaml",
+        "after": "helm/polyad-crds/crds/remotescales.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/replicagroups.yaml",
+        "after": "helm/polyad-crds/crds/replicagroups.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/resources.yaml",
+        "after": "helm/polyad-crds/crds/resources.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/rewrites.yaml",
+        "after": "helm/polyad-crds/crds/rewrites.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/shutdownpolicies.yaml",
+        "after": "helm/polyad-crds/crds/shutdownpolicies.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/temporaryconnections.yaml",
+        "after": "helm/polyad-crds/crds/temporaryconnections.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/crds/workloads.yaml",
+        "after": "helm/polyad-crds/crds/workloads.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/files/resource-catalog.json",
+        "after": "helm/polyad-crds/files/resource-catalog.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "helm/polyad-crds/references/README.md",
+        "after": "helm/polyad-crds/references/README.md",
+        "added": 29,
+        "deleted": 0
+      },
+      {
+        "before": "helm/polyad-crds/references/activations/README.md",
+        "after": "helm/polyad-crds/references/activations/README.md",
+        "added": 35,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-activations.reference.yaml",
+        "after": "helm/polyad-crds/references/activations/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/compositions/README.md",
+        "after": "helm/polyad-crds/references/compositions/README.md",
+        "added": 29,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-compositions.reference.yaml",
+        "after": "helm/polyad-crds/references/compositions/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/daemons/README.md",
+        "after": "helm/polyad-crds/references/daemons/README.md",
+        "added": 69,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-daemons.reference.yaml",
+        "after": "helm/polyad-crds/references/daemons/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/dragonflies/README.md",
+        "after": "helm/polyad-crds/references/dragonflies/README.md",
+        "added": 159,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-dragonflies.reference.yaml",
+        "after": "helm/polyad-crds/references/dragonflies/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/dragonflyPools/README.md",
+        "after": "helm/polyad-crds/references/dragonflyPools/README.md",
+        "added": 30,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-dragonflyPools.reference.yaml",
+        "after": "helm/polyad-crds/references/dragonflyPools/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/gates/README.md",
+        "after": "helm/polyad-crds/references/gates/README.md",
+        "added": 29,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-gates.reference.yaml",
+        "after": "helm/polyad-crds/references/gates/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/graphPolicies/README.md",
+        "after": "helm/polyad-crds/references/graphPolicies/README.md",
+        "added": 69,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-graphPolicies.reference.yaml",
+        "after": "helm/polyad-crds/references/graphPolicies/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/graphs/README.md",
+        "after": "helm/polyad-crds/references/graphs/README.md",
+        "added": 96,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-graphs.reference.yaml",
+        "after": "helm/polyad-crds/references/graphs/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/operatorPools/README.md",
+        "after": "helm/polyad-crds/references/operatorPools/README.md",
+        "added": 35,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-operatorPools.reference.yaml",
+        "after": "helm/polyad-crds/references/operatorPools/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/polygraphs/README.md",
+        "after": "helm/polyad-crds/references/polygraphs/README.md",
+        "added": 96,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-polygraphs.reference.yaml",
+        "after": "helm/polyad-crds/references/polygraphs/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/remoteScales/README.md",
+        "after": "helm/polyad-crds/references/remoteScales/README.md",
+        "added": 32,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-remoteScales.reference.yaml",
+        "after": "helm/polyad-crds/references/remoteScales/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/replicaGroups/README.md",
+        "after": "helm/polyad-crds/references/replicaGroups/README.md",
+        "added": 51,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-replicaGroups.reference.yaml",
+        "after": "helm/polyad-crds/references/replicaGroups/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/resources/README.md",
+        "after": "helm/polyad-crds/references/resources/README.md",
+        "added": 33,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-resources.reference.yaml",
+        "after": "helm/polyad-crds/references/resources/values.yaml",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "helm/polyad-crds/references/rewrites/README.md",
+        "after": "helm/polyad-crds/references/rewrites/README.md",
+        "added": 91,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-rewrites.reference.yaml",
+        "after": "helm/polyad-crds/references/rewrites/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/shutdownPolicies/README.md",
+        "after": "helm/polyad-crds/references/shutdownPolicies/README.md",
+        "added": 29,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-shutdownPolicies.reference.yaml",
+        "after": "helm/polyad-crds/references/shutdownPolicies/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/temporaryConnections/README.md",
+        "after": "helm/polyad-crds/references/temporaryConnections/README.md",
+        "added": 41,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-temporaryConnections.reference.yaml",
+        "after": "helm/polyad-crds/references/temporaryConnections/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad-crds/references/workloads/README.md",
+        "after": "helm/polyad-crds/references/workloads/README.md",
+        "added": 47,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values-workloads.reference.yaml",
+        "after": "helm/polyad-crds/references/workloads/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/activation-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/activation-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/composition-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/composition-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/daemon-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/daemon-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/dragonfly-dragonflydb-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/dragonfly-dragonflydb-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/dragonfly-operator-LICENSE",
+        "after": "helm/polyad-crds/schemas/dragonfly-operator-LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/dragonflypool-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/dragonflypool-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/gate-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/gate-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/graph-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/graph-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/graphpolicy-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/graphpolicy-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/operatorpool-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/operatorpool-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/polygraph-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/polygraph-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/remotescale-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/remotescale-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/replicagroup-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/replicagroup-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/resource-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/resource-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/rewrite-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/rewrite-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/shutdownpolicy-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/shutdownpolicy-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/temporaryconnection-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/temporaryconnection-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/workload-polyad-v1alpha1.json",
+        "after": "helm/polyad-crds/schemas/workload-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/templates/_render.tpl",
+        "after": "helm/polyad-crds/templates/_render.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/templates/_values.tpl",
+        "after": "helm/polyad-crds/templates/_values.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/templates/resources.yaml",
+        "after": "helm/polyad-crds/templates/resources.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values.reference.schema.json",
+        "after": "helm/polyad-crds/values.reference.schema.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values.schema.json",
+        "after": "helm/polyad-crds/values.schema.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/values.yaml",
+        "after": "helm/polyad-crds/values.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/.helmignore",
+        "after": "helm/polyad/.helmignore",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/Chart.lock",
+        "after": "helm/polyad/Chart.lock",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/Chart.yaml",
+        "after": "helm/polyad/Chart.yaml",
+        "added": 7,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/LICENSE",
+        "after": "helm/polyad/LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/LICENSE.dragonfly-operator",
+        "after": "helm/polyad/LICENSE.dragonfly-operator",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/README.md",
+        "after": "helm/polyad/README.md",
+        "added": 48,
+        "deleted": 43
+      },
+      {
+        "before": "charts/polyad/UPSTREAM.md",
+        "after": "helm/polyad/UPSTREAM.md",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "charts/polyad/files/postgresql/restrict-database.sql.tpl",
+        "after": "helm/polyad/files/postgresql/restrict-database.sql.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/files/postgresql/restrict-schema.sql",
+        "after": "helm/polyad/files/postgresql/restrict-schema.sql",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "helm/polyad/references/README.md",
+        "after": "helm/polyad/references/README.md",
+        "added": 46,
+        "deleted": 0
+      },
+      {
+        "before": "helm/polyad/references/authentication/README.md",
+        "after": "helm/polyad/references/authentication/README.md",
+        "added": 43,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-authentication.reference.yaml",
+        "after": "helm/polyad/references/authentication/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/capabilities/README.md",
+        "after": "helm/polyad/references/capabilities/README.md",
+        "added": 27,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-capabilities.reference.yaml",
+        "after": "helm/polyad/references/capabilities/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/cheeger/README.md",
+        "after": "helm/polyad/references/cheeger/README.md",
+        "added": 37,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-cheeger.reference.yaml",
+        "after": "helm/polyad/references/cheeger/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/components/README.md",
+        "after": "helm/polyad/references/components/README.md",
+        "added": 54,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-components.reference.yaml",
+        "after": "helm/polyad/references/components/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/connection-pools/README.md",
+        "after": "helm/polyad/references/connection-pools/README.md",
+        "added": 38,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-connection-pools.reference.yaml",
+        "after": "helm/polyad/references/connection-pools/values.yaml",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "helm/polyad/references/connections/README.md",
+        "after": "helm/polyad/references/connections/README.md",
+        "added": 35,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-connections.reference.yaml",
+        "after": "helm/polyad/references/connections/values.yaml",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "helm/polyad/references/demo/README.md",
+        "after": "helm/polyad/references/demo/README.md",
+        "added": 40,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-demo.reference.yaml",
+        "after": "helm/polyad/references/demo/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/discovery/README.md",
+        "after": "helm/polyad/references/discovery/README.md",
+        "added": 37,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-discovery.reference.yaml",
+        "after": "helm/polyad/references/discovery/values.yaml",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "helm/polyad/references/event-rebalancing/README.md",
+        "after": "helm/polyad/references/event-rebalancing/README.md",
+        "added": 40,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-event-rebalancing.reference.yaml",
+        "after": "helm/polyad/references/event-rebalancing/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/events/README.md",
+        "after": "helm/polyad/references/events/README.md",
+        "added": 30,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-events.reference.yaml",
+        "after": "helm/polyad/references/events/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad/references/federation/README.md",
+        "after": "helm/polyad/references/federation/README.md",
+        "added": 26,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-federation.reference.yaml",
+        "after": "helm/polyad/references/federation/values.yaml",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "helm/polyad/references/ha/README.md",
+        "after": "helm/polyad/references/ha/README.md",
+        "added": 50,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-ha.reference.yaml",
+        "after": "helm/polyad/references/ha/values.yaml",
+        "added": 7,
+        "deleted": 7
+      },
+      {
+        "before": "helm/polyad/references/istio-bundled/README.md",
+        "after": "helm/polyad/references/istio-bundled/README.md",
+        "added": 32,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-istio-bundled.reference.yaml",
+        "after": "helm/polyad/references/istio-bundled/values.yaml",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "helm/polyad/references/istio-existing/README.md",
+        "after": "helm/polyad/references/istio-existing/README.md",
+        "added": 31,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-istio-existing.reference.yaml",
+        "after": "helm/polyad/references/istio-existing/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/istio-features/README.md",
+        "after": "helm/polyad/references/istio-features/README.md",
+        "added": 44,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-istio-features.reference.yaml",
+        "after": "helm/polyad/references/istio-features/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/istio-traffic/README.md",
+        "after": "helm/polyad/references/istio-traffic/README.md",
+        "added": 43,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-istio-traffic.reference.yaml",
+        "after": "helm/polyad/references/istio-traffic/values.yaml",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "helm/polyad/references/keda/README.md",
+        "after": "helm/polyad/references/keda/README.md",
+        "added": 45,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-keda.reference.yaml",
+        "after": "helm/polyad/references/keda/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/local-root/README.md",
+        "after": "helm/polyad/references/local-root/README.md",
+        "added": 34,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-local-root.reference.yaml",
+        "after": "helm/polyad/references/local-root/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad/references/multicluster/README.md",
+        "after": "helm/polyad/references/multicluster/README.md",
+        "added": 42,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-multicluster.reference.yaml",
+        "after": "helm/polyad/references/multicluster/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad/references/observer/README.md",
+        "after": "helm/polyad/references/observer/README.md",
+        "added": 35,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-observer.reference.yaml",
+        "after": "helm/polyad/references/observer/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/postgresql-encryption/README.md",
+        "after": "helm/polyad/references/postgresql-encryption/README.md",
+        "added": 30,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-postgresql-encryption.reference.yaml",
+        "after": "helm/polyad/references/postgresql-encryption/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/postgresql-record-encryption/README.md",
+        "after": "helm/polyad/references/postgresql-record-encryption/README.md",
+        "added": 29,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-postgresql-record-encryption.reference.yaml",
+        "after": "helm/polyad/references/postgresql-record-encryption/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/postgresql/README.md",
+        "after": "helm/polyad/references/postgresql/README.md",
+        "added": 54,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-postgresql.reference.yaml",
+        "after": "helm/polyad/references/postgresql/values.yaml",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "helm/polyad/references/prometheus-agent/README.md",
+        "after": "helm/polyad/references/prometheus-agent/README.md",
+        "added": 33,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-prometheus-agent.reference.yaml",
+        "after": "helm/polyad/references/prometheus-agent/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad/references/root-control-plane/README.md",
+        "after": "helm/polyad/references/root-control-plane/README.md",
+        "added": 47,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-root-control-plane.reference.yaml",
+        "after": "helm/polyad/references/root-control-plane/values.yaml",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "helm/polyad/references/singular/README.md",
+        "after": "helm/polyad/references/singular/README.md",
+        "added": 42,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-singular.reference.yaml",
+        "after": "helm/polyad/references/singular/values.yaml",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "helm/polyad/references/soul-searching/README.md",
+        "after": "helm/polyad/references/soul-searching/README.md",
+        "added": 25,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-soul-searching.reference.yaml",
+        "after": "helm/polyad/references/soul-searching/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/telemetry/README.md",
+        "after": "helm/polyad/references/telemetry/README.md",
+        "added": 37,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-telemetry.reference.yaml",
+        "after": "helm/polyad/references/telemetry/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad/references/tracing/README.md",
+        "after": "helm/polyad/references/tracing/README.md",
+        "added": 32,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-tracing.reference.yaml",
+        "after": "helm/polyad/references/tracing/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "helm/polyad/references/tuning/README.md",
+        "after": "helm/polyad/references/tuning/README.md",
+        "added": 77,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-tuning.reference.yaml",
+        "after": "helm/polyad/references/tuning/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/vpa/README.md",
+        "after": "helm/polyad/references/vpa/README.md",
+        "added": 24,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-vpa.reference.yaml",
+        "after": "helm/polyad/references/vpa/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/websockets/README.md",
+        "after": "helm/polyad/references/websockets/README.md",
+        "added": 26,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-websockets.reference.yaml",
+        "after": "helm/polyad/references/websockets/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/worker/README.md",
+        "after": "helm/polyad/references/worker/README.md",
+        "added": 40,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-worker.reference.yaml",
+        "after": "helm/polyad/references/worker/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "helm/polyad/references/workload-protocols/README.md",
+        "after": "helm/polyad/references/workload-protocols/README.md",
+        "added": 26,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/references/values-workload-protocols.reference.yaml",
+        "after": "helm/polyad/references/workload-protocols/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/README.md",
+        "after": "helm/polyad/schemas/README.md",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/activation-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/activation-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/authorizationpolicy-security-v1.json",
+        "after": "helm/polyad/schemas/authorizationpolicy-security-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/schemas/composition-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/composition-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/daemon-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/daemon-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/destinationrule-networking-v1.json",
+        "after": "helm/polyad/schemas/destinationrule-networking-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/dragonfly-dragonflydb-v1alpha1.json",
+        "after": "helm/polyad/schemas/dragonfly-dragonflydb-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/dragonfly-operator-LICENSE",
+        "after": "helm/polyad/schemas/dragonfly-operator-LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/schemas/dragonflypool-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/dragonflypool-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/external-secrets-LICENSE",
+        "after": "helm/polyad/schemas/external-secrets-LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/externalsecret-external-secrets-v1.json",
+        "after": "helm/polyad/schemas/externalsecret-external-secrets-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/schemas/gate-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/gate-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/gateway-api-LICENSE",
+        "after": "helm/polyad/schemas/gateway-api-LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/gateway-gateway-v1.json",
+        "after": "helm/polyad/schemas/gateway-gateway-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/gateway-networking-v1.json",
+        "after": "helm/polyad/schemas/gateway-networking-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/graph-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/graph-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad-crds/schemas/graphpolicy-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/graphpolicy-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/httproute-gateway-v1.json",
+        "after": "helm/polyad/schemas/httproute-gateway-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/istio-LICENSE",
+        "after": "helm/polyad/schemas/istio-LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/keda-LICENSE",
+        "after": "helm/polyad/schemas/keda-LICENSE",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/schemas/operatorpool-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/operatorpool-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/peerauthentication-security-v1.json",
+        "after": "helm/polyad/schemas/peerauthentication-security-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/polygraph-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/polygraph-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/remotescale-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/remotescale-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/replicagroup-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/replicagroup-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/requestauthentication-security-v1.json",
+        "after": "helm/polyad/schemas/requestauthentication-security-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/schemas/resource-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/resource-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/rewrite-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/rewrite-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/serviceentry-networking-v1.json",
+        "after": "helm/polyad/schemas/serviceentry-networking-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/shutdownpolicy-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/shutdownpolicy-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/sidecar-networking-v1.json",
+        "after": "helm/polyad/schemas/sidecar-networking-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/telemetry-telemetry-v1.json",
+        "after": "helm/polyad/schemas/telemetry-telemetry-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/schemas/temporaryconnection-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/temporaryconnection-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/schemas/triggerauthentication-keda-v1alpha1.json",
+        "after": "helm/polyad/schemas/triggerauthentication-keda-v1alpha1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/schemas/virtualservice-networking-v1.json",
+        "after": "helm/polyad/schemas/virtualservice-networking-v1.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad-crds/schemas/workload-polyad-v1alpha1.json",
+        "after": "helm/polyad/schemas/workload-polyad-v1alpha1.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/templates/NOTES.txt",
+        "after": "helm/polyad/templates/NOTES.txt",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/_profiles.tpl",
+        "after": "helm/polyad/templates/_profiles.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/ha/connection-autoscaling.yaml",
+        "after": "helm/polyad/templates/ha/connection-autoscaling.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/ha/deployment.yaml",
+        "after": "helm/polyad/templates/ha/deployment.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/ha/distributed/bootstrap.yaml",
+        "after": "helm/polyad/templates/ha/distributed/bootstrap.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/ha/distributed/components.yaml",
+        "after": "helm/polyad/templates/ha/distributed/components.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/ha/keda-autoscaling.yaml",
+        "after": "helm/polyad/templates/ha/keda-autoscaling.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/ha/pools.yaml",
+        "after": "helm/polyad/templates/ha/pools.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/ha/service-observations.yaml",
+        "after": "helm/polyad/templates/ha/service-observations.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/multicluster/federation.yaml",
+        "after": "helm/polyad/templates/multicluster/federation.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/multicluster/mesh-multicluster.yaml",
+        "after": "helm/polyad/templates/multicluster/mesh-multicluster.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/multicluster/observer.yaml",
+        "after": "helm/polyad/templates/multicluster/observer.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_authentication.tpl",
+        "after": "helm/polyad/templates/shared/_authentication.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_connection-settings.tpl",
+        "after": "helm/polyad/templates/shared/_connection-settings.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_deployment.tpl",
+        "after": "helm/polyad/templates/shared/_deployment.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_local-services.tpl",
+        "after": "helm/polyad/templates/shared/_local-services.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_pod-context.tpl",
+        "after": "helm/polyad/templates/shared/_pod-context.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_postgresql-record-encryption.tpl",
+        "after": "helm/polyad/templates/shared/_postgresql-record-encryption.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_postgresql-storage.tpl",
+        "after": "helm/polyad/templates/shared/_postgresql-storage.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_resources.tpl",
+        "after": "helm/polyad/templates/shared/_resources.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_tracing.tpl",
+        "after": "helm/polyad/templates/shared/_tracing.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/_workload-protocols.tpl",
+        "after": "helm/polyad/templates/shared/_workload-protocols.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/authentication-database.yaml",
+        "after": "helm/polyad/templates/shared/authentication-database.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/authentication.yaml",
+        "after": "helm/polyad/templates/shared/authentication.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/capacity-priorityclass.yaml",
+        "after": "helm/polyad/templates/shared/capacity-priorityclass.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/connections.yaml",
+        "after": "helm/polyad/templates/shared/connections.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/credentials.yaml",
+        "after": "helm/polyad/templates/shared/credentials.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/dragonfly.yaml",
+        "after": "helm/polyad/templates/shared/dragonfly.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/events-routing.yaml",
+        "after": "helm/polyad/templates/shared/events-routing.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/events-service.yaml",
+        "after": "helm/polyad/templates/shared/events-service.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/externalsecrets.yaml",
+        "after": "helm/polyad/templates/shared/externalsecrets.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/gateway.yaml",
+        "after": "helm/polyad/templates/shared/gateway.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/hpa.yaml",
+        "after": "helm/polyad/templates/shared/hpa.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/httproute.yaml",
+        "after": "helm/polyad/templates/shared/httproute.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/keda-authentication.yaml",
+        "after": "helm/polyad/templates/shared/keda-authentication.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/mesh-egress.yaml",
+        "after": "helm/polyad/templates/shared/mesh-egress.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/mesh-gateway.yaml",
+        "after": "helm/polyad/templates/shared/mesh-gateway.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/mesh-locality.yaml",
+        "after": "helm/polyad/templates/shared/mesh-locality.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/mesh-observability.yaml",
+        "after": "helm/polyad/templates/shared/mesh-observability.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/mesh-security.yaml",
+        "after": "helm/polyad/templates/shared/mesh-security.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/metrics-service.yaml",
+        "after": "helm/polyad/templates/shared/metrics-service.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/networkpolicy.yaml",
+        "after": "helm/polyad/templates/shared/networkpolicy.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/postgresql-record-encryption.yaml",
+        "after": "helm/polyad/templates/shared/postgresql-record-encryption.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/postgresql-storage.yaml",
+        "after": "helm/polyad/templates/shared/postgresql-storage.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/postgresql.yaml",
+        "after": "helm/polyad/templates/shared/postgresql.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/role.yaml",
+        "after": "helm/polyad/templates/shared/role.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/rolebinding.yaml",
+        "after": "helm/polyad/templates/shared/rolebinding.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/service.yaml",
+        "after": "helm/polyad/templates/shared/service.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/shared/serviceaccount.yaml",
+        "after": "helm/polyad/templates/shared/serviceaccount.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/singular/deployment.yaml",
+        "after": "helm/polyad/templates/singular/deployment.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/telemetry/_config.tpl",
+        "after": "helm/polyad/templates/telemetry/_config.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/telemetry/_targets.tpl",
+        "after": "helm/polyad/templates/telemetry/_targets.tpl",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/telemetry/agent.yaml",
+        "after": "helm/polyad/templates/telemetry/agent.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/telemetry/networkpolicy.yaml",
+        "after": "helm/polyad/templates/telemetry/networkpolicy.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/telemetry/targets.yaml",
+        "after": "helm/polyad/templates/telemetry/targets.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/templates/worker/deployment.yaml",
+        "after": "helm/polyad/templates/worker/deployment.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "charts/polyad/values.reference.schema.json",
+        "after": "helm/polyad/values.reference.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/values.schema.json",
+        "after": "helm/polyad/values.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "charts/polyad/values.yaml",
+        "after": "helm/polyad/values.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "integrations/kind/kind.sh",
+        "after": "integrations/kind/kind.sh",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "integrations/kind/values.yaml",
+        "after": "integrations/kind/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "integrations/minikube/README.md",
+        "after": "integrations/minikube/README.md",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "integrations/minikube/full/README.md",
+        "after": "integrations/minikube/full/README.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "integrations/minikube/full/full.sh",
+        "after": "integrations/minikube/full/full.sh",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "integrations/minikube/minikube.sh",
+        "after": "integrations/minikube/minikube.sh",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "integrations/minikube/values.yaml",
+        "after": "integrations/minikube/values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-benchmarks/README.md",
+        "after": "pkg/polyad-benchmarks/README.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-benchmarks/polyad_benchmarks/plan.py",
+        "after": "pkg/polyad-benchmarks/polyad_benchmarks/plan.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-benchmarks/polyad_benchmarks/refresh.py",
+        "after": "pkg/polyad-benchmarks/polyad_benchmarks/refresh.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/helm/helm-reference.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/helm/helm-reference.schema.json",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/helm/helm-values.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/helm/helm-values.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/activation.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/activation.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/composition.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/composition.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/daemon.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/daemon.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/dragonfly.dragonflydb.io.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/dragonfly.dragonflydb.io.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/dragonflypool.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/dragonflypool.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/gate.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/gate.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/graph.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/graph.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/graphpolicy.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/graphpolicy.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/operatorpool.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/operatorpool.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/polygraph.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/polygraph.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/remotescale.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/remotescale.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/replicagroup.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/replicagroup.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/resource.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/resource.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/rewrite.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/rewrite.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/shutdownpolicy.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/shutdownpolicy.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/temporaryconnection.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/temporaryconnection.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/polyad-schemas/polyad_schemas/resources/workload.v1alpha1.schema.json",
+        "after": "pkg/polyad-schemas/polyad_schemas/resources/workload.v1alpha1.schema.json",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pyproject.toml",
+        "after": "pyproject.toml",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "schemas/README.md",
+        "after": "schemas/README.md",
+        "added": 7,
+        "deleted": 7
+      },
+      {
+        "before": "scripts/__init__.py",
+        "after": "scripts/__init__.py",
+        "added": 5,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/coverage/NOTICE.md",
+        "after": "scripts/coverage/NOTICE.md",
+        "added": 1,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/coverage/coverage-badge.mjs",
+        "after": "scripts/coverage/coverage-badge.mjs",
+        "added": 50,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/coverage/coverage.test.mjs",
+        "after": "scripts/coverage/coverage.test.mjs",
+        "added": 129,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/coverage/publish-coverage.mjs",
+        "after": "scripts/coverage/publish-coverage.mjs",
+        "added": 65,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/NOTICE.md",
+        "after": "scripts/documentation/NOTICE.md",
+        "added": 13,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/check-markdown.mjs",
+        "after": "scripts/documentation/check-markdown.mjs",
+        "added": 112,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/check-markdown.test.mjs",
+        "after": "scripts/documentation/check-markdown.test.mjs",
+        "added": 58,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/eslint.config.mjs",
+        "after": "scripts/documentation/eslint.config.mjs",
+        "added": 7,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/lint-markdown.mjs",
+        "after": "scripts/documentation/lint-markdown.mjs",
+        "added": 59,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/lint-markdown.test.mjs",
+        "after": "scripts/documentation/lint-markdown.test.mjs",
+        "added": 23,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/markdown-checks.LICENSE",
+        "after": "scripts/documentation/markdown-checks.LICENSE",
+        "added": 202,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/package-lock.json",
+        "after": "scripts/documentation/package-lock.json",
+        "added": 4316,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/package.json",
+        "after": "scripts/documentation/package.json",
+        "added": 30,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/documentation/update-contents.py",
+        "after": "scripts/documentation/update-contents.py",
+        "added": 4,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/ownership/__init__.py",
+        "after": "scripts/ownership/__init__.py",
+        "added": 5,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/ownership/__main__.py",
+        "after": "scripts/ownership/__main__.py",
+        "added": 9,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/ownership/cli.py",
+        "after": "scripts/ownership/cli.py",
+        "added": 137,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/ownership/compiler.py",
+        "after": "scripts/ownership/compiler.py",
+        "added": 242,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/release/attest.py",
+        "after": "scripts/release/attest.py",
+        "added": 215,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/release/feedback.cjs",
+        "after": "scripts/release/feedback.cjs",
+        "added": 64,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/release/feedback.test.cjs",
+        "after": "scripts/release/feedback.test.cjs",
+        "added": 89,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/release/publish.sh",
+        "after": "scripts/release/publish.sh",
+        "added": 63,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/release/setup-signing.sh",
+        "after": "scripts/release/setup-signing.sh",
+        "added": 75,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/release/signing-config.json",
+        "after": "scripts/release/signing-config.json",
+        "added": 1,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/release/verify-published.sh",
+        "after": "scripts/release/verify-published.sh",
+        "added": 26,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/repair/__init__.py",
+        "after": "scripts/repair/__init__.py",
+        "added": 3,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/repair/plan.py",
+        "after": "scripts/repair/plan.py",
+        "added": 365,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/repair/repair.mjs",
+        "after": "scripts/repair/repair.mjs",
+        "added": 98,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/repair/repair.test.mjs",
+        "after": "scripts/repair/repair.test.mjs",
+        "added": 143,
+        "deleted": 0
+      },
+      {
+        "before": "scripts/schemas/generate-benchmark-chart.py",
+        "after": "scripts/schemas/generate-benchmark-chart.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "scripts/schemas/generate-helm-readme.py",
+        "after": "scripts/schemas/generate-helm-readme.py",
+        "added": 10,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/schemas/generate-json-schemas.py",
+        "after": "scripts/schemas/generate-json-schemas.py",
+        "added": 9,
+        "deleted": 9
+      },
+      {
+        "before": "scripts/schemas/generate-network-schemas.py",
+        "after": "scripts/schemas/generate-network-schemas.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/schemas/generate-reference-schema.py",
+        "after": "scripts/schemas/generate-reference-schema.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/schemas/generate-resource-chart.py",
+        "after": "scripts/schemas/generate-resource-chart.py",
+        "added": 8,
+        "deleted": 5
+      },
+      {
+        "before": "scripts/schemas/generate-status-schemas.py",
+        "after": "scripts/schemas/generate-status-schemas.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/testing/test-coordination.sh",
+        "after": "scripts/testing/test-coordination.sh",
+        "added": 13,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/tooling/build-chart-dependencies.sh",
+        "after": "scripts/tooling/build-chart-dependencies.sh",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/tooling/install-helm-tools.sh",
+        "after": "scripts/tooling/install-helm-tools.sh",
+        "added": 12,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/validation/benchmark-schemas.py",
+        "after": "scripts/validation/benchmark-schemas.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/validation/check-shell.sh",
+        "after": "scripts/validation/check-shell.sh",
+        "added": 12,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/validation/check-values.py",
+        "after": "scripts/validation/check-values.py",
+        "added": 6,
+        "deleted": 6
+      },
+      {
+        "before": "scripts/validation/kubeconform.sh",
+        "after": "scripts/validation/kubeconform.sh",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "scripts/validation/mermaid/package-lock.json",
+        "after": "scripts/validation/mermaid/package-lock.json",
+        "added": 192,
+        "deleted": 169
+      },
+      {
+        "before": "scripts/validation/mermaid/package.json",
+        "after": "scripts/validation/mermaid/package.json",
+        "added": 7,
+        "deleted": 3
+      },
+      {
+        "before": "services/README.md",
+        "after": "services/README.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "services/fixture/Dockerfile",
+        "after": "services/fixture/Dockerfile",
+        "added": 7,
+        "deleted": 2
+      },
+      {
+        "before": "services/operator/Dockerfile",
+        "after": "services/operator/Dockerfile",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "services/runner/Dockerfile",
+        "after": "services/runner/Dockerfile",
+        "added": 7,
+        "deleted": 2
+      },
+      {
+        "before": "studies/README.md",
+        "after": "studies/README.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "studies/cheeger-strategies/README.md",
+        "after": "studies/cheeger-strategies/README.md",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "studies/load/README.md",
+        "after": "studies/load/README.md",
+        "added": 9,
+        "deleted": 9
+      },
+      {
+        "before": "studies/load/fixtures/application.yaml",
+        "after": "studies/load/fixtures/application.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "studies/load/fixtures/gke-values.yaml",
+        "after": "studies/load/fixtures/gke-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "studies/load/fixtures/operator-agents-values.yaml",
+        "after": "studies/load/fixtures/operator-agents-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "studies/load/fixtures/operator-values.yaml",
+        "after": "studies/load/fixtures/operator-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "terraform/README.md",
+        "after": "terraform/README.md",
+        "added": 8,
+        "deleted": 8
+      },
+      {
+        "before": "terraform/argocd.tf",
+        "after": "terraform/argocd.tf",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "terraform/bootstrap/templates/application.yaml",
+        "after": "terraform/bootstrap/templates/application.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "terraform/bootstrap/templates/benchmarks.yaml",
+        "after": "terraform/bootstrap/templates/benchmarks.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "terraform/bootstrap/templates/flux.yaml",
+        "after": "terraform/bootstrap/templates/flux.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "terraform/bootstrap/values.yaml",
+        "after": "terraform/bootstrap/values.yaml",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "terraform/polyad-values.yaml",
+        "after": "terraform/polyad-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "terraform/variables.tf",
+        "after": "terraform/variables.tf",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/__init__.py",
+        "after": "tests/__init__.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "tests/contracts/__init__.py",
+        "after": "tests/contracts/__init__.py",
+        "added": 5,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_ci_coordination.py",
+        "after": "tests/contracts/test_ci_coordination.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_ci_dependencies.py",
+        "after": "tests/contracts/test_ci_dependencies.py",
+        "added": 8,
+        "deleted": 8
+      },
+      {
+        "before": "pkg/tests/test_coverage_workflow.py",
+        "after": "tests/contracts/test_coverage_workflow.py",
+        "added": 30,
+        "deleted": 41
+      },
+      {
+        "before": "pkg/tests/test_demo_layout.py",
+        "after": "tests/contracts/test_demo_layout.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_documentation_contents.py",
+        "after": "tests/contracts/test_documentation_contents.py",
+        "added": 14,
+        "deleted": 0
+      },
+      {
+        "before": "tests/contracts/test_generated_repair.py",
+        "after": "tests/contracts/test_generated_repair.py",
+        "added": 306,
+        "deleted": 0
+      },
+      {
+        "before": "tests/contracts/test_generated_repair_workflow.py",
+        "after": "tests/contracts/test_generated_repair_workflow.py",
+        "added": 58,
+        "deleted": 0
+      },
+      {
+        "before": "tests/contracts/test_ownership_compiler.py",
+        "after": "tests/contracts/test_ownership_compiler.py",
+        "added": 198,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_public_exports.py",
+        "after": "tests/contracts/test_public_exports.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "tests/contracts/test_release_attestation.py",
+        "after": "tests/contracts/test_release_attestation.py",
+        "added": 83,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_release_workflow.py",
+        "after": "tests/contracts/test_release_workflow.py",
+        "added": 62,
+        "deleted": 28
+      },
+      {
+        "before": "pkg/tests/test_shell_functions.py",
+        "after": "tests/contracts/test_shell_functions.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_typing.py",
+        "after": "tests/contracts/test_typing.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/data/attached-pool-values.yaml",
+        "after": "tests/data/attached-pool-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/data/events.json",
+        "after": "tests/data/events.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/data/local-services-values.yaml",
+        "after": "tests/data/local-services-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/data/local_cluster_command.py",
+        "after": "tests/data/local_cluster_command.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/data/minikube_full_command.py",
+        "after": "tests/data/minikube_full_command.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/data/pool-values.yaml",
+        "after": "tests/data/pool-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/data/resource-chart-values.yaml",
+        "after": "tests/data/resource-chart-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/data/root-values.yaml",
+        "after": "tests/data/root-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/data/sdk_process_worker.py",
+        "after": "tests/data/sdk_process_worker.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/data/studies/load-results.json",
+        "after": "tests/data/studies/load-results.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/data/work-graph-values.yaml",
+        "after": "tests/data/work-graph-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/data/worker-values.yaml",
+        "after": "tests/data/worker-values.yaml",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "tests/features/__init__.py",
+        "after": "tests/features/__init__.py",
+        "added": 5,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_activations.py",
+        "after": "tests/features/test_activations.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_adaptation_constraints.py",
+        "after": "tests/features/test_adaptation_constraints.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_adaptation_status.py",
+        "after": "tests/features/test_adaptation_status.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_adaptation_strategies.py",
+        "after": "tests/features/test_adaptation_strategies.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_api_limits.py",
+        "after": "tests/features/test_api_limits.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_argocd_health.py",
+        "after": "tests/features/test_argocd_health.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_atlas.py",
+        "after": "tests/features/test_atlas.py",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "pkg/tests/test_authentication.py",
+        "after": "tests/features/test_authentication.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_authentication_chart.py",
+        "after": "tests/features/test_authentication_chart.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_backlog_metrics.py",
+        "after": "tests/features/test_backlog_metrics.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_benchmarks.py",
+        "after": "tests/features/test_benchmarks.py",
+        "added": 11,
+        "deleted": 11
+      },
+      {
+        "before": "pkg/tests/test_cache.py",
+        "after": "tests/features/test_cache.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_capabilities.py",
+        "after": "tests/features/test_capabilities.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_capacity.py",
+        "after": "tests/features/test_capacity.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_chart.py",
+        "after": "tests/features/test_chart.py",
+        "added": 8,
+        "deleted": 8
+      },
+      {
+        "before": "pkg/tests/test_cheeger_computation.py",
+        "after": "tests/features/test_cheeger_computation.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_cheeger_pid.py",
+        "after": "tests/features/test_cheeger_pid.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_cheeger_reduction.py",
+        "after": "tests/features/test_cheeger_reduction.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_cheeger_strategies.py",
+        "after": "tests/features/test_cheeger_strategies.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_client.py",
+        "after": "tests/features/test_client.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_components.py",
+        "after": "tests/features/test_components.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_composition.py",
+        "after": "tests/features/test_composition.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_composition_api.py",
+        "after": "tests/features/test_composition_api.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_connection_consent.py",
+        "after": "tests/features/test_connection_consent.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_connection_tuning.py",
+        "after": "tests/features/test_connection_tuning.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_coordination.py",
+        "after": "tests/features/test_coordination.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_daemonsets.py",
+        "after": "tests/features/test_daemonsets.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_decision_logs.py",
+        "after": "tests/features/test_decision_logs.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_deployment_profiles.py",
+        "after": "tests/features/test_deployment_profiles.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_dragonfly_scaling.py",
+        "after": "tests/features/test_dragonfly_scaling.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_event_contract.py",
+        "after": "tests/features/test_event_contract.py",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "pkg/tests/test_event_rebalancing.py",
+        "after": "tests/features/test_event_rebalancing.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_event_visibility.py",
+        "after": "tests/features/test_event_visibility.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_events.py",
+        "after": "tests/features/test_events.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_exceptions.py",
+        "after": "tests/features/test_exceptions.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_feedback_security.py",
+        "after": "tests/features/test_feedback_security.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_flux_health.py",
+        "after": "tests/features/test_flux_health.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_graph_boundaries.py",
+        "after": "tests/features/test_graph_boundaries.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_graph_metrics.py",
+        "after": "tests/features/test_graph_metrics.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_helm_notes.py",
+        "after": "tests/features/test_helm_notes.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_helm_workers.py",
+        "after": "tests/features/test_helm_workers.py",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "pkg/tests/test_http_runtime.py",
+        "after": "tests/features/test_http_runtime.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_interfaces.py",
+        "after": "tests/features/test_interfaces.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_json_schemas.py",
+        "after": "tests/features/test_json_schemas.py",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "pkg/tests/test_keda_autoscaling.py",
+        "after": "tests/features/test_keda_autoscaling.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_kind.py",
+        "after": "tests/features/test_kind.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_load_profiles.py",
+        "after": "tests/features/test_load_profiles.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_local_nature.py",
+        "after": "tests/features/test_local_nature.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_local_services.py",
+        "after": "tests/features/test_local_services.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_local_soul.py",
+        "after": "tests/features/test_local_soul.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_lua_runtime.py",
+        "after": "tests/features/test_lua_runtime.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_metrics_api.py",
+        "after": "tests/features/test_metrics_api.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_minikube.py",
+        "after": "tests/features/test_minikube.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_minikube_autoscaler.py",
+        "after": "tests/features/test_minikube_autoscaler.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_minikube_features.py",
+        "after": "tests/features/test_minikube_features.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_minikube_full_bootstrap.py",
+        "after": "tests/features/test_minikube_full_bootstrap.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_minikube_maintenance.py",
+        "after": "tests/features/test_minikube_maintenance.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_multicluster.py",
+        "after": "tests/features/test_multicluster.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_mutations.py",
+        "after": "tests/features/test_mutations.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_network.py",
+        "after": "tests/features/test_network.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_openapi.py",
+        "after": "tests/features/test_openapi.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_operator.py",
+        "after": "tests/features/test_operator.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_operator_asts.py",
+        "after": "tests/features/test_operator_asts.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_operator_diagnostics.py",
+        "after": "tests/features/test_operator_diagnostics.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_operator_logging.py",
+        "after": "tests/features/test_operator_logging.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_operator_resources.py",
+        "after": "tests/features/test_operator_resources.py",
+        "added": 9,
+        "deleted": 9
+      },
+      {
+        "before": "pkg/tests/test_operator_tuning.py",
+        "after": "tests/features/test_operator_tuning.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_pipeline_workflow.py",
+        "after": "tests/features/test_pipeline_workflow.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_pod_context.py",
+        "after": "tests/features/test_pod_context.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_postgresql.py",
+        "after": "tests/features/test_postgresql.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_postgresql_encryption.py",
+        "after": "tests/features/test_postgresql_encryption.py",
+        "added": 12,
+        "deleted": 12
+      },
+      {
+        "before": "pkg/tests/test_process_studies.py",
+        "after": "tests/features/test_process_studies.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_reachability.py",
+        "after": "tests/features/test_reachability.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_reachability_studies.py",
+        "after": "tests/features/test_reachability_studies.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_record_encryption.py",
+        "after": "tests/features/test_record_encryption.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_record_encryption_chart.py",
+        "after": "tests/features/test_record_encryption_chart.py",
+        "added": 8,
+        "deleted": 10
+      },
+      {
+        "before": "pkg/tests/test_reference_values.py",
+        "after": "tests/features/test_reference_values.py",
+        "added": 12,
+        "deleted": 12
+      },
+      {
+        "before": "pkg/tests/test_remote_scaling.py",
+        "after": "tests/features/test_remote_scaling.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_replica_connectivity.py",
+        "after": "tests/features/test_replica_connectivity.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_replication.py",
+        "after": "tests/features/test_replication.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_reserved_topology.py",
+        "after": "tests/features/test_reserved_topology.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_resource_chart.py",
+        "after": "tests/features/test_resource_chart.py",
+        "added": 7,
+        "deleted": 7
+      },
+      {
+        "before": "pkg/tests/test_resource_registry.py",
+        "after": "tests/features/test_resource_registry.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_rewrites.py",
+        "after": "tests/features/test_rewrites.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_root_control_plane.py",
+        "after": "tests/features/test_root_control_plane.py",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "pkg/tests/test_runtime_capabilities.py",
+        "after": "tests/features/test_runtime_capabilities.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_scheduling.py",
+        "after": "tests/features/test_scheduling.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_scheduling_contracts.py",
+        "after": "tests/features/test_scheduling_contracts.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_scheduling_gates.py",
+        "after": "tests/features/test_scheduling_gates.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_sdk.py",
+        "after": "tests/features/test_sdk.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_sdk_connections.py",
+        "after": "tests/features/test_sdk_connections.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_sdk_context.py",
+        "after": "tests/features/test_sdk_context.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_sdk_invocations.py",
+        "after": "tests/features/test_sdk_invocations.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_sdk_processes.py",
+        "after": "tests/features/test_sdk_processes.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_sdk_telemetry.py",
+        "after": "tests/features/test_sdk_telemetry.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_service_levels.py",
+        "after": "tests/features/test_service_levels.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_shared_queue.py",
+        "after": "tests/features/test_shared_queue.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_statefulsets.py",
+        "after": "tests/features/test_statefulsets.py",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "before": "pkg/tests/test_status_asts.py",
+        "after": "tests/features/test_status_asts.py",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "before": "pkg/tests/test_structural_policies.py",
+        "after": "tests/features/test_structural_policies.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_study_plotting.py",
+        "after": "tests/features/test_study_plotting.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_telemetry_agents.py",
+        "after": "tests/features/test_telemetry_agents.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_temporary_connections.py",
+        "after": "tests/features/test_temporary_connections.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_terraform.py",
+        "after": "tests/features/test_terraform.py",
+        "added": 8,
+        "deleted": 8
+      },
+      {
+        "before": "pkg/tests/test_throughput.py",
+        "after": "tests/features/test_throughput.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_topology_events.py",
+        "after": "tests/features/test_topology_events.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_tracing.py",
+        "after": "tests/features/test_tracing.py",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/test_traffic.py",
+        "after": "tests/features/test_traffic.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_types_package.py",
+        "after": "tests/features/test_types_package.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_vertical_pod_autoscaling.py",
+        "after": "tests/features/test_vertical_pod_autoscaling.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/test_websockets.py",
+        "after": "tests/features/test_websockets.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_work_graph_settings.py",
+        "after": "tests/features/test_work_graph_settings.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_workload_identity.py",
+        "after": "tests/features/test_workload_identity.py",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/test_write_contracts.py",
+        "after": "tests/features/test_write_contracts.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_write_parallelism.py",
+        "after": "tests/features/test_write_parallelism.py",
+        "added": 2,
+        "deleted": 2
+      },
+      {
+        "before": "pkg/tests/test_write_queue.py",
+        "after": "tests/features/test_write_queue.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/flux/cases.json",
+        "after": "tests/flux/cases.json",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/flux/crds_test.go",
+        "after": "tests/flux/crds_test.go",
+        "added": 1,
+        "deleted": 1
+      },
+      {
+        "before": "pkg/tests/flux/go.mod",
+        "after": "tests/flux/go.mod",
+        "added": 41,
+        "deleted": 31
+      },
+      {
+        "before": "pkg/tests/flux/go.sum",
+        "after": "tests/flux/go.sum",
+        "added": 97,
+        "deleted": 78
+      },
+      {
+        "before": "pkg/tests/flux/health_test.go",
+        "after": "tests/flux/health_test.go",
+        "added": 3,
+        "deleted": 3
+      },
+      {
+        "before": "pkg/tests/helm.py",
+        "after": "tests/helm.py",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/kind.yaml",
+        "after": "tests/kind.yaml",
+        "added": 0,
+        "deleted": 0
+      },
+      {
+        "before": "pkg/tests/workflows.py",
+        "after": "tests/workflows.py",
+        "added": 1,
+        "deleted": 1
+      }
+    ],
+    "shares": [
+      {
+        "language": "JSON",
+        "added": 4807,
+        "deleted": 228
+      },
+      {
+        "language": "Markdown",
+        "added": 2930,
+        "deleted": 268
+      },
+      {
+        "language": "Python",
+        "added": 2073,
+        "deleted": 387
+      },
+      {
+        "language": "JavaScript",
+        "added": 897,
+        "deleted": 0
+      },
+      {
+        "language": "YAML",
+        "added": 540,
+        "deleted": 316
+      },
+      {
+        "language": "Unknown",
+        "added": 320,
+        "deleted": 89
+      },
+      {
+        "language": "Bash",
+        "added": 214,
+        "deleted": 16
+      },
+      {
+        "language": "Modula-2",
+        "added": 41,
+        "deleted": 31
+      },
+      {
+        "language": "Docker",
+        "added": 16,
+        "deleted": 6
+      },
+      {
+        "language": "Terraform",
+        "added": 5,
+        "deleted": 5
+      },
+      {
+        "language": "Go",
+        "added": 4,
+        "deleted": 4
+      },
+      {
+        "language": "TOML",
+        "added": 3,
+        "deleted": 3
+      }
+    ]
+  },
+  "palette_sha256": "df3607dacd40a0c4dbfb4b0053752953f4b40d060401fe4e42a3d842f6a8a15c",
+  "matplotlib": "3.11.2"
+}
