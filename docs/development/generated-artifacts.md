@@ -31,8 +31,12 @@ Schema generators import application models and therefore do not run in the
 credential-bearing repair stage. Mixed authored/generated README files and measured
 figures also remain review-owned.
 
-The job can update only open, non-draft PR branches in this repository targeting
-the default branch. It rechecks head/base bindings, constructs a two-parent merge,
+The job considers open, non-draft PR branches in this repository targeting any
+branch. It orders parents before children and refreshes each declared base after
+its prerequisites. Retargeting and closing a parent also trigger scans. Trusted
+tooling still comes from the default branch; both candidate inventories must match
+that trusted revision, even when both stack branches agree on a policy change.
+It rechecks head/base names and commits, constructs a two-parent merge,
 requires GitHub to verify the bot signature, then updates the PR ref without force.
 It never writes to the default branch, repairs forks or merges a PR. If the provider
 cannot verify the commit or refuses the ref update, the repair fails visibly.
@@ -46,10 +50,11 @@ The workflow becomes active only after this stage is reviewed into the default b
 
 ```bash
 python -m scripts.repair.plan --check
-python -m scripts.repair.plan --head HEAD_SHA --base BASE_SHA --output /tmp/repair.json
+python -m scripts.repair.plan --head HEAD_SHA --base BASE_SHA --trusted POLICY_SHA --output /tmp/repair.json
 ```
 
-Use full commit identifiers already fetched into this checkout. The second command
+Use full commit identifiers already fetched into this checkout. `BASE_SHA` is the
+actual target commit; `POLICY_SHA` is the reviewed default-branch tooling revision. The second command
 only writes a proposal; it does not change the worktree, index, branch or remote.
 Review refusal diagnostics rather than substituting one side of a conflict.
 

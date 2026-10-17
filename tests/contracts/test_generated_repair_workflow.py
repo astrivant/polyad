@@ -19,8 +19,9 @@ def test_repair_is_a_trusted_leaf_with_no_secret_or_candidate_checkout() -> None
     assert caller["uses"] == "./.github/workflows/stage-repair.yml"
     assert "needs" not in caller
     assert "pull_request_target" in caller["if"] and "schedule" in caller["if"]
-    assert "github.event.pull_request.base.ref == github.event.repository.default_branch" in caller["if"]
-    assert PIPELINE["on"]["pull_request_target"]["branches"] == ["main"]
+    assert "github.event.pull_request.base.ref" not in caller["if"]
+    assert "branches" not in PIPELINE["on"]["pull_request_target"]
+    assert "branches-ignore" not in PIPELINE["on"]["pull_request_target"]
     assert caller["permissions"] == job["permissions"] == {"contents": "write", "pull-requests": "read"}
     assert "secrets" not in caller and "environment" not in job
     assert job["concurrency"] == {"group": "generated-conflict-repair", "cancel-in-progress": "false"}
@@ -30,7 +31,14 @@ def test_repair_is_a_trusted_leaf_with_no_secret_or_candidate_checkout() -> None
     assert len(job["steps"]) == 3
     assert job["steps"][-1]["uses"].startswith("actions/github-script@")
     assert "scripts/repair/repair.mjs" in job["steps"][-1]["with"]["script"]
-    assert set(PIPELINE["on"]["pull_request_target"]["types"]) == {"opened", "synchronize", "reopened", "ready_for_review"}
+    assert set(PIPELINE["on"]["pull_request_target"]["types"]) == {
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review",
+        "edited",
+        "closed",
+    }
 
 
 def test_privileged_events_cannot_enter_source_validation_or_release() -> None:

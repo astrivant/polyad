@@ -98,8 +98,8 @@ def test_real_merge_is_deterministic_and_preserves_source(tmp_path: Path) -> Non
     """
     head, base = fixture(tmp_path)
     before = git(tmp_path, "status", "--porcelain")
-    result = prepare(tmp_path, head, base)
-    assert result == prepare(tmp_path, head, base)
+    result = prepare(tmp_path, head, base, trusted=base)
+    assert result == prepare(tmp_path, head, base, trusted=base)
     assert result["status"] == "repair"
     assert result["conflicts"] == [".github/CODEOWNERS"]
     changes = result["tree"]
@@ -129,7 +129,7 @@ def test_copy_uses_merged_canonical_data(tmp_path: Path) -> None:
     (tmp_path / "generated.txt").write_text("stale target\n")
     (tmp_path / "source.txt").write_text("a\nb\nbase\n")
     base = commit(tmp_path)
-    result = prepare(tmp_path, head, base)
+    result = prepare(tmp_path, head, base, trusted=base)
     changes = result["tree"]
     assert isinstance(changes, list)
     output = next(item for item in changes if item["path"] == "generated.txt")
@@ -166,7 +166,7 @@ def test_ambiguous_merges_never_produce_a_partial_repair(tmp_path: Path, kind: s
         (tmp_path / "source.txt").write_text("base\n")
         base = commit(tmp_path)
     with pytest.raises(ValueError):
-        prepare(tmp_path, head, base)
+        prepare(tmp_path, head, base, trusted=base)
 
 
 @pytest.mark.parametrize(
@@ -256,7 +256,7 @@ def test_clean_merge_is_noop(tmp_path: Path) -> None:
         None: The boundary assertions pass.
     """
     head, _ = fixture(tmp_path)
-    assert prepare(tmp_path, head, head)["status"] == "clean"
+    assert prepare(tmp_path, head, head, trusted=head)["status"] == "clean"
 
 
 def test_section_comments_do_not_move() -> None:
@@ -269,3 +269,38 @@ def test_section_comments_do_not_move() -> None:
     source = "/a @owner\n# Next section\n/b @owner\n"
     with pytest.raises(ValueError, match="commentary"):
         owners(source, source + "/head @owner\n", source + "/base @owner\n")
+
+
+@pytest.mark.parametrize("changed", ["neither", "head", "base", "both"])
+def test_stack_base_is_independent_of_trusted_policy(tmp_path: Path, changed: str) -> None:
+    """
+    Separate a stacked target from policy approval even when both PR branches agree.
+
+    Args:
+        tmp_path (Path): Owned Git fixture, with no executed candidate code.
+        changed (str): Branches carrying an unapproved inventory change.
+
+    Returns:
+        None: Only the original trusted inventory permits repair.
+    """
+    head, base = fixture(tmp_path)
+    trusted = git(tmp_path, "merge-base", head, base).decode().strip()
+    for label, revision in (("head", head), ("base", base)):
+        if changed not in {label, "both"}:
+            continue
+        git(tmp_path, "checkout", "--quiet", "--detach", revision)
+        (tmp_path / MANIFEST).write_text('{"version":1,"artifacts":[]}')
+        if label == "head":
+            head = commit(tmp_path)
+        else:
+            base = commit(tmp_path)
+    git(tmp_path, "checkout", "--quiet", "--detach", trusted)
+    if changed == "neither":
+        result = prepare(tmp_path, head, base, trusted=trusted)
+        assert result["status"] == "repair"
+        assert result["trusted"] == trusted
+        assert result["base"] == base != trusted
+    else:
+        with pytest.raises(ValueError, match="trusted policy"):
+            prepare(tmp_path, head, base, trusted=trusted)
+    assert git(tmp_path, "rev-parse", "HEAD").decode().strip() == trusted

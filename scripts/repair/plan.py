@@ -221,14 +221,15 @@ def blob(root: Path, revision: str, path: str) -> bytes:
     return git(root, "cat-file", "blob", row[2])
 
 
-def prepare(repository: Path, head: str, base: str) -> dict[str, object]:
+def prepare(repository: Path, head: str, base: str, *, trusted: str) -> dict[str, object]:
     """
     Construct a merge tree and repair only declared, supported conflict outputs.
 
     Args:
         repository (Path): Existing trusted checkout with fetched immutable refs.
         head (str): Exact PR head commit.
-        base (str): Exact target commit, also the trusted tooling revision.
+        base (str): Exact target commit, including another PR's branch.
+        trusted (str): Independently reviewed revision supplying the repair inventory.
 
     Returns:
         dict[str, object]: Bounded API tree updates and source bindings, or a clean no-op.
@@ -236,16 +237,17 @@ def prepare(repository: Path, head: str, base: str) -> dict[str, object]:
     Raises:
         ValueError: A conflict, policy change or output exceeds the approved boundary.
     """
-    if not SHA.fullmatch(head) or not SHA.fullmatch(base):
+    if not all(SHA.fullmatch(revision) for revision in (head, base, trusted)):
         raise ValueError("Use full immutable commit identifiers")
     with tempfile.TemporaryDirectory(prefix="generated-repair-") as directory:
         root = Path(directory)
         git(root, "init", "--bare", "--quiet")
-        git(root, "fetch", "--quiet", "--no-tags", str(repository.resolve()), head, base)
-        trusted = blob(root, base, MANIFEST)
-        if blob(root, head, MANIFEST) != trusted:
-            raise ValueError("Inventory changed in the PR; review it before enabling repairs")
-        entries = inventory(trusted)
+        git(root, "fetch", "--quiet", "--no-tags", str(repository.resolve()), head, base, trusted)
+        policy = blob(root, trusted, MANIFEST)
+        # Agreement between two unreviewed stack branches cannot authorize a new repair policy.
+        if any(blob(root, revision, MANIFEST) != policy for revision in (head, base)):
+            raise ValueError("Inventory differs from trusted policy; review it before enabling repairs")
+        entries = inventory(policy)
         merged = git(
             root,
             "merge-tree",
@@ -259,7 +261,7 @@ def prepare(repository: Path, head: str, base: str) -> dict[str, object]:
         tree = merged[0].decode()
         conflicts = [part.decode() for part in merged[1 : merged.index(b"")]] if b"" in merged else []
         if not conflicts:
-            return {"status": "clean", "head": head, "base": base}
+            return {"status": "clean", "head": head, "base": base, "trusted": trusted}
         if len(conflicts) > 50 or not SHA.fullmatch(tree):
             raise ValueError("Merge exceeds the bounded repair domain")
         ancestor = git(root, "merge-base", "--all", head, base).decode().strip()
@@ -319,6 +321,7 @@ def prepare(repository: Path, head: str, base: str) -> dict[str, object]:
             "status": "repair",
             "head": head,
             "base": base,
+            "trusted": trusted,
             "conflicts": sorted(conflicts),
             "tree": updates,
         }
@@ -342,15 +345,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--head")
     parser.add_argument("--base")
+    parser.add_argument("--trusted", help="Reviewed policy revision, independent of the PR target")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.check:
             inventory((args.repo / MANIFEST).read_bytes())
         else:
-            if not args.head or not args.base or not args.output:
-                raise ValueError("Preparation requires --head, --base and --output")
-            result = prepare(args.repo, args.head, args.base)
+            if not args.head or not args.base or not args.trusted or not args.output:
+                raise ValueError("Preparation requires --head, --base, --trusted and --output")
+            result = prepare(args.repo, args.head, args.base, trusted=args.trusted)
             args.output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
     except (ValueError, OSError, subprocess.TimeoutExpired) as error:
         parser.exit(2, f"Generated repair requires review: {error}\n")
